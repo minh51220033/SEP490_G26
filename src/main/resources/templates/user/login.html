@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Đăng nhập hệ thống - CV-DCMS</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+            width: 380px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin: 0 0 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #007bff;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* =========================
+           ERROR
+           ========================= */
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+            padding: 12px;
+            border-radius: 7px;
+            margin-bottom: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* =========================
+           SUCCESS
+           ========================= */
+
+        .alert-success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            padding: 12px;
+            border-radius: 7px;
+            margin-bottom: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* =========================
+           NOTIFICATION
+           ========================= */
+
+        .alert-notification {
+            background-color: #cff4fc;
+            color: #055160;
+            border: 1px solid #b6effb;
+            padding: 12px;
+            border-radius: 7px;
+            margin-bottom: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .links {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .links a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 7px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            color: #ccc;
+        }
+
+        .required {
+            color: red;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Đăng Nhập</h2>
+
+    <div class="subtitle">
+        Hệ thống quản lý phòng khám nha khoa CV-DCMS
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- ERROR MESSAGE -->
+    <!-- ================================================= -->
+
+    <div th:if="${error != null}"
+         class="alert-error"
+         th:text="${error}">
+        Thông báo lỗi
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- SUCCESS MESSAGE -->
+    <!-- ================================================= -->
+
+    <div th:if="${success != null}"
+         class="alert-success"
+         th:text="${success}">
+        Thông báo thành công
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- NOTIFICATION -->
+    <!-- ================================================= -->
+
+    <div th:if="${notification != null}"
+         class="alert-notification"
+         th:text="${notification}">
+        Thông báo
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- LOGIN FORM -->
+    <!-- ================================================= -->
+
+    <form th:action="@{/login}"
+          method="POST">
+
+        <!-- USERNAME -->
+
+        <div class="form-group">
+
+            <label for="username">
+                Tên đăng nhập
+                <span class="required">*</span>
+            </label>
+
+            <input type="text"
+                   id="username"
+                   name="username"
+                   required
+                   autocomplete="username"
+                   placeholder="Nhập tên đăng nhập...">
+
+        </div>
+
+
+        <!-- PASSWORD -->
+
+        <div class="form-group">
+
+            <label for="password">
+                Mật khẩu
+                <span class="required">*</span>
+            </label>
+
+            <input type="password"
+                   id="password"
+                   name="password"
+                   required
+                   autocomplete="current-password"
+                   placeholder="Nhập mật khẩu...">
+
+        </div>
+
+
+        <!-- LOGIN BUTTON -->
+
+        <button type="submit">
+            Đăng Nhập
+        </button>
+
+    </form>
+
+
+    <!-- ================================================= -->
+    <!-- LINKS -->
+    <!-- ================================================= -->
+
+    <div class="links">
+
+        <a href="/forgot-password">
+            Quên mật khẩu?
+        </a>
+
+        <span class="divider">|</span>
+
+        <a href="/register">
+            Đăng ký tài khoản
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>
