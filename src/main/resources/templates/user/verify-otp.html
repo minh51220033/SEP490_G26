@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Xác minh OTP</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 380px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        .email {
+            font-weight: bold;
+            color: #007bff;
+            margin: 15px 0;
+        }
+
+        .description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 22px;
+            letter-spacing: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px;
+            margin-top: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Xác Minh OTP</h2>
+
+    <p class="description">
+        Mã OTP đã được gửi đến email:
+    </p>
+
+    <div class="email"
+         th:text="${maskedEmail}">
+    </div>
+
+    <p class="description">
+        Mã OTP có hiệu lực trong 5 phút.
+    </p>
+
+    <div th:if="${error}"
+         class="alert-error"
+         th:text="${error}">
+    </div>
+
+    <form th:action="@{/verify-otp}"
+          method="POST">
+
+        <input type="text"
+               name="otp"
+               maxlength="6"
+               minlength="6"
+               pattern="[0-9]{6}"
+               inputmode="numeric"
+               required
+               autocomplete="one-time-code"
+               placeholder="000000">
+
+        <button type="submit">
+            Xác nhận OTP
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>
