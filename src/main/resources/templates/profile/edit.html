@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Chỉnh sửa thông tin</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .description {
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        input[readonly] {
+            background: #f3f4f6;
+        }
+
+        .error {
+            margin-top: 5px;
+            color: #dc2626;
+            font-size: 13px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button,
+        .back {
+            padding: 11px 18px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+        }
+
+        .back {
+            background: #eef2f7;
+            color: #374151;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>Chỉnh sửa thông tin cá nhân</h1>
+
+        <p class="description">
+            Bạn chỉ có thể chỉnh sửa thông tin cá nhân của chính mình.
+        </p>
+
+
+        <form th:action="@{/profile/edit}"
+              th:object="${profileUpdateDTO}"
+              method="post">
+
+
+            <!-- Username không cho đổi -->
+            <div class="form-group">
+
+                <label>Username</label>
+
+                <input type="text"
+                       th:value="${user.username}"
+                       readonly>
+
+            </div>
+
+
+            <!-- Họ tên -->
+            <div class="form-group">
+
+                <label>Họ và tên</label>
+
+                <input type="text"
+                       th:field="*{fullName}"
+                       pattern="^[\p{L}]+(?:\s[\p{L}]+)*$"
+                       title="Họ tên chỉ được chứa chữ cái và khoảng trắng."
+                       required>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('fullName')}"
+                     th:errors="*{fullName}">
+                </div>
+
+            </div>
+
+
+            <!-- Email -->
+            <div class="form-group">
+
+                <label>Email</label>
+
+                <input type="email"
+                       th:field="*{email}"
+                       required>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('email')}"
+                     th:errors="*{email}">
+                </div>
+
+            </div>
+
+
+            <!-- Phone -->
+            <div class="form-group">
+
+                <label>Số điện thoại</label>
+
+                <input type="tel"
+                       th:field="*{phoneNumber}"
+                       pattern="^(0|\+84)(3|5|7|8|9)[0-9]{8}$"
+                       title="Ví dụ: 0987654321 hoặc +84987654321"
+                       required>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('phoneNumber')}"
+                     th:errors="*{phoneNumber}">
+                </div>
+
+            </div>
+
+
+            <!-- DOB -->
+            <div class="form-group">
+
+                <label>Ngày sinh</label>
+
+                <input type="date"
+                       th:field="*{dob}">
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('dob')}"
+                     th:errors="*{dob}">
+                </div>
+
+            </div>
+
+
+            <!-- Gender -->
+            <div class="form-group">
+
+                <label>Giới tính</label>
+
+                <select th:field="*{gender}">
+
+                    <option value="">
+                        -- Chọn giới tính --
+                    </option>
+
+                    <option value="Nam">
+                        Nam
+                    </option>
+
+                    <option value="Nữ">
+                        Nữ
+                    </option>
+
+                    <option value="Khác">
+                        Khác
+                    </option>
+
+                </select>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('gender')}"
+                     th:errors="*{gender}">
+                </div>
+
+            </div>
+
+
+            <!-- Address -->
+            <div class="form-group">
+
+                <label>Địa chỉ</label>
+
+                <textarea th:field="*{address}"
+                          maxlength="255"
+                          rows="4">
+                </textarea>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('address')}"
+                     th:errors="*{address}">
+                </div>
+
+            </div>
+
+
+            <div class="actions">
+
+                <button type="submit">
+                    💾 Lưu thay đổi
+                </button>
+
+                <a href="/profile"
+                   class="back">
+                    Hủy
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>
