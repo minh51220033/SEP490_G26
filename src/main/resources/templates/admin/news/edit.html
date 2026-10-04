@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chỉnh sửa bài viết - CV-DCMS</title>
+
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .header {
+            height: 65px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .logo {
+            color: #2563eb;
+            font-weight: bold;
+            font-size: 21px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .page-header h1 {
+            margin-bottom: 5px;
+        }
+
+        .page-header p {
+            color: #6b7280;
+        }
+
+        .card {
+            margin-top: 20px;
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.06);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
+
+        .error {
+            margin-top: 6px;
+            color: #dc2626;
+            font-size: 13px;
+        }
+
+        .actions {
+            margin-top: 25px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 11px 18px;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #eef2f7;
+            color: #374151;
+        }
+
+        .upload-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .preview-img {
+            max-width: 200px;
+            max-height: 120px;
+            border-radius: 8px;
+            margin-top: 10px;
+            object-fit: cover;
+        }
+
+        .ck-editor__editable_inline {
+            min-height: 320px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">CV-DCMS</div>
+</header>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Chỉnh sửa bài viết</h1>
+        <p>Cập nhật nội dung tin tức</p>
+    </div>
+
+    <div class="card">
+        <form id="newsForm"
+              th:action="@{'/admin/news/' + ${newsUpdateDTO.newsId}}"
+              th:object="${newsUpdateDTO}"
+              method="post">
+
+            <input type="hidden" th:field="*{newsId}">
+
+            <!-- TITLE -->
+            <div class="form-group">
+                <label>Tiêu đề *</label>
+                <input type="text" th:field="*{title}" maxlength="200" required>
+                <div class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+            </div>
+
+            <!-- SUMMARY -->
+            <div class="form-group">
+                <label>Mô tả ngắn</label>
+                <textarea th:field="*{summary}" maxlength="500" rows="4"></textarea>
+                <div class="error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}"></div>
+            </div>
+
+            <!-- THUMBNAIL -->
+            <div class="form-group">
+                <label>Ảnh đại diện (Thumbnail)</label>
+                <div class="upload-box">
+                    <input type="text" id="thumbnail" th:field="*{thumbnail}" placeholder="URL ảnh đại diện...">
+                    <input type="file" id="thumbnailFile" accept="image/*" style="display: none;">
+                    <button type="button" id="uploadThumbnailButton" class="btn btn-secondary">📷 Chọn ảnh</button>
+                </div>
+                <div id="thumbnailPreview" th:style="${newsUpdateDTO.thumbnail != null and !#strings.isEmpty(newsUpdateDTO.thumbnail)} ? 'display:block' : 'display:none'">
+                    <img id="thumbnailPreviewImage" th:src="${newsUpdateDTO.thumbnail}" class="preview-img" alt="Preview">
+                </div>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="form-group">
+                <label>Nội dung *</label>
+                <div id="editor"></div>
+                <textarea id="content" name="content" hidden th:field="*{content}"></textarea>
+                <div class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></div>
+            </div>
+
+            <!-- STATUS -->
+            <div class="form-group">
+                <label>Trạng thái</label>
+                <select th:field="*{status}">
+                    <option value="DRAFT">Bản nháp</option>
+                    <option value="PUBLISHED">Đã đăng</option>
+                    <option value="ARCHIVED">Lưu trữ</option>
+                </select>
+            </div>
+
+            <div class="actions">
+                <a href="/admin/news" class="btn btn-secondary">← Quay lại</a>
+                <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.umd.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // 1. UPLOAD THUMBNAIL
+        const fileInput = document.getElementById('thumbnailFile');
+        const uploadBtn = document.getElementById('uploadThumbnailButton');
+        const urlInput = document.getElementById('thumbnail');
+        const previewDiv = document.getElementById('thumbnailPreview');
+        const previewImg = document.getElementById('thumbnailPreviewImage');
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                uploadBtn.textContent = "⏳ Đang tải lên...";
+                const formData = new FormData();
+                formData.append('upload', file);
+
+                fetch('/admin/news/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => { throw err; });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if(data.url) {
+                            urlInput.value = data.url;
+                            previewImg.src = data.url;
+                            previewDiv.style.display = 'block';
+                            uploadBtn.textContent = "✅ Tải ảnh thành công";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Lỗi:", error);
+                        let errorMsg = error?.error?.message || "Lỗi tải ảnh";
+                        alert(errorMsg);
+                        uploadBtn.textContent = "❌ Tải lại";
+                    });
+            }
+        });
+
+        // 2. CKEDITOR 5
+        if (typeof CKEDITOR === "undefined") return;
+
+        const {
+            ClassicEditor, Essentials, Paragraph, Heading, Bold, Italic,
+            Underline, Font, Link, List, Alignment, BlockQuote,
+            Image, ImageUpload, ImageToolbar, ImageCaption, ImageStyle, ImageResize,
+            SimpleUploadAdapter, Table, TableToolbar
+        } = CKEDITOR;
+
+        const contentTextarea = document.getElementById("content");
+        let editorInstance;
+
+        ClassicEditor
+            .create(document.querySelector("#editor"), {
+                licenseKey: "GPL",
+                plugins: [
+                    Essentials, Paragraph, Heading, Bold, Italic, Underline,
+                    Font, Link, List, Alignment, BlockQuote,
+                    Image, ImageUpload, ImageToolbar, ImageCaption, ImageStyle, ImageResize,
+                    SimpleUploadAdapter, Table, TableToolbar
+                ],
+                toolbar: [
+                    "undo", "redo", "|", "heading", "|", "bold", "italic", "underline", "|",
+                    "fontSize", "fontColor", "|", "alignment", "|",
+                    "bulletedList", "numberedList", "|",
+                    "link", "insertImage", "insertTable", "blockQuote"
+                ],
+                image: {
+                    toolbar: [
+                        'imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|',
+                        'toggleImageCaption', 'imageTextAlternative'
+                    ]
+                },
+                simpleUpload: {
+                    uploadUrl: '/admin/news/upload-image'
+                },
+                initialData: contentTextarea.value || ""
+            })
+            .then(editor => {
+                editorInstance = editor;
+                editor.model.document.on("change:data", () => {
+                    contentTextarea.value = editor.getData();
+                });
+            })
+            .catch(error => console.error("Lỗi CKEditor:", error));
+
+        document.getElementById("newsForm").addEventListener("submit", function () {
+            if (editorInstance) {
+                contentTextarea.value = editorInstance.getData();
+            }
+        });
+    });
+
+    tinymce.init({
+        selector: '#content', // ID của ô textarea nội dung bài viết
+        plugins: 'image link code media table',
+        toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | image link',
+
+        // 🎯 SỬA HOẶC THÊM DÒNG NÀY:
+        images_upload_url: '/admin/news/upload/image',
+
+        // Cấu hình gửi request đính kèm file (nếu có dùng custom handler)
+        images_upload_handler: function (blobInfo, progress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 🎯 ĐẢM BẢO URL Ở ĐÂY CŨNG LÀ /admin/news/upload/image
+                xhr.open('POST', '/admin/news/upload/image');
+
+                xhr.onload = () => {
+                    if (xhr.status < 200 || xhr.status >= 300) {
+                        reject('Lỗi HTTP: ' + xhr.status);
+                        return;
+                    }
+                    const json = JSON.parse(xhr.responseText);
+                    if (!json || typeof json.location !== 'string') {
+                        reject('Phản hồi JSON không hợp lệ: ' + xhr.responseText);
+                        return;
+                    }
+                    resolve(json.location);
+                };
+
+                xhr.onerror = () => {
+                    reject('Tải ảnh thất bại do lỗi kết nối mạng.');
+                };
+
+                const formData = new FormData();
+                formData.append('file', blobInfo.blob(), blobInfo.filename());
+                xhr.send(formData);
+            });
+        }
+    });
+</script>
+</body>
+</html>
