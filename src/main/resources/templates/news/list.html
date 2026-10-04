@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Tin tức - CV-DCMS</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: #f7f7f7;
+            color: #222;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #ddd;
+            padding: 20px 0;
+        }
+
+        .header-inner {
+            max-width: 1100px;
+            margin: auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1d4ed8;
+        }
+
+        .home-link {
+            font-family: Arial, sans-serif;
+            text-decoration: none;
+            color: #374151;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 35px auto;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title h1 {
+            font-size: 38px;
+            margin-bottom: 8px;
+        }
+
+        .page-title p {
+            color: #777;
+        }
+
+        .search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+        }
+
+        .search input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+        }
+
+        .search button {
+            padding: 12px 20px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0,0,0,.06);
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .thumbnail-placeholder {
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e5e7eb;
+            color: #777;
+            font-family: Arial, sans-serif;
+        }
+
+        .news-body {
+            padding: 22px;
+        }
+
+        .news-title {
+            font-size: 25px;
+            line-height: 1.3;
+            margin: 0 0 10px;
+        }
+
+        .news-title a {
+            color: #222;
+            text-decoration: none;
+        }
+
+        .news-title a:hover {
+            color: #2563eb;
+        }
+
+        .meta {
+            color: #888;
+            font-size: 13px;
+            font-family: Arial, sans-serif;
+            margin-bottom: 12px;
+        }
+
+        .summary {
+            color: #555;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .read-more {
+            display: inline-block;
+            margin-top: 15px;
+            color: #2563eb;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+            font-weight: 600;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 60px;
+        }
+
+        .pagination {
+            margin-top: 35px;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            font-family: Arial, sans-serif;
+        }
+
+        .page-link {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            text-decoration: none;
+        }
+
+        .page-link.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        @media (max-width: 800px) {
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <div class="header-inner">
+
+        <div class="logo">
+            CV-DCMS
+        </div>
+
+        <a href="/home"
+           class="home-link">
+            ← Trang chủ
+        </a>
+
+    </div>
+
+</header>
+
+
+<div class="container">
+
+    <div class="page-title">
+
+        <h1>Tin tức</h1>
+
+        <p>
+            Thông tin và kiến thức nha khoa
+        </p>
+
+    </div>
+
+
+    <!-- SEARCH -->
+
+    <form action="/news"
+          method="get"
+          class="search">
+
+        <input type="text"
+               name="keyword"
+               th:value="${keyword}"
+               placeholder="Tìm kiếm tin tức...">
+
+        <button type="submit">
+            Tìm kiếm
+        </button>
+
+    </form>
+
+
+    <!-- NEWS -->
+
+    <div class="news-grid">
+
+        <article class="news-card"
+                 th:each="news : ${newsPage.content}">
+
+            <a th:href="@{'/news/' + ${news.slug}}">
+
+                <img th:if="${news.thumbnail != null
+                              and !#strings.isEmpty(news.thumbnail)}"
+                     th:src="@{${news.thumbnail}}"
+                     th:alt="${news.title}"
+                     class="thumbnail">
+
+                <div th:if="${news.thumbnail == null
+                              or #strings.isEmpty(news.thumbnail)}"
+                     class="thumbnail-placeholder">
+                    Không có ảnh
+                </div>
+
+            </a>
+
+
+            <div class="news-body">
+
+                <h2 class="news-title">
+
+                    <a th:href="@{'/news/' + ${news.slug}}"
+                       th:text="${news.title}">
+                        Tiêu đề
+                    </a>
+
+                </h2>
+
+
+                <div class="meta">
+
+                    <span th:if="${news.publishedAt != null}"
+                          th:text="${#temporals.format(
+                                news.publishedAt,
+                                'dd/MM/yyyy HH:mm'
+                          )}">
+                        03/10/2026
+                    </span>
+
+                </div>
+
+
+                <div class="summary"
+                     th:text="${news.summary}">
+                    Mô tả bài viết...
+                </div>
+
+
+                <a th:href="@{'/news/' + ${news.slug}}"
+                   class="read-more">
+                    Đọc tiếp →
+                </a>
+
+            </div>
+
+        </article>
+
+
+        <div th:if="${newsPage.content.isEmpty()}"
+             class="empty">
+
+            Không tìm thấy bài viết phù hợp.
+
+        </div>
+
+    </div>
+
+
+    <!-- PAGINATION -->
+
+    <div class="pagination"
+         th:if="${newsPage.totalPages > 1}">
+
+        <a th:if="${newsPage.number > 0}"
+           th:href="@{/news(
+                keyword=${keyword},
+                size=${newsPage.size},
+                page=${newsPage.number - 1}
+           )}"
+           class="page-link">
+            ‹
+        </a>
+
+
+        <a th:each="pageNumber :
+                ${#numbers.sequence(0, newsPage.totalPages - 1)}"
+           th:href="@{/news(
+                keyword=${keyword},
+                size=${newsPage.size},
+                page=${pageNumber}
+           )}"
+           th:text="${pageNumber + 1}"
+           th:classappend="${pageNumber == newsPage.number}
+                ? ' active'"
+           class="page-link">
+            1
+        </a>
+
+
+        <a th:if="${newsPage.number < newsPage.totalPages - 1}"
+           th:href="@{/news(
+                keyword=${keyword},
+                size=${newsPage.size},
+                page=${newsPage.number + 1}
+           )}"
+           class="page-link">
+            ›
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>
