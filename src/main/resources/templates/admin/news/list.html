@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý tin tức - CV-DCMS</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .header {
+            height: 65px;
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 0 30px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .logo {
+            color: #2563eb;
+            font-weight: bold;
+            font-size: 21px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .top h1 {
+            margin: 0;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .btn-danger {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .btn-secondary {
+            background: #eef2f7;
+            color: #374151;
+        }
+
+        .filter-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 10px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0,0,0,.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 13px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+            font-size: 13px;
+        }
+
+        td {
+            font-size: 14px;
+        }
+
+        .status {
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .draft { background: #fef3c7; color: #92400e; }
+        .published { background: #dcfce7; color: #166534; }
+        .archived { background: #e5e7eb; color: #374151; }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .empty {
+            padding: 40px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            padding: 20px;
+        }
+
+        .page-link {
+            padding: 8px 12px;
+            background: #eef2f7;
+            color: #374151;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .page-link.active {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">CV-DCMS</div>
+</header>
+
+<div class="container">
+    <div class="top">
+        <div>
+            <h1>Quản lý tin tức</h1>
+        </div>
+        <a href="/admin/news/create" class="btn btn-primary">+ Tạo bài viết</a>
+    </div>
+
+    <!-- FILTER -->
+    <div class="filter-card">
+        <form action="/admin/news" method="get">
+            <div class="filters">
+                <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tiêu đề...">
+
+                <select name="status">
+                    <option value="" th:selected="${status == null || status == ''}">Tất cả trạng thái</option>
+                    <option value="DRAFT" th:selected="${status == 'DRAFT'}">Nháp</option>
+                    <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">Đã đăng</option>
+                    <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">Lưu trữ</option>
+                </select>
+
+                <select name="sort">
+                    <option value="createdAt" th:selected="${sort == 'createdAt'}">Ngày tạo</option>
+                    <option value="title" th:selected="${sort == 'title'}">Tiêu đề</option>
+                    <option value="publishedAt" th:selected="${sort == 'publishedAt'}">Ngày đăng</option>
+                </select>
+
+                <select name="direction">
+                    <option value="desc" th:selected="${direction == 'desc'}">Giảm dần</option>
+                    <option value="asc" th:selected="${direction == 'asc'}">Tăng dần</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">Tìm</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tiêu đề</th>
+                <th>Trạng thái</th>
+                <th>Người tạo</th>
+                <th>Ngày tạo</th>
+                <th>Ngày đăng</th>
+                <th>Thao tác</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="news : ${newsPage.content}">
+                <td th:text="${news.newsId}">1</td>
+                <td><strong th:text="${news.title}">Tiêu đề</strong></td>
+                <td>
+                    <span th:if="${news.status == 'DRAFT'}" class="status draft">DRAFT</span>
+                    <span th:if="${news.status == 'PUBLISHED'}" class="status published">PUBLISHED</span>
+                    <span th:if="${news.status == 'ARCHIVED'}" class="status archived">ARCHIVED</span>
+                </td>
+                <td th:text="${news.createdBy.username}">admin</td>
+                <td th:text="${news.createdAt != null ? #temporals.format(news.createdAt,'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                <td th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt,'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                <td>
+                    <div class="actions">
+                        <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}" class="btn btn-edit">Sửa</a>
+
+                        <!-- Admin detail preview link -->
+                        <a th:href="@{'/admin/news/' + ${news.newsId}}" target="_blank" class="btn btn-secondary">Xem</a>
+
+                        <!-- Permanent Delete form button -->
+                        <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}"
+                              method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này không?');">
+                            <button type="submit" class="btn btn-danger">Xóa</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+
+            <tr th:if="${newsPage.content.isEmpty()}">
+                <td colspan="7" class="empty">Không tìm thấy bài viết.</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- PAGINATION -->
+        <div class="pagination" th:if="${newsPage.totalPages > 1}">
+            <a th:if="${newsPage.number > 0}"
+               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${newsPage.number - 1})}"
+               class="page-link">‹</a>
+
+            <a th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
+               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${pageNumber})}"
+               th:text="${pageNumber + 1}"
+               th:classappend="${pageNumber == newsPage.number} ? ' active'"
+               class="page-link">1</a>
+
+            <a th:if="${newsPage.number < newsPage.totalPages - 1}"
+               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${pageNumber + 1})}"
+               class="page-link">›</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
