@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý tài khoản bị Cấm (Ban)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+        .search-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-form input, .search-form select { padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-success { background: #16a34a; color: white; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .table th { background: #f8fafc; font-weight: 600; color: #475569; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .badge-secondary { background: #f1f5f9; color: #64748b; }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>🚫 Danh sách tài khoản bị Cấm (Ban)</h2>
+        <div>
+            <a href="/admin/news" class="btn btn-primary">← Quản lý Tin tức</a>
+        </div>
+    </div>
+
+    <!-- Thông báo Flash Session khi gỡ ban thành công -->
+    <div class="alert-success" th:if="${session.banSuccess}" th:text="${session.banSuccess}"></div>
+
+    <form action="/admin/bans" method="get" class="search-form">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo Username hoặc Email...">
+        <select name="activeOnly">
+            <option value="" th:selected="${activeOnly == null}">Tất cả trạng thái</option>
+            <option value="true" th:selected="${activeOnly == true}">Đang bị Cấm</option>
+            <option value="false" th:selected="${activeOnly == false}">Đã được Gỡ Cấm</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Lọc</button>
+    </form>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>STT</th>
+            <th>Tài khoản</th>
+            <th>Lý do Cấm</th>
+            <th>Ngày Cấm</th>
+            <th>Hết hạn</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="ban, iterStat : ${banPage.content}">
+            <td th:text="${iterStat.index + 1}">1</td>
+            <td>
+                <strong th:text="${ban.user.username}">User</strong><br>
+                <small style="color: #64748b;" th:text="${ban.user.email}">user@gmail.com</small>
+            </td>
+            <td th:text="${ban.reason != null ? ban.reason : 'Không có lý do'}">Lý do</td>
+            <td th:text="${#temporals.format(ban.bannedAt, 'dd/MM/yyyy HH:mm')}">04/10/2026</td>
+            <td th:text="${ban.expiresAt != null ? #temporals.format(ban.expiresAt, 'dd/MM/yyyy') : 'Vĩnh viễn'}">Vĩnh viễn</td>
+            <td>
+                <span th:if="${ban.active}" class="badge badge-danger">ĐANG BỊ CẤM</span>
+                <span th:if="${!ban.active}" class="badge badge-secondary">ĐÃ GỠ CẤM</span>
+            </td>
+            <td>
+                <!-- NÚT GỠ CẤM (UNBAN) -->
+                <form th:if="${ban.active}" th:action="@{'/admin/bans/' + ${ban.banId} + '/unban'}" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn GỠ CẤM cho tài khoản này?');">
+                    <button type="submit" class="btn btn-success">🔓 Gỡ Cấm</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${banPage.content.size() == 0}">
+            <td colspan="7" style="text-align: center; color: #64748b; padding: 25px;">Chưa có tài khoản nào bị cấm.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
