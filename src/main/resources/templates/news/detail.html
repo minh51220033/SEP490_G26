@@ -54,191 +54,428 @@
     </style>
 </head>
 
+
 <body>
 
 <header class="header">
     <div class="header-inner">
         <a href="/" class="logo">CV-DCMS</a>
-        <a href="/admin/news" style="text-decoration: none; color: #2563eb; font-weight: bold;"
-           th:if="${session.loggedInUser != null and session.loggedInUser.role != null and session.loggedInUser.role.roleName == 'ADMIN'}">← Quản lý tin tức</a>
+
+        <!-- Chỉ Admin mới thấy liên kết quản lý tin tức -->
+        <a href="/admin/news"
+           style="text-decoration: none; color: #2563eb; font-weight: bold;"
+           th:if="${session.loggedInUser != null
+                   and session.loggedInUser.roles != null
+                   and session.loggedInUser.roles.?[roleName == 'ADMIN'].size() > 0}">
+            ← Quản lý tin tức
+        </a>
     </div>
 </header>
 
 <div class="container">
 
+    <!-- ==================== CHI TIẾT TIN TỨC ==================== -->
     <article class="article">
-        <h1 class="article-title" th:text="${news.title}">Tiêu đề bài viết</h1>
+
+        <h1 class="article-title" th:text="${news.title}">
+            Tiêu đề bài viết
+        </h1>
 
         <div class="meta">
             <span>Đăng ngày: </span>
-            <span th:if="${news.publishedAt != null}" th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</span>
+
+            <span th:if="${news.publishedAt != null}"
+                  th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">
+                03/10/2026
+            </span>
+
             <span> · Tác giả: </span>
-            <strong th:text="${news.createdBy != null ? (news.createdBy.fullName != null ? news.createdBy.fullName : news.createdBy.username) : 'Admin'}">Admin</strong>
+
+            <!-- User không có fullName, chỉ dùng username -->
+            <strong th:text="${news.createdBy != null
+                              ? news.createdBy.username
+                              : 'Admin'}">
+                Admin
+            </strong>
         </div>
 
         <img th:if="${news.thumbnail != null and !#strings.isEmpty(news.thumbnail)}"
-             th:src="@{${news.thumbnail}}" th:alt="${news.title}" class="article-thumbnail">
+             th:src="@{${news.thumbnail}}"
+             th:alt="${news.title}"
+             class="article-thumbnail">
 
         <div class="article-content" th:utext="${news.content}"></div>
+
     </article>
 
-    <!-- BÌNH LUẬN -->
+
+
+    <!-- ==================== BÌNH LUẬN ==================== -->
     <section class="comments">
+
         <h2>Bình luận</h2>
 
-        <!-- THÔNG BÁO FLASH MESSAGE -->
-        <div class="alert-error" th:if="${commentError}" th:text="${commentError}"></div>
-        <div class="alert-success" th:if="${commentSuccess}" th:text="${commentSuccess}"></div>
+        <!-- Thông báo -->
+        <div class="alert-error"
+             th:if="${commentError != null}"
+             th:text="${commentError}">
+        </div>
 
-        <!-- THÔNG BÁO DÀNH CHO TÀI KHOẢN BỊ BAN -->
+        <div class="alert-success"
+             th:if="${commentSuccess != null}"
+             th:text="${commentSuccess}">
+        </div>
+
+        <!-- Thông báo tài khoản bị cấm bình luận -->
         <div class="alert-ban" th:if="${isBanned}">
-            🚫 <span th:text="${banMessage}">Tài khoản của bạn hiện đang bị cấm bình luận.</span>
+            🚫
+            <span th:text="${banMessage}">
+            Tài khoản của bạn hiện đang bị cấm bình luận.
+        </span>
         </div>
 
-        <!-- FORM TẠO BÌNH LUẬN (CHỈ HIỆN KHI ĐÃ ĐĂNG NHẬP VÀ KHÔNG BỊ BAN) -->
+        <!-- Form đăng bình luận: yêu cầu đăng nhập và không bị cấm -->
         <div th:if="${session.loggedInUser != null and !isBanned}">
-            <form th:action="@{'/news/' + ${news.newsId} + '/comments'}" method="post" class="comment-form">
-                <textarea name="content" rows="3" maxlength="2000" placeholder="Viết bình luận của bạn..." required></textarea>
-                <button type="submit" class="btn btn-primary">Đăng bình luận</button>
+
+            <form th:action="@{/news/{id}/comments(id=${news.newsId})}"
+                  method="post"
+                  class="comment-form">
+
+            <textarea name="content"
+                      rows="3"
+                      maxlength="2000"
+                      placeholder="Viết bình luận của bạn..."
+                      required></textarea>
+
+                <button type="submit" class="btn btn-primary">
+                    Đăng bình luận
+                </button>
             </form>
+
         </div>
 
-        <div th:if="${session.loggedInUser == null}" style="padding: 15px; background: #f3f4f6; border-radius: 8px;">
-            Vui lòng <a href="/login" style="color: #2563eb;">đăng nhập</a> để bình luận.
+        <!-- Chưa đăng nhập -->
+        <div th:if="${session.loggedInUser == null}"
+             style="padding: 15px; background: #f3f4f6; border-radius: 8px;">
+            Vui lòng
+            <a th:href="@{/login}" style="color: #2563eb;">đăng nhập</a>
+            để bình luận.
         </div>
 
-        <!-- DANH SÁCH BÌNH LUẬN -->
+        <!-- ==================== DANH SÁCH BÌNH LUẬN ==================== -->
         <div class="comment" th:each="comment : ${comments}">
+
             <div class="comment-header">
-                <img th:if="${comment.user.avatar != null and !#strings.isEmpty(comment.user.avatar)}"
-                     th:src="@{${comment.user.avatar}}" class="avatar" alt="Avatar">
 
+                <!-- Tên người bình luận -->
                 <div>
-                    <div class="comment-user" th:text="${comment.user.fullName != null ? comment.user.fullName : comment.user.username}">Người dùng</div>
-                    <div class="comment-date" th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</div>
-                </div>
-
-                <!-- ADMIN ACTION BUTTONS -->
-                <div th:if="${session.loggedInUser != null and session.loggedInUser.role != null and session.loggedInUser.role.roleName == 'ADMIN'}" class="admin-controls">
-                    <form th:action="@{'/admin/comments/' + ${comment.commentId} + '/delete'}" method="post" style="display:inline;" onsubmit="return confirm('Xóa bình luận này?');">
-                        <button type="submit" class="btn-admin-del">🗑️ Xóa</button>
-                    </form>
-
-                    <form th:if="${comment.user.userId != session.loggedInUser.userId and (comment.user.role == null or comment.user.role.roleName != 'ADMIN')}"
-                          th:action="@{'/admin/comments/' + ${comment.commentId} + '/ban'}" method="post" style="display:inline;" onsubmit="return confirm('Cấm (Ban) người dùng này?');">
-                        <input type="hidden" name="reason" value="Vi phạm quy định bình luận">
-                        <button type="submit" class="btn-admin-ban">🚫 Ban User</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- NỘI DUNG BÌNH LUẬN -->
-            <div class="comment-content" th:id="'comment-text-' + ${comment.commentId}" th:text="${comment.content}">Nội dung bình luận</div>
-
-            <!-- FORM CHỈNH SỬA BÌNH LUẬN -->
-            <div class="edit-form" th:id="'edit-form-' + ${comment.commentId}">
-                <form th:action="@{'/comments/' + ${comment.commentId} + '/edit'}" method="post">
-                    <textarea name="content" rows="3" required th:text="${comment.content}"></textarea>
-                    <button type="submit" class="btn btn-primary">Lưu chỉnh sửa</button>
-                    <button type="button" class="btn btn-secondary" th:onclick="'toggleEdit(' + ${comment.commentId} + ')'">Hủy</button>
-                </form>
-            </div>
-
-            <div class="comment-actions">
-                <!-- NÚT LIKE -->
-                <form th:action="@{'/comments/' + ${comment.commentId} + '/like'}" method="post" style="display:inline;">
-                    <button type="submit" class="action-btn">
-                        ❤️ <span th:text="${likeCounts[comment.commentId] != null ? likeCounts[comment.commentId] : 0}">0</span>
-                    </button>
-                </form>
-
-                <!-- NÚT REPLY (ẨN NẾU BỊ BAN) -->
-                <button th:if="${!isBanned}" type="button" class="action-btn" th:onclick="'toggleReply(' + ${comment.commentId} + ')'">↩ Trả lời</button>
-
-                <!-- NÚT SỬA & XÓA CỦA CHÍNH TÁC GIẢ BÌNH LUẬN (CHỈ HIỆN KHI KHÔNG BỊ BAN) -->
-                <th:block th:if="${session.loggedInUser != null and session.loggedInUser.userId == comment.user.userId and !isBanned}">
-                    <button type="button" class="action-btn" th:onclick="'toggleEdit(' + ${comment.commentId} + ')'">✏️ Sửa</button>
-
-                    <form th:action="@{'/comments/' + ${comment.commentId} + '/delete'}" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa bình luận này?');">
-                        <button type="submit" class="action-btn action-btn-danger">🗑️ Xóa</button>
-                    </form>
-                </th:block>
-            </div>
-
-            <!-- FORM TRẢ LỜI (REPLY) -->
-            <div class="reply-form" th:id="'reply-form-' + ${comment.commentId}" th:if="${!isBanned}">
-                <form th:action="@{'/comments/' + ${comment.commentId} + '/reply'}" method="post">
-                    <textarea name="content" rows="2" maxlength="2000" placeholder="Viết phản hồi..." required></textarea>
-                    <button type="submit" class="btn btn-primary">Gửi phản hồi</button>
-                </form>
-            </div>
-
-            <!-- DANH SÁCH REPLIES -->
-            <div class="reply" th:each="reply : ${repliesByComment[comment.commentId]}">
-                <div class="comment-header">
-                    <img th:if="${reply.user.avatar != null and !#strings.isEmpty(reply.user.avatar)}"
-                         th:src="@{${reply.user.avatar}}" class="avatar" alt="Avatar">
-
-                    <div>
-                        <div class="comment-user" th:text="${reply.user.fullName != null ? reply.user.fullName : reply.user.username}">User</div>
-                        <div class="comment-date" th:text="${#temporals.format(reply.createdAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</div>
+                    <div class="comment-user"
+                         th:text="${comment.user != null
+                               ? comment.user.username
+                               : 'Người dùng'}">
+                        Người dùng
                     </div>
 
-                    <div th:if="${session.loggedInUser != null and session.loggedInUser.role != null and session.loggedInUser.role.roleName == 'ADMIN'}" class="admin-controls">
-                        <form th:action="@{'/admin/comments/' + ${reply.commentId} + '/delete'}" method="post" style="display:inline;" onsubmit="return confirm('Xóa phản hồi này?');">
-                            <button type="submit" class="btn-admin-del">🗑️ Xóa</button>
-                        </form>
+                    <div class="comment-date"
+                         th:if="${comment.createdAt != null}"
+                         th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}">
+                        03/10/2026
                     </div>
                 </div>
 
-                <div class="comment-content" th:id="'comment-text-' + ${reply.commentId}" th:text="${reply.content}">Reply</div>
+                <!-- Các thao tác dành cho Admin -->
+                <div class="admin-controls"
+                     th:if="${session.loggedInUser != null
+                         and session.loggedInUser.roles != null
+                         and session.loggedInUser.roles.?[roleName == 'ADMIN'].size() > 0}">
 
-                <!-- FORM CHỈNH SỬA REPLY -->
-                <div class="edit-form" th:id="'edit-form-' + ${reply.commentId}">
-                    <form th:action="@{'/comments/' + ${reply.commentId} + '/edit'}" method="post">
-                        <textarea name="content" rows="2" required th:text="${reply.content}"></textarea>
-                        <button type="submit" class="btn btn-primary">Lưu chỉnh sửa</button>
-                        <button type="button" class="btn btn-secondary" th:onclick="'toggleEdit(' + ${reply.commentId} + ')'">Hủy</button>
-                    </form>
-                </div>
+                    <!-- Admin xóa bình luận -->
+                    <form th:action="@{/admin/comments/{id}/delete(id=${comment.commentId})}"
+                          method="post"
+                          style="display: inline;"
+                          onsubmit="return confirm('Xóa bình luận này?');">
 
-                <div class="comment-actions">
-                    <form th:action="@{'/comments/' + ${reply.commentId} + '/like'}" method="post" style="display:inline;">
-                        <button type="submit" class="action-btn">
-                            ❤️ <span th:text="${likeCounts[reply.commentId] != null ? likeCounts[reply.commentId] : 0}">0</span>
+                        <button type="submit" class="btn-admin-del">
+                            🗑️ Xóa
                         </button>
                     </form>
 
-                    <th:block th:if="${session.loggedInUser != null and session.loggedInUser.userId == reply.user.userId and !isBanned}">
-                        <button type="button" class="action-btn" th:onclick="'toggleEdit(' + ${reply.commentId} + ')'">✏️ Sửa</button>
+                    <!-- Chỉ cho phép ban người dùng không phải Admin và không phải chính mình -->
+                    <form th:if="${comment.user != null
+                              and comment.user.userId != session.loggedInUser.userId
+                              and comment.user.roles != null
+                              and comment.user.roles.?[roleName == 'ADMIN'].size() == 0}"
+                          th:action="@{/admin/comments/{id}/ban(id=${comment.commentId})}"
+                          method="post"
+                          style="display: inline;"
+                          onsubmit="return confirm('Cấm (Ban) người dùng này?');">
 
-                        <form th:action="@{'/comments/' + ${reply.commentId} + '/delete'}" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa phản hồi này?');">
-                            <button type="submit" class="action-btn action-btn-danger">🗑️ Xóa</button>
-                        </form>
-                    </th:block>
+                        <input type="hidden"
+                               name="reason"
+                               value="Vi phạm quy định bình luận">
+
+                        <button type="submit" class="btn-admin-ban">
+                            🚫 Ban User
+                        </button>
+                    </form>
+
                 </div>
             </div>
+
+            <!-- Nội dung bình luận -->
+            <div class="comment-content"
+                 th:id="|comment-text-${comment.commentId}|"
+                 th:text="${comment.content}">
+                Nội dung bình luận
+            </div>
+
+            <!-- Form sửa bình luận -->
+            <div class="edit-form"
+                 th:id="|edit-form-${comment.commentId}|">
+
+                <form th:action="@{/comments/{id}/edit(id=${comment.commentId})}"
+                      method="post">
+
+                <textarea name="content"
+                          rows="3"
+                          maxlength="2000"
+                          required
+                          th:text="${comment.content}"></textarea>
+
+                    <button type="submit" class="btn btn-primary">
+                        Lưu chỉnh sửa
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            th:onclick="|toggleEdit(${comment.commentId})|">
+                        Hủy
+                    </button>
+                </form>
+            </div>
+
+            <!-- Các thao tác của bình luận -->
+            <div class="comment-actions">
+
+                <!-- Thích bình luận -->
+                <form th:action="@{/comments/{id}/like(id=${comment.commentId})}"
+                      method="post"
+                      style="display: inline;">
+
+                    <button type="submit" class="action-btn">
+                        ❤️
+                        <span th:text="${likeCounts != null and likeCounts[comment.commentId] != null
+                                    ? likeCounts[comment.commentId]
+                                    : 0}">
+                        0
+                    </span>
+                    </button>
+                </form>
+
+                <!-- Trả lời -->
+                <button th:if="${session.loggedInUser != null and !isBanned}"
+                        type="button"
+                        class="action-btn"
+                        th:onclick="|toggleReply(${comment.commentId})|">
+                    ↩ Trả lời
+                </button>
+
+                <!-- Sửa và xóa bình luận của chính mình -->
+                <th:block th:if="${session.loggedInUser != null
+                              and comment.user != null
+                              and session.loggedInUser.userId == comment.user.userId
+                              and !isBanned}">
+
+                    <button type="button"
+                            class="action-btn"
+                            th:onclick="|toggleEdit(${comment.commentId})|">
+                        ✏️ Sửa
+                    </button>
+
+                    <form th:action="@{/comments/{id}/delete(id=${comment.commentId})}"
+                          method="post"
+                          style="display: inline;"
+                          onsubmit="return confirm('Bạn có chắc muốn xóa bình luận này?');">
+
+                        <button type="submit"
+                                class="action-btn action-btn-danger">
+                            🗑️ Xóa
+                        </button>
+                    </form>
+
+                </th:block>
+            </div>
+
+            <!-- Form trả lời -->
+            <div class="reply-form"
+                 th:id="|reply-form-${comment.commentId}|"
+                 th:if="${session.loggedInUser != null and !isBanned}">
+
+                <form th:action="@{/comments/{id}/reply(id=${comment.commentId})}"
+                      method="post">
+
+                <textarea name="content"
+                          rows="2"
+                          maxlength="2000"
+                          placeholder="Viết phản hồi..."
+                          required></textarea>
+
+                    <button type="submit" class="btn btn-primary">
+                        Gửi phản hồi
+                    </button>
+                </form>
+            </div>
+
+            <!-- ==================== DANH SÁCH PHẢN HỒI ==================== -->
+            <div class="reply"
+                 th:each="reply : ${repliesByComment[comment.commentId]}">
+
+                <div class="comment-header">
+
+                    <!-- Tên người phản hồi -->
+                    <div>
+                        <div class="comment-user"
+                             th:text="${reply.user != null
+                                   ? reply.user.username
+                                   : 'Người dùng'}">
+                            Người dùng
+                        </div>
+
+                        <div class="comment-date"
+                             th:if="${reply.createdAt != null}"
+                             th:text="${#temporals.format(reply.createdAt, 'dd/MM/yyyy HH:mm')}">
+                            03/10/2026
+                        </div>
+                    </div>
+
+                    <!-- Admin xóa phản hồi -->
+                    <div class="admin-controls"
+                         th:if="${session.loggedInUser != null
+                             and session.loggedInUser.roles != null
+                             and session.loggedInUser.roles.?[roleName == 'ADMIN'].size() > 0}">
+
+                        <form th:action="@{/admin/comments/{id}/delete(id=${reply.commentId})}"
+                              method="post"
+                              style="display: inline;"
+                              onsubmit="return confirm('Xóa phản hồi này?');">
+
+                            <button type="submit" class="btn-admin-del">
+                                🗑️ Xóa
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                <!-- Nội dung phản hồi -->
+                <div class="comment-content"
+                     th:id="|comment-text-${reply.commentId}|"
+                     th:text="${reply.content}">
+                    Nội dung phản hồi
+                </div>
+
+                <!-- Form sửa phản hồi -->
+                <div class="edit-form"
+                     th:id="|edit-form-${reply.commentId}|">
+
+                    <form th:action="@{/comments/{id}/edit(id=${reply.commentId})}"
+                          method="post">
+
+                    <textarea name="content"
+                              rows="2"
+                              maxlength="2000"
+                              required
+                              th:text="${reply.content}"></textarea>
+
+                        <button type="submit" class="btn btn-primary">
+                            Lưu chỉnh sửa
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                th:onclick="|toggleEdit(${reply.commentId})|">
+                            Hủy
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Thao tác phản hồi -->
+                <div class="comment-actions">
+
+                    <!-- Thích phản hồi -->
+                    <form th:action="@{/comments/{id}/like(id=${reply.commentId})}"
+                          method="post"
+                          style="display: inline;">
+
+                        <button type="submit" class="action-btn">
+                            ❤️
+                            <span th:text="${likeCounts != null and likeCounts[reply.commentId] != null
+                                        ? likeCounts[reply.commentId]
+                                        : 0}">
+                            0
+                        </span>
+                        </button>
+                    </form>
+
+                    <!-- Sửa và xóa phản hồi của chính mình -->
+                    <th:block th:if="${session.loggedInUser != null
+                                  and reply.user != null
+                                  and session.loggedInUser.userId == reply.user.userId
+                                  and !isBanned}">
+
+                        <button type="button"
+                                class="action-btn"
+                                th:onclick="|toggleEdit(${reply.commentId})|">
+                            ✏️ Sửa
+                        </button>
+
+                        <form th:action="@{/comments/{id}/delete(id=${reply.commentId})}"
+                              method="post"
+                              style="display: inline;"
+                              onsubmit="return confirm('Bạn có chắc muốn xóa phản hồi này?');">
+
+                            <button type="submit"
+                                    class="action-btn action-btn-danger">
+                                🗑️ Xóa
+                            </button>
+                        </form>
+
+                    </th:block>
+                </div>
+
+            </div>
+            <!-- Hết danh sách phản hồi -->
+
         </div>
+        <!-- Hết danh sách bình luận -->
+
     </section>
 
-</div>
+    <script>
+        function toggleReply(commentId) {
+            const element = document.getElementById("reply-form-" + commentId);
 
-<script>
-    function toggleReply(commentId) {
-        const element = document.getElementById("reply-form-" + commentId);
-        if (element) element.classList.toggle("show");
-    }
-
-    function toggleEdit(commentId) {
-        const textElement = document.getElementById("comment-text-" + commentId);
-        const formElement = document.getElementById("edit-form-" + commentId);
-        if (formElement) {
-            formElement.classList.toggle("show");
-            if (textElement) {
-                textElement.style.display = formElement.classList.contains("show") ? "none" : "block";
+            if (element) {
+                element.classList.toggle("show");
             }
         }
-    }
-</script>
+
+        function toggleEdit(commentId) {
+            const textElement = document.getElementById("comment-text-" + commentId);
+            const formElement = document.getElementById("edit-form-" + commentId);
+
+            if (formElement) {
+                formElement.classList.toggle("show");
+
+                if (textElement) {
+                    textElement.style.display =
+                        formElement.classList.contains("show") ? "none" : "block";
+                }
+            }
+        }
+    </script>
+
+</div>
 </body>
+
 </html>

@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thay đổi cơ sở nha khoa</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 30px 16px;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 24px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .current-branch {
+            padding: 14px;
+            margin: 16px 0;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+
+        .error {
+            color: #b91c1c;
+            margin-bottom: 12px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .actions button,
+        .actions a {
+            padding: 11px 14px;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .save {
+            background: #2563eb;
+            color: white;
+        }
+
+        .cancel {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h2>Thay đổi cơ sở nha khoa</h2>
+
+    <p>
+        Cơ sở được chọn sẽ áp dụng cho tài khoản và
+        tất cả hồ sơ bệnh nhân thuộc tài khoản này.
+    </p>
+
+    <div class="current-branch">
+        <strong>Cơ sở hiện tại:</strong>
+        <span th:text="${currentBranch != null
+                ? currentBranch.branchName
+                : 'Chưa thiết lập cơ sở'}">
+            Chưa thiết lập cơ sở
+        </span>
+    </div>
+
+    <p class="error"
+       th:if="${error}"
+       th:text="${error}">
+    </p>
+
+    <form th:action="@{/profile/change-branch}" method="post">
+        <label for="branchId">Chọn cơ sở mới</label>
+
+        <select id="branchId" name="branchId" required>
+            <option value="">-- Chọn cơ sở --</option>
+
+            <option th:each="branch : ${branches}"
+                    th:value="${branch.branchId}"
+                    th:text="${branch.branchName}"
+                    th:selected="${currentBranch != null
+                        and currentBranch.branchId == branch.branchId}">
+            </option>
+        </select>
+
+        <!-- Nếu dự án dùng Spring Security CSRF,
+             hãy giữ cơ chế CSRF đang được cấu hình. -->
+
+        <div class="actions">
+            <button type="submit" class="save">
+                Lưu thay đổi
+            </button>
+
+            <a th:href="@{/profile}" class="cancel">
+                Quay lại
+            </a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

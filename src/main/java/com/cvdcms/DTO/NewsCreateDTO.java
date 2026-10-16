@@ -1,6 +1,7 @@
 package com.cvdcms.DTO;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,4 +34,10 @@ public class NewsCreateDTO {
 
 
     private String status;
+
+
+    @NotNull(message = "Vui lòng chọn chi nhánh.")
+    private Long branchId;
+
+
 }

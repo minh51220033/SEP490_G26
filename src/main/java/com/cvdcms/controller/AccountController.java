@@ -18,6 +18,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Objects;
+import java.util.Set;
+
+import org.springframework.web.bind.annotation.*;
+
 @Controller
 @RequestMapping("/accounts")
 public class AccountController {
@@ -68,25 +76,37 @@ public class AccountController {
             Model model
     ) {
 
-        User loggedInUser =
-                (User) session.getAttribute("loggedInUser");
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
 
+// Chưa đăng nhập thì chuyển về trang đăng nhập.
         if (loggedInUser == null) {
             return "redirect:/login";
         }
 
-        if (loggedInUser.getRole() == null) {
-            return "error/403";
-        }
+// Lấy các vai trò của tài khoản đang đăng nhập.
+        Set<Role> userRoles = loggedInUser.getRoles();
 
-        String roleName =
-                loggedInUser.getRole().getRoleName();
+// Kiểm tra tài khoản có quyền ADMIN hoặc LE_TAN không.
+        boolean hasPermission = userRoles != null
+                && userRoles.stream()
+                .filter(Objects::nonNull)
+                .map(Role::getRoleName)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .map(String::toUpperCase)
+                .anyMatch(roleName ->
+                        roleName.equals("ADMIN")
+                                || roleName.equals("ROLE_ADMIN")
+                                || roleName.equals("LE_TAN")
+                                || roleName.equals("ROLE_LE_TAN")
+                );
 
-        if (!"ADMIN".equals(roleName)
-                && !"LE_TAN".equals(roleName)) {
-
-            return "error/403";
-
+// Không đủ quyền thì trả về lỗi 403.
+        if (!hasPermission) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền quản lý tài khoản."
+            );
         }
 
         // Không cho page âm
@@ -110,13 +130,8 @@ public class AccountController {
         String sortField;
 
         switch (sort) {
-
             case "username":
                 sortField = "username";
-                break;
-
-            case "fullName":
-                sortField = "fullName";
                 break;
 
             case "email":
@@ -134,7 +149,6 @@ public class AccountController {
             default:
                 sortField = "createdDate";
         }
-
 
         Sort.Direction sortDirection =
                 "asc".equalsIgnoreCase(direction)
@@ -233,7 +247,11 @@ public class AccountController {
     // =========================================================
 
     @GetMapping("/create")
-    public String showCreateForm(Model model) {
+    public String showCreateForm(HttpSession session, Model model) {
+
+        // Lấy user đang đăng nhập để kiểm tra quyền admin
+        User currentUser = (User) session.getAttribute("loggedInUser");
+        model.addAttribute("isAdmin", isAdmin(currentUser));
 
         model.addAttribute(
                 "accountCreateDTO",
@@ -252,37 +270,58 @@ public class AccountController {
     // =========================================================
     // 3. CREATE
     // =========================================================
-
     @PostMapping("/create")
     public String createAccount(
-
             @ModelAttribute AccountCreateDTO dto,
+            HttpSession session,
+            Model model) {
 
-            Model model
-    ) {
+        User currentUser =
+                (User) session.getAttribute("loggedInUser");
+
+        if (currentUser == null
+                || !Boolean.TRUE.equals(currentUser.getIsActive())) {
+            return "redirect:/login";
+        }
 
         try {
+            // Tìm role được chọn trong form.
+            Role selectedRole = roleRepository.findAll().stream()
+                    .filter(role -> dto.getRoleId() != null
+                            && role.getRoleId() != null
+                            && role.getRoleId().longValue()
+                            == dto.getRoleId().longValue())
+                    .findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Role không tồn tại."
+                    ));
+
+            // Lễ tân không được tạo tài khoản ADMIN.
+            String roleName = selectedRole.getRoleName();
+
+            boolean isAdminRole = roleName != null
+                    && (roleName.equalsIgnoreCase("ADMIN")
+                    || roleName.equalsIgnoreCase("ROLE_ADMIN"));
+
+            if (isAdminRole && !isAdmin(currentUser)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Lễ tân không được phép tạo tài khoản ADMIN."
+                );
+            }
 
             accountService.createAccount(dto);
 
             return "redirect:/accounts?success=created";
 
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (RuntimeException e) {
-
-            model.addAttribute(
-                    "error",
-                    e.getMessage()
-            );
-
-            model.addAttribute(
-                    "accountCreateDTO",
-                    dto
-            );
-
-            model.addAttribute(
-                    "roles",
-                    roleRepository.findAll()
-            );
+            model.addAttribute("error", e.getMessage());
+            model.addAttribute("accountCreateDTO", dto);
+            model.addAttribute("roles", roleRepository.findAll());
+            model.addAttribute("isAdmin", isAdmin(currentUser)); // Thêm dòng này
 
             return "account/create";
         }
@@ -338,7 +377,7 @@ public class AccountController {
         AccountUpdateDTO dto =
                 new AccountUpdateDTO();
 
-        dto.setFullName(user.getFullName());
+
         dto.setEmail(user.getEmail());
         dto.setPhoneNumber(user.getPhoneNumber());
 
@@ -411,21 +450,45 @@ public class AccountController {
 
     @PostMapping("/{id}/role")
     public String changeRole(
+            @PathVariable Long id,
+            @ModelAttribute RoleUpdateDTO dto,
+            HttpSession session) {
 
-            @PathVariable("id")
-            Long id,
+        User currentUser =
+                (User) session.getAttribute("loggedInUser");
 
-            @ModelAttribute RoleUpdateDTO dto
-    ) {
+        if (currentUser == null
+                || !Boolean.TRUE.equals(currentUser.getIsActive())) {
+            return "redirect:/login";
+        }
 
-        accountService.changeRole(
-                id,
-                dto.getRoleId()
-        );
+        Role selectedRole = roleRepository.findAll().stream()
+                .filter(role -> dto.getRoleId() != null
+                        && role.getRoleId() != null
+                        && role.getRoleId().longValue()
+                        == dto.getRoleId().longValue())
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Role không tồn tại."
+                ));
 
-        return "redirect:/accounts/"
-                + id
-                + "?success=role";
+        String roleName = selectedRole.getRoleName();
+
+        boolean isAdminRole = roleName != null
+                && (roleName.equalsIgnoreCase("ADMIN")
+                || roleName.equalsIgnoreCase("ROLE_ADMIN"));
+
+        if (isAdminRole && !isAdmin(currentUser)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Lễ tân không được phép cấp quyền ADMIN."
+            );
+        }
+
+        accountService.changeRole(id, dto.getRoleId());
+
+        return "redirect:/accounts";
     }
 
 
@@ -446,4 +509,44 @@ public class AccountController {
                 + id
                 + "?success=status";
     }
+
+
+    /**
+     * Kiểm tra tài khoản hiện tại có quyền ADMIN hay không.
+     */
+    private boolean isAdmin(User user) {
+        if (user == null || !Boolean.TRUE.equals(user.getIsActive())) {
+            return false;
+        }
+
+        if (user.getRoles() == null) {
+            return false;
+        }
+
+        return user.getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(Role::getRoleName)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .anyMatch(name ->
+                        name.equalsIgnoreCase("ADMIN")
+                                || name.equalsIgnoreCase("ROLE_ADMIN"));
+    }
+
+    /**
+     * Chỉ cho phép ADMIN thực hiện thao tác quản trị.
+     */
+    private void requireAdmin(HttpSession session) {
+        User currentUser = (User) session.getAttribute("loggedInUser");
+
+        if (!isAdmin(currentUser)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền cấp role ADMIN."
+            );
+        }
+    }
+
+
+
 }
