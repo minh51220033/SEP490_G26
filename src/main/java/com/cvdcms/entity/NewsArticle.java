@@ -68,4 +68,10 @@ public class NewsArticle {
     // Tự động xóa tất cả comment liên quan khi xóa bài viết
     @OneToMany(mappedBy = "news", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
+
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
+
 }

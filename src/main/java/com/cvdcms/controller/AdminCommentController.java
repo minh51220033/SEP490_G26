@@ -38,9 +38,20 @@ public class AdminCommentController {
         this.userRepository = userRepository;
     }
 
+    private User getLoggedInUser(HttpSession session) {
+        return (User) session.getAttribute("loggedInUser");
+    }
+
+    private boolean hasRole(User user, String roleName) {
+        return user != null
+                && user.getRoles() != null
+                && user.getRoles().stream()
+                .filter(role -> role != null)
+                .anyMatch(role -> roleName.equals(role.getRoleName()));
+    }
+
     private boolean isAdmin(HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        return user != null && user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
+        return hasRole(getLoggedInUser(session), "ADMIN");
     }
 
 
@@ -83,17 +94,28 @@ public class AdminCommentController {
         if (comment == null) return "redirect:/admin";
 
         User targetUser = comment.getUser();
-        User admin = (User) session.getAttribute("loggedInUser");
+        User admin = getLoggedInUser(session);
 
-        // KHÔNG CHO PHÉP ADMIN TỰ BAN CHÍNH MÌNH HOẶC BAN TÀI KHOẢN ADMIN KHÁC
-        boolean isTargetAdmin = targetUser.getRole() != null && "ADMIN".equals(targetUser.getRole().getRoleName());
-        if (targetUser.getUserId().equals(admin.getUserId()) || isTargetAdmin) {
-            session.setAttribute("commentError", "Không thể thực hiện cấm tài khoản Admin!");
+        if (targetUser == null || admin == null) {
+            return "redirect:/admin";
+        }
+
+// Không cho phép Admin tự cấm mình hoặc cấm tài khoản Admin khác.
+        if (targetUser.getUserId().equals(admin.getUserId())
+                || hasRole(targetUser, "ADMIN")) {
+
+            session.setAttribute(
+                    "commentError",
+                    "Không thể cấm tài khoản Admin."
+            );
+
             return "redirect:/news/" + comment.getNews().getSlug();
         }
 
         boolean alreadyBanned = commentBanRepository
-                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(targetUser.getUserId())
+                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(
+                        targetUser.getUserId()
+                )
                 .isPresent();
 
         if (alreadyBanned) {
