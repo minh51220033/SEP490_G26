@@ -72,21 +72,7 @@
                         </div>
 
 
-                        <!-- FULL NAME -->
-                        <div class="mb-3">
 
-                            <label class="form-label">
-                                Họ và tên
-                            </label>
-
-                            <input
-                                    type="text"
-                                    class="form-control"
-                                    th:field="*{fullName}"
-                                    maxlength="100"
-                                    placeholder="Nguyễn Văn A">
-
-                        </div>
 
 
                         <!-- EMAIL -->
@@ -178,6 +164,9 @@
 
                                 <option
                                         th:each="role : ${roles}"
+                                        th:if="${isAdmin
+        or (role.roleName != 'ADMIN'
+        and role.roleName != 'ROLE_ADMIN')}"
                                         th:value="${role.roleId}"
                                         th:text="${role.roleName}">
                                 </option>

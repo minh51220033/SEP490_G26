@@ -25,9 +25,20 @@ public class AdminBanController {
         this.commentBanRepository = commentBanRepository;
     }
 
+    private User getLoggedInUser(HttpSession session) {
+        return (User) session.getAttribute("loggedInUser");
+    }
+
+    private boolean hasRole(User user, String roleName) {
+        return user != null
+                && user.getRoles() != null
+                && user.getRoles().stream()
+                .filter(role -> role != null)
+                .anyMatch(role -> roleName.equals(role.getRoleName()));
+    }
+
     private boolean isAdmin(HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        return user != null && user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getRoleName());
+        return hasRole(getLoggedInUser(session), "ADMIN");
     }
 
     // 1. HIỂN THỊ DANH SÁCH TÀI KHỎAN BỊ BAN

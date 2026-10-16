@@ -193,6 +193,20 @@
             <div class="filters">
                 <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tiêu đề...">
 
+                <select name="branchId">
+                    <option value=""
+                            th:selected="${branchId == null}">
+                        Tất cả chi nhánh
+                    </option>
+
+                    <option th:each="branch : ${branches}"
+                            th:value="${branch.branchId}"
+                            th:text="${branch.branchName}"
+                            th:selected="${branchId != null
+                and branchId.equals(branch.branchId)}">
+                    </option>
+                </select>
+
                 <select name="status">
                     <option value="" th:selected="${status == null || status == ''}">Tất cả trạng thái</option>
                     <option value="DRAFT" th:selected="${status == 'DRAFT'}">Nháp</option>
@@ -223,6 +237,7 @@
             <tr>
                 <th>ID</th>
                 <th>Tiêu đề</th>
+                <th>Chi nhánh</th>
                 <th>Trạng thái</th>
                 <th>Người tạo</th>
                 <th>Ngày tạo</th>
@@ -234,23 +249,50 @@
             <tbody>
             <tr th:each="news : ${newsPage.content}">
                 <td th:text="${news.newsId}">1</td>
-                <td><strong th:text="${news.title}">Tiêu đề</strong></td>
+
                 <td>
-                    <span th:if="${news.status == 'DRAFT'}" class="status draft">DRAFT</span>
-                    <span th:if="${news.status == 'PUBLISHED'}" class="status published">PUBLISHED</span>
-                    <span th:if="${news.status == 'ARCHIVED'}" class="status archived">ARCHIVED</span>
+                    <strong th:text="${news.title}">Tiêu đề</strong>
                 </td>
-                <td th:text="${news.createdBy.username}">admin</td>
-                <td th:text="${news.createdAt != null ? #temporals.format(news.createdAt,'dd/MM/yyyy HH:mm') : '-'}">-</td>
-                <td th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt,'dd/MM/yyyy HH:mm') : '-'}">-</td>
+
+                <td th:text="${news.branch != null
+            ? news.branch.branchName
+            : 'Chưa gán chi nhánh'}">
+                    Chi nhánh
+                </td>
+
                 <td>
+        <span th:if="${news.status == 'DRAFT'}"
+              class="status draft">DRAFT</span>
+
+                    <span th:if="${news.status == 'PUBLISHED'}"
+                          class="status published">PUBLISHED</span>
+
+                    <span th:if="${news.status == 'ARCHIVED'}"
+                          class="status archived">ARCHIVED</span>
+                </td>
+
+                <td th:text="${news.createdBy != null
+            ? news.createdBy.username
+            : '-'}">admin</td>
+
+                <td th:text="${news.createdAt != null
+            ? #temporals.format(news.createdAt, 'dd/MM/yyyy HH:mm')
+            : '-'}">-</td>
+
+                <td th:text="${news.publishedAt != null
+            ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')
+            : '-'}">-</td>
+
+                <td>
+                    <!-- Giữ nguyên các nút Sửa, Xem và Xóa hiện tại của bạn -->
                     <div class="actions">
-                        <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}" class="btn btn-edit">Sửa</a>
+                        <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
+                           class="btn btn-edit">Sửa</a>
 
-                        <!-- Admin detail preview link -->
-                        <a th:href="@{'/admin/news/' + ${news.newsId}}" target="_blank" class="btn btn-secondary">Xem</a>
+                        <a th:href="@{'/admin/news/' + ${news.newsId}}"
+                           target="_blank"
+                           class="btn btn-secondary">Xem</a>
 
-                        <!-- Permanent Delete form button -->
                         <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}"
                               method="post"
                               style="display:inline;"
@@ -262,7 +304,9 @@
             </tr>
 
             <tr th:if="${newsPage.content.isEmpty()}">
-                <td colspan="7" class="empty">Không tìm thấy bài viết.</td>
+                <td colspan="8" class="empty">
+                    Không tìm thấy bài viết.
+                </td>
             </tr>
             </tbody>
         </table>
@@ -270,17 +314,42 @@
         <!-- PAGINATION -->
         <div class="pagination" th:if="${newsPage.totalPages > 1}">
             <a th:if="${newsPage.number > 0}"
-               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${newsPage.number - 1})}"
+               th:href="@{/admin/news(
+       keyword=${keyword},
+       status=${status},
+       branchId=${branchId},
+       sort=${sort},
+       direction=${direction},
+       size=${newsPage.size},
+       page=${newsPage.number - 1}
+   )}"
                class="page-link">‹</a>
 
             <a th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${pageNumber})}"
+               th:href="@{/admin/news(
+       keyword=${keyword},
+       status=${status},
+       branchId=${branchId},
+       sort=${sort},
+       direction=${direction},
+       size=${newsPage.size},
+       page=${pageNumber}
+   )}"
                th:text="${pageNumber + 1}"
                th:classappend="${pageNumber == newsPage.number} ? ' active'"
                class="page-link">1</a>
 
+
             <a th:if="${newsPage.number < newsPage.totalPages - 1}"
-               th:href="@{/admin/news(keyword=${keyword},status=${status},sort=${sort},direction=${direction},size=${newsPage.size},page=${pageNumber + 1})}"
+               th:href="@{/admin/news(
+       keyword=${keyword},
+       status=${status},
+       branchId=${branchId},
+       sort=${sort},
+       direction=${direction},
+       size=${newsPage.size},
+       page=${newsPage.number + 1}
+   )}"
                class="page-link">›</a>
         </div>
     </div>

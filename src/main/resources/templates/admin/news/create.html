@@ -67,6 +67,28 @@
                 <input type="text" id="title" th:field="*{title}" maxlength="200" placeholder="Nhập tiêu đề bài viết..." required>
             </div>
 
+            <!-- CHI NHÁNH -->
+            <div class="form-group">
+                <label for="branchId">
+                    Chi nhánh <span class="required">*</span>
+                </label>
+
+                <select id="branchId"
+                        th:field="*{branchId}"
+                        required>
+                    <option value="">-- Chọn chi nhánh --</option>
+                    <option th:each="branch : ${branches}"
+                            th:value="${branch.branchId}"
+                            th:text="${branch.branchName}">
+                    </option>
+                </select>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('branchId')}"
+                     th:errors="*{branchId}">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="summary">Mô tả ngắn</label>
                 <textarea id="summary" th:field="*{summary}" maxlength="500" rows="3" placeholder="Nhập đoạn mô tả ngắn..."></textarea>

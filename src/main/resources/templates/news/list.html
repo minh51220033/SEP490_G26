@@ -1,16 +1,22 @@
+
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Tin tức - CV-DCMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tin tức | CV-DCMS</title>
 
     <style>
+        :root {
+            --primary: #2468f2;
+            --primary-dark: #123a91;
+            --primary-light: #edf4ff;
+            --border: #dce8ff;
+            --text: #19336b;
+            --muted: #7082a5;
+            --background: #f8fbff;
+            --white: #ffffff;
+        }
 
         * {
             box-sizing: border-box;
@@ -18,360 +24,822 @@
 
         body {
             margin: 0;
-            font-family: Georgia, "Times New Roman", serif;
-            background: #f7f7f7;
-            color: #222;
+            color: var(--text);
+            background: var(--background);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
         }
 
         .header {
-            background: white;
-            border-bottom: 1px solid #ddd;
-            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid #e8efff;
         }
 
         .header-inner {
-            max-width: 1100px;
+            max-width: 1200px;
+            min-height: 66px;
             margin: auto;
-            padding: 0 20px;
+            padding: 0 24px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
         }
 
         .logo {
-            font-family: Arial, sans-serif;
-            font-size: 24px;
-            font-weight: bold;
-            color: #1d4ed8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            width: 35px;
+            height: 35px;
+            display: grid;
+            place-items: center;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            font-size: 20px;
         }
 
         .home-link {
-            font-family: Arial, sans-serif;
-            text-decoration: none;
-            color: #374151;
+            color: #405982;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .home-link:hover {
+            color: var(--primary);
+        }
+
+        .hero {
+            padding: 34px 20px 29px;
+            text-align: center;
+            background:
+                    radial-gradient(ellipse at 0% 100%, #dceaff 0, transparent 48%),
+                    radial-gradient(ellipse at 100% 0%, #e6f0ff 0, transparent 48%),
+                    linear-gradient(135deg, #f6faff, #eaf3ff);
+        }
+
+        .hero h1 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: clamp(30px, 4vw, 40px);
+            font-weight: 800;
+        }
+
+        .hero-line {
+            width: 48px;
+            height: 4px;
+            margin: 12px auto;
+            border-radius: 10px;
+            background: var(--primary);
+        }
+
+        .hero p {
+            margin: 0;
+            color: #536789;
+            font-size: 16px;
         }
 
         .container {
-            max-width: 1100px;
-            margin: 35px auto;
-            padding: 0 20px;
+            width: min(1150px, calc(100% - 40px));
+            margin: 22px auto 48px;
         }
 
-        .page-title {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .page-title h1 {
-            font-size: 38px;
-            margin-bottom: 8px;
-        }
-
-        .page-title p {
-            color: #777;
-        }
-
-        .search {
+        .current-branch-card {
+            position: relative;
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            font-family: Arial, sans-serif;
+            align-items: center;
+            gap: 20px;
+            min-height: 145px;
+            padding: 24px 27px;
+            overflow: hidden;
+            background: linear-gradient(110deg, #f0f6ff, #ffffff);
+            border: 1px solid var(--border);
+            border-left: 6px solid var(--primary);
+            border-radius: 14px;
+            box-shadow: 0 5px 18px rgba(36, 104, 242, 0.06);
         }
 
-        .search input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 7px;
+        .branch-icon {
+            flex-shrink: 0;
+            width: 82px;
+            height: 82px;
+            display: grid;
+            place-items: center;
+            color: var(--primary);
+            background: #dceaff;
+            border-radius: 24px;
+            font-size: 38px;
         }
 
-        .search button {
-            padding: 12px 20px;
-            border: none;
-            background: #2563eb;
+        .branch-info {
+            min-width: 0;
+        }
+
+        .branch-label {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 6px 12px;
             color: white;
-            border-radius: 7px;
+            background: var(--primary);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .branch-name {
+            margin: 0 0 9px;
+            color: var(--primary-dark);
+            font-size: 22px;
+            overflow-wrap: anywhere;
+        }
+
+        .branch-address {
+            margin: 0 0 8px;
+            color: #5c7094;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .branch-note {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .branch-status {
+            flex-shrink: 0;
+            align-self: flex-start;
+            margin-left: auto;
+            padding: 9px 13px;
+            color: #07865b;
+            background: #dcf8ed;
+            border: 1px solid #b9efd9;
+            border-radius: 22px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            margin-right: 6px;
+            background: #10a66b;
+            border-radius: 50%;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0 28px;
+        }
+
+        .search-input-wrap {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            padding: 0 16px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .search-icon {
+            margin-right: 10px;
+            color: #7285a8;
+            font-size: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            min-width: 0;
+            height: 46px;
+            border: none;
+            outline: none;
+            color: var(--text);
+            background: transparent;
+            font-size: 14px;
+        }
+
+        .search-input::placeholder {
+            color: #93a2bd;
+        }
+
+        .size-select {
+            min-width: 110px;
+            padding: 0 10px;
+            color: var(--text);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .search-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 24px;
+            color: white;
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            border-radius: 10px;
+            font-weight: 700;
             cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .search-button:hover {
+            background: #1554d7;
+            transform: translateY(-1px);
+        }
+
+        .result-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 13px;
         }
 
         .news-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 22px;
         }
 
         .news-card {
-            background: white;
-            border-radius: 12px;
+            min-width: 0;
             overflow: hidden;
-            box-shadow: 0 3px 15px rgba(0,0,0,.06);
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            box-shadow: 0 5px 16px rgba(25, 69, 145, 0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .news-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(25, 69, 145, 0.11);
+        }
+
+        .thumbnail-link {
+            display: block;
+            overflow: hidden;
+            background: #eaf2ff;
         }
 
         .thumbnail {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
             display: block;
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .news-card:hover .thumbnail {
+            transform: scale(1.035);
         }
 
         .thumbnail-placeholder {
-            height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #e5e7eb;
-            color: #777;
-            font-family: Arial, sans-serif;
+            height: 190px;
+            display: grid;
+            place-items: center;
+            color: #7185a8;
+            background: linear-gradient(135deg, #eaf2ff, #f8fbff);
+            font-size: 14px;
         }
 
         .news-body {
-            padding: 22px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 17px 18px 19px;
         }
 
         .news-title {
-            font-size: 25px;
-            line-height: 1.3;
-            margin: 0 0 10px;
-        }
-
-        .news-title a {
-            color: #222;
-            text-decoration: none;
+            margin: 0 0 12px;
+            color: var(--primary-dark);
+            font-size: 18px;
+            line-height: 1.45;
         }
 
         .news-title a:hover {
-            color: #2563eb;
+            color: var(--primary);
         }
 
         .meta {
-            color: #888;
-            font-size: 13px;
-            font-family: Arial, sans-serif;
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 13px;
+            color: #7385a5;
+            font-size: 12px;
         }
 
         .summary {
-            color: #555;
-            line-height: 1.6;
-            font-size: 15px;
+            display: -webkit-box;
+            overflow: hidden;
+            margin: 0 0 16px;
+            color: #647796;
+            font-size: 14px;
+            line-height: 1.65;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
         }
 
         .read-more {
-            display: inline-block;
-            margin-top: 15px;
-            color: #2563eb;
-            text-decoration: none;
-            font-family: Arial, sans-serif;
-            font-weight: 600;
+            align-self: flex-start;
+            margin-top: auto;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .read-more:hover {
+            color: var(--primary-dark);
         }
 
         .empty {
+            grid-column: 1 / -1;
+            padding: 55px 20px;
             text-align: center;
-            color: #777;
-            padding: 60px;
+            color: var(--muted);
+            background: white;
+            border: 1px dashed #cbdaf5;
+            border-radius: 14px;
+        }
+
+        .empty-icon {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 35px;
+        }
+
+        .pagination-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 13px;
+            margin-top: 30px;
         }
 
         .pagination {
-            margin-top: 35px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 6px;
-            font-family: Arial, sans-serif;
+            align-items: center;
+            gap: 7px;
         }
 
         .page-link {
-            padding: 8px 12px;
-            border-radius: 6px;
+            min-width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            color: #35517e;
             background: white;
-            color: #374151;
-            text-decoration: none;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .page-link:hover {
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .page-link.active {
-            background: #2563eb;
             color: white;
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 4px 10px rgba(36, 104, 242, 0.2);
         }
 
-        @media (max-width: 800px) {
+        .page-link.disabled {
+            color: #b6c2d6;
+            background: #f7f9fd;
+            pointer-events: none;
+        }
+
+        .page-summary {
+            color: var(--muted);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .error-message {
+            margin-bottom: 20px;
+            padding: 15px 18px;
+            color: #a33b2c;
+            background: #fff1ef;
+            border: 1px solid #ffd4ce;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 900px) {
             .news-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 17px;
+            }
+
+            .branch-status {
+                font-size: 12px;
             }
         }
 
-    </style>
+        @media (max-width: 600px) {
+            .header-inner {
+                min-height: 60px;
+                padding: 0 16px;
+            }
 
+            .logo {
+                font-size: 21px;
+            }
+
+            .hero {
+                padding: 27px 15px;
+            }
+
+            .container {
+                width: calc(100% - 28px);
+                margin-top: 16px;
+            }
+
+            .current-branch-card {
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 13px;
+                padding: 17px;
+            }
+
+            .branch-icon {
+                width: 55px;
+                height: 55px;
+                border-radius: 15px;
+                font-size: 27px;
+            }
+
+            .branch-info {
+                flex: 1;
+            }
+
+            .branch-name {
+                font-size: 18px;
+            }
+
+            .branch-status {
+                margin-left: 68px;
+            }
+
+            .search-row {
+                flex-wrap: wrap;
+                gap: 9px;
+                margin: 18px 0 22px;
+            }
+
+            .search-input-wrap {
+                flex-basis: 100%;
+            }
+
+            .size-select {
+                flex: 1;
+                height: 44px;
+            }
+
+            .search-button {
+                min-height: 44px;
+                padding: 0 17px;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+                gap: 17px;
+            }
+
+            .thumbnail,
+            .thumbnail-placeholder {
+                height: 210px;
+            }
+
+            .news-body {
+                padding: 15px;
+            }
+
+            .news-title {
+                font-size: 17px;
+            }
+
+            .page-link {
+                min-width: 35px;
+                height: 35px;
+                padding: 0 8px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
 <header class="header">
-
     <div class="header-inner">
-
-        <div class="logo">
-            CV-DCMS
-        </div>
-
-        <a href="/home"
-           class="home-link">
-            ← Trang chủ
+        <a class="logo" th:href="@{/home}">
+            <span class="logo-icon">✚</span>
+            <span>CV-DCMS</span>
         </a>
 
+        <a th:href="@{/home}" class="home-link">
+            ← Trang chủ
+        </a>
     </div>
-
 </header>
 
+<section class="hero">
+    <h1>Tin tức</h1>
+    <div class="hero-line"></div>
+    <p>Thông tin và kiến thức nha khoa</p>
+</section>
 
-<div class="container">
+<main class="container">
 
-    <div class="page-title">
+    <!-- Thông tin cơ sở hiện tại -->
+    <section class="current-branch-card"
+             th:if="${currentBranchName != null}">
 
-        <h1>Tin tức</h1>
+        <div class="branch-icon">🏥</div>
 
-        <p>
-            Thông tin và kiến thức nha khoa
-        </p>
+        <div class="branch-info">
+            <span class="branch-label">CƠ SỞ ĐANG XEM</span>
 
+            <h2 class="branch-name"
+                th:text="${currentBranchName}">
+                Cơ sở Cường Việt
+            </h2>
+
+            <p class="branch-address"
+               th:if="${currentBranchAddress != null
+                       and !#strings.isEmpty(currentBranchAddress)}">
+                📍
+                <span th:text="${currentBranchAddress}">
+                    Địa chỉ cơ sở
+                </span>
+            </p>
+
+            <p class="branch-note">
+                ℹ Tin tức được hiển thị theo cơ sở của tài khoản bạn.
+            </p>
+        </div>
+
+        <div class="branch-status">
+            <span class="status-dot"></span>
+            Cơ sở hiện tại
+        </div>
+    </section>
+
+    <!-- Thông báo lỗi nếu tài khoản chưa có cơ sở -->
+    <div class="error-message"
+         th:if="${errorMessage != null}"
+         th:text="${errorMessage}">
+        Không xác định được cơ sở của tài khoản.
     </div>
 
-
-    <!-- SEARCH -->
-
-    <form action="/news"
+    <!-- Tìm kiếm và chọn số bài viết mỗi trang -->
+    <form th:action="@{/news}"
           method="get"
-          class="search">
+          class="search-row">
 
-        <input type="text"
-               name="keyword"
-               th:value="${keyword}"
-               placeholder="Tìm kiếm tin tức...">
+        <div class="search-input-wrap">
+            <span class="search-icon">⌕</span>
 
-        <button type="submit">
-            Tìm kiếm
+            <input class="search-input"
+                   type="text"
+                   name="keyword"
+                   th:value="${keyword}"
+                   placeholder="Tìm kiếm tin tức..."
+                   aria-label="Tìm kiếm tin tức">
+        </div>
+
+        <select class="size-select"
+                name="size"
+                aria-label="Số bài viết mỗi trang"
+                onchange="this.form.submit()">
+
+            <option value="6"
+                    th:selected="${size == 6}">
+                6 bài/trang
+            </option>
+
+            <option value="12"
+                    th:selected="${size == 12}">
+                12 bài/trang
+            </option>
+
+            <option value="18"
+                    th:selected="${size == 18}">
+                18 bài/trang
+            </option>
+        </select>
+
+        <button type="submit" class="search-button">
+            🔍 Tìm kiếm
         </button>
-
     </form>
 
+    <!-- Thông tin kết quả -->
+    <div class="result-info" th:if="${newsPage != null}">
+        <span>
+            Tổng số bài viết:
+            <strong th:text="${newsPage.totalElements}">0</strong>
+        </span>
 
-    <!-- NEWS -->
+        <span th:if="${newsPage.totalElements > 0}">
+            Trang
+            <strong th:text="${newsPage.number + 1}">1</strong>
+            /
+            <strong th:text="${newsPage.totalPages}">1</strong>
+        </span>
+    </div>
 
-    <div class="news-grid">
+    <!-- Danh sách tin tức -->
+    <section class="news-grid" th:if="${newsPage != null}">
 
         <article class="news-card"
                  th:each="news : ${newsPage.content}">
 
-            <a th:href="@{'/news/' + ${news.slug}}">
+            <a class="thumbnail-link"
+               th:href="@{/news/{slug}(slug=${news.slug})}">
 
-                <img th:if="${news.thumbnail != null
-                              and !#strings.isEmpty(news.thumbnail)}"
-                     th:src="@{${news.thumbnail}}"
-                     th:alt="${news.title}"
-                     class="thumbnail">
+                <img class="thumbnail"
+                     th:if="${news.thumbnail != null
+                             and !#strings.isEmpty(news.thumbnail)}"
+                     th:src="${news.thumbnail}"
+                     th:alt="${news.title}">
 
-                <div th:if="${news.thumbnail == null
-                              or #strings.isEmpty(news.thumbnail)}"
-                     class="thumbnail-placeholder">
-                    Không có ảnh
+                <div class="thumbnail-placeholder"
+                     th:if="${news.thumbnail == null
+                             or #strings.isEmpty(news.thumbnail)}">
+                    🦷 Không có ảnh
                 </div>
-
             </a>
-
 
             <div class="news-body">
 
                 <h2 class="news-title">
-
-                    <a th:href="@{'/news/' + ${news.slug}}"
+                    <a th:href="@{/news/{slug}(slug=${news.slug})}"
                        th:text="${news.title}">
-                        Tiêu đề
+                        Tiêu đề bài viết
                     </a>
-
                 </h2>
 
+                <div class="meta"
+                     th:if="${news.publishedAt != null}">
+                    <span>▦</span>
 
-                <div class="meta">
-
-                    <span th:if="${news.publishedAt != null}"
-                          th:text="${#temporals.format(
-                                news.publishedAt,
-                                'dd/MM/yyyy HH:mm'
-                          )}">
-                        03/10/2026
+                    <span th:text="${#temporals.format(
+                        news.publishedAt, 'dd/MM/yyyy HH:mm')}">
+                        16/10/2026 16:50
                     </span>
-
                 </div>
 
+                <p class="summary"
+                   th:if="${news.summary != null
+                           and !#strings.isEmpty(news.summary)}"
+                   th:text="${news.summary}">
+                    Mô tả bài viết
+                </p>
 
-                <div class="summary"
-                     th:text="${news.summary}">
-                    Mô tả bài viết...
-                </div>
-
-
-                <a th:href="@{'/news/' + ${news.slug}}"
-                   class="read-more">
+                <a class="read-more"
+                   th:href="@{/news/{slug}(slug=${news.slug})}">
                     Đọc tiếp →
                 </a>
 
             </div>
-
         </article>
 
+        <!-- Không có kết quả -->
+        <div class="empty"
+             th:if="${newsPage.content.isEmpty()}">
 
-        <div th:if="${newsPage.content.isEmpty()}"
-             class="empty">
+            <span class="empty-icon">📰</span>
 
-            Không tìm thấy bài viết phù hợp.
+            <strong>Chưa tìm thấy bài viết phù hợp</strong>
 
+            <p>Hãy thử từ khóa khác hoặc quay lại sau.</p>
+        </div>
+    </section>
+
+    <!-- Phân trang đầy đủ -->
+    <nav class="pagination-wrap"
+         aria-label="Phân trang tin tức"
+         th:if="${newsPage != null
+                 and newsPage.totalPages > 1}">
+
+        <div class="pagination">
+
+            <!-- Về trang đầu -->
+            <a class="page-link"
+               th:classappend="${newsPage.first} ? ' disabled'"
+               th:href="@{/news(
+                   keyword=${keyword},
+                   size=${size},
+                   page=0
+               )}"
+               aria-label="Trang đầu">
+                «
+            </a>
+
+            <!-- Trang trước -->
+            <a class="page-link"
+               th:classappend="${newsPage.first} ? ' disabled'"
+               th:href="@{/news(
+                   keyword=${keyword},
+                   size=${size},
+                   page=${newsPage.number - 1}
+               )}"
+               aria-label="Trang trước">
+                ‹
+            </a>
+
+            <!-- Các số trang -->
+            <a class="page-link"
+               th:each="pageNumber : ${#numbers.sequence(
+                   0, newsPage.totalPages - 1
+               )}"
+               th:href="@{/news(
+                   keyword=${keyword},
+                   size=${size},
+                   page=${pageNumber}
+               )}"
+               th:text="${pageNumber + 1}"
+               th:classappend="${pageNumber == newsPage.number}
+                   ? ' active'"
+               th:attr="aria-current=${pageNumber == newsPage.number
+                   ? 'page' : null}">
+                1
+            </a>
+
+            <!-- Trang tiếp -->
+            <a class="page-link"
+               th:classappend="${newsPage.last} ? ' disabled'"
+               th:href="@{/news(
+                   keyword=${keyword},
+                   size=${size},
+                   page=${newsPage.number + 1}
+               )}"
+               aria-label="Trang tiếp">
+                ›
+            </a>
+
+            <!-- Đến trang cuối -->
+            <a class="page-link"
+               th:classappend="${newsPage.last} ? ' disabled'"
+               th:href="@{/news(
+                   keyword=${keyword},
+                   size=${size},
+                   page=${newsPage.totalPages - 1}
+               )}"
+               aria-label="Trang cuối">
+                »
+            </a>
         </div>
 
-    </div>
+        <p class="page-summary">
+            Đang xem trang
+            <strong th:text="${newsPage.number + 1}">1</strong>
+            trong
+            <strong th:text="${newsPage.totalPages}">1</strong>
+            trang ·
+            <strong th:text="${newsPage.totalElements}">0</strong>
+            bài viết
+        </p>
+    </nav>
 
-
-    <!-- PAGINATION -->
-
-    <div class="pagination"
-         th:if="${newsPage.totalPages > 1}">
-
-        <a th:if="${newsPage.number > 0}"
-           th:href="@{/news(
-                keyword=${keyword},
-                size=${newsPage.size},
-                page=${newsPage.number - 1}
-           )}"
-           class="page-link">
-            ‹
-        </a>
-
-
-        <a th:each="pageNumber :
-                ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-           th:href="@{/news(
-                keyword=${keyword},
-                size=${newsPage.size},
-                page=${pageNumber}
-           )}"
-           th:text="${pageNumber + 1}"
-           th:classappend="${pageNumber == newsPage.number}
-                ? ' active'"
-           class="page-link">
-            1
-        </a>
-
-
-        <a th:if="${newsPage.number < newsPage.totalPages - 1}"
-           th:href="@{/news(
-                keyword=${keyword},
-                size=${newsPage.size},
-                page=${newsPage.number + 1}
-           )}"
-           class="page-link">
-            ›
-        </a>
-
-    </div>
-
-</div>
+</main>
 
 </body>
 </html>
