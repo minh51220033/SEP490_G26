@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý chi nhánh - CV-DCMS</title>
+</head>
+<body>
+
+<h1>Quản lý chi nhánh</h1>
+
+<p>
+    Trang kiểm thử chức năng quản lý chi nhánh của hệ thống CV-DCMS.
+</p>
+
+<!-- Hiển thị thông báo thành công sau khi chuyển hướng. -->
+<p th:if="${successMessage}"
+   th:text="${successMessage}"
+   style="color: green;">
+</p>
+
+<!-- Hiển thị lỗi nghiệp vụ do Service trả về. -->
+<p th:if="${errorMessage}"
+   th:text="${errorMessage}"
+   style="color: red;">
+</p>
+
+<hr>
+
+<h2>Thêm chi nhánh mới</h2>
+
+<form th:action="@{/admin/branches}"
+      th:object="${branchForm}"
+      method="post">
+
+    <div>
+        <label for="branchCode">Mã chi nhánh:</label>
+        <input type="text"
+               id="branchCode"
+               th:field="*{branchCode}"
+               maxlength="30"
+               required>
+    </div>
+
+    <br>
+
+    <div>
+        <label for="branchName">Tên chi nhánh:</label>
+        <input type="text"
+               id="branchName"
+               th:field="*{branchName}"
+               maxlength="150"
+               required>
+    </div>
+
+    <br>
+
+    <div>
+        <label for="address">Địa chỉ:</label>
+        <input type="text"
+               id="address"
+               th:field="*{address}"
+               maxlength="255"
+               required>
+    </div>
+
+    <br>
+
+    <div>
+        <label for="phone">Số điện thoại:</label>
+        <input type="text"
+               id="phone"
+               th:field="*{phone}"
+               maxlength="20">
+    </div>
+
+    <br>
+
+    <div>
+        <label for="email">Email:</label>
+        <input type="email"
+               id="email"
+               th:field="*{email}"
+               maxlength="100">
+    </div>
+
+    <br>
+
+    <button type="submit">Thêm chi nhánh</button>
+</form>
+
+<hr>
+
+<h2>Danh sách chi nhánh</h2>
+
+<table border="1" cellpadding="8" cellspacing="0">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Mã chi nhánh</th>
+        <th>Tên chi nhánh</th>
+        <th>Địa chỉ</th>
+        <th>Số điện thoại</th>
+        <th>Email</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    <tr th:each="branch : ${branches}">
+        <td th:text="${branch.branchId}"></td>
+        <td th:text="${branch.branchCode}"></td>
+        <td th:text="${branch.branchName}"></td>
+        <td th:text="${branch.address}"></td>
+        <td th:text="${branch.phone}"></td>
+        <td th:text="${branch.email}"></td>
+
+        <td>
+            <span th:if="${branch.isActive}">Đang hoạt động</span>
+            <span th:unless="${branch.isActive}">Ngừng hoạt động</span>
+        </td>
+
+        <td>
+            <!-- Chi nhánh đang hoạt động: cho phép ngừng hoạt động. -->
+            <form th:if="${branch.isActive}"
+                  th:action="@{/admin/branches/{id}/deactivate(id=${branch.branchId})}"
+                  method="post">
+
+                <button type="submit"
+                        onclick="return confirm('Bạn có chắc muốn ngừng hoạt động chi nhánh này?')">
+                    Ngừng hoạt động
+                </button>
+            </form>
+
+            <!-- Chi nhánh đã ngừng: cho phép kích hoạt lại. -->
+            <form th:unless="${branch.isActive}"
+                  th:action="@{/admin/branches/{id}/activate(id=${branch.branchId})}"
+                  method="post">
+
+                <button type="submit">Kích hoạt lại</button>
+            </form>
+        </td>
+    </tr>
+
+    <tr th:if="${#lists.isEmpty(branches)}">
+        <td colspan="8">Chưa có chi nhánh nào.</td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>

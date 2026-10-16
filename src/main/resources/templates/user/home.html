@@ -258,6 +258,36 @@
             color: #dc2626;
         }
 
+        .avatar-button {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .avatar-letter {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+
 
     </style>
 
@@ -319,29 +349,37 @@
 
     </a>
 
-    <div class="user-menu">
+    <!-- MENU TÀI KHOẢN -->
+    <div class="user-menu"
+         th:if="${session.loggedInUser != null}">
 
-        <!-- Nút avatar -->
+        <!-- Nút avatar tài khoản -->
         <button type="button"
                 class="avatar-button"
-                id="avatarButton">
+                id="avatarButton"
+                aria-label="Mở menu tài khoản">
 
-            <!-- Có avatar -->
-            <img th:if="${session.loggedInUser.avatar != null
-                     and !#strings.isEmpty(session.loggedInUser.avatar)}"
-                 th:src="@{${session.loggedInUser.avatar}}"
-                 alt="Avatar">
+            <!-- Có ảnh đại diện trong hồ sơ bệnh nhân mặc định -->
+            <img th:if="${defaultPatientProfile != null
+                 and defaultPatientProfile.avatarUrl != null
+                 and !#strings.isEmpty(defaultPatientProfile.avatarUrl)}"
+                 th:src="${defaultPatientProfile.avatarUrl}"
+                 alt="Ảnh đại diện"
+                 class="avatar-image">
 
-            <!-- Không có avatar -->
-            <span th:if="${session.loggedInUser.avatar == null
-                      or #strings.isEmpty(session.loggedInUser.avatar)}"
+            <!-- Chưa có ảnh: hiển thị chữ cái đầu username -->
+            <span th:if="${defaultPatientProfile == null
+                  or defaultPatientProfile.avatarUrl == null
+                  or #strings.isEmpty(defaultPatientProfile.avatarUrl)}"
                   class="avatar-letter"
-                  th:text="${#strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()}">
-            U
-        </span>
+                  th:text="${session.loggedInUser.username != null
+              and !#strings.isEmpty(session.loggedInUser.username)
+              ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
+              : 'U'}">
+        U
+    </span>
 
         </button>
-
 
         <!-- Dropdown -->
         <div class="user-dropdown" id="userDropdown">
@@ -349,36 +387,35 @@
             <div class="user-dropdown-header">
 
                 <div class="user-dropdown-name"
-                     th:text="${session.loggedInUser.fullName != null
-                            ? session.loggedInUser.fullName
-                            : session.loggedInUser.username}">
-                    Nguyễn Văn A
+                     th:text="${displayName != null
+                     and !#strings.isEmpty(displayName)
+                     ? displayName
+                     : session.loggedInUser.username}">
+                    Người dùng
                 </div>
 
                 <div class="user-dropdown-role"
-                     th:text="${session.loggedInUser.role.roleName}">
-                    BENH_NHAN
+                     th:text="${roleNames != null
+                     and !#lists.isEmpty(roleNames)
+                     ? #strings.listJoin(roleNames, ', ')
+                     : 'Chưa xác định'}">
+                    Vai trò
                 </div>
 
             </div>
 
-
-            <!-- Thông tin cá nhân -->
-            <a href="/profile"
+            <a th:href="@{/profile}"
                class="dropdown-link">
-                👤
-                <span>Thông tin cá nhân</span>
+                👤 <span>Thông tin cá nhân</span>
             </a>
 
-
-            <form action="/logout"
+            <form th:action="@{/logout}"
                   method="post"
                   class="logout-form">
 
                 <button type="submit"
                         class="dropdown-link logout-button">
-                    🚪
-                    <span>Đăng xuất</span>
+                    🚪 <span>Đăng xuất</span>
                 </button>
 
             </form>
@@ -391,9 +428,7 @@
     <!-- ===================================================== -->
 
     <div
-            th:if="${session.loggedInUser != null
-            and session.loggedInUser.role != null
-            and session.loggedInUser.role.roleName == 'ADMIN'}">
+            th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
 
         <div class="menu-title">
             Quản trị hệ thống
@@ -448,13 +483,13 @@
         <!-- EMPLOYEE -->
 
         <a
-                href="#"
+                th:href="@{/admin/branches}"
                 class="menu-item disabled">
 
             👨‍💼
 
             <span>
-                Quản lý nhân viên
+                Quản lý cơ sở
             </span>
 
         </a>
@@ -497,9 +532,7 @@
     <!-- ===================================================== -->
 
     <div
-            th:if="${session.loggedInUser != null
-            and session.loggedInUser.role != null
-            and session.loggedInUser.role.roleName == 'LE_TAN'}">
+            th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
 
         <div class="menu-title">
             Lễ tân
@@ -619,30 +652,21 @@
     <div class="topbar">
 
         <div>
-
-            <strong>
-                Dashboard
-            </strong>
-
+            <strong>Dashboard</strong>
         </div>
-
 
         <div class="d-flex align-items-center gap-3">
 
-            <span
-                    th:if="${session.loggedInUser != null}"
-                    th:text="${session.loggedInUser.username}">
-                admin
-            </span>
+        <span th:if="${session.loggedInUser != null}"
+              th:text="${session.loggedInUser.username}">
+            username
+        </span>
 
-
-            <span
-                    th:if="${session.loggedInUser != null
-                    and session.loggedInUser.role != null}"
-                    class="role-badge"
-                    th:text="${session.loggedInUser.role.roleName}">
-                ADMIN
-            </span>
+            <span class="role-badge"
+                  th:if="${roleNames != null and !#lists.isEmpty(roleNames)}"
+                  th:text="${#strings.listJoin(roleNames, ', ')}">
+            Vai trò
+        </span>
 
         </div>
 
@@ -658,28 +682,31 @@
 
         <!-- WELCOME -->
 
+        <!-- THÔNG TIN CƠ SỞ HIỆN TẠI -->
         <div class="welcome-card mb-4">
 
-            <h2>
+            <div class="d-flex align-items-center gap-3">
 
-                Xin chào,
+                <div class="function-icon">🏥</div>
 
-                <span
-                        th:text="${session.loggedInUser != null
-                        ? session.loggedInUser.fullName
-                        : 'bạn'}">
-                    Quản trị viên
-                </span>
+                <div>
+                    <h5 class="mb-1">Cơ sở hiện tại</h5>
 
-            </h2>
+                    <p class="mb-1"
+                       th:text="${currentBranchName}">
+                        Chưa xác định cơ sở
+                    </p>
 
+                    <small class="text-muted"
+                           th:text="${currentBranchAddress != null
+                       and !#strings.isEmpty(currentBranchAddress)
+                       ? currentBranchAddress
+                       : 'Chưa có thông tin địa chỉ'}">
+                        Địa chỉ cơ sở
+                    </small>
+                </div>
 
-            <p class="text-muted mb-0">
-
-                Chào mừng bạn đến với hệ thống
-                quản lý phòng khám nha khoa Cường Việt.
-
-            </p>
+            </div>
 
         </div>
 
@@ -689,9 +716,7 @@
         <!-- ================================================= -->
 
         <div
-                th:if="${session.loggedInUser != null
-                and session.loggedInUser.role != null
-                and session.loggedInUser.role.roleName == 'ADMIN'}">
+                th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
 
 
             <h4 class="mb-3">
@@ -876,10 +901,17 @@
                             Nhật ký thao tác
                         </h5>
 
-                        <p class="text-muted">
-                            Theo dõi lịch sử thao tác
-                            của người dùng.
-                        </p>
+                        <div class="user-dropdown-name"
+                             th:text="${displayName}">
+                            Người dùng
+                        </div>
+
+                        <div class="user-dropdown-role"
+                             th:text="${roleNames != null
+               ? #strings.listJoin(roleNames, ', ')
+               : 'Chưa xác định'}">
+                            Vai trò
+                        </div>
 
                         <button
                                 class="btn btn-secondary"
@@ -904,9 +936,7 @@
         <!-- ================================================= -->
 
         <div
-                th:if="${session.loggedInUser != null
-                and session.loggedInUser.role != null
-                and session.loggedInUser.role.roleName == 'LE_TAN'}">
+                th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
 
 
             <h4 class="mb-3">
@@ -1102,4 +1132,5 @@
 
 </body>
 
+</html>
 </html>

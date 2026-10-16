@@ -36,6 +36,7 @@ public class CommentController {
         this.newsRepository = newsRepository;
     }
 
+
     @PostMapping("/news/{id}/comments")
     public String createComment(
             @PathVariable Long id,
@@ -43,18 +44,39 @@ public class CommentController {
             BindingResult bindingResult,
             HttpSession session) {
 
-        User user = getLoggedInUser(session);
-        if (user == null) return "redirect:/login";
-        if (bindingResult.hasErrors()) return "redirect:/news/" + getNewsSlug(id);
+        // 1. Tìm bài viết trước để xác định đúng trang quay về
+        NewsArticle news = newsRepository.findById(id).orElse(null);
 
-        if (isCommentBanned(user)) {
-            session.setAttribute("commentError", getBanMessage(user));
-            return "redirect:/news/" + getNewsSlug(id);
+        if (news == null || !"PUBLISHED".equals(news.getStatus())) {
+            session.setAttribute("commentError", "Bài viết không tồn tại hoặc chưa được xuất bản.");
+            return "redirect:/news";
         }
 
-        NewsArticle news = newsRepository.findById(id).orElse(null);
-        if (news == null || !"PUBLISHED".equals(news.getStatus())) return "redirect:/news";
+        String detailUrl = "redirect:/news/" + news.getSlug();
 
+        // 2. Kiểm tra đăng nhập
+        User user = getLoggedInUser(session);
+
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        // 3. Kiểm tra dữ liệu bình luận
+        if (bindingResult.hasErrors()
+                || dto.getContent() == null
+                || dto.getContent().trim().isEmpty()) {
+
+            session.setAttribute("commentError", "Nội dung bình luận không được để trống.");
+            return detailUrl;
+        }
+
+        // 4. Kiểm tra trạng thái cấm bình luận
+        if (isCommentBanned(user)) {
+            session.setAttribute("commentError", getBanMessage(user));
+            return detailUrl;
+        }
+
+        // 5. Tạo và lưu bình luận
         Comment comment = new Comment();
         comment.setNews(news);
         comment.setUser(user);
@@ -63,8 +85,11 @@ public class CommentController {
         comment.setStatus("ACTIVE");
 
         commentRepository.save(comment);
+
+        // 6. Thông báo và quay lại đúng trang chi tiết theo slug
         session.setAttribute("commentSuccess", "Đăng bình luận thành công.");
-        return "redirect:/news/" + news.getSlug();
+
+        return detailUrl;
     }
 
     @PostMapping("/comments/{id}/reply")
@@ -119,8 +144,10 @@ public class CommentController {
             return "redirect:/news/" + comment.getNews().getSlug();
         }
 
-        boolean isOwner = comment.getUser().getUserId().equals(user.getUserId());
-        boolean isAdmin = user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
+        boolean isOwner = comment.getUser() != null
+                && comment.getUser().getUserId().equals(user.getUserId());
+
+        boolean isAdmin = isAdmin(user);
 
         if (!isOwner && !isAdmin) {
             return "redirect:/news/" + comment.getNews().getSlug();
@@ -142,27 +169,44 @@ public class CommentController {
             HttpSession session) {
 
         User user = getLoggedInUser(session);
-        if (user == null) return "redirect:/login";
+
+        if (user == null) {
+            return "redirect:/login";
+        }
 
         Comment comment = commentRepository.findById(id).orElse(null);
-        if (comment == null) return "redirect:/news";
 
-        boolean isAdmin = user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
+        if (comment == null) {
+            return "redirect:/news";
+        }
 
-        if (!isAdmin && isCommentBanned(user)) {
-            session.setAttribute("commentError", "Tài khoản của bạn đã bị cấm, không thể xóa bình luận!");
+        boolean admin = isAdmin(user);
+
+        // Người dùng thông thường bị ban không được xóa bình luận.
+        if (!admin && isCommentBanned(user)) {
+            session.setAttribute(
+                    "commentError",
+                    "Tài khoản của bạn đã bị cấm, không thể xóa bình luận."
+            );
+
             return "redirect:/news/" + comment.getNews().getSlug();
         }
 
-        boolean isOwner = comment.getUser().getUserId().equals(user.getUserId());
+        boolean isOwner = comment.getUser() != null
+                && comment.getUser().getUserId().equals(user.getUserId());
 
-        if (!isOwner && !isAdmin) {
+        if (!isOwner && !admin) {
+            return "redirect:/news/" + comment.getNews().getSlug();
+        }
+
+        if (!"ACTIVE".equals(comment.getStatus())) {
             return "redirect:/news/" + comment.getNews().getSlug();
         }
 
         comment.setStatus("DELETED");
         comment.setDeletedAt(LocalDateTime.now());
         comment.setDeletedBy(user);
+
         commentRepository.save(comment);
 
         return "redirect:/news/" + comment.getNews().getSlug();
@@ -195,16 +239,37 @@ public class CommentController {
         return (User) session.getAttribute("loggedInUser");
     }
 
+    private boolean hasRole(User user, String roleName) {
+        return user != null
+                && user.getRoles() != null
+                && user.getRoles().stream()
+                .filter(role -> role != null)
+                .anyMatch(role -> roleName.equals(role.getRoleName()));
+    }
+
+    private boolean isAdmin(User user) {
+        return hasRole(user, "ADMIN");
+    }
+
+
+    //,nhưng nên dùng !ban.getExpiresAt().isAfter(now) để xem thời điểm hết hạn đã tới là hết ban
     private boolean isCommentBanned(User user) {
-        return commentBanRepository.findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(user.getUserId())
+        return commentBanRepository
+                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(
+                        user.getUserId()
+                )
                 .map(ban -> {
-                    if (ban.getExpiresAt() != null && ban.getExpiresAt().isBefore(LocalDateTime.now())) {
+                    if (ban.getExpiresAt() != null
+                            && !ban.getExpiresAt().isAfter(LocalDateTime.now())) {
+
                         ban.setActive(false);
                         commentBanRepository.save(ban);
                         return false;
                     }
+
                     return true;
-                }).orElse(false);
+                })
+                .orElse(false);
     }
 
     private String getBanMessage(User user) {

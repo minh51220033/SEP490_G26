@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm hồ sơ bệnh nhân | CV-DCMS</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 30px 16px;
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            color: #243247;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: auto;
+        }
+
+        .card {
+            padding: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(20, 40, 70, .08);
+        }
+
+        h1 { margin-top: 0; color: #174ea6; }
+        h2 { font-size: 18px; margin-top: 26px; }
+
+        .description { color: #65748b; line-height: 1.6; }
+
+        .branch {
+            padding: 16px;
+            margin: 20px 0;
+            background: #eef5ff;
+            border: 1px solid #cfe0ff;
+            border-radius: 10px;
+        }
+
+        label {
+            display: block;
+            margin: 16px 0 7px;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #ccd5e1;
+            border-radius: 8px;
+            font: inherit;
+        }
+
+        textarea { min-height: 90px; resize: vertical; }
+
+        .radio-row {
+            display: flex;
+            gap: 22px;
+            margin-top: 12px;
+        }
+
+        .radio-row label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .radio-row input { width: auto; }
+
+        .error {
+            padding: 12px;
+            color: #a52222;
+            background: #fff0f0;
+            border-radius: 8px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 26px;
+        }
+
+        button, .back {
+            display: inline-block;
+            padding: 12px 18px;
+            border: 0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button {
+            color: white;
+            background: #1765c1;
+        }
+
+        .back {
+            color: #34445b;
+            background: #e9eef5;
+        }
+
+        .hint { color: #65748b; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h1>Thêm hồ sơ bệnh nhân</h1>
+
+        <p class="description">
+            Tạo hồ sơ mới cho thành viên trong gia đình.
+            Hồ sơ sẽ được liên kết với tài khoản hiện tại.
+        </p>
+
+        <p class="error"
+           th:if="${error != null}"
+           th:text="${error}"></p>
+
+        <div class="branch" th:if="${branch != null}">
+            <strong>Chi nhánh áp dụng cho tài khoản</strong>
+            <p th:text="${branch.branchName}">Tên chi nhánh</p>
+            <p th:text="${branch.address}">Địa chỉ chi nhánh</p>
+            <small>
+                Hồ sơ mới sẽ sử dụng chi nhánh này.
+                Muốn đổi chi nhánh, hãy sử dụng chức năng đổi chi nhánh riêng.
+            </small>
+        </div>
+
+        <form th:action="@{/profile/add-patient}"
+              method="post"
+              enctype="multipart/form-data">
+
+            <h2>Thông tin bệnh nhân</h2>
+
+            <label for="fullName">Họ và tên *</label>
+            <input id="fullName" name="fullName"
+                   maxlength="100" required>
+
+            <label for="dob">Ngày sinh</label>
+            <input id="dob" name="dob" type="date">
+
+            <label for="gender">Giới tính *</label>
+            <select id="gender" name="gender" required>
+                <option value="">-- Chọn giới tính --</option>
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+                <option value="Khác">Khác</option>
+            </select>
+
+            <label for="phoneNumber">Số điện thoại hồ sơ *</label>
+            <input id="phoneNumber" name="phoneNumber"
+                   type="tel" maxlength="20" required>
+
+            <label for="address">Địa chỉ *</label>
+            <textarea id="address" name="address"
+                      maxlength="255" required></textarea>
+
+            <h2>Thông tin sức khỏe</h2>
+
+            <label>Bệnh nhân có bệnh nền không? *</label>
+            <div class="radio-row">
+                <label>
+                    <input type="radio" name="hasUnderlyingDisease"
+                           value="true" required>
+                    Có
+                </label>
+                <label>
+                    <input type="radio" name="hasUnderlyingDisease"
+                           value="false" required>
+                    Không
+                </label>
+            </div>
+
+            <label for="underlyingDiseaseDetails">Chi tiết bệnh nền</label>
+            <textarea id="underlyingDiseaseDetails"
+                      name="underlyingDiseaseDetails"
+                      maxlength="2000"
+                      placeholder="Nhập thông tin bệnh nền nếu có"></textarea>
+
+            <label for="avatar">Ảnh đại diện (không bắt buộc)</label>
+            <input id="avatar" name="avatar" type="file"
+                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+
+            <p class="hint">Chỉ nhận ảnh JPG, PNG hoặc WebP; tối đa 5 MB.</p>
+
+            <div class="actions">
+                <button type="submit">Tạo hồ sơ bệnh nhân</button>
+                <a class="back" th:href="@{/profile/edit}">Quay lại chỉnh sửa</a>
+                <a class="back" th:href="@{/profile}">Danh sách hồ sơ</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
