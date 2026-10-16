@@ -25,7 +25,7 @@ public interface CommentBanRepository
           AND (
               LOWER(u.username)
                   LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(COALESCE(u.fullName, ''))
+              OR LOWER(COALESCE(u.username, ''))
                   LIKE LOWER(CONCAT('%', :keyword, '%'))
               OR LOWER(u.email)
                   LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -45,7 +45,7 @@ public interface CommentBanRepository
           AND (
               LOWER(u.username)
                   LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(COALESCE(u.fullName, ''))
+              OR LOWER(COALESCE(u.username, ''))
                   LIKE LOWER(CONCAT('%', :keyword, '%'))
               OR LOWER(u.email)
                   LIKE LOWER(CONCAT('%', :keyword, '%'))

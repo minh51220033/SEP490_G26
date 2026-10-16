@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @Transactional
@@ -82,159 +84,224 @@ public class AccountServiceImpl implements AccountService {
     // 3. TẠO ACCOUNT
     // =========================================================
 
+
     @Override
     public User createAccount(AccountCreateDTO dto) {
 
-        // Kiểm tra username
-        if (dto.getUsername() == null ||
-                dto.getUsername().trim().isEmpty()) {
+        // 1. Kiểm tra DTO đầu vào.
+        if (dto == null) {
+            throw new IllegalArgumentException("Dữ liệu tài khoản không hợp lệ.");
+        }
 
-            throw new RuntimeException(
-                    "Username không được để trống."
-            );
+        // 2. Kiểm tra và chuẩn hóa username.
+        if (dto.getUsername() == null || dto.getUsername().isBlank()) {
+            throw new IllegalArgumentException("Username không được để trống.");
         }
 
         String username = dto.getUsername().trim();
 
-        // Username phải duy nhất
         if (userRepository.existsByUsername(username)) {
-
-            throw new RuntimeException(
-                    "Username đã tồn tại."
-            );
+            throw new IllegalArgumentException("Username đã tồn tại.");
         }
 
-
-        // Kiểm tra password
-        if (dto.getPassword() == null ||
-                dto.getPassword().isBlank()) {
-
-            throw new RuntimeException(
-                    "Password không được để trống."
-            );
+        // 3. Kiểm tra mật khẩu.
+        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Mật khẩu không được để trống.");
         }
 
-
-        // Confirm password
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp.");
+        }
 
-            throw new RuntimeException(
-                    "Mật khẩu xác nhận không khớp."
+        // 4. Kiểm tra email.
+        if (dto.getEmail() == null || dto.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Email không được để trống.");
+        }
+
+        String email = dto.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email đã được sử dụng.");
+        }
+
+        // 5. Kiểm tra số điện thoại.
+        if (dto.getPhoneNumber() == null || dto.getPhoneNumber().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Số điện thoại không được để trống."
             );
         }
 
+        String phoneNumber = dto.getPhoneNumber().trim();
 
-        // Kiểm tra role
-        if (dto.getRoleId() == null) {
-
-            throw new RuntimeException(
-                    "Vui lòng chọn role."
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+            throw new IllegalArgumentException(
+                    "Số điện thoại đã được sử dụng."
             );
+        }
+
+        // 6. Lấy vai trò được Admin chọn.
+        // Role ID phải tồn tại trong bảng roles.
+        if (dto.getRoleId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn vai trò.");
         }
 
         Role role = roleRepository.findById(dto.getRoleId())
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Role không tồn tại."
-                        )
+                        new IllegalArgumentException("Vai trò không tồn tại.")
                 );
 
+        if (!Boolean.TRUE.equals(role.getIsActive())) {
+            throw new IllegalArgumentException(
+                    "Vai trò này đang bị vô hiệu hóa."
+            );
+        }
 
-        // Tạo User
+        // 7. Tạo tài khoản mới.
         User user = new User();
-
         user.setUsername(username);
 
-        // KHÔNG lưu password dạng plain text
-        user.setPassword(
-                passwordEncoder.encode(dto.getPassword())
-        );
+        // Chỉ lưu mật khẩu đã mã hóa BCrypt.
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-        user.setEmail(dto.getEmail());
-
-        user.setPhoneNumber(dto.getPhoneNumber());
-
-        user.setFullName(dto.getFullName());
-
-        user.setRole(role);
-
+        user.setEmail(email);
+        user.setPhoneNumber(phoneNumber);
         user.setIsActive(true);
+        user.setStatus("ACTIVE");
 
+        // Mô hình mới: một User có thể có nhiều Role.
+        user.getRoles().add(role);
+
+        // Không gọi user.setFullName() vì họ tên thuộc PatientProfile.
+        // Không tự tạo PatientProfile ở đây.
+        // Tài khoản do Admin tạo chưa bắt buộc có hồ sơ bệnh nhân.
 
         return userRepository.save(user);
     }
+
 
 
     // =========================================================
     // 4. UPDATE ACCOUNT
     // =========================================================
 
-    @Override
-    public User updateAccount(
-            Long userId,
-            AccountUpdateDTO dto
-    ) {
 
+    @Override
+    public User updateAccount(Long userId, AccountUpdateDTO dto) {
+
+        // Lấy tài khoản cần cập nhật.
         User user = getAccountById(userId);
 
+        // Cập nhật email nếu người quản trị gửi giá trị mới.
         if (dto.getEmail() != null) {
-            user.setEmail(dto.getEmail().trim());
+            String email = dto.getEmail().trim().toLowerCase();
+
+            if (email.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Email không được để trống."
+                );
+            }
+
+            // Chỉ báo trùng nếu email đang thuộc tài khoản khác.
+            userRepository.findByEmail(email)
+                    .filter(existing -> !existing.getUserId().equals(userId))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException(
+                                "Email đã được tài khoản khác sử dụng."
+                        );
+                    });
+
+            user.setEmail(email);
         }
 
+        // Cập nhật số điện thoại nếu có gửi giá trị mới.
         if (dto.getPhoneNumber() != null) {
-            user.setPhoneNumber(dto.getPhoneNumber().trim());
+            String phone = dto.getPhoneNumber().trim();
+
+            if (phone.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Số điện thoại không được để trống."
+                );
+            }
+
+            // Không cho phép hai tài khoản sử dụng cùng số điện thoại.
+            userRepository.findByPhoneNumber(phone)
+                    .filter(existing -> !existing.getUserId().equals(userId))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException(
+                                "Số điện thoại đã được tài khoản khác sử dụng."
+                        );
+                    });
+
+            user.setPhoneNumber(phone);
         }
 
-        if (dto.getFullName() != null) {
-            user.setFullName(dto.getFullName().trim());
-        }
+        // Không cập nhật fullName tại đây.
+        // Việc cập nhật họ tên phải thực hiện qua PatientProfileService.
 
         return userRepository.save(user);
     }
+
 
 
     // =========================================================
     // 5. ĐỔI ROLE
     // =========================================================
 
-    @Override
-    public void changeRole(
-            Long userId,
-            Integer roleId
-    ) {
 
-        User user = getAccountById(userId);
+    @Transactional
+    public void changeRole(Long userId, Integer roleId) {
 
-        Role role = roleRepository.findById(roleId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Role không tồn tại."
-                        )
-                );
+        // 1. Tìm tài khoản cần thay đổi quyền
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Tài khoản không tồn tại."
+                ));
 
-        user.setRole(role);
+        // 2. Tìm role mới
+        Role selectedRole = roleRepository.findById(roleId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Role không tồn tại."
+                ));
 
+        // 3. Không cho phép gán role đã bị vô hiệu hóa
+        if (!Boolean.TRUE.equals(selectedRole.getIsActive())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Role này hiện không hoạt động."
+            );
+        }
+
+        // 4. Xóa toàn bộ role cũ
+        user.getRoles().clear();
+
+        // 5. Chỉ gán một role mới
+        user.getRoles().add(selectedRole);
+
+        // 6. Lưu thay đổi
         userRepository.save(user);
     }
+
 
 
     // =========================================================
     // 6. KHÓA / MỞ KHÓA ACCOUNT
     // =========================================================
 
+
     @Override
     public void toggleStatus(Long userId) {
 
+        // Tìm tài khoản; nếu không tồn tại thì báo lỗi.
         User user = getAccountById(userId);
 
-        Boolean currentStatus = user.getIsActive();
-
-        if (currentStatus == null) {
-            user.setIsActive(true);
-        } else {
-            user.setIsActive(!currentStatus);
-        }
+        // Đảo trạng thái hoạt động.
+        // Tài khoản đang hoạt động -> bị khóa.
+        // Tài khoản bị khóa -> được mở lại.
+        user.setIsActive(!Boolean.TRUE.equals(user.getIsActive()));
 
         userRepository.save(user);
     }
+
 }

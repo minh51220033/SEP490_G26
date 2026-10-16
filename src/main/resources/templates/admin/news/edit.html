@@ -161,6 +161,28 @@
                 <div class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
             </div>
 
+            <!-- CHI NHÁNH -->
+            <div class="form-group">
+                <label for="branchId">
+                    Chi nhánh <span class="required">*</span>
+                </label>
+
+                <select id="branchId"
+                        th:field="*{branchId}"
+                        required>
+                    <option value="">-- Chọn chi nhánh --</option>
+                    <option th:each="branch : ${branches}"
+                            th:value="${branch.branchId}"
+                            th:text="${branch.branchName}">
+                    </option>
+                </select>
+
+                <div class="error"
+                     th:if="${#fields.hasErrors('branchId')}"
+                     th:errors="*{branchId}">
+                </div>
+            </div>
+
             <!-- SUMMARY -->
             <div class="form-group">
                 <label>Mô tả ngắn</label>
@@ -226,7 +248,7 @@
                 const formData = new FormData();
                 formData.append('upload', file);
 
-                fetch('/admin/news/upload-image', {
+                fetch('/admin/news/upload/image', {
                     method: 'POST',
                     body: formData
                 })
@@ -288,7 +310,7 @@
                     ]
                 },
                 simpleUpload: {
-                    uploadUrl: '/admin/news/upload-image'
+                    uploadUrl: '/admin/news/upload/image'
                 },
                 initialData: contentTextarea.value || ""
             })

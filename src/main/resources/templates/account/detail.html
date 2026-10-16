@@ -126,11 +126,17 @@
                                 Họ và tên
                             </th>
 
-                            <td
-                                    th:text="${account.fullName}">
-                                Nguyễn Văn A
-                            </td>
+                            <td>
+    <span th:if="${#sets.isEmpty(account.patientProfiles)}">
+        Chưa có hồ sơ bệnh nhân
+    </span>
 
+                                <span th:unless="${#sets.isEmpty(account.patientProfiles)}"
+                                      th:each="profile, iter : ${account.patientProfiles}">
+        <span th:if="${!iter.first}">, </span>
+        <span th:text="${profile.fullName}">Nguyễn Văn A</span>
+    </span>
+                            </td>
                         </tr>
 
 
@@ -169,13 +175,16 @@
                             </th>
 
                             <td>
+    <span th:if="${#sets.isEmpty(account.roles)}"
+          class="badge bg-secondary">
+        Chưa có vai trò
+    </span>
 
-                                <span
-                                        class="badge bg-primary"
-                                        th:text="${account.role.roleName}">
-                                    BENH_NHAN
-                                </span>
-
+                                <span th:each="role : ${account.roles}"
+                                      class="badge bg-primary me-1"
+                                      th:text="${role.roleName}">
+        BENH_NHAN
+    </span>
                             </td>
 
                         </tr>
@@ -266,7 +275,7 @@
                                     th:each="role : ${roles}"
                                     th:value="${role.roleId}"
                                     th:text="${role.roleName}"
-                                    th:selected="${account.role.roleId == role.roleId}">
+                                    th:selected="${account.roles.contains(role)}">
                             </option>
 
                         </select>
