@@ -1,12 +1,11 @@
 package com.cvdcms.controller;
 
 import com.cvdcms.DTO.UserRegisterDTO;
-import com.cvdcms.entity.Role;
-import com.cvdcms.entity.Token;
-import com.cvdcms.entity.User;
+import com.cvdcms.entity.*;
 import com.cvdcms.repository.RoleRepository;
 import com.cvdcms.repository.TokenRepository;
 import com.cvdcms.repository.UserRepository;
+import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.service.EmailService;
 
 import jakarta.servlet.http.HttpSession;
@@ -19,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -40,16 +41,34 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-
+    @Autowired
+    private PatientProfileRepository patientProfileRepository;
     // =====================================================
     // REGEX
     // =====================================================
 
-    private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+    // =====================================================
+// BIỂU THỨC KIỂM TRA DỮ LIỆU ĐẦU VÀO
+// =====================================================
 
+    // Username: 4–50 ký tự, bắt đầu bằng chữ hoặc số.
+// Cho phép chữ cái, chữ số, dấu chấm, gạch dưới và gạch ngang.
+    private static final Pattern USERNAME_PATTERN =
+            Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._-]{3,49}$");
+
+    // Email: kiểm tra cấu trúc cơ bản và phần tên miền.
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile(
+                    "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+            );
+
+    // Số điện thoại Việt Nam: bắt đầu bằng 0, tổng cộng 10 hoặc 11 chữ số.
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^0\\d{9,10}$");
+
+    // OTP: chính xác 6 chữ số.
+    private static final Pattern OTP_PATTERN =
+            Pattern.compile("^\\d{6}$");
 
 
     // =====================================================
@@ -78,11 +97,91 @@ public class UserController {
 
 
     @GetMapping("/home")
-    public String home(HttpSession session) {
+    public String home(HttpSession session, Model model) {
 
-        // Kiểm tra đã đăng nhập chưa
-        if (session.getAttribute("loggedInUser") == null) {
+        // 1. Kiểm tra người dùng đã đăng nhập chưa
+        Object loggedInUser = session.getAttribute("loggedInUser");
+
+        if (!(loggedInUser instanceof User)) {
             return "redirect:/login";
+        }
+
+        User sessionUser = (User) loggedInUser;
+
+        // 2. Lấy thông tin tài khoản mới nhất từ database
+        User user = userRepository.findById(sessionUser.getUserId())
+                .orElse(null);
+
+        if (user == null || !Boolean.TRUE.equals(user.getIsActive())) {
+            session.invalidate();
+            return "redirect:/login";
+        }
+
+        // Cập nhật tài khoản mới nhất vào session
+        session.setAttribute("loggedInUser", user);
+        session.setAttribute("username", user.getUsername());
+
+        // 3. Lấy danh sách vai trò của tài khoản
+        List<String> roleNames = user.getRoles()
+                .stream()
+                .map(Role::getRoleName)
+                .toList();
+
+        session.setAttribute("roleNames", roleNames);
+        model.addAttribute("roleNames", roleNames);
+
+        // 4. Tên hiển thị mặc định là username
+        model.addAttribute("displayName", user.getUsername());
+
+        // 5. Khởi tạo giá trị mặc định cho hồ sơ và cơ sở
+        model.addAttribute("defaultPatientProfile", null);
+        model.addAttribute("currentBranchName", "Chưa xác định cơ sở");
+        model.addAttribute("currentBranchAddress", "");
+
+        // 6. Tìm hồ sơ bệnh nhân mặc định của tài khoản
+        PatientProfile defaultProfile =
+                patientProfileRepository
+                        .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
+                        .orElse(null);
+
+        if (defaultProfile != null) {
+
+            // Truyền hồ sơ mặc định sang HTML để lấy avatarUrl
+            model.addAttribute("defaultPatientProfile", defaultProfile);
+
+            // Nếu có họ tên, dùng họ tên làm tên hiển thị
+            if (defaultProfile.getFullName() != null
+                    && !defaultProfile.getFullName().isBlank()) {
+
+                model.addAttribute(
+                        "displayName",
+                        defaultProfile.getFullName()
+                );
+            }
+
+            // 7. Lấy cơ sở ưu tiên từ hồ sơ mặc định
+            Branch branch = defaultProfile.getPreferredBranch();
+
+            if (branch != null) {
+
+                if (branch.getBranchName() != null
+                        && !branch.getBranchName().isBlank()) {
+
+                    model.addAttribute(
+                            "currentBranchName",
+                            branch.getBranchName()
+                    );
+                }
+
+                if (branch.getAddress() != null
+                        && !branch.getAddress().isBlank()) {
+
+                    model.addAttribute(
+                            "currentBranchAddress",
+                            branch.getAddress()
+                    );
+                }
+            }
         }
 
         return "user/home";
@@ -210,29 +309,45 @@ public class UserController {
         }
 
 
-        // ---------------------------------------------
-        // LOGIN SUCCESS
-        // ---------------------------------------------
 
+        // =============================================
+        // ĐĂNG NHẬP THÀNH CÔNG
+        // =============================================
+
+        session.setAttribute("loggedInUser", user);
+        session.setAttribute("username", user.getUsername());
+
+        // Lưu tên các vai trò vào session.
         session.setAttribute(
-                "loggedInUser",
-                user
+                "roleNames",
+                user.getRoles()
+                        .stream()
+                        .map(Role::getRoleName)
+                        .toList()
         );
 
-        session.setAttribute(
-                "username",
-                user.getUsername()
-        );
+        // =============================================
+        // KIỂM TRA HỒ SƠ CƠ BẢN CHO MỌI VAI TRÒ
+        // =============================================
 
+        // Không phân biệt ADMIN, DOCTOR, LE_TAN hay PATIENT.
+        // Nếu tài khoản chưa có hồ sơ mặc định thì yêu cầu hoàn thiện.
+        boolean hasDefaultProfile =
+                patientProfileRepository
+                        .existsByUser_UserIdAndIsDefaultTrue(
+                                user.getUserId()
+                        );
 
-        // ---------------------------------------------
-        // REDIRECT HOME
-        // ---------------------------------------------
+        if (!hasDefaultProfile) {
+            return "redirect:/profile/complete";
+        }
 
+        // Đã có hồ sơ mặc định thì vào trang chính.
         return "redirect:/home";
+
     }
 
-    // =====================================================
+        // =====================================================
     // REGISTER - GET
     // =====================================================
 
@@ -263,28 +378,33 @@ public class UserController {
         // USERNAME
         // -----------------------------
 
+        // Chuẩn hóa username, không cho phép giá trị null.
         String username = dto.getUsername() == null
                 ? ""
                 : dto.getUsername().trim();
 
-        if (username.isEmpty()) {
-
+// Kiểm tra bắt buộc và định dạng username.
+        if (!USERNAME_PATTERN.matcher(username).matches()) {
             model.addAttribute(
                     "error",
-                    "Vui lòng nhập tên đăng nhập."
+                    "Tên đăng nhập phải từ 4 đến 50 ký tự, "
+                            + "bắt đầu bằng chữ hoặc số và chỉ chứa "
+                            + "chữ cái, chữ số, dấu chấm, gạch dưới "
+                            + "hoặc gạch ngang."
             );
 
+            model.addAttribute("registerDTO", dto);
             return "/user/register";
         }
 
-        if (username.length() < 4 ||
-                username.length() > 50) {
-
+// Kiểm tra username đã tồn tại.
+        if (userRepository.findByUsername(username).isPresent()) {
             model.addAttribute(
                     "error",
-                    "Tên đăng nhập phải từ 4 đến 50 ký tự."
+                    "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác."
             );
 
+            model.addAttribute("registerDTO", dto);
             return "/user/register";
         }
 
@@ -339,111 +459,157 @@ public class UserController {
 
 
         // -----------------------------
-        // EMAIL
-        // -----------------------------
-
+// EMAIL
+// -----------------------------
         String email = dto.getEmail() == null
                 ? ""
-                : dto.getEmail().trim();
+                : dto.getEmail().trim().toLowerCase(Locale.ROOT);
 
-        if (email.isEmpty() ||
-                !EMAIL_PATTERN
-                        .matcher(email)
-                        .matches()) {
+        if (email.isEmpty()
+                || email.length() > 254
+                || !EMAIL_PATTERN.matcher(email).matches()) {
 
+            model.addAttribute("error", "Email không hợp lệ.");
+            model.addAttribute("registerDTO", dto);
+            return "/user/register";
+        }
+
+// -----------------------------
+// PHONE
+// -----------------------------
+        String phoneNumber = dto.getPhoneNumber() == null
+                ? ""
+                : dto.getPhoneNumber().trim();
+
+        if (!PHONE_PATTERN.matcher(phoneNumber).matches()) {
             model.addAttribute(
                     "error",
-                    "Email không hợp lệ."
+                    "Số điện thoại phải bắt đầu bằng số 0 "
+                            + "và gồm 10 hoặc 11 chữ số."
             );
 
+            model.addAttribute("registerDTO", dto);
+            return "/user/register";
+        }
+
+// -----------------------------
+// KIỂM TRA TRÙNG DỮ LIỆU
+// -----------------------------
+        if (userRepository.existsByEmail(email)) {
+            model.addAttribute(
+                    "error",
+                    "Email đã được sử dụng. Vui lòng nhập email khác."
+            );
+
+            model.addAttribute("registerDTO", dto);
+            return "/user/register";
+        }
+
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+            model.addAttribute(
+                    "error",
+                    "Số điện thoại đã được sử dụng. Vui lòng nhập số khác."
+            );
+
+            model.addAttribute("registerDTO", dto);
             return "/user/register";
         }
 
 
-        // -----------------------------
-        // PHONE
-        // -----------------------------
 
-        String phoneNumber =
-                dto.getPhoneNumber() == null
-                        ? ""
-                        : dto.getPhoneNumber().trim();
+        // =============================================
+        // KIỂM TRA EMAIL VÀ SỐ ĐIỆN THOẠI ĐÃ TỒN TẠI
+        // =============================================
 
-        if (!PHONE_PATTERN
-                .matcher(phoneNumber)
-                .matches()) {
+        // Chuẩn hóa email để hạn chế trường hợp cùng email
+        // nhưng khác chữ hoa/chữ thường.
+        email = email.toLowerCase(Locale.ROOT);
 
+        if (userRepository.existsByEmail(email)) {
             model.addAttribute(
                     "error",
-                    "Số điện thoại không hợp lệ."
+                    "Email đã được sử dụng. Vui lòng nhập email khác."
             );
-
+            model.addAttribute("registerDTO", dto);
             return "/user/register";
         }
 
-
-        // -----------------------------
-        // ROLE PATIENT
-        // -----------------------------
-
-        Role patientRole =
-                roleRepository.findById(6)
-                        .orElse(null);
-
-        if (patientRole == null) {
-
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
             model.addAttribute(
                     "error",
-                    "Không tìm thấy quyền khách hàng."
+                    "Số điện thoại đã được sử dụng. Vui lòng nhập số khác."
             );
-
+            model.addAttribute("registerDTO", dto);
             return "/user/register";
         }
 
+        // =============================================
+        // LẤY VAI TRÒ BỆNH NHÂN
+        // =============================================
 
-        // -----------------------------
-        // CREATE USER
-        // -----------------------------
+        // Theo dữ liệu roles bạn gửi, ID 6 là BENH_NHAN.
+        // Không cho người đăng ký tự chọn vai trò ADMIN.
+        Role patientRole = roleRepository.findById(6)
+                .orElse(null);
+
+        if (patientRole == null
+                || !Boolean.TRUE.equals(patientRole.getIsActive())) {
+
+            model.addAttribute(
+                    "error",
+                    "Vai trò bệnh nhân chưa được cấu hình hoặc đang bị khóa."
+            );
+            model.addAttribute("registerDTO", dto);
+            return "/user/register";
+        }
+
+        // =============================================
+        // TẠO TÀI KHOẢN
+        // =============================================
 
         User user = new User();
 
         user.setUsername(username);
 
-        /*
-         * KHÔNG lưu password dạng plaintext.
-         */
-        user.setPassword(
-                passwordEncoder.encode(password)
-        );
+        // Mật khẩu luôn được mã hóa bằng BCrypt.
+        user.setPassword(passwordEncoder.encode(password));
 
         user.setEmail(email);
-
         user.setPhoneNumber(phoneNumber);
-
-        /*
-         * Theo yêu cầu hiện tại:
-         * không bắt buộc họ tên.
-         */
-        user.setFullName(null);
-
         user.setIsActive(true);
+        user.setStatus("ACTIVE");
 
-        user.setRole(patientRole);
+        // Mô hình mới: thêm vai trò vào tập hợp roles.
+        // Không dùng user.setRole(patientRole).
+        user.getRoles().add(patientRole);
 
-
+        // Không gọi user.setFullName().
+        // Hồ sơ bệnh nhân được tạo ở bước hoàn thiện hồ sơ.
         userRepository.save(user);
 
+        // =============================================
+        // ĐĂNG NHẬP NGAY SAU KHI ĐĂNG KÝ
+        // =============================================
 
-        // -----------------------------
-        // SUCCESS
-        // -----------------------------
+        session.setAttribute("loggedInUser", user);
+        session.setAttribute("username", user.getUsername());
+
+        List<String> roleNames = user.getRoles()
+                .stream()
+                .map(Role::getRoleName)
+                .toList();
+
+        session.setAttribute("roleNames", roleNames);
 
         session.setAttribute(
                 "notification",
-                "Đăng ký tài khoản thành công! Vui lòng đăng nhập."
+                "Đăng ký tài khoản thành công. Vui lòng hoàn thiện hồ sơ."
         );
 
-        return "redirect:/login";
+        // URL này cần khớp với @GetMapping trong ProfileController.
+        return "redirect:/profile/complete";
+
+
     }
 
 
@@ -652,14 +818,10 @@ public class UserController {
         }
 
 
-        if (otp == null ||
-                !otp.matches("\\d{6}")) {
+        otp = otp == null ? "" : otp.trim();
 
-            model.addAttribute(
-                    "error",
-                    "Mã OTP phải gồm 6 chữ số."
-            );
-
+        if (!OTP_PATTERN.matcher(otp).matches()) {
+            model.addAttribute("error", "Mã OTP phải gồm 6 chữ số.");
             model.addAttribute(
                     "maskedEmail",
                     session.getAttribute("maskedEmail")
@@ -824,7 +986,8 @@ public class UserController {
         }
 
 
-        if (!newPassword.equals(confirmPassword)) {
+        if (confirmPassword == null
+                || !newPassword.equals(confirmPassword)) {
 
             model.addAttribute(
                     "error",

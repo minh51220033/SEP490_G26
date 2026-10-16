@@ -1,12 +1,7 @@
 package com.cvdcms.controller;
 
-import com.cvdcms.entity.Comment;
-import com.cvdcms.entity.NewsArticle;
-import com.cvdcms.entity.User;
-import com.cvdcms.repository.CommentBanRepository;
-import com.cvdcms.repository.CommentLikeRepository;
-import com.cvdcms.repository.CommentRepository;
-import com.cvdcms.repository.NewsArticleRepository;
+import com.cvdcms.entity.*;
+import com.cvdcms.repository.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +10,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.PatientProfile;
+import com.cvdcms.entity.User;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.cvdcms.entity.NewsArticle;
+
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -23,20 +25,32 @@ import java.util.*;
 @RequestMapping("/news")
 public class NewsController {
 
+
     private final NewsArticleRepository newsRepository;
     private final CommentRepository commentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final CommentBanRepository commentBanRepository;
+    private final BranchRepository branchRepository;
+    private final UserRepository userRepository;
+    private final PatientProfileRepository patientProfileRepository;
+
 
     public NewsController(
             NewsArticleRepository newsRepository,
             CommentRepository commentRepository,
             CommentLikeRepository commentLikeRepository,
-            CommentBanRepository commentBanRepository) {
+            CommentBanRepository commentBanRepository,
+            BranchRepository branchRepository,
+            UserRepository userRepository,                     // Thêm dòng này
+            PatientProfileRepository patientProfileRepository) { // Thêm dòng này
+
         this.newsRepository = newsRepository;
         this.commentRepository = commentRepository;
         this.commentLikeRepository = commentLikeRepository;
         this.commentBanRepository = commentBanRepository;
+        this.branchRepository = branchRepository;
+        this.userRepository = userRepository;                   // Thêm dòng này
+        this.patientProfileRepository = patientProfileRepository; // Thêm dòng này
     }
 
     // =====================================================
@@ -48,17 +62,75 @@ public class NewsController {
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "6") int size,
+            HttpSession session,
             Model model) {
 
-        if (page < 0) page = 0;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
+        page = Math.max(page, 0);
 
-        Page<NewsArticle> newsPage = newsRepository.searchPublished(keyword == null ? "" : keyword.trim(), pageable);
+        if (size != 6 && size != 12 && size != 18) {
+            size = 6;
+        }
+        
 
+        // 1. Lấy tài khoản đang đăng nhập từ session.
+        User sessionUser = (User) session.getAttribute("loggedInUser");
+
+        if (sessionUser == null) {
+            return "redirect:/login";
+        }
+
+        // 2. Tải lại tài khoản từ database.
+        User user = userRepository.findById(sessionUser.getUserId())
+                .orElse(null);
+
+        if (user == null) {
+            session.invalidate();
+            return "redirect:/login";
+        }
+
+        // 3. Lấy hồ sơ bệnh nhân mặc định của tài khoản.
+        // Giả định repository trả về Optional<PatientProfile>.
+        PatientProfile profile = patientProfileRepository
+                .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
+                .orElse(null);
+
+        if (profile == null || profile.getPreferredBranch() == null) {
+            model.addAttribute(
+                    "errorMessage",
+                    "Tài khoản chưa có hồ sơ mặc định hoặc chưa được gán cơ sở."
+            );
+            model.addAttribute("newsPage", Page.empty());
+            model.addAttribute("keyword", keyword.trim());
+            model.addAttribute("size", size);
+            model.addAttribute("currentBranchName", "Chưa xác định cơ sở");
+
+            return "news/list";
+        }
+
+        // 4. Lấy đúng cơ sở của tài khoản.
+        Branch branch = profile.getPreferredBranch();
+        Long currentBranchId = branch.getBranchId();
+
+        // 5. Chỉ truy vấn tin tức thuộc cơ sở hiện tại.
+        String searchKeyword = keyword == null ? "" : keyword.trim();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<NewsArticle> newsPage =
+                newsRepository.searchPublishedByBranch(
+                        searchKeyword,
+                        currentBranchId,
+                        pageable
+                );
+
+        // 6. Truyền dữ liệu cho giao diện.
         model.addAttribute("newsPage", newsPage);
-        model.addAttribute("keyword", keyword);
+        model.addAttribute("keyword", searchKeyword);
+        model.addAttribute("size", size);
+        model.addAttribute("currentBranchName", branch.getBranchName());
+        model.addAttribute("currentBranchAddress", branch.getAddress());
+        model.addAttribute("currentBranchId", currentBranchId);
 
-        // Đảm bảo tên template tương ứng với vị trí file list_2.html (VD: templates/news/list.html)
         return "news/list";
     }
 
