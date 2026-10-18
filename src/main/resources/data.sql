@@ -1,12 +1,3 @@
--- Dữ liệu khởi tạo cho bảng roles (Chỉ insert nếu chưa tồn tại để tránh lỗi duplicate)
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (1, 'ADMIN', true);
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (2, 'LE_TAN', true);
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (3, 'BAC_SI', true);
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (4, 'QUAN_LY_KHO', true);
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (5, 'KE_TOAN', true);
-INSERT IGNORE INTO roles (role_id, role_name, is_active) VALUES (6, 'BENH_NHAN', true);
-
-
 INSERT INTO branches (address, branch_code, branch_name, created_at, email, is_active, phone, updated_at)
 VALUES
     ('123 Nguyễn Trãi, Quận 1, TP.HCM', 'CN01', 'Cơ sở Quận 1', NOW(), 'cs1@dentalclinic.com', 1, '0901234567', NOW()),
