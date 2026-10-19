@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<!--
+    Fragment dùng chung cho các trang xác thực (login, register, verify-otp, reset-password).
+
+    Cách dùng:
+    <head th:replace="~{fragments/auth :: head('Đăng nhập')}"></head>
+    <aside th:replace="~{fragments/auth :: hero}"></aside>
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a2f6e">
+    <title th:text="${title} + ' | CV-DCMS'">CV-DCMS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <link href="../../static/css/layout.css" th:href="@{/css/layout.css}" rel="stylesheet">
+    <link href="../../static/css/auth.css" th:href="@{/css/auth.css}" rel="stylesheet">
+    <script src="../../static/js/auth.js" th:src="@{/js/auth.js}" defer></script>
+</head>
+
+<body>
+
+<aside th:fragment="hero" class="auth-hero" aria-label="Giới thiệu CV-DCMS">
+    <div class="auth-hero__top">
+        <a th:replace="~{fragments/logo :: logo('light')}"></a>
+    </div>
+
+    <div class="auth-hero__body">
+        <h1 class="auth-hero__title">
+            Số hóa phòng khám
+            <span class="auth-hero__highlight">Tăng trưởng bền vững</span>
+        </h1>
+        <p class="auth-hero__lead">
+            Dành thời gian cho bệnh nhân — để CV-DCMS lo phần vận hành.
+        </p>
+
+        <ul class="auth-hero__list">
+            <li><i class="bi bi-check2" aria-hidden="true"></i>Quản lý bệnh nhân, lịch hẹn &amp; điều trị tập trung</li>
+            <li><i class="bi bi-check2" aria-hidden="true"></i>Tự động nhắc hẹn, chăm sóc qua Zalo ZNS &amp; SMS</li>
+            <li><i class="bi bi-check2" aria-hidden="true"></i>Báo cáo doanh thu, công nợ minh bạch mỗi ngày</li>
+            <li><i class="bi bi-check2" aria-hidden="true"></i>Nhiều chi nhánh — một hệ thống duy nhất</li>
+        </ul>
+    </div>
+
+    <p class="auth-hero__copy">Bản quyền © 2026 · CV-DCMS</p>
+</aside>
+
+</body>
+</html>

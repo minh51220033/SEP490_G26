@@ -1,1136 +1,197 @@
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head>
+<head th:replace="~{fragments/head :: head('Trang chủ')}"></head>
 
-    <meta charset="UTF-8">
+<body class="app-body">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
+<!-- Header công khai: logo, menu dịch vụ, tin tức -->
+<header th:replace="~{fragments/header :: siteHeader}"></header>
 
-    <title>CV-DCMS - Dashboard</title>
+<!-- Khu vực quản trị: giữ nguyên sidebar và dashboard -->
+<div class="app-shell">
 
-    <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-            rel="stylesheet">
+    <!-- Sidebar và Backdrop -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-    <style>
+    <div class="app-main">
 
-        body {
-            margin: 0;
-            background: #f5f6fa;
-            font-family: Arial, sans-serif;
-        }
+        <!-- Topbar / Header -->
+        <header th:replace="~{fragments/header :: appTopbar('Trang chủ')}"></header>
 
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 260px;
-            height: 100vh;
-            background: #1f2937;
-            color: white;
-            overflow-y: auto;
-        }
+        <main class="app-content">
 
-        .logo {
-            padding: 22px 20px;
-            font-size: 20px;
-            font-weight: bold;
-            border-bottom: 1px solid #374151;
-        }
-
-        .logo small {
-            display: block;
-            margin-top: 5px;
-            font-size: 12px;
-            color: #9ca3af;
-            font-weight: normal;
-        }
-
-        .menu-title {
-            padding: 20px 20px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            color: #9ca3af;
-            font-weight: bold;
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            padding: 12px 20px;
-
-            color: #d1d5db;
-            text-decoration: none;
-
-            transition: 0.2s;
-        }
-
-        .menu-item:hover {
-            background: #374151;
-            color: white;
-        }
-
-        .menu-item.active {
-            background: #2563eb;
-            color: white;
-        }
-
-        .menu-item.disabled {
-            color: #6b7280;
-            cursor: not-allowed;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            min-height: 100vh;
-        }
-
-        .topbar {
-            height: 70px;
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-
-            padding: 0 30px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .welcome-card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .function-card {
-            background: white;
-            border-radius: 10px;
-            padding: 22px;
-
-            height: 100%;
-
-            border: 1px solid #e5e7eb;
-
-            transition: 0.2s;
-        }
-
-        .function-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        }
-
-        .function-icon {
-            font-size: 30px;
-            margin-bottom: 10px;
-        }
-
-        .role-badge {
-            background: #2563eb;
-            color: white;
-
-            padding: 5px 10px;
-            border-radius: 20px;
-
-            font-size: 12px;
-        }
-
-        @media (max-width: 768px) {
-
-            .sidebar {
-                width: 220px;
-            }
-
-            .main-content {
-                margin-left: 220px;
-            }
-
-        }
-
-         .user-menu {
-             position: relative;
-             margin-left: auto;
-         }
-
-        .avatar-button {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 2px solid #ffffff;
-            cursor: pointer;
-            overflow: hidden;
-            padding: 0;
-            background: #e8eef5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .avatar-button img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .avatar-letter {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2563eb;
-        }
-
-        .user-dropdown {
-            position: absolute;
-            top: 55px;
-            right: 0;
-            width: 230px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            padding: 8px;
-            display: none;
-            z-index: 1000;
-        }
-
-        .user-dropdown.show {
-            display: block;
-        }
-
-        .user-dropdown-header {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 5px;
-        }
-
-        .user-dropdown-name {
-            font-weight: 600;
-            font-size: 15px;
-            color: #222;
-        }
-
-        .user-dropdown-role {
-            margin-top: 4px;
-            font-size: 13px;
-            color: #777;
-        }
-
-        .dropdown-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 11px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .dropdown-link:hover {
-            background: #f3f6fa;
-        }
-
-        .logout-form {
-            margin: 0;
-        }
-
-        .logout-button {
-            width: 100%;
-            border: none;
-            background: transparent;
-            text-align: left;
-            cursor: pointer;
-            font: inherit;
-        }
-
-        .logout-button:hover {
-            background: #fff1f1;
-            color: #dc2626;
-        }
-
-        .avatar-button {
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            border: none;
-            border-radius: 50%;
-            overflow: hidden;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .avatar-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-
-        .avatar-letter {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-weight: bold;
-        }
-
-
-    </style>
-
-</head>
-
-
-<body>
-
-
-<!-- ========================================================= -->
-<!-- SIDEBAR -->
-<!-- ========================================================= -->
-
-<div class="sidebar">
-
-    <!-- LOGO -->
-
-    <div class="logo">
-
-        CV-DCMS
-
-        <small>
-            Cường Việt Dental Clinic
-        </small>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- COMMON -->
-    <!-- ===================================================== -->
-
-    <div class="menu-title">
-        Chung
-    </div>
-
-
-    <a
-            href="/home"
-            class="menu-item active">
-
-        🏠
-
-        <span>
-            Trang chủ
-        </span>
-
-    </a>
-
-    <a
-            href="/news"
-            class="menu-item active">
-
-        🏠
-
-        <span>
-            Tin tức
-        </span>
-
-    </a>
-
-    <!-- MENU TÀI KHOẢN -->
-    <div class="user-menu"
-         th:if="${session.loggedInUser != null}">
-
-        <!-- Nút avatar tài khoản -->
-        <button type="button"
-                class="avatar-button"
-                id="avatarButton"
-                aria-label="Mở menu tài khoản">
-
-            <!-- Có ảnh đại diện trong hồ sơ bệnh nhân mặc định -->
-            <img th:if="${defaultPatientProfile != null
-                 and defaultPatientProfile.avatarUrl != null
-                 and !#strings.isEmpty(defaultPatientProfile.avatarUrl)}"
-                 th:src="${defaultPatientProfile.avatarUrl}"
-                 alt="Ảnh đại diện"
-                 class="avatar-image">
-
-            <!-- Chưa có ảnh: hiển thị chữ cái đầu username -->
-            <span th:if="${defaultPatientProfile == null
-                  or defaultPatientProfile.avatarUrl == null
-                  or #strings.isEmpty(defaultPatientProfile.avatarUrl)}"
-                  class="avatar-letter"
-                  th:text="${session.loggedInUser.username != null
-              and !#strings.isEmpty(session.loggedInUser.username)
-              ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
-              : 'U'}">
-        U
-    </span>
-
-        </button>
-
-        <!-- Dropdown -->
-        <div class="user-dropdown" id="userDropdown">
-
-            <div class="user-dropdown-header">
-
-                <div class="user-dropdown-name"
-                     th:text="${displayName != null
-                     and !#strings.isEmpty(displayName)
-                     ? displayName
-                     : session.loggedInUser.username}">
-                    Người dùng
-                </div>
-
-                <div class="user-dropdown-role"
-                     th:text="${roleNames != null
-                     and !#lists.isEmpty(roleNames)
-                     ? #strings.listJoin(roleNames, ', ')
-                     : 'Chưa xác định'}">
-                    Vai trò
-                </div>
-
-            </div>
-
-            <a th:href="@{/profile}"
-               class="dropdown-link">
-                👤 <span>Thông tin cá nhân</span>
-            </a>
-
-            <form th:action="@{/logout}"
-                  method="post"
-                  class="logout-form">
-
-                <button type="submit"
-                        class="dropdown-link logout-button">
-                    🚪 <span>Đăng xuất</span>
-                </button>
-
-            </form>
-
-        </div>
-    </div>
-
-    <!-- ===================================================== -->
-    <!-- ADMIN MENU -->
-    <!-- ===================================================== -->
-
-    <div
-            th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
-
-        <div class="menu-title">
-            Quản trị hệ thống
-        </div>
-
-
-        <!-- ACCOUNT -->
-
-        <a
-                th:href="@{/accounts}"
-                class="menu-item">
-
-            👥
-
-            <span>
-                Quản lý tài khoản
-            </span>
-
-        </a>
-
-
-        <!-- SERVICE -->
-
-        <a
-                th:href="@{/admin/news}"
-                class="menu-item disabled">
-
-            🦷
-
-            <span>
-                Quản lý tin tức
-            </span>
-
-        </a>
-
-
-        <!-- PATIENT -->
-
-        <a
-                th:href="@{/admin/bans}"
-                class="menu-item disabled">
-
-            🧑‍⚕️
-
-            <span>
-                Quản lý tài khoản bị ban
-            </span>
-
-        </a>
-
-
-        <!-- EMPLOYEE -->
-
-        <a
-                th:href="@{/admin/branches}"
-                class="menu-item disabled">
-
-            👨‍💼
-
-            <span>
-                Quản lý cơ sở
-            </span>
-
-        </a>
-
-
-        <!-- REPORT -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            📊
-
-            <span>
-                Báo cáo & Thống kê
-            </span>
-
-        </a>
-
-
-        <!-- AUDIT -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            📋
-
-            <span>
-                Nhật ký thao tác
-            </span>
-
-        </a>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- RECEPTIONIST MENU -->
-    <!-- ===================================================== -->
-
-    <div
-            th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
-
-        <div class="menu-title">
-            Lễ tân
-        </div>
-
-
-        <!-- PATIENT -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            🧑
-
-            <span>
-                Hồ sơ bệnh nhân
-            </span>
-
-        </a>
-
-
-        <!-- APPOINTMENT -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            📅
-
-            <span>
-                Quản lý lịch hẹn
-            </span>
-
-        </a>
-
-
-        <!-- CHECK IN -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            ✅
-
-            <span>
-                Tiếp đón & Check-in
-            </span>
-
-        </a>
-
-
-        <!-- QUEUE -->
-
-        <a
-                href="#"
-                class="menu-item disabled">
-
-            🔢
-
-            <span>
-                Hàng chờ khám
-            </span>
-
-        </a>
-
-
-        <!-- ACCOUNT -->
-
-        <a
-                th:href="@{/accounts}"
-                class="menu-item">
-
-            👥
-
-            <span>
-                Quản lý tài khoản
-            </span>
-
-        </a>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- LOGOUT -->
-    <!-- ===================================================== -->
-
-    <div class="menu-title">
-        Tài khoản
-    </div>
-
-
-    <a
-            href="/logout"
-            class="menu-item">
-
-        🚪
-
-        <span>
-            Đăng xuất
-        </span>
-
-    </a>
-
-</div>
-
-
-<!-- ========================================================= -->
-<!-- MAIN CONTENT -->
-<!-- ========================================================= -->
-
-<div class="main-content">
-
-
-    <!-- TOP BAR -->
-
-    <div class="topbar">
-
-        <div>
-            <strong>Dashboard</strong>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
-
-        <span th:if="${session.loggedInUser != null}"
-              th:text="${session.loggedInUser.username}">
-            username
-        </span>
-
-            <span class="role-badge"
-                  th:if="${roleNames != null and !#lists.isEmpty(roleNames)}"
-                  th:text="${#strings.listJoin(roleNames, ', ')}">
-            Vai trò
-        </span>
-
-        </div>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- CONTENT -->
-    <!-- ===================================================== -->
-
-    <div class="content">
-
-
-        <!-- WELCOME -->
-
-        <!-- THÔNG TIN CƠ SỞ HIỆN TẠI -->
-        <div class="welcome-card mb-4">
-
-            <div class="d-flex align-items-center gap-3">
-
-                <div class="function-icon">🏥</div>
-
+            <!-- CHÀO MỪNG + CƠ SỞ HIỆN TẠI -->
+            <section class="welcome-card">
                 <div>
-                    <h5 class="mb-1">Cơ sở hiện tại</h5>
-
-                    <p class="mb-1"
-                       th:text="${currentBranchName}">
-                        Chưa xác định cơ sở
-                    </p>
-
-                    <small class="text-muted"
-                           th:text="${currentBranchAddress != null
-                       and !#strings.isEmpty(currentBranchAddress)
-                       ? currentBranchAddress
-                       : 'Chưa có thông tin địa chỉ'}">
-                        Địa chỉ cơ sở
-                    </small>
+                    <span class="eyebrow">Hệ thống quản lý nha khoa</span>
+                    <h2 class="welcome-card__title">
+                        Xin chào,
+                        <span class="text-brand"
+                              th:text="${displayName != null and !#strings.isEmpty(displayName)
+                                      ? displayName
+                                      : (session.loggedInUser != null ? session.loggedInUser.username : 'bạn')}">admin</span>
+                    </h2>
+                    <p class="welcome-card__desc">Chúc bạn một ngày làm việc hiệu quả cùng CV-DCMS.</p>
                 </div>
 
-            </div>
-
-        </div>
-
-
-        <!-- ================================================= -->
-        <!-- ADMIN FUNCTIONS -->
-        <!-- ================================================= -->
-
-        <div
-                th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
-
-
-            <h4 class="mb-3">
-                Chức năng quản trị
-            </h4>
-
-
-            <div class="row g-4">
-
-
-                <!-- ACCOUNT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            👥
-                        </div>
-
-                        <h5>
-                            Quản lý tài khoản
-                        </h5>
-
-                        <p class="text-muted">
-                            Tạo, sửa, khóa/mở khóa và
-                            phân quyền tài khoản.
-                        </p>
-
-                        <a
-                                th:href="@{/accounts}"
-                                class="btn btn-primary">
-
-                            Xem danh sách
-
-                        </a>
-
+                <div class="branch-box">
+                    <span class="icon-tile icon-tile--lg"><i class="bi bi-hospital" aria-hidden="true"></i></span>
+                    <div>
+                        <span class="branch-box__label">Cơ sở hiện tại</span>
+                        <p class="branch-box__name" th:text="${currentBranchName}">Chưa xác định cơ sở</p>
+                        <small class="branch-box__address"
+                               th:text="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)
+                                       ? currentBranchAddress : 'Chưa có thông tin địa chỉ'}">Địa chỉ cơ sở</small>
                     </div>
-
                 </div>
+            </section>
 
+            <!-- THẺ SỐ LIỆU -->
+            <section class="stat-grid" aria-label="Số liệu hôm nay">
+                <article class="stat-card">
+                    <p class="stat-card__label">Lịch hẹn hôm nay</p>
+                    <p class="stat-card__value" th:text="${todayAppointments ?: 0}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Bệnh nhân đang chờ</p>
+                    <p class="stat-card__value" th:text="${waitingPatients ?: 0}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Bệnh nhân mới</p>
+                    <p class="stat-card__value" th:text="${newPatients ?: 0}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Tài khoản hoạt động</p>
+                    <p class="stat-card__value" th:text="${activeAccounts ?: 0}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                </article>
+            </section>
 
-                <!-- SERVICE -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            🦷
-                        </div>
-
-                        <h5>
-                            Dịch vụ & Bảng giá
-                        </h5>
-
-                        <p class="text-muted">
-                            Quản lý dịch vụ nha khoa,
-                            giá và chương trình khuyến mãi.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+            <!-- CHỨC NĂNG QUẢN TRỊ -->
+            <section class="panel" th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
+                <div class="panel__head">
+                    <div>
+                        <h3 class="panel__title">Chức năng quản trị</h3>
+                        <p class="panel__subtitle">Quản lý toàn bộ hệ thống phòng khám</p>
                     </div>
-
                 </div>
 
-
-                <!-- PATIENT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            🧑‍⚕️
-                        </div>
-
-                        <h5>
-                            Quản lý bệnh nhân
-                        </h5>
-
-                        <p class="text-muted">
-                            Quản lý hồ sơ và thông tin
-                            bệnh nhân.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                <div class="feature-grid">
+                    <a th:href="@{/accounts}" class="feature-card">
+                        <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Quản lý tài khoản</span>
+                            <span class="feature-card__desc">Tạo, sửa, khoá / mở khoá và phân quyền tài khoản.</span>
+                            <span class="feature-card__link">Xem danh sách <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                        </span>
+                    </a>
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-tags" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Dịch vụ &amp; Bảng giá</span>
+                            <span class="feature-card__desc">Quản lý dịch vụ nha khoa, giá và chương trình khuyến mãi.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-                <!-- EMPLOYEE -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            👨‍💼
-                        </div>
-
-                        <h5>
-                            Quản lý nhân viên
-                        </h5>
-
-                        <p class="text-muted">
-                            Quản lý thông tin nhân viên
-                            và phân công công việc.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Quản lý bệnh nhân</span>
+                            <span class="feature-card__desc">Quản lý hồ sơ và thông tin bệnh nhân.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-                <!-- REPORT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            📊
-                        </div>
-
-                        <h5>
-                            Báo cáo & Thống kê
-                        </h5>
-
-                        <p class="text-muted">
-                            Theo dõi doanh thu và hoạt động
-                            của phòng khám.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Quản lý nhân viên</span>
+                            <span class="feature-card__desc">Quản lý thông tin nhân viên và phân công công việc.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-                <!-- AUDIT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            📋
-                        </div>
-
-                        <h5>
-                            Nhật ký thao tác
-                        </h5>
-
-                        <div class="user-dropdown-name"
-                             th:text="${displayName}">
-                            Người dùng
-                        </div>
-
-                        <div class="user-dropdown-role"
-                             th:text="${roleNames != null
-               ? #strings.listJoin(roleNames, ', ')
-               : 'Chưa xác định'}">
-                            Vai trò
-                        </div>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Báo cáo &amp; Thống kê</span>
+                            <span class="feature-card__desc">Theo dõi doanh thu và hoạt động của phòng khám.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-            </div>
-
-        </div>
-
-
-        <!-- ================================================= -->
-        <!-- RECEPTIONIST FUNCTIONS -->
-        <!-- ================================================= -->
-
-        <div
-                th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
-
-
-            <h4 class="mb-3">
-                Chức năng lễ tân
-            </h4>
-
-
-            <div class="row g-4">
-
-
-                <!-- PATIENT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            🧑
-                        </div>
-
-                        <h5>
-                            Hồ sơ bệnh nhân
-                        </h5>
-
-                        <p class="text-muted">
-                            Tra cứu và quản lý hồ sơ
-                            bệnh nhân.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Nhật ký thao tác</span>
+                            <span class="feature-card__desc">Lưu vết các thao tác quan trọng trong hệ thống.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
                 </div>
+            </section>
 
-
-                <!-- APPOINTMENT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            📅
-                        </div>
-
-                        <h5>
-                            Quản lý lịch hẹn
-                        </h5>
-
-                        <p class="text-muted">
-                            Tạo, chỉnh sửa và quản lý
-                            lịch hẹn bệnh nhân.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+            <!-- CHỨC NĂNG LỄ TÂN -->
+            <section class="panel" th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
+                <div class="panel__head">
+                    <div>
+                        <h3 class="panel__title">Chức năng lễ tân</h3>
+                        <p class="panel__subtitle">Tiếp đón và hỗ trợ bệnh nhân</p>
                     </div>
-
                 </div>
 
-
-                <!-- CHECK IN -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            ✅
-                        </div>
-
-                        <h5>
-                            Tiếp đón & Check-in
-                        </h5>
-
-                        <p class="text-muted">
-                            Tiếp nhận bệnh nhân khi
-                            đến phòng khám.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                <div class="feature-grid">
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Hồ sơ bệnh nhân</span>
+                            <span class="feature-card__desc">Tra cứu và quản lý hồ sơ bệnh nhân.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-                <!-- QUEUE -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            🔢
-                        </div>
-
-                        <h5>
-                            Hàng chờ khám
-                        </h5>
-
-                        <p class="text-muted">
-                            Quản lý số thứ tự và
-                            hàng chờ bệnh nhân.
-                        </p>
-
-                        <button
-                                class="btn btn-secondary"
-                                disabled>
-
-                            Đang phát triển
-
-                        </button>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Quản lý lịch hẹn</span>
+                            <span class="feature-card__desc">Tạo, chỉnh sửa và quản lý lịch hẹn bệnh nhân.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
-                </div>
-
-
-                <!-- ACCOUNT -->
-
-                <div class="col-md-4">
-
-                    <div class="function-card">
-
-                        <div class="function-icon">
-                            👥
-                        </div>
-
-                        <h5>
-                            Quản lý tài khoản
-                        </h5>
-
-                        <p class="text-muted">
-                            Quản lý tài khoản khách hàng
-                            và bệnh nhân.
-                        </p>
-
-                        <a
-                                th:href="@{/accounts}"
-                                class="btn btn-primary">
-
-                            Xem danh sách
-
-                        </a>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Tiếp đón &amp; Check-in</span>
+                            <span class="feature-card__desc">Tiếp nhận bệnh nhân khi đến phòng khám.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
                     </div>
-
+                    <div class="feature-card is-disabled">
+                        <span class="icon-tile"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Hàng chờ khám</span>
+                            <span class="feature-card__desc">Quản lý số thứ tự và hàng chờ bệnh nhân.</span>
+                            <span class="badge-soon">Đang phát triển</span>
+                        </span>
+                    </div>
+                    <a th:href="@{/accounts}" class="feature-card">
+                        <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
+                        <span class="feature-card__body">
+                            <span class="feature-card__title">Quản lý tài khoản</span>
+                            <span class="feature-card__desc">Quản lý tài khoản khách hàng và bệnh nhân.</span>
+                            <span class="feature-card__link">Xem danh sách <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                        </span>
+                    </a>
                 </div>
+            </section>
 
+        </main>
 
-            </div>
-
-        </div>
-
-
+        <!-- Footer -->
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
-
 </div>
-
-<script>
-    const avatarButton = document.getElementById("avatarButton");
-    const userDropdown = document.getElementById("userDropdown");
-
-    avatarButton.addEventListener("click", function (event) {
-        event.stopPropagation();
-        userDropdown.classList.toggle("show");
-    });
-
-    document.addEventListener("click", function () {
-        userDropdown.classList.remove("show");
-    });
-</script>
 
 </body>
-
-</html>
 </html>
