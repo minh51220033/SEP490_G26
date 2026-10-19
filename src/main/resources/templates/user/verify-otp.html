@@ -1,124 +1,57 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Xác minh OTP</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            width: 380px;
-            text-align: center;
-        }
-
-        h2 {
-            color: #333;
-        }
-
-        .email {
-            font-weight: bold;
-            color: #007bff;
-            margin: 15px 0;
-        }
-
-        .description {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 12px;
-            margin-top: 15px;
-            text-align: center;
-            font-size: 22px;
-            letter-spacing: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        button {
-            width: 100%;
-            padding: 11px;
-            margin-top: 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 15px;
-        }
-    </style>
-</head>
-
+<head th:replace="~{fragments/auth :: head('Xác minh OTP')}"></head>
 <body>
 
-<div class="container">
+<div class="auth">
+    <aside th:replace="~{fragments/auth :: hero}"></aside>
 
-    <h2>Xác Minh OTP</h2>
+    <main class="auth-main">
+        <div class="auth-main__mobile-brand">
+            <a th:replace="~{fragments/logo :: logo('dark')}"></a>
+        </div>
 
-    <p class="description">
-        Mã OTP đã được gửi đến email:
-    </p>
+        <section class="auth-card" aria-labelledby="otp-title">
+            <div class="auth-card__icon" aria-hidden="true"><i class="bi bi-envelope-check"></i></div>
+            <h2 id="otp-title" class="auth-card__title">Xác minh OTP</h2>
+            <p class="auth-card__subtitle">
+                Mã OTP đã được gửi đến email
+                <strong th:text="${maskedEmail}">n***@gmail.com</strong>.
+                Mã có hiệu lực trong <strong>5 phút</strong>.
+            </p>
 
-    <div class="email"
-         th:text="${maskedEmail}">
-    </div>
+            <div class="auth-alerts" role="status">
+                <div th:if="${error}" class="auth-alert auth-alert--error">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:text="${error}">Thông báo lỗi</span>
+                </div>
+            </div>
 
-    <p class="description">
-        Mã OTP có hiệu lực trong 5 phút.
-    </p>
+            <form class="auth-form" th:action="@{/verify-otp}" method="POST">
+                <div class="field">
+                    <div class="field__head">
+                        <label class="field__label" for="otp">Nhập mã gồm 6 chữ số</label>
+                    </div>
+                    <input class="otp-input" type="text" id="otp" name="otp"
+                           maxlength="6" minlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                           required autocomplete="one-time-code" placeholder="000000" data-otp>
+                </div>
 
-    <div th:if="${error}"
-         class="alert-error"
-         th:text="${error}">
-    </div>
+                <button type="submit" class="auth-btn">Xác nhận OTP</button>
 
-    <form th:action="@{/verify-otp}"
-          method="POST">
+                <div class="auth-alert auth-alert--info">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>Không thấy email? Hãy kiểm tra thư mục Spam hoặc Quảng cáo.</span>
+                </div>
+            </form>
 
-        <input type="text"
-               name="otp"
-               maxlength="6"
-               minlength="6"
-               pattern="[0-9]{6}"
-               inputmode="numeric"
-               required
-               autocomplete="one-time-code"
-               placeholder="000000">
-
-        <button type="submit">
-            Xác nhận OTP
-        </button>
-
-    </form>
-
+            <div class="auth-center">
+                <a class="auth-back" th:href="@{/login}" href="/login">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Quay lại đăng nhập
+                </a>
+            </div>
+        </section>
+    </main>
 </div>
 
 </body>
