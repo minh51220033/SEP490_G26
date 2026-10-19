@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Cách dùng (truyền tên menu đang active):
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+
+    Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue
+-->
+<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
+
+    <div class="app-sidebar__head">
+        <a th:replace="~{fragments/logo :: logo('dark')}"></a>
+        <button type="button" class="icon-button app-sidebar__close" data-sidebar-toggle aria-label="Đóng menu">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <nav class="app-sidebar__nav">
+
+        <!-- CHUNG -->
+        <p class="app-sidebar__section">Chung</p>
+
+        <a th:href="@{/home}" href="#" class="side-link"
+           th:classappend="${activeMenu == 'home'} ? 'is-active' : ''">
+            <i class="bi bi-grid" aria-hidden="true"></i><span>Trang chủ</span>
+        </a>
+
+        <a th:href="@{/news}" href="#" class="side-link"
+           th:classappend="${activeMenu == 'news'} ? 'is-active' : ''">
+            <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
+        </a>
+
+        <!-- QUẢN TRỊ HỆ THỐNG -->
+        <div th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
+            <p class="app-sidebar__section">Quản trị hệ thống</p>
+
+            <a th:href="@{/accounts}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
+                <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
+            </a>
+            <a th:href="@{/admin/news}" href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'admin-news'} ? 'is-active' : ''">
+                <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i><span>Quản lý tin tức</span>
+            </a>
+            <a th:href="@{/admin/bans}" href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'bans'} ? 'is-active' : ''">
+                <i class="bi bi-person-slash" aria-hidden="true"></i><span>Tài khoản bị ban</span>
+            </a>
+            <a th:href="@{/admin/branches}" href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
+                <i class="bi bi-buildings" aria-hidden="true"></i><span>Quản lý cơ sở</span>
+            </a>
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'reports'} ? 'is-active' : ''">
+                <i class="bi bi-graph-up" aria-hidden="true"></i><span>Báo cáo &amp; Thống kê</span>
+            </a>
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'audit'} ? 'is-active' : ''">
+                <i class="bi bi-journal-text" aria-hidden="true"></i><span>Nhật ký thao tác</span>
+            </a>
+        </div>
+
+        <!-- LỄ TÂN -->
+        <div th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
+            <p class="app-sidebar__section">Lễ tân</p>
+
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''">
+                <i class="bi bi-person-vcard" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
+            </a>
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'appointments'} ? 'is-active' : ''">
+                <i class="bi bi-calendar3" aria-hidden="true"></i><span>Quản lý lịch hẹn</span>
+            </a>
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'checkin'} ? 'is-active' : ''">
+                <i class="bi bi-person-check" aria-hidden="true"></i><span>Tiếp đón &amp; Check-in</span>
+            </a>
+            <a href="#" class="side-link is-disabled" aria-disabled="true"
+               th:classappend="${activeMenu == 'queue'} ? 'is-active' : ''">
+                <i class="bi bi-list-ol" aria-hidden="true"></i><span>Hàng chờ khám</span>
+            </a>
+            <a th:href="@{/accounts}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
+                <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- THẺ NGƯỜI DÙNG -->
+    <div class="app-sidebar__user" th:if="${session.loggedInUser != null}">
+        <span class="user-card__avatar"
+              th:text="${session.loggedInUser.username != null
+                      and !#strings.isEmpty(session.loggedInUser.username)
+                      ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
+                      : 'U'}">A</span>
+
+        <span class="user-card__info">
+            <span class="user-card__name"
+                  th:text="${displayName != null and !#strings.isEmpty(displayName)
+                          ? displayName : session.loggedInUser.username}">admin</span>
+            <span class="user-card__role"
+                  th:text="${roleNames != null and !#lists.isEmpty(roleNames)
+                          ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
+        </span>
+
+        <a th:href="@{/profile}" href="#" class="icon-button" aria-label="Thông tin cá nhân">
+            <i class="bi bi-person-gear" aria-hidden="true"></i>
+        </a>
+        <form th:action="@{/logout}" method="post" class="m-0">
+            <button type="submit" class="icon-button" aria-label="Đăng xuất">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            </button>
+        </form>
+    </div>
+</aside>
+
+
+<!-- Lớp phủ khi mở sidebar trên mobile -->
+<div th:fragment="sidebarBackdrop" class="app-sidebar__backdrop" data-sidebar-toggle aria-hidden="true"></div>
+
+</body>
+</html>

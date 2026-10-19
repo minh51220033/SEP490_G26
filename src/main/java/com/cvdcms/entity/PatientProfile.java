@@ -1,4 +1,3 @@
-
 package com.cvdcms.entity;
 
 import jakarta.persistence.*;
@@ -23,7 +22,9 @@ public class PatientProfile {
     @Column(name = "profile_id")
     private Long profileId;
 
-    // Tài khoản sở hữu hồ sơ.
+    @Column(name = "patient_code", unique = true, length = 20, nullable = false)
+    private String patientCode; // Thêm trường này
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -43,12 +44,9 @@ public class PatientProfile {
     @Column(name = "address", nullable = false, length = 255)
     private String address;
 
-    // Chỉ lưu đường dẫn hoặc khóa lưu trữ ảnh,
-    // không lưu trực tiếp dữ liệu ảnh vào cột này.
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
-    // Tiền sử y tế.
     @Column(name = "has_allergies")
     private Boolean hasAllergies;
 
@@ -70,7 +68,6 @@ public class PatientProfile {
     @Column(name = "medical_history_completed", nullable = false)
     private Boolean medicalHistoryCompleted = false;
 
-    // Chi nhánh ưu tiên của hồ sơ.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "preferred_branch_id", nullable = false)
     private Branch preferredBranch;
@@ -78,7 +75,6 @@ public class PatientProfile {
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;
 
-    // ACTIVE hoặc ARCHIVED.
     @Column(name = "status", nullable = false, length = 20)
     private String status = "ACTIVE";
 
@@ -89,4 +85,12 @@ public class PatientProfile {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Tự động gán mã bệnh nhân trước khi Hibernate thực hiện câu lệnh Insert
+    @PrePersist
+    public void prePersist() {
+        if (this.patientCode == null || this.patientCode.isEmpty()) {
+            this.patientCode = "BN" + System.currentTimeMillis();
+        }
+    }
 }

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<!-- Trang mẫu cho các trang công khai (tin tức, giới thiệu...): header + nội dung + CTA + footer -->
+<head th:replace="~{fragments/head :: head('Tin tức')}"></head>
+
+<body>
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="container-xl py-5">
+    <span class="eyebrow">Tin tức</span>
+    <h1 class="mt-3 fw-bold text-brand">Nội dung trang của bạn</h1>
+    <p class="text-secondary">Thay phần &lt;main&gt; này bằng nội dung riêng của từng trang.</p>
+</main>
+
+<section th:replace="~{fragments/footer :: ctaBanner}"></section>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>
