@@ -1,4 +1,3 @@
-
 package com.cvdcms.entity;
 
 import jakarta.persistence.*;
@@ -9,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,6 +46,28 @@ public class Branch {
 
     @Column(name = "email", length = 100)
     private String email;
+
+    @Column(name = "tax_code", length = 20)
+    private String taxCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_user_id")
+    private User managerUser;
+
+    @Column(name = "opening_time", nullable = false)
+    private LocalTime openingTime = LocalTime.of(8, 0);
+
+    @Column(name = "closing_time", nullable = false)
+    private LocalTime closingTime = LocalTime.of(20, 0);
+
+    @Column(name = "working_days", nullable = false, length = 20)
+    private String workingDays = "2,3,4,5,6,7,CN";
+
+    @Column(name = "allowed_ip_range", length = 255)
+    private String allowedIpRange;
+
+    @Column(name = "tv_config_json", columnDefinition = "json")
+    private String tvConfigJson;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

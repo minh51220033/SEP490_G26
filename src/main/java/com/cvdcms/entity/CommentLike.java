@@ -21,8 +21,8 @@ public class CommentLike {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
-
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
@@ -30,7 +30,6 @@ public class CommentLike {
             nullable = false
     )
     private Comment comment;
-
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
