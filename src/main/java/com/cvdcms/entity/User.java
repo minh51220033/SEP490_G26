@@ -1,11 +1,12 @@
-
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.UserType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -51,17 +52,32 @@ public class User {
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_type", nullable = false)
+    private UserType userType = UserType.PATIENT;
 
     @Column(name = "status", length = 50)
     private String status = "ACTIVE";
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(name = "created_date", updatable = false)
     private LocalDateTime createdDate;
 
-    // Một tài khoản có thể có nhiều vai trò.
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    // Một tài khoản có thể có nhiều vai trò (quan hệ nhiều-nhiều qua bảng user_roles)
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
@@ -74,14 +90,10 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
-    // Một tài khoản có thể quản lý nhiều hồ sơ bệnh nhân.
+    // Một tài khoản có thể quản lý nhiều hồ sơ bệnh nhân
     @OneToMany(
             mappedBy = "user",
             fetch = FetchType.LAZY
     )
     private Set<PatientProfile> patientProfiles = new HashSet<>();
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id")
-    private Branch branch;
 }
