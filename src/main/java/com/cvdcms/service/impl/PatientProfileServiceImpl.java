@@ -1,5 +1,5 @@
 
-package com.cvdcms.service;
+package com.cvdcms.service.impl;
 
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.PatientProfile;
@@ -7,6 +7,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 
+import com.cvdcms.service.PatientProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
