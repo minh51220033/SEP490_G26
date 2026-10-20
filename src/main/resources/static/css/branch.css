@@ -1,0 +1,91 @@
+/* FT40 - Quản lý chi nhánh, phòng & ghế nha.
+   Dùng lại biến màu/bo góc của layout.css để đồng bộ giao diện toàn nhóm. */
+
+.branch-table td, .branch-table th { vertical-align: middle; }
+
+.mini-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+/* ---------- Thẻ phòng ---------- */
+.room-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+.room-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--brand-50);
+    border-bottom: 1px solid var(--line);
+}
+.room-card__title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--brand-900); }
+.room-card__meta { color: var(--muted); font-size: .85rem; }
+.room-card__body { padding: 16px 18px; }
+
+/* ---------- Lưới ghế ---------- */
+.chair-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 14px;
+}
+.chair-card {
+    position: relative;
+    border: 1px solid var(--line);
+    border-left-width: 5px;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    background: var(--surface);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.chair-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.chair-card__code { font-weight: 700; color: var(--ink); }
+.chair-card__name { color: var(--muted); font-size: .85rem; margin-bottom: 8px; }
+.chair-card__actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+.chair-card--available   { border-left-color: var(--success); }
+.chair-card--in_use      { border-left-color: #2563eb; }
+.chair-card--cleaning    { border-left-color: #f0a30a; }
+.chair-card--maintenance { border-left-color: #d64545; }
+
+.chair-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.chair-badge--available   { background: #e3f6ed; color: #14744b; }
+.chair-badge--in_use      { background: #e1ebff; color: #1d4fc4; }
+.chair-badge--cleaning    { background: #fff3d6; color: #8a5a00; }
+.chair-badge--maintenance { background: #fde4e4; color: #a02727; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; color: var(--muted); }
+.legend__dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.legend__dot--available   { background: var(--success); }
+.legend__dot--in_use      { background: #2563eb; }
+.legend__dot--cleaning    { background: #f0a30a; }
+.legend__dot--maintenance { background: #d64545; }
+
+.empty-hint {
+    padding: 22px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+}
