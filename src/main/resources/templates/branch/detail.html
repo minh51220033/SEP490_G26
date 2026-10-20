@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Chi tiết cơ sở')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('branches')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết cơ sở')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/branch.css}">
+
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+            <!-- TIÊU ĐỀ CHI NHÁNH -->
+            <section class="welcome-card">
+                <div>
+                    <a th:href="@{/admin/branches}" class="text-decoration-none small">
+                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách chi nhánh
+                    </a>
+                    <h2 class="welcome-card__title mt-1">
+                        <span class="text-brand" th:text="${branch.branchName}">Chi nhánh</span>
+                    </h2>
+                    <p class="welcome-card__desc">
+                        <strong th:text="${branch.branchCode}">CN01</strong> ·
+                        <span th:text="${branch.address}">Địa chỉ</span>
+                    </p>
+                </div>
+                <div>
+                    <span th:if="${branch.isActive}" class="badge bg-success">Đang hoạt động</span>
+                    <span th:unless="${branch.isActive}" class="badge bg-secondary">Ngừng hoạt động</span>
+                </div>
+            </section>
+
+            <!-- SỐ LIỆU GHẾ -->
+            <section class="stat-grid" aria-label="Thống kê ghế nha">
+                <article class="stat-card">
+                    <p class="stat-card__label">Tổng số ghế</p>
+                    <p class="stat-card__value" th:text="${totalChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-heart-pulse" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Ghế trống</p>
+                    <p class="stat-card__value" th:text="${availableChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-check-circle" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Đang khám</p>
+                    <p class="stat-card__value" th:text="${inUseChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Vệ sinh / Bảo trì</p>
+                    <p class="stat-card__value" th:text="${cleaningChairs + maintenanceChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-tools" aria-hidden="true"></i></span>
+                </article>
+            </section>
+
+            <!-- TAB -->
+            <section class="panel">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-map" data-bs-toggle="tab" data-bs-target="#pane-map"
+                                type="button" role="tab" aria-controls="pane-map" aria-selected="true">
+                            <i class="bi bi-diagram-3" aria-hidden="true"></i> Sơ đồ phòng &amp; ghế
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-config" data-bs-toggle="tab" data-bs-target="#pane-config"
+                                type="button" role="tab" aria-controls="pane-config" aria-selected="false">
+                            <i class="bi bi-wifi" aria-hidden="true"></i> Cấu hình mạng &amp; giờ làm việc
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info"
+                                type="button" role="tab" aria-controls="pane-info" aria-selected="false">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i> Thông tin chi nhánh
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ============ TAB 1: SƠ ĐỒ PHÒNG & GHẾ (SCR-40.2) ============ -->
+                    <div class="tab-pane fade show active" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
+
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div class="legend">
+                                <span><i class="legend__dot legend__dot--available"></i>Trống</span>
+                                <span><i class="legend__dot legend__dot--in_use"></i>Đang khám</span>
+                                <span><i class="legend__dot legend__dot--cleaning"></i>Đang vệ sinh</span>
+                                <span><i class="legend__dot legend__dot--maintenance"></i>Bảo trì</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                        data-bs-toggle="modal" data-bs-target="#roomModal" data-mode="create">
+                                    <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm phòng
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm"
+                                        data-bs-toggle="modal" data-bs-target="#chairModal" data-mode="create">
+                                    <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm ghế
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="empty-hint" th:if="${#lists.isEmpty(rooms) and #lists.isEmpty(unassignedChairs)}">
+                            Chi nhánh chưa có phòng hoặc ghế nào. Hãy bắt đầu bằng việc thêm phòng khám.
+                        </div>
+
+                        <!-- Từng phòng -->
+                        <article class="room-card" th:each="room : ${rooms}">
+                            <div class="room-card__head">
+                                <div>
+                                    <h4 class="room-card__title">
+                                        <span th:text="${room.roomCode}">P01</span> ·
+                                        <span th:text="${room.roomName}">Phòng khám</span>
+                                    </h4>
+                                    <span class="room-card__meta">
+                                        <span th:text="${room.roomType}">TREATMENT</span> ·
+                                        <span th:text="${room.status}">ACTIVE</span> ·
+                                        <span th:text="${#lists.size(chairsByRoom[room.roomId])}">0</span> ghế
+                                    </span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            data-bs-toggle="modal" data-bs-target="#roomModal" data-mode="edit"
+                                            th:attr="data-room-id=${room.roomId},data-room-code=${room.roomCode},data-room-name=${room.roomName},data-room-type=${room.roomType},data-room-status=${room.status}">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
+                                    </button>
+                                    <form th:action="@{/admin/branches/{id}/rooms/{rid}/delete(id=${branch.branchId},rid=${room.roomId})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Xóa phòng này? Phòng phải không còn ghế nào.');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash" aria-hidden="true"></i> Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="room-card__body">
+                                <div class="chair-grid" th:if="${!#lists.isEmpty(chairsByRoom[room.roomId])}">
+                                    <th:block th:each="chair : ${chairsByRoom[room.roomId]}">
+                                        <div th:replace="~{branch/chair-card :: chairCard(${chair})}"></div>
+                                    </th:block>
+                                </div>
+                                <div class="empty-hint" th:if="${#lists.isEmpty(chairsByRoom[room.roomId])}">
+                                    Phòng này chưa có ghế nha.
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Ghế chưa gán phòng -->
+                        <article class="room-card" th:if="${!#lists.isEmpty(unassignedChairs)}">
+                            <div class="room-card__head">
+                                <div>
+                                    <h4 class="room-card__title">Ghế chưa gán phòng</h4>
+                                    <span class="room-card__meta">Hãy sửa ghế để chọn phòng phù hợp</span>
+                                </div>
+                            </div>
+                            <div class="room-card__body">
+                                <div class="chair-grid">
+                                    <th:block th:each="chair : ${unassignedChairs}">
+                                        <div th:replace="~{branch/chair-card :: chairCard(${chair})}"></div>
+                                    </th:block>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- ============ TAB 2: CẤU HÌNH (SCR-40.3) ============ -->
+                    <div class="tab-pane fade" id="pane-config" role="tabpanel" aria-labelledby="tab-config">
+                        <form th:action="@{/admin/branches/{id}/config(id=${branch.branchId})}"
+                              th:object="${config}" method="post">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="allowedIpRange" class="form-label">Dải IP Wifi cho phép chấm công</label>
+                                    <input type="text" id="allowedIpRange" th:field="*{allowedIpRange}"
+                                           class="form-control" maxlength="255"
+                                           placeholder="Ví dụ: 192.168.1.0/24, 14.232.112.*">
+                                    <div class="form-text">
+                                        Nhân viên chỉ chấm công được khi kết nối mạng thuộc dải IP này.
+                                        Phân cách nhiều dải bằng dấu phẩy.
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="openingTime" class="form-label">Giờ mở cửa</label>
+                                    <input type="time" id="openingTime" th:field="*{openingTime}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="closingTime" class="form-label">Giờ đóng cửa</label>
+                                    <input type="time" id="closingTime" th:field="*{closingTime}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="workingDays" class="form-label">Ngày làm việc</label>
+                                    <input type="text" id="workingDays" th:field="*{workingDays}"
+                                           class="form-control" maxlength="20" placeholder="2,3,4,5,6,7,CN">
+                                </div>
+                                <div class="col-12">
+                                    <label for="tvConfigJson" class="form-label">Cấu hình TV phòng chờ (JSON)</label>
+                                    <textarea id="tvConfigJson" th:field="*{tvConfigJson}" rows="4"
+                                              class="form-control font-monospace"
+                                              placeholder='{"tvIps": ["192.168.1.50"]}'></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save" aria-hidden="true"></i> Lưu cấu hình
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ============ TAB 3: THÔNG TIN CHI NHÁNH ============ -->
+                    <div class="tab-pane fade" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
+                        <form th:action="@{/admin/branches/{id}/update(id=${branch.branchId})}"
+                              th:object="${branch}" method="post">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Mã chi nhánh</label>
+                                    <input type="text" class="form-control" th:value="${branch.branchCode}" disabled>
+                                </div>
+                                <div class="col-md-8">
+                                    <label for="infoName" class="form-label">Tên chi nhánh</label>
+                                    <input type="text" id="infoName" name="branchName" class="form-control"
+                                           th:value="${branch.branchName}" maxlength="150" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="infoAddress" class="form-label">Địa chỉ</label>
+                                    <input type="text" id="infoAddress" name="address" class="form-control"
+                                           th:value="${branch.address}" maxlength="255" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoPhone" class="form-label">Số điện thoại</label>
+                                    <input type="tel" id="infoPhone" name="phone" class="form-control"
+                                           pattern="^(\+84|0)[0-9]{9,10}$"
+                                           title="SĐT gồm 10-11 số (ví dụ: 0901234567)"
+                                           th:value="${branch.phone}" maxlength="20">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoEmail" class="form-label">Email</label>
+                                    <input type="email" id="infoEmail" name="email" class="form-control"
+                                           th:value="${branch.email}" maxlength="100">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save" aria-hidden="true"></i> Cập nhật thông tin
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+
+
+<!-- ============ MODAL: PHÒNG (thêm / sửa dùng chung) ============ -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="roomForm" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roomModalTitle">Thêm phòng khám</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="roomCode" class="form-label">Mã phòng</label>
+                        <input type="text" id="roomCode" name="roomCode" class="form-control text-uppercase"
+                               pattern="^[A-Za-z0-9_\-]{1,20}$"
+                               title="Mã phòng chỉ gồm chữ cái, số, gạch ngang/dưới (1-20 ký tự)"
+                               maxlength="20" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label for="roomName" class="form-label">Tên phòng</label>
+                        <input type="text" id="roomName" name="roomName" class="form-control" maxlength="100" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="roomType" class="form-label">Loại phòng</label>
+                        <select id="roomType" name="roomType" class="form-select">
+                            <option th:each="t : ${roomTypes}" th:value="${t}" th:text="${t}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="roomStatus" class="form-label">Trạng thái</label>
+                        <select id="roomStatus" name="status" class="form-select">
+                            <option th:each="s : ${roomStatuses}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu phòng</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ MODAL: GHẾ (thêm / sửa dùng chung) ============ -->
+<div class="modal fade" id="chairModal" tabindex="-1" aria-labelledby="chairModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="chairForm" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chairModalTitle">Thêm ghế nha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="chairCode" class="form-label">Mã ghế</label>
+                        <input type="text" id="chairCode" name="chairCode" class="form-control text-uppercase"
+                               pattern="^[A-Za-z0-9_\-]{1,20}$"
+                               title="Mã ghế chỉ gồm chữ cái, số, gạch ngang/dưới (1-20 ký tự)"
+                               maxlength="20" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label for="chairName" class="form-label">Tên ghế</label>
+                        <input type="text" id="chairName" name="chairName" class="form-control" maxlength="50" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="chairRoom" class="form-label">Phòng</label>
+                        <select id="chairRoom" name="roomId" class="form-select">
+                            <option value="">-- Chưa gán phòng --</option>
+                            <option th:each="r : ${rooms}" th:value="${r.roomId}"
+                                    th:text="${r.roomCode + ' - ' + r.roomName}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="chairStatus" class="form-label">Trạng thái</label>
+                        <select id="chairStatus" name="status" class="form-select">
+                            <option th:each="s : ${chairStatuses}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu ghế</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    (function () {
+        var base = /*[[@{/admin/branches/{id}(id=${branch.branchId})}]]*/ '/admin/branches/1';
+
+        // Modal phòng: đổi form theo chế độ thêm / sửa.
+        document.getElementById('roomModal').addEventListener('show.bs.modal', function (e) {
+            var b = e.relatedTarget, f = document.getElementById('roomForm');
+            var edit = b && b.dataset.mode === 'edit';
+            document.getElementById('roomModalTitle').textContent = edit ? 'Sửa phòng khám' : 'Thêm phòng khám';
+            f.action = edit ? base + '/rooms/' + b.dataset.roomId + '/update' : base + '/rooms';
+            f.roomCode.value = edit ? b.dataset.roomCode : '';
+            f.roomName.value = edit ? b.dataset.roomName : '';
+            f.roomType.value = edit ? b.dataset.roomType : 'TREATMENT';
+            f.status.value = edit ? b.dataset.roomStatus : 'ACTIVE';
+        });
+
+        // Modal ghế: đổi form theo chế độ thêm / sửa.
+        document.getElementById('chairModal').addEventListener('show.bs.modal', function (e) {
+            var b = e.relatedTarget, f = document.getElementById('chairForm');
+            var edit = b && b.dataset.mode === 'edit';
+            document.getElementById('chairModalTitle').textContent = edit ? 'Sửa ghế nha' : 'Thêm ghế nha';
+            f.action = edit ? base + '/chairs/' + b.dataset.chairId + '/update' : base + '/chairs';
+            f.chairCode.value = edit ? b.dataset.chairCode : '';
+            f.chairName.value = edit ? b.dataset.chairName : '';
+            f.roomId.value = edit ? b.dataset.roomId : '';
+            f.status.value = edit ? b.dataset.chairStatus : 'AVAILABLE';
+        });
+    })();
+</script>
+</body>
+</html>
