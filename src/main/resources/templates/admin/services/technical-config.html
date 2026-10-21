@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Cấu hình kỹ thuật dịch vụ')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+  <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+  <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+  <div class="app-main">
+
+    <header th:replace="~{fragments/header :: appTopbar('Cấu hình kỹ thuật dịch vụ')}"></header>
+
+    <main class="app-content"
+          th:with="paraclinical=${service.serviceType.name() == 'LAB'
+                  or service.serviceType.name() == 'XRAY'}">
+
+      <div class="d-flex flex-wrap justify-content-between
+                        align-items-center gap-3 mb-4">
+        <div>
+          <h2 class="h4 mb-1">Cấu hình kỹ thuật</h2>
+
+          <p class="text-muted mb-0">
+            <strong th:text="${service.serviceCode}"></strong>
+            —
+            <span th:text="${service.serviceName}"></span>
+          </p>
+        </div>
+
+        <a th:href="@{/admin/services}"
+           class="btn btn-outline-secondary">
+          Quay lại danh sách
+        </a>
+      </div>
+
+      <div class="alert alert-success"
+           role="status"
+           th:if="${successMessage}"
+           th:text="${successMessage}">
+      </div>
+
+      <form id="serviceTechnicalConfigForm"
+            th:object="${technicalConfigForm}"
+            th:action="@{/admin/services/{id}/config(id=${service.serviceId})}"
+            th:attr="data-paraclinical=${paraclinical}"
+            method="post">
+
+        <!-- DỮ LIỆU MẪU KẾT QUẢ DO JAVASCRIPT TỔNG HỢP -->
+        <textarea id="resultTemplateJson"
+                  th:field="*{resultTemplateJson}"
+                  hidden></textarea>
+
+        <div class="alert alert-danger"
+             role="alert"
+             th:if="${#fields.hasGlobalErrors()}">
+          <ul class="mb-0">
+            <li th:each="error : ${#fields.globalErrors()}"
+                th:text="${error}">
+            </li>
+          </ul>
+        </div>
+
+        <div id="technicalConfigError"
+             class="alert alert-danger"
+             role="alert"
+             hidden>
+        </div>
+
+        <!-- THÔNG SỐ KẾT QUẢ -->
+        <section class="panel mb-4" th:if="${paraclinical}">
+
+          <div class="panel__head flex-wrap gap-3">
+            <div>
+              <h3 class="panel__title">
+                Thông số kết quả
+              </h3>
+
+              <p class="panel__subtitle">
+                Thiết lập các mục cần nhập khi ghi nhận
+                kết quả xét nghiệm hoặc X-Ray.
+              </p>
+            </div>
+
+            <button id="addResultParameter"
+                    type="button"
+                    class="btn btn-outline-primary">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              Thêm thông số
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+
+              <thead class="table-light">
+              <tr>
+                <th scope="col">Mã thông số</th>
+                <th scope="col">Tên thông số</th>
+                <th scope="col">Kiểu kết quả</th>
+                <th scope="col">Đơn vị</th>
+                <th scope="col">Giá trị tham chiếu</th>
+                <th scope="col">Bắt buộc</th>
+                <th scope="col">Thao tác</th>
+              </tr>
+              </thead>
+
+              <tbody id="resultParameterRows"></tbody>
+
+            </table>
+          </div>
+
+          <p id="emptyResultParameters"
+             class="text-center text-muted p-3 mb-0">
+            Chưa thiết lập thông số kết quả.
+          </p>
+
+          <div class="p-3 border-top small text-muted">
+            Mã thông số không được trùng.
+            Ví dụ: mã <strong>ket_luan</strong>,
+            tên <strong>Kết luận</strong>,
+            kiểu <strong>Văn bản</strong>.
+          </div>
+
+        </section>
+
+        <div class="alert alert-info"
+             th:unless="${paraclinical}">
+          Dịch vụ này không thuộc loại xét nghiệm hoặc X-Ray.
+          Bạn có thể thiết lập yêu cầu thực hiện kỹ thuật bên dưới.
+        </div>
+
+        <!-- YÊU CẦU KỸ THUẬT -->
+        <section class="panel mb-4">
+
+          <div class="panel__head">
+            <div>
+              <h3 class="panel__title">
+                Yêu cầu thực hiện kỹ thuật
+              </h3>
+
+              <p class="panel__subtitle">
+                Hướng dẫn chuẩn bị, thực hiện và các lưu ý
+                áp dụng cho dịch vụ.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-3">
+            <label for="technicalRequirements"
+                   class="form-label">
+              Nội dung yêu cầu
+            </label>
+
+            <textarea id="technicalRequirements"
+                      th:field="*{technicalRequirements}"
+                      class="form-control"
+                      rows="8"
+                      placeholder="Nhập yêu cầu thực hiện kỹ thuật...">
+                        </textarea>
+          </div>
+
+        </section>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          <button id="saveTechnicalConfig"
+                  type="submit"
+                  class="btn btn-primary">
+            Lưu cấu hình
+          </button>
+
+          <a th:href="@{/admin/services/{id}/edit(id=${service.serviceId})}"
+             class="btn btn-outline-secondary">
+            Sửa thông tin dịch vụ
+          </a>
+        </div>
+
+      </form>
+
+      <!-- MẪU MỘT DÒNG THÔNG SỐ -->
+      <template id="resultParameterRowTemplate">
+        <tr>
+          <td>
+            <input type="text"
+                   data-field="key"
+                   class="form-control form-control-sm"
+                   aria-label="Mã thông số"
+                   maxlength="50"
+                   pattern="[A-Za-z][A-Za-z0-9_]{0,49}"
+                   title="Bắt đầu bằng chữ không dấu; chỉ chứa chữ, số hoặc dấu _."
+                   required>
+          </td>
+
+          <td>
+            <input type="text"
+                   data-field="label"
+                   class="form-control form-control-sm"
+                   aria-label="Tên thông số"
+                   maxlength="200"
+                   required>
+          </td>
+
+          <td>
+            <select data-field="type"
+                    class="form-select form-select-sm"
+                    aria-label="Kiểu kết quả"
+                    required>
+              <option value="TEXT">Văn bản</option>
+              <option value="NUMBER">Số</option>
+              <option value="BOOLEAN">Có / Không</option>
+            </select>
+          </td>
+
+          <td>
+            <input type="text"
+                   data-field="unit"
+                   class="form-control form-control-sm"
+                   aria-label="Đơn vị">
+          </td>
+
+          <td>
+            <input type="text"
+                   data-field="referenceRange"
+                   class="form-control form-control-sm"
+                   aria-label="Giá trị tham chiếu">
+          </td>
+
+          <td class="text-center">
+            <input type="checkbox"
+                   data-field="required"
+                   class="form-check-input"
+                   aria-label="Bắt buộc nhập kết quả">
+          </td>
+
+          <td>
+            <button type="button"
+                    data-remove-parameter
+                    class="btn btn-sm btn-outline-danger">
+              Xóa
+            </button>
+          </td>
+        </tr>
+      </template>
+
+    </main>
+
+    <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+  </div>
+</div>
+
+<script th:src="@{/js/service-technical-config.js}" defer></script>
+
+</body>
+</html>
