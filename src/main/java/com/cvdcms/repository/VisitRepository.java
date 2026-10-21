@@ -33,4 +33,10 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
         ORDER BY v.checkInAt DESC
     """)
     List<Visit> findRecentVisitsByStatuses(@Param("statuses") List<VisitStatus> statuses);
+
+    List<Visit> findByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
+
+    Optional<Visit> findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
+
+    Optional<Visit> findFirstByPatientProfile_ProfileIdAndStatusIn(Long profileId, List<VisitStatus> statuses);
 }
