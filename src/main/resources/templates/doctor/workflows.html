@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý Quy trình Kỹ thuật Lâm sàng')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <!-- SIDEBAR DÙNG CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('workflows')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- TOPBAR -->
+        <header th:replace="~{fragments/header :: appTopbar('Quy trình Kỹ thuật Lâm sàng')}"></header>
+
+        <main class="app-content p-3 p-md-4">
+            <style>
+                :root {
+                    --primary-blue: #0284c7;
+                    --primary-dark: #0369a1;
+                    --bg-light: #f8fafc;
+                    --border-color: #e2e8f0;
+                    --text-dark: #0f172a;
+                    --text-muted: #64748b;
+                }
+                .wf-card {
+                    background: #ffffff;
+                    border-radius: 14px;
+                    border: 1px solid var(--border-color);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+                    transition: all 0.2s ease;
+                }
+                .wf-card:hover {
+                    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+                }
+                .wf-header-title {
+                    font-size: 22px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .wf-badge-code {
+                    font-family: monospace;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    font-weight: 700;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                }
+                .wf-badge-steps {
+                    background: #f1f5f9;
+                    color: #334155;
+                    font-weight: 600;
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                .wf-btn-ai {
+                    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                    color: #ffffff;
+                    border: none;
+                    padding: 9px 18px;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
+                    transition: all 0.2s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .wf-btn-ai:hover {
+                    background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+                    color: #ffffff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(147, 51, 234, 0.35);
+                }
+                .wf-btn-primary {
+                    background-color: var(--primary-blue);
+                    color: #ffffff;
+                    border: none;
+                    padding: 9px 18px;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .wf-btn-primary:hover {
+                    background-color: var(--primary-dark);
+                    color: #ffffff;
+                }
+                .step-timeline-item {
+                    position: relative;
+                    padding-left: 42px;
+                    padding-bottom: 24px;
+                }
+                .step-timeline-item:last-child {
+                    padding-bottom: 0;
+                }
+                .step-timeline-item::before {
+                    content: '';
+                    position: absolute;
+                    left: 17px;
+                    top: 26px;
+                    bottom: 0;
+                    width: 2px;
+                    background: #cbd5e1;
+                }
+                .step-timeline-item:last-child::before {
+                    display: none;
+                }
+                .step-timeline-badge {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 50%;
+                    background: #e0f2fe;
+                    color: var(--primary-blue);
+                    font-weight: 800;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 13px;
+                    border: 2px solid #ffffff;
+                    box-shadow: 0 0 0 2px var(--primary-blue);
+                }
+                .step-box-card {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 14px 16px;
+                }
+                .criteria-box {
+                    background: #ecfdf5;
+                    border-left: 3px solid #10b981;
+                    padding: 8px 12px;
+                    border-radius: 0 6px 6px 0;
+                    font-size: 13px;
+                    color: #065f46;
+                    margin-top: 8px;
+                }
+                .step-edit-row {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 14px;
+                    margin-bottom: 12px;
+                    transition: all 0.2s;
+                }
+                .step-edit-row:hover {
+                    border-color: #cbd5e1;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+                }
+            </style>
+            <!-- HEADER SECTION -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <div>
+                    <h1 class="wf-header-title mb-1">
+                        <i class="bi bi-journal-medical text-primary"></i>
+                        <span>Quy trình Kỹ thuật Lâm sàng</span>
+                        <span class="badge bg-danger text-white rounded-pill px-2 py-1" style="font-size: 11px;">MOH BYT</span>
+                    </h1>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-shield-check text-success"></i>
+                        Chuẩn Hướng dẫn Quy trình Kỹ thuật Khám chữa bệnh chuyên ngành Răng Hàm Mặt (Quyết định số 3207/QĐ-BYT)
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="wf-btn-ai" onclick="openAiExtractModal()">
+                        <i class="bi bi-stars"></i>
+                        <span>⚡ AI Bóc tách từ Bộ Y Tế</span>
+                    </button>
+                    <button type="button" class="wf-btn-primary" onclick="openAddWorkflowModal()">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>+ Thêm quy trình mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BẢNG TÌM KIẾM & BỘ LỌC -->
+            <div class="wf-card p-3 mb-4">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="searchInput" class="form-control border-start-0 ps-0"
+                                   placeholder="Tìm quy trình kỹ thuật theo tên, mã hoặc dịch vụ..." onkeyup="filterWorkflows()">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="serviceFilter" class="form-select" onchange="filterWorkflows()">
+                            <option value="">-- Tất cả dịch vụ nha khoa --</option>
+                            <option th:each="s : ${activeServices}" th:value="${s.serviceId}" th:text="${s.serviceName}">Cạo vôi răng</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="text-muted small fw-semibold" id="wfCountText"
+                              th:text="'Tổng số: ' + ${workflows.size()} + ' quy trình chuẩn'">
+                            Tổng số: 6 quy trình
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH QUY TRÌNH KỸ THUẬT -->
+            <div class="wf-card p-0 overflow-hidden mb-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="workflowTable">
+                        <thead class="table-light border-bottom">
+                        <tr>
+                            <th style="width: 130px;" class="ps-3">Mã quy trình</th>
+                            <th>Tên quy trình kỹ thuật &amp; Hướng dẫn Bộ Y Tế</th>
+                            <th style="width: 200px;">Dịch vụ liên kết</th>
+                            <th style="width: 120px;" class="text-center">Số bước</th>
+                            <th style="width: 100px;" class="text-center">Phiên bản</th>
+                            <th style="width: 120px;" class="text-center">Trạng thái</th>
+                            <th style="width: 130px;" class="text-center pe-3">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="workflowTableBody">
+                        <tr th:if="${workflows == null or workflows.isEmpty()}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary"></i>
+                                <span>Chưa có quy trình kỹ thuật nào được thiết lập. Hãy nhấn <strong>"+ Thêm quy trình mới"</strong> hoặc dùng <strong>"⚡ AI Bóc tách từ Bộ Y Tế"</strong>.</span>
+                            </td>
+                        </tr>
+                        <tr th:each="wf : ${workflows}" th:id="'wf-row-' + ${wf.templateId}">
+                            <td class="ps-3">
+                                <span class="wf-badge-code" th:text="${wf.templateCode}">QTKT-CAOVOI</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark fs-6" th:text="${wf.templateName}">Quy trình kỹ thuật Lấy cao răng & Đánh bóng</div>
+                                <div class="small text-muted text-truncate mt-1" style="max-width: 480px;" th:text="${wf.description}">
+                                    Hướng dẫn kỹ thuật lấy cao răng siêu âm và đánh bóng men răng theo Quyết định 3207/QĐ-BYT
+                                </div>
+                            </td>
+                            <td>
+                                <div th:if="${wf.serviceName != null}">
+                                    <span class="badge bg-light text-primary border fw-semibold px-2 py-1" style="font-size: 12px;" th:text="${wf.serviceName}">
+                                        Cạo vôi răng & Đánh bóng
+                                    </span>
+                                </div>
+                                <div th:if="${wf.serviceName == null}" class="text-muted small fst-italic">
+                                    (Chưa gán dịch vụ)
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="wf-badge-steps">
+                                    <i class="bi bi-list-ol text-primary"></i>
+                                    <strong th:text="${wf.stepCount}">4</strong> bước
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" style="font-size: 11px;"
+                                      th:text="'v' + ${wf.versionNumber != null ? wf.versionNumber : 1} + '.0'">
+                                    v1.0
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${wf.status == 'ACTIVE'}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                    <i class="bi bi-check-circle-fill"></i> Đang áp dụng
+                                </span>
+                                <span th:if="${wf.status != 'ACTIVE'}" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                    <i class="bi bi-pencil"></i> Bản nháp
+                                </span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" title="Xem chi tiết các bước"
+                                            th:onclick="'viewWorkflowStepsModal(' + ${wf.templateId} + ')'">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" title="Chỉnh sửa quy trình & các bước"
+                                            th:onclick="'openEditWorkflowModal(' + ${wf.templateId} + ')'">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" title="Xóa quy trình"
+                                            th:onclick="'deleteWorkflow(' + ${wf.templateId} + ')'">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL 1: XEM CHI TIẾT CÁC BƯỚC CỦA QUY TRÌNH (VIEW STEPS TIMELINE)     -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="viewStepsModal" tabindex="-1" aria-labelledby="viewStepsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 16px;">
+            <div class="modal-header border-bottom py-3">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="viewStepsModalLabel">
+                        <i class="bi bi-clipboard2-check-fill text-primary"></i>
+                        <span id="viewStepsTitle">Quy trình kỹ thuật</span>
+                    </h5>
+                    <span class="badge bg-light text-muted border mt-1" id="viewStepsCode">QTKT-01</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 px-3 small mb-4 rounded-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                    <span id="viewStepsDesc">Mô tả quy trình kỹ thuật chuẩn ban hành theo Quyết định số 3207/QĐ-BYT.</span>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-list-check text-success"></i> Các bước kỹ thuật tiến hành:
+                </h6>
+
+                <div id="viewStepsTimelineContainer">
+                    <!-- Dynamic Step Timeline Items -->
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary px-4 rounded-pill" id="btnEditFromView">
+                    <i class="bi bi-pencil-square"></i> Chỉnh sửa các bước
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL 2: THÊM / SỬA QUY TRÌNH KỸ THUẬT & CÁC BƯỚC (CRUD FORM)         -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="editWorkflowModal" tabindex="-1" aria-labelledby="editWorkflowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 16px;">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="editWorkflowModalLabel">
+                    <i class="bi bi-tools text-primary"></i>
+                    <span id="editModalHeading">Thêm Quy trình Kỹ thuật Mới</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="workflowForm">
+                    <input type="hidden" id="formTemplateId">
+
+                    <!-- HÀNG 1: TÊN, MÃ, DỊCH VỤ, TRẠNG THÁI -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-dark small">Tên quy trình kỹ thuật <span class="text-danger">*</span></label>
+                            <input type="text" id="formTemplateName" class="form-control" required
+                                   placeholder="Ví dụ: Quy trình kỹ thuật Lấy cao răng & Đánh bóng">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small">Mã quy trình <span class="text-danger">*</span></label>
+                            <input type="text" id="formTemplateCode" class="form-control" required
+                                   placeholder="QTKT-CAOVOI" style="font-family: monospace; text-transform: uppercase;">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small">Dịch vụ nha khoa liên kết</label>
+                            <select id="formServiceId" class="form-select">
+                                <option value="">-- Chọn dịch vụ --</option>
+                                <option th:each="s : ${activeServices}" th:value="${s.serviceId}" th:text="${s.serviceName}">Cạo vôi răng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small">Trạng thái</label>
+                            <select id="formStatus" class="form-select">
+                                <option value="ACTIVE">Đang áp dụng</option>
+                                <option value="DRAFT">Bản nháp</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark small">Mô tả / Chỉ định / Căn cứ kỹ thuật (BYT)</label>
+                        <textarea id="formDescription" class="form-control" rows="2"
+                                  placeholder="Nhập đại cương, chỉ định, chống chỉ định theo Hướng dẫn Bộ Y Tế..."></textarea>
+                    </div>
+
+                    <!-- DANH SÁCH CÁC BƯỚC TIẾN HÀNH (BƯỚC 1, BƯỚC 2,...) -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-list-ol text-primary"></i>
+                            <span>Chi tiết các bước thực hiện (Bước 1, Bước 2, Bước 3...):</span>
+                            <span class="badge bg-primary rounded-pill" id="stepCounterBadge">0 bước</span>
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold rounded-pill px-3" onclick="addNewStepRow()">
+                            <i class="bi bi-plus-circle"></i> + Thêm bước tiếp theo
+                        </button>
+                    </div>
+
+                    <div id="stepsContainer">
+                        <!-- Dynamic Step Rows -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top py-2">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary px-4 rounded-pill fw-bold" onclick="saveWorkflowForm()">
+                    <i class="bi bi-check-circle-fill"></i> Lưu quy trình kỹ thuật
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL 3: TRỢ LÝ AI BÓC TÁCH QUY TRÌNH TỪ BỘ Y TẾ (PDF/VĂN BẢN/ẢNH)    -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="aiExtractModal" tabindex="-1" aria-labelledby="aiExtractModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 16px;">
+            <div class="modal-header border-bottom py-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f3e8ff 100%);">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="aiExtractModalLabel">
+                    <i class="bi bi-stars text-purple" style="color: #9333ea;"></i>
+                    <span>Trợ lý AI Bóc tách Quy trình Kỹ thuật Bộ Y Tế</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small">
+                    Dán văn bản trích xuất từ tài liệu <strong>"Kỹ thuật Răng-Hàm-Mặt.pdf" (Bộ Y Tế - QĐ 3207/QĐ-BYT)</strong> hoặc tải ảnh chụp trang sách.
+                    Gemini AI sẽ tự động phân tích và bóc tách thành các bước tuần tự <strong>Bước 1, Bước 2, Bước 3...</strong> điền thẳng vào form CRUD!
+                </p>
+
+                <!-- NÚT MẪU VĂN BẢN BYT THỬ NGAY -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small">Thử nhanh với mẫu quy trình chuẩn BYT:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('caovoi')">
+                            🦷 Cạo vôi &amp; Đánh bóng
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('tramrang')">
+                            ✨ Hàn răng Composite
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('tuyrang')">
+                            🔬 Điều trị tủy (Nội nha)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('nhorang')">
+                            🩺 Phẫu thuật Nhổ răng khôn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KHUNG DÁN VĂN BẢN -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small">Nội dung văn bản quy trình kỹ thuật</label>
+                    <textarea id="aiInputText" class="form-control" rows="8"
+                              placeholder="Dán đoạn văn bản các bước tiến hành kỹ thuật từ tài liệu Bộ Y Tế vào đây..."></textarea>
+                </div>
+
+                <!-- UPLOAD ẢNH NẾU CÓ -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small">Hoặc tải ảnh chụp trang sách quy trình kỹ thuật (Tùy chọn)</label>
+                    <input type="file" id="aiImageInput" class="form-control" accept="image/*" onchange="handleAiImageSelect(this)">
+                    <div id="aiImagePreview" class="mt-2 d-none">
+                        <img id="previewImg" src="" alt="Preview" style="max-height: 120px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    </div>
+                </div>
+
+                <!-- LOADING SPINNER -->
+                <div id="aiLoadingIndicator" class="text-center py-3 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-primary fw-semibold mt-2 mb-0">Gemini 3.5 Flash đang phân tích văn bản y khoa và bóc tách các bước...</p>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="wf-btn-ai px-4" id="btnRunAiExtract" onclick="runAiExtract()">
+                    <i class="bi bi-stars"></i> Phân tích &amp; Bóc tách bước
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let workflowsData = [];
+    let currentStepCount = 0;
+    let selectedImageBase64 = null;
+    let selectedImageMime = null;
+
+    // Load initial workflows
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchWorkflows();
+    });
+
+    async function fetchWorkflows() {
+        try {
+            const res = await fetch('/api/doctor/workflows');
+            if (res.ok) {
+                workflowsData = await res.json();
+                renderWorkflowTable(workflowsData);
+            }
+        } catch (e) {
+            console.error("Lỗi khi tải danh sách quy trình:", e);
+        }
+    }
+
+    function renderWorkflowTable(list) {
+        const tbody = document.getElementById("workflowTableBody");
+        document.getElementById("wfCountText").textContent = `Tổng số: ${list.length} quy trình chuẩn`;
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary"></i>
+                        <span>Chưa có quy trình kỹ thuật nào phù hợp với bộ lọc.</span>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach(wf => {
+            const statusBadge = wf.status === 'ACTIVE' 
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill"></i> Đang áp dụng</span>'
+                : '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-pencil"></i> Bản nháp</span>';
+
+            const serviceText = wf.serviceName 
+                ? `<span class="badge bg-light text-primary border fw-semibold px-2 py-1" style="font-size: 12px;">${wf.serviceName}</span>`
+                : '<span class="text-muted small fst-italic">(Chưa gán dịch vụ)</span>';
+
+            html += `
+                <tr id="wf-row-${wf.templateId}">
+                    <td class="ps-3">
+                        <span class="wf-badge-code">${wf.templateCode || 'QTKT'}</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark fs-6">${wf.templateName || ''}</div>
+                        <div class="small text-muted text-truncate mt-1" style="max-width: 480px;">${wf.description || 'Không có mô tả'}</div>
+                    </td>
+                    <td>${serviceText}</td>
+                    <td class="text-center">
+                        <span class="wf-badge-steps">
+                            <i class="bi bi-list-ol text-primary"></i>
+                            <strong>${wf.stepCount || (wf.steps ? wf.steps.length : 0)}</strong> bước
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" style="font-size: 11px;">v${wf.versionNumber || 1}.0</span>
+                    </td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center pe-3">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" title="Xem chi tiết các bước" onclick="viewWorkflowStepsModal(${wf.templateId})">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" title="Chỉnh sửa quy trình & các bước" onclick="openEditWorkflowModal(${wf.templateId})">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" title="Xóa quy trình" onclick="deleteWorkflow(${wf.templateId})">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function filterWorkflows() {
+        const query = (document.getElementById("searchInput").value || '').trim().toLowerCase();
+        const serviceId = document.getElementById("serviceFilter").value;
+
+        const filtered = workflowsData.filter(wf => {
+            const matchQuery = !query || 
+                (wf.templateName && wf.templateName.toLowerCase().includes(query)) ||
+                (wf.templateCode && wf.templateCode.toLowerCase().includes(query)) ||
+                (wf.serviceName && wf.serviceName.toLowerCase().includes(query));
+
+            const matchService = !serviceId || (wf.serviceId && wf.serviceId.toString() === serviceId);
+
+            return matchQuery && matchService;
+        });
+
+        renderWorkflowTable(filtered);
+    }
+
+    // =========================================================================
+    // MODAL 1: XEM CHI TIẾT CÁC BƯỚC
+    // =========================================================================
+    async function viewWorkflowStepsModal(templateId) {
+        try {
+            const res = await fetch(`/api/doctor/workflows/${templateId}`);
+            if (!res.ok) throw new Error("Không thể tải thông tin quy trình");
+            const wf = await res.json();
+
+            document.getElementById("viewStepsTitle").textContent = wf.templateName;
+            document.getElementById("viewStepsCode").textContent = wf.templateCode + ' • v' + (wf.versionNumber || 1) + '.0';
+            document.getElementById("viewStepsDesc").textContent = wf.description || 'Không có mô tả chi tiết.';
+
+            const container = document.getElementById("viewStepsTimelineContainer");
+            container.innerHTML = '';
+
+            if (!wf.steps || wf.steps.length === 0) {
+                container.innerHTML = '<div class="text-muted fst-italic text-center py-3">Quy trình này chưa được tạo các bước kỹ thuật.</div>';
+            } else {
+                wf.steps.sort((a,b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+                wf.steps.forEach((st, idx) => {
+                    const stepNum = st.sequenceOrder || (idx + 1);
+                    const item = document.createElement("div");
+                    item.className = "step-timeline-item";
+                    item.innerHTML = `
+                        <div class="step-timeline-badge">${stepNum}</div>
+                        <div class="step-box-card">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold text-dark fs-6">${st.stepName}</span>
+                                <span class="badge bg-light text-primary border" style="font-size: 11px;">
+                                    <i class="bi bi-clock"></i> ~${st.estimatedDurationMinutes || 10} phút
+                                </span>
+                            </div>
+                            <p class="text-secondary small mb-1">${st.stepDescription || 'Chưa có mô tả kỹ thuật.'}</p>
+                            ${st.completionCriteria ? `
+                                <div class="criteria-box">
+                                    <strong><i class="bi bi-check2-circle"></i> Tiêu chí hoàn thành:</strong> ${st.completionCriteria}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            document.getElementById("btnEditFromView").onclick = () => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById("viewStepsModal"));
+                if (modal) modal.hide();
+                openEditWorkflowModal(templateId);
+            };
+
+            const viewModal = new bootstrap.Modal(document.getElementById("viewStepsModal"));
+            viewModal.show();
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
+    }
+
+    // =========================================================================
+    // MODAL 2: THÊM / SỬA QUY TRÌNH (CRUD)
+    // =========================================================================
+    function openAddWorkflowModal() {
+        document.getElementById("workflowForm").reset();
+        document.getElementById("formTemplateId").value = '';
+        document.getElementById("editModalHeading").textContent = "Thêm Quy trình Kỹ thuật Mới (Bộ Y Tế)";
+        document.getElementById("stepsContainer").innerHTML = '';
+        currentStepCount = 0;
+        updateStepBadge();
+
+        // Thêm sẵn 3 bước mẫu ban đầu
+        addNewStepRow("Bước 1: Thăm khám và giải thích", "Khám khoang miệng, giải thích cho bệnh nhân rõ ràng quy trình", "Bệnh nhân nắm rõ chỉ định", 5);
+        addNewStepRow("Bước 2: Tiến hành thao tác kỹ thuật chính", "Thao tác chuẩn xác theo quy trình chuyên môn Bộ Y Tế", "Đảm bảo vô trùng và đạt yêu cầu kỹ thuật", 15);
+        addNewStepRow("Bước 3: Hoàn thiện, sát khuẩn & Dặn dò", "Kiểm tra kết quả lâm sàng, sát khuẩn vùng can thiệp và dặn dò chăm sóc", "Vùng điều trị sạch sẽ, ổn định", 5);
+
+        const modal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
+        modal.show();
+    }
+
+    async function openEditWorkflowModal(templateId) {
+        try {
+            const res = await fetch(`/api/doctor/workflows/${templateId}`);
+            if (!res.ok) throw new Error("Không thể tải thông tin quy trình");
+            const wf = await res.json();
+
+            document.getElementById("formTemplateId").value = wf.templateId || '';
+            document.getElementById("formTemplateName").value = wf.templateName || '';
+            document.getElementById("formTemplateCode").value = wf.templateCode || '';
+            document.getElementById("formServiceId").value = wf.serviceId || '';
+            document.getElementById("formStatus").value = wf.status || 'ACTIVE';
+            document.getElementById("formDescription").value = wf.description || '';
+            document.getElementById("editModalHeading").textContent = "Chỉnh sửa Quy trình: " + wf.templateName;
+
+            const container = document.getElementById("stepsContainer");
+            container.innerHTML = '';
+            currentStepCount = 0;
+
+            if (wf.steps && wf.steps.length > 0) {
+                wf.steps.sort((a,b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+                wf.steps.forEach(st => {
+                    addNewStepRow(st.stepName, st.stepDescription, st.completionCriteria, st.estimatedDurationMinutes, st.stepCode, st.stepType);
+                });
+            } else {
+                addNewStepRow("Bước 1: ", "", "", 10);
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
+            modal.show();
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
+    }
+
+    function addNewStepRow(name = '', desc = '', criteria = '', duration = 10, code = '', type = 'CLINICAL') {
+        currentStepCount++;
+        const container = document.getElementById("stepsContainer");
+        const rowId = `step-row-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+        const defaultName = name || `Bước ${currentStepCount}: `;
+
+        const row = document.createElement("div");
+        row.className = "step-edit-row";
+        row.id = rowId;
+        row.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-primary text-white px-2 py-1 step-num-badge">
+                    Bước ${currentStepCount}
+                </span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa bước này" onclick="removeStepRow('${rowId}')">
+                    <i class="bi bi-trash3-fill"></i> Xóa bước
+                </button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-9">
+                    <label class="form-label small fw-semibold text-dark mb-1">Tên bước kỹ thuật</label>
+                    <input type="text" class="form-control form-control-sm step-name-input" value="${escapeHtml(defaultName)}" placeholder="Ví dụ: Bước 1: Khám và đánh giá...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-dark mb-1">Thời gian (phút)</label>
+                    <input type="number" class="form-control form-control-sm step-duration-input" value="${duration}" min="1" max="180">
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-semibold text-dark mb-1">Mô tả kỹ thuật thao tác lâm sàng</label>
+                <textarea class="form-control form-control-sm step-desc-input" rows="2" placeholder="Dụng cụ, thao tác, góc độ, cách thức thực hiện...">${escapeHtml(desc)}</textarea>
+            </div>
+            <div>
+                <label class="form-label small fw-semibold text-success mb-1">Tiêu chí hoàn thành bước (Nghiệm thu y khoa)</label>
+                <input type="text" class="form-control form-control-sm step-criteria-input" value="${escapeHtml(criteria)}" placeholder="Ví dụ: Bề mặt răng sạch mảng bám, nướu cầm máu...">
+            </div>
+        `;
+
+        container.appendChild(row);
+        updateStepBadge();
+    }
+
+    function removeStepRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+            renumberSteps();
+        }
+    }
+
+    function renumberSteps() {
+        const rows = document.querySelectorAll("#stepsContainer .step-edit-row");
+        currentStepCount = 0;
+        rows.forEach((r, idx) => {
+            currentStepCount = idx + 1;
+            const badge = r.querySelector(".step-num-badge");
+            if (badge) badge.textContent = `Bước ${currentStepCount}`;
+        });
+        updateStepBadge();
+    }
+
+    function updateStepBadge() {
+        const badge = document.getElementById("stepCounterBadge");
+        if (badge) badge.textContent = `${currentStepCount} bước`;
+    }
+
+    async function saveWorkflowForm() {
+        const templateId = document.getElementById("formTemplateId").value;
+        const templateName = document.getElementById("formTemplateName").value.trim();
+        const templateCode = document.getElementById("formTemplateCode").value.trim().toUpperCase();
+        const serviceId = document.getElementById("formServiceId").value;
+        const status = document.getElementById("formStatus").value;
+        const description = document.getElementById("formDescription").value.trim();
+
+        if (!templateName) {
+            alert("Vui lòng nhập tên quy trình kỹ thuật.");
+            return;
+        }
+
+        const stepRows = document.querySelectorAll("#stepsContainer .step-edit-row");
+        const steps = [];
+
+        stepRows.forEach((r, idx) => {
+            const name = r.querySelector(".step-name-input").value.trim();
+            const duration = parseInt(r.querySelector(".step-duration-input").value) || 10;
+            const desc = r.querySelector(".step-desc-input").value.trim();
+            const criteria = r.querySelector(".step-criteria-input").value.trim();
+
+            if (name) {
+                steps.push({
+                    sequenceOrder: idx + 1,
+                    stepCode: `B${idx + 1}`,
+                    stepName: name,
+                    stepDescription: desc,
+                    completionCriteria: criteria,
+                    estimatedDurationMinutes: duration,
+                    stepType: 'CLINICAL'
+                });
+            }
+        });
+
+        if (steps.length === 0) {
+            alert("Vui lòng thêm ít nhất 1 bước cho quy trình kỹ thuật.");
+            return;
+        }
+
+        const payload = {
+            templateId: templateId ? parseInt(templateId) : null,
+            templateName,
+            templateCode,
+            serviceId: serviceId ? parseInt(serviceId) : null,
+            status,
+            description,
+            steps
+        };
+
+        try {
+            const res = await fetch('/api/doctor/workflows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err || "Lỗi khi lưu quy trình");
+            }
+
+            const saved = await res.json();
+            alert("Đã lưu quy trình kỹ thuật thành công!");
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById("editWorkflowModal"));
+            if (modal) modal.hide();
+
+            fetchWorkflows();
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
+    }
+
+    async function deleteWorkflow(templateId) {
+        if (!confirm("Bạn có chắc chắn muốn xóa quy trình kỹ thuật này?")) return;
+
+        try {
+            const res = await fetch(`/api/doctor/workflows/${templateId}`, { method: 'DELETE' });
+            if (res.ok || res.status === 204) {
+                alert("Đã xóa quy trình thành công.");
+                fetchWorkflows();
+            } else {
+                throw new Error("Không thể xóa quy trình");
+            }
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
+    }
+
+    // =========================================================================
+    // MODAL 3: TRỢ LÝ AI BÓC TÁCH TỪ BỘ Y TẾ (GEMINI AI)
+    // =========================================================================
+    function openAiExtractModal() {
+        document.getElementById("aiInputText").value = '';
+        document.getElementById("aiImageInput").value = '';
+        document.getElementById("aiImagePreview").classList.add("d-none");
+        document.getElementById("aiLoadingIndicator").classList.add("d-none");
+        document.getElementById("btnRunAiExtract").disabled = false;
+        selectedImageBase64 = null;
+        selectedImageMime = null;
+
+        const modal = new bootstrap.Modal(document.getElementById("aiExtractModal"));
+        modal.show();
+    }
+
+    function handleAiImageSelect(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            selectedImageMime = file.type;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImageBase64 = e.target.result;
+                document.getElementById("previewImg").src = selectedImageBase64;
+                document.getElementById("aiImagePreview").classList.remove("d-none");
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    const sampleMOHData = {
+        caovoi: `QUY TRÌNH KỸ THUẬT LẤY CAO RĂNG VÀ ĐÁNH BÓNG (Theo Quyết định số 3207/QĐ-BYT)
+V. CÁC BƯỚC TIẾN HÀNH
+1. Kiểm tra hồ sơ bệnh án và đánh giá toàn thân, tại chỗ. Giải thích cho người bệnh quy trình thao tác.
+2. Thực hiện kỹ thuật lấy cao răng:
+- Dùng đầu rung siêu âm nghiêng góc 15-20 độ so với trục răng.
+- Di chuyển liên tục đầu rung siêu âm từ thân răng đến cổ răng dưới tia nước làm mát vô trùng.
+- Lấy sạch cao răng trên lợi và dưới bờ lợi.
+3. Đánh bóng:
+- Dùng chổi cước hoặc đài cao su lắp vào tay khoan chậm.
+- Lấy lượng bột đánh bóng vừa đủ xoa đều lên các mặt răng.
+- Đánh bóng làm nhẵn toàn bộ bề mặt men răng và kẽ răng.
+4. Bơm rửa sát khuẩn bằng Chlorhexidine 0.12%, kiểm tra cầm máu nướu và dặn dò bệnh nhân cách chải răng đúng cách.`,
+
+        tramrang: `ĐIỀU TRỊ SÂU NGÀ RĂNG PHỤC HỒI BẰNG COMPOSITE (Theo Quyết định số 3207/QĐ-BYT)
+V. CÁC BƯỚC TIẾN HÀNH
+1. Khám, làm sạch xoang sâu và so màu Composite bằng bảng so màu VITA.
+2. Sửa soạn xoang hàn: Nạo bỏ toàn bộ ngà mủn hoại tử, tạo vát men 45 độ bờ xoang. Đặt đê cao su cách ly khô ráo tuyệt đối.
+3. Xử lý bề mặt men ngà: Bơm Etching Acid Phosphoric 37% lên men 15s, ngà 10s. Rửa sạch 20s, thổi khô nhẹ. Quét Bonding và chiếu đèn LED 20s.
+4. Đắp Composite từng lớp: Đưa composite vào xoang từng lớp nghiêng dày dưới 2mm, điêu khắc múi rãnh giải phẫu răng tự nhiên và chiếu đèn trùng hợp 20-40s mỗi lớp.
+5. Kiểm tra khớp cắn bằng giấy cắn xanh đỏ, mài chỉnh điểm cộm sớm và đánh bóng hoàn thiện bằng đĩa Sof-Lex và mũi silicon.`,
+
+        tuyrang: `QUY TRÌNH ĐIỀU TRỊ TỦY RĂNG (NỘI NHA) (Theo Quyết định số 3207/QĐ-BYT)
+V. CÁC BƯỚC TIẾN HÀNH
+1. Khám lâm sàng, chụp phim X-quang cuống răng và gây tê vô cảm vùng điều trị.
+2. Mở tủy: Dùng mũi khoan tròn bộc lộ trần buồng tủy, dùng thám châm nội nha DG-16 tìm đủ các lỗ ống tủy.
+3. Đo chiều dài làm việc bằng máy Apex Locator kết hợp trâm K-file #15, tạo hình ống tủy thuôn đều bằng hệ thống trâm máy quay Ni-Ti.
+4. Bơm rửa sạch bằng dung dịch NaOCl 2.5% kết hợp kích hoạt sóng siêu âm, hút khô bằng côn giấy và đặt thuốc sát trùng.
+5. Thử côn Gutta Percha chính khít sát chóp và bít kín hệ thống ống tủy 3 chiều bằng xi măng sinh học Bioceramic. Chụp phim kiểm tra sau bít.`,
+
+        nhorang: `PHẪU THUẬT NHỔ RĂNG KHÔN MỌC LỆCH CẮT THÂN CHIA CHÂN (Theo Quyết định số 3207/QĐ-BYT)
+V. CÁC BƯỚC TIẾN HÀNH
+1. Kiểm tra toàn thân, đo huyết áp, đọc phim Panorama/ConeBeam CT xác định khoảng cách dây thần kinh răng dưới.
+2. Sát khuẩn phẫu trường trong ngoài miệng và gây tê gai Spix kết hợp gây tê ngách lợi tiền đình.
+3. Rạch lợi tạo vạt niêm mạc màng xương bộc lộ xương và thân răng khôn mọc kẹt.
+4. Mở xương bằng tay khoan nghiêng 45 độ, cắt chia tách thân và chân răng khôn, dùng bẩy lấy từng phần an toàn ra ngoài.
+5. Nạo sạch mô hạt, bơm rửa nước muối sinh lý vô trùng, đặt gạc cầm máu và khâu khép vạt bằng chỉ tiêu Vicryl 3-0.`
+    };
+
+    function loadSampleMOH(key) {
+        if (sampleMOHData[key]) {
+            document.getElementById("aiInputText").value = sampleMOHData[key];
+        }
+    }
+
+    async function runAiExtract() {
+        const text = document.getElementById("aiInputText").value.trim();
+        if (!text && !selectedImageBase64) {
+            alert("Vui lòng dán văn bản quy trình hoặc chọn ảnh tài liệu để phân tích.");
+            return;
+        }
+
+        const indicator = document.getElementById("aiLoadingIndicator");
+        const btn = document.getElementById("btnRunAiExtract");
+        indicator.classList.remove("d-none");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/doctor/workflows/ai-extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: text,
+                    imageBase64: selectedImageBase64,
+                    mimeType: selectedImageMime
+                })
+            });
+
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err || "Lỗi khi gọi AI bóc tách");
+            }
+
+            const parsed = await res.json();
+
+            // Đóng modal AI
+            const aiModal = bootstrap.Modal.getInstance(document.getElementById("aiExtractModal"));
+            if (aiModal) aiModal.hide();
+
+            // Điền vào Form Thêm/Sửa Quy trình
+            document.getElementById("formTemplateId").value = '';
+            document.getElementById("formTemplateName").value = parsed.templateName || '';
+            document.getElementById("formTemplateCode").value = parsed.templateCode || ('QTKT-' + Math.floor(Math.random()*10000));
+            document.getElementById("formStatus").value = 'ACTIVE';
+            document.getElementById("formDescription").value = parsed.description || '';
+            document.getElementById("editModalHeading").textContent = "✨ Xem xét & Lưu Quy trình Bóc tách bởi AI";
+
+            // Điền các bước
+            const container = document.getElementById("stepsContainer");
+            container.innerHTML = '';
+            currentStepCount = 0;
+
+            if (parsed.steps && parsed.steps.length > 0) {
+                parsed.steps.forEach(st => {
+                    addNewStepRow(st.stepName, st.stepDescription, st.completionCriteria, st.estimatedDurationMinutes, st.stepCode, st.stepType);
+                });
+            } else {
+                addNewStepRow("Bước 1: ", "", "", 10);
+            }
+
+            // Mở modal Thêm/Sửa
+            const editModal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
+            editModal.show();
+
+        } catch (e) {
+            alert("Lỗi AI: " + e.message);
+        } finally {
+            indicator.classList.add("d-none");
+            btn.disabled = false;
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                          .replace(/'/g, '&#39;');
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
