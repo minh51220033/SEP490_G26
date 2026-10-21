@@ -2,6 +2,10 @@ package com.cvdcms.controller;
 
 import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.DTO.Icd10DiseaseDTO;
+import com.cvdcms.DTO.MedicationDTO;
+import com.cvdcms.DTO.PerformedServiceResponseDTO;
+import com.cvdcms.DTO.PrescriptionResponseDTO;
+import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.StaffGender;
@@ -9,11 +13,12 @@ import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
-import com.cvdcms.DTO.PerformedServiceResponseDTO;
-import com.cvdcms.DTO.ServiceDTO;
+import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 import com.cvdcms.service.DiagnosisService;
 import com.cvdcms.service.Icd10DiseaseService;
 import com.cvdcms.service.PerformedServiceService;
+import com.cvdcms.service.PrescriptionService;
+import com.cvdcms.service.TreatmentPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -23,9 +28,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Controller
@@ -35,6 +43,8 @@ public class DiagnosisController {
     private final DiagnosisService diagnosisService;
     private final Icd10DiseaseService icd10DiseaseService;
     private final PerformedServiceService performedServiceService;
+    private final PrescriptionService prescriptionService;
+    private final TreatmentPlanService treatmentPlanService;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
@@ -62,6 +72,44 @@ public class DiagnosisController {
             }
         }
         return "redirect:/doctor/examination/" + visitId + "/diagnoses";
+    }
+
+    @GetMapping("/doctor/examination/patient/{patientId}")
+    public String examinationByPatient(
+            @PathVariable("patientId") Long patientId,
+            @RequestParam(value = "newVisit", defaultValue = "false") boolean forceNewVisit
+    ) {
+        if (!forceNewVisit) {
+            Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
+                    patientId,
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_RESULT, VisitStatus.WAITING_PAYMENT)
+            );
+            if (activeVisitOpt.isPresent()) {
+                return "redirect:/doctor/examination/" + activeVisitOpt.get().getVisitId() + "/diagnoses";
+            }
+            Optional<Visit> latestVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(patientId);
+            if (latestVisitOpt.isPresent()) {
+                return "redirect:/doctor/examination/" + latestVisitOpt.get().getVisitId() + "/diagnoses";
+            }
+        }
+
+        // Tạo ca khám mới nếu chưa có
+        PatientProfile patient = patientProfileRepository.findById(patientId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + patientId));
+
+        Visit newVisit = new Visit();
+        newVisit.setPatientProfile(patient);
+        newVisit.setCheckInAt(LocalDateTime.now());
+        newVisit.setStatus(VisitStatus.IN_EXAM);
+        newVisit.setVisitType(com.cvdcms.entity.enums.VisitType.WALK_IN);
+        newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
+        newVisit.setBranch(patient.getPreferredBranch() != null ? patient.getPreferredBranch() : branchRepository.findAll().get(0));
+        newVisit.setPrimaryDoctor(staffProfileRepository.findAll().stream().filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS")).findFirst().orElse(null));
+        long count = visitRepository.count() + 1;
+        newVisit.setVisitCode("VIS" + (10000 + count));
+        newVisit = visitRepository.save(newVisit);
+
+        return "redirect:/doctor/examination/" + newVisit.getVisitId() + "/diagnoses";
     }
 
     @GetMapping({"/doctor/examination/{visitId}/diagnoses", "/doctor/examination/{visitId}/treatment"})
@@ -95,11 +143,28 @@ public class DiagnosisController {
         // FT16 Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
+        String activeServicesJson = "[]";
+        try {
+            activeServicesJson = new ObjectMapper().writeValueAsString(activeServices);
+        } catch (Exception ignored) {}
+        model.addAttribute("activeServicesJson", activeServicesJson);
         model.addAttribute("doctors", doctors);
         model.addAttribute("assistants", assistants);
         model.addAttribute("totalPerformedAmount", totalPerformedAmount);
 
-        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14) & Dịch vụ thực hiện (FT16)");
+        // FT18: Đơn thuốc & Dặn dò
+        List<PrescriptionResponseDTO> prescriptions = prescriptionService.getPrescriptionsByVisit(visitId);
+        List<MedicationDTO> activeMedications = prescriptionService.getActiveMedications();
+        model.addAttribute("prescriptions", prescriptions);
+        model.addAttribute("activeMedications", activeMedications);
+
+        // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
+        List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
+                ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())
+                : Collections.emptyList();
+        model.addAttribute("treatmentPlans", treatmentPlans);
+
+        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
 
         return "doctor/diagnoses";

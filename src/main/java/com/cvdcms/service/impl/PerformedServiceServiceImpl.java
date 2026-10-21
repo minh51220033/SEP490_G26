@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,6 +34,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     private final ServiceRepository serviceRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final VisitRepository visitRepository;
+    private final com.cvdcms.repository.ClinicalWorkflowTemplateRepository workflowTemplateRepo;
+    private final com.cvdcms.repository.ClinicalWorkflowVersionRepository workflowVersionRepo;
+    private final com.cvdcms.repository.ClinicalWorkflowStepRepository workflowStepRepo;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -162,6 +166,31 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         String statusDisplay = ps.getStatus() == PerformedServiceStatus.COMPLETED ? "Đã hoàn thành" : "Đã hủy";
         String timeStr = ps.getCompletedAt() != null ? ps.getCompletedAt().format(FORMATTER) : "";
 
+        Boolean hasWorkflow = false;
+        Long wfTemplateId = null;
+        Integer wfStepCount = 0;
+        String wfTemplateName = null;
+
+        if (ps.getService() != null && ps.getService().getServiceId() != null) {
+            Optional<com.cvdcms.entity.ClinicalWorkflowTemplate> optTpl = workflowTemplateRepo.findFirstByService_ServiceIdAndStatus(
+                    ps.getService().getServiceId(), com.cvdcms.entity.enums.WorkflowTemplateStatus.ACTIVE);
+            if (optTpl.isEmpty()) {
+                List<com.cvdcms.entity.ClinicalWorkflowTemplate> all = workflowTemplateRepo.findByService_ServiceId(ps.getService().getServiceId());
+                if (!all.isEmpty()) optTpl = Optional.of(all.get(0));
+            }
+
+            if (optTpl.isPresent()) {
+                hasWorkflow = true;
+                com.cvdcms.entity.ClinicalWorkflowTemplate tpl = optTpl.get();
+                wfTemplateId = tpl.getTemplateId();
+                wfTemplateName = tpl.getTemplateName();
+                com.cvdcms.entity.ClinicalWorkflowVersion v = workflowVersionRepo.findFirstByTemplate_TemplateIdOrderByVersionNumberDesc(tpl.getTemplateId()).orElse(null);
+                if (v != null) {
+                    wfStepCount = workflowStepRepo.findByVersion_VersionIdOrderBySequenceOrderAsc(v.getVersionId()).size();
+                }
+            }
+        }
+
         return PerformedServiceResponseDTO.builder()
                 .performedId(ps.getPerformedId())
                 .visitId(ps.getVisit() != null ? ps.getVisit().getVisitId() : null)
@@ -186,6 +215,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .status(ps.getStatus() != null ? ps.getStatus().name() : "COMPLETED")
                 .statusDisplay(statusDisplay)
                 .clinicalNotes(ps.getClinicalNotes())
+                .hasWorkflow(hasWorkflow)
+                .workflowTemplateId(wfTemplateId)
+                .workflowStepCount(wfStepCount)
+                .workflowTemplateName(wfTemplateName)
                 .build();
     }
 }

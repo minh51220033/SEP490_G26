@@ -35,4 +35,8 @@ public class PerformedServiceResponseDTO {
     private String status;
     private String statusDisplay;
     private String clinicalNotes;
+    private Boolean hasWorkflow;
+    private Long workflowTemplateId;
+    private Integer workflowStepCount;
+    private String workflowTemplateName;
 }
