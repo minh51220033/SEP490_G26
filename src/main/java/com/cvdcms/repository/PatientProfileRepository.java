@@ -30,4 +30,15 @@ public interface PatientProfileRepository
     boolean existsByUser_UserId(Long userId);
 
     List<PatientProfile> findAllByUser_UserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT p FROM PatientProfile p
+        WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
+           OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :query, '%'))
+           OR p.phoneNumber LIKE CONCAT('%', :query, '%')
+        ORDER BY p.profileId DESC
+    """)
+    List<PatientProfile> searchPatients(@org.springframework.data.repository.query.Param("query") String query);
+
+    List<PatientProfile> findTop15ByOrderByProfileIdDesc();
 }

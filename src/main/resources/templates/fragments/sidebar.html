@@ -88,6 +88,141 @@
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
             </a>
         </div>
+
+        <!-- ========================================== -->
+        <!-- BÁC SĨ: KHÁM & ĐIỀU TRỊ (ROLE 2 SCREENS FLOW) -->
+        <!-- ========================================== -->
+        <p class="app-sidebar__section">Bác sĩ &amp; Điều phối</p>
+
+        <!-- 1. Bàn làm việc & Ca khám trong ngày -->
+        <a th:href="@{/doctor/diagnoses}" class="side-link"
+           th:classappend="${activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
+           title="Bảng điều khiển ca khám của Bác sĩ trong ngày (SCR-07.2)">
+            <i class="bi bi-calendar2-week text-primary" aria-hidden="true"></i>
+            <span>Ca khám trong ngày</span>
+            <span class="badge bg-primary-subtle text-primary border ms-auto" style="font-size: 10px;">SCR-07.2</span>
+        </a>
+
+        <!-- 2. Điều phối & Ghế khám Kanban (FT08) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Bảng điều phối ghế & hàng chờ (SCR-08.1 - FT08)">
+            <i class="bi bi-kanban" aria-hidden="true"></i>
+            <span>Điều phối ghế nha</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT08</span>
+        </a>
+
+        <!-- NHÓM: ĐIỀU TRỊ TẠI GHẾ (CHAIRSIDE CLINICAL) -->
+        <p class="app-sidebar__section">Điều trị tại ghế</p>
+
+        <!-- 3. Chẩn đoán ICD-10 (FT14) -->
+        <a th:href="@{/doctor/diagnoses#diagnosisSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('diagnosisSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Khám lâm sàng & Chẩn đoán bệnh lý ICD-10 (SCR-14.1)">
+            <i class="bi bi-clipboard2-pulse text-danger" aria-hidden="true"></i>
+            <span>Chẩn đoán ICD-10</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT14</span>
+        </a>
+
+        <!-- 4. Dịch vụ thực hiện (FT16) -->
+        <a th:href="@{/doctor/diagnoses#performedServicesSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('performedServicesSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Dịch vụ & Thủ thuật thực hiện thực tế (SCR-16.1 & 16.2)">
+            <i class="bi bi-tools text-primary" aria-hidden="true"></i>
+            <span>Dịch vụ thực hiện</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT16</span>
+        </a>
+
+        <!-- 4.1. Quy trình kỹ thuật (MOH) -->
+        <a th:href="@{/doctor/workflows}" class="side-link"
+           th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
+           title="Quản lý Quy trình Kỹ thuật Lâm sàng & Bóc tách AI chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)">
+            <i class="bi bi-journal-medical text-info" aria-hidden="true"></i>
+            <span>Quy trình kỹ thuật</span>
+            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">BYT</span>
+        </a>
+
+        <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
+        <a th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('prescriptionsSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kê đơn thuốc, dặn dò & in đơn (SCR-18.3, 18.4, 18.5)">
+            <i class="bi bi-capsule text-warning" aria-hidden="true"></i>
+            <span>Đơn thuốc &amp; Dặn dò</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT18</span>
+        </a>
+
+        <!-- 6. Kế hoạch điều trị & Lộ trình (FT15) -->
+        <a th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('treatmentPlanSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kế hoạch điều trị nhiều giai đoạn & Trợ lý AI (SCR-15.1, 15.2, 15.3 - FT15)">
+            <i class="bi bi-diagram-3-fill text-info" aria-hidden="true"></i>
+            <span>Kế hoạch điều trị</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT15</span>
+        </a>
+
+        <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Kho ảnh lâm sàng Before/After (SCR-17.1 - FT17)">
+            <i class="bi bi-images text-secondary" aria-hidden="true"></i>
+            <span>Kho ảnh lâm sàng</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT17</span>
+        </a>
+
+        <!-- NHÓM: CẬN LÂM SÀNG & HÌNH ẢNH -->
+        <p class="app-sidebar__section">Cận lâm sàng &amp; Labo</p>
+
+        <!-- 8. Phim X-quang NanoPix (FT12) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Ảnh X-quang tích hợp NanoPix (SCR-12.1 - FT12)">
+            <i class="bi bi-bounding-box" aria-hidden="true"></i>
+            <span>Phim X-quang NanoPix</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT12</span>
+        </a>
+
+        <!-- 9. Mẫu xét nghiệm & Labo (FT13) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Mẫu xét nghiệm gửi ngoài & Labo (SCR-13.1 - FT13)">
+            <i class="bi bi-droplet-half" aria-hidden="true"></i>
+            <span>Xét nghiệm &amp; Labo</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT13</span>
+        </a>
+
+        <!-- NHÓM: HỒ SƠ & TÁI KHÁM -->
+        <p class="app-sidebar__section">Hồ sơ &amp; Tái khám</p>
+
+        <!-- 10. Hồ sơ bệnh nhân (FT03) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Tra cứu hồ sơ bệnh nhân & bệnh án EMR (SCR-03.1 - FT03)">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i>
+            <span>Hồ sơ Bệnh nhân</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT03</span>
+        </a>
+
+        <!-- 11. Nhắc tái khám sau điều trị (SCR-18.2) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Danh sách bệnh nhân cần nhắc tái khám (SCR-18.2)">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <span>Nhắc hẹn tái khám</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">SCR-18.2</span>
+        </a>
+
+        <!-- NHÓM: CÁ NHÂN BÁC SĨ -->
+        <p class="app-sidebar__section">Cá nhân</p>
+
+        <!-- 12. Lịch trực & Chấm công (FT33) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Lịch trực tuần & Chấm công (SCR-33.3 - FT33)">
+            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+            <span>Lịch trực &amp; Chấm công</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT33</span>
+        </a>
+
+        <!-- 13. Đơn xin nghỉ / Khóa lịch (FT42) -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Gửi yêu cầu nghỉ phép & Khóa lịch (SCR-42.1 - FT42)">
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+            <span>Yêu cầu nghỉ / Khóa lịch</span>
+            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT42</span>
+        </a>
     </nav>
 
     <!-- THẺ NGƯỜI DÙNG -->
