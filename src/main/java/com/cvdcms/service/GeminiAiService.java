@@ -35,7 +35,8 @@ public class GeminiAiService {
     }
 
     /**
-     * Bóc tách quy trình kỹ thuật RHM hoặc ghi chú lâm sàng thành Kế hoạch điều trị nhiều giai đoạn
+     * Bóc tách quy trình kỹ thuật RHM hoặc ghi chú lâm sàng thành Kế hoạch điều trị
+     * nhiều giai đoạn
      */
     public AiParsePlanResponseDTO parseTreatmentPlan(AiParsePlanRequestDTO request) {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
@@ -44,7 +45,7 @@ public class GeminiAiService {
         String systemPrompt = """
                 Bạn là chuyên gia cố vấn giải pháp phần mềm nha khoa chuẩn DentalSoft / Bộ Y Tế.
                 Nhiệm vụ của bạn: Hãy phân tích văn bản kỹ thuật răng hàm mặt hoặc ảnh chụp trang sách/ghi chú lâm sàng sau đây và bóc tách thành Kế hoạch điều trị nhiều giai đoạn (Multi-stage Treatment Plan) chuẩn y khoa.
-                
+
                 Yêu cầu cấu trúc JSON trả về:
                 {
                   "planTitle": "Tên phác đồ điều trị rõ ràng, chuyên nghiệp",
@@ -71,7 +72,7 @@ public class GeminiAiService {
                   "postOpAdvice": "Lời dặn sau điều trị và chăm sóc vệ sinh",
                   "contraindications": "Chống chỉ định hoặc lưu ý an toàn y khoa"
                 }
-                
+
                 Nếu văn bản ngắn, hãy tự động bổ sung các bước y khoa chuẩn mực (Ví dụ: Khám & Gây tê -> Thực hiện -> Theo dõi/Cắt chỉ/Lấy dấu).
                 """;
 
@@ -84,8 +85,9 @@ public class GeminiAiService {
                 if (cleanBase64.contains(",")) {
                     cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
                 }
-                String mimeType = (request.getMimeType() != null && !request.getMimeType().isEmpty()) 
-                        ? request.getMimeType() : "image/jpeg";
+                String mimeType = (request.getMimeType() != null && !request.getMimeType().isEmpty())
+                        ? request.getMimeType()
+                        : "image/jpeg";
 
                 Map<String, Object> inlineData = new HashMap<>();
                 inlineData.put("mime_type", mimeType);
@@ -99,9 +101,11 @@ public class GeminiAiService {
             // 2. Nội dung văn bản
             StringBuilder textContent = new StringBuilder(systemPrompt);
             if (request.getText() != null && !request.getText().trim().isEmpty()) {
-                textContent.append("\n\nVăn bản kỹ thuật / Ghi chú lâm sàng cần bóc tách:\n").append(request.getText().trim());
+                textContent.append("\n\nVăn bản kỹ thuật / Ghi chú lâm sàng cần bóc tách:\n")
+                        .append(request.getText().trim());
             } else if (parts.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng nhập văn bản hoặc tải ảnh tài liệu kỹ thuật để phân tích.");
+                throw new IllegalArgumentException(
+                        "Vui lòng nhập văn bản hoặc tải ảnh tài liệu kỹ thuật để phân tích.");
             }
 
             Map<String, Object> textPart = new HashMap<>();
@@ -146,16 +150,18 @@ public class GeminiAiService {
     }
 
     /**
-     * Bóc tách quy trình kỹ thuật Răng Hàm Mặt từ tài liệu QĐ 3207/QĐ-BYT hoặc ảnh chụp thành các bước 1, 2, 3...
+     * Bóc tách quy trình kỹ thuật Răng Hàm Mặt từ tài liệu QĐ 3207/QĐ-BYT hoặc ảnh
+     * chụp thành các bước 1, 2, 3...
      */
-    public com.cvdcms.DTO.WorkflowTemplateResponseDTO parseWorkflowProcedure(String text, String imageBase64, String mimeType) {
+    public com.cvdcms.DTO.WorkflowTemplateResponseDTO parseWorkflowProcedure(String text, String imageBase64,
+            String mimeType) {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 modelName, apiKey);
 
         String systemPrompt = """
                 Bạn là chuyên gia thẩm định Quy trình Kỹ thuật Khám bệnh, Chữa bệnh chuyên ngành Răng Hàm Mặt theo Quyết định số 3207/QĐ-BYT của Bộ Y Tế.
                 Nhiệm vụ: Hãy phân tích văn bản quy trình kỹ thuật hoặc ảnh chụp trang sách từ tài liệu Bộ Y Tế và bóc tách thành Quy trình kỹ thuật lâm sàng chuẩn hoá gồm các bước thực hiện tuần tự: Bước 1, Bước 2, Bước 3...
-                
+
                 Yêu cầu cấu trúc JSON trả về:
                 {
                   "templateName": "Tên quy trình kỹ thuật rõ ràng, chuẩn mực (VD: Quy trình kỹ thuật Lấy cao răng và đánh bóng)",
@@ -173,7 +179,7 @@ public class GeminiAiService {
                     }
                   ]
                 }
-                
+
                 Quy tắc bắt buộc:
                 1. Giá trị 'stepType' chỉ được chọn trong các từ: CLINICAL, TREATMENT, FOLLOW_UP, PARACLINICAL, DECISION.
                 2. Phải bóc tách thành các bước tuần tự từ Bước 1 đến bước cuối cùng (sequenceOrder: 1, 2, 3...).
@@ -205,7 +211,8 @@ public class GeminiAiService {
             if (text != null && !text.trim().isEmpty()) {
                 textContent.append("\n\nVăn bản quy trình kỹ thuật Bộ Y Tế cần bóc tách:\n").append(text.trim());
             } else if (parts.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng nhập văn bản quy trình hoặc tải ảnh tài liệu kỹ thuật để phân tích.");
+                throw new IllegalArgumentException(
+                        "Vui lòng nhập văn bản quy trình hoặc tải ảnh tài liệu kỹ thuật để phân tích.");
             }
 
             Map<String, Object> textPart = new HashMap<>();
