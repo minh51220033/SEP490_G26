@@ -2,19 +2,30 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.Service;
 import com.cvdcms.entity.enums.ServiceStatus;
+import com.cvdcms.entity.enums.ServiceType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
-import java.util.Optional;
-
-import com.cvdcms.entity.enums.ServiceType;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
+@Repository
 public interface ServiceRepository extends JpaRepository<Service, Long> {
+
+    // === FT16: Bác sĩ điều trị tại ghế & Khám lâm sàng ===
+    List<Service> findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus status);
+
+    @Query("SELECT s FROM Service s JOIN FETCH s.category WHERE s.status = :status ORDER BY s.category.displayOrder ASC, s.serviceName ASC")
+    List<Service> findAllActiveWithCategory(ServiceStatus status);
+
+    Optional<Service> findByServiceCode(String serviceCode);
+
+    // === FT02: Quản lý danh mục dịch vụ & Bảng giá ===
     // Kiểm tra mã dịch vụ đã tồn tại.
     boolean existsByServiceCodeIgnoreCase(String serviceCode);
 
@@ -31,12 +42,11 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     // Dịch vụ có trạng thái chỉ định và thuộc nhóm đang hoạt động.
     // Khi lấy bảng giá công khai, truyền ServiceStatus.ACTIVE.
     @EntityGraph(attributePaths = "category")
-    List<Service>
-    findByStatusAndCategory_IsActiveTrueOrderByServiceNameAsc(
+    List<Service> findByStatusAndCategory_IsActiveTrueOrderByServiceNameAsc(
             ServiceStatus status
     );
 
-    //guest có thể xem không khai
+    // Guest có thể xem công khai
     @EntityGraph(attributePaths = "category")
     @Query("""
     SELECT s
