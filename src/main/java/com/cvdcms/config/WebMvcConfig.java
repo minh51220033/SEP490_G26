@@ -16,13 +16,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final AdminBranchInterceptor adminBranchInterceptor;
     private final AccountManagementInterceptor accountManagementInterceptor;
+    //FT02 dichvu
+    private final AdminServiceCatalogInterceptor adminServiceCatalogInterceptor;
+
 
     public WebMvcConfig(
             AdminBranchInterceptor adminBranchInterceptor,
-            AccountManagementInterceptor accountManagementInterceptor
+            AccountManagementInterceptor accountManagementInterceptor,
+            AdminServiceCatalogInterceptor adminServiceCatalogInterceptor //FT02
     ) {
         this.adminBranchInterceptor = adminBranchInterceptor;
         this.accountManagementInterceptor = accountManagementInterceptor;
+        this.adminServiceCatalogInterceptor = adminServiceCatalogInterceptor; //FT02
     }
 
     @Override
@@ -58,6 +63,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // Chỉ tài khoản Admin hoặc Lễ tân hợp lệ mới được vào khu vực quản lý tài khoản.
         registry.addInterceptor(accountManagementInterceptor)
                 .addPathPatterns("/accounts/**")
+                .excludePathPatterns(staticFilesExclusions);
+
+        // Bảo vệ toàn bộ trang và thao tác quản trị FT02.
+        registry.addInterceptor(adminServiceCatalogInterceptor)
+                .addPathPatterns("/admin/services",
+                                 "/admin/services/**")
                 .excludePathPatterns(staticFilesExclusions);
     }
 }
