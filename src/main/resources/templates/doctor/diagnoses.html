@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Chẩn đoán bệnh lý ICD-10 - DentalFlow')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <!-- SIDEBAR DÙNG CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('examination')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <!-- HEADER TOPBAR DÙNG CHUNG -->
+        <header th:replace="~{fragments/header :: appTopbar('Khám & Điều trị')}"></header>
+
+        <main class="app-content p-3 p-md-4">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css}">
+
+            <!-- 1. DENTALSOFT PATIENT PROFILE BANNER (image7.png, image6.png) -->
+            <div class="df-patient-profile-card">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="df-avatar-circle"
+                             th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
+                            NA
+                        </div>
+                        <div>
+                            <div class="text-muted small" th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001')}">Mã KH: DEMO0001</div>
+                            <h4 class="mb-0 fw-bold text-dark"
+                                th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? patient.fullName : 'Bệnh nhân mẫu 1'}">
+                                Nguyễn Văn An
+                            </h4>
+                            <div class="text-muted small" th:text="${'SĐT: ' + (patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---')}">SĐT: 0900000001</div>
+                        </div>
+                    </div>
+
+                    <!-- 3 CHỈ SỐ TÀI CHÍNH (THEO DENTALSOFT image7.png) -->
+                    <div class="d-flex align-items-center gap-4 text-end">
+                        <div>
+                            <div class="df-stat-title">PHÁT SINH</div>
+                            <div class="df-stat-value text-dark" id="headerPhatSinh"
+                                 th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0'}">
+                                5.000.000
+                            </div>
+                        </div>
+                        <div>
+                            <div class="df-stat-title">THANH TOÁN</div>
+                            <div class="df-stat-value text-success">0</div>
+                        </div>
+                        <div>
+                            <div class="df-stat-title text-danger">CÔNG NỢ</div>
+                            <div class="df-stat-value text-danger" id="headerCongNo"
+                                 th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0'}">
+                                5.000.000
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. HỆ THỐNG TAB ĐIỀU HƯỚNG DENTALSOFT (image7.png) -->
+            <nav class="df-subnav rounded-3 mb-3 shadow-sm">
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân</a>
+                <a href="#" class="df-subnav-item active"><i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-calendar-event"></i> Lịch hẹn</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-chat-heart"></i> Chăm sóc</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-capsule"></i> Đơn thuốc</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-box-seam"></i> Đặt xưởng</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-images"></i> Film ảnh</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-card-checklist"></i> Lời dặn</a>
+                <a href="#" class="df-subnav-item" onclick="return false;"><i class="bi bi-credit-card"></i> Thanh toán</a>
+            </nav>
+
+            <!-- 3. BREADCRUMB NAV (image7.png) -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="df-breadcrumb-nav mb-0">
+                    <a th:href="@{/doctor/diagnoses}">Hồ sơ khách hàng</a>
+                    <span class="mx-1 text-muted">&gt;</span>
+                    <span class="text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
+                    <span class="mx-1 text-muted">&gt;</span>
+                    <span class="text-dark fw-semibold">Khám &amp; Điều trị</span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2" th:if="${allVisits != null and !allVisits.isEmpty()}">
+                    <span class="text-muted small"><i class="bi bi-clock-history"></i> Đổi ca khám:</span>
+                    <select class="form-select form-select-sm" style="max-width: 240px;"
+                            onchange="if(this.value) window.location.href='/doctor/examination/' + this.value + '/diagnoses'">
+                        <option th:each="v : ${allVisits}"
+                                th:value="${v.visitId}"
+                                th:selected="${v.visitId == visit.visitId}"
+                                th:text="${(v.visitCode != null ? v.visitCode : 'VIS-01') + ' - ' + (v.patientProfile != null and v.patientProfile.fullName != null ? v.patientProfile.fullName : 'Bệnh nhân')}">
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 3. STRIP THÔNG TIN BỆNH NHÂN (CHỈ HIỆN KHI CÓ DỮ LIỆU THỰC TẾ) -->
+            <div class="df-patient-strip">
+                <div class="d-flex flex-wrap gap-4">
+                    <span class="df-info-pill" th:if="${patient != null and patient.patientCode != null}">
+                        <i class="bi bi-qr-code text-muted"></i>
+                        <span>Mã BN:</span>
+                        <strong th:text="${patient.patientCode}">BN-MAU-01</strong>
+                    </span>
+                    <span class="df-info-pill" th:if="${patient != null and patient.gender != null}">
+                        <i class="bi bi-gender-ambiguous text-muted"></i>
+                        <span>Giới tính:</span>
+                        <strong th:text="${patient.gender}">Nam</strong>
+                    </span>
+                    <span class="df-info-pill" th:if="${patient != null and patient.dob != null}">
+                        <i class="bi bi-calendar3 text-muted"></i>
+                        <span>Ngày sinh:</span>
+                        <strong th:text="${#temporals.format(patient.dob, 'dd/MM/yyyy')}">20/05/1995</strong>
+                    </span>
+                    <span class="df-info-pill" th:if="${patient != null and patient.phoneNumber != null}">
+                        <i class="bi bi-telephone text-muted"></i>
+                        <span>SĐT:</span>
+                        <strong th:text="${patient.phoneNumber}">0900000001</strong>
+                    </span>
+                    <span class="df-info-pill" th:if="${visit.branch != null and visit.branch.branchName != null}">
+                        <i class="bi bi-geo-alt text-muted"></i>
+                        <span>Cơ sở:</span>
+                        <strong th:text="${visit.branch.branchName}">Cơ sở mẫu 1</strong>
+                    </span>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <span class="df-info-pill" th:if="${visit.primaryDoctor != null and visit.primaryDoctor.fullName != null}">
+                        <i class="bi bi-person-badge text-primary"></i>
+                        <span>Bác sĩ:</span>
+                        <strong class="text-primary" th:text="${visit.primaryDoctor.fullName}">Bác sĩ mẫu 1</strong>
+                    </span>
+                    <span class="df-info-pill" th:if="${visit.visitCode != null}">
+                        <i class="bi bi-ticket-perforated text-muted"></i>
+                        <span>Mã ca:</span>
+                        <strong th:text="${visit.visitCode}">VIS-MAU-01</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 4. KHỐI CA KHÁM THEO NGÀY (DENTALFLOW SESSION CARD) -->
+            <div class="df-session-card">
+
+                <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
+                <div class="df-session-bar">
+                    <div class="df-session-title">
+                        <i class="bi bi-calendar2-check-fill"></i>
+                        <span>NGÀY KHÁM: </span>
+                        <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2" th:if="${visit.initialSymptoms != null and !visit.initialSymptoms.isEmpty()}">
+                        <span class="badge bg-light text-secondary border">
+                            <i class="bi bi-chat-left-text me-1"></i>
+                            <span th:text="${'Lý do: ' + visit.initialSymptoms}">Lý do khám</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- NỘI DUNG CHÍNH: CHẨN ĐOÁN BỆNH LÝ THEO ICD-10 (FT14 - SCR-14.1) -->
+                <div class="p-3 p-md-4">
+
+                    <!-- KHỐI FORM GHI NHẬN CHẨN ĐOÁN -->
+                    <div class="mb-4 p-3 bg-light rounded-3 border">
+                        <div class="row g-4">
+
+                            <!-- CỘT TRÁI: DANH SÁCH BỆNH LÝ THƯỜNG GẶP (1 CHẠM ĐIỀN TỰ ĐỘNG) - DẠNG DANH SÁCH LIST -->
+                            <div class="col-lg-5">
+                                <div class="df-list-card shadow-sm">
+                                    <div class="df-list-header">
+                                        <div class="df-list-header-title">
+                                            <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                            <span>Bệnh lý thường gặp (1 chạm điền tự động)</span>
+                                        </div>
+                                        <div class="df-list-search">
+                                            <i class="bi bi-search"></i>
+                                            <input type="text"
+                                                   class="form-control form-control-sm"
+                                                   id="filterCommonDiseases"
+                                                   placeholder="Lọc nhanh danh sách bệnh lý..."
+                                                   oninput="filterCommonDiseasesList(this.value)">
+                                        </div>
+                                    </div>
+
+                                    <div class="df-list-body">
+                                        <table class="df-list-table">
+                                            <thead>
+                                            <tr>
+                                                <th style="width: 75px;">Mã ICD</th>
+                                                <th>Tên bệnh lý</th>
+                                                <th style="width: 60px;" class="text-center">Chọn</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody id="commonDiseasesListBody">
+                                            <tr th:each="cd : ${commonDiseases}"
+                                                class="df-list-row"
+                                                th:data-code="${cd.icd10Code}"
+                                                th:data-name="${cd.diseaseNameVi}"
+                                                th:data-en="${cd.diseaseNameEn}"
+                                                onclick="selectFromCommonList(this)">
+                                                <td>
+                                                    <span class="df-list-code" th:text="${cd.icd10Code}">K02.1</span>
+                                                </td>
+                                                <td>
+                                                    <div class="df-list-name" th:text="${cd.diseaseNameVi}">Sâu ngà răng</div>
+                                                    <small class="text-muted" style="font-size: 11px;" th:if="${cd.diseaseNameEn != null}" th:text="${cd.diseaseNameEn}">Caries of dentine</small>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="df-list-select-btn" title="Điền tự động vào chẩn đoán">
+                                                        + Chọn
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: FORM NHẬP THÔNG TIN CHẨN ĐOÁN (SCR-14.1) -->
+                            <div class="col-lg-7">
+                                <div class="df-form-card shadow-sm">
+                                    <div class="df-form-title">
+                                        <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
+                                        <span>Ghi nhận chẩn đoán bệnh lý</span>
+                                    </div>
+
+                                    <form id="diagnosisForm" onsubmit="submitDiagnosis(event)">
+                                        <input type="hidden" id="visitId" th:value="${visit.visitId}">
+
+                                        <!-- TÌM KIẾM ICD-10 AUTOCOMPLETE -->
+                                        <div class="mb-3 autocomplete-wrapper">
+                                            <label class="form-label fw-bold small text-secondary">
+                                                Mã bệnh / Tên bệnh ICD-10 <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white border-end-0 text-muted">
+                                                    <i class="bi bi-search"></i>
+                                                </span>
+                                                <input type="text"
+                                                       class="form-control border-start-0 ps-0"
+                                                       id="icdSearchInput"
+                                                       placeholder="Gõ mã hoặc tên bệnh (K02, sâu răng, viêm tủy...) hoặc chọn từ danh sách bên trái"
+                                                       autocomplete="off"
+                                                       required
+                                                       oninput="onIcdInput(this.value)">
+                                            </div>
+                                            <input type="hidden" id="selectedIcd10Code">
+
+                                            <!-- DROPDOWN AUTOCOMPLETE -->
+                                            <div class="autocomplete-list" id="autocompleteList"></div>
+
+                                            <!-- PREVIEW BỆNH ĐÃ CHỌN -->
+                                            <div id="selectedBadgeBox" class="mt-2 p-2 rounded-3 bg-light border border-dashed d-none">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <span class="badge bg-primary me-2" id="selectedBadgeCode">K02.1</span>
+                                                        <strong id="selectedBadgeName" class="text-dark small">Sâu ngà răng</strong>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="clearSelectedIcd()">
+                                                        <i class="bi bi-x-circle"></i> Đổi
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- PHÂN LOẠI CHẨN ĐOÁN (ENUM: MAIN, SECONDARY, DIFFERENTIAL) -->
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold small text-secondary">
+                                                Phân loại chẩn đoán <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="type-card-group">
+                                                <label class="type-radio-label">
+                                                    <input type="radio" name="diagnosisType" value="MAIN" checked>
+                                                    <div class="type-radio-box main-card">
+                                                        <span class="indicator"></span>
+                                                        <div>
+                                                            <div class="fw-bold small">Chính</div>
+                                                            <div class="text-muted" style="font-size: 11px;">Bệnh chủ đạo</div>
+                                                        </div>
+                                                    </div>
+                                                </label>
+
+                                                <label class="type-radio-label">
+                                                    <input type="radio" name="diagnosisType" value="SECONDARY">
+                                                    <div class="type-radio-box sec-card">
+                                                        <span class="indicator"></span>
+                                                        <div>
+                                                            <div class="fw-bold small">Kèm theo</div>
+                                                            <div class="text-muted" style="font-size: 11px;">Phát hiện thêm</div>
+                                                        </div>
+                                                    </div>
+                                                </label>
+
+                                                <label class="type-radio-label">
+                                                    <input type="radio" name="diagnosisType" value="DIFFERENTIAL">
+                                                    <div class="type-radio-box diff-card">
+                                                        <span class="indicator"></span>
+                                                        <div>
+                                                            <div class="fw-bold small">Phân biệt</div>
+                                                            <div class="text-muted" style="font-size: 11px;">Cần loại trừ</div>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- VỊ TRÍ RĂNG ÁP DỤNG (THEO DENTALFLOW BƯỚC 3: CHỌN RĂNG) -->
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-bold small text-secondary mb-0">
+                                                    Vị trí răng liên quan (FDI)
+                                                </label>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button type="button" class="btn btn-outline-secondary py-0" onclick="setQuickTeeth('Toàn hàm')">Toàn hàm</button>
+                                                    <button type="button" class="btn btn-outline-secondary py-0" onclick="setQuickTeeth('Hàm trên')">Hàm trên</button>
+                                                    <button type="button" class="btn btn-outline-secondary py-0" onclick="setQuickTeeth('Hàm dưới')">Hàm dưới</button>
+                                                    <button type="button" class="btn btn-outline-secondary py-0" onclick="clearTeethSelection()">Xóa</button>
+                                                </div>
+                                            </div>
+
+                                            <input type="text" class="form-control mb-2" id="toothNumbersInput" placeholder="Ví dụ: 18, 28 hoặc bấm vào sơ đồ bên dưới">
+
+                                            <!-- SƠ ĐỒ RĂNG FDI THÔNG MINH (DentalFlow image120.png) -->
+                                            <div class="p-2 border rounded-3 bg-light">
+                                                <div class="text-center small text-muted mb-1" style="font-size: 11px;">Bấm chọn răng (Cung 1 - 2 - 3 - 4):</div>
+                                                <!-- HÀM TRÊN -->
+                                                <div class="d-flex justify-content-center gap-2 mb-1">
+                                                    <div class="fdi-quadrant">
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(18)">18</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(17)">17</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(16)">16</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(15)">15</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(14)">14</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(13)">13</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(12)">12</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(11)">11</button>
+                                                    </div>
+                                                    <div class="vr"></div>
+                                                    <div class="fdi-quadrant">
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(21)">21</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(22)">22</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(23)">23</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(24)">24</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(25)">25</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(26)">26</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(27)">27</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(28)">28</button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- HÀM DƯỚI -->
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <div class="fdi-quadrant">
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(48)">48</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(47)">47</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(46)">46</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(45)">45</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(44)">44</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(43)">43</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(42)">42</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(41)">41</button>
+                                                    </div>
+                                                    <div class="vr"></div>
+                                                    <div class="fdi-quadrant">
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(31)">31</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(32)">32</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(33)">33</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(34)">34</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(35)">35</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(36)">36</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(37)">37</button>
+                                                        <button type="button" class="tooth-btn" onclick="toggleTooth(38)">38</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- GHI CHÚ LÂM SÀNG -->
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold small text-secondary">
+                                                Ghi chú lâm sàng
+                                            </label>
+                                            <textarea class="form-control"
+                                                      id="notesInput"
+                                                      rows="2"
+                                                      placeholder="Chi tiết tổn thương, mức độ ê buốt, lỗ sâu mặt nhai..."></textarea>
+                                        </div>
+
+                                        <!-- NÚT HÀNH ĐỘNG -->
+                                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                            <button type="button" class="btn btn-df-light" onclick="resetForm()">
+                                                Hủy bỏ
+                                            </button>
+                                            <button type="submit" class="btn btn-df-purple" id="btnSubmitDiagnosis">
+                                                <i class="bi bi-check-lg"></i> Lưu chẩn đoán
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DANH SÁCH CHẨN ĐOÁN THEO GIAO DIỆN DENTALFLOW (DARK HEADER TABLE) -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-list-check me-1 text-primary"></i> DANH SÁCH CHẨN ĐOÁN ĐÃ GHI NHẬN (ICD-10)
+                        </h6>
+                        <span class="badge bg-secondary rounded-pill px-3 py-1" id="totalCountBadge"
+                              th:text="${diagnoses != null ? #lists.size(diagnoses) : 0} + ' chẩn đoán'">
+                            0 chẩn đoán
+                        </span>
+                    </div>
+
+                    <div class="table-responsive rounded-3 border">
+                        <table class="df-table" id="diagnosesTable">
+                            <thead>
+                            <tr>
+                                <th style="width: 120px;">RĂNG SỐ</th>
+                                <th style="width: 120px;">MÃ BỆNH</th>
+                                <th>CHẨN ĐOÁN (ICD-10)</th>
+                                <th style="width: 140px;">PHÂN LOẠI</th>
+                                <th>GHI CHÚ</th>
+                                <th style="width: 80px;" class="text-center">THAO TÁC</th>
+                            </tr>
+                            </thead>
+                            <tbody id="diagnosesTableBody">
+
+                            <!-- KHI CHƯA CÓ DỮ LIỆU (EMPTY STATE THEO DENTALFLOW) -->
+                            <tr th:if="${diagnoses == null or #lists.isEmpty(diagnoses)}" id="emptyRow">
+                                <td colspan="6">
+                                    <div class="df-no-data">
+                                        <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
+                                        <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
+                                        <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- DANH SÁCH HÀNG DỮ LIỆU ĐÃ CÓ TỪ DATABASE -->
+                            <tr th:each="d : ${diagnoses}" th:id="'diag-row-' + ${d.diagnosisId}">
+                                <td>
+                                    <strong class="text-dark" th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</strong>
+                                </td>
+                                <td>
+                                    <span class="df-list-code" th:text="${d.icd10Code}">K02.1</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark" th:text="${d.diagnosisText}">Sâu ngà răng</div>
+                                    <div class="small text-muted" th:if="${d.diseaseNameEn != null}" th:text="${d.diseaseNameEn}">Caries of dentine</div>
+                                </td>
+                                <td>
+                                    <span th:if="${d.diagnosisType.name() == 'MAIN'}" class="badge-main">
+                                        <i class="bi bi-star-fill me-1"></i>Chính
+                                    </span>
+                                    <span th:if="${d.diagnosisType.name() == 'SECONDARY'}" class="badge-secondary">
+                                        <i class="bi bi-plus-circle me-1"></i>Kèm theo
+                                    </span>
+                                    <span th:if="${d.diagnosisType.name() == 'DIFFERENTIAL'}" class="badge-diff">
+                                        <i class="bi bi-question-circle me-1"></i>Phân biệt
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-secondary small" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
+                                            class="btn btn-sm btn-link text-danger p-0"
+                                            title="Xóa chẩn đoán này"
+                                            th:data-id="${d.diagnosisId}"
+                                            onclick="deleteDiagnosis(this.getAttribute('data-id'))">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ===================================================================== -->
+                    <!-- FT16: DỊCH VỤ THỰC HIỆN THỰC TẾ (SCR-16.1 & SCR-16.2)                 -->
+                    <!-- Chuẩn giao diện DentalFlow & DentalSoft (image7.png, image121.png)    -->
+                    <!-- ===================================================================== -->
+                    <div class="df-treatment-card mt-4">
+                        <div class="df-treatment-header">
+                            <div class="df-treatment-title-box">
+                                <h3 class="df-treatment-title">
+                                    <i class="bi bi-tools text-primary"></i>
+                                    <span>Nội dung điều trị / Dịch vụ thực hiện</span>
+                                </h3>
+                                <span class="df-treatment-count-badge" id="performedCountBadge"
+                                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
+                                    1 dịch vụ
+                                </span>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="df-treatment-total-pill">
+                                    <i class="bi bi-cash-stack"></i>
+                                    <span>Tổng thành tiền: </span>
+                                    <strong id="totalPerformedText"
+                                            th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                        5.000.000 đ
+                                    </strong>
+                                </div>
+
+                                <button type="button" class="df-btn-add-treatment" onclick="openAddTreatmentModal()">
+                                    <i class="bi bi-plus-lg"></i>
+                                    <span>+ Thêm điều trị</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BẢNG DANH SÁCH DỊCH VỤ ĐÃ THỰC HIỆN (SCR-16.2) -->
+                        <div class="df-treatment-table-wrapper">
+                            <table class="df-treatment-table">
+                                <thead>
+                                <tr>
+                                    <th style="width: 110px;">Ngày khám</th>
+                                    <th>Nội dung / Điều trị</th>
+                                    <th style="width: 70px;" class="text-center">ĐVT</th>
+                                    <th style="width: 105px;" class="text-end">Đơn giá</th>
+                                    <th style="width: 50px;" class="text-center">SL</th>
+                                    <th style="width: 90px;" class="text-end">K.Mại</th>
+                                    <th style="width: 60px;" class="text-end">VAT</th>
+                                    <th style="width: 115px;" class="text-end">Thành tiền</th>
+                                    <th style="width: 95px;" class="text-end text-success">Đã thu</th>
+                                    <th style="width: 115px;" class="text-end text-danger">Còn nợ</th>
+                                    <th style="width: 110px;" class="text-center">Trạng thái</th>
+                                    <th style="width: 60px;" class="text-center">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody id="performedServicesTableBody">
+                                <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
+                                    <td colspan="12" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
+                                        <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
+                                    </td>
+                                </tr>
+                                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
+                                    <td>
+                                        <span class="small text-muted fw-semibold" th:text="${ps.completedAt}">21/10/2026</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="fw-bold text-dark" th:text="${ps.serviceName}">Răng sứ Titan</span>
+                                            <span class="badge bg-primary text-white px-2 py-1" style="font-size: 11px; border-radius: 6px;"
+                                                  th:if="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty()}"
+                                                  th:text="${'R' + ps.toothNumbers}">
+                                                R16
+                                            </span>
+                                            <span class="df-service-category-tag" th:if="${ps.categoryName != null and !ps.categoryName.isEmpty()}" th:text="${ps.categoryName}">Phục hình</span>
+                                        </div>
+                                        <div class="df-staff-badge">
+                                            <i class="bi bi-person-fill text-primary"></i>
+                                            <span th:text="${ps.doctorName}">BS. CK1 Lê Hoàng Nam</span>
+                                        </div>
+                                        <div class="df-staff-badge text-muted" th:if="${ps.assistantName != null and !ps.assistantName.isEmpty()}" style="font-size: 11px;">
+                                            <i class="bi bi-person-check text-success"></i>
+                                            <span th:text="${'Phụ tá: ' + ps.assistantName}">Phụ tá: Phạm Thị Dung</span>
+                                        </div>
+                                        <div class="small text-muted fst-italic mt-1" th:if="${ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}">
+                                            <i class="bi bi-chat-left-dots text-secondary"></i>
+                                            <span th:text="${ps.clinicalNotes}"></span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center" th:text="${ps.unit}">Đơn vị</td>
+                                    <td class="text-end df-price-text" th:text="${#numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">2.500.000 đ</td>
+                                    <td class="text-center fw-bold" th:text="${ps.quantity}">2</td>
+                                    <td class="text-end text-muted small" th:text="${ps.discountAmount != null and ps.discountAmount > 0 ? (#numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT') + ' đ') : '0 đ'}">0 đ</td>
+                                    <td class="text-end text-muted small">0 đ</td>
+                                    <td class="text-end df-final-price-text" th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>
+                                    <td class="text-end fw-bold text-success small">0 đ</td>
+                                    <td class="text-end fw-bold text-danger small" th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>
+                                    <td class="text-center">
+                                        <span class="df-status-completed-badge">
+                                            <i class="bi bi-check-circle-fill"></i> Hoàn thành
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ thực hiện này"
+                                                th:data-id="${ps.performedId}"
+                                                onclick="deletePerformedService(this.getAttribute('data-id'))">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL THÊM DỊCH VỤ THỰC HIỆN THỰC TẾ (SCR-16.1)                       -->
+<!-- Theo chuẩn giao diện DentalFlow (image121.png)                        -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="addTreatmentModal" tabindex="-1" aria-labelledby="addTreatmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header text-white" style="background: var(--df-dark-header); padding: 14px 20px;">
+                <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2" id="addTreatmentModalLabel">
+                    <i class="bi bi-tools text-warning"></i>
+                    <span>Thêm Dịch vụ &amp; Thủ thuật thực hiện (SCR-16.1)</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="treatmentForm" onsubmit="submitPerformedService(event)">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="treatVisitId" th:value="${visit.visitId}">
+
+                    <!-- 1. CHỌN DỊCH VỤ / THỦ THUẬT -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">
+                            Dịch vụ / Thủ thuật thực hiện <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="treatServiceSelect" required onchange="onServiceSelectChange(this)">
+                            <option value="">-- Chọn dịch vụ trong danh mục --</option>
+                            <option th:each="s : ${activeServices}"
+                                    th:value="${s.serviceId}"
+                                    th:data-price="${s.basePrice}"
+                                    th:data-unit="${s.unit}"
+                                    th:data-tooth="${s.requiresTooth}"
+                                    th:text="${s.serviceName + ' (' + #numbers.formatDecimal(s.basePrice, 0, 'COMMA', 0, 'POINT') + ' đ / ' + s.unit + ')'}">
+                                Răng sứ Titan (2.500.000 đ / Đơn vị)
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 2. VỊ TRÍ RĂNG FDI THỰC HIỆN -->
+                    <div class="mb-3" id="treatToothContainer">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-bold small text-secondary mb-0">
+                                Vị trí răng thực hiện (FDI) <span id="toothReqBadge" class="badge bg-light text-secondary border">Tùy chọn</span>
+                            </label>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary py-0" style="font-size: 11px;" onclick="setTreatTeethPreset('UPPER')">Hàm trên</button>
+                                <button type="button" class="btn btn-outline-secondary py-0" style="font-size: 11px;" onclick="setTreatTeethPreset('LOWER')">Hàm dưới</button>
+                                <button type="button" class="btn btn-outline-secondary py-0" style="font-size: 11px;" onclick="setTreatTeethPreset('ALL')">Toàn hàm</button>
+                                <button type="button" class="btn btn-outline-danger py-0" style="font-size: 11px;" onclick="clearTreatTeeth()">Xóa</button>
+                            </div>
+                        </div>
+
+                        <input type="text" class="form-control mb-2" id="treatToothInput" placeholder="Ví dụ: 16 hoặc bấm chọn các răng bên dưới">
+
+                        <!-- SƠ ĐỒ RĂNG FDI MODAL (DentalFlow image118.png) -->
+                        <div class="p-2 border rounded-3 bg-light">
+                            <div class="d-flex justify-content-center gap-2 mb-1">
+                                <div class="fdi-quadrant">
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="18" onclick="toggleTreatTooth(18)">18</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="17" onclick="toggleTreatTooth(17)">17</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="16" onclick="toggleTreatTooth(16)">16</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="15" onclick="toggleTreatTooth(15)">15</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="14" onclick="toggleTreatTooth(14)">14</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="13" onclick="toggleTreatTooth(13)">13</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="12" onclick="toggleTreatTooth(12)">12</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="11" onclick="toggleTreatTooth(11)">11</button>
+                                </div>
+                                <div class="vr"></div>
+                                <div class="fdi-quadrant">
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="21" onclick="toggleTreatTooth(21)">21</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="22" onclick="toggleTreatTooth(22)">22</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="23" onclick="toggleTreatTooth(23)">23</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="24" onclick="toggleTreatTooth(24)">24</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="25" onclick="toggleTreatTooth(25)">25</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="26" onclick="toggleTreatTooth(26)">26</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="27" onclick="toggleTreatTooth(27)">27</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="28" onclick="toggleTreatTooth(28)">28</button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-center gap-2">
+                                <div class="fdi-quadrant">
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="48" onclick="toggleTreatTooth(48)">48</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="47" onclick="toggleTreatTooth(47)">47</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="46" onclick="toggleTreatTooth(46)">46</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="45" onclick="toggleTreatTooth(45)">45</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="44" onclick="toggleTreatTooth(44)">44</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="43" onclick="toggleTreatTooth(43)">43</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="42" onclick="toggleTreatTooth(42)">42</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="41" onclick="toggleTreatTooth(41)">41</button>
+                                </div>
+                                <div class="vr"></div>
+                                <div class="fdi-quadrant">
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="31" onclick="toggleTreatTooth(31)">31</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="32" onclick="toggleTreatTooth(32)">32</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="33" onclick="toggleTreatTooth(33)">33</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="34" onclick="toggleTreatTooth(34)">34</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="35" onclick="toggleTreatTooth(35)">35</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="36" onclick="toggleTreatTooth(36)">36</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="37" onclick="toggleTreatTooth(37)">37</button>
+                                    <button type="button" class="tooth-btn treat-tooth-btn" data-t="38" onclick="toggleTreatTooth(38)">38</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. SL, ĐƠN GIÁ, CHIẾT KHẤU -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">
+                                Số lượng (<span id="treatUnitBadge">Đơn vị</span>) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="treatQuantity" min="0.5" step="0.5" value="1" required oninput="calcTreatFinalPrice()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">
+                                Đơn giá (VNĐ) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="treatUnitPrice" min="0" step="1000" value="0" required oninput="calcTreatFinalPrice()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">
+                                Giảm giá / Chiết khấu (VNĐ)
+                            </label>
+                            <input type="number" class="form-control" id="treatDiscount" min="0" step="1000" value="0" oninput="calcTreatFinalPrice()">
+                        </div>
+                    </div>
+
+                    <!-- HỘP TÍNH THÀNH TIỀN TỨC THÌ -->
+                    <div class="df-modal-calc-box mb-3">
+                        <div class="df-modal-calc-title">
+                            <i class="bi bi-calculator me-1"></i> Thành tiền thực tế:
+                        </div>
+                        <div class="df-modal-calc-value" id="treatFinalPriceDisplay">0 đ</div>
+                    </div>
+
+                    <!-- 4. BÁC SĨ & PHỤ TÁ -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">
+                                Bác sĩ thực hiện <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="treatDoctorSelect" required>
+                                <option th:each="doc : ${doctors}"
+                                        th:value="${doc.staffId}"
+                                        th:selected="${visit.primaryDoctor != null and doc.staffId == visit.primaryDoctor.staffId}"
+                                        th:text="${doc.fullName + ' (' + doc.staffCode + ')'}">
+                                    BS. CK1 Lê Hoàng Nam
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">
+                                Phụ tá / Trợ thủ hỗ trợ
+                            </label>
+                            <select class="form-select" id="treatAssistantSelect">
+                                <option value="">-- Không có phụ tá --</option>
+                                <option th:each="ast : ${assistants}"
+                                        th:value="${ast.staffId}"
+                                        th:text="${ast.fullName + ' (' + ast.staffCode + ')'}">
+                                    Phạm Thị Dung
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5. GHI CHÚ LÂM SÀNG / VẬT LIỆU -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary">
+                            Ghi chú lâm sàng / Vật liệu sử dụng
+                        </label>
+                        <textarea class="form-control" id="treatClinicalNotes" rows="2" placeholder="Ví dụ: Lắp 2 răng sứ Titan R16 khít sát, cắn khớp tốt, dặn tái khám sau 1 tuần..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="submitTreatmentBtn">
+                        <i class="bi bi-check-circle-fill me-1"></i> Xác nhận hoàn thành (COMPLETED)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST THÔNG BÁO -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="liveToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage">
+                Thao tác thành công!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let selectedTeeth = new Set();
+    let searchTimeout = null;
+
+    // 1. Lọc danh sách bệnh lý thường gặp
+    function filterCommonDiseasesList(keyword) {
+        const term = (keyword || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#commonDiseasesListBody tr');
+        rows.forEach(row => {
+            const code = (row.getAttribute('data-code') || '').toLowerCase();
+            const name = (row.getAttribute('data-name') || '').toLowerCase();
+            const en = (row.getAttribute('data-en') || '').toLowerCase();
+            if (code.includes(term) || name.includes(term) || en.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 2. Chọn 1 chạm từ danh sách bệnh lý thường gặp
+    function selectFromCommonList(rowEl) {
+        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
+        rowEl.classList.add('is-selected');
+
+        const code = rowEl.getAttribute('data-code');
+        const name = rowEl.getAttribute('data-name');
+        const en = rowEl.getAttribute('data-en');
+
+        selectIcd({
+            icd10Code: code,
+            diseaseNameVi: name,
+            diseaseNameEn: en
+        });
+    }
+
+    // 3. Autocomplete tra cứu ICD-10
+    function onIcdInput(query) {
+        clearTimeout(searchTimeout);
+        const listEl = document.getElementById('autocompleteList');
+
+        if (!query || query.trim().length === 0) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/v1/icd10/search?q=${encodeURIComponent(query.trim())}`)
+                .then(res => res.json())
+                .then(data => {
+                    listEl.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        listEl.innerHTML = '<div class="p-3 text-muted small text-center">Không tìm thấy mã bệnh phù hợp.</div>';
+                        listEl.style.display = 'block';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.innerHTML = `
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border me-1">${item.icd10Code}</span>
+                                <span class="item-title">${item.diseaseNameVi}</span>
+                                ${item.diseaseNameEn ? `<div class="item-sub">${item.diseaseNameEn}</div>` : ''}
+                            </div>
+                            <span class="text-primary small"><i class="bi bi-check2-circle"></i> Chọn</span>
+                        `;
+                        div.onclick = () => selectIcd(item);
+                        listEl.appendChild(div);
+                    });
+                    listEl.style.display = 'block';
+                })
+                .catch(err => {
+                    console.error('Lỗi tìm kiếm ICD-10: ', err);
+                });
+        }, 250);
+    }
+
+    function selectIcd(item) {
+        document.getElementById('selectedIcd10Code').value = item.icd10Code;
+        document.getElementById('icdSearchInput').value = `${item.icd10Code} - ${item.diseaseNameVi}`;
+        document.getElementById('autocompleteList').style.display = 'none';
+
+        // Hiện badge đã chọn
+        document.getElementById('selectedBadgeCode').innerText = item.icd10Code;
+        document.getElementById('selectedBadgeName').innerText = item.diseaseNameVi;
+        document.getElementById('selectedBadgeBox').classList.remove('d-none');
+    }
+
+    function clearSelectedIcd() {
+        document.getElementById('selectedIcd10Code').value = '';
+        document.getElementById('icdSearchInput').value = '';
+        document.getElementById('selectedBadgeBox').classList.add('d-none');
+        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
+        document.getElementById('icdSearchInput').focus();
+    }
+
+    // Đóng autocomplete khi click ngoài
+    document.addEventListener('click', function(e) {
+        const wrapper = document.querySelector('.autocomplete-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            document.getElementById('autocompleteList').style.display = 'none';
+        }
+    });
+
+    // 4. Quản lý chọn răng FDI
+    function toggleTooth(toothNumber) {
+        if (selectedTeeth.has(toothNumber)) {
+            selectedTeeth.delete(toothNumber);
+        } else {
+            selectedTeeth.add(toothNumber);
+        }
+        updateToothUI();
+    }
+
+    function setQuickTeeth(type) {
+        selectedTeeth.clear();
+        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
+        document.getElementById('toothNumbersInput').value = type;
+    }
+
+    function clearTeethSelection() {
+        selectedTeeth.clear();
+        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
+        document.getElementById('toothNumbersInput').value = '';
+    }
+
+    function updateToothUI() {
+        document.querySelectorAll('.tooth-btn').forEach(btn => {
+            const num = parseInt(btn.innerText);
+            if (selectedTeeth.has(num)) {
+                btn.classList.add('is-selected');
+            } else {
+                btn.classList.remove('is-selected');
+            }
+        });
+
+        if (selectedTeeth.size > 0) {
+            const sorted = Array.from(selectedTeeth).sort((a,b) => a - b);
+            document.getElementById('toothNumbersInput').value = sorted.join(', ');
+        } else {
+            document.getElementById('toothNumbersInput').value = '';
+        }
+    }
+
+    // 5. Gửi chẩn đoán qua AJAX
+    function submitDiagnosis(e) {
+        e.preventDefault();
+        const visitId = document.getElementById('visitId').value;
+        const icd10Code = document.getElementById('selectedIcd10Code').value;
+        const rawSearch = document.getElementById('icdSearchInput').value;
+
+        const finalCode = icd10Code || (rawSearch.includes(' - ') ? rawSearch.split(' - ')[0].trim() : rawSearch.trim());
+        if (!finalCode) {
+            showToast('Vui lòng chọn hoặc nhập mã bệnh ICD-10!', true);
+            return;
+        }
+
+        const typeInput = document.querySelector('input[name="diagnosisType"]:checked');
+        const diagnosisType = typeInput ? typeInput.value : 'MAIN';
+        const toothNumbers = document.getElementById('toothNumbersInput').value;
+        const notes = document.getElementById('notesInput').value;
+
+        const payload = {
+            visitId: parseInt(visitId),
+            icd10Code: finalCode,
+            diagnosisType: diagnosisType,
+            toothNumbers: toothNumbers,
+            notes: notes
+        };
+
+        const btn = document.getElementById('btnSubmitDiagnosis');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+        fetch('/api/v1/diagnoses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Có lỗi xảy ra'); });
+            }
+            return res.json();
+        })
+        .then(saved => {
+            showToast(`Đã thêm chẩn đoán ${saved.icd10Code} thành công!`);
+            addDiagnosisRowToTable(saved);
+            resetForm();
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Lưu chẩn đoán';
+        });
+    }
+
+    // 6. Xóa chẩn đoán
+    function deleteDiagnosis(diagId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa chẩn đoán này khỏi ca khám?')) {
+            return;
+        }
+
+        fetch(`/api/v1/diagnoses/${diagId}`, {
+            method: 'DELETE'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Không thể xóa'); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            showToast('Đã xóa chẩn đoán thành công!');
+            const row = document.getElementById(`diag-row-${diagId}`);
+            if (row) {
+                row.remove();
+            }
+            updateTableCount();
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        });
+    }
+
+    function addDiagnosisRowToTable(d) {
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        let badgeHtml = '';
+        if (d.diagnosisType === 'MAIN') {
+            badgeHtml = '<span class="badge-main"><i class="bi bi-star-fill me-1"></i>Chính</span>';
+        } else if (d.diagnosisType === 'SECONDARY') {
+            badgeHtml = '<span class="badge-secondary"><i class="bi bi-plus-circle me-1"></i>Kèm theo</span>';
+        } else {
+            badgeHtml = '<span class="badge-diff"><i class="bi bi-question-circle me-1"></i>Phân biệt</span>';
+        }
+
+        const toothDisplay = d.toothNumbers ? ('R-' + d.toothNumbers) : 'Toàn hàm';
+        const notesDisplay = d.notes ? d.notes : '-';
+
+        const tbody = document.getElementById('diagnosesTableBody');
+        const tr = document.createElement('tr');
+        tr.id = `diag-row-${d.diagnosisId}`;
+        tr.innerHTML = `
+            <td><strong class="text-dark">${toothDisplay}</strong></td>
+            <td><span class="df-list-code">${d.icd10Code}</span></td>
+            <td>
+                <div class="fw-bold text-dark">${d.diagnosisText}</div>
+                ${d.diseaseNameEn ? `<div class="small text-muted">${d.diseaseNameEn}</div>` : ''}
+            </td>
+            <td>${badgeHtml}</td>
+            <td><span class="text-secondary small">${notesDisplay}</span></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa" onclick="deleteDiagnosis(${d.diagnosisId})">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
+            </td>
+        `;
+
+        if (d.diagnosisType === 'MAIN') {
+            tbody.insertBefore(tr, tbody.firstChild);
+        } else {
+            tbody.appendChild(tr);
+        }
+
+        updateTableCount();
+    }
+
+    function updateTableCount() {
+        const rows = document.querySelectorAll('#diagnosesTableBody tr:not(#emptyRow)');
+        const count = rows.length;
+        document.getElementById('totalCountBadge').innerText = `${count} chẩn đoán`;
+
+        if (count === 0) {
+            document.getElementById('diagnosesTableBody').innerHTML = `
+                <tr id="emptyRow">
+                    <td colspan="6">
+                        <div class="df-no-data">
+                            <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
+                            <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
+                            <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('diagnosisForm').reset();
+        clearSelectedIcd();
+        clearTeethSelection();
+        document.querySelector('input[name="diagnosisType"][value="MAIN"]').checked = true;
+    }
+
+    function showToast(message, isError = false) {
+        const toastEl = document.getElementById('liveToast');
+        const msgEl = document.getElementById('toastMessage');
+        msgEl.innerText = message;
+
+        toastEl.classList.remove('bg-success', 'bg-danger');
+        toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+        toast.show();
+    }
+
+    // =====================================================================
+    // FT16: DỊCH VỤ THỰC HIỆN THỰC TẾ (SCR-16.1 & SCR-16.2) JAVASCRIPT
+    // =====================================================================
+    let selectedTreatTeeth = new Set();
+    let treatmentModalInstance = null;
+
+    function openAddTreatmentModal() {
+        const modalEl = document.getElementById('addTreatmentModal');
+        treatmentModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        // Reset form
+        document.getElementById('treatmentForm').reset();
+        clearTreatTeeth();
+        document.getElementById('treatQuantity').value = "1";
+        document.getElementById('treatUnitPrice').value = "0";
+        document.getElementById('treatDiscount').value = "0";
+        document.getElementById('treatFinalPriceDisplay').innerText = "0 đ";
+        document.getElementById('treatUnitBadge').innerText = "Đơn vị";
+
+        // Pre-select service if any option available
+        const select = document.getElementById('treatServiceSelect');
+        if (select.options.length > 1) {
+            select.selectedIndex = 1;
+            onServiceSelectChange(select);
+        }
+
+        treatmentModalInstance.show();
+    }
+
+    function onServiceSelectChange(selectEl) {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt || !opt.value) {
+            document.getElementById('treatUnitPrice').value = "0";
+            document.getElementById('treatUnitBadge').innerText = "Đơn vị";
+            document.getElementById('toothReqBadge').className = "badge bg-light text-secondary border";
+            document.getElementById('toothReqBadge').innerText = "Tùy chọn";
+            calcTreatFinalPrice();
+            return;
+        }
+
+        const price = opt.getAttribute('data-price') || "0";
+        const unit = opt.getAttribute('data-unit') || "Lần";
+        const reqTooth = opt.getAttribute('data-tooth') === "true";
+
+        document.getElementById('treatUnitPrice').value = Math.round(parseFloat(price));
+        document.getElementById('treatUnitBadge').innerText = unit;
+
+        const reqBadge = document.getElementById('toothReqBadge');
+        if (reqTooth) {
+            reqBadge.className = "badge bg-danger-subtle text-danger border border-danger-subtle";
+            reqBadge.innerText = "Bắt buộc chọn răng";
+        } else {
+            reqBadge.className = "badge bg-light text-secondary border";
+            reqBadge.innerText = "Tùy chọn / Toàn hàm";
+        }
+
+        calcTreatFinalPrice();
+    }
+
+    function calcTreatFinalPrice() {
+        const qty = parseFloat(document.getElementById('treatQuantity').value) || 0;
+        const unitPrice = parseFloat(document.getElementById('treatUnitPrice').value) || 0;
+        const discount = parseFloat(document.getElementById('treatDiscount').value) || 0;
+
+        let total = (qty * unitPrice) - discount;
+        if (total < 0) total = 0;
+
+        document.getElementById('treatFinalPriceDisplay').innerText = formatVnd(total);
+    }
+
+    function toggleTreatTooth(tooth) {
+        tooth = parseInt(tooth);
+        if (selectedTreatTeeth.has(tooth)) {
+            selectedTreatTeeth.delete(tooth);
+        } else {
+            selectedTreatTeeth.add(tooth);
+        }
+        updateTreatTeethUI();
+    }
+
+    function setTreatTeethPreset(type) {
+        selectedTreatTeeth.clear();
+        if (type === 'UPPER') {
+            for (let i = 11; i <= 18; i++) selectedTreatTeeth.add(i);
+            for (let i = 21; i <= 28; i++) selectedTreatTeeth.add(i);
+        } else if (type === 'LOWER') {
+            for (let i = 41; i <= 48; i++) selectedTreatTeeth.add(i);
+            for (let i = 31; i <= 38; i++) selectedTreatTeeth.add(i);
+        } else if (type === 'ALL') {
+            for (let i = 11; i <= 18; i++) selectedTreatTeeth.add(i);
+            for (let i = 21; i <= 28; i++) selectedTreatTeeth.add(i);
+            for (let i = 41; i <= 48; i++) selectedTreatTeeth.add(i);
+            for (let i = 31; i <= 38; i++) selectedTreatTeeth.add(i);
+        }
+        updateTreatTeethUI();
+    }
+
+    function clearTreatTeeth() {
+        selectedTreatTeeth.clear();
+        updateTreatTeethUI();
+    }
+
+    function updateTreatTeethUI() {
+        document.querySelectorAll('.treat-tooth-btn').forEach(btn => {
+            const t = parseInt(btn.getAttribute('data-t'));
+            if (selectedTreatTeeth.has(t)) {
+                btn.classList.add('is-selected');
+            } else {
+                btn.classList.remove('is-selected');
+            }
+        });
+
+        const arr = Array.from(selectedTreatTeeth).sort((a, b) => a - b);
+        document.getElementById('treatToothInput').value = arr.length > 0 ? arr.join(', ') : '';
+    }
+
+    function submitPerformedService(e) {
+        e.preventDefault();
+
+        const visitId = document.getElementById('treatVisitId').value;
+        const serviceSelect = document.getElementById('treatServiceSelect');
+        const serviceId = serviceSelect.value;
+        if (!serviceId) {
+            showToast('Vui lòng chọn dịch vụ / thủ thuật!', true);
+            return;
+        }
+
+        const toothNumbers = document.getElementById('treatToothInput').value.trim();
+        const quantity = parseFloat(document.getElementById('treatQuantity').value) || 1;
+        const unitPrice = parseFloat(document.getElementById('treatUnitPrice').value) || 0;
+        const discountAmount = parseFloat(document.getElementById('treatDiscount').value) || 0;
+        const doctorId = document.getElementById('treatDoctorSelect').value;
+        const assistantId = document.getElementById('treatAssistantSelect').value || null;
+        const clinicalNotes = document.getElementById('treatClinicalNotes').value.trim();
+
+        let finalPrice = (quantity * unitPrice) - discountAmount;
+        if (finalPrice < 0) finalPrice = 0;
+
+        const payload = {
+            visitId: parseInt(visitId),
+            serviceId: parseInt(serviceId),
+            toothNumbers: toothNumbers ? toothNumbers : null,
+            quantity: quantity,
+            unitPrice: unitPrice,
+            discountAmount: discountAmount,
+            finalPrice: finalPrice,
+            doctorId: parseInt(doctorId),
+            assistantId: assistantId ? parseInt(assistantId) : null,
+            clinicalNotes: clinicalNotes ? clinicalNotes : null
+        };
+
+        const submitBtn = document.getElementById('submitTreatmentBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+        fetch('/api/doctor/performed-services', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.message || 'Lỗi khi lưu dịch vụ'); });
+            }
+            return res.json();
+        })
+        .then(result => {
+            showToast('Đã ghi nhận dịch vụ thực hiện thành công (COMPLETED)!');
+            addPerformedRowToTable(result.data);
+            if (treatmentModalInstance) {
+                treatmentModalInstance.hide();
+            }
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Xác nhận hoàn thành (COMPLETED)';
+        });
+    }
+
+    function addPerformedRowToTable(ps) {
+        const emptyRow = document.getElementById('emptyPerformedRow');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        const tbody = document.getElementById('performedServicesTableBody');
+        const tr = document.createElement('tr');
+        tr.id = `ps-row-${ps.performedId}`;
+
+        const toothBadge = ps.toothNumbers ? 
+            `<span class="badge bg-primary text-white px-2 py-1" style="font-size: 11px; border-radius: 6px;">R${ps.toothNumbers}</span>` : '';
+        const categoryTag = ps.categoryName ? `<span class="df-service-category-tag">${ps.categoryName}</span>` : '';
+        const notesTag = ps.clinicalNotes ? `
+            <div class="small text-muted fst-italic mt-1">
+                <i class="bi bi-chat-left-dots text-secondary"></i>
+                <span>${ps.clinicalNotes}</span>
+            </div>` : '';
+        const assistantTag = ps.assistantName ? `
+            <div class="df-staff-badge text-muted" style="font-size: 11px;">
+                <i class="bi bi-person-check text-success"></i>
+                <span>Phụ tá: ${ps.assistantName}</span>
+            </div>` : '';
+
+        tr.innerHTML = `
+            <td><span class="small text-muted fw-semibold">${ps.completedAt}</span></td>
+            <td>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="fw-bold text-dark">${ps.serviceName}</span>
+                    ${toothBadge}
+                    ${categoryTag}
+                </div>
+                <div class="df-staff-badge">
+                    <i class="bi bi-person-fill text-primary"></i>
+                    <span>${ps.doctorName}</span>
+                </div>
+                ${assistantTag}
+                ${notesTag}
+            </td>
+            <td class="text-center">${ps.unit || 'Đơn vị'}</td>
+            <td class="text-end df-price-text">${formatVnd(ps.unitPrice)}</td>
+            <td class="text-center fw-bold">${ps.quantity}</td>
+            <td class="text-end text-muted small">${formatVnd(ps.discountAmount)}</td>
+            <td class="text-end text-muted small">0 đ</td>
+            <td class="text-end df-final-price-text">${formatVnd(ps.finalPrice)}</td>
+            <td class="text-end fw-bold text-success small">0 đ</td>
+            <td class="text-end fw-bold text-danger small">${formatVnd(ps.finalPrice)}</td>
+            <td class="text-center">
+                <span class="df-status-completed-badge">
+                    <i class="bi bi-check-circle-fill"></i> Hoàn thành
+                </span>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ này"
+                        onclick="deletePerformedService(${ps.performedId})">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.insertBefore(tr, tbody.firstChild);
+        recalcPerformedTableTotals();
+    }
+
+    function deletePerformedService(performedId) {
+        if (!confirm('Bạn có chắc chắn muốn hủy dịch vụ thực hiện này?')) {
+            return;
+        }
+
+        fetch(`/api/doctor/performed-services/${performedId}`, {
+            method: 'DELETE'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.message || 'Không thể hủy dịch vụ'); });
+            }
+            return res.json();
+        })
+        .then(result => {
+            showToast('Đã hủy dịch vụ thực hiện thành công!');
+            const row = document.getElementById(`ps-row-${performedId}`);
+            if (row) {
+                row.remove();
+            }
+            recalcPerformedTableTotals();
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        });
+    }
+
+    function recalcPerformedTableTotals() {
+        const rows = document.querySelectorAll('#performedServicesTableBody tr:not(#emptyPerformedRow)');
+        const count = rows.length;
+        document.getElementById('performedCountBadge').innerText = `${count} dịch vụ`;
+
+        if (count === 0) {
+            document.getElementById('totalPerformedText').innerText = "0 đ";
+            const hp = document.getElementById('headerPhatSinh');
+            if (hp) hp.innerText = "0";
+            const hc = document.getElementById('headerCongNo');
+            if (hc) hc.innerText = "0";
+
+            document.getElementById('performedServicesTableBody').innerHTML = `
+                <tr id="emptyPerformedRow">
+                    <td colspan="12" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        // Fetch latest performed services to calculate exact sum
+        const visitId = document.getElementById('visitId').value;
+        fetch(`/api/doctor/performed-services?visitId=${visitId}`)
+            .then(res => res.json())
+            .then(list => {
+                let sum = 0;
+                list.forEach(item => {
+                    sum += (item.finalPrice || 0);
+                });
+                document.getElementById('totalPerformedText').innerText = formatVnd(sum);
+                const hp = document.getElementById('headerPhatSinh');
+                if (hp) hp.innerText = formatNumber(sum);
+                const hc = document.getElementById('headerCongNo');
+                if (hc) hc.innerText = formatNumber(sum);
+            })
+            .catch(err => {
+                console.error("Error recalcing sum:", err);
+            });
+    }
+
+    function formatNumber(amount) {
+        if (!amount && amount !== 0) return '0';
+        return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function formatVnd(amount) {
+        if (!amount && amount !== 0) return '0 đ';
+        return formatNumber(amount) + ' đ';
+    }
+</script>
+</body>
+</html>
