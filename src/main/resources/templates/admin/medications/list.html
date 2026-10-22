@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý danh mục thuốc')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+  <aside th:replace="~{fragments/sidebar :: sidebar('medications')}"></aside>
+  <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+  <div class="app-main">
+    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục thuốc')}"></header>
+
+    <main class="app-content">
+
+      <!-- THÔNG BÁO -->
+      <div class="alert alert-success" role="status"
+           th:if="${successMessage}" th:text="${successMessage}"></div>
+      <div class="alert alert-danger" role="alert"
+           th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+      <!-- TIÊU ĐỀ + NÚT THÊM -->
+      <section class="panel mb-4">
+        <div class="panel__head flex-wrap gap-3">
+          <div>
+            <h3 class="panel__title">Danh mục thuốc nha khoa</h3>
+            <p class="panel__subtitle">Quản lý thuốc dùng trong kê đơn cho bệnh nhân.</p>
+          </div>
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
+          </button>
+        </div>
+
+        <!-- TÌM KIẾM -->
+        <form th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5 col-lg-4">
+              <label for="searchKeyword" class="form-label">Tìm kiếm</label>
+              <input id="searchKeyword" type="text" name="q" class="form-control"
+                     placeholder="Tên thuốc, mã thuốc, hoạt chất..."
+                     th:value="${keyword}">
+            </div>
+            <div class="col-md-auto">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search" aria-hidden="true"></i> Tìm
+              </button>
+              <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Xoá bộ lọc</a>
+            </div>
+          </div>
+        </form>
+
+        <!-- BẢNG DANH SÁCH -->
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tblMedications">
+            <thead class="table-light">
+              <tr>
+                <th style="width:130px">Mã thuốc</th>
+                <th>Tên thuốc</th>
+                <th>Hoạt chất</th>
+                <th style="width:90px">Đơn vị</th>
+                <th>Hướng dẫn sử dụng</th>
+                <th style="width:120px" class="text-center">Trạng thái</th>
+                <th style="width:140px" class="text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:if="${medications.isEmpty()}">
+                <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
+              </tr>
+              <tr th:each="med : ${medications}">
+                <td><code th:text="${med.drugCode}">TH001</code></td>
+                <td th:text="${med.drugName}">Amoxicillin</td>
+                <td th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
+                <td th:text="${med.unit}">Viên</td>
+                <td th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
+                <td class="text-center">
+                  <span class="badge"
+                        th:classappend="${med.isActive} ? 'bg-success' : 'bg-secondary'"
+                        th:text="${med.isActive} ? 'Đang dùng' : 'Ngừng dùng'">Đang dùng</span>
+                </td>
+                <td class="text-center">
+                  <!-- Sửa -->
+                  <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                          th:data-id="${med.medicationId}"
+                          th:data-code="${med.drugCode}"
+                          th:data-name="${med.drugName}"
+                          th:data-ingredient="${med.activeIngredient}"
+                          th:data-unit="${med.unit}"
+                          th:data-usage="${med.usageInstruction}"
+                          onclick="openEditModal(this)"
+                          title="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </button>
+                  <!-- Bật/Tắt -->
+                  <form th:action="@{'/admin/medications/' + ${med.medicationId} + '/toggle'}"
+                        method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm me-1"
+                            th:classappend="${med.isActive} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${med.isActive} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${med.isActive} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
+                    </button>
+                  </form>
+                  <!-- Xóa -->
+                  <form th:action="@{'/admin/medications/' + ${med.medicationId} + '/delete'}"
+                        method="post" class="d-inline"
+                        onsubmit="return confirm('Xác nhận xóa thuốc này?')">
+                    <input type="hidden" name="deleteToken" th:value="${deleteToken}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section><!-- /panel -->
+
+    </main><!-- /app-content -->
+  </div><!-- /app-main -->
+</div><!-- /app-shell -->
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL THÊM MỚI
+════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form th:action="@{/admin/medications/create}" method="post" class="modal-content needs-validation" novalidate>
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCreateLabel">
+          <i class="bi bi-plus-circle me-1"></i> Thêm thuốc mới
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="createCode">Mã thuốc <span class="text-danger">*</span></label>
+            <input id="createCode" name="drugCode" type="text" class="form-control text-uppercase"
+                   placeholder="VD: TH001" required maxlength="30">
+            <div class="invalid-feedback">Vui lòng nhập mã thuốc.</div>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold" for="createName">Tên thuốc <span class="text-danger">*</span></label>
+            <input id="createName" name="drugName" type="text" class="form-control"
+                   placeholder="VD: Amoxicillin 500mg" required maxlength="200">
+            <div class="invalid-feedback">Vui lòng nhập tên thuốc.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="createIngredient">Hoạt chất</label>
+            <input id="createIngredient" name="activeIngredient" type="text" class="form-control"
+                   placeholder="VD: Amoxicillin trihydrate" maxlength="200">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="createUnit">Đơn vị</label>
+            <select id="createUnit" name="unit" class="form-select">
+              <option value="Viên">Viên</option>
+              <option value="Ống">Ống</option>
+              <option value="Chai">Chai</option>
+              <option value="Tuýp">Tuýp</option>
+              <option value="Gói">Gói</option>
+              <option value="ml">ml</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="createUsage">Hướng dẫn sử dụng</label>
+            <input id="createUsage" name="usageInstruction" type="text" class="form-control"
+                   placeholder="VD: Uống sau khi ăn, 1 viên x 3 lần/ngày" maxlength="255">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i> Lưu thuốc
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL CHỈNH SỬA
+════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="formEdit" method="post" class="modal-content needs-validation" novalidate>
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEditLabel">
+          <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa thuốc
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="editCode">Mã thuốc <span class="text-danger">*</span></label>
+            <input id="editCode" name="drugCode" type="text" class="form-control text-uppercase"
+                   required maxlength="30">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold" for="editName">Tên thuốc <span class="text-danger">*</span></label>
+            <input id="editName" name="drugName" type="text" class="form-control"
+                   required maxlength="200">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="editIngredient">Hoạt chất</label>
+            <input id="editIngredient" name="activeIngredient" type="text" class="form-control" maxlength="200">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="editUnit">Đơn vị</label>
+            <select id="editUnit" name="unit" class="form-select">
+              <option value="Vien">Viên</option>
+              <option value="Ong">Ống</option>
+              <option value="Chai">Chai</option>
+              <option value="Tuyp">Tuýp</option>
+              <option value="Goi">Gói</option>
+              <option value="ml">ml</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="editUsage">Hướng dẫn sử dụng</label>
+            <input id="editUsage" name="usageInstruction" type="text" class="form-control" maxlength="255">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i> Lưu thay đổi
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script th:inline="javascript">
+// Bootstrap validation
+(function() {
+  'use strict';
+  document.querySelectorAll('.needs-validation').forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    }, false);
+  });
+})();
+
+// Mở modal sửa và điền dữ liệu
+function openEditModal(btn) {
+  const id   = btn.dataset.id;
+  const code = btn.dataset.code;
+  const name = btn.dataset.name;
+  const ing  = btn.dataset.ingredient || '';
+  const unit = btn.dataset.unit || 'Vien';
+  const usage= btn.dataset.usage || '';
+
+  const form = document.getElementById('formEdit');
+  form.action = '/admin/medications/' + id + '/update';
+
+  document.getElementById('editCode').value       = code;
+  document.getElementById('editName').value       = name;
+  document.getElementById('editIngredient').value = ing;
+  document.getElementById('editUsage').value      = usage;
+
+  // Chọn đúng option unit
+  const sel = document.getElementById('editUnit');
+  for (let opt of sel.options) {
+    opt.selected = (opt.text === unit || opt.value === unit);
+  }
+
+  const modal = new bootstrap.Modal(document.getElementById('modalEdit'));
+  modal.show();
+}
+</script>
+
+</body>
+</html>
