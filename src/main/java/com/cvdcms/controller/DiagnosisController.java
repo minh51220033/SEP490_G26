@@ -51,6 +51,13 @@ public class DiagnosisController {
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
 
+    @GetMapping({"/doctor/daily-visits", "/doctor/visits"})
+    public String dailyVisits(Model model) {
+        model.addAttribute("activeMenu", "daily-visits");
+        model.addAttribute("branches", branchRepository.findAll());
+        return "doctor/daily-visits";
+    }
+
     @GetMapping({"/doctor/diagnoses", "/doctor/treatment"})
     public String index(
             @RequestParam(value = "visitId", required = false) Long visitId,

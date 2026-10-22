@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,12 +38,18 @@ public class TreatmentPlanStage {
     @Column(name = "stage_name", nullable = false, length = 150)
     private String stageName;
 
+    @Column(name = "description", length = 500)
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TreatmentPlanStageStatus status = TreatmentPlanStageStatus.PENDING;
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Column(name = "expected_end_date")
+    private LocalDate expectedEndDate;
 
     @OneToMany(mappedBy = "stage", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TreatmentPlanItem> items = new ArrayList<>();
