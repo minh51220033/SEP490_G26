@@ -55,6 +55,9 @@ public class AdminIcd10Controller {
                 "Đã thêm mã ICD-10 '" + dto.getIcd10Code() + " - " + dto.getDiseaseNameVi() + "' thành công.");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Lỗi khi thêm mã ICD-10: ", e);
+            ra.addFlashAttribute("errorMessage", "Không thể thêm mã ICD-10: " + e.getMessage());
         }
         return REDIRECT_LIST;
     }
@@ -67,6 +70,9 @@ public class AdminIcd10Controller {
             ra.addFlashAttribute("successMessage", "Đã cập nhật mã ICD-10 thành công.");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật mã ICD-10: ", e);
+            ra.addFlashAttribute("errorMessage", "Không thể cập nhật mã ICD-10: " + e.getMessage());
         }
         return REDIRECT_LIST;
     }
@@ -79,6 +85,9 @@ public class AdminIcd10Controller {
             ra.addFlashAttribute("successMessage", "Đã thay đổi trạng thái mã ICD-10.");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Lỗi khi thay đổi trạng thái mã ICD-10: ", e);
+            ra.addFlashAttribute("errorMessage", "Không thể thay đổi trạng thái mã ICD-10: " + e.getMessage());
         }
         return REDIRECT_LIST;
     }
@@ -88,12 +97,17 @@ public class AdminIcd10Controller {
     public String delete(@PathVariable Long id,
                          @RequestParam(required = false) String deleteToken,
                          HttpSession session, RedirectAttributes ra) {
-        requireDeletePermission(session, deleteToken);
         try {
+            requireDeletePermission(session, deleteToken);
             icd10DiseaseService.deleteDisease(id);
             ra.addFlashAttribute("successMessage", "Đã xóa mã ICD-10 thành công.");
+        } catch (ResponseStatusException e) {
+            ra.addFlashAttribute("errorMessage", e.getReason());
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa mã ICD-10: ", e);
+            ra.addFlashAttribute("errorMessage", "Không thể xóa mã ICD-10: " + e.getMessage());
         }
         return REDIRECT_LIST;
     }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head th:replace="~{fragments/head :: head('Quản lý danh mục thuốc')}"></head>
@@ -159,10 +159,13 @@
             <label class="form-label fw-semibold" for="createUnit">Đơn vị</label>
             <select id="createUnit" name="unit" class="form-select">
               <option value="Viên">Viên</option>
+              <option value="Viên sủi">Viên sủi</option>
               <option value="Ống">Ống</option>
               <option value="Chai">Chai</option>
               <option value="Tuýp">Tuýp</option>
               <option value="Gói">Gói</option>
+              <option value="Lọ">Lọ</option>
+              <option value="Hộp">Hộp</option>
               <option value="ml">ml</option>
             </select>
           </div>
@@ -214,11 +217,14 @@
           <div class="col-md-3">
             <label class="form-label fw-semibold" for="editUnit">Đơn vị</label>
             <select id="editUnit" name="unit" class="form-select">
-              <option value="Vien">Viên</option>
-              <option value="Ong">Ống</option>
+              <option value="Viên">Viên</option>
+              <option value="Viên sủi">Viên sủi</option>
+              <option value="Ống">Ống</option>
               <option value="Chai">Chai</option>
-              <option value="Tuyp">Tuýp</option>
-              <option value="Goi">Gói</option>
+              <option value="Tuýp">Tuýp</option>
+              <option value="Gói">Gói</option>
+              <option value="Lọ">Lọ</option>
+              <option value="Hộp">Hộp</option>
               <option value="ml">ml</option>
             </select>
           </div>
@@ -238,6 +244,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
 // Bootstrap validation
 (function() {
@@ -259,7 +266,7 @@ function openEditModal(btn) {
   const code = btn.dataset.code;
   const name = btn.dataset.name;
   const ing  = btn.dataset.ingredient || '';
-  const unit = btn.dataset.unit || 'Vien';
+  const unit = btn.dataset.unit || 'Viên';
   const usage= btn.dataset.usage || '';
 
   const form = document.getElementById('formEdit');
@@ -273,7 +280,7 @@ function openEditModal(btn) {
   // Chọn đúng option unit
   const sel = document.getElementById('editUnit');
   for (let opt of sel.options) {
-    opt.selected = (opt.text === unit || opt.value === unit);
+    opt.selected = (opt.value === unit || opt.text === unit);
   }
 
   const modal = new bootstrap.Modal(document.getElementById('modalEdit'));
