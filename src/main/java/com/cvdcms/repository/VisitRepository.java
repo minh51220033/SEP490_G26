@@ -39,4 +39,28 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     Optional<Visit> findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
 
     Optional<Visit> findFirstByPatientProfile_ProfileIdAndStatusIn(Long profileId, List<VisitStatus> statuses);
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE (:start IS NULL OR v.checkInAt >= :start)
+          AND (:end IS NULL OR v.checkInAt <= :end)
+          AND (:status IS NULL OR v.status = :status)
+          AND (
+              :search IS NULL OR :search = ''
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :search, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :search, '%')
+              OR LOWER(v.visitCode) LIKE LOWER(CONCAT('%', :search, '%'))
+          )
+        ORDER BY v.checkInAt DESC
+    """)
+    List<Visit> findFilteredVisits(
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end,
+            @Param("status") VisitStatus status,
+            @Param("search") String search
+    );
 }

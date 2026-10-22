@@ -25,45 +25,54 @@
                 <!-- HÀNG 1: BREADCRUMB & THANH TÌM KIẾM BỆNH NHÂN -->
                 <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
                     <div class="df-breadcrumb-nav mb-0">
-                        <a th:href="@{/doctor/diagnoses}">Hồ sơ khách hàng</a>
+                        <a th:href="@{/doctor/daily-visits}">DS Khám Trong Ngày</a>
                         <span class="mx-1 text-muted">&gt;</span>
                         <span class="text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
                         <span class="mx-1 text-muted">&gt;</span>
                         <span class="text-dark fw-semibold">Khám &amp; Điều trị</span>
                     </div>
 
-                    <!-- THANH TÌM KIẾM BỆNH NHÂN THỜI GIAN THỰC -->
-                    <div class="df-patient-search-wrapper position-relative" style="width: 380px; z-index: 1040;">
-                        <div class="input-group input-group-sm shadow-sm" style="border-radius: 20px; overflow: hidden; border: 1.5px solid #0284c7; background: #ffffff;">
-                            <span class="input-group-text bg-white border-0 text-primary ps-3">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" id="patientSearchInput" class="form-control border-0 ps-1 py-1"
-                                   placeholder="🔍 Tìm bệnh nhân (Tên, Mã BN, SĐT)..."
-                                   autocomplete="off"
-                                   onfocus="openPatientSearchDropdown()"
-                                   oninput="handlePatientSearchInput(this.value)">
-                            <button class="btn btn-white border-0 text-muted px-2" type="button" id="clearPatientSearchBtn"
-                                    style="display: none;" onclick="clearPatientSearch()">
-                                <i class="bi bi-x-circle-fill text-secondary"></i>
-                            </button>
-                            <button class="btn btn-primary px-3 fw-bold d-flex align-items-center gap-1" type="button" onclick="focusPatientSearch()">
-                                <i class="bi bi-person-bounding-box"></i>
-                                <span>Đổi BN</span>
-                            </button>
-                        </div>
+                    <!-- THANH TÌM KIẾM BỆNH NHÂN THỜI GIAN THỰC & NÚT DANH SÁCH CA KHÁM -->
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/doctor/daily-visits}" class="btn btn-outline-primary btn-sm px-3 py-1.5 fw-bold rounded-pill d-flex align-items-center gap-1.5 shadow-sm"
+                           title="Xem toàn màn hình danh sách ca khám trong ngày">
+                            <i class="bi bi-grid-3x3-gap-fill text-primary"></i>
+                            <span>DS Khám Trong Ngày</span>
+                            <span class="badge bg-primary text-white rounded-pill ms-1" id="topbarDailyVisitsBadge">...</span>
+                        </a>
 
-                        <!-- DROPDOWN KẾT QUẢ TÌM KIẾM BỆNH NHÂN -->
-                        <div id="patientSearchDropdown" class="shadow-lg p-0 border"
-                             style="display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 100%; max-height: 440px; overflow-y: auto; border-radius: 12px; background: #ffffff; z-index: 1060; border-color: #cbd5e1 !important;">
-                            <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-                                <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px;">
-                                    <i class="bi bi-people-fill text-primary"></i> Danh sách bệnh nhân
+                        <div class="df-patient-search-wrapper position-relative" style="width: 380px; z-index: 1040;">
+                            <div class="input-group input-group-sm shadow-sm" style="border-radius: 20px; overflow: hidden; border: 1.5px solid #0284c7; background: #ffffff;">
+                                <span class="input-group-text bg-white border-0 text-primary ps-3">
+                                    <i class="bi bi-search"></i>
                                 </span>
-                                <span class="badge bg-primary rounded-pill" id="patientSearchCountBadge">0 kết quả</span>
+                                <input type="text" id="patientSearchInput" class="form-control border-0 ps-1 py-1"
+                                       placeholder="🔍 Tìm bệnh nhân (Tên, Mã BN, SĐT)..."
+                                       autocomplete="off"
+                                       onfocus="openPatientSearchDropdown()"
+                                       oninput="handlePatientSearchInput(this.value)">
+                                <button class="btn btn-white border-0 text-muted px-2" type="button" id="clearPatientSearchBtn"
+                                        style="display: none;" onclick="clearPatientSearch()">
+                                    <i class="bi bi-x-circle-fill text-secondary"></i>
+                                </button>
+                                <button class="btn btn-primary px-3 fw-bold d-flex align-items-center gap-1" type="button" onclick="openDailyVisitsDrawer()" title="Danh sách ca khám & Đổi bệnh nhân">
+                                    <i class="bi bi-person-bounding-box"></i>
+                                    <span>Đổi BN</span>
+                                </button>
                             </div>
-                            <div id="patientSearchResultsList">
-                                <!-- Dynamic patient cards -->
+
+                            <!-- DROPDOWN KẾT QUẢ TÌM KIẾM BỆNH NHÂN -->
+                            <div id="patientSearchDropdown" class="shadow-lg p-0 border"
+                                 style="display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 100%; max-height: 440px; overflow-y: auto; border-radius: 12px; background: #ffffff; z-index: 1060; border-color: #cbd5e1 !important;">
+                                <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px;">
+                                        <i class="bi bi-people-fill text-primary"></i> Danh sách bệnh nhân
+                                    </span>
+                                    <span class="badge bg-primary rounded-pill" id="patientSearchCountBadge">0 kết quả</span>
+                                </div>
+                                <div id="patientSearchResultsList">
+                                    <!-- Dynamic patient cards -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -174,21 +183,228 @@
                 <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
                 <div class="df-session-bar">
                     <div class="df-session-title">
-                        <i class="bi bi-calendar2-check-fill"></i>
+                        <i class="bi bi-calendar2-event"></i>
                         <span>NGÀY KHÁM: </span>
                         <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2" th:if="${visit.initialSymptoms != null and !visit.initialSymptoms.isEmpty()}">
-                        <span class="badge bg-light text-secondary border">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-secondary border" th:if="${visit.initialSymptoms != null and !visit.initialSymptoms.isEmpty()}">
                             <i class="bi bi-chat-left-text me-1"></i>
                             <span th:text="${'Lý do: ' + visit.initialSymptoms}">Lý do khám</span>
                         </span>
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-2" title="Xóa ca khám này" onclick="if(confirm('Bạn có chắc muốn xóa ca khám này?')) showToast('Chức năng bảo vệ ca khám.');">
+                            <i class="bi bi-trash3"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- NỘI DUNG CHÍNH: CHẨN ĐOÁN BỆNH LÝ THEO ICD-10 (FT14 - SCR-14.1) -->
-                <div class="p-3 p-md-4">
+                <!-- ============================================================= -->
+                <!-- BAR 1: KHÁM TỔNG QUÁT (GẬP GỌN NHƯ ẢNH CHỤP)                 -->
+                <!-- ============================================================= -->
+                <div class="df-foldable-bar" id="bar-exam" onclick="toggleMainBar('exam')">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-exam"></i>
+                        <span class="df-foldable-title">KHÁM TỔNG QUÁT</span>
+                        <span class="df-foldable-subtitle d-none d-md-inline">(Triệu chứng ban đầu, tiền sử y khoa &amp; khám mô mềm)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-secondary border small" th:if="${visit.initialSymptoms != null and !visit.initialSymptoms.isEmpty()}"
+                              th:text="${visit.initialSymptoms}">Khám định kỳ</span>
+                    </div>
+                </div>
+                <div class="df-foldable-content" id="content-exam" style="display: none;">
+                    <div class="p-3 p-md-4 bg-white">
+                        <div class="row g-3">
+                            <!-- 1. Lý do khám & Triệu chứng -->
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 border bg-light h-100">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <strong class="text-dark small text-uppercase">
+                                            <i class="bi bi-chat-left-text-fill text-primary me-1"></i>Lý do đến khám &amp; Triệu chứng ban đầu
+                                        </strong>
+                                        <button type="button" class="btn btn-sm btn-link text-primary p-0 small fw-bold" onclick="saveInitialSymptoms()">
+                                            <i class="bi bi-check2"></i> Lưu
+                                        </button>
+                                    </div>
+                                    <textarea class="form-control form-control-sm mb-2" id="examSymptomsInput" rows="2"
+                                              th:text="${visit.initialSymptoms != null ? visit.initialSymptoms : ''}"
+                                              placeholder="Nhập triệu chứng đau nhức, ê buốt, thời gian khởi phát..."></textarea>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-white text-secondary border cursor-pointer hover-primary" onclick="setQuickSymptom('Đau nhức khi ăn nhai')">+ Đau khi ăn nhai</span>
+                                        <span class="badge bg-white text-secondary border cursor-pointer hover-primary" onclick="setQuickSymptom('Ê buốt nóng lạnh')">+ Ê buốt nóng lạnh</span>
+                                        <span class="badge bg-white text-secondary border cursor-pointer hover-primary" onclick="setQuickSymptom('Chảy máu chân răng')">+ Chảy máu chân răng</span>
+                                        <span class="badge bg-white text-secondary border cursor-pointer hover-primary" onclick="setQuickSymptom('Khám định kỳ &amp; Lấy cao răng')">+ Khám định kỳ</span>
+                                        <span class="badge bg-white text-secondary border cursor-pointer hover-primary" onclick="setQuickSymptom('Tư vấn cấy ghép Implant')">+ Tư vấn Implant</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Tiền sử y khoa & Dị ứng thuốc -->
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 border bg-light h-100">
+                                    <strong class="text-dark small text-uppercase d-block mb-2">
+                                        <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>Tiền sử y khoa &amp; Cảnh báo dị ứng
+                                    </strong>
+                                    <div class="d-flex flex-column gap-2 small">
+                                        <label class="form-check d-flex align-items-center gap-2 mb-0 cursor-pointer">
+                                            <input class="form-check-input" type="checkbox" id="allergyCheck">
+                                            <span class="fw-semibold text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Có tiền sử dị ứng thuốc (Penicillin, NSAIDs, Thuốc tê...)</span>
+                                        </label>
+                                        <div class="row g-2 pt-1">
+                                            <div class="col-6">
+                                                <label class="form-check small text-secondary cursor-pointer mb-0">
+                                                    <input class="form-check-input" type="checkbox" id="cardioCheck"> Tim mạch / Tăng huyết áp
+                                                </label>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-check small text-secondary cursor-pointer mb-0">
+                                                    <input class="form-check-input" type="checkbox" id="diabetesCheck"> Đái tháo đường
+                                                </label>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-check small text-secondary cursor-pointer mb-0">
+                                                    <input class="form-check-input" type="checkbox" id="bleedingCheck"> Rối loạn đông máu
+                                                </label>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-check small text-secondary cursor-pointer mb-0">
+                                                    <input class="form-check-input" type="checkbox" id="pregnantCheck"> Mang thai / Cho con bú
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Khám mô mềm & Khớp thái dương hàm -->
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <div class="row g-3 align-items-center">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-secondary mb-1">Khớp thái dương hàm (TMJ):</label>
+                                            <select class="form-select form-select-sm" id="tmjSelect">
+                                                <option value="NORMAL" selected>Bình thường (Há ngậm êm)</option>
+                                                <option value="CLICKING">Có tiếng kêu lục cục (Clicking)</option>
+                                                <option value="LIMITED">Há miệng hạn chế (&lt; 35mm)</option>
+                                                <option value="PAIN">Đau khớp khi ăn nhai</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-secondary mb-1">Vệ sinh răng miệng &amp; Cao răng:</label>
+                                            <select class="form-select form-select-sm" id="hygieneSelect">
+                                                <option value="GOOD">Tốt (Ít mảng bám)</option>
+                                                <option value="MEDIUM" selected>Trung bình (Cao răng độ 1-2)</option>
+                                                <option value="POOR">Kém (Nhiều cao răng dưới nướu độ 3)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-secondary mb-1">Tình trạng nướu / Mô mềm:</label>
+                                            <select class="form-select form-select-sm" id="gingivaSelect">
+                                                <option value="HEALTHY" selected>Hồng hào, săn chắc</option>
+                                                <option value="GINGIVITIS">Viêm nướu viền / Chảy máu khi thăm khám</option>
+                                                <option value="PERIODONTITIS">Viêm nha chu / Có túi mủ</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- BAR 2: CHỈ ĐỊNH (GẬP GỌN NHƯ ẢNH CHỤP)                        -->
+                <!-- ============================================================= -->
+                <div class="df-foldable-bar" id="bar-orders" onclick="toggleMainBar('orders')">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
+                        <span class="df-foldable-title">CHỈ ĐỊNH</span>
+                        <span class="df-foldable-subtitle">(Thêm chỉ định như Chụp X-Quang, Xét nghiệm máu)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 11px;"
+                                onclick="event.stopPropagation(); quickAddOrderPrompt();">
+                            <i class="bi bi-plus-lg"></i> Thêm chỉ định
+                        </button>
+                        <span class="badge bg-light text-primary border small" id="ordersCountBadge">0 chỉ định</span>
+                    </div>
+                </div>
+                <div class="df-foldable-content" id="content-orders" style="display: none;">
+                    <div class="p-3 p-md-4 bg-white">
+                        <!-- CHIP CHỈ ĐỊNH NHANH -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                            <div class="d-flex flex-wrap align-items-center gap-1.5 small">
+                                <span class="text-secondary fw-bold me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chỉ định nhanh:</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp X-quang quanh chóp (Periapical)', 'R16', 'X_RAY')">
+                                    + X-Quang quanh chóp
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp Panorama toàn cảnh (Toàn hàm)', 'Toàn hàm', 'X_RAY')">
+                                    + Panorama toàn cảnh
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp CT ConeBeam 3D khảo sát xương', 'Hàm dưới', 'CT_SCAN')">
+                                    + CT ConeBeam 3D
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Xét nghiệm máu đông (PT/APTT/INR)', 'Máu', 'LAB_TEST')">
+                                    + Xét nghiệm đông máu
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs" onclick="quickAddOrderPrompt()">
+                                <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
+                            </button>
+                        </div>
+
+                        <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG -->
+                        <div class="table-responsive rounded-3 border">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 110px;">Mã CĐ</th>
+                                        <th>Tên chỉ định cận lâm sàng</th>
+                                        <th style="width: 100px;" class="text-center">Vị trí / Vùng</th>
+                                        <th style="width: 180px;">Bác sĩ chỉ định</th>
+                                        <th style="width: 140px;">Thời gian</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 120px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clinicalOrdersTableBody">
+                                    <tr id="emptyOrdersRow">
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
+                                            <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- BAR 3: CHẨN ĐOÁN VÀ ĐIỀU TRỊ (GẬP GỌN NHƯ ẢNH CHỤP)          -->
+                <!-- ============================================================= -->
+                <div class="df-foldable-bar is-expanded" id="bar-treatment" onclick="toggleMainBar('treatment')">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-treatment"></i>
+                        <span class="df-foldable-title">CHẨN ĐOÁN VÀ ĐIỀU TRỊ</span>
+                        <span class="df-foldable-subtitle d-none d-md-inline">(Chẩn đoán ICD-10, Kế hoạch điều trị FT15, Dịch vụ thực hiện FT16, Đơn thuốc FT18)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary small fw-semibold" id="treatmentSummaryBadge">
+                            <span th:text="${diagnoses != null ? #lists.size(diagnoses) : 0} + ' chẩn đoán'">0 chẩn đoán</span>
+                            <span> • </span>
+                            <span th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' KHDT'">0 KHDT</span>
+                            <span> • </span>
+                            <span th:text="${performedServices != null ? performedServices.size() : 0} + ' điều trị'">0 điều trị</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="df-foldable-content" id="content-treatment" style="display: block;">
+                    <div class="p-3 p-md-4">
 
                     <!-- KHỐI FORM GHI NHẬN CHẨN ĐOÁN -->
                     <div class="mb-4">
@@ -552,7 +768,8 @@
                                         <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <strong>"+ Lập kế hoạch (AI Assistant)"</strong> để tạo mới hoặc bóc tách phác đồ tự động bằng AI.</span>
                                     </td>
                                 </tr>
-                                <tr th:each="plan : ${treatmentPlans}" th:id="'plan-row-' + ${plan.planId}">
+                                <th:block th:each="plan : ${treatmentPlans}">
+                                <tr th:id="'plan-row-' + ${plan.planId}">
                                     <td>
                                         <span class="badge bg-light text-dark border fw-bold" th:text="${plan.planCode}">KHDT1001</span>
                                     </td>
@@ -596,11 +813,13 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-info px-2 py-1"
-                                                    title="Xem chi tiết lộ trình & các bước (SCR-15.3)"
+                                            <button type="button" class="btn btn-sm btn-primary px-2.5 py-1 fw-bold rounded-pill d-inline-flex align-items-center gap-1 shadow-xs"
+                                                    title="Xem &amp; cập nhật lộ trình các bước trực tiếp (SCR-15.3)"
                                                     th:data-id="${plan.planId}"
-                                                    onclick="openPlanDetailModal(this.getAttribute('data-id'))">
-                                                <i class="bi bi-eye-fill"></i>
+                                                    onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
+                                                <i class="bi bi-diagram-3-fill"></i>
+                                                <span>Lộ trình</span>
+                                                <i class="bi bi-chevron-up ms-0.5" th:id="'chevron-plan-' + ${plan.planId}"></i>
                                             </button>
                                             <button type="button" class="btn btn-sm btn-outline-success px-2 py-1"
                                                     title="Đổi trạng thái kế hoạch"
@@ -618,6 +837,164 @@
                                         </div>
                                     </td>
                                 </tr>
+
+                                <!-- KHUNG HIỂN THỊ LỘ TRÌNH TỪNG BƯỚC TRỰC TIẾP TRÊN TRANG (KHÔNG POPUP) -->
+                                <tr th:id="'plan-roadmap-row-' + ${plan.planId}" class="df-plan-roadmap-row">
+                                    <td colspan="7" class="p-0 border-0">
+                                        <div class="df-inline-roadmap-container p-3 p-md-4">
+                                            <!-- HEADER TÓM TẮT TIẾN ĐỘ -->
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-primary text-white px-2.5 py-1 rounded-pill fw-bold">
+                                                        <i class="bi bi-diagram-3-fill me-1"></i>LỘ TRÌNH CHI TIẾT TỪNG BƯỚC
+                                                    </span>
+                                                    <strong class="text-dark fs-6" th:text="${plan.planName}">Phác đồ điều trị</strong>
+                                                </div>
+                                                <div class="d-flex flex-wrap align-items-center gap-2 small">
+                                                    <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                                        <i class="bi bi-calendar-check text-primary me-1"></i>
+                                                        <span>Dự kiến xong: </span>
+                                                        <strong th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">30/12/2026</strong>
+                                                    </span>
+                                                    <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" th:id="'plan-progress-badge-' + ${plan.planId}"
+                                                          th:text="${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn (' + ${plan.progressPercent} + '%)'">
+                                                        1/3 giai đoạn (33%)
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- DANH SÁCH CÁC GIAI ĐOẠN & THỦ THUẬT (INLINE) -->
+                                            <div th:id="'stages-container-' + ${plan.planId}">
+                                                <div th:each="st : ${plan.stages}"
+                                                     th:id="'stage-card-' + ${st.stageId}"
+                                                     class="df-inline-stage-card"
+                                                     th:classappend="${st.status == 'COMPLETED'} ? 'is-completed' : (${st.status == 'IN_PROGRESS'} ? 'is-in-progress' : 'is-pending')">
+                                                    
+                                                    <!-- TIÊU ĐỀ GIAI ĐOẠN -->
+                                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold" th:text="'Giai đoạn ' + ${st.stageOrder}">Giai đoạn 1</span>
+                                                            <strong class="text-dark" style="font-size: 15px;" th:text="${st.stageName}">Giai đoạn 1: Khám &amp; Cấy trụ</strong>
+                                                        </div>
+                                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                                            <!-- NGÀY LÀM (GHI NHẬN NOW()) -->
+                                                            <span class="badge px-2.5 py-1.5 rounded-pill"
+                                                                  th:id="'stage-completed-badge-' + ${st.stageId}"
+                                                                  th:classappend="${st.completedAt != null} ? 'bg-success-subtle text-success border border-success' : 'bg-light text-secondary border'">
+                                                                <i class="bi bi-clock-history me-1"></i>
+                                                                <span th:text="${st.completedAt != null} ? 'Ngày làm: ' + ${st.completedAt} : 'Chưa thực hiện'">Chưa thực hiện</span>
+                                                            </span>
+
+                                                            <!-- NGÀY DỰ KIẾN XONG -->
+                                                            <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                                                <i class="bi bi-calendar-check text-primary me-1"></i>
+                                                                <span>Dự kiến xong: </span>
+                                                                <strong th:text="${st.expectedEndDate != null ? st.expectedEndDate : (plan.expectedEndDate != null ? plan.expectedEndDate : '---')}">30/12/2026</strong>
+                                                            </span>
+
+                                                            <!-- BỘ CHỌN TRẠNG THÁI GIAI ĐOẠN -->
+                                                            <div class="btn-group btn-group-sm" role="group" th:id="'stage-btn-group-' + ${st.stageId}">
+                                                                <button type="button" class="btn btn-sm"
+                                                                        th:classappend="${st.status == 'PENDING'} ? 'btn-secondary text-white fw-bold' : 'btn-outline-secondary'"
+                                                                        th:data-stage-id="${st.stageId}"
+                                                                        onclick="changeStageStatus(this.getAttribute('data-stage-id'), 'PENDING')">
+                                                                    Chưa thực hiện
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm"
+                                                                        th:classappend="${st.status == 'IN_PROGRESS'} ? 'btn-primary text-white fw-bold' : 'btn-outline-primary'"
+                                                                        th:data-stage-id="${st.stageId}"
+                                                                        onclick="changeStageStatus(this.getAttribute('data-stage-id'), 'IN_PROGRESS')">
+                                                                    Đang thực hiện
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm"
+                                                                        th:classappend="${st.status == 'COMPLETED'} ? 'btn-success text-white fw-bold' : 'btn-outline-success'"
+                                                                        th:data-stage-id="${st.stageId}"
+                                                                        onclick="changeStageStatus(this.getAttribute('data-stage-id'), 'COMPLETED')">
+                                                                    <i class="bi bi-check-lg me-1"></i>Hoàn thành
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- MÔ TẢ GIAI ĐOẠN -->
+                                                    <div class="small text-secondary mb-2 fst-italic" th:if="${st.description != null and !st.description.isEmpty()}" th:text="${st.description}">
+                                                        Mô tả chi tiết
+                                                    </div>
+
+                                                    <!-- BẢNG CÁC BƯỚC / THỦ THUẬT -->
+                                                    <div class="table-responsive bg-white rounded-3 border">
+                                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th style="width: 45px;" class="text-center">#</th>
+                                                                    <th>Tên bước / Dịch vụ thủ thuật</th>
+                                                                    <th style="width: 90px;" class="text-center">Vị trí răng</th>
+                                                                    <th style="width: 70px;" class="text-center">SL</th>
+                                                                    <th style="width: 120px;" class="text-end">Đơn giá</th>
+                                                                    <th style="width: 130px;" class="text-end">Thành tiền</th>
+                                                                    <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
+                                                                    <th style="width: 125px;" class="text-center">Trạng thái</th>
+                                                                    <th style="width: 125px;" class="text-center">Thao tác</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody th:id="'stage-items-body-' + ${st.stageId}">
+                                                                <tr th:if="${st.items == null or st.items.isEmpty()}">
+                                                                    <td colspan="9" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục thủ thuật chi tiết.</td>
+                                                                </tr>
+                                                                <tr th:each="it, itStat : ${st.items}" th:id="'item-row-' + ${it.planItemId}">
+                                                                    <td class="text-center text-muted" th:text="${itStat.index + 1}">1</td>
+                                                                    <td>
+                                                                        <strong class="text-dark" th:text="${it.serviceName}">Cấy trụ Implant</strong>
+                                                                        <span class="badge bg-light text-muted border ms-1" style="font-size: 10px;" th:if="${it.categoryName != null}" th:text="${it.categoryName}">Cấy ghép</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <span class="badge bg-primary-subtle text-primary border" th:if="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}" th:text="'R' + ${it.toothNumbers}">R16</span>
+                                                                        <span class="text-muted" th:unless="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}">-</span>
+                                                                    </td>
+                                                                    <td class="text-center fw-bold" th:text="${it.quantity}">1</td>
+                                                                    <td class="text-end text-muted" th:text="${it.estimatedPrice != null ? #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">12.000.000 đ</td>
+                                                                    <td class="text-end fw-bold text-primary" th:text="${it.totalPrice != null ? #numbers.formatDecimal(it.totalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">12.000.000 đ</td>
+                                                                    <td class="text-center small" th:id="'item-completed-cell-' + ${it.planItemId}">
+                                                                        <span class="badge bg-success-subtle text-success border" th:if="${it.completedAt != null}">
+                                                                            <i class="bi bi-check-circle-fill me-1"></i><span th:text="${it.completedAt}">11:20 22/10</span>
+                                                                        </span>
+                                                                        <span class="text-muted" th:unless="${it.completedAt != null}">---</span>
+                                                                    </td>
+                                                                    <td class="text-center" th:id="'item-status-cell-' + ${it.planItemId}">
+                                                                        <span class="badge px-2 py-1 rounded-pill" th:classappend="${it.statusBadgeClass}" th:text="${it.statusDisplayName}">Dự kiến</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <div class="btn-group btn-group-sm" th:id="'item-btn-group-' + ${it.planItemId}">
+                                                                            <button type="button" class="btn btn-sm btn-outline-success"
+                                                                                    title="Đánh dấu hoàn thành bước này (ghi nhận now())"
+                                                                                    th:data-item-id="${it.planItemId}"
+                                                                                    onclick="changeItemStatus(this.getAttribute('data-item-id'), 'COMPLETED')">
+                                                                                <i class="bi bi-check-lg"></i>
+                                                                            </button>
+                                                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                                                    title="Đang thực hiện"
+                                                                                    th:data-item-id="${it.planItemId}"
+                                                                                    onclick="changeItemStatus(this.getAttribute('data-item-id'), 'IN_PROGRESS')">
+                                                                                <i class="bi bi-play-fill"></i>
+                                                                            </button>
+                                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                                                    title="Chưa thực hiện"
+                                                                                    th:data-item-id="${it.planItemId}"
+                                                                                    onclick="changeItemStatus(this.getAttribute('data-item-id'), 'PLANNED')">
+                                                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </th:block>
                                 </tbody>
                             </table>
                         </div>
@@ -849,6 +1226,7 @@
                         </div>
                     </div>
 
+                </div>
                 </div>
             </div>
 
@@ -1305,83 +1683,6 @@
 </div>
 
 <!-- ===================================================================== -->
-<!-- FT15: MODAL XEM CHI TIẾT LỘ TRÌNH & TIẾN ĐỘ ĐIỀU TRỊ (SCR-15.3)       -->
-<!-- ===================================================================== -->
-<div class="modal fade" id="planDetailModal" tabindex="-1" aria-labelledby="planDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="modal-header bg-light border-bottom px-4 py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <h5 class="modal-title fs-6 fw-bold text-dark mb-0 d-flex align-items-center gap-2" id="planDetailModalLabel">
-                        <i class="bi bi-diagram-3-fill text-info"></i>
-                        <span>Chi tiết Lộ trình &amp; Tiến độ điều trị (SCR-15.3)</span>
-                    </h5>
-                    <span class="badge" id="detailPlanStatusBadge">Đang điều trị</span>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
-                <!-- Header Card Tóm tắt -->
-                <div class="p-3 bg-light rounded-3 border mb-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="badge bg-secondary-subtle text-dark border fw-bold me-2" id="detailPlanCode">KHDT1001</span>
-                            <h5 class="d-inline fw-bold text-dark" id="detailPlanName">Phác đồ Cấy ghép Implant</h5>
-                        </div>
-                        <div class="text-end">
-                            <span class="small text-muted d-block">Tổng chi phí dự toán:</span>
-                            <strong class="text-primary fs-5" id="detailPlanCost">15.500.000 đ</strong>
-                        </div>
-                    </div>
-
-                    <div class="row g-2 small text-secondary mt-1">
-                        <div class="col-md-6">
-                            <i class="bi bi-person-fill text-primary me-1"></i>Bác sĩ phụ trách: <strong class="text-dark" id="detailPlanDoctor">BS. CK1 Lê Hoàng Nam</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <i class="bi bi-calendar-range text-primary me-1"></i>Thời gian: <strong class="text-dark" id="detailPlanDates">01/10/2026 &rarr; 30/12/2026</strong>
-                        </div>
-                        <div class="col-12" id="detailPlanNotesWrapper">
-                            <i class="bi bi-info-circle text-primary me-1"></i>Ghi chú: <span id="detailPlanNotes" class="fst-italic">Không có ghi chú</span>
-                        </div>
-                    </div>
-
-                    <!-- Tiến độ các giai đoạn -->
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1 small">
-                            <span class="fw-semibold text-dark">Tiến độ thực hiện phác đồ:</span>
-                            <span class="fw-bold text-primary" id="detailProgressText">1/3 giai đoạn (33%)</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" id="detailProgressBar"
-                                 role="progressbar" style="width: 33%;" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Timeline các Giai đoạn & Thủ thuật -->
-                <h6 class="fw-bold text-dark small text-uppercase mb-3">
-                    <i class="bi bi-clock-history me-1 text-primary"></i>Lộ trình các giai đoạn &amp; Thủ thuật:
-                </h6>
-                <div id="detailStagesContainer">
-                    <!-- Injected by JS -->
-                </div>
-            </div>
-            <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">
-                        <i class="bi bi-printer me-1"></i> In lộ trình
-                    </button>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===================================================================== -->
 <!-- MODAL KÊ ĐƠN THUỐC (SCR-18.3 & SCR-18.4)                               -->
 <!-- Theo chuẩn giao diện DentalSoft (image10.png)                         -->
 <!-- ===================================================================== -->
@@ -1621,6 +1922,129 @@
     </div>
 </div>
 
+<!-- ========================================================= -->
+<!-- MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY -->
+<!-- ========================================================= -->
+<div id="dailyVisitsBackdrop" class="daily-visits-drawer-backdrop" onclick="closeDailyVisitsDrawer()"></div>
+
+<aside id="dailyVisitsDrawer" class="daily-visits-drawer" aria-label="Danh sách ca khám trong ngày">
+    <!-- HEADER -->
+    <div class="dvd-header">
+        <h5 class="dvd-title">
+            <i class="bi bi-calendar2-check-fill text-primary fs-5"></i>
+            <span>Danh sách ca khám trong ngày</span>
+            <span class="badge bg-primary text-white rounded-pill ms-1" id="dvdTotalCountBadge">0 ca</span>
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-light border text-secondary" onclick="refreshDailyVisits()" title="Tải lại danh sách">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-light border-0 text-dark fs-5 py-0 px-2" onclick="closeDailyVisitsDrawer()" title="Đóng">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTER SECTION -->
+    <div class="dvd-filter-section">
+        <!-- 1. TÌM KIẾM CHI TIẾT -->
+        <div class="dvd-search-box">
+            <i class="bi bi-search dvd-search-icon"></i>
+            <input type="text" id="dvdSearchInput" placeholder="Tìm theo tên BN, Mã BN, SĐT, Mã ca..." autocomplete="off" oninput="handleDvdSearch(this.value)">
+            <button type="button" id="dvdClearSearchBtn" class="dvd-clear-search" onclick="clearDvdSearch()">
+                <i class="bi bi-x-circle-fill"></i>
+            </button>
+        </div>
+
+        <!-- 2. LỌC THEO NGÀY & TUẦN -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="dvd-date-row">
+                <button type="button" class="dvd-date-btn is-active" id="btnDateToday" onclick="setDvdDateFilter('TODAY')">
+                    <i class="bi bi-calendar-event me-1"></i>Hôm nay
+                </button>
+                <button type="button" class="dvd-date-btn" id="btnDateYesterday" onclick="setDvdDateFilter('YESTERDAY')">
+                    Hôm qua
+                </button>
+                <button type="button" class="dvd-date-btn" id="btnDateThisWeek" onclick="setDvdDateFilter('THIS_WEEK')">
+                    <i class="bi bi-calendar2-range-fill me-1 text-warning"></i>Tuần này
+                </button>
+                <button type="button" class="dvd-date-btn" id="btnDateLastWeek" onclick="setDvdDateFilter('LAST_WEEK')">
+                    Tuần trước
+                </button>
+                <button type="button" class="dvd-date-btn" id="btnDateAll" onclick="setDvdDateFilter('ALL')">
+                    Tất cả
+                </button>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <input type="date" id="dvdDatePicker" class="dvd-date-picker-input" onchange="handleDvdDateChange(this.value)">
+            </div>
+        </div>
+
+        <!-- 3. LỌC THEO TRẠNG THÁI CHI TIẾT -->
+        <div>
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="small text-secondary fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">
+                    <i class="bi bi-funnel text-primary"></i> Trạng thái ca khám:
+                </span>
+                <span class="small text-muted" id="dvdFilteredCountText" style="font-size: 11px;">Hiển thị: 0 ca</span>
+            </div>
+            <div class="dvd-status-bar" id="dvdStatusBar">
+                <button type="button" class="dvd-status-pill is-active" data-status="ALL" onclick="setDvdStatusFilter('ALL')">
+                    Tất cả <span class="badge bg-secondary rounded-pill" id="badgeCountAll">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="WAITING" onclick="setDvdStatusFilter('WAITING')">
+                    <span class="rounded-circle d-inline-block bg-warning" style="width: 7px; height: 7px;"></span>
+                    Chờ khám <span class="badge bg-warning text-dark rounded-pill" id="badgeCountWaiting">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="IN_EXAM" onclick="setDvdStatusFilter('IN_EXAM')">
+                    <span class="rounded-circle d-inline-block bg-primary" style="width: 7px; height: 7px;"></span>
+                    Đang khám <span class="badge bg-primary text-white rounded-pill" id="badgeCountInExam">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="IN_TREATMENT" onclick="setDvdStatusFilter('IN_TREATMENT')">
+                    <span class="rounded-circle d-inline-block bg-info" style="width: 7px; height: 7px;"></span>
+                    Đang điều trị <span class="badge bg-info text-dark rounded-pill" id="badgeCountInTreatment">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="WAITING_PARACLINICAL" onclick="setDvdStatusFilter('WAITING_PARACLINICAL')">
+                    Chờ CLS <span class="badge bg-secondary text-white rounded-pill" id="badgeCountWaitingCls">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="WAITING_PAYMENT" onclick="setDvdStatusFilter('WAITING_PAYMENT')">
+                    Chờ T.Toán <span class="badge bg-dark text-white rounded-pill" id="badgeCountWaitingPayment">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="COMPLETED" onclick="setDvdStatusFilter('COMPLETED')">
+                    <span class="rounded-circle d-inline-block bg-success" style="width: 7px; height: 7px;"></span>
+                    Hoàn thành <span class="badge bg-success text-white rounded-pill" id="badgeCountCompleted">0</span>
+                </button>
+                <button type="button" class="dvd-status-pill" data-status="CANCELLED" onclick="setDvdStatusFilter('CANCELLED')">
+                    Đã hủy <span class="badge bg-danger text-white rounded-pill" id="badgeCountCancelled">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK SUMMARY / ACTIVE INFO -->
+    <div class="dvd-summary-bar">
+        <span>
+            <i class="bi bi-info-circle text-primary me-1"></i>
+            <span id="dvdSummaryText">Đang tải danh sách ca khám...</span>
+        </span>
+        <span class="fw-semibold text-primary" style="cursor: pointer;" onclick="resetAllDvdFilters()">
+            <i class="bi bi-arrow-counterclockwise"></i> Đặt lại
+        </span>
+    </div>
+
+    <!-- SCROLLABLE VISITS CONTAINER -->
+    <div class="dvd-list-container" id="dvdVisitsContainer">
+        <!-- Dynamic visit cards -->
+    </div>
+</aside>
+
+<!-- FLOATING TOGGLE BUTTON: MỞ NHANH DANH SÁCH CA KHÁM BẤT KỲ LÚC NÀO -->
+<button type="button" class="df-floating-drawer-toggle" onclick="openDailyVisitsDrawer()" title="Mở danh sách ca khám trong ngày">
+    <i class="bi bi-calendar2-week-fill fs-5"></i>
+    <span>DS Khám Trong Ngày</span>
+    <span class="badge bg-white text-primary rounded-pill px-2 py-1 shadow-sm" id="floatDailyVisitsCount">0</span>
+</button>
+
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
     <div id="liveToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
@@ -1669,8 +2093,15 @@
             el.classList.remove('tab-highlight-active');
         }, 1000);
 
-        // 5. Cuộn mượt màn hình đến phân vùng chức năng tương ứng
+        // 5. Mở thanh tương ứng nếu đang đóng và cuộn mượt màn hình đến phân vùng chức năng
         if (sectionId) {
+            if (sectionId === 'bar-exam' || sectionId === 'content-exam') {
+                expandMainBar('exam');
+            } else if (sectionId === 'bar-orders' || sectionId === 'content-orders') {
+                expandMainBar('orders');
+            } else if (['diagnosisSection', 'treatmentPlanSection', 'performedServicesSection', 'prescriptionsSection'].includes(sectionId)) {
+                expandMainBar('treatment');
+            }
             const targetEl = document.getElementById(sectionId);
             if (targetEl) {
                 targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1680,7 +2111,165 @@
                 }, 1000);
             }
         } else if (tabName) {
-            showToast('Chức năng "' + tabName + '" đang được liên kết trong ca khám này.');
+            if (tabName === 'Film ảnh') {
+                expandMainBar('orders');
+                const targetEl = document.getElementById('bar-orders');
+                if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                showToast('Chức năng "' + tabName + '" đang được liên kết trong ca khám này.');
+            }
+        }
+    }
+
+    // =========================================================================
+    // ACCORDION FOLDABLE BARS (GẬP GỌN THEO CHUẨN DENTALFLOW)
+    // =========================================================================
+    function toggleMainBar(barKey) {
+        const contentEl = document.getElementById(`content-${barKey}`);
+        const chevronEl = document.getElementById(`chevron-${barKey}`);
+        const barHeaderEl = document.getElementById(`bar-${barKey}`);
+        if (!contentEl) return;
+
+        const isHidden = window.getComputedStyle(contentEl).display === 'none';
+        if (isHidden) {
+            contentEl.style.display = 'block';
+            if (chevronEl) {
+                chevronEl.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
+            }
+            if (barHeaderEl) {
+                barHeaderEl.classList.add('is-expanded');
+            }
+        } else {
+            contentEl.style.display = 'none';
+            if (chevronEl) {
+                chevronEl.className = 'bi bi-chevron-right df-foldable-chevron text-secondary';
+            }
+            if (barHeaderEl) {
+                barHeaderEl.classList.remove('is-expanded');
+            }
+        }
+    }
+
+    function expandMainBar(barKey) {
+        const contentEl = document.getElementById(`content-${barKey}`);
+        const chevronEl = document.getElementById(`chevron-${barKey}`);
+        const barHeaderEl = document.getElementById(`bar-${barKey}`);
+        if (!contentEl) return;
+        contentEl.style.display = 'block';
+        if (chevronEl) chevronEl.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
+        if (barHeaderEl) barHeaderEl.classList.add('is-expanded');
+    }
+
+    function setQuickSymptom(text) {
+        const input = document.getElementById('examSymptomsInput');
+        if (!input) return;
+        if (input.value && !input.value.includes(text)) {
+            input.value = input.value + ', ' + text;
+        } else if (!input.value) {
+            input.value = text;
+        }
+    }
+
+    function saveInitialSymptoms() {
+        const input = document.getElementById('examSymptomsInput');
+        if (!input) return;
+        showToast('Đã lưu thông tin triệu chứng & khám tổng quát!');
+    }
+
+    let clinicalOrdersList = [];
+
+    function addClinicalOrder(orderName, region, type) {
+        const orderId = 'CĐ' + (1000 + clinicalOrdersList.length + 1);
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        clinicalOrdersList.push({
+            id: orderId,
+            name: orderName,
+            region: region || 'Toàn hàm',
+            doctor: 'BS. CK1 Lê Hoàng Nam',
+            time: timeStr,
+            status: 'PENDING'
+        });
+        
+        renderClinicalOrders();
+        showToast(`Đã thêm chỉ định: ${orderName}`);
+    }
+
+    function quickAddOrderPrompt() {
+        const name = prompt('Nhập tên chỉ định cận lâm sàng (Ví dụ: Chụp CT ConeBeam 3D, Chụp Panorama, Xét nghiệm máu):', 'Chụp X-quang quanh chóp');
+        if (!name) return;
+        const region = prompt('Vị trí răng hoặc vùng chụp (Ví dụ: R16, Hàm trên, Toàn hàm):', 'R16');
+        addClinicalOrder(name, region || 'Toàn hàm', 'OTHER');
+    }
+
+    function renderClinicalOrders() {
+        const tbody = document.getElementById('clinicalOrdersTableBody');
+        const badge = document.getElementById('ordersCountBadge');
+        if (!tbody) return;
+
+        if (badge) badge.innerText = `${clinicalOrdersList.length} chỉ định`;
+
+        if (clinicalOrdersList.length === 0) {
+            tbody.innerHTML = `
+                <tr id="emptyOrdersRow">
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let rowsHtml = '';
+        clinicalOrdersList.forEach((ord, idx) => {
+            const isDone = ord.status === 'COMPLETED';
+            rowsHtml += `
+                <tr>
+                    <td><span class="badge bg-light text-dark border fw-bold">${ord.id}</span></td>
+                    <td><strong class="text-dark">${ord.name}</strong></td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${ord.region}</span></td>
+                    <td><div class="small fw-semibold text-dark">${ord.doctor}</div></td>
+                    <td><span class="small text-muted">${ord.time}</span></td>
+                    <td class="text-center">
+                        <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
+                            ${isDone ? 'Đã có kết quả' : 'Chờ thực hiện'}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
+                                    title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
+                                    onclick="toggleOrderStatus(${idx})">
+                                <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    title="Xóa chỉ định này"
+                                    onclick="deleteOrder(${idx})">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = rowsHtml;
+    }
+
+    function toggleOrderStatus(idx) {
+        if (clinicalOrdersList[idx]) {
+            clinicalOrdersList[idx].status = clinicalOrdersList[idx].status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+            renderClinicalOrders();
+            showToast('Đã cập nhật trạng thái chỉ định cận lâm sàng!');
+        }
+    }
+
+    function deleteOrder(idx) {
+        if (confirm('Bạn có chắc muốn xóa chỉ định này?')) {
+            clinicalOrdersList.splice(idx, 1);
+            renderClinicalOrders();
+            showToast('Đã xóa chỉ định.');
         }
     }
 
@@ -3214,16 +3803,12 @@
     // Tích hợp AI Bóc tách phác đồ (Gemini Flash 3.5) & Mẫu chuẩn Bộ Y Tế
     // =====================================================================
     let planModalInstance = null;
-    let planDetailModalInstance = null;
     let stageCounter = 0;
     let itemCounter = 0;
 
     document.addEventListener('DOMContentLoaded', function() {
         const planEl = document.getElementById('addTreatmentPlanModal');
         if (planEl) planModalInstance = new bootstrap.Modal(planEl);
-
-        const planDetailEl = document.getElementById('planDetailModal');
-        if (planDetailEl) planDetailModalInstance = new bootstrap.Modal(planDetailEl);
     });
 
     const PLAN_PRESETS = {
@@ -3924,10 +4509,12 @@
             </td>
             <td class="text-center">
                 <div class="d-flex align-items-center justify-content-center gap-1">
-                    <button type="button" class="btn btn-sm btn-outline-info px-2 py-1"
-                            title="Xem chi tiết lộ trình & các bước (SCR-15.3)"
-                            onclick="openPlanDetailModal(${plan.planId})">
-                        <i class="bi bi-eye-fill"></i>
+                    <button type="button" class="btn btn-sm btn-primary px-2.5 py-1 fw-bold rounded-pill d-inline-flex align-items-center gap-1 shadow-xs"
+                            title="Xem &amp; cập nhật lộ trình các bước trực tiếp (SCR-15.3)"
+                            onclick="togglePlanInlineRoadmap(${plan.planId})">
+                        <i class="bi bi-diagram-3-fill"></i>
+                        <span>Lộ trình</span>
+                        <i class="bi bi-chevron-up ms-0.5" id="chevron-plan-${plan.planId}"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-success px-2 py-1"
                             title="Đổi trạng thái kế hoạch"
@@ -3943,125 +4530,336 @@
             </td>
         `;
 
-        tbody.insertBefore(tr, tbody.firstChild);
+        const roadmapTr = document.createElement('tr');
+        roadmapTr.id = `plan-roadmap-row-${plan.planId}`;
+        roadmapTr.className = 'df-plan-roadmap-row';
+        roadmapTr.innerHTML = renderPlanInlineRoadmapHtml(plan);
+
+        // Prepend plan row and roadmap row
+        tbody.insertBefore(roadmapTr, tbody.firstChild);
+        tbody.insertBefore(tr, roadmapTr);
         updatePlanCountBadge();
     }
 
-    function updatePlanCountBadge() {
-        const rows = document.querySelectorAll('#treatmentPlansTableBody tr:not(#emptyPlanRow)');
-        const count = rows.length;
-        const badge = document.getElementById('planCountBadge');
-        if (badge) badge.innerText = `${count} kế hoạch`;
+    function renderPlanInlineRoadmapHtml(plan) {
+        let stagesHtml = '';
+        if (plan.stages && plan.stages.length > 0) {
+            plan.stages.forEach(st => {
+                let cardClass = 'df-inline-stage-card';
+                if (st.status === 'COMPLETED') cardClass += ' is-completed';
+                else if (st.status === 'IN_PROGRESS') cardClass += ' is-in-progress';
+                else cardClass += ' is-pending';
 
-        if (count === 0) {
-            document.getElementById('treatmentPlansTableBody').innerHTML = `
-                <tr id="emptyPlanRow">
-                    <td colspan="7" class="text-center py-4 text-muted">
-                        <i class="bi bi-diagram-3 fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <strong>"+ Lập kế hoạch (AI Assistant)"</strong> để tạo mới hoặc bóc tách phác đồ tự động bằng AI.</span>
-                    </td>
-                </tr>
-            `;
+                const completedBadgeHtml = st.completedAt
+                    ? `<span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
+                           <i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>
+                       </span>`
+                    : `<span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
+                           <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
+                       </span>`;
+
+                const expectedEnd = st.expectedEndDate || plan.expectedEndDate || '---';
+
+                let itemsRows = '';
+                if (st.items && st.items.length > 0) {
+                    st.items.forEach((it, idx) => {
+                        const toothBadge = it.toothNumbers ? `<span class="badge bg-primary-subtle text-primary border">R${it.toothNumbers}</span>` : '<span class="text-muted">-</span>';
+                        const completedItemHtml = it.completedAt
+                            ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
+                            : '<span class="text-muted">---</span>';
+
+                        const isComp = it.status === 'COMPLETED';
+                        const isProg = it.status === 'IN_PROGRESS';
+                        const isPlan = it.status === 'PLANNED';
+
+                        itemsRows += `
+                            <tr id="item-row-${it.planItemId}">
+                                <td class="text-center text-muted">${idx + 1}</td>
+                                <td>
+                                    <strong class="text-dark">${it.serviceName}</strong>
+                                    ${it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : ''}
+                                </td>
+                                <td class="text-center">${toothBadge}</td>
+                                <td class="text-center fw-bold">${it.quantity}</td>
+                                <td class="text-end text-muted">${formatVnd(it.estimatedPrice)}</td>
+                                <td class="text-end fw-bold text-primary">${formatVnd(it.totalPrice || it.finalPrice)}</td>
+                                <td class="text-center small" id="item-completed-cell-${it.planItemId}">${completedItemHtml}</td>
+                                <td class="text-center" id="item-status-cell-${it.planItemId}">
+                                    <span class="badge px-2 py-1 rounded-pill ${it.statusBadgeClass}">${it.statusDisplayName}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" id="item-btn-group-${it.planItemId}">
+                                        <button type="button" class="btn btn-sm ${isComp ? 'btn-success text-white' : 'btn-outline-success'}"
+                                                title="Đánh dấu hoàn thành bước này (ghi nhận now())"
+                                                onclick="changeItemStatus(${it.planItemId}, 'COMPLETED')">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm ${isProg ? 'btn-primary text-white' : 'btn-outline-primary'}"
+                                                title="Đang thực hiện"
+                                                onclick="changeItemStatus(${it.planItemId}, 'IN_PROGRESS')">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm ${isPlan ? 'btn-secondary text-white' : 'btn-outline-secondary'}"
+                                                title="Chưa thực hiện"
+                                                onclick="changeItemStatus(${it.planItemId}, 'PLANNED')">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    itemsRows = `<tr><td colspan="9" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục thủ thuật chi tiết.</td></tr>`;
+                }
+
+                const isStPending = st.status === 'PENDING';
+                const isStInProgress = st.status === 'IN_PROGRESS';
+                const isStCompleted = st.status === 'COMPLETED';
+
+                stagesHtml += `
+                    <div id="stage-card-${st.stageId}" class="${cardClass}">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold">Giai đoạn ${st.stageOrder}</span>
+                                <strong class="text-dark" style="font-size: 15px;">${st.stageName}</strong>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                ${completedBadgeHtml}
+                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                    <i class="bi bi-calendar-check text-primary me-1"></i>
+                                    <span>Dự kiến xong: </span>
+                                    <strong>${expectedEnd}</strong>
+                                </span>
+                                <div class="btn-group btn-group-sm" role="group" id="stage-btn-group-${st.stageId}">
+                                    <button type="button" class="btn btn-sm ${isStPending ? 'btn-secondary text-white fw-bold' : 'btn-outline-secondary'}"
+                                            onclick="changeStageStatus(${st.stageId}, 'PENDING')">
+                                        Chưa thực hiện
+                                    </button>
+                                    <button type="button" class="btn btn-sm ${isStInProgress ? 'btn-primary text-white fw-bold' : 'btn-outline-primary'}"
+                                            onclick="changeStageStatus(${st.stageId}, 'IN_PROGRESS')">
+                                        Đang thực hiện
+                                    </button>
+                                    <button type="button" class="btn btn-sm ${isStCompleted ? 'btn-success text-white fw-bold' : 'btn-outline-success'}"
+                                            onclick="changeStageStatus(${st.stageId}, 'COMPLETED')">
+                                        <i class="bi bi-check-lg me-1"></i>Hoàn thành
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        ${st.description ? `<div class="small text-secondary mb-2 fst-italic">${st.description}</div>` : ''}
+                        <div class="table-responsive bg-white rounded-3 border">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 45px;" class="text-center">#</th>
+                                        <th>Tên bước / Dịch vụ thủ thuật</th>
+                                        <th style="width: 90px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 70px;" class="text-center">SL</th>
+                                        <th style="width: 120px;" class="text-end">Đơn giá</th>
+                                        <th style="width: 130px;" class="text-end">Thành tiền</th>
+                                        <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 125px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 125px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stage-items-body-${st.stageId}">
+                                    ${itemsRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            stagesHtml = `<div class="text-muted text-center py-3 fst-italic">Kế hoạch chưa có giai đoạn nào</div>`;
+        }
+
+        return `
+            <td colspan="7" class="p-0 border-0">
+                <div class="df-inline-roadmap-container p-3 p-md-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white px-2.5 py-1 rounded-pill fw-bold">
+                                <i class="bi bi-diagram-3-fill me-1"></i>LỘ TRÌNH CHI TIẾT TỪNG BƯỚC
+                            </span>
+                            <strong class="text-dark fs-6">${plan.planName}</strong>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 small">
+                            <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                <i class="bi bi-calendar-check text-primary me-1"></i>
+                                <span>Dự kiến xong: </span>
+                                <strong>${plan.expectedEndDate || '---'}</strong>
+                            </span>
+                            <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" id="plan-progress-badge-${plan.planId}">
+                                ${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)
+                            </span>
+                        </div>
+                    </div>
+                    <div id="stages-container-${plan.planId}">
+                        ${stagesHtml}
+                    </div>
+                </div>
+            </td>
+        `;
+    }
+
+    function togglePlanInlineRoadmap(planId) {
+        const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
+        const chevron = document.getElementById(`chevron-plan-${planId}`);
+        if (!roadmapRow) return;
+
+        const isHidden = window.getComputedStyle(roadmapRow).display === 'none';
+        if (isHidden) {
+            roadmapRow.style.display = 'table-row';
+            if (chevron) {
+                chevron.classList.remove('bi-chevron-down');
+                chevron.classList.add('bi-chevron-up');
+            }
+        } else {
+            roadmapRow.style.display = 'none';
+            if (chevron) {
+                chevron.classList.remove('bi-chevron-up');
+                chevron.classList.add('bi-chevron-down');
+            }
         }
     }
 
-    function openPlanDetailModal(planId) {
-        fetch(`/api/doctor/treatment-plans/${planId}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Không thể tải thông tin kế hoạch điều trị');
-                return res.json();
-            })
-            .then(plan => {
-                document.getElementById('detailPlanCode').innerText = plan.planCode || '---';
-                document.getElementById('detailPlanName').innerText = plan.planName || '---';
-                document.getElementById('detailPlanCost').innerText = formatVnd(plan.finalEstimatedCost);
-                document.getElementById('detailPlanDoctor').innerText = plan.doctorName || 'Bác sĩ điều trị';
-                document.getElementById('detailPlanDates').innerText = `${plan.startDate || '---'} → ${plan.expectedEndDate || '---'}`;
-                document.getElementById('detailPlanNotes').innerText = plan.notes || 'Không có ghi chú';
+    function changeStageStatus(stageId, status) {
+        fetch(`/api/doctor/treatment-plans/stages/${stageId}/status?status=${status}`, {
+            method: 'PUT'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.message || 'Lỗi khi cập nhật trạng thái giai đoạn'); });
+            }
+            return res.json();
+        })
+        .then(result => {
+            showToast('Đã cập nhật trạng thái giai đoạn & ghi nhận thời gian thực hiện (now())!');
+            if (result.data) {
+                updatePlanInlineView(result.data);
+            }
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        });
+    }
 
-                const badge = document.getElementById('detailPlanStatusBadge');
-                badge.className = `badge ${plan.statusBadgeClass}`;
-                badge.innerText = plan.statusDisplayName;
+    function changeItemStatus(itemId, status) {
+        fetch(`/api/doctor/treatment-plans/items/${itemId}/status?status=${status}`, {
+            method: 'PUT'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.message || 'Lỗi khi cập nhật trạng thái thủ thuật'); });
+            }
+            return res.json();
+        })
+        .then(result => {
+            showToast('Đã cập nhật trạng thái bước thực hiện & ghi nhận thời gian (now())!');
+            if (result.data) {
+                updatePlanInlineView(result.data);
+            }
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        });
+    }
 
-                document.getElementById('detailProgressText').innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
-                const pBar = document.getElementById('detailProgressBar');
-                pBar.style.width = `${plan.progressPercent}%`;
-                pBar.setAttribute('aria-valuenow', plan.progressPercent);
+    function updatePlanInlineView(plan) {
+        if (!plan || !plan.planId) return;
 
-                const container = document.getElementById('detailStagesContainer');
-                container.innerHTML = '';
+        // 1. Cập nhật dòng bảng chính của Kế hoạch
+        const mainRow = document.getElementById(`plan-row-${plan.planId}`);
+        if (mainRow) {
+            const progressCell = mainRow.cells[3];
+            if (progressCell) {
+                progressCell.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between mb-1 small">
+                        <span class="fw-semibold text-secondary">${plan.completedStages}/${plan.totalStages} giai đoạn</span>
+                        <strong class="text-primary">${plan.progressPercent}%</strong>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: ${plan.progressPercent}%;"
+                             aria-valuenow="${plan.progressPercent}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                `;
+            }
 
-                if (plan.stages && plan.stages.length > 0) {
-                    plan.stages.forEach((st, idx) => {
-                        const stageBox = document.createElement('div');
-                        let boxClass = 'df-detail-stage-box';
-                        if (st.status === 'COMPLETED') boxClass += ' is-completed';
-                        else if (st.status === 'IN_PROGRESS') boxClass += ' is-in-progress';
-                        stageBox.className = boxClass;
+            const statusCell = mainRow.cells[5];
+            if (statusCell) {
+                statusCell.innerHTML = `<span class="badge ${plan.statusBadgeClass}">${plan.statusDisplayName}</span>`;
+            }
+        }
 
-                        let itemsHtml = '';
-                        if (st.items && st.items.length > 0) {
-                            itemsHtml = `
-                                <table class="table table-sm table-bordered mt-2 mb-0 bg-white" style="font-size: 12.5px;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Thủ thuật / Dịch vụ</th>
-                                            <th style="width: 80px;" class="text-center">Răng</th>
-                                            <th style="width: 60px;" class="text-center">SL</th>
-                                            <th style="width: 120px;" class="text-end">Đơn giá</th>
-                                            <th style="width: 120px;" class="text-end">Thành tiền</th>
-                                            <th style="width: 100px;" class="text-center">Trạng thái</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                            `;
-                            st.items.forEach(it => {
-                                const toothBadge = it.toothNumbers ? `<span class="badge bg-primary">R${it.toothNumbers}</span>` : '-';
-                                itemsHtml += `
-                                    <tr>
-                                        <td>
-                                            <div class="fw-semibold text-dark">${it.serviceName}</div>
-                                            ${it.notes ? `<div class="small text-muted fst-italic">${it.notes}</div>` : ''}
-                                        </td>
-                                        <td class="text-center">${toothBadge}</td>
-                                        <td class="text-center fw-bold">${it.quantity}</td>
-                                        <td class="text-end text-muted">${formatVnd(it.estimatedPrice)}</td>
-                                        <td class="text-end fw-bold text-primary">${formatVnd(it.finalPrice)}</td>
-                                        <td class="text-center"><span class="badge ${it.statusBadgeClass}">${it.statusDisplayName}</span></td>
-                                    </tr>
-                                `;
-                            });
-                            itemsHtml += '</tbody></table>';
-                        } else {
-                            itemsHtml = '<div class="text-muted small fst-italic mt-1">Không có thủ thuật trong giai đoạn này</div>';
+        // 2. Cập nhật badge tiến độ trong roadmap
+        const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
+        if (progBadge) {
+            progBadge.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
+        }
+
+        // 3. Cập nhật từng giai đoạn và thủ thuật
+        if (plan.stages && plan.stages.length > 0) {
+            plan.stages.forEach(st => {
+                const card = document.getElementById(`stage-card-${st.stageId}`);
+                if (card) {
+                    card.classList.remove('is-completed', 'is-in-progress', 'is-pending');
+                    if (st.status === 'COMPLETED') card.classList.add('is-completed');
+                    else if (st.status === 'IN_PROGRESS') card.classList.add('is-in-progress');
+                    else card.classList.add('is-pending');
+                }
+
+                const compBadge = document.getElementById(`stage-completed-badge-${st.stageId}`);
+                if (compBadge) {
+                    if (st.completedAt) {
+                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success';
+                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>`;
+                    } else {
+                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border';
+                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>`;
+                    }
+                }
+
+                const stageBtnGroup = document.getElementById(`stage-btn-group-${st.stageId}`);
+                if (stageBtnGroup) {
+                    const btns = stageBtnGroup.querySelectorAll('button');
+                    if (btns.length >= 3) {
+                        btns[0].className = `btn btn-sm ${st.status === 'PENDING' ? 'btn-secondary text-white fw-bold' : 'btn-outline-secondary'}`;
+                        btns[1].className = `btn btn-sm ${st.status === 'IN_PROGRESS' ? 'btn-primary text-white fw-bold' : 'btn-outline-primary'}`;
+                        btns[2].className = `btn btn-sm ${st.status === 'COMPLETED' ? 'btn-success text-white fw-bold' : 'btn-outline-success'}`;
+                    }
+                }
+
+                if (st.items && st.items.length > 0) {
+                    st.items.forEach(it => {
+                        const itCompCell = document.getElementById(`item-completed-cell-${it.planItemId}`);
+                        if (itCompCell) {
+                            itCompCell.innerHTML = it.completedAt
+                                ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
+                                : '<span class="text-muted">---</span>';
                         }
 
-                        stageBox.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-dark fw-bold">Giai đoạn ${st.stageOrder}</span>
-                                    <strong class="text-dark">${st.stageName}</strong>
-                                    <small class="text-muted">(${st.estimatedDaysFromStart} ngày từ bắt đầu)</small>
-                                </div>
-                                <span class="badge ${st.statusBadgeClass}">${st.statusDisplayName}</span>
-                            </div>
-                            ${st.description ? `<div class="small text-secondary mb-2">${st.description}</div>` : ''}
-                            ${itemsHtml}
-                        `;
+                        const itStatusCell = document.getElementById(`item-status-cell-${it.planItemId}`);
+                        if (itStatusCell) {
+                            itStatusCell.innerHTML = `<span class="badge px-2 py-1 rounded-pill ${it.statusBadgeClass}">${it.statusDisplayName}</span>`;
+                        }
 
-                        container.appendChild(stageBox);
+                        const itBtnGroup = document.getElementById(`item-btn-group-${it.planItemId}`);
+                        if (itBtnGroup) {
+                            const btns = itBtnGroup.querySelectorAll('button');
+                            if (btns.length >= 3) {
+                                btns[0].className = `btn btn-sm ${it.status === 'COMPLETED' ? 'btn-success text-white' : 'btn-outline-success'}`;
+                                btns[1].className = `btn btn-sm ${it.status === 'IN_PROGRESS' ? 'btn-primary text-white' : 'btn-outline-primary'}`;
+                                btns[2].className = `btn btn-sm ${it.status === 'PLANNED' ? 'btn-secondary text-white' : 'btn-outline-secondary'}`;
+                            }
+                        }
                     });
-                } else {
-                    container.innerHTML = '<div class="text-muted text-center py-3">Phác đồ chưa có giai đoạn nào</div>';
                 }
-
-                if (planDetailModalInstance) {
-                    planDetailModalInstance.show();
-                }
-            })
-            .catch(err => {
-                showToast(err.message, true);
             });
+        }
     }
 
     function promptUpdatePlanStatus(planId, currentStatus) {
@@ -4098,12 +4896,8 @@
         })
         .then(result => {
             showToast('Đã cập nhật trạng thái kế hoạch thành công!');
-            const row = document.getElementById(`plan-row-${planId}`);
-            if (row) {
-                const statusCell = row.cells[5];
-                if (statusCell && result.data) {
-                    statusCell.innerHTML = `<span class="badge ${result.data.statusBadgeClass}">${result.data.statusDisplayName}</span>`;
-                }
+            if (result.data) {
+                updatePlanInlineView(result.data);
             }
         })
         .catch(err => {
@@ -4129,12 +4923,429 @@
             showToast('Đã xóa kế hoạch điều trị thành công!');
             const row = document.getElementById(`plan-row-${planId}`);
             if (row) row.remove();
+            const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
+            if (roadmapRow) roadmapRow.remove();
             updatePlanCountBadge();
         })
         .catch(err => {
             showToast(err.message, true);
         });
     }
+
+    // =========================================================================
+    // MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY CONTROLLER
+    // =========================================================================
+    let dvdState = {
+        dateMode: 'THIS_WEEK',
+        dateValue: null,
+        startDate: null,
+        endDate: null,
+        periodLabel: '',
+        status: 'ALL',
+        search: '',
+        debounceTimer: null,
+        allFetchedVisits: []
+    };
+
+    function getTodayIsoString() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getYesterdayIsoString() {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function computeDvdWeekRange(refDate, offset = 0) {
+        const d = new Date(refDate);
+        d.setDate(d.getDate() + (offset * 7));
+        const day = d.getDay();
+        const diffToMonday = (day === 0 ? -6 : 1) - day;
+        const monday = new Date(d);
+        monday.setDate(d.getDate() + diffToMonday);
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        const formatIso = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+        const formatVn = dt => `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+
+        return {
+            startDate: formatIso(monday),
+            endDate: formatIso(sunday),
+            label: `Tuần ${offset === 0 ? 'này' : 'trước'} (${formatVn(monday)} – ${formatVn(sunday)})`
+        };
+    }
+
+    function getCurrentExamVisitId() {
+        const vEl = document.getElementById('visitId');
+        return (vEl && vEl.value) ? Number(vEl.value) : 0;
+    }
+
+    function openDailyVisitsDrawer() {
+        const drawer = document.getElementById('dailyVisitsDrawer');
+        const backdrop = document.getElementById('dailyVisitsBackdrop');
+        if (drawer && backdrop) {
+            backdrop.classList.add('is-open');
+            drawer.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            // Tải dữ liệu mới nhất
+            loadDailyVisits();
+            // Focus ô tìm kiếm của drawer
+            setTimeout(() => {
+                const searchInp = document.getElementById('dvdSearchInput');
+                if (searchInp) searchInp.focus();
+            }, 300);
+        }
+    }
+
+    function closeDailyVisitsDrawer() {
+        const drawer = document.getElementById('dailyVisitsDrawer');
+        const backdrop = document.getElementById('dailyVisitsBackdrop');
+        if (drawer && backdrop) {
+            backdrop.classList.remove('is-open');
+            drawer.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function refreshDailyVisits() {
+        loadDailyVisits();
+    }
+
+    function setDvdDateFilter(mode) {
+        dvdState.dateMode = mode;
+        const allBtns = document.querySelectorAll('.dvd-date-btn');
+        allBtns.forEach(b => b.classList.remove('is-active'));
+        const picker = document.getElementById('dvdDatePicker');
+
+        if (mode === 'TODAY') {
+            document.getElementById('btnDateToday')?.classList.add('is-active');
+            dvdState.startDate = null;
+            dvdState.endDate = null;
+            dvdState.dateValue = getTodayIsoString();
+            dvdState.periodLabel = "Hôm nay";
+            if (picker) picker.value = dvdState.dateValue;
+        } else if (mode === 'YESTERDAY') {
+            document.getElementById('btnDateYesterday')?.classList.add('is-active');
+            dvdState.startDate = null;
+            dvdState.endDate = null;
+            dvdState.dateValue = getYesterdayIsoString();
+            dvdState.periodLabel = "Hôm qua";
+            if (picker) picker.value = dvdState.dateValue;
+        } else if (mode === 'THIS_WEEK') {
+            document.getElementById('btnDateThisWeek')?.classList.add('is-active');
+            const range = computeDvdWeekRange(new Date(), 0);
+            dvdState.startDate = range.startDate;
+            dvdState.endDate = range.endDate;
+            dvdState.dateValue = null;
+            dvdState.periodLabel = range.label;
+            if (picker) picker.value = range.startDate;
+        } else if (mode === 'LAST_WEEK') {
+            document.getElementById('btnDateLastWeek')?.classList.add('is-active');
+            const range = computeDvdWeekRange(new Date(), -1);
+            dvdState.startDate = range.startDate;
+            dvdState.endDate = range.endDate;
+            dvdState.dateValue = null;
+            dvdState.periodLabel = range.label;
+            if (picker) picker.value = range.startDate;
+        } else if (mode === 'ALL') {
+            document.getElementById('btnDateAll')?.classList.add('is-active');
+            dvdState.startDate = null;
+            dvdState.endDate = null;
+            dvdState.dateValue = 'ALL';
+            dvdState.periodLabel = "Tất cả các ngày";
+            if (picker) picker.value = '';
+        }
+
+        loadDailyVisits();
+    }
+
+    function handleDvdDateChange(customDate) {
+        if (!customDate) return;
+        dvdState.dateMode = 'CUSTOM';
+        dvdState.dateValue = customDate;
+        dvdState.startDate = null;
+        dvdState.endDate = null;
+        dvdState.periodLabel = `Ngày: ${customDate}`;
+        document.querySelectorAll('.dvd-date-btn').forEach(b => b.classList.remove('is-active'));
+        loadDailyVisits();
+    }
+
+    function setDvdStatusFilter(status) {
+        dvdState.status = status;
+        document.querySelectorAll('#dvdStatusBar .dvd-status-pill').forEach(pill => {
+            if (pill.getAttribute('data-status') === status) {
+                pill.classList.add('is-active');
+            } else {
+                pill.classList.remove('is-active');
+            }
+        });
+        applyClientFilters();
+    }
+
+    function handleDvdSearch(query) {
+        const clearBtn = document.getElementById('dvdClearSearchBtn');
+        if (clearBtn) {
+            clearBtn.style.display = (query && query.trim().length > 0) ? 'block' : 'none';
+        }
+
+        clearTimeout(dvdState.debounceTimer);
+        dvdState.debounceTimer = setTimeout(() => {
+            dvdState.search = query.trim();
+            loadDailyVisits();
+        }, 250);
+    }
+
+    function clearDvdSearch() {
+        const searchInp = document.getElementById('dvdSearchInput');
+        if (searchInp) {
+            searchInp.value = '';
+            document.getElementById('dvdClearSearchBtn').style.display = 'none';
+            dvdState.search = '';
+            loadDailyVisits();
+            searchInp.focus();
+        }
+    }
+
+    function resetAllDvdFilters() {
+        dvdState.status = 'ALL';
+        dvdState.search = '';
+        const searchInp = document.getElementById('dvdSearchInput');
+        if (searchInp) searchInp.value = '';
+        const clearBtn = document.getElementById('dvdClearSearchBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        setDvdDateFilter('TODAY');
+    }
+
+    async function loadDailyVisits() {
+        const container = document.getElementById('dvdVisitsContainer');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                <div class="small mt-2">Đang tải danh sách ca khám...</div>
+            </div>
+        `;
+
+        try {
+            const currentVid = getCurrentExamVisitId();
+            const params = new URLSearchParams();
+            if (dvdState.startDate && dvdState.endDate) {
+                params.append('startDate', dvdState.startDate);
+                params.append('endDate', dvdState.endDate);
+            } else if (dvdState.dateValue) {
+                params.append('date', dvdState.dateValue);
+            }
+            if (dvdState.search) params.append('search', dvdState.search);
+            if (currentVid) params.append('currentVisitId', currentVid);
+
+            const res = await fetch(`/api/doctor/patients/daily-visits?${params.toString()}`);
+            if (!res.ok) throw new Error('Không thể tải danh sách ca khám');
+            const data = await res.json();
+            dvdState.allFetchedVisits = data || [];
+
+            updateStatusCounters(dvdState.allFetchedVisits);
+            applyClientFilters();
+            updateTopBadges(dvdState.allFetchedVisits.length);
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = `
+                <div class="p-4 text-center text-danger small">
+                    <i class="bi bi-exclamation-triangle fs-3 d-block mb-1"></i>
+                    <span>Lỗi khi tải dữ liệu: ${e.message}</span>
+                </div>
+            `;
+        }
+    }
+
+    function updateStatusCounters(list) {
+        const counts = {
+            ALL: list.length,
+            WAITING: 0,
+            IN_EXAM: 0,
+            IN_TREATMENT: 0,
+            WAITING_PARACLINICAL: 0,
+            WAITING_PAYMENT: 0,
+            COMPLETED: 0,
+            CANCELLED: 0
+        };
+
+        list.forEach(v => {
+            const st = v.status;
+            if (counts[st] !== undefined) {
+                counts[st]++;
+            }
+        });
+
+        const setTxt = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        setTxt('badgeCountAll', counts.ALL);
+        setTxt('badgeCountWaiting', counts.WAITING);
+        setTxt('badgeCountInExam', counts.IN_EXAM);
+        setTxt('badgeCountInTreatment', counts.IN_TREATMENT);
+        setTxt('badgeCountWaitingCls', counts.WAITING_PARACLINICAL);
+        setTxt('badgeCountWaitingPayment', counts.WAITING_PAYMENT);
+        setTxt('badgeCountCompleted', counts.COMPLETED);
+        setTxt('badgeCountCancelled', counts.CANCELLED);
+    }
+
+    function applyClientFilters() {
+        let filtered = dvdState.allFetchedVisits || [];
+        if (dvdState.status !== 'ALL') {
+            filtered = filtered.filter(v => v.status === dvdState.status);
+        }
+
+        renderDailyVisits(filtered);
+
+        const countTxt = document.getElementById('dvdFilteredCountText');
+        if (countTxt) countTxt.textContent = `Hiển thị: ${filtered.length} ca`;
+
+        const totalBadge = document.getElementById('dvdTotalCountBadge');
+        if (totalBadge) totalBadge.textContent = `${filtered.length} ca`;
+
+        const summaryTxt = document.getElementById('dvdSummaryText');
+        if (summaryTxt) {
+            let dateLabel = dvdState.periodLabel || (dvdState.dateValue === 'ALL' ? 'Tất cả các ngày' : dvdState.dateValue);
+            summaryTxt.textContent = `${dateLabel} • Tìm thấy ${filtered.length} ca khám`;
+        }
+    }
+
+    function renderDailyVisits(visits) {
+        const container = document.getElementById('dvdVisitsContainer');
+        if (!container) return;
+
+        if (!visits || visits.length === 0) {
+            container.innerHTML = `
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                    <h6 class="fw-bold text-dark">Không có ca khám nào</h6>
+                    <p class="small text-muted mb-3">Không tìm thấy ca khám phù hợp với bộ lọc hiện tại.</p>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="resetAllDvdFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Xóa bộ lọc
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        const currentVid = getCurrentExamVisitId();
+
+        let html = '';
+        visits.forEach(v => {
+            const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
+            const isCurrent = v.currentVisit || (currentVid && currentVid === v.visitId);
+
+            const genderBadge = v.gender === 'Nữ'
+                ? '<span class="text-danger"><i class="bi bi-gender-female"></i> Nữ</span>'
+                : '<span class="text-primary"><i class="bi bi-gender-male"></i> Nam</span>';
+
+            const ageText = v.age ? ` • ${v.age} tuổi` : '';
+
+            html += `
+                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId})">
+                    <div class="dvd-card-header">
+                        <div class="d-flex align-items-center flex-grow-1 me-2">
+                            <div class="dvd-avatar">
+                                ${firstLetter}
+                            </div>
+                            <div class="dvd-card-info">
+                                <h6 class="dvd-patient-name">
+                                    <span>${escapeHtml(v.fullName)}</span>
+                                    ${isCurrent ? '<span class="badge bg-primary text-white" style="font-size: 10px;">Đang khám ca này</span>' : ''}
+                                </h6>
+                                <div class="dvd-meta-row">
+                                    <span class="badge bg-light text-primary border" style="font-family: monospace; font-size: 10.5px;">${escapeHtml(v.patientCode)}</span>
+                                    <span><i class="bi bi-telephone text-secondary"></i> ${escapeHtml(v.phoneNumber || '---')}</span>
+                                    <span>${genderBadge}${ageText}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge ${v.statusBadgeClass} px-2 py-1" style="font-size: 11px;">
+                                ${escapeHtml(v.statusDisplayName)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="dvd-meta-row text-secondary" style="font-size: 11.5px; background: #f8fafc; padding: 6px 10px; border-radius: 6px;">
+                        <span><i class="bi bi-clock-history text-primary"></i> ${v.checkInTime} • ${v.checkInDate}</span>
+                        <span>•</span>
+                        <span><i class="bi bi-hash text-muted"></i> ${escapeHtml(v.visitCode)}</span>
+                        <span>•</span>
+                        <span><i class="bi bi-person-badge text-secondary"></i> ${escapeHtml(v.doctorName)}</span>
+                    </div>
+
+                    <div class="dvd-card-footer">
+                        <div class="text-truncate text-muted me-2" style="max-width: 280px;" title="${escapeHtml(v.initialSymptoms || '')}">
+                            <i class="bi bi-chat-left-dots text-secondary me-1"></i>
+                            <span>${escapeHtml(v.initialSymptoms || 'Khám theo yêu cầu')}</span>
+                        </div>
+                        <div>
+                            ${isCurrent 
+                                ? '<span class="text-primary fw-bold small"><i class="bi bi-check2-circle"></i> Đang mở</span>'
+                                : '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function onSelectDailyVisitCard(visitId) {
+        if (!visitId) return;
+        const currentVid = getCurrentExamVisitId();
+        if (currentVid && Number(currentVid) === Number(visitId)) {
+            closeDailyVisitsDrawer();
+            return;
+        }
+        window.location.href = `/doctor/examination/${visitId}/diagnoses`;
+    }
+
+    function updateTopBadges(count) {
+        const topBadge = document.getElementById('topbarDailyVisitsBadge');
+        if (topBadge) topBadge.textContent = count;
+
+        const floatBadge = document.getElementById('floatDailyVisitsCount');
+        if (floatBadge) floatBadge.textContent = count;
+
+        const sidebarBadge = document.getElementById('sidebarDailyVisitsCount');
+        if (sidebarBadge) sidebarBadge.textContent = count;
+    }
+
+    // Lắng nghe phím ESC để đóng drawer
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDailyVisitsDrawer();
+        }
+    });
+
+    // Khởi tạo drawer khi trang tải xong
+    window.addEventListener('DOMContentLoaded', function() {
+        // Tải danh sách ca khám tuần này để hiển thị đầy đủ
+        setDvdDateFilter('THIS_WEEK');
+
+        // Kiểm tra nếu có tham số URL ?openDailyVisits=true
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('openDailyVisits') === 'true') {
+            setTimeout(openDailyVisitsDrawer, 400);
+        }
+    });
 
     // Tự động cuộn đến phân vùng tương ứng nếu có hashtag trên URL (từ Sidebar hoặc chuyển trang)
     window.addEventListener('DOMContentLoaded', () => {

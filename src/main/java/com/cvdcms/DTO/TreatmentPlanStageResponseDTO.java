@@ -21,6 +21,8 @@ public class TreatmentPlanStageResponseDTO {
     private String statusBadgeClass;
     private String statusDisplayName;
     private String completedAt;
+    private String expectedEndDate;
+    private String description;
     private BigDecimal stageTotalCost;
 
     @Builder.Default
