@@ -89,6 +89,48 @@ public class TreatmentPlanRestController {
     }
 
     /**
+     * Cập nhật trạng thái giai đoạn điều trị (SCR-15.3 - Ghi nhận now() và tiến độ)
+     */
+    @PutMapping("/stages/{stageId}/status")
+    public ResponseEntity<?> updateStageStatus(@PathVariable Long stageId, @RequestParam String status) {
+        try {
+            TreatmentPlanResponseDTO updatedPlan = treatmentPlanService.updateStageStatus(stageId, status);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã cập nhật trạng thái giai đoạn thành công!");
+            response.put("data", updatedPlan);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error updating stage status: ", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * Cập nhật trạng thái từng thủ thuật / dịch vụ trong giai đoạn (Ghi nhận now())
+     */
+    @PutMapping("/items/{itemId}/status")
+    public ResponseEntity<?> updateItemStatus(@PathVariable Long itemId, @RequestParam String status) {
+        try {
+            TreatmentPlanResponseDTO updatedPlan = treatmentPlanService.updateItemStatus(itemId, status);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã cập nhật trạng thái thủ thuật thành công!");
+            response.put("data", updatedPlan);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error updating item status: ", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
      * Xóa kế hoạch điều trị
      */
     @DeleteMapping("/{id}")

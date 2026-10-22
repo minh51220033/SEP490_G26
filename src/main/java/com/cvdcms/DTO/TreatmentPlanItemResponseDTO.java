@@ -25,4 +25,5 @@ public class TreatmentPlanItemResponseDTO {
     private String status; // PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
     private String statusBadgeClass;
     private String statusDisplayName;
+    private String completedAt;
 }

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "treatment_plan_items")
@@ -44,4 +45,7 @@ public class TreatmentPlanItem {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TreatmentPlanItemStatus status = TreatmentPlanItemStatus.PLANNED;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 }
