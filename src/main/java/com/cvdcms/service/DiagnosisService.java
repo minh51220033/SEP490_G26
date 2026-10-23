@@ -1,5 +1,6 @@
 package com.cvdcms.service;
 
+import com.cvdcms.DTO.ClinicalCompletionCheckDTO;
 import com.cvdcms.DTO.DiagnosisRequestDTO;
 import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.entity.Visit;
@@ -17,4 +18,10 @@ public interface DiagnosisService {
     Visit getVisitOrThrow(Long visitId);
 
     List<Visit> getAvailableVisitsForDiagnosis();
+
+    ClinicalCompletionCheckDTO checkClinicalCompletionReadiness(Long visitId);
+
+    Visit completeClinicalExamination(Long visitId, String doctorNotes);
+
+    Visit reopenClinicalExamination(Long visitId, String reason);
 }

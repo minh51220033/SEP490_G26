@@ -62,6 +62,7 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     Optional<CustomerCareTask> findByIdWithDetails(@Param("taskId") Long taskId);
 
+    List<CustomerCareTask> findByAppointment_AppointmentId(Long appointmentId);
     /**
      * Lấy toàn bộ công việc CSKH của một chi nhánh (hoặc tất cả chi nhánh nếu branchId = null) kèm thông tin liên kết.
      */
@@ -84,6 +85,7 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<CustomerCareTask> findAllByBranchWithDetails(@Param("branchId") Long branchId);
 
+    List<CustomerCareTask> findByVisit_VisitId(Long visitId);
     /**
      * Lấy danh sách công việc CSKH của một bệnh nhân cụ thể (phục vụ SCR-44.6).
      */
@@ -106,6 +108,7 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<CustomerCareTask> findByPatientProfileIdWithDetails(@Param("profileId") Long profileId);
 
+    List<CustomerCareTask> findByDueDateAndStatus(LocalDate dueDate, CustomerCareTaskStatus status);
     /**
      * Truy vấn các ca khám COMPLETED hợp lệ tại cơ sở (có thật hồ sơ bệnh nhân trong bảng patient_profiles
      * và chi nhánh trong bảng branches) để tránh lỗi EntityNotFoundException (ví dụ profile_id = 201 không tồn tại).
@@ -123,6 +126,7 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<Visit> findCompletedVisitsByBranchForCare(@Param("branchId") Long branchId);
 
+    List<CustomerCareTask> findByTaskTypeAndStatus(CustomerCareTaskType taskType, CustomerCareTaskStatus status);
     /**
      * Truy vấn danh sách ca khám hợp lệ tại cơ sở để hiển thị trong dropdown Lập lịch CSKH.
      */
@@ -138,6 +142,7 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<Visit> findValidVisitsByBranchForLookup(@Param("branchId") Long branchId);
 
+    Optional<CustomerCareTask> findFirstByAppointment_AppointmentId(Long appointmentId);
     /**
      * Truy vấn danh sách đơn thuốc hợp lệ tại cơ sở (bắt buộc tồn tại patientProfile, branch, visit và doctor)
      * để tránh lỗi EntityNotFoundException khi tổng hợp tự động hoặc tải danh mục.

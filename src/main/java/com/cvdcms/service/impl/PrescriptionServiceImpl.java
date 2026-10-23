@@ -2,6 +2,7 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.DTO.*;
 import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.PrescriptionService;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
         Visit visit = visitRepository.findById(request.getVisitId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám ID: " + request.getVisitId()));
+
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02). Không thể tạo đơn thuốc mới.");
+        }
 
         PatientProfile patient = visit.getPatientProfile();
         if (patient == null) {
@@ -161,10 +167,15 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Override
     @Transactional
     public void deletePrescription(Long prescriptionId) {
-        if (!prescriptionRepository.existsById(prescriptionId)) {
-            throw new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId);
+        Prescription prescription = prescriptionRepository.findById(prescriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
+
+        if (prescription.getVisit() != null &&
+                (prescription.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || prescription.getVisit().getStatus() == VisitStatus.COMPLETED)) {
+            throw new IllegalStateException("Bệnh án lâm sàng đã khóa bất biến (BR-EMR-02). Không thể xóa đơn thuốc.");
         }
-        prescriptionRepository.deleteById(prescriptionId);
+
+        prescriptionRepository.delete(prescription);
         log.info("Đã xóa đơn thuốc ID: {}", prescriptionId);
     }
 

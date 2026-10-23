@@ -7,7 +7,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
-    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -127,10 +127,6 @@
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
             </a>
-            <a th:href="@{/customer-care}" href="#" class="side-link"
-               th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''">
-                <i class="bi bi-headset" aria-hidden="true"></i><span>Chăm sóc khách hàng</span>
-            </a>
         </div>
 
         <!-- ========================================== -->
@@ -161,7 +157,25 @@
             <span>Điều phối ghế nha</span>
         </a>
 
-        <!-- 4. Kho ảnh lâm sàng Trước/Sau -->
+        <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
+        <a th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('prescriptionsSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kê đơn thuốc, dặn dò & in đơn (SCR-18.3, 18.4, 18.5)">
+            <i class="bi bi-capsule text-warning" aria-hidden="true"></i>
+            <span>Đơn thuốc &amp; Dặn dò</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT18</span>
+        </a>
+
+        <!-- 6. Kế hoạch điều trị & Lộ trình (FT15) -->
+        <a th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('treatmentPlanSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kế hoạch điều trị nhiều giai đoạn & Trợ lý AI (SCR-15.1, 15.2, 15.3 - FT15)">
+            <i class="bi bi-diagram-3-fill text-info" aria-hidden="true"></i>
+            <span>Kế hoạch điều trị</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT15</span>
+        </a>
+
+        <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
            title="Kho ảnh lâm sàng Before/After">
             <i class="bi bi-images" aria-hidden="true"></i>

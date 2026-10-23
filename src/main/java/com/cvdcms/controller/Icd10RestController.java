@@ -49,7 +49,7 @@ public class Icd10RestController {
         try {
             DiagnosisResponseDTO response = diagnosisService.addDiagnosis(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             Map<String, String> err = new HashMap<>();
             err.put("error", ex.getMessage());
             return ResponseEntity.badRequest().body(err);
@@ -69,7 +69,7 @@ public class Icd10RestController {
             res.put("success", true);
             res.put("message", "Đã xóa chẩn đoán thành công");
             return ResponseEntity.ok(res);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             Map<String, String> err = new HashMap<>();
             err.put("error", ex.getMessage());
             return ResponseEntity.badRequest().body(err);
