@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head(${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'})}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar(${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'})}"></header>
+
+        <main class="app-content">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <h2 class="h4 mb-0"
+                    th:text="${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'}">
+                </h2>
+                <a th:href="@{/admin/services}" class="btn btn-outline-secondary">
+                    Quay lại danh sách
+                </a>
+            </div>
+
+            <section class="panel">
+                <div class="panel__head">
+                    <div>
+                        <h3 class="panel__title">Thông tin nhóm dịch vụ</h3>
+                        <p class="panel__subtitle">Phân nhóm và sắp xếp danh mục dịch vụ.</p>
+                    </div>
+                </div>
+
+                <form th:object="${categoryForm}"
+                      th:action="@{${categoryEditingId == null ? '/admin/services/categories' : '/admin/services/categories/' + categoryEditingId + '/update'}}"
+                      method="post"
+                      class="p-3">
+
+                    <!-- LỖI NGHIỆP VỤ DO SERVICE TRẢ VỀ -->
+                    <div class="alert alert-danger"
+                         role="alert"
+                         th:if="${#fields.hasGlobalErrors()}">
+                        <ul class="mb-0">
+                            <li th:each="error : ${#fields.globalErrors()}"
+                                th:text="${error}">
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label for="categoryCode" class="form-label">
+                                Mã nhóm <span class="text-danger">*</span>
+                            </label>
+
+                            <input id="categoryCode"
+                                   type="text"
+                                   th:field="*{categoryCode}"
+                                   class="form-control"
+                                   th:classappend="${#fields.hasErrors('categoryCode')}
+                                        ? 'is-invalid' : ''"
+                                   minlength="2"
+                                   maxlength="30"
+                                   pattern="[A-Za-z0-9_\-]{2,30}"
+                                   title="Nhập 2–30 ký tự: chữ không dấu, số, dấu - hoặc _."
+                                   required>
+
+                            <div class="invalid-feedback"
+                                 th:errors="*{categoryCode}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label for="categoryName" class="form-label">
+                                Tên nhóm <span class="text-danger">*</span>
+                            </label>
+
+                            <input id="categoryName"
+                                   type="text"
+                                   th:field="*{categoryName}"
+                                   class="form-control"
+                                   th:classappend="${#fields.hasErrors('categoryName')}
+                                        ? 'is-invalid' : ''"
+                                   maxlength="150"
+                                   required>
+
+                            <div class="invalid-feedback"
+                                 th:errors="*{categoryName}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="categoryType" class="form-label">
+                                Loại nhóm <span class="text-danger">*</span>
+                            </label>
+
+                            <select id="categoryType"
+                                    th:field="*{categoryType}"
+                                    class="form-select"
+                                    th:classappend="${#fields.hasErrors('categoryType')}
+                                        ? 'is-invalid' : ''"
+                                    required>
+
+                                <option value="">-- Chọn loại --</option>
+                                <option value="PROCEDURE">Thủ thuật nha khoa</option>
+                                <option value="LAB">Xét nghiệm</option>
+                                <option value="XRAY">X-Ray</option>
+                                <option value="CONSULTATION">Khám / Tư vấn</option>
+                            </select>
+
+                            <div class="invalid-feedback"
+                                 th:errors="*{categoryType}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="displayOrder" class="form-label">
+                                Thứ tự hiển thị
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input id="displayOrder"
+                                   type="number"
+                                   th:field="*{displayOrder}"
+                                   class="form-control"
+                                   th:classappend="${#fields.hasErrors('displayOrder')}
+                                        ? 'is-invalid' : ''"
+                                   min="0"
+                                   step="1"
+                                   required>
+
+                            <div class="invalid-feedback"
+                                 th:errors="*{displayOrder}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="isActive" class="form-label">
+                                Trạng thái <span class="text-danger">*</span>
+                            </label>
+
+                            <select id="isActive"
+                                    th:field="*{isActive}"
+                                    class="form-select"
+                                    th:classappend="${#fields.hasErrors('isActive')}
+                                        ? 'is-invalid' : ''"
+                                    required>
+
+                                <option value="true">Đang sử dụng</option>
+                                <option value="false">Ngừng sử dụng</option>
+                            </select>
+
+                            <div class="invalid-feedback"
+                                 th:errors="*{isActive}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="small text-muted mt-3">
+                        Nhóm ngừng sử dụng sẽ không xuất hiện trong bảng giá công khai.
+                    </p>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit"
+                                class="btn btn-primary"
+                                th:text="${categoryEditingId == null}
+                                    ? 'Thêm nhóm'
+                                    : 'Lưu thay đổi'">
+                        </button>
+
+                        <a th:href="@{/admin/services}"
+                           class="btn btn-outline-secondary">
+                            Hủy
+                        </a>
+                    </div>
+                </form>
+            </section>
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+</body>
+</html>
