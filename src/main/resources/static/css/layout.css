@@ -392,16 +392,62 @@ color: #334155;
 font-weight: 500;
 transition: background .15s, color .15s;
 }
-.side-link .bi { font-size: 18px; width: 20px; text-align: center; }
+.side-link .bi { font-size: 18px; width: 20px; text-align: center; color: #2563eb; transition: color .15s; }
 .side-link:hover { background: var(--brand-50); color: var(--brand-700); }
+.side-link:hover .bi { color: var(--brand-700); }
 .side-link.is-active {
 background: var(--brand-700);
 color: #fff;
 font-weight: 700;
 box-shadow: 0 6px 16px rgba(36, 64, 142, .28);
 }
+.side-link.is-active .bi { color: #fff !important; }
 .side-link.is-disabled { color: #a3adbf; cursor: not-allowed; }
+.side-link.is-disabled .bi { color: #94a3b8; }
 .side-link.is-disabled:hover { background: transparent; color: #a3adbf; }
+
+/* Sub-link cấp 2 thụt lề chuẩn DentalFlow */
+.side-sublink {
+    margin-left: 18px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    gap: 8px;
+    border-radius: 8px;
+    color: #475569;
+    position: relative;
+    white-space: nowrap;
+}
+.side-sublink::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    width: 6px;
+    height: 1.5px;
+    background: #cbd5e1;
+    border-radius: 1px;
+}
+.side-sublink .bi {
+    font-size: 15px;
+    width: 18px;
+    color: #2563eb;
+}
+.side-sublink:hover {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+.side-sublink.is-active {
+    background: var(--brand-700);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(36, 64, 142, .24);
+}
+.side-sublink.is-active::before {
+    background: var(--brand-700);
+}
+.side-sublink.is-active .bi {
+    color: #fff !important;
+}
 
 .app-sidebar__user {
 display: flex;
@@ -1148,16 +1194,61 @@ color: #334155;
 font-weight: 500;
 transition: background .15s, color .15s;
 }
-.side-link .bi { font-size: 18px; width: 20px; text-align: center; }
+.side-link .bi { font-size: 18px; width: 20px; text-align: center; color: #2563eb; transition: color .15s; }
 .side-link:hover { background: var(--brand-50); color: var(--brand-700); }
+.side-link:hover .bi { color: var(--brand-700); }
 .side-link.is-active {
 background: var(--brand-700);
 color: #fff;
 font-weight: 700;
 box-shadow: 0 6px 16px rgba(36, 64, 142, .28);
 }
+.side-link.is-active .bi { color: #fff !important; }
 .side-link.is-disabled { color: #a3adbf; cursor: not-allowed; }
+.side-link.is-disabled .bi { color: #94a3b8; }
 .side-link.is-disabled:hover { background: transparent; color: #a3adbf; }
+
+.side-sublink {
+    margin-left: 18px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    gap: 8px;
+    border-radius: 8px;
+    color: #475569;
+    position: relative;
+    white-space: nowrap;
+}
+.side-sublink::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    width: 6px;
+    height: 1.5px;
+    background: #cbd5e1;
+    border-radius: 1px;
+}
+.side-sublink .bi {
+    font-size: 15px;
+    width: 18px;
+    color: #2563eb;
+}
+.side-sublink:hover {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+.side-sublink.is-active {
+    background: var(--brand-700);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(36, 64, 142, .24);
+}
+.side-sublink.is-active::before {
+    background: var(--brand-700);
+}
+.side-sublink.is-active .bi {
+    color: #fff !important;
+}
 
 .app-sidebar__user {
 display: flex;

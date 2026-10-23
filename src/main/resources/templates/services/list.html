@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Dịch vụ & Bảng giá')}"></head>
+
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="container-xl py-5">
+    <div class="mb-4">
+        <h1 class="h3 mb-2">Dịch vụ &amp; Bảng giá</h1>
+        <p class="text-muted mb-0">
+            Tra cứu dịch vụ nha khoa, xét nghiệm và chẩn đoán hình ảnh.
+        </p>
+    </div>
+
+    <section class="panel mb-4" aria-labelledby="catalogSearchTitle">
+        <div class="panel__head">
+            <h2 id="catalogSearchTitle" class="panel__title">Tra cứu dịch vụ</h2>
+        </div>
+
+        <form th:action="@{/services}" method="get" class="p-3" role="search">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6 col-lg-4">
+                    <label for="keyword" class="form-label">Tìm kiếm dịch vụ</label>
+                    <input id="keyword"
+                           name="keyword"
+                           type="search"
+                           class="form-control"
+                           th:value="${selectedKeyword}"
+                           placeholder="Nhập tên hoặc mã dịch vụ...">
+                </div>
+
+                <div class="col-md-6 col-lg-3">
+                    <label for="categoryId" class="form-label">Nhóm dịch vụ</label>
+                    <select id="categoryId" name="categoryId" class="form-select">
+                        <option value="">Tất cả nhóm</option>
+                        <option th:each="category : ${categories}"
+                                th:value="${category.categoryId}"
+                                th:text="${category.categoryName}"
+                                th:selected="${selectedCategoryId == category.categoryId}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 col-lg-3">
+                    <label for="serviceType" class="form-label">Loại dịch vụ</label>
+                    <select id="serviceType" name="serviceType" class="form-select">
+                        <option value="">Tất cả loại</option>
+                        <option value="PROCEDURE"
+                                th:selected="${selectedServiceType != null
+                                    and selectedServiceType.name() == 'PROCEDURE'}">
+                            Thủ thuật nha khoa
+                        </option>
+                        <option value="LAB"
+                                th:selected="${selectedServiceType != null
+                                    and selectedServiceType.name() == 'LAB'}">
+                            Xét nghiệm
+                        </option>
+                        <option value="XRAY"
+                                th:selected="${selectedServiceType != null
+                                    and selectedServiceType.name() == 'XRAY'}">
+                            X-Ray
+                        </option>
+                        <option value="CONSULTATION"
+                                th:selected="${selectedServiceType != null
+                                    and selectedServiceType.name() == 'CONSULTATION'}">
+                            Khám / Tư vấn
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 col-lg-2">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary">Tra cứu</button>
+                        <a th:href="@{/services}" class="btn btn-outline-secondary">Bỏ lọc</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" aria-labelledby="catalogPriceTitle">
+        <div class="panel__head flex-wrap gap-3">
+            <div>
+                <h2 id="catalogPriceTitle" class="panel__title">Bảng giá dịch vụ</h2>
+                <p class="panel__subtitle">
+                    Giá niêm yết gồm đơn giá chuẩn và phụ phí được công bố.
+                </p>
+                <p class="small text-muted mb-0 mt-2"
+                   th:if="${selectedKeyword != null and !#strings.isEmpty(selectedKeyword)}">
+                    Kết quả tìm kiếm cho: <strong th:text="${selectedKeyword}"></strong>
+                </p>
+            </div>
+            <span class="text-muted">
+                <strong th:text="${#lists.size(services)}">0</strong> dịch vụ
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">Dịch vụ</th>
+                    <th scope="col">Nhóm</th>
+                    <th scope="col">Loại</th>
+                    <th scope="col">Đơn vị</th>
+                    <th scope="col" class="text-end">Đơn giá</th>
+                    <th scope="col" class="text-end">Phụ phí</th>
+                    <th scope="col" class="text-end">Giá niêm yết</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="service : ${services}"
+                    th:with="listedPrice=${service.basePrice.add(service.surchargeAmount)}">
+                    <td>
+                        <div class="fw-semibold" th:text="${service.serviceName}"></div>
+                        <small class="text-muted" th:text="${service.serviceCode}"></small>
+                        <p class="small text-muted mb-0 mt-1"
+                           th:if="${service.description != null and !#strings.isEmpty(service.description)}"
+                           th:text="${service.description}">
+                        </p>
+                    </td>
+                    <td th:text="${service.category.categoryName}"></td>
+                    <td th:switch="${service.serviceType.name()}">
+                        <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
+                        <span th:case="'LAB'">Xét nghiệm</span>
+                        <span th:case="'XRAY'">X-Ray</span>
+                        <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
+                        <span th:case="*" th:text="${service.serviceType}"></span>
+                    </td>
+                    <td th:text="${service.unit}"></td>
+                    <td class="text-end text-nowrap">
+                        <span th:text="${#numbers.formatDecimal(service.basePrice, 1, 'POINT', 2, 'COMMA')}"></span> ₫
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <span th:text="${#numbers.formatDecimal(service.surchargeAmount, 1, 'POINT', 2, 'COMMA')}"></span> ₫
+                    </td>
+                    <td class="text-end text-nowrap fw-semibold">
+                        <span th:text="${#numbers.formatDecimal(listedPrice, 1, 'POINT', 2, 'COMMA')}"></span> ₫
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(services)}">
+                    <td colspan="7" class="text-center text-muted py-5">
+                        Không có dịch vụ phù hợp với từ khóa hoặc bộ lọc đã chọn.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+</body>
+</html>

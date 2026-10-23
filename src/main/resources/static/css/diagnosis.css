@@ -1,0 +1,1882 @@
+/* =====================================================================
+   CV-DCMS - Phân hệ Khám & Điều trị (Theo chuẩn DentalFlow)
+   FT14: Chẩn đoán bệnh lý theo ICD-10 (SCR-14.1)
+===================================================================== */
+
+:root {
+    --df-purple: #7c5cfc;
+    --df-purple-hover: #6941eb;
+    --df-purple-light: #f5f3ff;
+    --df-purple-border: #ddd6fe;
+    --df-dark-header: #3c424a;
+    --df-border: #e2e8f0;
+    --df-bg-gray: #f8fafc;
+    --df-text-dark: #1e293b;
+    --df-text-muted: #64748b;
+    --df-success: #10b981;
+    --df-warning: #f59e0b;
+    --df-danger: #ef4444;
+}
+
+/* =====================================================================
+   UNIFIED PATIENT RECORD HEADER (GỘP THỐNG NHẤT, GỌN GÀNG, KHÔNG RỜI RẠC)
+   ===================================================================== */
+.df-unified-header {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid var(--df-border);
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+    overflow: hidden;
+}
+
+.df-unified-top-bar {
+    background: #ffffff;
+}
+
+.df-avatar-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1e40af;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.df-stat-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.df-stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.df-breadcrumb-nav {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.df-breadcrumb-nav a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.df-breadcrumb-nav a:hover {
+    text-decoration: underline;
+}
+
+/* SUBNAV CONTAINER WITH HORIZONTAL SCROLL & CONTROLS */
+.df-subnav-container {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 0 34px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.df-subnav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    z-index: 5;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 0;
+}
+.df-subnav-arrow:hover {
+    background: #f1f5f9;
+    color: var(--df-purple);
+    border-color: var(--df-purple);
+}
+.df-subnav-arrow-left { left: 5px; }
+.df-subnav-arrow-right { right: 5px; }
+
+/* 2. DENTALFLOW SUB-NAVIGATION TABS (HỖ TRỢ CUỘN NGANG MƯỢT MÀ) */
+.df-subnav {
+    display: flex;
+    gap: 16px;
+    padding: 0 4px;
+    background: #ffffff;
+    overflow-x: auto;
+    overflow-y: hidden !important;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    scroll-behavior: smooth;
+    flex: 1;
+}
+
+.df-subnav::-webkit-scrollbar {
+    height: 3.5px;
+}
+.df-subnav::-webkit-scrollbar-track {
+    background: transparent;
+}
+.df-subnav::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.df-subnav::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.df-subnav-item {
+    padding: 11px 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: 0;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+}
+
+.df-subnav-item:hover {
+    color: var(--df-purple);
+    background: #f8fafc;
+}
+
+.df-subnav-item.active {
+    color: var(--df-purple);
+    font-weight: 700;
+    border-bottom-color: var(--df-purple);
+}
+
+/* HIỆU ỨNG SÁNG MÀU NỔI BẬT TRONG 1 GIÂY KHI CLICK TAB */
+.df-subnav-item.tab-highlight-active {
+    background: #ede9fe !important;
+    color: #6d28d9 !important;
+    border-bottom-color: #6d28d9 !important;
+    font-weight: 700 !important;
+    transform: scale(1.04);
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.2) !important;
+    animation: tabPulse1s 1s ease forwards;
+}
+
+@keyframes tabPulse1s {
+    0% {
+        background: #ede9fe;
+        transform: scale(1.05);
+    }
+    70% {
+        background: #ede9fe;
+        transform: scale(1.02);
+    }
+    100% {
+        background: transparent;
+        transform: scale(1);
+    }
+}
+
+/* HIỆU ỨNG CHỚP SÁNG PHÂN VÙNG ĐÍCH TRONG 1 GIÂY */
+.section-pulse-active {
+    outline: 2.5px solid #7c5cfc !important;
+    box-shadow: 0 0 0 6px rgba(124, 92, 252, 0.25) !important;
+    transition: all 0.3s ease;
+}
+
+/* 4. EXAMINATION SESSION CARD (GỌN GÀNG, SÁT VÀO MAIN) */
+.df-session-card {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid var(--df-border);
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.df-session-bar {
+    background: #f8fafc;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.df-session-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.df-session-title i {
+    color: #64748b;
+    font-size: 15px;
+}
+
+/* =====================================================================
+   DENTALFLOW ACCORDION BARS (GẬP GỌN NHƯ HÌNH CHỤP)
+   ===================================================================== */
+.df-foldable-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.df-foldable-bar:hover {
+    background-color: #f8fafc;
+}
+
+.df-foldable-bar.is-expanded {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.df-foldable-chevron {
+    font-size: 13px;
+    font-weight: 700;
+    width: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    transition: transform 0.2s ease, color 0.2s ease;
+    margin-right: 6px;
+}
+
+.df-foldable-bar.is-expanded .df-foldable-chevron {
+    color: #0284c7;
+}
+
+.df-foldable-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    transition: color 0.15s ease;
+}
+
+.df-foldable-bar:hover .df-foldable-title {
+    color: #0f172a;
+}
+
+.df-foldable-bar.is-expanded .df-foldable-title {
+    color: #0369a1;
+}
+
+.df-foldable-subtitle {
+    font-size: 12.5px;
+    font-weight: 400;
+    color: #94a3b8;
+    margin-left: 8px;
+    font-style: italic;
+}
+
+.df-foldable-content {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    animation: dfFadeSlideDown 0.2s ease;
+}
+
+@keyframes dfFadeSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 5. ACCORDION SECTIONS */
+.df-accordion {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.df-section-box {
+    border: 1px solid var(--df-border);
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.df-section-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #334155;
+    cursor: pointer;
+    background: #ffffff;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.df-section-header:hover {
+    background: #f8fafc;
+}
+
+.df-section-header.active {
+    background: #faf5ff;
+    color: var(--df-purple);
+    border-bottom: 1px solid var(--df-border);
+}
+
+.df-section-header .subtext {
+    font-weight: 400;
+    font-size: 12px;
+    color: #64748b;
+    margin-left: 8px;
+}
+
+.df-section-body {
+    padding: 20px;
+}
+
+/* 6. BUTTONS */
+.btn-df-purple {
+    background: var(--df-purple);
+    color: #ffffff;
+    border: 1px solid var(--df-purple);
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 18px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-df-purple:hover {
+    background: var(--df-purple-hover);
+    border-color: var(--df-purple-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(124, 92, 252, 0.25);
+}
+
+.btn-df-light {
+    background: #e2e8f0;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 18px;
+    transition: all 0.2s;
+}
+
+.btn-df-light:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+}
+
+/* 7. DENTALFLOW TABLE (DARK HEADER) */
+.df-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.df-table thead th {
+    background-color: var(--df-dark-header) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border: none;
+    vertical-align: middle;
+}
+
+.df-table thead th:first-child {
+    border-top-left-radius: 6px;
+}
+
+.df-table thead th:last-child {
+    border-top-right-radius: 6px;
+}
+
+.df-table tbody td {
+    padding: 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--df-border);
+    font-size: 13.5px;
+    color: #334155;
+}
+
+.df-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Empty state */
+.df-no-data {
+    padding: 48px 20px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+.df-no-data-icon {
+    font-size: 42px;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+}
+
+/* Status badge (matching DentalFlow 'Đang điều trị') */
+.badge-status-treating {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 1px solid #f87171;
+    color: #ef4444;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-status-completed {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 1px solid #10b981;
+    color: #10b981;
+    background: #ecfdf5;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Type Badges */
+.badge-main {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-secondary {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-diff {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* 8. COMMON DISEASES LIST (DANH SÁCH BỆNH LÝ THƯỜNG GẶP) */
+.df-list-card {
+    border: 1px solid var(--df-border);
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.df-list-header {
+    background: #f8fafc;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--df-border);
+}
+
+.df-list-header-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.df-list-search {
+    position: relative;
+}
+
+.df-list-search input {
+    font-size: 13px;
+    border-radius: 6px;
+    padding-left: 32px;
+    border: 1px solid #cbd5e1;
+}
+
+.df-list-search i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.df-list-body {
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.df-list-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: collapse;
+}
+
+.df-list-table th {
+    background: #f1f5f9;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #475569;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--df-border);
+}
+
+.df-list-row {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.df-list-row td {
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.df-list-row:hover {
+    background: #faf5ff;
+}
+
+.df-list-row.is-selected {
+    background: #f3e8ff;
+    border-left: 3px solid var(--df-purple);
+}
+
+.df-list-code {
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 12px;
+    background: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.df-list-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.df-list-select-btn {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.df-list-row:hover .df-list-select-btn {
+    background: var(--df-purple);
+    border-color: var(--df-purple);
+    color: #ffffff;
+}
+
+/* 9. FORM GHI NHẬN CHẨN ĐOÁN */
+.df-form-card {
+    border: 1px solid var(--df-border);
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 18px 20px;
+    height: 100%;
+}
+
+.df-form-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Autocomplete list */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1050;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: none;
+    margin-top: 4px;
+}
+
+.autocomplete-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s;
+}
+
+.autocomplete-item:hover {
+    background-color: #faf5ff;
+}
+
+.autocomplete-item .item-title {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: #1e293b;
+}
+
+.autocomplete-item .item-sub {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* Type Radio Boxes */
+.type-card-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.type-radio-label {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.type-radio-label input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.type-radio-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--df-border);
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.type-radio-label input[type="radio"]:checked + .type-radio-box {
+    border-color: var(--df-purple);
+    background: #faf5ff;
+}
+
+.type-radio-box.main-card .indicator { background: #ef4444; }
+.type-radio-box.sec-card .indicator { background: #f59e0b; }
+.type-radio-box.diff-card .indicator { background: #0ea5e9; }
+
+.indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Tooth FDI Selector */
+.fdi-quadrant {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+}
+
+.tooth-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tooth-btn:hover {
+    background: #f1f5f9;
+    border-color: var(--df-purple);
+}
+
+.tooth-btn.is-selected {
+    background: var(--df-purple);
+    color: #fff;
+    border-color: var(--df-purple);
+}
+
+/* =====================================================================
+   FT16: DỊCH VỤ THỰC HIỆN THỰC TẾ (SCR-16.1 & SCR-16.2)
+   Chuẩn bảng điều trị DentalFlow (image7.png, image121.png)
+===================================================================== */
+.df-treatment-card {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid var(--df-border);
+    border-radius: 0;
+    margin-top: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.df-treatment-header {
+    background: #ffffff;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--df-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.df-treatment-title-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.df-treatment-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--df-text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.df-treatment-count-badge {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.df-treatment-total-pill {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.df-btn-add-treatment {
+    background: #1890ff;
+    color: #ffffff;
+    border: none;
+    padding: 8px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.25);
+}
+
+.df-btn-add-treatment:hover {
+    background: #096dd9;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(24, 144, 255, 0.35);
+}
+
+/* Treatment Table */
+.df-treatment-table-wrapper {
+    overflow-x: auto;
+}
+
+.df-treatment-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.df-treatment-table thead tr {
+    background: var(--df-dark-header);
+    color: #ffffff;
+}
+
+.df-treatment-table th {
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    white-space: nowrap;
+}
+
+.df-treatment-table th:first-child {
+    border-top-left-radius: 0;
+}
+
+.df-treatment-table th:last-child {
+    border-top-right-radius: 0;
+}
+
+.df-treatment-table tbody tr {
+    transition: background 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.df-treatment-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.df-treatment-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.df-service-name {
+    font-weight: 700;
+    color: var(--df-text-dark);
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.df-service-category-tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.df-tooth-pill {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.df-staff-badge {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+    margin-bottom: 2px;
+}
+
+.df-staff-badge strong {
+    color: #1e293b;
+}
+
+.df-price-text {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 13.5px;
+}
+
+.df-final-price-text {
+    font-weight: 800;
+    color: #16a34a;
+    font-size: 14px;
+}
+
+.df-status-completed-badge {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Modal Form SCR-16.1 */
+.df-modal-calc-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.df-modal-calc-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.df-modal-calc-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #16a34a;
+}
+
+/* =====================================================================
+   FT18: KÊ ĐƠN THUỐC & DẶN DÒ (SCR-18.3, SCR-18.4, SCR-18.5)
+   Theo chuẩn DentalSoft (image10.png)
+===================================================================== */
+.df-presc-card {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid var(--df-border);
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 0;
+    overflow: hidden;
+}
+
+.df-presc-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--df-border);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.df-presc-title-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.df-presc-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--df-text-dark);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.df-btn-add-presc {
+    background: #1e3a8a;
+    color: #ffffff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.df-btn-add-presc:hover {
+    background: #172554;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
+}
+
+/* Preset buttons (image10.png) */
+.df-preset-container {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+}
+
+.df-preset-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.df-preset-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-block;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.df-preset-btn:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.df-preset-btn.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+}
+
+/* Modal Drug Items Table */
+.df-drug-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.df-drug-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.df-drug-table td {
+    padding: 8px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.df-drug-table input, .df-drug-table select {
+    font-size: 13px;
+}
+
+/* Print Modal Layout (SCR-18.5) */
+.print-prescription-box {
+    background: #ffffff;
+    padding: 30px;
+    font-family: 'Times New Roman', Times, serif;
+    color: #000000;
+}
+
+.print-clinic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.print-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 15px 0 20px 0;
+    letter-spacing: 1px;
+}
+
+.print-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 20px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.print-drugs-list {
+    margin-bottom: 25px;
+}
+
+.print-drug-row {
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.print-drug-name {
+    font-weight: bold;
+}
+
+.print-drug-usage {
+    font-style: italic;
+    margin-left: 20px;
+    color: #333333;
+}
+
+.print-footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 30px;
+    font-size: 14px;
+}
+
+.print-signature-box {
+    text-align: center;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printablePrescriptionArea, #printablePrescriptionArea * {
+        visibility: visible;
+    }
+    #printablePrescriptionArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+    }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.df-highlight-section {
+    animation: dfPulseHighlight 2s ease;
+}
+
+@keyframes dfPulseHighlight {
+    0% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.45); }
+    100% { box-shadow: none; }
+}
+
+/* =====================================================================
+   FT15: KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ (SCR-15.1, SCR-15.2, SCR-15.3)
+===================================================================== */
+.df-plan-card {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid var(--df-border);
+    border-radius: 0;
+    margin-top: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.df-plan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--df-border);
+}
+
+.df-plan-title-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.df-plan-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--df-text-dark);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.df-btn-add-plan {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+}
+
+.df-btn-add-plan:hover {
+    background: linear-gradient(135deg, #0369a1, #075985);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(2, 132, 199, 0.3);
+}
+
+/* AI Box styling */
+.df-ai-assistant-card {
+    background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+}
+
+.df-ai-badge {
+    background: linear-gradient(135deg, #059669, #0284c7);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Stage timeline in plan detail */
+.df-stage-timeline {
+    position: relative;
+    padding-left: 28px;
+}
+.df-stage-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: #cbd5e1;
+}
+.df-stage-node {
+    position: relative;
+    margin-bottom: 20px;
+}
+.df-stage-node::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 2px #2563eb;
+}
+.df-stage-node.is-completed::before {
+    background: #10b981;
+    box-shadow: 0 0 0 2px #10b981;
+}
+
+.df-stage-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Treatment Plan Modal Editor & Stage Builder Styles */
+.df-plan-stage-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.df-plan-stage-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+.df-plan-stage-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.df-plan-stage-title-input {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: #1e293b;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    width: 60%;
+}
+
+.df-plan-stage-title-input:hover,
+.df-plan-stage-title-input:focus {
+    background: #ffffff;
+    border-color: #93c5fd;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+}
+
+.df-plan-items-table {
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 13px;
+}
+
+.df-plan-items-table th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+}
+
+.df-plan-items-table td {
+    padding: 8px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.df-btn-add-item {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0284c7;
+    background: #f0f9ff;
+    border: 1px dashed #bae6fd;
+    border-radius: 6px;
+    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.df-btn-add-item:hover {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+    color: #0369a1;
+}
+
+.df-plan-total-summary {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.df-ai-prompt-box {
+    background: #ffffff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.df-pulse-anim {
+    animation: df-pulse 1.5s infinite;
+}
+
+@keyframes df-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.df-detail-stage-box {
+    border-left: 3px solid #0284c7;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.df-detail-stage-box.is-completed {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+}
+
+.df-detail-stage-box.is-in-progress {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+}
+
+/* =====================================================================
+   FT15: INLINE TREATMENT PLAN ROADMAP & PROGRESS (SCR-15.3 INLINE VIEW)
+   Không dùng popup modal - Hiển thị trực tiếp các giai đoạn & bước
+   ===================================================================== */
+.df-plan-roadmap-row {
+    transition: all 0.3s ease;
+}
+
+.df-inline-roadmap-container {
+    background: #f8fafc;
+    border-top: 1.5px dashed #cbd5e1;
+    border-bottom: 2px solid #e2e8f0;
+    border-radius: 0 0 10px 10px;
+}
+
+.df-inline-stage-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    transition: all 0.2s ease;
+}
+
+.df-inline-stage-card:hover {
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.df-inline-stage-card.is-completed {
+    border-left-color: #10b981 !important;
+    background: #f0fdf4 !important;
+}
+
+.df-inline-stage-card.is-in-progress {
+    border-left-color: #0284c7 !important;
+    background: #f0f9ff !important;
+}
+
+.df-inline-stage-card.is-pending {
+    border-left-color: #94a3b8 !important;
+    background: #ffffff !important;
+}
+
+/* =====================================================================
+   MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY
+   ===================================================================== */
+.daily-visits-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.daily-visits-drawer-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.daily-visits-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 480px;
+    max-width: 96vw;
+    height: 100vh;
+    background: #ffffff;
+    z-index: 1055;
+    box-shadow: -8px 0 35px rgba(0, 0, 0, 0.16);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.daily-visits-drawer.is-open {
+    transform: translateX(0);
+}
+
+.dvd-header {
+    padding: 16px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dvd-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.dvd-filter-section {
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dvd-search-box {
+    position: relative;
+}
+
+.dvd-search-box input {
+    width: 100%;
+    padding: 8px 36px 8px 36px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #ffffff;
+}
+
+.dvd-search-box input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.dvd-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.dvd-clear-search {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 16px;
+    display: none;
+}
+
+/* Date filter chips & picker */
+.dvd-date-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dvd-date-btn {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dvd-date-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.dvd-date-btn.is-active {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+}
+
+.dvd-date-picker-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #334155;
+    background: #ffffff;
+    height: 28px;
+}
+
+/* Status chips horizontal scroll */
+.dvd-status-bar {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+}
+
+.dvd-status-pill {
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dvd-status-pill:hover {
+    background: #f1f5f9;
+}
+
+.dvd-status-pill.is-active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+/* Quick summary bar */
+.dvd-summary-bar {
+    padding: 8px 20px;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* Scrollable visit list */
+.dvd-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f8fafc;
+}
+
+/* Visit Card */
+.dvd-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.dvd-card:hover {
+    border-color: #38bdf8;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    transform: translateY(-1px);
+}
+
+.dvd-card.is-current {
+    border: 2px solid #0284c7;
+    background: #f0f9ff;
+}
+
+.dvd-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.dvd-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dvd-card-info {
+    flex: 1;
+    margin-left: 10px;
+}
+
+.dvd-patient-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 14px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dvd-meta-row {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 3px;
+}
+
+.dvd-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+    font-size: 11.5px;
+}
+
+/* Floating Drawer Toggle Button */
+.df-floating-drawer-toggle {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1040;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.df-floating-drawer-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+}
+
+
+
+
