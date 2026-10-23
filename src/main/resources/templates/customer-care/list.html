@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Chăm sóc Khách hàng (CSKH) | CV-DCMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/customer-care.css}">
+    <script th:src="@{/js/customer-care.js}" defer></script>
+</head>
+<head th:replace="~{fragments/head :: head('Trang chủ')}"></head>
+<body>
+
+
+<!-- Header công khai: logo, menu dịch vụ, tin tức -->
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- Khu vực quản trị: giữ nguyên sidebar và dashboard -->
+<div class="app-shell">
+
+    <!-- Sidebar và Backdrop -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+<main class="cc-page">
+
+    <!-- HEADER TRANG QUẢN LÝ CSKH (ĐỒNG BỘ PHONG CÁCH HOME.HTML / DENTALSOFT) -->
+    <header class="cc-topbar">
+        <div class="cc-topbar-title">
+            <p class="eyebrow">CV-DCMS · CHĂM SÓC KHÁCH HÀNG &amp; HẬU PHẪU (FT44 - UC-26)</p>
+            <h1>Quản lý Chăm sóc Khách hàng</h1>
+            <p class="subtitle">
+                Theo dõi lịch hỏi thăm sau điều trị, nhắc dùng thuốc, nhắc lịch hẹn, xử lý hẹn gọi lại và chuyển Bác sĩ tư vấn chuyên môn.
+            </p>
+        </div>
+
+        <div class="cc-topbar-controls">
+            <div class="branch-box">
+                <label for="branchId">Cơ sở / Chi nhánh</label>
+                <select id="branchId" name="branchId" aria-label="Chọn chi nhánh">
+                    <option value="">Đang tải chi nhánh...</option>
+                </select>
+            </div>
+            <div class="topbar-actions">
+                <a class="button button-secondary" th:href="@{/home}">← Trang chủ</a>
+                <button id="autoGenerateBtn" class="button button-secondary" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
+                    ⚡ Tổng hợp tự động
+                </button>
+                <button id="openCreateTaskBtn" class="button button-primary-white" type="button">
+                    + Lập lịch CSKH
+                </button>
+                <button id="refreshBtn" class="button button-secondary" type="button">
+                    ↻ Làm mới
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 4 THẺ KPI SUMMARY CARDS (SCR-44.1) -->
+    <section class="stats-grid" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
+        <article class="stat-card is-loading" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0">
+            <div class="stat-card-top">
+                <span class="stat-label">Tổng công việc CSKH</span>
+                <span class="stat-icon stat-icon-brand" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        <path d="M9 14l2 2 4-4"/>
+                    </svg>
+                </span>
+            </div>
+            <strong id="statTotalTasks" class="stat-value">—</strong>
+            <span id="statTotalTasksSub" class="stat-meta">Đang tải dữ liệu...</span>
+        </article>
+
+        <article class="stat-card stat-warning is-loading" id="kpiCardDue" data-kpi-tab="TODAY" role="button" tabindex="0">
+            <div class="stat-card-top">
+                <span class="stat-label">Cần xử lý hôm nay / Quá hạn</span>
+                <span class="stat-icon stat-icon-warning" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </span>
+            </div>
+            <strong id="statDueTasks" class="stat-value">—</strong>
+            <span id="statDueTasksSub" class="stat-meta">Đang kiểm tra lịch hẹn...</span>
+        </article>
+
+        <article class="stat-card stat-danger is-loading" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0">
+            <div class="stat-card-top">
+                <span class="stat-label">Ca chuyển Bác sĩ chuyên môn</span>
+                <span class="stat-icon stat-icon-danger" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </span>
+            </div>
+            <strong id="statEscalatedTasks" class="stat-value">—</strong>
+            <span id="statEscalatedTasksSub" class="stat-meta">Đang kiểm tra ca chuyển BS...</span>
+        </article>
+
+        <article class="stat-card stat-success is-loading" id="kpiCardCompleted" data-kpi-tab="COMPLETED_FILTER" role="button" tabindex="0">
+            <div class="stat-card-top">
+                <span class="stat-label">Đã hoàn thành chăm sóc</span>
+                <span class="stat-icon stat-icon-success" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+            </div>
+            <strong id="statCompletedTasks" class="stat-value">—</strong>
+            <span id="statCompletedTasksSub" class="stat-meta">Đang tính tỷ lệ hoàn thành...</span>
+        </article>
+    </section>
+
+    <!-- THANH ĐIỀU HƯỚNG TABS PHÂN NHÓM BỆNH NHÂN (SCR-44.2, SCR-44.5, SCR-44.6) -->
+    <nav class="tabs-bar" aria-label="Phân nhóm công việc chăm sóc khách hàng">
+        <button class="tab active" type="button" data-tab="ALL">
+            📋 Tổng quan <span class="tab-badge" id="badge_ALL">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="TODAY">
+            ⏰ Lịch hôm nay <span class="tab-badge" id="badge_TODAY">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="POST_TREATMENT">
+            🦷 Sau điều trị &amp; Đơn thuốc <span class="tab-badge" id="badge_POST_TREATMENT">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="APPOINTMENT_REMINDER">
+            📅 Nhắc lịch hẹn <span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="INSTALLMENT_REMINDER">
+            💳 Nhắc trả góp <span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="NO_SHOW_RECALL">
+            📞 Lịch hẹn lỡ <span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="NO_SERVICE_FOLLOWUP">
+            ⏸ Không làm dịch vụ <span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="FEEDBACK_COMPLAINT">
+            💬 Phản ánh <span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span>
+        </button>
+        <button class="tab tab-doctor" type="button" data-tab="ESCALATED">
+            🩺 Chuyển Bác sĩ (SCR-44.5) <span class="tab-badge" id="badge_ESCALATED">0</span>
+        </button>
+        <button class="tab" type="button" data-tab="HISTORY">
+            🕒 Lịch sử CSKH Bệnh nhân (SCR-44.6)
+        </button>
+    </nav>
+
+    <!-- THÔNG BÁO HỆ THỐNG -->
+    <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
+
+    <!-- BỘ LỌC TÌM KIẾM CHUNG (SCR-44.1 & SCR-44.2) -->
+    <section id="filterToolbarSection" class="toolbar-card" aria-label="Bộ lọc công việc CSKH">
+        <div class="filter-grid">
+            <div class="filter-field filter-keyword">
+                <label for="keyword">Tìm kiếm nhanh</label>
+                <input id="keyword" type="search" placeholder="Mã CV (TASK001), mã BN, họ tên bệnh nhân, số điện thoại, nội dung...">
+            </div>
+
+            <div class="filter-field">
+                <label for="filterStaffId">Nhân viên phụ trách</label>
+                <select id="filterStaffId">
+                    <option value="">Tất cả nhân viên</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="filterStatus">Trạng thái công việc</label>
+                <select id="filterStatus">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="PENDING">Chờ liên hệ (PENDING)</option>
+                    <option value="IN_PROGRESS">Đang chăm sóc / Hẹn gọi lại</option>
+                    <option value="ESCALATED_TO_DOCTOR">Chuyển Bác sĩ chuyên môn</option>
+                    <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
+                    <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="filterFromDate">Hạn từ ngày</label>
+                <input id="filterFromDate" type="date">
+            </div>
+
+            <div class="filter-field">
+                <label for="filterToDate">Đến ngày</label>
+                <input id="filterToDate" type="date">
+            </div>
+
+            <div class="filter-actions">
+                <button id="searchBtn" class="button button-primary" type="button">Lọc dữ liệu</button>
+                <button id="clearFilterBtn" class="button button-secondary" type="button">Xóa lọc</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PANEL 1: DANH SÁCH CÔNG VIỆC CSKH & CÁC NHÓM BỆNH NHÂN (SCR-44.1, SCR-44.2, SCR-44.5) -->
+    <section id="tasksPanel" class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 id="tasksPanelTitle">Danh sách công việc chăm sóc khách hàng</h2>
+                <p id="tasksPanelSubtitle">Quản lý lịch liên hệ bệnh nhân, ghi nhận kết quả cuộc gọi/Zalo/SMS và chuyển Bác sĩ khi có dấu hiệu bất thường.</p>
+            </div>
+            <div class="panel-actions">
+                <span id="tasksTotalBadge" class="count-pill">Đang tải...</span>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Mã CV</th>
+                    <th>Bệnh nhân</th>
+                    <th>Phân nhóm &amp; Hồ sơ gốc</th>
+                    <th>Hạn hoàn thành / Gọi lại</th>
+                    <th>Nội dung &amp; Phản hồi Bác sĩ</th>
+                    <th>Phụ trách / Bác sĩ</th>
+                    <th>Tương tác gần nhất</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="tasksTableBody">
+                <tr>
+                    <td colspan="9" class="empty">Đang tải danh sách công việc CSKH...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <button id="tasksPrevBtn" class="button button-secondary" type="button">← Trang trước</button>
+            <span id="tasksPageInfo">Trang 1 / 1</span>
+            <button id="tasksNextBtn" class="button button-secondary" type="button">Trang sau →</button>
+        </div>
+    </section>
+
+    <!-- PANEL 2: LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) -->
+    <section id="historyPanel" class="panel" hidden>
+        <div class="panel-head">
+            <div>
+                <h2>Lịch sử chăm sóc bệnh nhân (Timeline - SCR-44.6)</h2>
+                <p>Xem toàn bộ lịch sử tương tác qua Điện thoại, Zalo, SMS và các công việc chăm sóc của từng bệnh nhân.</p>
+            </div>
+            <div class="inline-filters">
+                <label for="historyPatientSelect">Chọn bệnh nhân:</label>
+                <select id="historyPatientSelect" aria-label="Chọn bệnh nhân xem lịch sử">
+                    <option value="">-- Chọn bệnh nhân --</option>
+                </select>
+                <button id="loadHistoryBtn" class="button button-primary" type="button">Xem lịch sử</button>
+            </div>
+        </div>
+
+        <!-- Thông tin tóm tắt bệnh nhân -->
+        <div id="historyPatientSummary" class="patient-summary-card" hidden></div>
+
+        <div class="history-layout">
+            <div class="history-column">
+                <h3 class="sub-heading">🕒 Timeline tương tác liên hệ (<span id="timelineCount">0</span> lần)</h3>
+                <div id="patientTimelineContainer" class="timeline-list">
+                    <p class="empty">Vui lòng chọn một bệnh nhân để xem timeline lịch sử tương tác.</p>
+                </div>
+            </div>
+
+            <div class="history-column">
+                <h3 class="sub-heading">📋 Danh sách công việc CSKH của bệnh nhân (<span id="patientTasksCount">0</span> công việc)</h3>
+                <div id="patientTasksContainer" class="patient-tasks-list">
+                    <p class="empty">Chưa chọn bệnh nhân.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ========================================================================= -->
+<!-- MODAL 1: LẬP LỊCH / PHÂN CÔNG CHĂM SÓC KHÁCH HÀNG (SCR-44.3)              -->
+<!-- ========================================================================= -->
+<div id="taskFormModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="taskFormModalTitle">
+        <div class="modal-header">
+            <h3 id="taskFormModalTitle">Lập lịch / Phân công chăm sóc khách hàng (SCR-44.3)</h3>
+            <button type="button" class="modal-close" id="closeTaskFormModalBtn" aria-label="Đóng">×</button>
+        </div>
+        <form id="taskForm">
+            <input type="hidden" id="editTaskId">
+            <div class="form-grid-2">
+                <label>
+                    Bệnh nhân cần chăm sóc *
+                    <select id="formProfileId" required>
+                        <option value="">-- Chọn bệnh nhân --</option>
+                    </select>
+                </label>
+
+                <label>
+                    Phân nhóm công việc CSKH *
+                    <select id="formCareGroup" required>
+                        <option value="POST_TREATMENT_FOLLOWUP">Chăm sóc sau điều trị (POST_TREATMENT_FOLLOWUP)</option>
+                        <option value="MEDICATION_REMINDER">Nhắc dùng thuốc theo đơn (MEDICATION_REMINDER)</option>
+                        <option value="APPOINTMENT_REMINDER">Nhắc lịch hẹn sắp tới (APPOINTMENT_REMINDER)</option>
+                        <option value="INSTALLMENT_REMINDER">Nhắc thanh toán trả góp (INSTALLMENT_REMINDER)</option>
+                        <option value="NO_SHOW_RECALL">Liên hệ lại lịch hẹn lỡ (NO_SHOW_RECALL)</option>
+                        <option value="NO_SERVICE_FOLLOWUP">Chăm sóc KH chưa làm dịch vụ (NO_SERVICE_FOLLOWUP)</option>
+                        <option value="FEEDBACK_COMPLAINT">Tiếp nhận Phản ánh / Khiếu nại (FEEDBACK_COMPLAINT)</option>
+                    </select>
+                </label>
+
+                <label>
+                    Hạn hoàn thành (Due Date) *
+                    <input id="formDueDate" type="date" required>
+                </label>
+
+                <label>
+                    Nhân viên CSKH phụ trách
+                    <select id="formAssignedStaffId">
+                        <option value="">-- Giao cho nhân viên --</option>
+                    </select>
+                </label>
+
+                <label>
+                    Liên kết Ca khám (Visit - tùy chọn)
+                    <select id="formVisitId">
+                        <option value="">-- Không liên kết ca khám --</option>
+                    </select>
+                </label>
+
+                <label>
+                    Liên kết Đơn thuốc (Prescription - tùy chọn)
+                    <select id="formPrescriptionId">
+                        <option value="">-- Không liên kết đơn thuốc --</option>
+                    </select>
+                </label>
+
+                <label class="span-2">
+                    Liên kết Lịch hẹn (Appointment - tùy chọn)
+                    <select id="formAppointmentId">
+                        <option value="">-- Không liên kết lịch hẹn --</option>
+                    </select>
+                </label>
+
+                <label class="span-2">
+                    Nội dung / Ghi chú công việc CSKH *
+                    <textarea id="formNotes" rows="3" maxlength="1000" required placeholder="Nhập nội dung cần hỏi thăm, dặn dò sau điều trị hoặc nhắc lịch cho bệnh nhân..."></textarea>
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" id="cancelTaskFormModalBtn">Hủy</button>
+                <button type="submit" class="button button-primary" id="saveTaskFormBtn">✓ Lưu lịch chăm sóc</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 2: CHI TIẾT CÔNG VIỆC & GHI KẾT QUẢ LIÊN HỆ (SCR-44.4)              -->
+<!-- ========================================================================= -->
+<div id="interactionModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="interactionModalTitle">
+        <div class="modal-header">
+            <h3 id="interactionModalTitle">Chi tiết công việc &amp; Ghi kết quả liên hệ (SCR-44.4)</h3>
+            <button type="button" class="modal-close" id="closeInteractionModalBtn" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="modal-body-scroll">
+            <!-- Thông tin công việc & hồ sơ liên kết -->
+            <div id="interactionTaskMeta" class="detail-meta-grid"></div>
+
+            <!-- Phản hồi chuyên môn của Bác sĩ (nếu có) -->
+            <div id="interactionDoctorAlert" class="doctor-response-box" hidden></div>
+
+            <!-- Form ghi nhận kết quả liên hệ mới -->
+            <form id="interactionForm" class="sub-card">
+                <input type="hidden" id="intTaskId">
+                <div class="sub-card-head">
+                    <h4>📞 Ghi nhận kết quả liên hệ mới</h4>
+                    <span class="sub-note">Nếu bệnh nhân muốn đổi/đặt lịch hẹn mới, vui lòng chọn kết quả "Đã đặt/đổi lịch hẹn" hoặc chuyển sang chức năng Quản lý lịch hẹn (FT05).</span>
+                </div>
+
+                <div class="form-grid-2">
+                    <label>
+                        Kênh liên hệ *
+                        <select id="intChannel" required>
+                            <option value="PHONE_CALL">📞 Gọi điện thoại (PHONE_CALL)</option>
+                            <option value="ZALO">💬 Nhắn tin Zalo (ZALO)</option>
+                            <option value="SMS">✉️ Tin nhắn SMS (SMS)</option>
+                            <option value="IN_PERSON">🏥 Gặp trực tiếp tại PK (IN_PERSON)</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Kết quả liên hệ *
+                        <select id="intContactResult" required>
+                            <option value="CONNECTED">✓ Đã kết nối thành công (CONNECTED)</option>
+                            <option value="BUSY">⏳ Máy bận (BUSY - Cần hẹn gọi lại)</option>
+                            <option value="NO_ANSWER">📵 Không bắt máy (NO_ANSWER - Cần hẹn gọi lại)</option>
+                            <option value="SCHEDULED_APPOINTMENT">📅 Đã đặt / đổi lịch hẹn (SCHEDULED_APPOINTMENT)</option>
+                        </select>
+                    </label>
+
+                    <label id="retryDateTimeWrap">
+                        <span id="retryDateTimeLabel">Thời gian hẹn gọi lại (next_retry_at)</span>
+                        <input id="intNextRetryAt" type="datetime-local">
+                        <small class="field-hint" id="retryHint">Bắt buộc nhập khi kết quả là Không bắt máy hoặc Máy bận.</small>
+                    </label>
+
+                    <label>
+                        Cập nhật trạng thái công việc *
+                        <select id="intNextStatus" required>
+                            <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
+                            <option value="IN_PROGRESS">Đang chăm sóc / Chờ gọi lại (IN_PROGRESS)</option>
+                            <option value="CANCELLED">Hủy công việc (CANCELLED)</option>
+                        </select>
+                    </label>
+
+                    <label class="span-2">
+                        Nội dung trao đổi / Ghi chú kết quả liên hệ *
+                        <textarea id="intNotes" rows="3" maxlength="2000" required placeholder="Ghi rõ tình trạng sức khỏe bệnh nhân, phản hồi uống thuốc hoặc thời gian bệnh nhân hẹn gọi lại..."></textarea>
+                    </label>
+                </div>
+
+                <div class="modal-footer-inline">
+                    <button type="button" class="button button-warning-outline" id="switchToEscalateFromIntBtn">
+                        🩺 Chuyển Bác sĩ hỗ trợ chuyên môn
+                    </button>
+                    <div class="right-btns">
+                        <button type="button" class="button button-secondary" id="cancelInteractionModalBtn">Đóng</button>
+                        <button type="submit" class="button button-primary" id="saveInteractionBtn">✓ Lưu kết quả liên hệ</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Lịch sử các lần liên hệ trước đó của công việc này -->
+            <div class="sub-card">
+                <h4>🕒 Lịch sử tương tác của công việc này</h4>
+                <div id="taskInteractionsList" class="timeline-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 3: CHUYỂN BÁC SĨ HỖ TRỢ CHUYÊN MÔN (SCR-44.5)                       -->
+<!-- ========================================================================= -->
+<div id="escalateModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="escalateModalTitle">
+        <div class="modal-header">
+            <h3 id="escalateModalTitle">🩺 Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)</h3>
+            <button type="button" class="modal-close" id="closeEscalateModalBtn" aria-label="Đóng">×</button>
+        </div>
+        <form id="escalateForm">
+            <input type="hidden" id="escTaskId">
+            <div id="escTaskSummary" class="info-banner"></div>
+
+            <div class="form-grid-1">
+                <label>
+                    Chọn Bác sĩ tiếp nhận xử lý chuyên môn *
+                    <select id="escDoctorId" required>
+                        <option value="">-- Chọn Bác sĩ --</option>
+                    </select>
+                </label>
+
+                <label>
+                    Triệu chứng bất thường / Nội dung cần Bác sĩ tư vấn *
+                    <textarea id="escReason" rows="4" maxlength="2000" required placeholder="Mô tả chi tiết triệu chứng bệnh nhân phản ánh (VD: sưng nướu, chảy máu kéo dài, dị ứng thuốc kháng sinh...)"></textarea>
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" id="cancelEscalateModalBtn">Hủy</button>
+                <button type="submit" class="button button-danger" id="saveEscalateBtn">🩺 Xác nhận chuyển Bác sĩ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 4: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5)                       -->
+<!-- ========================================================================= -->
+<div id="doctorResponseModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="doctorResponseModalTitle">
+        <div class="modal-header">
+            <h3 id="doctorResponseModalTitle">💬 Phản hồi chuyên môn của Bác sĩ (SCR-44.5)</h3>
+            <button type="button" class="modal-close" id="closeDoctorResponseModalBtn" aria-label="Đóng">×</button>
+        </div>
+        <form id="doctorResponseForm">
+            <input type="hidden" id="docRespTaskId">
+            <div id="docRespTaskSummary" class="info-banner"></div>
+
+            <div class="form-grid-1">
+                <label>
+                    Chỉ định / Hướng xử lý chuyên môn của Bác sĩ *
+                    <textarea id="docResponseText" rows="4" maxlength="2000" required placeholder="Nhập hướng dẫn xử lý cho nhân viên CSKH và bệnh nhân (VD: Ngưng thuốc kháng sinh hiện tại, đổi sang Paracetamol và hẹn qua phòng khám kiểm tra lại)..."></textarea>
+                </label>
+
+                <label>
+                    Trạng thái công việc sau khi Bác sĩ phản hồi *
+                    <select id="docNextStatus" required>
+                        <option value="ESCALATED_TO_DOCTOR">Giữ ở danh sách Chuyển Bác sĩ (Đã có phản hồi)</option>
+                        <option value="IN_PROGRESS">Chuyển về Đang chăm sóc để Lễ tân/CSKH gọi báo bệnh nhân</option>
+                        <option value="COMPLETED">Đánh dấu Đã hoàn thành xử lý</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" id="cancelDoctorResponseModalBtn">Hủy</button>
+                <button type="submit" class="button button-primary" id="saveDoctorResponseBtn">✓ Lưu phản hồi chuyên môn</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>
