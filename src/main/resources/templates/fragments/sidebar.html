@@ -7,7 +7,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
-    reports, audit, patients, appointments, checkin, queue
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -49,6 +49,22 @@
 
                 <i class="bi bi-tags" aria-hidden="true"></i>
                 <span>Dịch vụ &amp; Bảng giá</span>
+            </a>
+
+            <!--Danh mục thuốc-->
+            <a th:href="@{/admin/medications}"
+               class="side-link"
+               th:classappend="${activeMenu == 'medications'} ? 'is-active' : ''">
+                <i class="bi bi-capsule" aria-hidden="true"></i>
+                <span>Danh mục thuốc</span>
+            </a>
+
+            <!--Danh mục ICD-10-->
+            <a th:href="@{/admin/icd10}"
+               class="side-link"
+               th:classappend="${activeMenu == 'icd10'} ? 'is-active' : ''">
+                <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                <span>Danh mục ICD-10</span>
             </a>
 
             <a th:href="@{/admin/news}" href="#" class="side-link is-disabled" aria-disabled="true"
@@ -132,7 +148,6 @@
            title="Quản lý Quy trình Kỹ thuật Lâm sàng chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)">
             <i class="bi bi-journal-medical" aria-hidden="true"></i>
             <span>Quy trình kỹ thuật</span>
-            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">BYT</span>
         </a>
 
         <!-- 3. Điều phối & Ghế khám Kanban -->
@@ -194,11 +209,13 @@
             <span>Hồ sơ Bệnh nhân</span>
         </a>
 
-        <!-- 8. Nhắc tái khám sau điều trị -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Danh sách bệnh nhân cần nhắc tái khám">
-            <i class="bi bi-bell" aria-hidden="true"></i>
-            <span>Nhắc hẹn tái khám</span>
+        <!-- 8. Chăm sóc khách hàng & Nhắc tái khám (FT44 - Chỉ hiển thị cho ADMIN, LE_TAN, BAC_SI) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))}"
+           th:href="@{/customer-care}" class="side-link"
+           th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
+           title="Quản lý Chăm sóc khách hàng &amp; Nhắc hẹn tái khám (FT44)">
+            <i class="bi bi-headset" aria-hidden="true"></i>
+            <span>Chăm sóc khách hàng</span>
         </a>
 
         <!-- NHÓM: CÁ NHÂN BÁC SĨ -->
