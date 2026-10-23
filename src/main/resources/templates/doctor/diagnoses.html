@@ -93,6 +93,18 @@
                                 </h4>
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle"
                                       th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001')}">DEMO0001</span>
+                                <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}"
+                                      class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill">
+                                    <i class="bi bi-hourglass-split me-1"></i>Chờ thanh toán (Khóa BR-EMR-02)
+                                </span>
+                                <span th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}"
+                                      class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã hoàn tất ca khám
+                                </span>
+                                <span th:if="${visit.status != null and visit.status.name() == 'IN_EXAM'}"
+                                      class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">
+                                    <i class="bi bi-stethoscope me-1"></i>Đang khám
+                                </span>
                             </div>
                             <!-- DẢI THÔNG TIN LÂM SÀNG LIỀN MẠCH -->
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1 text-muted small">
@@ -136,37 +148,37 @@
                     </button>
 
                     <nav class="df-subnav" id="mainSubnav">
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thông tin bệnh nhân')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thông tin bệnh nhân')">
                             <i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân
                         </a>
-                        <a href="#diagnosisSection" class="df-subnav-item active" onclick="handleSubnavClick(event, this, 'diagnosisSection', 'Khám & Điều trị')">
+                        <a href="javascript:void(0)" class="df-subnav-item active" onclick="handleSubnavClick(event, this, 'diagnosisSection', 'Khám & Điều trị')">
                             <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
                         </a>
-                        <a href="#treatmentPlanSection" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'treatmentPlanSection', 'Kế hoạch điều trị')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'treatmentPlanSection', 'Kế hoạch điều trị')">
                             <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
                         </a>
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Lịch hẹn')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Lịch hẹn')">
                             <i class="bi bi-calendar-event"></i> Lịch hẹn
                         </a>
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Chăm sóc')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Chăm sóc')">
                             <i class="bi bi-chat-heart"></i> Chăm sóc
                         </a>
-                        <a href="#prescriptionsSection" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Đơn thuốc')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Đơn thuốc')">
                             <i class="bi bi-capsule"></i> Đơn thuốc
                         </a>
-                        <a href="#performedServicesSection" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'performedServicesSection', 'Dịch vụ thực hiện')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'performedServicesSection', 'Dịch vụ thực hiện')">
                             <i class="bi bi-tools"></i> Dịch vụ thực hiện
                         </a>
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Đặt xưởng')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Đặt xưởng')">
                             <i class="bi bi-box-seam"></i> Đặt xưởng
                         </a>
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Film ảnh')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'bar-photos', 'Film ảnh')">
                             <i class="bi bi-images"></i> Film ảnh
                         </a>
-                        <a href="#prescriptionsSection" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Lời dặn')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Lời dặn')">
                             <i class="bi bi-card-checklist"></i> Lời dặn
                         </a>
-                        <a href="#" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thanh toán')">
+                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thanh toán')">
                             <i class="bi bi-credit-card"></i> Thanh toán
                         </a>
                     </nav>
@@ -178,7 +190,8 @@
             </div>
 
             <!-- 4. KHỐI CA KHÁM THEO NGÀY (DENTALFLOW SESSION CARD) -->
-            <div class="df-session-card" id="diagnosisSection">
+            <div class="df-session-card" id="diagnosisSection"
+                 th:with="isClinicalLocked=${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}">
 
                 <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
                 <div class="df-session-bar">
@@ -192,12 +205,77 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
+                        <!-- NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4) -->
+                        <div id="clinicalCompletionActionWrapper" class="d-inline-flex align-items-center gap-2">
+                            <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <i class="bi bi-hourglass-split text-warning"></i>
+                                    <span>Chờ thanh toán (Đã khóa BR-EMR-02)</span>
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                        th:onclick="'reopenClinicalExamination(' + ${visit.visitId} + ')'"
+                                        title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
+                                    <i class="bi bi-unlock text-secondary"></i>
+                                    <span>Mở lại khám</span>
+                                </button>
+                            </th:block>
+
+                            <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                    <span>Đã hoàn tất &amp; Thu tiền</span>
+                                </span>
+                            </th:block>
+
+                            <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
+                                <button type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
+                                        th:onclick="'openCompleteExaminationModal(' + ${visit.visitId} + ')'"
+                                        id="btnCompleteExamination"
+                                        title="Bác sĩ khám xong bấm nút này để hệ thống kiểm tra điều kiện (ICD-10, dịch vụ COMPLETED), khóa bệnh án BR-EMR-02 và bàn giao sang Kế toán">
+                                    <i class="bi bi-check2-circle fs-6"></i>
+                                    <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
+                                </button>
+                            </th:block>
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-xs"
+                                onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
+                            <i class="bi bi-calendar2-plus-fill text-primary"></i>
+                            <span>Hẹn tái khám</span>
+                            <span class="badge bg-primary text-white rounded-pill ms-0.5" id="sessionReExamCountBadge"
+                                  th:text="${reExaminations != null ? reExaminations.size() : 0}">0</span>
+                        </button>
                         <span class="badge bg-light text-secondary border" th:if="${visit.initialSymptoms != null and !visit.initialSymptoms.isEmpty()}">
                             <i class="bi bi-chat-left-text me-1"></i>
                             <span th:text="${'Lý do: ' + visit.initialSymptoms}">Lý do khám</span>
                         </span>
                         <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-2" title="Xóa ca khám này" onclick="if(confirm('Bạn có chắc muốn xóa ca khám này?')) showToast('Chức năng bảo vệ ca khám.');">
                             <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BANNER THÔNG BÁO KHÓA BỆNH ÁN KHI ĐÃ HOÀN TẤT (BR-EMR-02) -->
+                <div th:if="${visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
+                     id="clinicalLockedBanner"
+                     class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-warning text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                            <i class="bi bi-lock-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark fs-7">
+                                <i class="bi bi-shield-lock-fill text-warning me-1"></i>BỆNH ÁN LÂM SÀNG ĐÃ ĐƯỢC KHÓA BẤT BIẾN (QUY TẮC BR-EMR-02)
+                            </div>
+                            <div class="text-secondary small mt-0.5">
+                                Bác sĩ đã hoàn tất ca khám và bàn giao dữ liệu sang bộ phận Kế toán (Người 4) để lập hóa đơn và thu tiền. Toàn bộ chẩn đoán ICD-10, dịch vụ điều trị và đơn thuốc đã được bảo vệ bất biến.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-2 mt-md-0" th:if="${visit.status.name() == 'WAITING_PAYMENT'}">
+                        <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-semibold px-3 py-1"
+                                th:onclick="'reopenClinicalExamination(' + ${visit.visitId} + ')'">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Mở lại ca khám
                         </button>
                     </div>
                 </div>
@@ -385,11 +463,11 @@
                 </div>
 
                 <!-- ============================================================= -->
-                <!-- BAR 3: CHẨN ĐOÁN VÀ ĐIỀU TRỊ (GẬP GỌN NHƯ ẢNH CHỤP)          -->
+                <!-- BAR 3: CHẨN ĐOÁN VÀ ĐIỀU TRỊ (MẶC ĐỊNH GẬP GỌN NHƯ ẢNH CHỤP)   -->
                 <!-- ============================================================= -->
-                <div class="df-foldable-bar is-expanded" id="bar-treatment" onclick="toggleMainBar('treatment')">
+                <div class="df-foldable-bar" id="bar-treatment" onclick="toggleMainBar('treatment')">
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-treatment"></i>
+                        <i class="bi bi-chevron-right df-foldable-chevron text-secondary" id="chevron-treatment"></i>
                         <span class="df-foldable-title">CHẨN ĐOÁN VÀ ĐIỀU TRỊ</span>
                         <span class="df-foldable-subtitle d-none d-md-inline">(Chẩn đoán ICD-10, Kế hoạch điều trị FT15, Dịch vụ thực hiện FT16, Đơn thuốc FT18)</span>
                     </div>
@@ -403,7 +481,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="df-foldable-content" id="content-treatment" style="display: block;">
+                <div class="df-foldable-content" id="content-treatment" style="display: none;">
                     <div class="p-3 p-md-4">
 
                     <!-- KHỐI FORM GHI NHẬN CHẨN ĐOÁN -->
@@ -638,7 +716,7 @@
                                             <button type="button" class="btn btn-df-light" onclick="resetForm()">
                                                 Hủy bỏ
                                             </button>
-                                            <button type="submit" class="btn btn-df-purple" id="btnSubmitDiagnosis">
+                                            <button type="submit" class="btn btn-df-purple" id="btnSubmitDiagnosis" th:disabled="${isClinicalLocked}">
                                                 <i class="bi bi-check-lg"></i> Lưu chẩn đoán
                                             </button>
                                         </div>
@@ -711,13 +789,17 @@
                                     <span class="text-secondary small" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
                                 </td>
                                 <td class="text-center">
-                                    <button type="button"
+                                    <button th:if="${!isClinicalLocked}"
+                                            type="button"
                                             class="btn btn-sm btn-link text-danger p-0"
                                             title="Xóa chẩn đoán này"
                                             th:data-id="${d.diagnosisId}"
                                             onclick="deleteDiagnosis(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3-fill"></i>
                                     </button>
+                                    <span th:if="${isClinicalLocked}" class="text-muted" title="Bệnh án đã khóa (BR-EMR-02)">
+                                        <i class="bi bi-lock-fill text-secondary"></i>
+                                    </span>
                                 </td>
                             </tr>
                             </tbody>
@@ -869,7 +951,7 @@
                                                      th:id="'stage-card-' + ${st.stageId}"
                                                      class="df-inline-stage-card"
                                                      th:classappend="${st.status == 'COMPLETED'} ? 'is-completed' : (${st.status == 'IN_PROGRESS'} ? 'is-in-progress' : 'is-pending')">
-                                                    
+
                                                     <!-- TIÊU ĐỀ GIAI ĐOẠN -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
                                                         <div class="d-flex align-items-center gap-2">
@@ -1027,10 +1109,13 @@
                                     </strong>
                                 </div>
 
-                                <button type="button" class="df-btn-add-treatment" onclick="openAddTreatmentModal()">
+                                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-treatment" onclick="openAddTreatmentModal()">
                                     <i class="bi bi-plus-lg"></i>
                                     <span>+ Thêm điều trị</span>
                                 </button>
+                                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã khóa (BR-EMR-02)
+                                </span>
                             </div>
                         </div>
 
@@ -1115,11 +1200,14 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ thực hiện này"
+                                        <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ thực hiện này"
                                                 th:data-id="${ps.performedId}"
                                                 onclick="deletePerformedService(this.getAttribute('data-id'))">
                                             <i class="bi bi-trash3-fill"></i>
                                         </button>
+                                        <span th:if="${isClinicalLocked}" class="text-muted" title="Bệnh án đã khóa (BR-EMR-02)">
+                                            <i class="bi bi-lock-fill text-secondary"></i>
+                                        </span>
                                     </td>
                                 </tr>
                                 </tbody>
@@ -1144,10 +1232,19 @@
                                 </span>
                             </div>
 
-                            <button type="button" class="df-btn-add-presc" onclick="openAddPrescriptionModal()">
-                                <i class="bi bi-plus-lg"></i>
-                                <span>+ Kê đơn thuốc</span>
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1 shadow-xs" onclick="openReExamModal()">
+                                    <i class="bi bi-calendar2-plus-fill"></i>
+                                    <span>+ Hẹn tái khám</span>
+                                </button>
+                                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-presc" onclick="openAddPrescriptionModal()">
+                                    <i class="bi bi-plus-lg"></i>
+                                    <span>+ Kê đơn thuốc</span>
+                                </button>
+                                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã khóa (BR-EMR-02)
+                                </span>
+                            </div>
                         </div>
 
                         <!-- BẢNG DANH SÁCH ĐƠN THUỐC ĐÃ KÊ THEO CA KHÁM -->
@@ -1212,12 +1309,15 @@
                                                     onclick="openPrintPrescriptionModal(this.getAttribute('data-id'))">
                                                 <i class="bi bi-printer-fill"></i> In
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0"
                                                     title="Xóa đơn thuốc này"
                                                     th:data-id="${pr.prescriptionId}"
                                                     onclick="deletePrescription(this.getAttribute('data-id'))">
                                                 <i class="bi bi-trash3-fill"></i>
                                             </button>
+                                            <span th:if="${isClinicalLocked}" class="text-muted" title="Bệnh án đã khóa (BR-EMR-02)">
+                                                <i class="bi bi-lock-fill text-secondary"></i>
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>
@@ -1227,6 +1327,124 @@
                     </div>
 
                 </div>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- BAR 4: FILM ẢNH & THEO DÕI LÂM SÀNG (MẶC ĐỊNH LÀ THANH GẬP GỌN) -->
+                <!-- ============================================================= -->
+                <div class="df-foldable-bar" id="bar-photos" onclick="toggleMainBar('photos')">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chevron-right df-foldable-chevron text-secondary" id="chevron-photos"></i>
+                        <span class="df-foldable-title">FILM ẢNH &amp; THEO DÕI LÂM SÀNG</span>
+                        <span class="df-foldable-subtitle d-none d-md-inline">(Kho ảnh trước/sau FT17, đối chiếu Before/After slider)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0.5 px-2.5 rounded-pill fw-bold" style="font-size: 11px;"
+                                onclick="event.stopPropagation(); openPhotoCompareModal();" title="Mở thanh trượt so sánh 2 ảnh Trước &amp; Sau">
+                            <i class="bi bi-intersect"></i> So sánh Trước &amp; Sau
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary py-0.5 px-2.5 rounded-pill fw-bold" style="font-size: 11px;"
+                                onclick="event.stopPropagation(); openUploadPhotoModal();" title="Tải ảnh chụp lâm sàng của bệnh nhân">
+                            <i class="bi bi-plus-lg"></i> Tải ảnh mới
+                        </button>
+                        <span class="badge bg-light text-primary border small" id="foldablePhotoCountBadge">
+                            <span th:text="${photoStats != null ? photoStats.get('total') : 0} + ' ảnh'">4 ảnh</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="df-foldable-content" id="content-photos" style="display: none;">
+                    <div class="p-3 p-md-4 bg-white border-bottom" id="clinicalPhotosSection">
+                        <!-- TOOLBAR LỌC ẢNH (SCR-17.1) -->
+                        <div class="df-photo-toolbar">
+                            <div class="df-photo-pill-group">
+                                <button type="button" class="df-photo-pill active" onclick="filterPhotosStage('ALL', this)">
+                                    <i class="bi bi-grid-fill"></i> Tất cả (<span id="countPillAll" th:text="${photoStats != null ? photoStats.get('total') : '0'}">4</span>)
+                                </button>
+                                <button type="button" class="df-photo-pill" onclick="filterPhotosStage('BEFORE', this)">
+                                    <span class="badge bg-warning text-dark p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
+                                    Trước điều trị (<span id="countPillBefore" th:text="${photoStats != null ? photoStats.get('before') : '0'}">2</span>)
+                                </button>
+                                <button type="button" class="df-photo-pill" onclick="filterPhotosStage('DURING', this)">
+                                    <span class="badge bg-info p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
+                                    Trong quá trình (<span id="countPillDuring" th:text="${photoStats != null ? photoStats.get('during') : '0'}">0</span>)
+                                </button>
+                                <button type="button" class="df-photo-pill" onclick="filterPhotosStage('AFTER', this)">
+                                    <span class="badge bg-success p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
+                                    Sau điều trị (<span id="countPillAfter" th:text="${photoStats != null ? photoStats.get('after') : '0'}">2</span>)
+                                </button>
+                                <button type="button" class="df-photo-pill" onclick="filterPhotosVisit(this)">
+                                    <i class="bi bi-calendar-check"></i> Ca khám này
+                                </button>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="small text-muted fw-semibold">Góc chụp:</label>
+                                <select class="form-select form-select-sm" id="photoCategorySelect" style="width: 170px;" onchange="filterPhotosCategory(this.value)">
+                                    <option value="ALL">Tất cả góc chụp</option>
+                                    <option value="SMILE">Nụ cười (Smile)</option>
+                                    <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                                    <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                    <option value="EXTRAORAL">Mặt ngoài (Extraoral)</option>
+                                    <option value="OTHER">Khác (Other)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- LƯỚI DANH SÁCH ẢNH LÂM SÀNG (SCR-17.1 GALLERY GRID) -->
+                        <div class="df-photo-grid" id="clinicalPhotoGalleryGrid">
+                            <!-- Lặp qua danh sách ảnh -->
+                            <div class="df-photo-card" th:each="photo : ${clinicalPhotos}"
+                                 th:attr="data-id=${photo.photoId}, data-stage=${photo.photoStage}, data-stagetext=${photo.photoStageText}, data-category=${photo.photoCategory}, data-visit=${photo.visitId != null ? photo.visitId : ''}, data-url=${photo.imageUrl}, data-caption=${photo.caption}, data-date=${photo.capturedAtFormatted}">
+
+                                <div class="df-photo-img-wrap" onclick="openPhotoLightboxFromCard(this)">
+                                    <img th:src="@{${photo.imageUrl}}" th:alt="${photo.caption}" loading="lazy" onerror="this.src='/images/dental-placeholder.png'">
+
+                                    <!-- Stage Badge -->
+                                    <span class="df-photo-stage-tag"
+                                          th:classappend="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'df-photo-stage-before' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'df-photo-stage-after' : 'df-photo-stage-during')"
+                                          th:text="${photo.photoStage != null ? photo.photoStage.name() : 'BEFORE'}">BEFORE</span>
+
+                                    <!-- Category Badge -->
+                                    <span class="df-photo-cat-tag" th:text="${photo.photoCategoryText}">Nụ cười</span>
+
+                                    <!-- Quick Hover Actions -->
+                                    <div class="df-photo-overlay-actions" onclick="event.stopPropagation()">
+                                        <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded shadow-sm" title="Xem ảnh phóng to"
+                                                onclick="openPhotoLightboxFromCard(this)">
+                                            <i class="bi bi-arrows-fullscreen text-dark"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-warning py-0 px-2 rounded shadow-sm fw-bold text-dark" title="Đưa vào so sánh Before/After"
+                                                onclick="selectPhotoForCompareFromCard(this)">
+                                            <i class="bi bi-intersect"></i> So sánh
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger py-0 px-2 rounded shadow-sm" title="Xóa ảnh này"
+                                                onclick="deleteClinicalPhotoFromCard(this)">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="df-photo-info">
+                                    <div class="df-photo-caption" th:text="${photo.caption}" th:title="${photo.caption}">Chú thích ảnh</div>
+                                    <div class="df-photo-date">
+                                        <i class="bi bi-clock-history"></i>
+                                        <span th:text="${photo.capturedAtFormatted}">23/10/2026 09:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EMPTY STATE NẾU CHƯA CÓ ẢNH HOẶC KHÔNG KHỚP LỌC -->
+                        <div class="df-photos-empty mt-3" id="clinicalPhotoEmptyState" th:style="${clinicalPhotos == null or clinicalPhotos.isEmpty()} ? 'display: block;' : 'display: none;'">
+                            <i class="bi bi-camera text-secondary fs-1 mb-2 d-block"></i>
+                            <h6 class="fw-bold text-dark">Chưa có ảnh chụp lâm sàng nào phù hợp</h6>
+                            <p class="text-muted small mb-3">Tải lên hình ảnh trước, trong hoặc sau điều trị để theo dõi tiến trình của bệnh nhân.</p>
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3" onclick="openUploadPhotoModal()">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Tải ảnh ngay
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2038,12 +2256,594 @@
     </div>
 </aside>
 
-<!-- FLOATING TOGGLE BUTTON: MỞ NHANH DANH SÁCH CA KHÁM BẤT KỲ LÚC NÀO -->
-<button type="button" class="df-floating-drawer-toggle" onclick="openDailyVisitsDrawer()" title="Mở danh sách ca khám trong ngày">
-    <i class="bi bi-calendar2-week-fill fs-5"></i>
-    <span>DS Khám Trong Ngày</span>
-    <span class="badge bg-white text-primary rounded-pill px-2 py-1 shadow-sm" id="floatDailyVisitsCount">0</span>
-</button>
+<!-- ===================================================================== -->
+<!-- MODAL: HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)       -->
+<!-- Kiểm tra điều kiện (ICD-10, COMPLETED) & Khóa bệnh án BR-EMR-02        -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="completeExaminationModal" tabindex="-1" aria-labelledby="completeExaminationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <!-- Modal Header -->
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #198754 0%, #0f5132 100%);">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="bg-white text-success rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px;">
+                        <i class="bi bi-check2-circle fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="completeExaminationModalLabel">Hoàn tất ca khám &amp; Chuyển thanh toán</h5>
+                        <small class="text-white-50">Kiểm tra điều kiện lâm sàng &amp; Bàn giao sang Kế toán (Người 4) lập hóa đơn</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-light-subtle">
+                <!-- 1. Patient & Visit Overview Bar -->
+                <div class="card border-0 shadow-xs rounded-3 mb-3 bg-white">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-7 d-flex align-items-center gap-2.5">
+                                <div class="df-avatar-circle bg-primary-subtle text-primary fw-bold" id="cemPatientAvatar" style="width: 44px; height: 44px; min-width: 44px; font-size: 16px;">BN</div>
+                                <div>
+                                    <div class="fw-bold text-dark fs-6" id="cemPatientName">---</div>
+                                    <div class="text-muted small">
+                                        Mã KH: <strong class="text-dark" id="cemPatientCode">---</strong> •
+                                        Mã ca: <strong class="text-primary" id="cemVisitCode">---</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-md-end">
+                                <div class="small text-muted">Bác sĩ điều trị</div>
+                                <div class="fw-bold text-dark" id="cemDoctorName">---</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Checklist điều kiện hoàn tất (BR-EMR-01 & BR-SVC-01) -->
+                <div class="card border-0 shadow-xs rounded-3 mb-3 bg-white">
+                    <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-dark small text-uppercase">
+                            <i class="bi bi-clipboard2-check-fill text-primary me-1.5"></i>Kiểm tra điều kiện hoàn tất lâm sàng
+                        </span>
+                        <span class="badge px-2.5 py-1 rounded-pill" id="cemOverallBadge">Đang kiểm tra...</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="d-flex flex-column gap-3">
+                            <!-- Điều kiện 1: Chẩn đoán ICD-10 -->
+                            <div class="p-3 rounded-3 border bg-light-subtle" id="cemDiagCard">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge rounded-circle p-1" id="cemDiagCheckIcon"><i class="bi bi-check-lg"></i></span>
+                                        <strong class="text-dark small">1. Chẩn đoán ICD-10 (Bắt buộc)</strong>
+                                    </div>
+                                    <span class="badge" id="cemDiagBadge">0 chẩn đoán</span>
+                                </div>
+                                <div id="cemDiagList" class="small text-secondary ps-4">
+                                    <!-- Render list of diagnoses -->
+                                </div>
+                                <div id="cemDiagAction" class="mt-2 ps-4" style="display: none;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small" onclick="jumpToSection('bar-exam')">
+                                        <i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán ICD-10 ngay
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Điều kiện 2: Dịch vụ thực hiện COMPLETED -->
+                            <div class="p-3 rounded-3 border bg-light-subtle" id="cemSvcCard">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge rounded-circle p-1" id="cemSvcCheckIcon"><i class="bi bi-check-lg"></i></span>
+                                        <strong class="text-dark small">2. Dịch vụ thực hiện (COMPLETED - Bắt buộc)</strong>
+                                    </div>
+                                    <span class="badge" id="cemSvcBadge">0 dịch vụ</span>
+                                </div>
+                                <div id="cemSvcList" class="small text-secondary ps-4">
+                                    <!-- Render table/list of completed services -->
+                                </div>
+                                <div id="cemSvcAction" class="mt-2 ps-4" style="display: none;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small" onclick="jumpToSection('bar-treatment')">
+                                        <i class="bi bi-plus-circle me-1"></i>Thêm dịch vụ điều trị ngay
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Điều kiện 3: Đơn thuốc & Dặn dò (Khuyến nghị) -->
+                            <div class="p-2.5 rounded-3 border bg-light-subtle d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2 ps-1">
+                                    <i class="bi bi-capsule text-primary"></i>
+                                    <span class="small text-dark fw-medium">3. Đơn thuốc &amp; Lời dặn:</span>
+                                    <span class="small text-secondary" id="cemPrescriptionStatus">Đang kiểm tra...</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none" onclick="jumpToSection('prescriptionsSection')">
+                                    Xem đơn thuốc
+                                </button>
+                            </div>
+
+                            <!-- Điều kiện 4: Hẹn tái khám (Khuyến nghị) -->
+                            <div class="p-2.5 rounded-3 border bg-light-subtle d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2 ps-1">
+                                    <i class="bi bi-calendar2-event text-primary"></i>
+                                    <span class="small text-dark fw-medium">4. Lịch hẹn tái khám:</span>
+                                    <span class="small text-secondary" id="cemReExamStatus">Đang kiểm tra...</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none" onclick="openReExamModalFromCompleteModal()">
+                                    Đặt lịch hẹn
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Tổng tiền bàn giao sang kế toán -->
+                <div class="card border-0 rounded-3 mb-3 text-white shadow-xs" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-white-50 small text-uppercase fw-semibold">Tổng tiền dịch vụ bàn giao sang Kế toán (Người 4)</div>
+                            <div class="h3 fw-bold mb-0 text-white mt-1" id="cemTotalAmount">0 đ</div>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded-circle p-2.5 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-cash-stack fs-3 text-white"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Ghi chú dặn dò bác sĩ & Cảnh báo BR-EMR-02 -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-dark mb-1">
+                        <i class="bi bi-chat-text-fill text-secondary me-1"></i>Ghi chú bàn giao / Dặn dò cho Kế toán &amp; Điều dưỡng (Tùy chọn):
+                    </label>
+                    <textarea class="form-control form-control-sm" id="cemDoctorNotes" rows="2"
+                              placeholder="Nhập ghi chú xuất hóa đơn, chính sách ưu đãi, hoặc dặn dò bệnh nhân ra viện..."></textarea>
+                </div>
+
+                <div class="alert alert-warning border border-warning-subtle small py-2 px-3 rounded-3 mb-0 d-flex align-items-start gap-2">
+                    <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <strong>Quy tắc bất biến bệnh án (BR-EMR-02):</strong> Khi bấm xác nhận, ca khám sẽ chuyển trạng thái sang <code>WAITING_PAYMENT</code> (Chờ thanh toán) và dữ liệu lâm sàng sẽ được <strong>khóa bất biến</strong>. Bác sĩ không thể sửa/xóa chẩn đoán, dịch vụ hay đơn thuốc trừ khi mở lại ca khám.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-white py-2.5 px-4 d-flex align-items-center justify-content-between border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Hủy bỏ
+                </button>
+                <button type="button" class="btn btn-success rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+                        id="btnConfirmCompleteClinical" onclick="submitClinicalCompletion()">
+                    <i class="bi bi-check2-circle fs-5"></i>
+                    <span>Xác nhận &amp; Chuyển thanh toán</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)                    -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="reExamBookingModal" tabindex="-1" aria-labelledby="reExamBookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="reExamBookingModalLabel">
+                        <i class="bi bi-calendar2-plus-fill"></i>
+                        <span>Hẹn tái khám sau điều trị (SCR-18.1)</span>
+                    </h5>
+                    <small class="text-white-50">Lập lịch tái khám, kiểm tra vết thương, dặn dò &amp; phân công nhắc hẹn CSKH</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Patient summary banner -->
+                <div class="p-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="df-avatar-circle" style="width: 40px; height: 40px; font-size: 15px;"
+                             th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">BN</div>
+                        <div>
+                            <div class="fw-bold text-dark fs-6" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Bệnh nhân</div>
+                            <div class="small text-secondary">
+                                <span th:text="${'Mã KH: ' + (patient != null ? patient.patientCode : '---')}">Mã KH</span>
+                                <span class="mx-1">•</span>
+                                <span th:text="${'SĐT: ' + (patient != null ? patient.phoneNumber : '---')}">SĐT</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end small">
+                        <div>Bác sĩ: <strong class="text-primary" th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Điều trị</strong></div>
+                        <div class="text-muted" th:text="${'Cơ sở: ' + (visit.branch != null ? visit.branch.branchName : 'Phòng khám')}">Cơ sở</div>
+                    </div>
+                </div>
+
+                <!-- Quick Date Presets -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1.5 d-flex align-items-center gap-1">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i>
+                        <span>Chọn nhanh mốc hẹn tái khám:</span>
+                    </label>
+                    <div class="d-flex flex-wrap gap-1.5">
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 small fw-semibold" onclick="setQuickReExamDate(3, 'Tái khám kiểm tra vết thương / Thay băng')">
+                            +3 ngày (Thay băng)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 small fw-semibold" onclick="setQuickReExamDate(7, 'Tái khám cắt chỉ &amp; kiểm tra huyệt ổ răng')">
+                            +7 ngày / 1 tuần (Cắt chỉ)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 small fw-semibold" onclick="setQuickReExamDate(14, 'Tái khám kiểm tra đáp ứng tủy / Lắp tạm')">
+                            +14 ngày / 2 tuần
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 small fw-semibold" onclick="setQuickReExamDate(30, 'Tái khám chỉnh nha / Siết dây cung &amp; thay thun')">
+                            +1 tháng (Siết niềng răng)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 small fw-semibold" onclick="setQuickReExamDate(90, 'Tái khám kiểm tra tích hợp xương Implant / Nha chu')">
+                            +3 tháng (Implant/Nha chu)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small" onclick="setQuickReExamDate(180, 'Khám răng định kỳ &amp; Lấy cao răng 6 tháng')">
+                            +6 tháng (Định kỳ)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date & Session Inputs -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold text-secondary mb-1">Ngày hẹn tái khám: <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="reExamDateInput" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-secondary mb-1">Buổi hẹn:</label>
+                        <select class="form-select" id="reExamSessionSelect">
+                            <option value="MORNING" selected>Sáng (08:00 - 12:00)</option>
+                            <option value="AFTERNOON">Chiều (13:30 - 17:30)</option>
+                            <option value="EVENING">Tối (17:30 - 20:30)</option>
+                            <option value="ANY">Bất kỳ giờ nào</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Giờ dự kiến:</label>
+                        <input type="time" class="form-control" id="reExamTimeInput" value="09:00">
+                    </div>
+                </div>
+
+                <!-- Doctor & Service -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Bác sĩ phụ trách tái khám:</label>
+                        <select class="form-select form-select-sm" id="reExamDoctorSelect">
+                            <option th:each="doc : ${doctors}" th:value="${doc.staffId}" th:text="${doc.fullName}"
+                                    th:selected="${visit.primaryDoctor != null and doc.staffId == visit.primaryDoctor.staffId}">
+                                BS. Lê Hoàng Nam
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Dịch vụ / Thủ thuật dự kiến:</label>
+                        <select class="form-select form-select-sm" id="reExamServiceSelect">
+                            <option value="">-- Khám &amp; Kiểm tra thông thường --</option>
+                            <option th:each="svc : ${activeServices}" th:value="${svc.serviceId}" th:text="${svc.serviceName}">
+                                Cắt chỉ / Thay chun
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Reason / Follow-up Notes -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Nội dung / Lý do tái khám &amp; Lời dặn: <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="reExamReasonInput" placeholder="Ví dụ: Tái khám cắt chỉ R38, kiểm tra lành thương..." value="Tái khám kiểm tra sau điều trị">
+                    <div class="d-flex flex-wrap gap-1 mt-1.5 small">
+                        <span class="text-muted me-1">Mẫu nhanh:</span>
+                        <span class="badge bg-light text-secondary border cursor-pointer" onclick="document.getElementById('reExamReasonInput').value = 'Tái khám cắt chỉ R38 &amp; kiểm tra lành thương'">Cắt chỉ R38</span>
+                        <span class="badge bg-light text-secondary border cursor-pointer" onclick="document.getElementById('reExamReasonInput').value = 'Tái khám chỉnh nha: Thay chun &amp; siết dây cung hàm trên'">Siết niềng răng</span>
+                        <span class="badge bg-light text-secondary border cursor-pointer" onclick="document.getElementById('reExamReasonInput').value = 'Thử sườn &amp; lắp răng sứ vĩnh viễn'">Thử sườn/Lắp sứ</span>
+                        <span class="badge bg-light text-secondary border cursor-pointer" onclick="document.getElementById('reExamReasonInput').value = 'Kiểm tra tủy lần 2 &amp; trám bít ống tủy'">Điều trị tủy đợt 2</span>
+                        <span class="badge bg-light text-secondary border cursor-pointer" onclick="document.getElementById('reExamReasonInput').value = 'Khám &amp; kiểm tra định kỳ 6 tháng'">Khám định kỳ</span>
+                    </div>
+                </div>
+
+                <!-- Customer Care Task toggle -->
+                <div class="p-3 rounded-3 mb-3 bg-light border">
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="reExamCareTaskCheck" checked>
+                        <label class="form-check-label fw-bold text-dark small" for="reExamCareTaskCheck">
+                            Tự động phân công nhiệm vụ CSKH / Lễ tân gọi điện nhắc hẹn trước 1 ngày (FT44)
+                        </label>
+                    </div>
+                    <div class="small text-muted ps-4">
+                        Hệ thống sẽ đồng bộ lịch vào danh sách <strong>"Nhắc hẹn tái khám"</strong> để điều phối nhân viên liên hệ xác nhận với bệnh nhân.
+                    </div>
+                </div>
+
+                <!-- Existing Re-examinations Table -->
+                <div class="border rounded-3 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="small fw-bold text-secondary text-uppercase">
+                            <i class="bi bi-clock-history text-primary"></i> Các lịch hẹn tái khám đã tạo của bệnh nhân:
+                        </span>
+                        <span class="badge bg-light text-primary border" id="reExamExistingCount">0 lịch hẹn</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 180px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12.5px;">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Mã hẹn</th>
+                                <th>Ngày hẹn</th>
+                                <th>Buổi / Giờ</th>
+                                <th>Bác sĩ</th>
+                                <th>Nội dung tái khám</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-center">Thao tác</th>
+                            </tr>
+                            </thead>
+                            <tbody id="reExamExistingTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-3 text-muted">Chưa có lịch hẹn tái khám nào.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2 px-3">
+                <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs" onclick="submitReExamBooking()">
+                    <i class="bi bi-check-circle-fill me-1"></i>Xác nhận đặt hẹn tái khám
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: UPLOAD ẢNH LÂM SÀNG (SCR-17.2) -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="clinicalPhotoUploadModal" tabindex="-1" aria-labelledby="photoUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="photoUploadModalLabel">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                        <span>Tải ảnh lâm sàng mới (SCR-17.2)</span>
+                    </h5>
+                    <small class="text-white-50">Lưu trữ ảnh nụ cười, khớp cắn, phim chẩn đoán theo giai đoạn</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="clinicalPhotoUploadForm" onsubmit="handlePhotoUploadSubmit(event)">
+                <div class="modal-body p-4">
+                    <!-- DROP ZONE CHO ẢNH -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Tệp hình ảnh <span class="text-danger">*</span></label>
+                        <div id="photoDropZone" class="border-2 border-dashed rounded-3 p-4 text-center bg-light"
+                             style="border-color: #cbd5e1; cursor: pointer; transition: all 0.2s ease;"
+                             onclick="document.getElementById('photoFileInput').click()">
+                            <i class="bi bi-images text-primary fs-1 mb-2 d-block"></i>
+                            <div class="fw-bold text-dark small" id="dropZoneText">Kéo &amp; thả ảnh vào đây hoặc bấm để chọn tệp</div>
+                            <small class="text-muted">Hỗ trợ JPG, PNG, WEBP (Tối đa 10MB)</small>
+                            <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handlePhotoFileSelected(this)">
+                        </div>
+
+                        <!-- KHUNG XEM TRƯỚC ẢNH VỪA CHỌN -->
+                        <div id="photoPreviewBox" class="mt-2 text-center" style="display: none;">
+                            <div class="position-relative d-inline-block rounded-3 overflow-hidden border shadow-sm" style="max-height: 180px;">
+                                <img id="photoPreviewImg" src="" alt="Preview" style="max-height: 180px; width: auto; object-fit: contain;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-1" style="line-height: 1;" onclick="clearPhotoSelection()">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div class="small text-muted mt-1" id="photoFileNameBadge"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- GIAI ĐOẠN ĐIỀU TRỊ -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Giai đoạn <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="photoStageInput" required>
+                                <option value="BEFORE" selected>Trước điều trị (Before)</option>
+                                <option value="DURING">Trong quá trình (During)</option>
+                                <option value="AFTER">Sau điều trị (After)</option>
+                            </select>
+                        </div>
+
+                        <!-- GÓC CHỤP / PHÂN LOẠI -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Phân loại góc chụp <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="photoCategoryInput" required>
+                                <option value="SMILE" selected>Nụ cười (Smile)</option>
+                                <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                                <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                <option value="EXTRAORAL">Mặt ngoài / Chân dung</option>
+                                <option value="OTHER">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- CHÚ THÍCH ẢNH -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-dark small">Chú thích lâm sàng / Ghi chú</label>
+                        <input type="text" class="form-control form-control-sm" id="photoCaptionInput" placeholder="Ví dụ: Răng 21 mẻ góc cắn, màu răng Vita A3.5..." maxlength="255">
+                        <div class="form-text small text-muted">Mô tả ngắn gọn đặc điểm tình trạng răng chụp được.</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light py-2 px-4 border-top">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 d-flex align-items-center gap-1.5" id="btnUploadPhotoSubmit">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>Lưu &amp; Tải lên</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: SO SÁNH ĐỐI CHIẾU ẢNH TRƯỚC & SAU (SCR-17.3 BEFORE/AFTER SLIDER) -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="clinicalPhotoCompareModal" tabindex="-1" aria-labelledby="compareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #0b1329;">
+            <div class="modal-header py-3 border-0" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2 bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 40px; height: 40px;">
+                        <i class="bi bi-intersect fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="compareModalLabel">
+                            Đối chiếu ảnh lâm sàng Trước &amp; Sau điều trị (SCR-17.3)
+                        </h5>
+                        <small class="text-white-50">Thanh trượt chia đôi tương tác hoặc xem song song chuẩn nha khoa thẩm mỹ</small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-light active" id="btnModeSlider" onclick="switchCompareMode('slider')">
+                            <i class="bi bi-sliders me-1"></i> Thanh trượt (Split Slider)
+                        </button>
+                        <button type="button" class="btn btn-outline-light" id="btnModeSide" onclick="switchCompareMode('side')">
+                            <i class="bi bi-layout-split me-1"></i> Song song (Side-by-Side)
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-4 text-white">
+                <!-- THANH CHỌN 2 ẢNH SO SÁNH -->
+                <div class="row g-3 align-items-center p-3 rounded-3 mb-4" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div class="col-md-5">
+                        <label class="form-label small text-warning fw-bold mb-1">
+                            <i class="bi bi-clock-history"></i> 1. Ảnh Trước điều trị (BEFORE):
+                        </label>
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary" id="compareSelectBefore" onchange="updateCompareImages()">
+                            <!-- Dynamic Before options -->
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 text-center">
+                        <button type="button" class="btn btn-outline-warning btn-sm rounded-circle p-2 mt-3" onclick="swapCompareImages()" title="Hoán đổi 2 ảnh">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label small text-success fw-bold mb-1">
+                            <i class="bi bi-check-circle-fill"></i> 2. Ảnh Sau điều trị (AFTER):
+                        </label>
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary" id="compareSelectAfter" onchange="updateCompareImages()">
+                            <!-- Dynamic After options -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 1. CHẾ ĐỘ THANH TRƯỢT SPLIT SLIDER -->
+                <div id="compareSliderWrap" class="df-ba-wrapper">
+                    <div class="df-ba-container" id="baContainer">
+                        <!-- Base After Image -->
+                        <img id="baImgAfter" src="" alt="Sau điều trị" class="df-ba-img-after">
+
+                        <!-- Clipped Before Image Overlay -->
+                        <div class="df-ba-before-wrap" id="baBeforeWrap">
+                            <img id="baImgBefore" src="" alt="Trước điều trị" class="df-ba-img-before">
+                        </div>
+
+                        <!-- Draggable Divider Handle -->
+                        <div class="df-ba-handle" id="baHandle">
+                            <div class="df-ba-handle-circle">
+                                <i class="bi bi-chevron-left"></i>
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+                        </div>
+
+                        <!-- Corner Badges -->
+                        <span class="df-ba-badge df-ba-badge-before">
+                            <i class="bi bi-clock me-1"></i> TRƯỚC ĐIỀU TRỊ
+                        </span>
+                        <span class="df-ba-badge df-ba-badge-after">
+                            <i class="bi bi-stars me-1"></i> SAU ĐIỀU TRỊ
+                        </span>
+                    </div>
+
+                    <!-- Fine-tune Range Slider bar -->
+                    <div class="p-3 text-center bg-dark border-top border-secondary">
+                        <div class="d-flex align-items-center justify-content-center gap-3">
+                            <span class="small text-warning fw-bold">Trước (Before)</span>
+                            <input type="range" class="form-range" id="baRangeSlider" min="0" max="100" value="50" style="max-width: 400px;" oninput="applySliderPercent(this.value)">
+                            <span class="small text-success fw-bold">Sau (After)</span>
+                        </div>
+                        <small class="text-white-50 mt-1 d-block">Kéo chuột trên ảnh hoặc thanh trượt bên dưới để bóc tách so sánh</small>
+                    </div>
+                </div>
+
+                <!-- 2. CHẾ ĐỘ XEM SONG SONG (SIDE-BY-SIDE) -->
+                <div id="compareSideWrap" class="df-side-by-side-wrap" style="display: none;">
+                    <div class="df-side-card">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark fw-bold px-2.5 py-1">TRƯỚC ĐIỀU TRỊ (BEFORE)</span>
+                        </div>
+                        <img id="sideImgBefore" src="" alt="Ảnh trước">
+                        <div class="df-side-card-footer">
+                            <span id="sideCaptionBefore" class="text-truncate">Chú thích ảnh trước</span>
+                            <span id="sideDateBefore" class="small text-white-50">Ngày chụp</span>
+                        </div>
+                    </div>
+
+                    <div class="df-side-card">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-success text-white fw-bold px-2.5 py-1">SAU ĐIỀU TRỊ (AFTER)</span>
+                        </div>
+                        <img id="sideImgAfter" src="" alt="Ảnh sau">
+                        <div class="df-side-card-footer">
+                            <span id="sideCaptionAfter" class="text-truncate">Chú thích ảnh sau</span>
+                            <span id="sideDateAfter" class="small text-white-50">Ngày chụp</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 py-2 px-4" style="background: #0f172a;">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng cửa sổ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: LIGHTBOX PHÓNG TO XEM CHI TIẾT ẢNH -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="clinicalPhotoLightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg bg-dark text-white" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-2 px-3 border-0 bg-black">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary" id="lightboxBadgeStage">BEFORE</span>
+                    <span class="fw-bold text-white small" id="lightboxTitle">Xem ảnh lâm sàng</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-light btn-sm py-0 px-2" onclick="rotateLightboxImg()" title="Xoay ảnh 90 độ">
+                        <i class="bi bi-arrow-repeat"></i> Xoay
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 text-center bg-black position-relative" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                <img id="lightboxImg" src="" alt="Chi tiết ảnh" style="max-height: 70vh; max-width: 100%; object-fit: contain; transition: transform 0.3s ease;">
+            </div>
+            <div class="modal-footer py-2 px-3 border-0 bg-dark justify-content-between">
+                <div class="small text-white-50">
+                    <i class="bi bi-clock-history me-1"></i> Ngày chụp: <span id="lightboxDate" class="text-white">---</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
@@ -2101,6 +2901,8 @@
                 expandMainBar('orders');
             } else if (['diagnosisSection', 'treatmentPlanSection', 'performedServicesSection', 'prescriptionsSection'].includes(sectionId)) {
                 expandMainBar('treatment');
+            } else if (['bar-photos', 'content-photos', 'clinicalPhotosSection'].includes(sectionId)) {
+                expandMainBar('photos');
             }
             const targetEl = document.getElementById(sectionId);
             if (targetEl) {
@@ -2112,9 +2914,11 @@
             }
         } else if (tabName) {
             if (tabName === 'Film ảnh') {
-                expandMainBar('orders');
-                const targetEl = document.getElementById('bar-orders');
+                expandMainBar('photos');
+                const targetEl = document.getElementById('bar-photos');
                 if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (tabName === 'Lịch hẹn') {
+                openReExamModal();
             } else {
                 showToast('Chức năng "' + tabName + '" đang được liên kết trong ca khám này.');
             }
@@ -2182,7 +2986,7 @@
         const orderId = 'CĐ' + (1000 + clinicalOrdersList.length + 1);
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
+
         clinicalOrdersList.push({
             id: orderId,
             name: orderName,
@@ -2191,7 +2995,7 @@
             time: timeStr,
             status: 'PENDING'
         });
-        
+
         renderClinicalOrders();
         showToast(`Đã thêm chỉ định: ${orderName}`);
     }
@@ -4767,101 +5571,6 @@
         });
     }
 
-    function updatePlanInlineView(plan) {
-        if (!plan || !plan.planId) return;
-
-        // 1. Cập nhật dòng bảng chính của Kế hoạch
-        const mainRow = document.getElementById(`plan-row-${plan.planId}`);
-        if (mainRow) {
-            const progressCell = mainRow.cells[3];
-            if (progressCell) {
-                progressCell.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-between mb-1 small">
-                        <span class="fw-semibold text-secondary">${plan.completedStages}/${plan.totalStages} giai đoạn</span>
-                        <strong class="text-primary">${plan.progressPercent}%</strong>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-success" role="progressbar"
-                             style="width: ${plan.progressPercent}%;"
-                             aria-valuenow="${plan.progressPercent}" aria-valuemin="0" aria-valuemax="100">
-                        </div>
-                    </div>
-                `;
-            }
-
-            const statusCell = mainRow.cells[5];
-            if (statusCell) {
-                statusCell.innerHTML = `<span class="badge ${plan.statusBadgeClass}">${plan.statusDisplayName}</span>`;
-            }
-        }
-
-        // 2. Cập nhật badge tiến độ trong roadmap
-        const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
-        if (progBadge) {
-            progBadge.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
-        }
-
-        // 3. Cập nhật từng giai đoạn và thủ thuật
-        if (plan.stages && plan.stages.length > 0) {
-            plan.stages.forEach(st => {
-                const card = document.getElementById(`stage-card-${st.stageId}`);
-                if (card) {
-                    card.classList.remove('is-completed', 'is-in-progress', 'is-pending');
-                    if (st.status === 'COMPLETED') card.classList.add('is-completed');
-                    else if (st.status === 'IN_PROGRESS') card.classList.add('is-in-progress');
-                    else card.classList.add('is-pending');
-                }
-
-                const compBadge = document.getElementById(`stage-completed-badge-${st.stageId}`);
-                if (compBadge) {
-                    if (st.completedAt) {
-                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success';
-                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>`;
-                    } else {
-                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border';
-                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>`;
-                    }
-                }
-
-                const stageBtnGroup = document.getElementById(`stage-btn-group-${st.stageId}`);
-                if (stageBtnGroup) {
-                    const btns = stageBtnGroup.querySelectorAll('button');
-                    if (btns.length >= 3) {
-                        btns[0].className = `btn btn-sm ${st.status === 'PENDING' ? 'btn-secondary text-white fw-bold' : 'btn-outline-secondary'}`;
-                        btns[1].className = `btn btn-sm ${st.status === 'IN_PROGRESS' ? 'btn-primary text-white fw-bold' : 'btn-outline-primary'}`;
-                        btns[2].className = `btn btn-sm ${st.status === 'COMPLETED' ? 'btn-success text-white fw-bold' : 'btn-outline-success'}`;
-                    }
-                }
-
-                if (st.items && st.items.length > 0) {
-                    st.items.forEach(it => {
-                        const itCompCell = document.getElementById(`item-completed-cell-${it.planItemId}`);
-                        if (itCompCell) {
-                            itCompCell.innerHTML = it.completedAt
-                                ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
-                                : '<span class="text-muted">---</span>';
-                        }
-
-                        const itStatusCell = document.getElementById(`item-status-cell-${it.planItemId}`);
-                        if (itStatusCell) {
-                            itStatusCell.innerHTML = `<span class="badge px-2 py-1 rounded-pill ${it.statusBadgeClass}">${it.statusDisplayName}</span>`;
-                        }
-
-                        const itBtnGroup = document.getElementById(`item-btn-group-${it.planItemId}`);
-                        if (itBtnGroup) {
-                            const btns = itBtnGroup.querySelectorAll('button');
-                            if (btns.length >= 3) {
-                                btns[0].className = `btn btn-sm ${it.status === 'COMPLETED' ? 'btn-success text-white' : 'btn-outline-success'}`;
-                                btns[1].className = `btn btn-sm ${it.status === 'IN_PROGRESS' ? 'btn-primary text-white' : 'btn-outline-primary'}`;
-                                btns[2].className = `btn btn-sm ${it.status === 'PLANNED' ? 'btn-secondary text-white' : 'btn-outline-secondary'}`;
-                            }
-                        }
-                    });
-                }
-            });
-        }
-    }
-
     function promptUpdatePlanStatus(planId, currentStatus) {
         const statuses = [
             { key: 'ACCEPTED', label: 'Đã chấp thuận (ACCEPTED)' },
@@ -5294,7 +6003,7 @@
                             <span>${escapeHtml(v.initialSymptoms || 'Khám theo yêu cầu')}</span>
                         </div>
                         <div>
-                            ${isCurrent 
+                            ${isCurrent
                                 ? '<span class="text-primary fw-bold small"><i class="bi bi-check2-circle"></i> Đang mở</span>'
                                 : '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
                             }
@@ -5347,19 +6056,1096 @@
         }
     });
 
-    // Tự động cuộn đến phân vùng tương ứng nếu có hashtag trên URL (từ Sidebar hoặc chuyển trang)
+    // Giữ màn hình luôn cố định ở đầu trang khi tải trang (không tự động cuộn xuống)
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    if (window.location.hash) {
+        history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
     window.addEventListener('DOMContentLoaded', () => {
-        if (window.location.hash) {
-            const targetEl = document.querySelector(window.location.hash);
-            if (targetEl) {
-                setTimeout(() => {
-                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    targetEl.classList.add('df-highlight-section');
-                    setTimeout(() => targetEl.classList.remove('df-highlight-section'), 2500);
-                }, 350);
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    window.addEventListener('load', () => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    // =====================================================================
+    // FT17: KHO ẢNH LÂM SÀNG & SO SÁNH TRƯỚC / SAU (SCR-17.1, 17.2, 17.3)
+    // =====================================================================
+    const ft17PatientProfileId = [(${patient != null and patient.profileId != null ? patient.profileId : 1})];
+    const ft17CurrentVisitId = [(${visit != null and visit.visitId != null ? visit.visitId : 1})];
+
+    let currentPhotoFilterStage = 'ALL';
+    let currentPhotoFilterCategory = 'ALL';
+    let isPhotoOnlyCurrentVisit = false;
+    let currentLightboxRotation = 0;
+    let isBaSliderDragging = false;
+    let selectedPhotoBeforeId = null;
+    let selectedPhotoAfterId = null;
+
+    // Lọc theo Giai đoạn (ALL, BEFORE, DURING, AFTER)
+    function filterPhotosStage(stage, btn) {
+        currentPhotoFilterStage = stage;
+        document.querySelectorAll('.df-photo-pill-group .df-photo-pill').forEach(p => {
+            if (!p.innerText.includes('Ca khám')) p.classList.remove('active');
+        });
+        if (btn) btn.classList.add('active');
+        applyPhotoFilters();
+    }
+
+    // Lọc theo Góc chụp (ALL, SMILE, INTRAORAL, OCCLUSAL, EXTRAORAL, OTHER)
+    function filterPhotosCategory(cat) {
+        currentPhotoFilterCategory = cat;
+        applyPhotoFilters();
+    }
+
+    // Lọc theo Ca khám hiện tại
+    function filterPhotosVisit(btn) {
+        isPhotoOnlyCurrentVisit = !isPhotoOnlyCurrentVisit;
+        if (btn) {
+            btn.classList.toggle('active', isPhotoOnlyCurrentVisit);
+        }
+        applyPhotoFilters();
+    }
+
+    // Áp dụng bộ lọc lên các thẻ ảnh trong DOM
+    function applyPhotoFilters() {
+        const cards = document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const stage = card.getAttribute('data-stage') || '';
+            const category = card.getAttribute('data-category') || '';
+            const visit = card.getAttribute('data-visit') || '';
+
+            const matchStage = (currentPhotoFilterStage === 'ALL' || stage === currentPhotoFilterStage);
+            const matchCategory = (currentPhotoFilterCategory === 'ALL' || category === currentPhotoFilterCategory);
+            const matchVisit = (!isPhotoOnlyCurrentVisit || String(visit) === String(ft17CurrentVisitId));
+
+            if (matchStage && matchCategory && matchVisit) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        const emptyBox = document.getElementById('clinicalPhotoEmptyState');
+        if (emptyBox) {
+            emptyBox.style.display = (visibleCount === 0) ? 'block' : 'none';
+        }
+    }
+
+    // Mở Modal Upload ảnh
+    function openUploadPhotoModal() {
+        const form = document.getElementById('clinicalPhotoUploadForm');
+        if (form) form.reset();
+        clearPhotoSelection();
+        const modal = new bootstrap.Modal(document.getElementById('clinicalPhotoUploadModal'));
+        modal.show();
+    }
+
+    // Xử lý khi chọn file ảnh
+    function handlePhotoFileSelected(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Dung lượng ảnh vượt quá 10MB. Vui lòng chọn ảnh nhỏ hơn.');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreviewImg').src = e.target.result;
+            document.getElementById('photoFileNameBadge').innerText = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+            document.getElementById('photoPreviewBox').style.display = 'block';
+            document.getElementById('photoDropZone').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Hủy chọn ảnh
+    function clearPhotoSelection() {
+        const fileInput = document.getElementById('photoFileInput');
+        if (fileInput) fileInput.value = '';
+        const previewBox = document.getElementById('photoPreviewBox');
+        if (previewBox) previewBox.style.display = 'none';
+        const dropZone = document.getElementById('photoDropZone');
+        if (dropZone) dropZone.style.display = 'block';
+    }
+
+    // Kéo thả ảnh vào Dropzone
+    (function initPhotoDragDrop() {
+        const dropZone = document.getElementById('photoDropZone');
+        if (!dropZone) return;
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.style.borderColor = '#0284c7';
+                dropZone.style.backgroundColor = '#f0f9ff';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.style.borderColor = '#cbd5e1';
+                dropZone.style.backgroundColor = '#f8fafc';
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                const fileInput = document.getElementById('photoFileInput');
+                fileInput.files = files;
+                handlePhotoFileSelected(fileInput);
+            }
+        }, false);
+    })();
+
+    // Gửi form upload ảnh lên Server
+    async function handlePhotoUploadSubmit(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById('photoFileInput');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Vui lòng chọn hoặc kéo thả tệp hình ảnh.');
+            return;
+        }
+
+        const stage = document.getElementById('photoStageInput').value;
+        const category = document.getElementById('photoCategoryInput').value;
+        const caption = document.getElementById('photoCaptionInput').value;
+        const submitBtn = document.getElementById('btnUploadPhotoSubmit');
+
+        const formData = new FormData();
+        formData.append('profileId', ft17PatientProfileId);
+        formData.append('visitId', ft17CurrentVisitId);
+        formData.append('stage', stage);
+        formData.append('category', category);
+        formData.append('caption', caption);
+        formData.append('file', fileInput.files[0]);
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tải lên...';
+
+        try {
+            const resp = await fetch('/api/doctor/clinical-photos/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                showToast('Tải ảnh lâm sàng lên thành công!');
+                const modalEl = document.getElementById('clinicalPhotoUploadModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                await reloadClinicalPhotos();
+            } else {
+                alert('Lỗi: ' + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Đã xảy ra lỗi khi tải ảnh lên.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check2-circle"></i> <span>Lưu &amp; Tải lên</span>';
+        }
+    }
+
+    // Xóa ảnh lâm sàng
+    async function deleteClinicalPhoto(photoId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa ảnh chụp lâm sàng này khỏi bệnh án?')) return;
+
+        try {
+            const resp = await fetch('/api/doctor/clinical-photos/' + photoId, {
+                method: 'DELETE'
+            });
+            const res = await resp.json();
+            if (res.success) {
+                showToast('Đã xóa ảnh thành công!');
+                await reloadClinicalPhotos();
+            } else {
+                alert('Lỗi: ' + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi khi xóa ảnh lâm sàng.');
+        }
+    }
+
+    // Tải lại danh sách ảnh qua AJAX và vẽ lại giao diện Grid
+    async function reloadClinicalPhotos() {
+        try {
+            const resp = await fetch('/api/doctor/clinical-photos/patient/' + ft17PatientProfileId);
+            const res = await resp.json();
+            if (!res.success) return;
+
+            const photos = res.data || [];
+            const stats = res.stats || {};
+
+            // Cập nhật badges thống kê
+            const total = stats.total || 0;
+            const before = stats.before || 0;
+            const during = stats.during || 0;
+            const after = stats.after || 0;
+
+            if (document.getElementById('badgePhotoTotal')) document.getElementById('badgePhotoTotal').innerText = total + ' ảnh';
+            if (document.getElementById('badgePhotoBefore')) document.getElementById('badgePhotoBefore').innerText = before + ' Before';
+            if (document.getElementById('badgePhotoDuring')) document.getElementById('badgePhotoDuring').innerText = during + ' During';
+            if (document.getElementById('badgePhotoAfter')) document.getElementById('badgePhotoAfter').innerText = after + ' After';
+            if (document.getElementById('foldablePhotoCountBadge')) document.getElementById('foldablePhotoCountBadge').innerText = total + ' ảnh';
+
+            if (document.getElementById('countPillAll')) document.getElementById('countPillAll').innerText = total;
+            if (document.getElementById('countPillBefore')) document.getElementById('countPillBefore').innerText = before;
+            if (document.getElementById('countPillDuring')) document.getElementById('countPillDuring').innerText = during;
+            if (document.getElementById('countPillAfter')) document.getElementById('countPillAfter').innerText = after;
+
+            const grid = document.getElementById('clinicalPhotoGalleryGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            photos.forEach(photo => {
+                const stageClass = (photo.photoStage === 'BEFORE') ? 'df-photo-stage-before' :
+                                   (photo.photoStage === 'AFTER' ? 'df-photo-stage-after' : 'df-photo-stage-during');
+
+                const cardHtml = `
+                    <div class="df-photo-card" data-id="${photo.photoId}" data-stage="${photo.photoStage}" data-category="${photo.photoCategory}" data-visit="${photo.visitId || ''}" data-url="${photo.imageUrl}" data-caption="${photo.caption || ''}" data-date="${photo.capturedAtFormatted || ''}">
+                        <div class="df-photo-img-wrap" onclick="openPhotoLightbox('${photo.imageUrl}', '${(photo.caption || '').replace(/'/g, "\\'")}', '${photo.photoStageText}', '${photo.capturedAtFormatted}')">
+                            <img src="${photo.imageUrl}" alt="${photo.caption || ''}" loading="lazy" onerror="this.src='/images/dental-placeholder.png'">
+                            <span class="df-photo-stage-tag ${stageClass}">${photo.photoStage}</span>
+                            <span class="df-photo-cat-tag">${photo.photoCategoryText || 'Khác'}</span>
+                            <div class="df-photo-overlay-actions" onclick="event.stopPropagation()">
+                                <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded shadow-sm" title="Xem ảnh phóng to" onclick="openPhotoLightbox('${photo.imageUrl}', '${(photo.caption || '').replace(/'/g, "\\'")}', '${photo.photoStageText}', '${photo.capturedAtFormatted}')">
+                                    <i class="bi bi-arrows-fullscreen text-dark"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning py-0 px-2 rounded shadow-sm fw-bold text-dark" title="Đưa vào so sánh Before/After" onclick="selectPhotoForCompare(${photo.photoId}, '${photo.photoStage}')">
+                                    <i class="bi bi-intersect"></i> So sánh
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger py-0 px-2 rounded shadow-sm" title="Xóa ảnh này" onclick="deleteClinicalPhoto(${photo.photoId})">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="df-photo-info">
+                            <div class="df-photo-caption" title="${photo.caption || ''}">${photo.caption || 'Ảnh chụp lâm sàng'}</div>
+                            <div class="df-photo-date">
+                                <i class="bi bi-clock-history"></i>
+                                <span>${photo.capturedAtFormatted || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            applyPhotoFilters();
+        } catch (e) {
+            console.error('Error reloading clinical photos:', e);
+        }
+    }
+
+    // =====================================================================
+    // SO SÁNH ĐỐI CHIẾU TRƯỚC / SAU (BEFORE / AFTER COMPARISON - SCR-17.3)
+    // =====================================================================
+    function openPhotoCompareModal(beforeId, afterId) {
+        populateCompareSelectors(beforeId, afterId);
+        const modal = new bootstrap.Modal(document.getElementById('clinicalPhotoCompareModal'));
+        modal.show();
+
+        // Khởi tạo kích thước thanh trượt sau khi modal hiển thị
+        setTimeout(() => {
+            initBeforeAfterSliderListeners();
+            applySliderPercent(50);
+        }, 300);
+    }
+
+    // Nút chọn nhanh từ thẻ ảnh đưa vào so sánh
+    function selectPhotoForCompare(photoId, stage) {
+        if (stage === 'BEFORE') {
+            selectedPhotoBeforeId = photoId;
+        } else {
+            selectedPhotoAfterId = photoId;
+        }
+        openPhotoCompareModal(selectedPhotoBeforeId, selectedPhotoAfterId);
+    }
+
+    function openPhotoLightboxFromCard(el) {
+        const card = el.closest('.df-photo-card');
+        if (!card) return;
+        const url = card.getAttribute('data-url');
+        const caption = card.getAttribute('data-caption');
+        const stage = card.getAttribute('data-stagetext') || card.getAttribute('data-stage');
+        const date = card.getAttribute('data-date');
+        openPhotoLightbox(url, caption, stage, date);
+    }
+
+    function selectPhotoForCompareFromCard(el) {
+        const card = el.closest('.df-photo-card');
+        if (!card) return;
+        const photoId = card.getAttribute('data-id');
+        const stage = card.getAttribute('data-stage');
+        selectPhotoForCompare(photoId, stage);
+    }
+
+    function deleteClinicalPhotoFromCard(el) {
+        const card = el.closest('.df-photo-card');
+        if (!card) return;
+        const photoId = card.getAttribute('data-id');
+        deleteClinicalPhoto(photoId);
+    }
+
+    // Nạp danh sách ảnh vào 2 Dropdown Before & After
+    function populateCompareSelectors(preferBeforeId, preferAfterId) {
+        const cards = Array.from(document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card'));
+        const beforeSelect = document.getElementById('compareSelectBefore');
+        const afterSelect = document.getElementById('compareSelectAfter');
+        if (!beforeSelect || !afterSelect) return;
+
+        beforeSelect.innerHTML = '';
+        afterSelect.innerHTML = '';
+
+        const beforePhotos = [];
+        const afterPhotos = [];
+        const otherPhotos = [];
+
+        cards.forEach(card => {
+            const p = {
+                id: card.getAttribute('data-id'),
+                stage: card.getAttribute('data-stage'),
+                category: card.getAttribute('data-category'),
+                url: card.getAttribute('data-url'),
+                caption: card.getAttribute('data-caption'),
+                date: card.getAttribute('data-date')
+            };
+            if (p.stage === 'BEFORE') beforePhotos.push(p);
+            else if (p.stage === 'AFTER') afterPhotos.push(p);
+            else otherPhotos.push(p);
+        });
+
+        // Populate Before
+        const listForBefore = beforePhotos.concat(otherPhotos).concat(afterPhotos);
+        listForBefore.forEach((p, idx) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.setAttribute('data-url', p.url);
+            opt.setAttribute('data-caption', p.caption);
+            opt.setAttribute('data-date', p.date);
+            opt.innerText = `[${p.stage}] ${p.caption.substring(0, 40)}... (${p.date})`;
+            if (preferBeforeId && String(p.id) === String(preferBeforeId)) opt.selected = true;
+            else if (!preferBeforeId && idx === 0) opt.selected = true;
+            beforeSelect.appendChild(opt);
+        });
+
+        // Populate After
+        const listForAfter = afterPhotos.concat(otherPhotos).concat(beforePhotos);
+        listForAfter.forEach((p, idx) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.setAttribute('data-url', p.url);
+            opt.setAttribute('data-caption', p.caption);
+            opt.setAttribute('data-date', p.date);
+            opt.innerText = `[${p.stage}] ${p.caption.substring(0, 40)}... (${p.date})`;
+            if (preferAfterId && String(p.id) === String(preferAfterId)) opt.selected = true;
+            else if (!preferAfterId && idx === 0) opt.selected = true;
+            afterSelect.appendChild(opt);
+        });
+
+        updateCompareImages();
+    }
+
+    // Cập nhật ảnh hiển thị trong khung so sánh
+    function updateCompareImages() {
+        const beforeSelect = document.getElementById('compareSelectBefore');
+        const afterSelect = document.getElementById('compareSelectAfter');
+        if (!beforeSelect || !afterSelect) return;
+
+        const beforeOpt = beforeSelect.options[beforeSelect.selectedIndex];
+        const afterOpt = afterSelect.options[afterSelect.selectedIndex];
+
+        const beforeUrl = beforeOpt ? beforeOpt.getAttribute('data-url') : '';
+        const afterUrl = afterOpt ? afterOpt.getAttribute('data-url') : '';
+        const beforeCaption = beforeOpt ? beforeOpt.getAttribute('data-caption') : '';
+        const afterCaption = afterOpt ? afterOpt.getAttribute('data-caption') : '';
+        const beforeDate = beforeOpt ? beforeOpt.getAttribute('data-date') : '';
+        const afterDate = afterOpt ? afterOpt.getAttribute('data-date') : '';
+
+        // Cập nhật Split Slider
+        const baImgBefore = document.getElementById('baImgBefore');
+        const baImgAfter = document.getElementById('baImgAfter');
+        if (baImgBefore) baImgBefore.src = beforeUrl;
+        if (baImgAfter) baImgAfter.src = afterUrl;
+
+        // Cập nhật Side-by-Side
+        const sideImgBefore = document.getElementById('sideImgBefore');
+        const sideImgAfter = document.getElementById('sideImgAfter');
+        if (sideImgBefore) sideImgBefore.src = beforeUrl;
+        if (sideImgAfter) sideImgAfter.src = afterUrl;
+
+        if (document.getElementById('sideCaptionBefore')) document.getElementById('sideCaptionBefore').innerText = beforeCaption;
+        if (document.getElementById('sideDateBefore')) document.getElementById('sideDateBefore').innerText = beforeDate;
+        if (document.getElementById('sideCaptionAfter')) document.getElementById('sideCaptionAfter').innerText = afterCaption;
+        if (document.getElementById('sideDateAfter')) document.getElementById('sideDateAfter').innerText = afterDate;
+
+        setTimeout(() => applySliderPercent(document.getElementById('baRangeSlider').value || 50), 50);
+    }
+
+    // Hoán đổi vị trí 2 ảnh Trước / Sau
+    function swapCompareImages() {
+        const b = document.getElementById('compareSelectBefore');
+        const a = document.getElementById('compareSelectAfter');
+        if (!b || !a) return;
+        const temp = b.value;
+        b.value = a.value;
+        a.value = temp;
+        updateCompareImages();
+    }
+
+    // Chuyển đổi giữa 2 chế độ xem: Thanh trượt (Slider) & Song song (Side-by-side)
+    function switchCompareMode(mode) {
+        const sliderWrap = document.getElementById('compareSliderWrap');
+        const sideWrap = document.getElementById('compareSideWrap');
+        const btnSlider = document.getElementById('btnModeSlider');
+        const btnSide = document.getElementById('btnModeSide');
+
+        if (mode === 'slider') {
+            sliderWrap.style.display = 'block';
+            sideWrap.style.display = 'none';
+            btnSlider.classList.add('active');
+            btnSide.classList.remove('active');
+            setTimeout(() => applySliderPercent(50), 100);
+        } else {
+            sliderWrap.style.display = 'none';
+            sideWrap.style.display = 'grid';
+            btnSlider.classList.remove('active');
+            btnSide.classList.add('active');
+        }
+    }
+
+    // Áp dụng tỷ lệ phần trăm thanh trượt Before/After
+    function applySliderPercent(percent) {
+        const beforeWrap = document.getElementById('baBeforeWrap');
+        const handle = document.getElementById('baHandle');
+        const range = document.getElementById('baRangeSlider');
+        const container = document.getElementById('baContainer');
+        const imgBefore = document.getElementById('baImgBefore');
+
+        if (beforeWrap) beforeWrap.style.width = percent + '%';
+        if (handle) handle.style.left = percent + '%';
+        if (range && range.value !== percent) range.value = percent;
+
+        if (container && imgBefore) {
+            imgBefore.style.width = container.offsetWidth + 'px';
+        }
+    }
+
+    // Gắn sự kiện kéo chuột và cảm ứng trên thanh trượt
+    function initBeforeAfterSliderListeners() {
+        const container = document.getElementById('baContainer');
+        const handle = document.getElementById('baHandle');
+        if (!container || !handle || container.getAttribute('data-listener-set')) return;
+        container.setAttribute('data-listener-set', 'true');
+
+        function move(e) {
+            if (!isBaSliderDragging) return;
+            const rect = container.getBoundingClientRect();
+            let clientX = e.clientX;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+            }
+            let pos = clientX - rect.left;
+            let percent = (pos / rect.width) * 100;
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+            applySliderPercent(percent);
+        }
+
+        container.addEventListener('mousedown', function(e) {
+            isBaSliderDragging = true;
+            handle.classList.add('active');
+            move(e);
+        });
+
+        window.addEventListener('mousemove', function(e) {
+            if (isBaSliderDragging) {
+                e.preventDefault();
+                move(e);
+            }
+        });
+
+        window.addEventListener('mouseup', function() {
+            if (isBaSliderDragging) {
+                isBaSliderDragging = false;
+                handle.classList.remove('active');
+            }
+        });
+
+        // Hỗ trợ Touch di động / iPad
+        container.addEventListener('touchstart', function(e) {
+            isBaSliderDragging = true;
+            handle.classList.add('active');
+            move(e);
+        }, { passive: true });
+
+        window.addEventListener('touchmove', function(e) {
+            if (isBaSliderDragging) {
+                move(e);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', function() {
+            if (isBaSliderDragging) {
+                isBaSliderDragging = false;
+                handle.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            applySliderPercent(document.getElementById('baRangeSlider').value || 50);
+        });
+    }
+
+    // =====================================================================
+    // LIGHTBOX XEM CHI TIẾT ẢNH & XOAY ẢNH
+    // =====================================================================
+    function openPhotoLightbox(imgUrl, caption, stage, date) {
+        const img = document.getElementById('lightboxImg');
+        const title = document.getElementById('lightboxTitle');
+        const badge = document.getElementById('lightboxBadgeStage');
+        const dateEl = document.getElementById('lightboxDate');
+
+        if (img) {
+            img.src = imgUrl;
+            currentLightboxRotation = 0;
+            img.style.transform = 'rotate(0deg)';
+        }
+        if (title) title.innerText = caption || 'Chi tiết ảnh lâm sàng';
+        if (badge) badge.innerText = stage || 'LÂM SÀNG';
+        if (dateEl) dateEl.innerText = date || '---';
+
+        const modal = new bootstrap.Modal(document.getElementById('clinicalPhotoLightboxModal'));
+        modal.show();
+    }
+
+    function rotateLightboxImg() {
+        const img = document.getElementById('lightboxImg');
+        if (!img) return;
+        currentLightboxRotation = (currentLightboxRotation + 90) % 360;
+        img.style.transform = `rotate(${currentLightboxRotation}deg)`;
+    }
+
+    // =====================================================================
+    // FT18: HẸN TÁI KHÁM SAU ĐIỀU TRỊ & NHẮC LỊCH (SCR-18.1)
+    // =====================================================================
+    function openReExamModal() {
+        const input = document.getElementById('reExamDateInput');
+        if (input && !input.value) {
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const yyyy = nextWeek.getFullYear();
+            const mm = String(nextWeek.getMonth() + 1).padStart(2, '0');
+            const dd = String(nextWeek.getDate()).padStart(2, '0');
+            input.value = `${yyyy}-${mm}-${dd}`;
+        }
+        loadPatientReExams();
+        const modal = new bootstrap.Modal(document.getElementById('reExamBookingModal'));
+        modal.show();
+    }
+
+    function setQuickReExamDate(days, reasonText) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + days);
+        const yyyy = targetDate.getFullYear();
+        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(targetDate.getDate()).padStart(2, '0');
+        const input = document.getElementById('reExamDateInput');
+        if (input) input.value = `${yyyy}-${mm}-${dd}`;
+
+        if (reasonText) {
+            const reasonInput = document.getElementById('reExamReasonInput');
+            if (reasonInput) reasonInput.value = reasonText;
+        }
+    }
+
+    async function loadPatientReExams() {
+        const profileId = ft17PatientProfileId;
+        if (!profileId) return;
+
+        try {
+            const res = await fetch(`/api/doctor/re-examinations/patient/${profileId}`);
+            if (!res.ok) return;
+            const list = await res.json();
+            renderExistingReExams(list);
+
+            const badge1 = document.getElementById('sessionReExamCountBadge');
+            if (badge1) badge1.textContent = list.length;
+            const badge2 = document.getElementById('reExamExistingCount');
+            if (badge2) badge2.textContent = `${list.length} lịch hẹn`;
+        } catch (e) {
+            console.error('Error loading patient re-examinations:', e);
+        }
+    }
+
+    function renderExistingReExams(list) {
+        const tbody = document.getElementById('reExamExistingTableBody');
+        if (!tbody) return;
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-3 text-muted">Bệnh nhân chưa có lịch hẹn tái khám nào.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = list.map(item => {
+            const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
+            const timeStr = item.expectedTime ? item.expectedTime.substring(0, 5) : '09:00';
+            const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Bất kỳ' };
+            const sessionName = sessionMap[item.preferredSession] || item.preferredSession;
+
+            let statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
+            if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border">Đã khám</span>`;
+            else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
+            else if (item.daysUntil < 0) statusBadge = `<span class="badge bg-danger-subtle text-danger border">Quá hạn</span>`;
+
+            return `
+                <tr>
+                    <td><strong class="text-primary font-monospace">${item.appointmentCode || ('TK-' + item.appointmentId)}</strong></td>
+                    <td class="fw-bold text-dark">${dateStr}</td>
+                    <td>${timeStr} (${sessionName})</td>
+                    <td>${item.doctorName || 'BS. Điều trị'}</td>
+                    <td class="text-truncate" style="max-width: 220px;" title="${item.initialSymptoms || ''}">${item.initialSymptoms || 'Tái khám'}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm py-0.5 px-2 rounded-pill small"
+                                onclick="cancelPatientReExam(${item.appointmentId})" title="Hủy lịch hẹn này">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function formatDateStr(dateVal) {
+        if (!dateVal) return '---';
+        if (typeof dateVal === 'string') {
+            const parts = dateVal.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateVal;
+        }
+        if (Array.isArray(dateVal)) {
+            const y = dateVal[0];
+            const m = String(dateVal[1]).padStart(2, '0');
+            const d = String(dateVal[2]).padStart(2, '0');
+            return `${d}/${m}/${y}`;
+        }
+        return dateVal;
+    }
+
+    async function submitReExamBooking() {
+        const dateInput = document.getElementById('reExamDateInput');
+        if (!dateInput || !dateInput.value) {
+            alert('Vui lòng chọn ngày hẹn tái khám!');
+            return;
+        }
+
+        const payload = {
+            patientProfileId: ft17PatientProfileId,
+            visitId: ft17CurrentVisitId,
+            doctorId: document.getElementById('reExamDoctorSelect')?.value || null,
+            serviceId: document.getElementById('reExamServiceSelect')?.value || null,
+            appointmentDate: dateInput.value,
+            preferredSession: document.getElementById('reExamSessionSelect')?.value || 'MORNING',
+            expectedTime: document.getElementById('reExamTimeInput')?.value || '09:00',
+            followupReason: document.getElementById('reExamReasonInput')?.value || 'Tái khám sau điều trị',
+            createCareTask: document.getElementById('reExamCareTaskCheck')?.checked || false,
+            careTaskNotes: 'Được tạo từ ca khám #' + ft17CurrentVisitId
+        };
+
+        try {
+            const res = await fetch('/api/doctor/re-examinations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const saved = await res.json();
+                showToast(`Đã tạo lịch hẹn tái khám thành công mã: ${saved.appointmentCode}!`);
+                loadPatientReExams();
+            } else {
+                alert('Có lỗi khi tạo lịch hẹn tái khám. Vui lòng thử lại.');
+            }
+        } catch (e) {
+            console.error('Error submitting re-exam booking:', e);
+            alert('Lỗi mạng: ' + e.message);
+        }
+    }
+
+    async function cancelPatientReExam(appointmentId) {
+        if (!confirm('Bạn có chắc muốn hủy lịch hẹn tái khám này?')) return;
+
+        try {
+            const res = await fetch(`/api/doctor/re-examinations/${appointmentId}?reason=Bác sĩ hủy trên màn khám`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                showToast('Đã hủy lịch hẹn tái khám.');
+                loadPatientReExams();
+            } else {
+                alert('Không thể hủy lịch hẹn.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi: ' + e.message);
+        }
+    }
+
+    // =====================================================================
+    // NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)
+    // Quy tắc BR-EMR-02 (Khóa bệnh án lâm sàng) & BR-SVC-01 (Bàn giao dịch vụ COMPLETED)
+    // =====================================================================
+    let currentCompletionCheckData = null;
+
+    function setCemText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = (val !== null && val !== undefined) ? val : '';
+    }
+
+    async function openCompleteExaminationModal(visitId) {
+        const targetVisitId = visitId || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+        if (!targetVisitId) {
+            alert('Không xác định được mã ca khám!');
+            return;
+        }
+
+        const modalEl = document.getElementById('completeExaminationModal');
+        if (!modalEl) return;
+
+        // Reset modal state
+        const overallBadge = document.getElementById('cemOverallBadge');
+        if (overallBadge) {
+            overallBadge.className = 'badge bg-secondary-subtle text-secondary border px-2.5 py-1 rounded-pill';
+            overallBadge.textContent = 'Đang kiểm tra...';
+        }
+        const diagList = document.getElementById('cemDiagList');
+        if (diagList) diagList.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Đang tải dữ liệu chẩn đoán...</div>';
+        const svcList = document.getElementById('cemSvcList');
+        if (svcList) svcList.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Đang tải dữ liệu dịch vụ...</div>';
+        const diagAction = document.getElementById('cemDiagAction');
+        if (diagAction) diagAction.style.display = 'none';
+        const svcAction = document.getElementById('cemSvcAction');
+        if (svcAction) svcAction.style.display = 'none';
+        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
+        if (confirmBtn) confirmBtn.disabled = true;
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        try {
+            const res = await fetch(`/api/doctor/visits/${targetVisitId}/completion-check`);
+            if (!res.ok) {
+                throw new Error('Không thể tải dữ liệu kiểm tra điều kiện ca khám.');
+            }
+            const data = await res.json();
+            currentCompletionCheckData = data;
+            renderCompletionCheckModal(data);
+        } catch (err) {
+            console.error('Error fetching completion check:', err);
+            if (overallBadge) {
+                overallBadge.className = 'badge bg-danger-subtle text-danger border border-danger px-2.5 py-1 rounded-pill';
+                overallBadge.textContent = 'Lỗi kết nối';
+            }
+            if (diagList) {
+                diagList.innerHTML = `<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>${err.message}</div>`;
             }
         }
-    });
+    }
+
+    function renderCompletionCheckModal(data) {
+        // Patient & Doctor Overview
+        setCemText('cemPatientName', data.patientName || '---');
+        setCemText('cemPatientCode', data.patientCode || '---');
+        setCemText('cemVisitCode', data.visitCode || ('VIS#' + data.visitId));
+        setCemText('cemDoctorName', data.doctorName || '---');
+        const avatar = document.getElementById('cemPatientAvatar');
+        if (avatar && data.patientName) {
+            avatar.textContent = data.patientName.trim().substring(0, 1).toUpperCase();
+        }
+
+        // Total amount
+        const totalFormatted = (data.totalBillableAmount !== null && data.totalBillableAmount !== undefined)
+            ? Number(data.totalBillableAmount).toLocaleString('vi-VN') + ' đ'
+            : '0 đ';
+        setCemText('cemTotalAmount', totalFormatted);
+
+        // 1. Chẩn đoán ICD-10
+        const diagCard = document.getElementById('cemDiagCard');
+        const diagBadge = document.getElementById('cemDiagBadge');
+        const diagIcon = document.getElementById('cemDiagCheckIcon');
+        const diagList = document.getElementById('cemDiagList');
+        const diagAction = document.getElementById('cemDiagAction');
+
+        if (data.hasDiagnosis) {
+            if (diagBadge) {
+                diagBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill';
+                diagBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Đạt (${data.diagnosisCount} chẩn đoán)`;
+            }
+            if (diagIcon) {
+                diagIcon.className = 'badge bg-success text-white rounded-circle p-1';
+                diagIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
+            }
+            if (diagCard) diagCard.className = 'p-3 rounded-3 border border-success-subtle bg-success-subtle bg-opacity-10';
+            if (diagAction) diagAction.style.display = 'none';
+
+            let diagHtml = '<ul class="list-unstyled mb-0 d-flex flex-column gap-1.5">';
+            (data.diagnoses || []).forEach(d => {
+                const typeBadge = d.diagnosisType === 'MAIN'
+                    ? '<span class="badge bg-primary text-white" style="font-size: 10px;">Chính</span>'
+                    : '<span class="badge bg-secondary text-white" style="font-size: 10px;">Kèm theo</span>';
+                diagHtml += `
+                    <li class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <strong class="text-primary">${d.icd10Code}</strong>:
+                            <span class="text-dark fw-medium">${d.diseaseName}</span>
+                            <span class="text-muted ms-1">(${d.toothNumbers || 'Toàn hàm'})</span>
+                        </div>
+                        <div>${typeBadge}</div>
+                    </li>
+                `;
+            });
+            diagHtml += '</ul>';
+            if (diagList) diagList.innerHTML = diagHtml;
+        } else {
+            if (diagBadge) {
+                diagBadge.className = 'badge bg-danger text-white rounded-pill';
+                diagBadge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Chưa đạt (0 chẩn đoán)';
+            }
+            if (diagIcon) {
+                diagIcon.className = 'badge bg-danger text-white rounded-circle p-1';
+                diagIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
+            }
+            if (diagCard) diagCard.className = 'p-3 rounded-3 border border-danger-subtle bg-danger-subtle bg-opacity-10';
+            if (diagList) {
+                diagList.innerHTML = '<div class="text-danger fw-medium"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có chẩn đoán ICD-10. Bác sĩ bắt buộc phải xác định chẩn đoán bệnh trước khi hoàn tất ca khám và chuyển thanh toán.</div>';
+            }
+            if (diagAction) diagAction.style.display = 'block';
+        }
+
+        // 2. Dịch vụ thực hiện (COMPLETED)
+        const svcCard = document.getElementById('cemSvcCard');
+        const svcBadge = document.getElementById('cemSvcBadge');
+        const svcIcon = document.getElementById('cemSvcCheckIcon');
+        const svcList = document.getElementById('cemSvcList');
+        const svcAction = document.getElementById('cemSvcAction');
+
+        if (data.hasCompletedServices) {
+            if (svcBadge) {
+                svcBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill';
+                svcBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Đạt (${data.completedServiceCount} dịch vụ)`;
+            }
+            if (svcIcon) {
+                svcIcon.className = 'badge bg-success text-white rounded-circle p-1';
+                svcIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
+            }
+            if (svcCard) svcCard.className = 'p-3 rounded-3 border border-success-subtle bg-success-subtle bg-opacity-10';
+            if (svcAction) svcAction.style.display = 'none';
+
+            let svcHtml = '<div class="table-responsive"><table class="table table-sm table-borderless mb-0" style="font-size: 12px;"><thead class="text-muted border-bottom"><tr><th>Dịch vụ</th><th>Răng</th><th class="text-center">SL</th><th class="text-end">Thành tiền</th></tr></thead><tbody>';
+            (data.services || []).forEach(s => {
+                const priceStr = Number(s.finalPrice || 0).toLocaleString('vi-VN') + ' đ';
+                svcHtml += `
+                    <tr>
+                        <td><strong>${s.serviceName}</strong></td>
+                        <td>${s.toothNumbers || '---'}</td>
+                        <td class="text-center">${s.quantity || 1}</td>
+                        <td class="text-end fw-bold text-success">${priceStr}</td>
+                    </tr>
+                `;
+            });
+            svcHtml += '</tbody></table></div>';
+            if (svcList) svcList.innerHTML = svcHtml;
+        } else {
+            if (svcBadge) {
+                svcBadge.className = 'badge bg-danger text-white rounded-pill';
+                svcBadge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Chưa đạt (0 dịch vụ)';
+            }
+            if (svcIcon) {
+                svcIcon.className = 'badge bg-danger text-white rounded-circle p-1';
+                svcIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
+            }
+            if (svcCard) svcCard.className = 'p-3 rounded-3 border border-danger-subtle bg-danger-subtle bg-opacity-10';
+            if (svcList) {
+                svcList.innerHTML = '<div class="text-danger fw-medium"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có dịch vụ nào hoàn thành (COMPLETED). Kế toán cần ít nhất 01 dịch vụ hoàn thành để xuất hóa đơn và thu tiền (BR-SVC-01).</div>';
+            }
+            if (svcAction) svcAction.style.display = 'block';
+        }
+
+        // 3. Đơn thuốc
+        const prescStatus = document.getElementById('cemPrescriptionStatus');
+        if (prescStatus) {
+            if (data.hasPrescription) {
+                prescStatus.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Đã kê ${data.prescriptionCount} đơn thuốc</span>`;
+            } else {
+                prescStatus.innerHTML = '<span class="text-muted fst-italic">Không kê đơn thuốc</span>';
+            }
+        }
+
+        // 4. Lịch hẹn tái khám
+        const reExamStatus = document.getElementById('cemReExamStatus');
+        if (reExamStatus) {
+            if (data.hasReExamination) {
+                reExamStatus.innerHTML = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Đã có ${data.reExaminationCount} lịch hẹn sắp tới</span>`;
+            } else {
+                reExamStatus.innerHTML = '<span class="text-muted fst-italic">Chưa đặt lịch hẹn tái khám</span>';
+            }
+        }
+
+        // Overall status & Submit button
+        const overallBadge = document.getElementById('cemOverallBadge');
+        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
+
+        if (data.ready) {
+            if (overallBadge) {
+                overallBadge.className = 'badge bg-success text-white px-2.5 py-1 rounded-pill';
+                overallBadge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Đủ điều kiện hoàn tất';
+            }
+            if (confirmBtn) confirmBtn.disabled = false;
+        } else {
+            if (overallBadge) {
+                overallBadge.className = 'badge bg-danger text-white px-2.5 py-1 rounded-pill';
+                overallBadge.innerHTML = '<i class="bi bi-exclamation-octagon-fill me-1"></i>Chưa đủ điều kiện';
+            }
+            if (confirmBtn) confirmBtn.disabled = true;
+        }
+    }
+
+    async function submitClinicalCompletion() {
+        if (!currentCompletionCheckData || !currentCompletionCheckData.visitId) {
+            alert('Không tìm thấy thông tin ca khám!');
+            return;
+        }
+
+        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang xử lý...';
+        }
+
+        const doctorNotes = document.getElementById('cemDoctorNotes')?.value || '';
+
+        try {
+            const res = await fetch(`/api/doctor/visits/${currentCompletionCheckData.visitId}/complete-clinical`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doctorNotes: doctorNotes })
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                const modalEl = document.getElementById('completeExaminationModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+                if (typeof showToast === 'function') {
+                    showToast('✓ Hoàn tất ca khám & Bàn giao Kế toán thành công! Bệnh án đã được khóa (BR-EMR-02).');
+                } else {
+                    alert('✓ Hoàn tất ca khám & Bàn giao Kế toán thành công! Bệnh án đã được khóa (BR-EMR-02).');
+                }
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Không thể hoàn tất ca khám: ' + (result.message || 'Lỗi không xác định'));
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i><span>Xác nhận &amp; Chuyển thanh toán</span>';
+                }
+            }
+        } catch (err) {
+            console.error('Error submitting completion:', err);
+            alert('Lỗi kết nối: ' + err.message);
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i><span>Xác nhận &amp; Chuyển thanh toán</span>';
+            }
+        }
+    }
+
+    async function reopenClinicalExamination(visitId) {
+        const targetVisitId = visitId || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+        const reason = prompt('Nhập lý do mở lại ca khám lâm sàng (Kế toán chưa thu tiền):', 'Bác sĩ bổ sung chẩn đoán / điều trị');
+        if (reason === null) return;
+
+        try {
+            const res = await fetch(`/api/doctor/visits/${targetVisitId}/reopen-clinical`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                if (typeof showToast === 'function') {
+                    showToast('✓ Đã mở lại ca khám lâm sàng thành công!');
+                } else {
+                    alert('✓ Đã mở lại ca khám lâm sàng thành công!');
+                }
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Không thể mở lại ca khám: ' + (result.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error reopening exam:', err);
+            alert('Lỗi kết nối: ' + err.message);
+        }
+    }
+
+    function jumpToSection(sectionId) {
+        const modalEl = document.getElementById('completeExaminationModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        if (sectionId === 'bar-exam') {
+            const content = document.getElementById('content-exam');
+            if (content && content.style.display === 'none') {
+                if (typeof toggleMainBar === 'function') toggleMainBar('exam');
+            }
+            document.getElementById('bar-exam')?.scrollIntoView({ behavior: 'smooth' });
+        } else if (sectionId === 'bar-treatment') {
+            const content = document.getElementById('content-treatment');
+            if (content && content.style.display === 'none') {
+                if (typeof toggleMainBar === 'function') toggleMainBar('treatment');
+            }
+            document.getElementById('performedServicesSection')?.scrollIntoView({ behavior: 'smooth' });
+        } else if (sectionId === 'prescriptionsSection') {
+            const content = document.getElementById('content-treatment');
+            if (content && content.style.display === 'none') {
+                if (typeof toggleMainBar === 'function') toggleMainBar('treatment');
+            }
+            document.getElementById('prescriptionsSection')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function openReExamModalFromCompleteModal() {
+        const modalEl = document.getElementById('completeExaminationModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        if (typeof openReExamModal === 'function') openReExamModal();
+    }
 </script>
 </body>
 </html>
