@@ -7,6 +7,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
 import com.cvdcms.entity.enums.ServiceStatus;
 import com.cvdcms.entity.enums.StaffStatus;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.PerformedServiceRepository;
 import com.cvdcms.repository.ServiceRepository;
 import com.cvdcms.repository.StaffProfileRepository;
@@ -85,6 +86,11 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         Visit visit = visitRepository.findById(requestDTO.getVisitId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + requestDTO.getVisitId()));
 
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02). Không thể thêm dịch vụ thực hiện.");
+        }
+
         com.cvdcms.entity.Service service = serviceRepository.findById(requestDTO.getServiceId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ với ID: " + requestDTO.getServiceId()));
 
@@ -141,6 +147,12 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         log.info("Cancelling/Deleting performed service with id={}", performedId);
         PerformedService ps = performedServiceRepository.findById(performedId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ thực hiện với ID: " + performedId));
+
+        // Quy tắc BR-EMR-02: Khóa bất biến
+        if (ps.getVisit() != null &&
+                (ps.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || ps.getVisit().getStatus() == VisitStatus.COMPLETED)) {
+            throw new IllegalStateException("Bệnh án lâm sàng đã khóa bất biến (BR-EMR-02). Không thể xóa hoặc hủy dịch vụ đã hoàn tất.");
+        }
 
         // Xóa hoàn toàn hoặc cập nhật status sang CANCELLED
         performedServiceRepository.delete(ps);
