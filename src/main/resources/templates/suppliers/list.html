@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Quản lý nhà cung cấp')}"></head>
+
+<body class="app-body">
+
+<!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
+<link rel="stylesheet" th:href="@{/css/suppliers.css}">
+
+<!-- Header công khai: logo, menu dịch vụ, tin tức -->
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<div class="app-shell">
+
+    <!-- Sidebar và Backdrop -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('suppliers')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <!-- Topbar / Header -->
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý nhà cung cấp')}"></header>
+
+        <main class="app-content page supplier-page">
+
+            <!-- Tiêu đề trang -->
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">CV-DCMS · QUẢN LÝ KHO VẬT TƯ NHA KHOA</p>
+                    <h1>Quản lý Nhà cung cấp</h1>
+                    <p class="subtitle">
+                        Quản lý danh mục đối tác cung ứng vật tư, mã số thuế, thông tin liên hệ và trạng thái hợp tác.
+                    </p>
+                </div>
+
+                <div class="header-actions">
+                    <a th:href="@{/home}" class="btn btn-secondary">← Trang chủ</a>
+                    <a th:href="@{/inventory}" class="btn btn-secondary">📦 Quản lý kho</a>
+                    <button id="addBtn" type="button" class="btn btn-primary">
+                        + Thêm nhà cung cấp
+                    </button>
+                </div>
+            </header>
+
+            <!-- Thanh tìm kiếm và lọc -->
+            <section class="toolbar">
+                <input
+                        id="keyword"
+                        name="keyword"
+                        type="search"
+                        placeholder="Tìm theo mã NCC, tên nhà cung cấp, số điện thoại, mã số thuế..."
+                        aria-label="Tìm kiếm nhà cung cấp"
+                >
+
+                <select id="active" name="active" aria-label="Lọc theo trạng thái">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="true">Đang hoạt động</option>
+                    <option value="false">Ngừng hoạt động</option>
+                </select>
+
+                <button id="searchBtn" type="button" class="btn btn-primary">
+                    Tìm kiếm
+                </button>
+                <button id="clearBtn" type="button" class="btn btn-secondary">
+                    Xóa lọc
+                </button>
+            </section>
+
+            <!-- Thông báo -->
+            <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+
+            <!-- Bảng nhà cung cấp -->
+            <section class="table-card">
+                <div class="table-heading">
+                    <h2>Danh sách nhà cung cấp vật tư</h2>
+                    <span id="totalCount">Đang tải...</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th scope="col">Mã NCC</th>
+                            <th scope="col">Tên nhà cung cấp</th>
+                            <th scope="col">Mã số thuế</th>
+                            <th scope="col">Số điện thoại</th>
+                            <th scope="col">Địa chỉ</th>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="supplierTable">
+                        <tr>
+                            <td colspan="7" class="empty">Đang tải dữ liệu...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang -->
+                <div class="pagination">
+                    <button id="prevBtn" type="button" class="btn btn-secondary">
+                        ← Trang trước
+                    </button>
+                    <span id="pageInfo">Trang 1</span>
+                    <button id="nextBtn" type="button" class="btn btn-secondary">
+                        Trang sau →
+                    </button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+
+<!-- Modal Thêm / Sửa Nhà cung cấp -->
+<div id="modal" class="modal" hidden>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+        <div class="modal-heading">
+            <h2 id="formTitle">Thêm nhà cung cấp</h2>
+            <button id="closeBtn" type="button" class="close-btn" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="supplierForm" novalidate>
+            <input id="supplierId" type="hidden" name="supplierId">
+
+            <label for="supplierCode">Mã nhà cung cấp * <small>(2-20 ký tự: chữ, số, -, _)</small></label>
+            <input
+                    id="supplierCode"
+                    name="supplierCode"
+                    type="text"
+                    maxlength="20"
+                    pattern="^[A-Za-z0-9_-]{2,20}$"
+                    placeholder="VD: NCC-3M-VN"
+                    required
+            >
+            <small class="field-error" id="supplierCodeError"></small>
+
+            <label for="supplierName">Tên nhà cung cấp *</label>
+            <input
+                    id="supplierName"
+                    name="supplierName"
+                    type="text"
+                    maxlength="100"
+                    placeholder="VD: Công ty Thiết bị Nha khoa 3M Việt Nam"
+                    required
+            >
+            <small class="field-error" id="supplierNameError"></small>
+
+            <label for="taxCode">Mã số thuế * <small>(10 số hoặc 10 số-3 số)</small></label>
+            <input
+                    id="taxCode"
+                    name="taxCode"
+                    type="text"
+                    maxlength="20"
+                    pattern="^[0-9]{10}(-[0-9]{3})?$"
+                    placeholder="VD: 0101234567 hoặc 0101234567-001"
+                    required
+            >
+            <small class="field-error" id="taxCodeError"></small>
+
+            <label for="phoneNumber">Số điện thoại * <small>(0xxxxxxxxx hoặc +84xxxxxxxxx)</small></label>
+            <input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    type="tel"
+                    maxlength="15"
+                    pattern="^(0|\+84)[0-9]{9,10}$"
+                    placeholder="VD: 0901234567"
+                    required
+            >
+            <small class="field-error" id="phoneNumberError"></small>
+
+            <label for="address">Địa chỉ *</label>
+            <textarea
+                    id="address"
+                    name="address"
+                    maxlength="255"
+                    rows="3"
+                    placeholder="Nhập địa chỉ trụ sở / kho nhà cung cấp"
+                    required
+            ></textarea>
+            <small class="field-error" id="addressError"></small>
+
+            <div class="form-actions">
+                <button type="button" id="cancelBtn" class="btn btn-secondary">Hủy</button>
+                <button type="submit" id="saveBtn" class="btn btn-primary">Lưu thông tin</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/suppliers.js}" defer></script>
+</body>
+</html>

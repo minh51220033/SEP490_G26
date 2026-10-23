@@ -260,6 +260,86 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("userId") Long userId
     );
 
+
+    @Query("""
+    SELECT CASE WHEN COUNT(DISTINCT u) > 0
+        THEN TRUE ELSE FALSE END
+    FROM User u
+    JOIN u.roles r
+    WHERE u.userId = :userId
+      AND u.isActive = TRUE
+      AND r.isActive = TRUE
+      AND UPPER(r.roleName) IN ('ADMIN', 'QUAN_LY_KHO')
+""")
+    boolean hasActiveSupplierManagementRole(
+            @Param("userId") Long userId
+    );
+
+
+    @Query(value = """
+    SELECT EXISTS (
+        SELECT 1
+        FROM users u
+        JOIN user_roles ur
+            ON ur.user_id = u.user_id
+        JOIN roles r
+            ON r.role_id = ur.role_id
+        JOIN staff_profiles sp
+            ON sp.user_id = u.user_id
+        JOIN staff_branch_assignments sba
+            ON sba.staff_id = sp.staff_id
+           AND sba.role_id = r.role_id
+        JOIN branches b
+            ON b.branch_id = sba.branch_id
+        WHERE u.user_id = :userId
+          AND sba.branch_id = :branchId
+          AND UPPER(r.role_name) = 'QUAN_LY_KHO'
+          AND r.is_active = 1
+          AND u.is_active = 1
+          AND UPPER(u.status) = 'ACTIVE'
+          AND UPPER(sp.status) = 'ACTIVE'
+          AND sba.status = 'ACTIVE'
+          AND sba.start_date <= CURDATE()
+          AND (
+              sba.end_date IS NULL
+              OR sba.end_date >= CURDATE()
+          )
+          AND b.is_active = 1
+    )
+    """, nativeQuery = true)
+    boolean hasActiveWarehouseAssignment(
+            @Param("userId") Long userId,
+            @Param("branchId") Long branchId
+    );
+
+
+    @Query(value = """
+    SELECT COUNT(*)
+    FROM users u
+    JOIN user_roles ur ON ur.user_id = u.user_id
+    JOIN roles r ON r.role_id = ur.role_id
+    JOIN staff_profiles sp ON sp.user_id = u.user_id
+    JOIN staff_branch_assignments sba
+      ON sba.staff_id = sp.staff_id
+     AND sba.role_id = r.role_id
+    JOIN branches b ON b.branch_id = sba.branch_id
+    WHERE u.user_id = :userId
+      AND sba.branch_id = :branchId
+      AND UPPER(r.role_name) = 'QUAN_LY_KHO'
+      AND r.is_active = 1
+      AND u.is_active = 1
+      AND UPPER(u.status) = 'ACTIVE'
+      AND UPPER(sp.status) = 'ACTIVE'
+      AND UPPER(sba.status) = 'ACTIVE'
+      AND sba.start_date <= CURDATE()
+      AND (sba.end_date IS NULL OR sba.end_date >= CURDATE())
+      AND b.is_active = 1
+    """, nativeQuery = true)
+    Long countActiveWarehouseAssignments(
+            @Param("userId") Long userId,
+            @Param("branchId") Long branchId
+    );
+
 }
 
 
