@@ -10,7 +10,20 @@
     <link rel="stylesheet" th:href="@{/css/customer-care.css}">
     <script th:src="@{/js/customer-care.js}" defer></script>
 </head>
+<head th:replace="~{fragments/head :: head('Trang chủ')}"></head>
 <body>
+
+
+<!-- Header công khai: logo, menu dịch vụ, tin tức -->
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- Khu vực quản trị: giữ nguyên sidebar và dashboard -->
+<div class="app-shell">
+
+    <!-- Sidebar và Backdrop -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
 <main class="cc-page">
 
     <!-- HEADER TRANG QUẢN LÝ CSKH (ĐỒNG BỘ PHONG CÁCH HOME.HTML / DENTALSOFT) -->
@@ -502,6 +515,9 @@
         </form>
     </div>
 </div>
+
+<!-- Footer -->
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 </body>
 </html>
