@@ -14,9 +14,10 @@ import java.util.List;
 @RequestMapping("/portal/patients")
 public class PortalPatientRestController {
     private final PortalPatientService patients;
+    private final PatientTransferService transfers;
 
-    public PortalPatientRestController(PortalPatientService patients) {
-        this.patients = patients;
+    public PortalPatientRestController(PortalPatientService patients, PatientTransferService transfers) {
+        this.patients = patients; this.transfers = transfers;
     }
 
     @GetMapping
@@ -55,6 +56,20 @@ public class PortalPatientRestController {
     public PortalPatientService.VisitDetails visit(HttpSession session, @PathVariable Long id,
                                                    @PathVariable Long visitId) {
         return patients.visit(session, id, visitId);
+    }
+
+    @PostMapping("/{id}/transfer-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PatientTransferService.TransferStarted startTransfer(HttpSession session, @PathVariable Long id,
+                                                                 @Valid @RequestBody TransferStartForm form) {
+        return transfers.start(session, id, form);
+    }
+
+    @PostMapping("/{id}/transfer-requests/{requestId}/confirm")
+    public PatientTransferService.TransferCompleted confirmTransfer(HttpSession session,
+            @PathVariable Long id, @PathVariable Long requestId,
+            @Valid @RequestBody TransferConfirmForm form) {
+        return transfers.confirm(session, id, requestId, form);
     }
 
     public record DuplicateCheck(boolean duplicate) {}

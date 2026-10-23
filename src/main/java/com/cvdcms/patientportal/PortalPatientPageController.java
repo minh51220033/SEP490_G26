@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -14,10 +15,12 @@ import java.util.List;
 @RequestMapping("/portal/records")
 public class PortalPatientPageController {
     private final PortalPatientService patients;
+    private final PatientTransferService transfers;
     private final PortalAccess access;
 
-    public PortalPatientPageController(PortalPatientService patients, PortalAccess access) {
-        this.patients = patients; this.access = access;
+    public PortalPatientPageController(PortalPatientService patients, PatientTransferService transfers,
+                                       PortalAccess access) {
+        this.patients = patients; this.transfers = transfers; this.access = access;
     }
 
     @ModelAttribute("roleNames")
@@ -62,4 +65,61 @@ public class PortalPatientPageController {
         return "portal/records/visit";
     }
 
+    @GetMapping("/{id}/transfer")
+    public String transfer(HttpSession session, @PathVariable Long id, Model model) {
+        PortalProfileView record = patients.get(session, id);
+        if (record.self()) throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT);
+        model.addAttribute("record", record);
+        return "portal/records/transfer";
+    }
+
+    @PostMapping("/{id}/transfer")
+    public String startTransfer(HttpSession session, @PathVariable Long id,
+            @Valid @ModelAttribute TransferStartForm form, BindingResult errors, Model model) {
+        if (!errors.hasErrors()) {
+            try {
+                var started = transfers.start(session, id, form);
+                return "redirect:/portal/records/" + id + "/transfer/" + started.requestId();
+            } catch (ResponseStatusException ex) {
+                model.addAttribute("error", ex.getReason());
+            }
+        } else model.addAttribute("error", "Email nhận không hợp lệ.");
+        model.addAttribute("record", patients.get(session, id));
+        return "portal/records/transfer";
+    }
+
+    @GetMapping("/{id}/transfer/{requestId}")
+    public String verifyTransfer(HttpSession session, @PathVariable Long id,
+            @PathVariable Long requestId, Model model) {
+        model.addAttribute("record", patients.get(session, id));
+        model.addAttribute("request", transfers.inspect(session, id, requestId));
+        return "portal/records/transfer-confirm";
+    }
+
+    @PostMapping("/{id}/transfer/{requestId}")
+    public String confirmTransfer(HttpSession session, @PathVariable Long id,
+            @PathVariable Long requestId, @Valid @ModelAttribute TransferConfirmForm form,
+            BindingResult errors, Model model, RedirectAttributes redirect) {
+        if (!errors.hasErrors()) {
+            try {
+                PortalProfileView record = patients.get(session, id);
+                var completed = transfers.confirm(session, id, requestId, form);
+                redirect.addFlashAttribute("transferredCode", record.code());
+                redirect.addFlashAttribute("transferredName", record.fullName());
+                redirect.addFlashAttribute("targetEmail", completed.targetEmail());
+                return "redirect:/portal/records/transfer-complete";
+            } catch (ResponseStatusException ex) {
+                model.addAttribute("error", ex.getReason());
+            }
+        } else model.addAttribute("error", "Vui lòng nhập hai mã xác minh gồm 6 chữ số.");
+        model.addAttribute("record", patients.get(session, id));
+        model.addAttribute("request", transfers.inspect(session, id, requestId));
+        return "portal/records/transfer-confirm";
+    }
+
+    @GetMapping("/transfer-complete")
+    public String transferComplete(Model model) {
+        if (!model.containsAttribute("transferredCode")) return "redirect:/portal/records";
+        return "portal/records/transfer-complete";
+    }
 }
