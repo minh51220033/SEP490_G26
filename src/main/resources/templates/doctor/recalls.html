@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Nhắc hẹn tái khám & Quản lý lịch hẹn - DentalFlow')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <!-- SIDEBAR DÙNG CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('recalls')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- HEADER TOPBAR DÙNG CHUNG -->
+        <header th:replace="~{fragments/header :: appTopbar('Nhắc hẹn tái khám sau điều trị')}"></header>
+
+        <main class="app-content p-3 p-md-4" style="background: #f8fafc !important;">
+            <style>
+                :root {
+                    --rc-primary: #0284c7;
+                    --rc-primary-dark: #0369a1;
+                    --rc-primary-light: #e0f2fe;
+                    --rc-border: #e2e8f0;
+                    --rc-text-dark: #0f172a;
+                    --rc-text-muted: #64748b;
+                }
+
+                .rc-breadcrumb {
+                    font-size: 13px;
+                    color: #64748b;
+                }
+                .rc-breadcrumb a {
+                    color: #0284c7;
+                    text-decoration: none;
+                    font-weight: 500;
+                }
+                .rc-breadcrumb a:hover {
+                    text-decoration: underline;
+                }
+
+                .rc-page-title {
+                    font-size: 22px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.5px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 2px;
+                }
+
+                /* 4 KPI Stat Cards */
+                .rc-stat-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 16px 20px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+                    transition: all 0.2s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .rc-stat-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+                    border-color: #cbd5e1;
+                }
+                .rc-stat-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 4px;
+                    height: 100%;
+                }
+                .rc-stat-card.card-blue::before { background: #0284c7; }
+                .rc-stat-card.card-amber::before { background: #f59e0b; }
+                .rc-stat-card.card-green::before { background: #10b981; }
+                .rc-stat-card.card-rose::before { background: #ef4444; }
+
+                .rc-stat-icon {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 20px;
+                }
+                .rc-stat-val {
+                    font-size: 26px;
+                    font-weight: 800;
+                    line-height: 1.1;
+                }
+                .rc-stat-label {
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                    margin-bottom: 4px;
+                }
+
+                /* Filter Toolbar */
+                .rc-toolbar {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 14px 18px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+                }
+
+                .rc-filter-btn {
+                    border: 1.5px solid #e2e8f0;
+                    background: #ffffff;
+                    color: #475569;
+                    font-weight: 600;
+                    font-size: 13px;
+                    padding: 6px 14px;
+                    border-radius: 20px;
+                    transition: all 0.15s ease;
+                    cursor: pointer;
+                }
+                .rc-filter-btn:hover {
+                    background: #f1f5f9;
+                    border-color: #cbd5e1;
+                    color: #0f172a;
+                }
+                .rc-filter-btn.is-active {
+                    background: #0284c7;
+                    border-color: #0284c7;
+                    color: #ffffff;
+                    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+                }
+
+                /* Table Styling */
+                .rc-table-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    overflow: hidden;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+                }
+                .rc-table th {
+                    background: #f8fafc;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #475569;
+                    font-weight: 700;
+                    padding: 12px 16px;
+                    border-bottom: 1.5px solid #e2e8f0;
+                }
+                .rc-table td {
+                    padding: 14px 16px;
+                    vertical-align: middle;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 13.5px;
+                }
+                .rc-table tbody tr:hover {
+                    background: #f8fafc;
+                }
+
+                .rc-avatar {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+                    color: #ffffff;
+                    font-weight: 700;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                /* Timeline Badges */
+                .rc-badge-overdue {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                    border: 1px solid #fca5a5;
+                    font-weight: 700;
+                }
+                .rc-badge-today {
+                    background: #fef3c7;
+                    color: #b45309;
+                    border: 1px solid #fde68a;
+                    font-weight: 700;
+                }
+                .rc-badge-upcoming {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    border: 1px solid #bae6fd;
+                    font-weight: 600;
+                }
+            </style>
+
+            <!-- HÀNG 1: BREADCRUMB & NÚT THAO TÁC TRÊN ĐẦU TRANG -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="rc-breadcrumb mb-1">
+                        <a th:href="@{/doctor/daily-visits}">DS Khám Trong Ngày</a>
+                        <span class="mx-1">&gt;</span>
+                        <span class="text-secondary">Hồ sơ &amp; Tái khám</span>
+                        <span class="mx-1">&gt;</span>
+                        <span class="text-dark fw-bold">Nhắc hẹn tái khám (SCR-18.2)</span>
+                    </div>
+                    <div class="rc-page-title">
+                        <i class="bi bi-bell-fill text-warning"></i>
+                        <span>Quản lý Lịch hẹn &amp; Nhắc tái khám</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-6 px-3 py-1">FT18</span>
+                    </div>
+                    <div class="text-muted small">
+                        Theo dõi danh sách bệnh nhân đến hạn tái khám sau điều trị, dặn dò và điều phối gọi điện CSKH.
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" onclick="loadRecalls()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Làm mới</span>
+                    </button>
+                    <a th:href="@{/doctor/daily-visits}" class="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs">
+                        <i class="bi bi-calendar2-week"></i>
+                        <span>DS Khám Trong Ngày</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- HÀNG 2: 4 THẺ THỐNG KÊ KPI NỔI BẬT -->
+            <div class="row g-3 mb-4">
+                <!-- Thẻ 1: Tổng số lịch hẹn -->
+                <div class="col-6 col-lg-3">
+                    <div class="rc-stat-card card-blue h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="rc-stat-label">Tổng ca tái khám</div>
+                            <div class="rc-stat-val text-dark" id="statTotal" th:text="${stats != null ? stats['total'] : 0}">0</div>
+                            <small class="text-muted">Được tạo sau điều trị</small>
+                        </div>
+                        <div class="rc-stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 2: Cần nhắc hôm nay -->
+                <div class="col-6 col-lg-3">
+                    <div class="rc-stat-card card-amber h-100 d-flex align-items-center justify-content-between" style="cursor: pointer;" onclick="setQuickDateFilter('TODAY')">
+                        <div>
+                            <div class="rc-stat-label text-warning-emphasis">Hẹn tái khám hôm nay</div>
+                            <div class="rc-stat-val text-warning-emphasis" id="statToday" th:text="${stats != null ? stats['todayCount'] : 0}">0</div>
+                            <small class="text-warning-emphasis fw-semibold">Bấm để lọc hôm nay</small>
+                        </div>
+                        <div class="rc-stat-icon bg-warning-subtle text-warning-emphasis">
+                            <i class="bi bi-alarm-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 3: Tái khám 7 ngày tới -->
+                <div class="col-6 col-lg-3">
+                    <div class="rc-stat-card card-green h-100 d-flex align-items-center justify-content-between" style="cursor: pointer;" onclick="setQuickDateFilter('NEXT_7_DAYS')">
+                        <div>
+                            <div class="rc-stat-label text-success">Sắp tới (7 ngày tới)</div>
+                            <div class="rc-stat-val text-success" id="statUpcoming" th:text="${stats != null ? stats['upcomingCount'] : 0}">0</div>
+                            <small class="text-success fw-semibold">Cần gửi tin / gọi nhắc</small>
+                        </div>
+                        <div class="rc-stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-calendar3-range-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 4: Quá hạn chưa đến -->
+                <div class="col-6 col-lg-3">
+                    <div class="rc-stat-card card-rose h-100 d-flex align-items-center justify-content-between" style="cursor: pointer;" onclick="setQuickDateFilter('OVERDUE')">
+                        <div>
+                            <div class="rc-stat-label text-danger">Quá hạn chưa đến</div>
+                            <div class="rc-stat-val text-danger" id="statOverdue" th:text="${stats != null ? stats['overdueCount'] : 0}">0</div>
+                            <small class="text-danger fw-semibold">Bấm để xử lý gọi lại</small>
+                        </div>
+                        <div class="rc-stat-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HÀNG 3: THANH CÔNG CỤ BỘ LỌC ĐA TIÊU CHÍ -->
+            <div class="rc-toolbar mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <!-- Nhóm nút mốc thời gian -->
+                    <div class="d-flex flex-wrap align-items-center gap-1.5" id="dateFilterButtonGroup">
+                        <button type="button" class="rc-filter-btn is-active" data-filter="ALL" onclick="setDateFilter('ALL', this)">
+                            <i class="bi bi-grid-fill me-1"></i>Tất cả
+                        </button>
+                        <button type="button" class="rc-filter-btn" data-filter="TODAY" onclick="setDateFilter('TODAY', this)">
+                            <i class="bi bi-calendar-event me-1"></i>Hôm nay
+                        </button>
+                        <button type="button" class="rc-filter-btn" data-filter="NEXT_7_DAYS" onclick="setDateFilter('NEXT_7_DAYS', this)">
+                            <i class="bi bi-calendar-week me-1"></i>7 ngày tới
+                        </button>
+                        <button type="button" class="rc-filter-btn" data-filter="THIS_MONTH" onclick="setDateFilter('THIS_MONTH', this)">
+                            <i class="bi bi-calendar-month me-1"></i>Tháng này
+                        </button>
+                        <button type="button" class="rc-filter-btn text-danger border-danger-subtle" data-filter="OVERDUE" onclick="setDateFilter('OVERDUE', this)">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>Quá hạn
+                        </button>
+                    </div>
+
+                    <!-- Nhóm lọc theo Bác sĩ & Trạng thái & Ô tìm kiếm -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Lọc Bác sĩ -->
+                        <div style="width: 200px;">
+                            <select class="form-select form-select-sm rounded-pill" id="filterDoctorSelect" onchange="loadRecalls()">
+                                <option value="">-- Tất cả Bác sĩ --</option>
+                                <option th:each="doc : ${doctors}" th:value="${doc.staffId}" th:text="${doc.fullName}">BS. Nguyễn Văn A</option>
+                            </select>
+                        </div>
+
+                        <!-- Lọc Trạng thái -->
+                        <div style="width: 170px;">
+                            <select class="form-select form-select-sm rounded-pill" id="filterStatusSelect" onchange="loadRecalls()">
+                                <option value="ALL">-- Tất cả trạng thái --</option>
+                                <option value="CONFIRMED" selected>Đã xác nhận</option>
+                                <option value="PENDING">Chờ xác nhận</option>
+                                <option value="COMPLETED">Đã hoàn thành</option>
+                                <option value="CANCELLED">Đã hủy</option>
+                            </select>
+                        </div>
+
+                        <!-- Ô tìm kiếm bệnh nhân -->
+                        <div class="input-group input-group-sm rounded-pill border" style="width: 260px; overflow: hidden; background: #ffffff;">
+                            <span class="input-group-text bg-white border-0 text-muted ps-2.5">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="recallSearchInput" class="form-control border-0 ps-1"
+                                   placeholder="Tìm tên, Mã BN, SĐT..."
+                                   oninput="debounceSearch()">
+                            <button class="btn btn-link text-muted border-0 p-1 pe-2" type="button" id="clearSearchBtn" style="display: none;" onclick="clearSearch()">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HÀNG 4: BẢNG DANH SÁCH LỊCH HẸN TÁI KHÁM -->
+            <div class="rc-table-card">
+                <div class="p-3 border-bottom d-flex align-items-center justify-content-between bg-white">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-list-task text-primary fs-5"></i>
+                        <span class="fw-bold text-dark">Danh sách bệnh nhân hẹn tái khám</span>
+                        <span class="badge bg-primary text-white rounded-pill px-2.5" id="recallsCountBadge">0 ca</span>
+                    </div>
+                    <div class="small text-muted" id="tableFilterNotice">
+                        Đang hiển thị tất cả lịch hẹn tái khám
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table rc-table align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th style="width: 120px;">Mã hẹn</th>
+                            <th style="width: 250px;">Bệnh nhân</th>
+                            <th style="width: 170px;">Bác sĩ phụ trách</th>
+                            <th style="width: 170px;">Thời gian hẹn</th>
+                            <th>Nội dung / Lý do tái khám</th>
+                            <th style="width: 140px;" class="text-center">Trạng thái hẹn</th>
+                            <th style="width: 160px;" class="text-center">Tình trạng CSKH</th>
+                            <th style="width: 170px;" class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="recallsTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                <span>Đang tải danh sách lịch hẹn tái khám...</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL 1: GHI NHẬN KẾT QUẢ GỌI ĐIỆN CSKH (SCR-44.5 / FT18)            -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="careTaskModal" tabindex="-1" aria-labelledby="careTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="careTaskModalLabel">
+                        <i class="bi bi-telephone-outbound-fill"></i>
+                        <span>Ghi nhận kết quả liên hệ CSKH</span>
+                    </h5>
+                    <small class="text-white-50">Cập nhật phản hồi từ bệnh nhân sau cuộc gọi nhắc lịch</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4">
+                <input type="hidden" id="modalTaskId">
+                <input type="hidden" id="modalApptId">
+
+                <div class="p-3 rounded-3 mb-3" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+                    <div class="fw-bold text-dark fs-6" id="modalPatientName">Đỗ Quỳnh Anh</div>
+                    <div class="small text-secondary mt-1">
+                        <span>SĐT: <strong class="text-primary" id="modalPhone">0982334455</strong></span>
+                        <span class="mx-2">•</span>
+                        <span>Ngày hẹn: <strong class="text-dark" id="modalDate">28/10/2026</strong></span>
+                    </div>
+                    <div class="small text-muted mt-1" id="modalReason">Lý do: Tái khám cắt chỉ R38</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Kết quả cuộc gọi / Phản hồi của bệnh nhân:</label>
+                    <select class="form-select" id="modalContactResult">
+                        <option value="CUSTOMER_CONFIRMED" selected>Đã nghe máy - Xác nhận sẽ đến đúng giờ</option>
+                        <option value="RESCHEDULE_REQUESTED">Đã nghe máy - Bận việc, xin đổi sang ngày khác</option>
+                        <option value="NO_ANSWER">Không nghe máy / Máy bận (Cần gọi lại sau)</option>
+                        <option value="CANCEL_REQUESTED">Khách xin hủy lịch tái khám này</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Trạng thái nhiệm vụ:</label>
+                    <select class="form-select form-select-sm" id="modalTaskStatus">
+                        <option value="COMPLETED" selected>Hoàn thành nhiệm vụ nhắc hẹn</option>
+                        <option value="IN_PROGRESS">Đang xử lý / Cần theo dõi tiếp</option>
+                        <option value="PENDING">Chưa xong (Giữ trạng thái chờ)</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Ghi chú chi tiết cuộc trao đổi:</label>
+                    <textarea class="form-control" id="modalTaskNotes" rows="3" placeholder="Nhập dặn dò thêm hoặc yêu cầu của khách hàng..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2 px-3">
+                <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" onclick="saveCareTaskResult()">
+                    <i class="bi bi-check-circle-fill me-1"></i>Lưu kết quả
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL 2: ĐỔI NGÀY HẸN TÁI KHÁM (RESCHEDULE)                          -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="rescheduleModal" tabindex="-1" aria-labelledby="rescheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="rescheduleModalLabel">
+                        <i class="bi bi-calendar-range-fill"></i>
+                        <span>Dời ngày hẹn tái khám</span>
+                    </h5>
+                    <small class="text-white-50">Cập nhật ngày giờ hẹn mới theo yêu cầu của bệnh nhân</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4">
+                <input type="hidden" id="rescheduleApptId">
+
+                <div class="p-3 rounded-3 mb-3 bg-light border">
+                    <div class="fw-bold text-dark" id="reschedulePatientName">Đỗ Quỳnh Anh</div>
+                    <div class="small text-muted mt-1" id="rescheduleOldDate">Lịch hẹn hiện tại: 25/10/2026 - Buổi Sáng</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Chọn ngày tái khám mới: <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="rescheduleNewDate">
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Buổi hẹn:</label>
+                        <select class="form-select" id="rescheduleNewSession">
+                            <option value="MORNING">Buổi Sáng (08:00 - 12:00)</option>
+                            <option value="AFTERNOON">Buổi Chiều (13:30 - 17:30)</option>
+                            <option value="EVENING">Buổi Tối (17:30 - 20:30)</option>
+                            <option value="ANY">Bất kỳ thời điểm nào</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Giờ dự kiến:</label>
+                        <input type="time" class="form-control" id="rescheduleNewTime" value="09:00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2 px-3">
+                <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" onclick="submitReschedule()">
+                    <i class="bi bi-calendar-check me-1"></i>Xác nhận dời ngày
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentFilter = 'ALL';
+    let recallsData = [];
+    let searchDebounceTimeout = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRecalls();
+    });
+
+    function setDateFilter(filterKey, btnEl) {
+        currentFilter = filterKey;
+        document.querySelectorAll('#dateFilterButtonGroup .rc-filter-btn').forEach(b => b.classList.remove('is-active'));
+        if (btnEl) btnEl.classList.add('is-active');
+
+        const filterLabels = {
+            'ALL': 'Đang hiển thị tất cả lịch hẹn tái khám',
+            'TODAY': 'Đang lọc các lịch hẹn tái khám HÔM NAY',
+            'NEXT_7_DAYS': 'Đang lọc các lịch hẹn tái khám trong 7 NGÀY TỚI',
+            'THIS_MONTH': 'Đang lọc các lịch hẹn tái khám trong THÁNG NÀY',
+            'OVERDUE': 'Đang lọc các lịch hẹn đã QUÁ HẠN nhưng bệnh nhân chưa đến'
+        };
+        const noticeEl = document.getElementById('tableFilterNotice');
+        if (noticeEl) noticeEl.textContent = filterLabels[filterKey] || 'Đang lọc dữ liệu';
+
+        loadRecalls();
+    }
+
+    function setQuickDateFilter(filterKey) {
+        const btn = document.querySelector(`#dateFilterButtonGroup button[data-filter="${filterKey}"]`);
+        setDateFilter(filterKey, btn);
+    }
+
+    function debounceSearch() {
+        clearTimeout(searchDebounceTimeout);
+        const input = document.getElementById('recallSearchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) {
+            clearBtn.style.display = (input && input.value) ? 'inline-block' : 'none';
+        }
+        searchDebounceTimeout = setTimeout(() => {
+            loadRecalls();
+        }, 300);
+    }
+
+    function clearSearch() {
+        const input = document.getElementById('recallSearchInput');
+        if (input) input.value = '';
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        loadRecalls();
+    }
+
+    async function loadRecalls() {
+        const doctorId = document.getElementById('filterDoctorSelect')?.value || '';
+        const status = document.getElementById('filterStatusSelect')?.value || 'ALL';
+        const keyword = document.getElementById('recallSearchInput')?.value || '';
+
+        const tbody = document.getElementById('recallsTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        <span>Đang tải danh sách lịch hẹn tái khám...</span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        try {
+            const url = `/api/doctor/recalls?dateFilter=${encodeURIComponent(currentFilter)}&doctorId=${encodeURIComponent(doctorId)}&status=${encodeURIComponent(status)}&keyword=${encodeURIComponent(keyword)}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Không thể tải danh sách tái khám');
+            recallsData = await res.json();
+            renderRecallsTable(recallsData);
+            loadStatistics();
+        } catch (err) {
+            console.error(err);
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-danger">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 d-block mb-1"></i>
+                            <span>Có lỗi xảy ra khi tải dữ liệu: ${err.message}</span>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    async function loadStatistics() {
+        try {
+            const res = await fetch('/api/doctor/recalls/statistics');
+            if (res.ok) {
+                const stats = await res.json();
+                document.getElementById('statTotal').textContent = stats.total || 0;
+                document.getElementById('statToday').textContent = stats.todayCount || 0;
+                document.getElementById('statUpcoming').textContent = stats.upcomingCount || 0;
+                document.getElementById('statOverdue').textContent = stats.overdueCount || 0;
+            }
+        } catch (e) {
+            console.error('Error fetching statistics', e);
+        }
+    }
+
+    function renderRecallsTable(list) {
+        const tbody = document.getElementById('recallsTableBody');
+        const badgeEl = document.getElementById('recallsCountBadge');
+        if (badgeEl) badgeEl.textContent = `${list.length} ca`;
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        <span class="fw-semibold">Không tìm thấy ca hẹn tái khám nào phù hợp với bộ lọc hiện tại.</span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = list.map(item => {
+            const firstLetter = (item.patientName || 'BN').charAt(0).toUpperCase();
+            const dateStr = item.appointmentDate ? formatDate(item.appointmentDate) : '---';
+            const timeStr = item.expectedTime ? item.expectedTime.substring(0, 5) : '09:00';
+            const sessionMap = {
+                'MORNING': 'Sáng',
+                'AFTERNOON': 'Chiều',
+                'EVENING': 'Tối',
+                'ANY': 'Bất kỳ'
+            };
+            const sessionName = sessionMap[item.preferredSession] || item.preferredSession;
+
+            // Status badges
+            let statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
+            if (item.status === 'COMPLETED') {
+                statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Đã khám</span>`;
+            } else if (item.status === 'PENDING') {
+                statusBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Chờ xác nhận</span>`;
+            } else if (item.status === 'CANCELLED') {
+                statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
+            }
+
+            // Timeline badge
+            let timeBadge = `<span class="badge ${item.timelineBadgeClass} rounded-pill px-2 py-0.5 small">${item.timelineBadgeText}</span>`;
+
+            // CSKH Badge
+            let careTaskBadge = `<span class="badge bg-light text-muted border">Chưa có nhiệm vụ</span>`;
+            if (item.hasCareTask) {
+                if (item.careTaskStatus === 'COMPLETED') {
+                    careTaskBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-telephone-check-fill me-1"></i>Đã gọi nhắc</span>`;
+                } else if (item.careTaskStatus === 'IN_PROGRESS') {
+                    careTaskBadge = `<span class="badge bg-info-subtle text-info-emphasis border"><i class="bi bi-telephone-forward-fill me-1"></i>Đang liên hệ</span>`;
+                } else {
+                    careTaskBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border"><i class="bi bi-bell-fill me-1"></i>Cần gọi nhắc</span>`;
+                }
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <strong class="text-primary font-monospace" style="font-size: 13px;">${item.appointmentCode || ('TK-' + item.appointmentId)}</strong>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rc-avatar">${firstLetter}</div>
+                            <div>
+                                <div class="fw-bold text-dark">${item.patientName || 'Bệnh nhân'}</div>
+                                <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                                    <span class="badge bg-light text-secondary border">${item.patientCode || '---'}</span>
+                                    <span>•</span>
+                                    <a href="tel:${item.phoneNumber}" class="text-decoration-none text-primary fw-semibold" title="Gọi điện">
+                                        <i class="bi bi-telephone-fill small"></i> ${item.phoneNumber || '---'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">${item.doctorName || 'BS. Chưa chỉ định'}</div>
+                        <div class="small text-muted">${item.branchName || ''}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-1.5 mb-1">
+                            <span class="fw-bold text-dark">${dateStr}</span>
+                            ${timeBadge}
+                        </div>
+                        <div class="small text-secondary">
+                            <i class="bi bi-clock me-1"></i>${timeStr} (${sessionName})
+                        </div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark text-break" style="max-width: 280px;">${item.initialSymptoms || 'Tái khám định kỳ sau điều trị'}</div>
+                        <div class="small text-muted text-truncate" style="max-width: 280px;">${item.serviceName || ''}</div>
+                    </td>
+                    <td class="text-center">
+                        ${statusBadge}
+                    </td>
+                    <td class="text-center">
+                        ${careTaskBadge}
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                                    title="Ghi nhận cuộc gọi CSKH"
+                                    onclick="openCareTaskModal(${item.appointmentId})">
+                                <i class="bi bi-telephone-outbound"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                                    title="Dời ngày hẹn"
+                                    onclick="openRescheduleModal(${item.appointmentId})">
+                                <i class="bi bi-calendar-event"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold"
+                                    title="Vào khám ngay"
+                                    onclick="startExamFromRecall(${item.patientId})">
+                                <i class="bi bi-play-circle-fill"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 rounded-pill"
+                                    title="Hủy lịch hẹn"
+                                    onclick="cancelRecall(${item.appointmentId})">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function formatDate(dateArrOrStr) {
+        if (!dateArrOrStr) return '---';
+        if (typeof dateArrOrStr === 'string') {
+            const parts = dateArrOrStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateArrOrStr;
+        }
+        if (Array.isArray(dateArrOrStr)) {
+            const y = dateArrOrStr[0];
+            const m = String(dateArrOrStr[1]).padStart(2, '0');
+            const d = String(dateArrOrStr[2]).padStart(2, '0');
+            return `${d}/${m}/${y}`;
+        }
+        return dateArrOrStr;
+    }
+
+    // Modal CSKH
+    function openCareTaskModal(appointmentId) {
+        const item = recallsData.find(x => x.appointmentId === appointmentId);
+        if (!item) return;
+
+        document.getElementById('modalTaskId').value = item.careTaskId || '';
+        document.getElementById('modalApptId').value = item.appointmentId;
+        document.getElementById('modalPatientName').textContent = item.patientName;
+        document.getElementById('modalPhone').textContent = item.phoneNumber;
+        document.getElementById('modalDate').textContent = formatDate(item.appointmentDate);
+        document.getElementById('modalReason').textContent = 'Lý do: ' + (item.initialSymptoms || 'Tái khám');
+        document.getElementById('modalTaskNotes').value = item.careTaskNotes || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('careTaskModal'));
+        modal.show();
+    }
+
+    async function saveCareTaskResult() {
+        const taskId = document.getElementById('modalTaskId').value;
+        const apptId = document.getElementById('modalApptId').value;
+        const contactResult = document.getElementById('modalContactResult').value;
+        const status = document.getElementById('modalTaskStatus').value;
+        const notes = document.getElementById('modalTaskNotes').value;
+
+        if (!taskId) {
+            alert('Lịch hẹn này chưa có nhiệm vụ CSKH riêng. Đã ghi nhận kết quả vào hệ thống.');
+            bootstrap.Modal.getInstance(document.getElementById('careTaskModal')).hide();
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/doctor/care-tasks', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId: taskId, contactResult: contactResult, status: status, notes: notes })
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('careTaskModal')).hide();
+                loadRecalls();
+            } else {
+                alert('Có lỗi khi lưu kết quả CSKH');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Có lỗi mạng: ' + e.message);
+        }
+    }
+
+    // Modal Reschedule
+    function openRescheduleModal(appointmentId) {
+        const item = recallsData.find(x => x.appointmentId === appointmentId);
+        if (!item) return;
+
+        document.getElementById('rescheduleApptId').value = item.appointmentId;
+        document.getElementById('reschedulePatientName').textContent = item.patientName;
+        document.getElementById('rescheduleOldDate').textContent = `Lịch hẹn hiện tại: ${formatDate(item.appointmentDate)} - Buổi ${item.preferredSession}`;
+        
+        let initialDate = '';
+        if (typeof item.appointmentDate === 'string') {
+            initialDate = item.appointmentDate;
+        } else if (Array.isArray(item.appointmentDate)) {
+            const y = item.appointmentDate[0];
+            const m = String(item.appointmentDate[1]).padStart(2, '0');
+            const d = String(item.appointmentDate[2]).padStart(2, '0');
+            initialDate = `${y}-${m}-${d}`;
+        }
+        document.getElementById('rescheduleNewDate').value = initialDate;
+        if (item.preferredSession) {
+            document.getElementById('rescheduleNewSession').value = item.preferredSession;
+        }
+        if (item.expectedTime) {
+            document.getElementById('rescheduleNewTime').value = item.expectedTime.substring(0, 5);
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
+        modal.show();
+    }
+
+    async function submitReschedule() {
+        const apptId = document.getElementById('rescheduleApptId').value;
+        const newDate = document.getElementById('rescheduleNewDate').value;
+        const newSession = document.getElementById('rescheduleNewSession').value;
+        const newTime = document.getElementById('rescheduleNewTime').value;
+
+        if (!newDate) {
+            alert('Vui lòng chọn ngày tái khám mới!');
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/doctor/re-examinations/${apptId}/reschedule?newDate=${encodeURIComponent(newDate)}&newTime=${encodeURIComponent(newTime)}&session=${encodeURIComponent(newSession)}`, {
+                method: 'PUT'
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('rescheduleModal')).hide();
+                loadRecalls();
+            } else {
+                alert('Không thể dời ngày hẹn tái khám.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi: ' + e.message);
+        }
+    }
+
+    async function cancelRecall(appointmentId) {
+        const reason = prompt('Nhập lý do hủy lịch hẹn tái khám này:');
+        if (reason === null) return;
+
+        try {
+            const res = await fetch(`/api/doctor/re-examinations/${appointmentId}?reason=${encodeURIComponent(reason || 'Bệnh nhân báo hủy')}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                loadRecalls();
+            } else {
+                alert('Không thể hủy cuộc hẹn.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi: ' + e.message);
+        }
+    }
+
+    function startExamFromRecall(patientId) {
+        if (!patientId) return;
+        window.location.href = `/doctor/examination/patient/${patientId}?newVisit=true`;
+    }
+</script>
+</body>
+</html>

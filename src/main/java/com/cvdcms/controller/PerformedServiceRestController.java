@@ -42,14 +42,21 @@ public class PerformedServiceRestController {
         log.info("API createPerformedService called with: visitId={}, serviceId={}",
                 requestDTO.getVisitId(), requestDTO.getServiceId());
 
-        PerformedServiceResponseDTO responseDTO = performedServiceService.createPerformedService(requestDTO);
+        try {
+            PerformedServiceResponseDTO responseDTO = performedServiceService.createPerformedService(requestDTO);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("message", "Ghi nhận dịch vụ thực hiện thành công (COMPLETED)!");
-        result.put("data", responseDTO);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Ghi nhận dịch vụ thực hiện thành công (COMPLETED)!");
+            result.put("data", responseDTO);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", ex.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 
     @DeleteMapping("/performed-services/{id}")
@@ -57,12 +64,19 @@ public class PerformedServiceRestController {
             @PathVariable("id") Long id
     ) {
         log.info("API cancelPerformedService called with id={}", id);
-        performedServiceService.cancelPerformedService(id);
+        try {
+            performedServiceService.cancelPerformedService(id);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("message", "Đã xóa dịch vụ thực hiện thành công!");
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Đã xóa dịch vụ thực hiện thành công!");
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", ex.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 }
