@@ -73,6 +73,20 @@
             </a>
         </div>
 
+        <!-- QUẢN LÝ KHO VẬT TƯ -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO'))}">
+            <p class="app-sidebar__section">Kho &amp; Vật tư</p>
+
+            <a th:href="@{/inventory}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
+                <i class="bi bi-box-seam" aria-hidden="true"></i><span>Quản lý kho vật tư</span>
+            </a>
+            <a th:href="@{/suppliers}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'suppliers'} ? 'is-active' : ''">
+                <i class="bi bi-truck" aria-hidden="true"></i><span>Nhà cung cấp</span>
+            </a>
+        </div>
+
         <!-- LỄ TÂN -->
         <div th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
             <p class="app-sidebar__section">Lễ tân</p>
@@ -118,6 +132,7 @@
            title="Quản lý Quy trình Kỹ thuật Lâm sàng chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)">
             <i class="bi bi-journal-medical" aria-hidden="true"></i>
             <span>Quy trình kỹ thuật</span>
+            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">BYT</span>
         </a>
 
         <!-- 3. Điều phối & Ghế khám Kanban -->
@@ -127,7 +142,25 @@
             <span>Điều phối ghế nha</span>
         </a>
 
-        <!-- 4. Kho ảnh lâm sàng Trước/Sau -->
+        <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
+        <a th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('prescriptionsSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kê đơn thuốc, dặn dò & in đơn (SCR-18.3, 18.4, 18.5)">
+            <i class="bi bi-capsule text-warning" aria-hidden="true"></i>
+            <span>Đơn thuốc &amp; Dặn dò</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT18</span>
+        </a>
+
+        <!-- 6. Kế hoạch điều trị & Lộ trình (FT15) -->
+        <a th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link"
+           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('treatmentPlanSection')?.scrollIntoView({behavior: 'smooth'}); }"
+           title="Kế hoạch điều trị nhiều giai đoạn & Trợ lý AI (SCR-15.1, 15.2, 15.3 - FT15)">
+            <i class="bi bi-diagram-3-fill text-info" aria-hidden="true"></i>
+            <span>Kế hoạch điều trị</span>
+            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT15</span>
+        </a>
+
+        <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
            title="Kho ảnh lâm sàng Before/After">
             <i class="bi bi-images" aria-hidden="true"></i>
@@ -161,10 +194,9 @@
             <span>Hồ sơ Bệnh nhân</span>
         </a>
 
-        <!-- 8. Nhắc tái khám sau điều trị (FT18 - SCR-18.2) -->
-        <a th:href="@{/doctor/recalls}" class="side-link"
-           th:classappend="${activeMenu == 'recalls'} ? 'is-active' : ''"
-           title="Danh sách bệnh nhân cần nhắc tái khám sau điều trị (SCR-18.2)">
+        <!-- 8. Nhắc tái khám sau điều trị -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Danh sách bệnh nhân cần nhắc tái khám">
             <i class="bi bi-bell" aria-hidden="true"></i>
             <span>Nhắc hẹn tái khám</span>
         </a>
