@@ -7,7 +7,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
-    reports, audit, patients, appointments, checkin, queue
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -86,6 +86,20 @@
             <a href="#" class="side-link is-disabled" aria-disabled="true"
                th:classappend="${activeMenu == 'audit'} ? 'is-active' : ''">
                 <i class="bi bi-journal-text" aria-hidden="true"></i><span>Nhật ký thao tác</span>
+            </a>
+        </div>
+
+        <!-- QUẢN LÝ KHO VẬT TƯ -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO'))}">
+            <p class="app-sidebar__section">Kho &amp; Vật tư</p>
+
+            <a th:href="@{/inventory}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
+                <i class="bi bi-box-seam" aria-hidden="true"></i><span>Quản lý kho vật tư</span>
+            </a>
+            <a th:href="@{/suppliers}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'suppliers'} ? 'is-active' : ''">
+                <i class="bi bi-truck" aria-hidden="true"></i><span>Nhà cung cấp</span>
             </a>
         </div>
 

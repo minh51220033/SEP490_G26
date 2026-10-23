@@ -1,357 +1,190 @@
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Quản lý tin tức')}"></head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý tin tức - CV-DCMS</title>
+<body class="app-body">
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<!-- CSS riêng của trang tin tức -->
+<link rel="stylesheet" th:href="@{/css/news.css}">
 
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f7fb;
-            color: #1f2937;
-        }
+<header th:replace="~{fragments/header :: siteHeader}"></header>
 
-        .header {
-            height: 65px;
-            display: flex;
-            align-items: center;
-            background: white;
-            padding: 0 30px;
-            border-bottom: 1px solid #e5e7eb;
-        }
+<div class="app-shell">
 
-        .logo {
-            color: #2563eb;
-            font-weight: bold;
-            font-size: 21px;
-        }
+    <aside th:replace="~{fragments/sidebar :: sidebar('news')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
+    <div class="app-main">
 
-        .top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý tin tức')}"></header>
 
-        .top h1 {
-            margin: 0;
-        }
+        <main class="app-content nw-page">
 
-        .btn {
-            border: none;
-            border-radius: 8px;
-            padding: 8px 14px;
-            text-decoration: none;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 13px;
-        }
-
-        .btn-primary {
-            background: #2563eb;
-            color: white;
-        }
-
-        .btn-edit {
-            background: #eff6ff;
-            color: #2563eb;
-        }
-
-        .btn-danger {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-
-        .btn-secondary {
-            background: #eef2f7;
-            color: #374151;
-        }
-
-        .filter-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 20px;
-        }
-
-        .filters {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr auto;
-            gap: 10px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 7px;
-        }
-
-        .table-card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 3px 15px rgba(0,0,0,.05);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 13px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-        }
-
-        th {
-            background: #f9fafb;
-            font-size: 13px;
-        }
-
-        td {
-            font-size: 14px;
-        }
-
-        .status {
-            padding: 5px 9px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .draft { background: #fef3c7; color: #92400e; }
-        .published { background: #dcfce7; color: #166534; }
-        .archived { background: #e5e7eb; color: #374151; }
-
-        .actions {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        .empty {
-            padding: 40px;
-            text-align: center;
-            color: #6b7280;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            padding: 20px;
-        }
-
-        .page-link {
-            padding: 8px 12px;
-            background: #eef2f7;
-            color: #374151;
-            text-decoration: none;
-            border-radius: 6px;
-        }
-
-        .page-link.active {
-            background: #2563eb;
-            color: white;
-        }
-    </style>
-</head>
-
-<body>
-
-<header class="header">
-    <div class="logo">CV-DCMS</div>
-</header>
-
-<div class="container">
-    <div class="top">
-        <div>
-            <h1>Quản lý tin tức</h1>
-        </div>
-        <a href="/admin/news/create" class="btn btn-primary">+ Tạo bài viết</a>
-    </div>
-
-    <!-- FILTER -->
-    <div class="filter-card">
-        <form action="/admin/news" method="get">
-            <div class="filters">
-                <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tiêu đề...">
-
-                <select name="branchId">
-                    <option value=""
-                            th:selected="${branchId == null}">
-                        Tất cả chi nhánh
-                    </option>
-
-                    <option th:each="branch : ${branches}"
-                            th:value="${branch.branchId}"
-                            th:text="${branch.branchName}"
-                            th:selected="${branchId != null
-                and branchId.equals(branch.branchId)}">
-                    </option>
-                </select>
-
-                <select name="status">
-                    <option value="" th:selected="${status == null || status == ''}">Tất cả trạng thái</option>
-                    <option value="DRAFT" th:selected="${status == 'DRAFT'}">Nháp</option>
-                    <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">Đã đăng</option>
-                    <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">Lưu trữ</option>
-                </select>
-
-                <select name="sort">
-                    <option value="createdAt" th:selected="${sort == 'createdAt'}">Ngày tạo</option>
-                    <option value="title" th:selected="${sort == 'title'}">Tiêu đề</option>
-                    <option value="publishedAt" th:selected="${sort == 'publishedAt'}">Ngày đăng</option>
-                </select>
-
-                <select name="direction">
-                    <option value="desc" th:selected="${direction == 'desc'}">Giảm dần</option>
-                    <option value="asc" th:selected="${direction == 'asc'}">Tăng dần</option>
-                </select>
-
-                <button type="submit" class="btn btn-primary">Tìm</button>
+            <div class="nw-admin-head">
+                <div>
+                    <span class="eyebrow">CV-DCMS · Nội dung</span>
+                    <h1>Quản lý tin tức</h1>
+                    <p>Tạo, chỉnh sửa và xuất bản bài viết cho từng chi nhánh phòng khám.</p>
+                </div>
+                <div class="nw-admin-head__actions">
+                    <a th:href="@{/news}" target="_blank" rel="noopener" class="nw-btn nw-btn--ghost">
+                        <i class="bi bi-box-arrow-up-right"></i> Xem trang tin tức
+                    </a>
+                    <a th:href="@{/admin/news/create}" class="nw-btn nw-btn--primary">
+                        <i class="bi bi-plus-lg"></i> Tạo bài viết
+                    </a>
+                </div>
             </div>
-        </form>
-    </div>
 
-    <!-- TABLE -->
-    <div class="table-card">
-        <table>
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Tiêu đề</th>
-                <th>Chi nhánh</th>
-                <th>Trạng thái</th>
-                <th>Người tạo</th>
-                <th>Ngày tạo</th>
-                <th>Ngày đăng</th>
-                <th>Thao tác</th>
-            </tr>
-            </thead>
+            <!-- BỘ LỌC -->
+            <form th:action="@{/admin/news}" method="get" class="nw-card nw-filters" role="search">
+                <div class="nw-field nw-field--keyword">
+                    <label for="keyword">Từ khóa</label>
+                    <input id="keyword" class="nw-input" type="search" name="keyword" th:value="${keyword}"
+                           placeholder="Tìm theo tiêu đề...">
+                </div>
 
-            <tbody>
-            <tr th:each="news : ${newsPage.content}">
-                <td th:text="${news.newsId}">1</td>
+                <div class="nw-field">
+                    <label for="branchFilter">Chi nhánh</label>
+                    <select id="branchFilter" class="nw-select" name="branchId">
+                        <option value="" th:selected="${branchId == null}">Tất cả chi nhánh</option>
+                        <option th:each="branch : ${branches}"
+                                th:value="${branch.branchId}"
+                                th:text="${branch.branchName}"
+                                th:selected="${branchId != null and branchId.equals(branch.branchId)}"></option>
+                    </select>
+                </div>
 
-                <td>
-                    <strong th:text="${news.title}">Tiêu đề</strong>
-                </td>
+                <div class="nw-field">
+                    <label for="statusFilter">Trạng thái</label>
+                    <select id="statusFilter" class="nw-select" name="status">
+                        <option value="" th:selected="${status == null || status == ''}">Tất cả</option>
+                        <option value="DRAFT" th:selected="${status == 'DRAFT'}">Bản nháp</option>
+                        <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">Đã đăng</option>
+                        <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">Lưu trữ</option>
+                    </select>
+                </div>
 
-                <td th:text="${news.branch != null
-            ? news.branch.branchName
-            : 'Chưa gán chi nhánh'}">
-                    Chi nhánh
-                </td>
+                <div class="nw-field">
+                    <label for="sortFilter">Sắp xếp</label>
+                    <select id="sortFilter" class="nw-select" name="sort">
+                        <option value="createdAt" th:selected="${sort == 'createdAt'}">Ngày tạo</option>
+                        <option value="title" th:selected="${sort == 'title'}">Tiêu đề</option>
+                        <option value="publishedAt" th:selected="${sort == 'publishedAt'}">Ngày đăng</option>
+                    </select>
+                </div>
 
-                <td>
-        <span th:if="${news.status == 'DRAFT'}"
-              class="status draft">DRAFT</span>
+                <div class="nw-field">
+                    <label for="directionFilter">Thứ tự</label>
+                    <select id="directionFilter" class="nw-select" name="direction">
+                        <option value="desc" th:selected="${direction == 'desc'}">Giảm dần</option>
+                        <option value="asc" th:selected="${direction == 'asc'}">Tăng dần</option>
+                    </select>
+                </div>
 
-                    <span th:if="${news.status == 'PUBLISHED'}"
-                          class="status published">PUBLISHED</span>
+                <div class="nw-field" style="flex-direction:row; gap:8px">
+                    <button type="submit" class="nw-btn nw-btn--primary"><i class="bi bi-funnel"></i> Lọc</button>
+                    <a th:href="@{/admin/news}" class="nw-btn nw-btn--neutral" title="Xóa bộ lọc" aria-label="Xóa bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
 
-                    <span th:if="${news.status == 'ARCHIVED'}"
-                          class="status archived">ARCHIVED</span>
-                </td>
+            <!-- BẢNG -->
+            <section class="nw-card nw-table-card">
+                <div class="nw-result" style="padding:16px 18px; border-bottom:1px solid var(--line)">
+                    <span>Tổng số: <strong th:text="${newsPage.totalElements}">0</strong> bài viết</span>
+                    <span th:if="${newsPage.totalPages > 0}">
+                        Trang <strong th:text="${newsPage.number + 1}">1</strong> / <strong th:text="${newsPage.totalPages}">1</strong>
+                    </span>
+                </div>
 
-                <td th:text="${news.createdBy != null
-            ? news.createdBy.username
-            : '-'}">admin</td>
+                <div class="nw-table-scroll">
+                    <table class="nw-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Tiêu đề</th>
+                            <th scope="col">Chi nhánh</th>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col">Người tạo</th>
+                            <th scope="col">Ngày tạo</th>
+                            <th scope="col">Ngày đăng</th>
+                            <th scope="col">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="news : ${newsPage.content}">
+                            <td class="nw-table__id" th:text="${'#' + news.newsId}">#1</td>
+                            <td><span class="nw-table__title" th:text="${news.title}">Tiêu đề</span></td>
+                            <td th:text="${news.branch != null ? news.branch.branchName : 'Chưa gán chi nhánh'}">Chi nhánh</td>
+                            <td>
+                                <span th:if="${news.status == 'DRAFT'}" class="nw-status nw-status--draft">Bản nháp</span>
+                                <span th:if="${news.status == 'PUBLISHED'}" class="nw-status nw-status--published">Đã đăng</span>
+                                <span th:if="${news.status == 'ARCHIVED'}" class="nw-status nw-status--archived">Lưu trữ</span>
+                            </td>
+                            <td th:text="${news.createdBy != null ? news.createdBy.username : '-'}">admin</td>
+                            <td class="nw-table__muted"
+                                th:text="${news.createdAt != null ? #temporals.format(news.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                            <td class="nw-table__muted"
+                                th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                            <td>
+                                <div class="nw-table__actions">
+                                    <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
+                                       class="nw-btn nw-btn--soft nw-btn--sm" title="Sửa bài viết">
+                                        <i class="bi bi-pencil-square"></i> Sửa
+                                    </a>
+                                    <a th:href="@{'/admin/news/' + ${news.newsId}}" target="_blank" rel="noopener"
+                                       class="nw-btn nw-btn--neutral nw-btn--sm" title="Xem bài viết">
+                                        <i class="bi bi-eye"></i> Xem
+                                    </a>
+                                    <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}" method="post"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này không?');">
+                                        <button type="submit" class="nw-btn nw-btn--danger nw-btn--sm" title="Xóa bài viết">
+                                            <i class="bi bi-trash3"></i> Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
 
-                <td th:text="${news.createdAt != null
-            ? #temporals.format(news.createdAt, 'dd/MM/yyyy HH:mm')
-            : '-'}">-</td>
+                        <tr th:if="${newsPage.content.isEmpty()}">
+                            <td colspan="8" class="nw-table__empty">
+                                <i class="bi bi-inbox"></i>
+                                Không tìm thấy bài viết.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <td th:text="${news.publishedAt != null
-            ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')
-            : '-'}">-</td>
-
-                <td>
-                    <!-- Giữ nguyên các nút Sửa, Xem và Xóa hiện tại của bạn -->
-                    <div class="actions">
-                        <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
-                           class="btn btn-edit">Sửa</a>
-
-                        <a th:href="@{'/admin/news/' + ${news.newsId}}"
-                           target="_blank"
-                           class="btn btn-secondary">Xem</a>
-
-                        <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}"
-                              method="post"
-                              style="display:inline;"
-                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này không?');">
-                            <button type="submit" class="btn btn-danger">Xóa</button>
-                        </form>
+                <!-- PHÂN TRANG -->
+                <nav class="nw-pager" aria-label="Phân trang" th:if="${newsPage.totalPages > 1}">
+                    <div class="nw-pager__list">
+                        <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'" aria-label="Trang trước"
+                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
+                                    direction=${direction}, size=${newsPage.size}, page=${newsPage.number - 1})}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                        <a class="nw-pager__link"
+                           th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
+                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
+                                    direction=${direction}, size=${newsPage.size}, page=${pageNumber})}"
+                           th:text="${pageNumber + 1}"
+                           th:classappend="${pageNumber == newsPage.number} ? ' active'"
+                           th:attr="aria-current=${pageNumber == newsPage.number ? 'page' : null}">1</a>
+                        <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'" aria-label="Trang tiếp"
+                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
+                                    direction=${direction}, size=${newsPage.size}, page=${newsPage.number + 1})}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
                     </div>
-                </td>
-            </tr>
+                </nav>
+            </section>
 
-            <tr th:if="${newsPage.content.isEmpty()}">
-                <td colspan="8" class="empty">
-                    Không tìm thấy bài viết.
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        </main>
 
-        <!-- PAGINATION -->
-        <div class="pagination" th:if="${newsPage.totalPages > 1}">
-            <a th:if="${newsPage.number > 0}"
-               th:href="@{/admin/news(
-       keyword=${keyword},
-       status=${status},
-       branchId=${branchId},
-       sort=${sort},
-       direction=${direction},
-       size=${newsPage.size},
-       page=${newsPage.number - 1}
-   )}"
-               class="page-link">‹</a>
-
-            <a th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-               th:href="@{/admin/news(
-       keyword=${keyword},
-       status=${status},
-       branchId=${branchId},
-       sort=${sort},
-       direction=${direction},
-       size=${newsPage.size},
-       page=${pageNumber}
-   )}"
-               th:text="${pageNumber + 1}"
-               th:classappend="${pageNumber == newsPage.number} ? ' active'"
-               class="page-link">1</a>
-
-
-            <a th:if="${newsPage.number < newsPage.totalPages - 1}"
-               th:href="@{/admin/news(
-       keyword=${keyword},
-       status=${status},
-       branchId=${branchId},
-       sort=${sort},
-       direction=${direction},
-       size=${newsPage.size},
-       page=${newsPage.number + 1}
-   )}"
-               class="page-link">›</a>
-        </div>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
