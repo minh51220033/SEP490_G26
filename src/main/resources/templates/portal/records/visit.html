@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết lượt khám')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Chi tiết lượt khám')}"></header>
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+            <a th:href="@{/portal/records/{id}(id=${record.id})}">← Hồ sơ bệnh nhân</a>
+            <h1 class="mt-3" th:text="${record.fullName}">Bệnh nhân</h1>
+            <section class="panel patient-detail"><div class="patient-facts">
+                <div><span>Mã lượt khám</span><strong th:text="${detail.visit.code}">—</strong></div>
+                <div><span>Ngày khám</span><strong th:text="${#temporals.format(detail.visit.checkInAt, 'dd/MM/yyyy HH:mm')}">—</strong></div>
+                <div><span>Chi nhánh</span><strong th:text="${detail.visit.branchName}">—</strong></div>
+                <div><span>Bác sĩ</span><strong th:text="${detail.visit.doctorName != null ? detail.visit.doctorName : 'Chưa phân'}">—</strong></div>
+                <div><span>Trạng thái</span><strong th:text="${detail.visit.status}">—</strong></div>
+                <div><span>Triệu chứng</span><strong th:text="${detail.visit.initialSymptoms != null ? detail.visit.initialSymptoms : 'Chưa ghi nhận'}">—</strong></div>
+                <div><span>Đánh giá</span><strong th:text="${detail.assessment != null ? detail.assessment : 'Chưa ghi nhận'}">—</strong></div>
+            </div><h2 class="h5 mt-4">Chẩn đoán</h2><ul><li th:each="item : ${detail.diagnoses}" th:text="${item}"></li><li th:if="${#lists.isEmpty(detail.diagnoses)}">Chưa ghi nhận</li></ul>
+                <h2 class="h5 mt-4">Dịch vụ</h2><ul><li th:each="item : ${detail.services}" th:text="${item}"></li><li th:if="${#lists.isEmpty(detail.services)}">Chưa ghi nhận</li></ul>
+                <h2 class="h5 mt-4">Đơn thuốc</h2><ul><li th:each="item : ${detail.prescriptions}" th:text="${item}"></li><li th:if="${#lists.isEmpty(detail.prescriptions)}">Chưa ghi nhận</li></ul>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer></div></div></body></html>
