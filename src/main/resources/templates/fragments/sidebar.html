@@ -7,7 +7,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
-    reports, audit, patients, appointments, checkin, queue, inventory, suppliers
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -127,6 +127,10 @@
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
             </a>
+            <a th:href="@{/customer-care}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''">
+                <i class="bi bi-headset" aria-hidden="true"></i><span>Chăm sóc khách hàng</span>
+            </a>
         </div>
 
         <!-- ========================================== -->
@@ -191,11 +195,13 @@
             <span>Hồ sơ Bệnh nhân</span>
         </a>
 
-        <!-- 8. Nhắc tái khám sau điều trị -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Danh sách bệnh nhân cần nhắc tái khám">
-            <i class="bi bi-bell" aria-hidden="true"></i>
-            <span>Nhắc hẹn tái khám</span>
+        <!-- 8. Chăm sóc khách hàng & Nhắc tái khám (FT44 - Chỉ hiển thị cho ADMIN, LE_TAN, BAC_SI) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))}"
+           th:href="@{/customer-care}" class="side-link"
+           th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
+           title="Quản lý Chăm sóc khách hàng &amp; Nhắc hẹn tái khám (FT44)">
+            <i class="bi bi-headset" aria-hidden="true"></i>
+            <span>Chăm sóc khách hàng</span>
         </a>
 
         <!-- NHÓM: CÁ NHÂN BÁC SĨ -->
