@@ -31,13 +31,25 @@ public class ChatConversation {
     @JoinColumn(name = "user_id")
     private User user;
 
+    /**
+     * Người nhận cụ thể trong cuộc hội thoại trực tiếp giữa các nhân viên / Admin trong cùng cơ sở.
+     * Nếu null: đây là cuộc hội thoại chung của người dùng gửi tới hộp thư cơ sở.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_user_id")
+    private User recipientUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
     private ChatChannel channel = ChatChannel.WEB_WIDGET;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private ChatStatus status = ChatStatus.BOT_HANDLING;
+    private ChatStatus status = ChatStatus.STAFF_HANDLING;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_staff_id")

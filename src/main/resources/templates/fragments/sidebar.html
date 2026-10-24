@@ -6,8 +6,17 @@
     Cách dùng (truyền tên menu đang active):
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
+<<<<<<< HEAD
+    Các giá trị activeMenu: home, news, accounts, staffs, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue
+=======
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers
+>>>>>>> origin/develop
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -33,6 +42,14 @@
             <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
         </a>
 
+        <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'KE_TOAN'))}"
+           th:href="@{/chat}" href="#" class="side-link"
+           th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
+           title="Hộp thư tin nhắn trực tuyến theo cơ sở">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Tin nhắn trực tuyến</span>
+        </a>
+
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
             <p class="app-sidebar__section">Quản trị hệ thống</p>
@@ -40,6 +57,10 @@
             <a th:href="@{/accounts}" href="#" class="side-link"
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
+            </a>
+            <a th:href="@{/admin/staffs}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'staffs'} ? 'is-active' : ''">
+                <i class="bi bi-person-badge" aria-hidden="true"></i><span>Quản lý nhân sự</span>
             </a>
             <!--FT02: dịch dụ và bảng giá-->
             <a th:href="@{/admin/services}"
