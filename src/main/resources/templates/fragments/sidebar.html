@@ -6,8 +6,13 @@
     Cách dùng (truyền tên menu đang active):
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
+<<<<<<< HEAD
+    Các giá trị activeMenu: home, news, accounts, staffs, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue
+=======
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers
+>>>>>>> origin/develop
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -40,6 +45,10 @@
             <a th:href="@{/accounts}" href="#" class="side-link"
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
+            </a>
+            <a th:href="@{/admin/staffs}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'staffs'} ? 'is-active' : ''">
+                <i class="bi bi-person-badge" aria-hidden="true"></i><span>Quản lý nhân sự</span>
             </a>
             <!--FT02: dịch dụ và bảng giá-->
             <a th:href="@{/admin/services}"
