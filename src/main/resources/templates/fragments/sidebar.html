@@ -13,6 +13,10 @@
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers
 >>>>>>> origin/develop
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -36,6 +40,14 @@
         <a th:href="@{/news}" href="#" class="side-link"
            th:classappend="${activeMenu == 'news'} ? 'is-active' : ''">
             <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
+        </a>
+
+        <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'KE_TOAN'))}"
+           th:href="@{/chat}" href="#" class="side-link"
+           th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
+           title="Hộp thư tin nhắn trực tuyến theo cơ sở">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Tin nhắn trực tuyến</span>
         </a>
 
         <!-- QUẢN TRỊ HỆ THỐNG -->
