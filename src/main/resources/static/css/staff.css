@@ -1,0 +1,113 @@
+/* FT41 - Quản lý hồ sơ nhân viên & phân công chi nhánh.
+   Dùng lại biến màu/bo góc của layout.css để đồng bộ giao diện toàn nhóm. */
+
+.staff-table td, .staff-table th { vertical-align: middle; }
+
+/* ---------- Avatar chữ cái đầu ---------- */
+.staff-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-weight: 800;
+    font-size: .95rem;
+}
+.staff-avatar--lg { width: 68px; height: 68px; font-size: 1.6rem; }
+
+.staff-name { font-weight: 700; color: var(--ink); line-height: 1.25; }
+.staff-sub { color: var(--muted); font-size: .8rem; }
+
+/* ---------- Chip chi nhánh / vai trò ---------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    margin: 2px 4px 2px 0;
+    border-radius: 999px;
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-size: .76rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.chip--primary { background: #e3f6ed; color: #14744b; }
+.chip--role { background: #fff3d6; color: #8a5a00; }
+
+/* ---------- Badge trạng thái ---------- */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.status-badge--active   { background: #e3f6ed; color: #14744b; }
+.status-badge--on_leave { background: #fff3d6; color: #8a5a00; }
+.status-badge--inactive { background: #eceff4; color: #5b6578; }
+.status-badge--ended    { background: #eceff4; color: #5b6578; }
+
+/* ---------- Lưới thông tin (tab chi tiết) ---------- */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px 24px;
+}
+.info-item__label { color: var(--muted); font-size: .78rem; font-weight: 600; margin-bottom: 2px; }
+.info-item__value { color: var(--ink); font-weight: 600; word-break: break-word; }
+.info-item__value--empty { color: #a0a9b8; font-weight: 400; }
+
+.info-section-title {
+    margin: 22px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--brand-900);
+}
+.info-section-title:first-child { margin-top: 0; }
+
+/* ---------- Form ---------- */
+.form-section { margin-bottom: 8px; }
+.form-section__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--brand-900);
+}
+.form-section__title i { color: var(--brand-600); }
+.form-hint { color: var(--muted); font-size: .78rem; margin-top: 4px; }
+
+/* ---------- Bộ lọc ---------- */
+.filter-bar {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1.2fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 18px;
+}
+@media (max-width: 992px) {
+    .filter-bar { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 576px) {
+    .filter-bar { grid-template-columns: 1fr; }
+}
+
+.empty-hint {
+    padding: 22px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+}

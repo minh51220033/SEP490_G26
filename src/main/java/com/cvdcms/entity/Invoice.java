@@ -86,6 +86,10 @@ public class Invoice {
     @Column(name = "payment_status", nullable = false, length = 20)
     private InvoicePaymentStatus paymentStatus = InvoicePaymentStatus.UNPAID;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private com.cvdcms.entity.enums.InvoiceStatus status = com.cvdcms.entity.enums.InvoiceStatus.CONFIRMED;
+
     @CreationTimestamp
     @Column(name = "issued_at", nullable = false, updatable = false)
     private LocalDateTime issuedAt;

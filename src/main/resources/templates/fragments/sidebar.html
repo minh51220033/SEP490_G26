@@ -6,8 +6,17 @@
     Cách dùng (truyền tên menu đang active):
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
+<<<<<<< HEAD
+    Các giá trị activeMenu: home, news, accounts, staffs, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue
+=======
     Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers
+>>>>>>> origin/develop
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
+    Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -33,6 +42,14 @@
             <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
         </a>
 
+        <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'KE_TOAN'))}"
+           th:href="@{/chat}" href="#" class="side-link"
+           th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
+           title="Hộp thư tin nhắn trực tuyến theo cơ sở">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Tin nhắn trực tuyến</span>
+        </a>
+
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
             <p class="app-sidebar__section">Quản trị hệ thống</p>
@@ -40,6 +57,10 @@
             <a th:href="@{/accounts}" href="#" class="side-link"
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
+            </a>
+            <a th:href="@{/admin/staffs}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'staffs'} ? 'is-active' : ''">
+                <i class="bi bi-person-badge" aria-hidden="true"></i><span>Quản lý nhân sự</span>
             </a>
             <!--FT02: dịch dụ và bảng giá-->
             <a th:href="@{/admin/services}"
@@ -100,6 +121,50 @@
             <a th:href="@{/suppliers}" href="#" class="side-link"
                th:classappend="${activeMenu == 'suppliers'} ? 'is-active' : ''">
                 <i class="bi bi-truck" aria-hidden="true"></i><span>Nhà cung cấp</span>
+            </a>
+        </div>
+
+        <!-- TÀI CHÍNH & KẾ TOÁN (FT21 & FT22) -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))}">
+            <p class="app-sidebar__section">Tài chính &amp; Kế toán</p>
+
+            <a th:href="@{/payments/dashboard}" class="side-link"
+               th:classappend="${activeMenu == 'dashboard_finance'} ? 'is-active' : ''"
+               title="Dashboard Tài chính Bệnh nhân (SCR-22.1)">
+                <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard Bệnh nhân</span>
+                <span class="badge bg-info text-dark ms-auto" style="font-size: 10px;">SCR-22.1</span>
+            </a>
+
+            <a th:href="@{/invoices}" class="side-link"
+               th:classappend="${activeMenu == 'invoices'} ? 'is-active' : ''"
+               title="Danh sách Hóa đơn &amp; Viện phí (SCR-21.2)">
+                <i class="bi bi-receipt" aria-hidden="true"></i><span>Quản lý Hóa đơn</span>
+                <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">SCR-21.2</span>
+            </a>
+
+            <a th:href="@{/payments}" class="side-link"
+               th:classappend="${activeMenu == 'payments'} ? 'is-active' : ''"
+               title="Lịch sử các đợt thanh toán (SCR-22.3)">
+                <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span>Lịch sử Thanh toán</span>
+                <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">SCR-22.3</span>
+            </a>
+
+            <a th:href="@{/payments/deposits}" class="side-link"
+               th:classappend="${activeMenu == 'deposits'} ? 'is-active' : ''"
+               title="Quản lý Tiền tạm ứng &amp; Đặt cọc bệnh nhân">
+                <i class="bi bi-wallet2" aria-hidden="true"></i><span>Tạm ứng &amp; Đặt cọc</span>
+            </a>
+
+            <a th:href="@{/payments/debts}" class="side-link"
+               th:classappend="${activeMenu == 'debts'} ? 'is-active' : ''"
+               title="Theo dõi &amp; Quản lý công nợ bệnh nhân">
+                <i class="bi bi-cash-stack" aria-hidden="true"></i><span>Công nợ bệnh nhân</span>
+            </a>
+
+            <a th:href="@{/payments/refunds}" class="side-link"
+               th:classappend="${activeMenu == 'refunds'} ? 'is-active' : ''"
+               title="Hoàn tiền dịch vụ &amp; Hủy điều trị">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span>Quản lý Hoàn tiền</span>
             </a>
         </div>
 
