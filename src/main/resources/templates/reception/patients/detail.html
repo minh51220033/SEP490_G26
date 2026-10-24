@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết hồ sơ bệnh nhân')}"></head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('patients')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="alert alert-success" role="status" th:if="${param.saved != null}">Đã lưu hồ sơ bệnh nhân.</div>
+            <div class="patient-page-heading"><div><a th:href="@{/reception/patients}">← Danh sách hồ sơ</a><h1 th:text="${patient.fullName}">Bệnh nhân</h1><p><span th:text="${patient.code}">BN001</span> · <span th:text="${patient.gender}">Nam</span> · <span th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa có ngày sinh'}">Ngày sinh</span> · <span th:text="${patient.phoneNumber}">SĐT</span></p></div><a class="btn btn-outline-primary" th:href="@{/reception/patients/{id}/edit(id=${patient.id})}"><i class="bi bi-pencil"></i> Chỉnh sửa</a></div>
+            <section class="panel patient-detail">
+                <ul class="nav nav-tabs" id="patientTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#personal" type="button">Thông tin cá nhân</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#overview" type="button">Tổng quan</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medical" type="button">Bệnh án</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" type="button">Lịch sử điều trị</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="personal"><div class="patient-facts"><div><span>Mã hồ sơ</span><strong th:text="${patient.code}">—</strong></div><div><span>Chi nhánh</span><strong th:text="${patient.branchName}">—</strong></div><div><span>Địa chỉ</span><strong th:text="${patient.address != null and !patient.address.isBlank() ? patient.address : 'Chưa cập nhật'}">—</strong></div><div><span>Người giám hộ</span><strong th:text="${patient.guardianName != null ? patient.guardianName : 'Chưa cập nhật'}">—</strong></div><div><span>Liên hệ giám hộ</span><strong th:text="${patient.guardianPhone != null ? patient.guardianPhone : 'Chưa cập nhật'}">—</strong></div><div><span>Trạng thái</span><strong th:text="${patient.status}">—</strong></div></div></div>
+                    <div class="tab-pane fade" id="overview"><div class="patient-facts"><div><span>Tổng lượt khám</span><strong th:text="${#lists.size(visits)}">0</strong></div><div><span>Lượt khám gần nhất</span><strong th:text="${#lists.isEmpty(visits) ? 'Chưa có' : #temporals.format(visits[0].checkInAt, 'dd/MM/yyyy HH:mm')}">—</strong></div><div><span>Ngày tạo hồ sơ</span><strong th:text="${patient.createdAt != null ? #temporals.format(patient.createdAt, 'dd/MM/yyyy HH:mm') : '—'}">—</strong></div><div><span>Cập nhật cuối</span><strong th:text="${patient.updatedAt != null ? #temporals.format(patient.updatedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</strong></div></div></div>
+                    <div class="tab-pane fade" id="medical"><div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div><p class="text-muted mt-3 mb-0">Chẩn đoán và điều trị được xem trong từng lượt khám bên dưới.</p></div>
+                    <div class="tab-pane fade" id="history"><div th:if="${#lists.isEmpty(visits)}" class="patient-empty">Chưa có lượt khám.</div><div class="patient-timeline" th:unless="${#lists.isEmpty(visits)}"><article th:each="visit : ${visits}"><div><strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</strong><span th:text="${visit.status}">Trạng thái</span></div><p><span th:text="${visit.branchName}">Chi nhánh</span> · <span th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span></p><a th:href="@{/reception/patients/{id}/visits/{visitId}(id=${patient.id},visitId=${visit.id})}">Xem chi tiết lượt khám →</a></article></div></div>
+                </div>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

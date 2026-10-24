@@ -1,5 +1,6 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.DTO.ClinicalPhotoResponseDTO;
 import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.DTO.Icd10DiseaseDTO;
 import com.cvdcms.DTO.MedicationDTO;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -45,11 +47,31 @@ public class DiagnosisController {
     private final PerformedServiceService performedServiceService;
     private final PrescriptionService prescriptionService;
     private final TreatmentPlanService treatmentPlanService;
+    private final com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
+    private final com.cvdcms.service.ReExaminationService reExaminationService;
+    private final com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
+
+    @GetMapping({"/doctor/daily-visits", "/doctor/visits"})
+    public String dailyVisits(Model model) {
+        model.addAttribute("activeMenu", "daily-visits");
+        model.addAttribute("branches", branchRepository.findAll());
+        return "doctor/daily-visits";
+    }
+
+    @GetMapping({"/doctor/recalls", "/doctor/re-examinations"})
+    public String recallsView(Model model) {
+        model.addAttribute("activeMenu", "recalls");
+        model.addAttribute("doctors", performedServiceService.getAvailableDoctors());
+        model.addAttribute("branches", branchRepository.findAll());
+        model.addAttribute("stats", reExaminationService.getRecallsStatistics());
+        model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị (SCR-18.2) - DentalFlow");
+        return "doctor/recalls";
+    }
 
     @GetMapping({"/doctor/diagnoses", "/doctor/treatment"})
     public String index(
@@ -164,7 +186,29 @@ public class DiagnosisController {
                 : Collections.emptyList();
         model.addAttribute("treatmentPlans", treatmentPlans);
 
-        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16) & Đơn thuốc (FT18)");
+        // FT17: Kho ảnh chụp lâm sàng Trước / Sau (SCR-17.1, 17.2, 17.3)
+        Long profileId = (visit.getPatientProfile() != null) ? visit.getPatientProfile().getProfileId() : null;
+        List<ClinicalPhotoResponseDTO> clinicalPhotos = clinicalPhotoService.getPhotosByProfile(profileId);
+        Map<String, Object> photoStats = clinicalPhotoService.getPhotoStatistics(profileId);
+        model.addAttribute("clinicalPhotos", clinicalPhotos);
+        model.addAttribute("photoStats", photoStats);
+        model.addAttribute("photoStages", com.cvdcms.entity.enums.PhotoStage.values());
+        model.addAttribute("photoCategories", com.cvdcms.entity.enums.PhotoCategory.values());
+
+        // FT18 (Phần Tái khám): Lịch hẹn tái khám của bệnh nhân (SCR-18.1)
+        List<com.cvdcms.DTO.ReExaminationResponseDTO> reExaminations = (profileId != null)
+                ? reExaminationService.getReExaminationsByPatient(profileId)
+                : Collections.emptyList();
+        model.addAttribute("reExaminations", reExaminations);
+        model.addAttribute("preferredSessions", com.cvdcms.entity.enums.PreferredSession.values());
+
+        // FT11 / UC-10: Chỉ định cận lâm sàng & Chẩn đoán hình ảnh (SCR-11.2, SCR-11.3)
+        List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
+        List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
+        model.addAttribute("paraclinicalOrders", paraclinicalOrders);
+        model.addAttribute("paraclinicalServices", paraclinicalServices);
+
+        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
 
         return "doctor/diagnoses";

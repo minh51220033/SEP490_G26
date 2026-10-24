@@ -6,8 +6,13 @@
     Cách dùng (truyền tên menu đang active):
     <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
 
-    Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
+<<<<<<< HEAD
+    Các giá trị activeMenu: home, news, accounts, staffs, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue
+=======
+    Các giá trị activeMenu: home, news, accounts, admin-news, bans, branches,
+    reports, audit, patients, appointments, checkin, queue, inventory, suppliers
+>>>>>>> origin/develop
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
 
@@ -41,6 +46,36 @@
                th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                 <i class="bi bi-people" aria-hidden="true"></i><span>Quản lý tài khoản</span>
             </a>
+            <a th:href="@{/admin/staffs}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'staffs'} ? 'is-active' : ''">
+                <i class="bi bi-person-badge" aria-hidden="true"></i><span>Quản lý nhân sự</span>
+            </a>
+            <!--FT02: dịch dụ và bảng giá-->
+            <a th:href="@{/admin/services}"
+               class="side-link"
+               th:classappend="${activeMenu == 'service-catalog'}
+                   ? 'is-active' : ''">
+
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <span>Dịch vụ &amp; Bảng giá</span>
+            </a>
+
+            <!--Danh mục thuốc-->
+            <a th:href="@{/admin/medications}"
+               class="side-link"
+               th:classappend="${activeMenu == 'medications'} ? 'is-active' : ''">
+                <i class="bi bi-capsule" aria-hidden="true"></i>
+                <span>Danh mục thuốc</span>
+            </a>
+
+            <!--Danh mục ICD-10-->
+            <a th:href="@{/admin/icd10}"
+               class="side-link"
+               th:classappend="${activeMenu == 'icd10'} ? 'is-active' : ''">
+                <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                <span>Danh mục ICD-10</span>
+            </a>
+
             <a th:href="@{/admin/news}" href="#" class="side-link is-disabled" aria-disabled="true"
                th:classappend="${activeMenu == 'admin-news'} ? 'is-active' : ''">
                 <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i><span>Quản lý tin tức</span>
@@ -60,6 +95,20 @@
             <a href="#" class="side-link is-disabled" aria-disabled="true"
                th:classappend="${activeMenu == 'audit'} ? 'is-active' : ''">
                 <i class="bi bi-journal-text" aria-hidden="true"></i><span>Nhật ký thao tác</span>
+            </a>
+        </div>
+
+        <!-- QUẢN LÝ KHO VẬT TƯ -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO'))}">
+            <p class="app-sidebar__section">Kho &amp; Vật tư</p>
+
+            <a th:href="@{/inventory}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
+                <i class="bi bi-box-seam" aria-hidden="true"></i><span>Quản lý kho vật tư</span>
+            </a>
+            <a th:href="@{/suppliers}" href="#" class="side-link"
+               th:classappend="${activeMenu == 'suppliers'} ? 'is-active' : ''">
+                <i class="bi bi-truck" aria-hidden="true"></i><span>Nhà cung cấp</span>
             </a>
         </div>
 
@@ -90,55 +139,31 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- BÁC SĨ: KHÁM & ĐIỀU TRỊ (ROLE 2 SCREENS FLOW) -->
+        <!-- BÁC SĨ: KHÁM & ĐIỀU TRỊ -->
         <!-- ========================================== -->
         <p class="app-sidebar__section">Bác sĩ &amp; Điều phối</p>
 
-        <!-- 1. Bàn làm việc & Ca khám trong ngày -->
-        <a th:href="@{/doctor/diagnoses}" class="side-link"
-           th:classappend="${activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
-           title="Bảng điều khiển ca khám của Bác sĩ trong ngày (SCR-07.2)">
-            <i class="bi bi-calendar2-week text-primary" aria-hidden="true"></i>
-            <span>Ca khám trong ngày</span>
-            <span class="badge bg-primary-subtle text-primary border ms-auto" style="font-size: 10px;">SCR-07.2</span>
+        <!-- 1. Danh sách khám trong ngày (Chọn ca để vào khám) -->
+        <a th:href="@{/doctor/daily-visits}" class="side-link"
+           th:classappend="${activeMenu == 'daily-visits' or activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
+           title="Danh sách ca khám trong ngày & tìm kiếm, lọc theo ngày, tuần">
+            <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+            <span>Danh sách khám trong ngày</span>
         </a>
 
-        <!-- 2. Điều phối & Ghế khám Kanban (FT08) -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Bảng điều phối ghế & hàng chờ (SCR-08.1 - FT08)">
-            <i class="bi bi-kanban" aria-hidden="true"></i>
-            <span>Điều phối ghế nha</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT08</span>
-        </a>
-
-        <!-- NHÓM: ĐIỀU TRỊ TẠI GHẾ (CHAIRSIDE CLINICAL) -->
-        <p class="app-sidebar__section">Điều trị tại ghế</p>
-
-        <!-- 3. Chẩn đoán ICD-10 (FT14) -->
-        <a th:href="@{/doctor/diagnoses#diagnosisSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('diagnosisSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Khám lâm sàng & Chẩn đoán bệnh lý ICD-10 (SCR-14.1)">
-            <i class="bi bi-clipboard2-pulse text-danger" aria-hidden="true"></i>
-            <span>Chẩn đoán ICD-10</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT14</span>
-        </a>
-
-        <!-- 4. Dịch vụ thực hiện (FT16) -->
-        <a th:href="@{/doctor/diagnoses#performedServicesSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('performedServicesSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Dịch vụ & Thủ thuật thực hiện thực tế (SCR-16.1 & 16.2)">
-            <i class="bi bi-tools text-primary" aria-hidden="true"></i>
-            <span>Dịch vụ thực hiện</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT16</span>
-        </a>
-
-        <!-- 4.1. Quy trình kỹ thuật (MOH) -->
+        <!-- 2. Quy trình kỹ thuật (MOH) -->
         <a th:href="@{/doctor/workflows}" class="side-link"
            th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
-           title="Quản lý Quy trình Kỹ thuật Lâm sàng & Bóc tách AI chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)">
-            <i class="bi bi-journal-medical text-info" aria-hidden="true"></i>
+           title="Quản lý Quy trình Kỹ thuật Lâm sàng chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)">
+            <i class="bi bi-journal-medical" aria-hidden="true"></i>
             <span>Quy trình kỹ thuật</span>
-            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">BYT</span>
+        </a>
+
+        <!-- 3. Điều phối & Ghế khám Kanban -->
+        <a href="#" class="side-link is-disabled" aria-disabled="true"
+           title="Bảng điều phối ghế & hàng chờ">
+            <i class="bi bi-kanban" aria-hidden="true"></i>
+            <span>Điều phối ghế nha</span>
         </a>
 
         <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
@@ -161,67 +186,62 @@
 
         <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Kho ảnh lâm sàng Before/After (SCR-17.1 - FT17)">
-            <i class="bi bi-images text-secondary" aria-hidden="true"></i>
+           title="Kho ảnh lâm sàng Before/After">
+            <i class="bi bi-images" aria-hidden="true"></i>
             <span>Kho ảnh lâm sàng</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT17</span>
         </a>
 
         <!-- NHÓM: CẬN LÂM SÀNG & HÌNH ẢNH -->
         <p class="app-sidebar__section">Cận lâm sàng &amp; Labo</p>
 
-        <!-- 8. Phim X-quang NanoPix (FT12) -->
+        <!-- 5. Phim X-quang NanoPix -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Ảnh X-quang tích hợp NanoPix (SCR-12.1 - FT12)">
+           title="Ảnh X-quang tích hợp NanoPix">
             <i class="bi bi-bounding-box" aria-hidden="true"></i>
             <span>Phim X-quang NanoPix</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT12</span>
         </a>
 
-        <!-- 9. Mẫu xét nghiệm & Labo (FT13) -->
+        <!-- 6. Mẫu xét nghiệm & Labo -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Mẫu xét nghiệm gửi ngoài & Labo (SCR-13.1 - FT13)">
+           title="Mẫu xét nghiệm gửi ngoài & Labo">
             <i class="bi bi-droplet-half" aria-hidden="true"></i>
             <span>Xét nghiệm &amp; Labo</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT13</span>
         </a>
 
         <!-- NHÓM: HỒ SƠ & TÁI KHÁM -->
         <p class="app-sidebar__section">Hồ sơ &amp; Tái khám</p>
 
-        <!-- 10. Hồ sơ bệnh nhân (FT03) -->
+        <!-- 7. Hồ sơ bệnh nhân -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Tra cứu hồ sơ bệnh nhân & bệnh án EMR (SCR-03.1 - FT03)">
+           title="Tra cứu hồ sơ bệnh nhân & bệnh án EMR">
             <i class="bi bi-folder2-open" aria-hidden="true"></i>
             <span>Hồ sơ Bệnh nhân</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT03</span>
         </a>
 
-        <!-- 11. Nhắc tái khám sau điều trị (SCR-18.2) -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Danh sách bệnh nhân cần nhắc tái khám (SCR-18.2)">
-            <i class="bi bi-bell" aria-hidden="true"></i>
-            <span>Nhắc hẹn tái khám</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">SCR-18.2</span>
+        <!-- 8. Chăm sóc khách hàng & Nhắc tái khám (FT44 - Chỉ hiển thị cho ADMIN, LE_TAN, BAC_SI) -->
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))}"
+           th:href="@{/customer-care}" class="side-link"
+           th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
+           title="Quản lý Chăm sóc khách hàng &amp; Nhắc hẹn tái khám (FT44)">
+            <i class="bi bi-headset" aria-hidden="true"></i>
+            <span>Chăm sóc khách hàng</span>
         </a>
 
         <!-- NHÓM: CÁ NHÂN BÁC SĨ -->
         <p class="app-sidebar__section">Cá nhân</p>
 
-        <!-- 12. Lịch trực & Chấm công (FT33) -->
+        <!-- 9. Lịch trực & Chấm công -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Lịch trực tuần & Chấm công (SCR-33.3 - FT33)">
+           title="Lịch trực tuần & Chấm công">
             <i class="bi bi-calendar-check" aria-hidden="true"></i>
             <span>Lịch trực &amp; Chấm công</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT33</span>
         </a>
 
-        <!-- 13. Đơn xin nghỉ / Khóa lịch (FT42) -->
+        <!-- 10. Đơn xin nghỉ / Khóa lịch -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Gửi yêu cầu nghỉ phép & Khóa lịch (SCR-42.1 - FT42)">
+           title="Gửi yêu cầu nghỉ phép & Khóa lịch">
             <i class="bi bi-calendar-x" aria-hidden="true"></i>
             <span>Yêu cầu nghỉ / Khóa lịch</span>
-            <span class="badge bg-light text-muted border ms-auto" style="font-size: 10px;">FT42</span>
         </a>
     </nav>
 

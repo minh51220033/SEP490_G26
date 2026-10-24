@@ -1,373 +1,161 @@
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chỉnh sửa bài viết')}"></head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chỉnh sửa bài viết - CV-DCMS</title>
+<body class="app-body">
 
-    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+<link rel="stylesheet" th:href="@{/css/news.css}">
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<header th:replace="~{fragments/header :: siteHeader}"></header>
 
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f7fb;
-            color: #1f2937;
-        }
+<div class="app-shell">
 
-        .header {
-            height: 65px;
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            padding: 0 30px;
-        }
+    <aside th:replace="~{fragments/sidebar :: sidebar('news')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-        .logo {
-            color: #2563eb;
-            font-weight: bold;
-            font-size: 21px;
-        }
+    <div class="app-main">
 
-        .container {
-            max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
+        <header th:replace="~{fragments/header :: appTopbar('Chỉnh sửa bài viết')}"></header>
 
-        .page-header h1 {
-            margin-bottom: 5px;
-        }
+        <main class="app-content nw-page">
 
-        .page-header p {
-            color: #6b7280;
-        }
-
-        .card {
-            margin-top: 20px;
-            background: white;
-            border-radius: 14px;
-            padding: 28px;
-            box-shadow: 0 5px 20px rgba(0,0,0,.06);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 11px 13px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            border-color: #2563eb;
-            outline: none;
-        }
-
-        .error {
-            margin-top: 6px;
-            color: #dc2626;
-            font-size: 13px;
-        }
-
-        .actions {
-            margin-top: 25px;
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .btn {
-            border: none;
-            border-radius: 8px;
-            padding: 11px 18px;
-            text-decoration: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background: #2563eb;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #eef2f7;
-            color: #374151;
-        }
-
-        .upload-box {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .preview-img {
-            max-width: 200px;
-            max-height: 120px;
-            border-radius: 8px;
-            margin-top: 10px;
-            object-fit: cover;
-        }
-
-        .ck-editor__editable_inline {
-            min-height: 320px;
-        }
-    </style>
-</head>
-
-<body>
-
-<header class="header">
-    <div class="logo">CV-DCMS</div>
-</header>
-
-<div class="container">
-    <div class="page-header">
-        <h1>Chỉnh sửa bài viết</h1>
-        <p>Cập nhật nội dung tin tức</p>
-    </div>
-
-    <div class="card">
-        <form id="newsForm"
-              th:action="@{'/admin/news/' + ${newsUpdateDTO.newsId}}"
-              th:object="${newsUpdateDTO}"
-              method="post">
-
-            <input type="hidden" th:field="*{newsId}">
-
-            <!-- TITLE -->
-            <div class="form-group">
-                <label>Tiêu đề *</label>
-                <input type="text" th:field="*{title}" maxlength="200" required>
-                <div class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
-            </div>
-
-            <!-- CHI NHÁNH -->
-            <div class="form-group">
-                <label for="branchId">
-                    Chi nhánh <span class="required">*</span>
-                </label>
-
-                <select id="branchId"
-                        th:field="*{branchId}"
-                        required>
-                    <option value="">-- Chọn chi nhánh --</option>
-                    <option th:each="branch : ${branches}"
-                            th:value="${branch.branchId}"
-                            th:text="${branch.branchName}">
-                    </option>
-                </select>
-
-                <div class="error"
-                     th:if="${#fields.hasErrors('branchId')}"
-                     th:errors="*{branchId}">
+            <div class="nw-admin-head">
+                <div>
+                    <nav class="nw-breadcrumb" style="margin:0" aria-label="Breadcrumb">
+                        <a th:href="@{/admin/news}">Quản lý tin tức</a>
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                        <span aria-current="page">Chỉnh sửa</span>
+                    </nav>
+                    <h1>Chỉnh sửa bài viết</h1>
+                    <p>Cập nhật nội dung tin tức <strong th:text="${'#' + newsUpdateDTO.newsId}">#1</strong>.</p>
+                </div>
+                <div class="nw-admin-head__actions">
+                    <a th:href="@{'/admin/news/' + ${newsUpdateDTO.newsId}}" target="_blank" rel="noopener"
+                       class="nw-btn nw-btn--ghost">
+                        <i class="bi bi-eye"></i> Xem bài viết
+                    </a>
+                    <a th:href="@{/admin/news}" class="nw-btn nw-btn--ghost">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
                 </div>
             </div>
 
-            <!-- SUMMARY -->
-            <div class="form-group">
-                <label>Mô tả ngắn</label>
-                <textarea th:field="*{summary}" maxlength="500" rows="4"></textarea>
-                <div class="error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}"></div>
+            <div class="nw-alert nw-alert--error" role="alert" th:if="${error}">
+                <i class="bi bi-exclamation-circle"></i>
+                <span th:text="${error}">Có lỗi xảy ra.</span>
             </div>
 
-            <!-- THUMBNAIL -->
-            <div class="form-group">
-                <label>Ảnh đại diện (Thumbnail)</label>
-                <div class="upload-box">
-                    <input type="text" id="thumbnail" th:field="*{thumbnail}" placeholder="URL ảnh đại diện...">
-                    <input type="file" id="thumbnailFile" accept="image/*" style="display: none;">
-                    <button type="button" id="uploadThumbnailButton" class="btn btn-secondary">📷 Chọn ảnh</button>
+            <form id="newsForm" th:action="@{'/admin/news/' + ${newsUpdateDTO.newsId}}" th:object="${newsUpdateDTO}"
+                  method="post" th:attr="data-upload-url=@{/admin/news/upload/image}" class="nw-form-grid">
+
+                <input type="hidden" th:field="*{newsId}">
+
+                <!-- CỘT TRÁI: NỘI DUNG -->
+                <div class="nw-form-main">
+                    <section class="nw-card nw-card--pad">
+                        <h2 class="nw-section-title"><i class="bi bi-file-earmark-text"></i> Thông tin bài viết</h2>
+
+                        <div class="nw-group">
+                            <label class="nw-label" for="title">
+                                Tiêu đề <span class="nw-required">*</span>
+                                <span class="nw-counter" id="titleCounter">0/200</span>
+                            </label>
+                            <input class="nw-input" type="text" id="title" th:field="*{title}" maxlength="200"
+                                   data-counter="titleCounter" required>
+                            <div class="nw-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+                        </div>
+
+                        <div class="nw-group">
+                            <label class="nw-label" for="summary">
+                                Mô tả ngắn
+                                <span class="nw-counter" id="summaryCounter">0/500</span>
+                            </label>
+                            <textarea class="nw-textarea" id="summary" th:field="*{summary}" maxlength="500" rows="3"
+                                      data-counter="summaryCounter"></textarea>
+                            <div class="nw-error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}"></div>
+                        </div>
+                    </section>
+
+                    <section class="nw-card nw-card--pad">
+                        <h2 class="nw-section-title"><i class="bi bi-pencil-square"></i> Nội dung <span class="nw-required">*</span></h2>
+                        <div class="nw-editor">
+                            <div id="editor"></div>
+                        </div>
+                        <textarea id="content" th:field="*{content}" hidden></textarea>
+                        <div class="nw-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></div>
+                    </section>
                 </div>
-                <div id="thumbnailPreview" th:style="${newsUpdateDTO.thumbnail != null and !#strings.isEmpty(newsUpdateDTO.thumbnail)} ? 'display:block' : 'display:none'">
-                    <img id="thumbnailPreviewImage" th:src="${newsUpdateDTO.thumbnail}" class="preview-img" alt="Preview">
-                </div>
-            </div>
 
-            <!-- CONTENT -->
-            <div class="form-group">
-                <label>Nội dung *</label>
-                <div id="editor"></div>
-                <textarea id="content" name="content" hidden th:field="*{content}"></textarea>
-                <div class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></div>
-            </div>
+                <!-- CỘT PHẢI: XUẤT BẢN -->
+                <aside class="nw-form-side">
+                    <section class="nw-card nw-card--pad">
+                        <h2 class="nw-section-title"><i class="bi bi-send-check"></i> Xuất bản</h2>
 
-            <!-- STATUS -->
-            <div class="form-group">
-                <label>Trạng thái</label>
-                <select th:field="*{status}">
-                    <option value="DRAFT">Bản nháp</option>
-                    <option value="PUBLISHED">Đã đăng</option>
-                    <option value="ARCHIVED">Lưu trữ</option>
-                </select>
-            </div>
+                        <div class="nw-group">
+                            <label class="nw-label" for="branchId">Chi nhánh <span class="nw-required">*</span></label>
+                            <select class="nw-select" style="width:100%" id="branchId" th:field="*{branchId}" required>
+                                <option value="">-- Chọn chi nhánh --</option>
+                                <option th:each="branch : ${branches}"
+                                        th:value="${branch.branchId}"
+                                        th:text="${branch.branchName}"></option>
+                            </select>
+                            <div class="nw-error" th:if="${#fields.hasErrors('branchId')}" th:errors="*{branchId}"></div>
+                        </div>
 
-            <div class="actions">
-                <a href="/admin/news" class="btn btn-secondary">← Quay lại</a>
-                <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
-            </div>
-        </form>
+                        <div class="nw-group">
+                            <label class="nw-label" for="status">Trạng thái</label>
+                            <select class="nw-select" style="width:100%" id="status" th:field="*{status}">
+                                <option value="DRAFT">Bản nháp</option>
+                                <option value="PUBLISHED">Đã đăng</option>
+                                <option value="ARCHIVED">Lưu trữ</option>
+                            </select>
+                        </div>
+
+                        <div class="nw-form-actions">
+                            <button type="submit" class="nw-btn nw-btn--primary">
+                                <i class="bi bi-floppy"></i> Lưu thay đổi
+                            </button>
+                            <a th:href="@{/admin/news}" class="nw-btn nw-btn--neutral">Hủy</a>
+                        </div>
+                    </section>
+
+                    <section class="nw-card nw-card--pad">
+                        <h2 class="nw-section-title"><i class="bi bi-image"></i> Ảnh đại diện</h2>
+
+                        <input type="file" id="thumbnailFile" accept="image/*" hidden>
+                        <div class="nw-upload" id="thumbnailDrop" role="button" tabindex="0"
+                             aria-label="Chọn ảnh đại diện">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <strong id="thumbnailDropText">Nhấn để chọn ảnh hoặc kéo thả vào đây</strong>
+                            <span>JPG, PNG, WEBP</span>
+                        </div>
+
+                        <div class="nw-group" style="margin-top:14px">
+                            <label class="nw-label" for="thumbnail">Đường dẫn ảnh (URL)</label>
+                            <input class="nw-input" type="text" id="thumbnail" th:field="*{thumbnail}"
+                                   placeholder="Dán URL ảnh hoặc tải ảnh lên...">
+                        </div>
+
+                        <div class="nw-preview" id="thumbnailPreview"
+                             th:hidden="${newsUpdateDTO.thumbnail == null or #strings.isEmpty(newsUpdateDTO.thumbnail)}">
+                            <img id="thumbnailPreviewImage" th:src="${newsUpdateDTO.thumbnail}" alt="Ảnh xem trước">
+                            <button type="button" id="thumbnailRemove" class="nw-btn nw-btn--danger nw-btn--sm"
+                                    style="margin-top:10px; width:100%">
+                                <i class="bi bi-x-lg"></i> Gỡ ảnh
+                            </button>
+                        </div>
+                    </section>
+                </aside>
+            </form>
+
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
 <script src="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.umd.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // 1. UPLOAD THUMBNAIL
-        const fileInput = document.getElementById('thumbnailFile');
-        const uploadBtn = document.getElementById('uploadThumbnailButton');
-        const urlInput = document.getElementById('thumbnail');
-        const previewDiv = document.getElementById('thumbnailPreview');
-        const previewImg = document.getElementById('thumbnailPreviewImage');
-
-        uploadBtn.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                uploadBtn.textContent = "⏳ Đang tải lên...";
-                const formData = new FormData();
-                formData.append('upload', file);
-
-                fetch('/admin/news/upload/image', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(err => { throw err; });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if(data.url) {
-                            urlInput.value = data.url;
-                            previewImg.src = data.url;
-                            previewDiv.style.display = 'block';
-                            uploadBtn.textContent = "✅ Tải ảnh thành công";
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Lỗi:", error);
-                        let errorMsg = error?.error?.message || "Lỗi tải ảnh";
-                        alert(errorMsg);
-                        uploadBtn.textContent = "❌ Tải lại";
-                    });
-            }
-        });
-
-        // 2. CKEDITOR 5
-        if (typeof CKEDITOR === "undefined") return;
-
-        const {
-            ClassicEditor, Essentials, Paragraph, Heading, Bold, Italic,
-            Underline, Font, Link, List, Alignment, BlockQuote,
-            Image, ImageUpload, ImageToolbar, ImageCaption, ImageStyle, ImageResize,
-            SimpleUploadAdapter, Table, TableToolbar
-        } = CKEDITOR;
-
-        const contentTextarea = document.getElementById("content");
-        let editorInstance;
-
-        ClassicEditor
-            .create(document.querySelector("#editor"), {
-                licenseKey: "GPL",
-                plugins: [
-                    Essentials, Paragraph, Heading, Bold, Italic, Underline,
-                    Font, Link, List, Alignment, BlockQuote,
-                    Image, ImageUpload, ImageToolbar, ImageCaption, ImageStyle, ImageResize,
-                    SimpleUploadAdapter, Table, TableToolbar
-                ],
-                toolbar: [
-                    "undo", "redo", "|", "heading", "|", "bold", "italic", "underline", "|",
-                    "fontSize", "fontColor", "|", "alignment", "|",
-                    "bulletedList", "numberedList", "|",
-                    "link", "insertImage", "insertTable", "blockQuote"
-                ],
-                image: {
-                    toolbar: [
-                        'imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|',
-                        'toggleImageCaption', 'imageTextAlternative'
-                    ]
-                },
-                simpleUpload: {
-                    uploadUrl: '/admin/news/upload/image'
-                },
-                initialData: contentTextarea.value || ""
-            })
-            .then(editor => {
-                editorInstance = editor;
-                editor.model.document.on("change:data", () => {
-                    contentTextarea.value = editor.getData();
-                });
-            })
-            .catch(error => console.error("Lỗi CKEditor:", error));
-
-        document.getElementById("newsForm").addEventListener("submit", function () {
-            if (editorInstance) {
-                contentTextarea.value = editorInstance.getData();
-            }
-        });
-    });
-
-    tinymce.init({
-        selector: '#content', // ID của ô textarea nội dung bài viết
-        plugins: 'image link code media table',
-        toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | image link',
-
-        // 🎯 SỬA HOẶC THÊM DÒNG NÀY:
-        images_upload_url: '/admin/news/upload/image',
-
-        // Cấu hình gửi request đính kèm file (nếu có dùng custom handler)
-        images_upload_handler: function (blobInfo, progress) {
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-
-                // 🎯 ĐẢM BẢO URL Ở ĐÂY CŨNG LÀ /admin/news/upload/image
-                xhr.open('POST', '/admin/news/upload/image');
-
-                xhr.onload = () => {
-                    if (xhr.status < 200 || xhr.status >= 300) {
-                        reject('Lỗi HTTP: ' + xhr.status);
-                        return;
-                    }
-                    const json = JSON.parse(xhr.responseText);
-                    if (!json || typeof json.location !== 'string') {
-                        reject('Phản hồi JSON không hợp lệ: ' + xhr.responseText);
-                        return;
-                    }
-                    resolve(json.location);
-                };
-
-                xhr.onerror = () => {
-                    reject('Tải ảnh thất bại do lỗi kết nối mạng.');
-                };
-
-                const formData = new FormData();
-                formData.append('file', blobInfo.blob(), blobInfo.filename());
-                xhr.send(formData);
-            });
-        }
-    });
-</script>
+<script th:src="@{/js/news-editor.js}"></script>
 </body>
 </html>
