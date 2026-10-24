@@ -49,6 +49,7 @@ public class DiagnosisController {
     private final TreatmentPlanService treatmentPlanService;
     private final com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
     private final com.cvdcms.service.ReExaminationService reExaminationService;
+    private final com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
@@ -200,6 +201,12 @@ public class DiagnosisController {
                 : Collections.emptyList();
         model.addAttribute("reExaminations", reExaminations);
         model.addAttribute("preferredSessions", com.cvdcms.entity.enums.PreferredSession.values());
+
+        // FT11 / UC-10: Chỉ định cận lâm sàng & Chẩn đoán hình ảnh (SCR-11.2, SCR-11.3)
+        List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
+        List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
+        model.addAttribute("paraclinicalOrders", paraclinicalOrders);
+        model.addAttribute("paraclinicalServices", paraclinicalServices);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
