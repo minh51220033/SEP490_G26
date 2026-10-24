@@ -33,4 +33,6 @@ public interface ExaminationDiagnosisRepository extends JpaRepository<Examinatio
     boolean existsByVisit_VisitIdAndDiagnosisType(Long visitId, DiagnosisType diagnosisType);
 
     long countByVisit_VisitId(Long visitId);
+
+    boolean existsByIcd10Disease_Icd10Id(Long icd10Id);
 }

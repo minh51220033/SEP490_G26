@@ -205,4 +205,20 @@ public class BranchService {
     private String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value.trim();
     }
+
+
+    /**
+     * Lấy danh sách chi nhánh người dùng được phép truy cập.
+     */
+    @Transactional(readOnly = true)
+    public List<Branch> getAccessibleBranches(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException(
+                    "Tài khoản không hợp lệ."
+            );
+        }
+
+        return branchRepository.findAccessibleBranchesByUserId(userId);
+    }
+
 }
