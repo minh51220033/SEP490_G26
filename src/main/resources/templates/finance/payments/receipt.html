@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="'Phiếu thu ' + ${payment.paymentCode} + ' | CV-DCMS'">Phiếu thu tiền</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #fff !important; }
+            .print-a4 { border: none !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-light py-4">
+
+<div class="container text-center mb-4 no-print">
+    <div class="d-inline-flex gap-2 p-2 bg-white rounded shadow-sm border">
+        <button onclick="window.print()" class="btn btn-success btn-sm px-4 fw-bold">
+            🖨️ In Phiếu thu
+        </button>
+        <button onclick="window.close()" class="btn btn-outline-secondary btn-sm px-3">
+            Đóng cửa sổ
+        </button>
+    </div>
+</div>
+
+<div class="print-container">
+    <div class="print-a4" style="max-width: 700px;">
+        <!-- Header -->
+        <div class="print-header">
+            <div class="print-clinic-info">
+                <h2>HỆ THỐNG NHA KHOA KỸ THUẬT CAO CV-DCMS</h2>
+                <p><strong th:text="${payment.branch.branchName}">Cơ sở Quận 1</strong> - Hotline: <span th:text="${payment.branch.phone}">0901234567</span></p>
+                <p>Địa chỉ: <span th:text="${payment.branch.address}">123 Nguyễn Trãi, Q1, TP.HCM</span></p>
+            </div>
+            <div class="text-end">
+                <div class="fs-6 fw-bold text-dark">MÃ PHIẾU THU</div>
+                <div class="fs-5 fw-bold text-success" th:text="${payment.paymentCode}">TT10001</div>
+                <div class="small text-muted" th:text="'Ngày: ' + ${#temporals.format(payment.paidAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 14:00</div>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="print-title">
+            <h1 class="text-success">PHIẾU THU TIỀN VIỆN PHÍ</h1>
+            <p class="text-muted small">
+                <span th:if="${payment.paymentType.name() == 'PAYMENT'}">Thanh toán hóa đơn điều trị nha khoa</span>
+                <span th:if="${payment.paymentType.name() == 'ADVANCE_DEPOSIT'}">Nộp tiền tạm ứng / Đặt cọc điều trị</span>
+            </p>
+        </div>
+
+        <!-- Payment details -->
+        <div class="p-4 bg-light rounded border border-light-subtle mb-4">
+            <div class="row g-3">
+                <div class="col-12">
+                    <strong>Họ và tên người nộp tiền:</strong>
+                    <span class="fs-6 text-uppercase fw-bold ms-1" th:text="${payment.patientProfile.fullName}">Nguyễn Văn An</span>
+                    <span class="badge bg-secondary ms-2" th:text="${payment.patientProfile.patientCode}">BN000101</span>
+                </div>
+                <div class="col-6">
+                    <strong>Số điện thoại:</strong> <span th:text="${payment.patientProfile.phoneNumber}">0987654321</span>
+                </div>
+                <div class="col-6">
+                    <strong>Địa chỉ:</strong> <span th:text="${payment.patientProfile.address}">123 Nguyễn Trãi, Q1</span>
+                </div>
+                <div class="col-12" th:if="${payment.invoice != null}">
+                    <strong>Hóa đơn thanh toán:</strong>
+                    <span class="text-primary fw-bold ms-1" th:text="${payment.invoice.invoiceCode}">HD123456</span>
+                    <span class="text-muted small ms-2" th:text="'(Tổng HĐ: ' + ${#numbers.formatDecimal(payment.invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ)'"></span>
+                </div>
+                <div class="col-12">
+                    <strong>Lý do nộp:</strong>
+                    <span th:text="${payment.notes != null and !payment.notes.isEmpty() ? payment.notes : (payment.paymentType.name() == 'PAYMENT' ? 'Thanh toán viện phí dịch vụ nha khoa' : 'Nộp tiền tạm ứng khám chữa bệnh')}"></span>
+                </div>
+                <div class="col-6">
+                    <strong>Phương thức thanh toán:</strong>
+                    <span class="badge bg-light text-dark border ms-1" th:text="${payment.paymentMethod}">CASH</span>
+                    <span th:if="${payment.transactionRef != null and !payment.transactionRef.isEmpty()}"
+                          class="small text-muted ms-1" th:text="'(Ref: ' + ${payment.transactionRef} + ')'"></span>
+                </div>
+                <div class="col-6 text-end">
+                    <strong>Số tiền đã thu:</strong>
+                    <span class="fs-4 fw-bold text-success ms-2" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signatures -->
+        <div class="row text-center mt-5">
+            <div class="col-6">
+                <h6 class="fw-bold m-0">NGƯỜI NỘP TIỀN</h6>
+                <p class="small text-muted fst-italic mb-5">(Ký, ghi rõ họ tên)</p>
+                <div class="fw-bold" th:text="${payment.patientProfile.fullName}">Nguyễn Văn An</div>
+            </div>
+            <div class="col-6">
+                <h6 class="fw-bold m-0">NGƯỜI THU TIỀN (THU NGÂN)</h6>
+                <p class="small text-muted fst-italic mb-5">(Ký, ghi rõ họ tên)</p>
+                <div class="fw-bold" th:text="${payment.cashier.fullName}">Nguyễn Thu Ngân</div>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top text-center text-muted small">
+            <em>Phiếu thu có giá trị xác nhận bệnh nhân đã hoàn tất thanh toán số tiền nêu trên.</em>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

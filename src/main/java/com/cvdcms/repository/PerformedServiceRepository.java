@@ -26,4 +26,8 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
     List<PerformedService> findByPatientProfile_ProfileIdOrderByCompletedAtDesc(Long profileId);
 
     List<PerformedService> findByVisit_VisitIdAndStatus(Long visitId, PerformedServiceStatus status);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ps FROM PerformedService ps WHERE ps.performedId = :id")
+    java.util.Optional<PerformedService> findByIdForUpdate(@Param("id") Long id);
 }

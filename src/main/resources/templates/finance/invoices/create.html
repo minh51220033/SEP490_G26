@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn mới - FT21')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lập Hóa đơn Viện phí')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-receipt-cutoff text-primary"></i> Lập Hóa đơn mới</h1>
+                    <p>Khởi tạo hóa đơn thu phí từ lượt khám điều trị được bàn giao (WAITING_PAYMENT), áp dụng ưu đãi thành viên, voucher &amp; điểm tích lũy.</p>
+                </div>
+                <div>
+                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại danh sách hóa đơn</a>
+                </div>
+            </div>
+
+            <!-- Card Chọn ca khám chờ thanh toán (Không bắt nhập visitId thủ công vào URL) -->
+            <div class="fin-card mb-4 border-primary">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label for="selectWaitingVisit" class="fw-bold text-primary m-0 fs-6">
+                        <i class="bi bi-clock-history me-1"></i> Chọn Lượt khám đang Chờ thanh toán (WAITING_PAYMENT):
+                    </label>
+                    <span class="badge bg-primary" th:text="${waitingVisits != null ? waitingVisits.size() : 0} + ' ca khám chờ thu tiền'">0 ca</span>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-9">
+                        <select id="selectWaitingVisit" class="form-select" onchange="onSelectWaitingVisit(this.value)">
+                            <option value="">-- Chọn ca khám đã được bác sĩ hoàn tất và bàn giao sang thu ngân --</option>
+                            <option th:each="wv : ${waitingVisits}" th:value="${wv.visitId}"
+                                    th:selected="${selectedVisit != null and selectedVisit.visitId == wv.visitId}"
+                                    th:text="${wv.visitCode} + ' - ' + ${wv.patientProfile.fullName} + ' (' + ${wv.patientProfile.patientCode} + ') - BS: ' + (${wv.primaryDoctor != null ? wv.primaryDoctor.fullName : 'BS trực'})">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới danh sách chờ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Lập Hóa Đơn -->
+            <form th:action="@{/invoices/create}" method="post" id="invoiceForm">
+                <!-- Hidden inputs -->
+                <input type="hidden" name="visitId" th:value="${selectedVisit != null ? selectedVisit.visitId : ''}" id="hiddenVisitId">
+                <input type="hidden" name="profileId" th:value="${selectedPatient != null ? selectedPatient.profileId : ''}" id="hiddenProfileId">
+                <input type="hidden" name="branchId" th:value="${selectedBranch != null ? selectedBranch.branchId : (selectedVisit != null ? selectedVisit.branch.branchId : selectedBranchId)}" id="hiddenBranchId">
+
+                <div class="fin-grid-2col">
+                    <!-- Cột trái: Thông tin ca khám & Danh sách dịch vụ thực hiện -->
+                    <div>
+                        <!-- Bệnh nhân & Lượt khám Card -->
+                        <div class="fin-card">
+                            <h4 class="fw-bold mb-3 text-primary d-flex align-items-center">
+                                <i class="bi bi-person-vcard me-2"></i> Thông tin Bệnh nhân &amp; Ca khám
+                            </h4>
+
+                            <div th:if="${selectedVisit == null}" class="alert alert-warning">
+                                <i class="bi bi-exclamation-circle me-1"></i> Chưa chọn lượt khám. Vui lòng chọn một ca khám đang chờ thanh toán ở menu phía trên để lập hóa đơn.
+                            </div>
+
+                            <div th:if="${selectedPatient != null}" class="row g-3">
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">MÃ &amp; HỌ TÊN BỆNH NHÂN</span>
+                                    <strong class="fs-6 text-dark" th:text="${selectedPatient.fullName}">Nguyễn Văn An</strong>
+                                    <span class="badge bg-secondary d-inline-block ms-1" th:text="${selectedPatient.patientCode}">BN000101</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">SỐ ĐIỆN THOẠI &amp; GIỚI TÍNH</span>
+                                    <span th:text="${selectedPatient.phoneNumber}">0987654321</span>
+                                    <span class="text-muted" th:text="'(' + ${selectedPatient.gender} + ')'"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">HẠNG THẺ THÀNH VIÊN</span>
+                                    <span th:if="${selectedPatient.membershipTier != null}" class="badge bg-warning text-dark fw-bold"
+                                          th:text="${selectedPatient.membershipTier.tierName} + ' (Giảm ' + ${selectedPatient.membershipTier.discountPercent} + '%)'">Thành viên</span>
+                                    <span th:if="${selectedPatient.membershipTier == null}" class="badge bg-light text-muted border">Chưa xếp hạng</span>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">MÃ CA KHÁM</span>
+                                    <strong class="text-primary" th:text="${selectedVisit.visitCode}">VIS10001</strong>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">BÁC SĨ ĐIỀU TRỊ CHÍNH</span>
+                                    <span th:text="${selectedVisit.primaryDoctor != null ? selectedVisit.primaryDoctor.fullName : 'Bác sĩ điều trị'}">BS Nam</span>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">CƠ SỞ ĐIỀU TRỊ</span>
+                                    <span class="badge bg-primary text-white" th:text="${selectedVisit.branch.branchName}">Cơ sở Quận 1</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách dịch vụ thực hiện lâm sàng Card -->
+                        <div class="fin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Dịch vụ thực hiện được bàn giao
+                                </h4>
+                                <span class="badge bg-info text-dark" id="selectedCountBadge"
+                                      th:text="${unbilledServices != null ? unbilledServices.size() : 0} + ' dịch vụ'">0 dịch vụ</span>
+                            </div>
+
+                            <div class="fin-table-wrapper">
+                                <table class="fin-table" id="itemsTable">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" id="checkAllItems" checked onchange="toggleAllItems(this)"></th>
+                                        <th>Tên dịch vụ / Thủ thuật</th>
+                                        <th>Răng</th>
+                                        <th class="text-center" style="width: 100px;">Số lượng</th>
+                                        <th class="text-end" style="width: 130px;">Đơn giá</th>
+                                        <th class="text-end" style="width: 110px;">Giảm BS</th>
+                                        <th class="text-end" style="width: 140px;">Thành tiền</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                    <tr th:if="${#lists.isEmpty(unbilledServices)}">
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="ps, iterStat : ${unbilledServices}" class="item-row" th:data-performed-id="${ps.performedId}">
+                                        <td>
+                                            <input type="checkbox" class="item-checkbox" checked onchange="onItemCheckboxChange()">
+                                            <input type="hidden" class="prop-performed-id" th:name="'items[' + ${iterStat.index} + '].performedId'" th:value="${ps.performedId}">
+                                            <input type="hidden" class="prop-service-id" th:name="'items[' + ${iterStat.index} + '].serviceId'" th:value="${ps.service.serviceId}">
+                                            <input type="hidden" class="prop-item-name" th:name="'items[' + ${iterStat.index} + '].itemName'" th:value="${ps.service.serviceName}">
+                                        </td>
+                                        <td>
+                                            <strong th:text="${ps.service.serviceName}">Trám răng thẩm mỹ</strong>
+                                            <small class="d-block text-muted" th:if="${ps.doctor != null}" th:text="'BS: ' + ${ps.doctor.fullName}"></small>
+                                        </td>
+                                        <td>
+                                            <span th:if="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty()}" class="badge bg-light text-dark border" th:text="${ps.toothNumbers}">R16</span>
+                                            <span th:if="${ps.toothNumbers == null or ps.toothNumbers.isEmpty()}" class="text-muted small">-</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="number" th:name="'items[' + ${iterStat.index} + '].quantity'" th:value="${ps.quantity}"
+                                                   class="form-control form-control-sm text-center item-qty prop-qty" step="1" min="1" onchange="onItemQtyChange(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" th:name="'items[' + ${iterStat.index} + '].unitPrice'" th:value="${ps.unitPrice}"
+                                                   class="form-control form-control-sm text-end item-price prop-price" step="1000" onchange="onItemPriceChange(this)">
+                                        </td>
+                                        <td class="text-end text-muted small item-clinical-discount"
+                                            th:data-discount="${ps.discountAmount}"
+                                            th:text="${#numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            0 đ
+                                        </td>
+                                        <td class="text-end fw-bold text-dark item-line-total"
+                                            th:data-val="${ps.finalPrice}"
+                                            th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            500.000 đ
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Ghi chú hóa đơn Card -->
+                        <div class="fin-card">
+                            <label for="notes" class="form-label fw-bold"><i class="bi bi-chat-left-text me-1"></i> Ghi chú hóa đơn / Lý do điều chỉnh</label>
+                            <textarea id="notes" name="notes" class="form-control" rows="3"
+                                      placeholder="Nhập ghi chú thêm cho hóa đơn (hoặc lý do nếu có điều chỉnh đơn giá/số lượng)..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Tính tiền & Giảm trừ ưu đãi -->
+                    <div>
+                        <div class="fin-calculation-box mb-4">
+                            <h4 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                                <i class="bi bi-calculator me-2 text-primary"></i> Tổng tiền &amp; Ưu đãi
+                            </h4>
+
+                            <!-- Ưu đãi khuyến mãi -->
+                            <div class="mb-3">
+                                <label for="promotionId" class="form-label small fw-bold text-muted">CHƯƠNG TRÌNH KHUYẾN MÃI</label>
+                                <select id="promotionId" name="promotionId" class="fin-select w-100" onchange="triggerRecalculate()">
+                                    <option value="">-- Không áp dụng khuyến mãi --</option>
+                                    <option th:each="p : ${availablePromotions}" th:value="${p.promotionId}"
+                                            th:text="${p.promoName} + ' (' + (p.promoType.name() == 'PERCENTAGE' ? p.discountValue + '%' : #numbers.formatDecimal(p.discountValue, 0, 'COMMA', 0, 'POINT') + ' đ') + ')'">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Mã Voucher Bệnh nhân -->
+                            <div class="mb-3">
+                                <label for="voucherId" class="form-label small fw-bold text-muted">VOUCHER CỦA BỆNH NHÂN</label>
+                                <select id="voucherId" name="voucherId" class="fin-select w-100" onchange="triggerRecalculate()">
+                                    <option value="">-- Không dùng voucher --</option>
+                                    <option th:each="v : ${availableVouchers}" th:value="${v.voucherId}"
+                                            th:text="${v.voucherCode} + ' - ' + ${v.promotion.promoName}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Điểm tích lũy Loyalty -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="pointsToRedeem" class="form-label small fw-bold text-muted m-0">ĐỔI ĐIỂM TÍCH LŨY</label>
+                                    <span class="badge bg-info text-dark" th:if="${loyaltyWallet != null}"
+                                          th:text="'Đang có: ' + ${loyaltyWallet.currentPoints} + ' điểm'">Đang có: 0 điểm</span>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" id="pointsToRedeem" name="pointsToRedeem" class="form-control"
+                                           value="0" min="0" th:max="${loyaltyWallet != null ? loyaltyWallet.currentPoints : 0}"
+                                           onchange="triggerRecalculate()">
+                                    <span class="input-group-text small">điểm</span>
+                                </div>
+                            </div>
+
+                            <!-- Giảm giá trực tiếp khác -->
+                            <div class="mb-4">
+                                <label for="manualDiscount" class="form-label small fw-bold text-muted">GIẢM GIÁ KHÁC (VNĐ)</label>
+                                <input type="number" id="manualDiscount" name="discountAmount" class="form-control"
+                                       value="0" min="0" step="1000" onchange="triggerRecalculate()">
+                            </div>
+
+                            <!-- Bảng tóm tắt thanh toán -->
+                            <div class="fin-calc-row">
+                                <span class="text-muted">Tổng tiền dịch vụ:</span>
+                                <strong id="lblTotalService">0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Giảm thẻ thành viên:</span>
+                                <strong id="lblMemberDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Giảm khuyến mãi/Voucher:</span>
+                                <strong id="lblPromoDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Trừ điểm tích lũy:</span>
+                                <strong id="lblPointDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row fin-calc-total">
+                                <span>THỰC THU (PHẢI TRẢ):</span>
+                                <span id="lblFinalPay" class="fs-4 text-primary">0 đ</span>
+                            </div>
+                            <div class="mt-2 text-end text-muted small">
+                                Điểm tích lũy dự kiến nhận: <strong id="lblPointsEarnable" class="text-success">+0 điểm</strong>
+                            </div>
+
+                            <!-- Nút Lưu Hóa đơn -->
+                            <div class="mt-4 d-grid gap-2">
+                                <button type="submit" id="btnSubmitInvoice" class="fin-btn fin-btn-primary py-3 fs-6"
+                                        th:disabled="${selectedVisit == null or #lists.isEmpty(unbilledServices)}">
+                                    <i class="bi bi-check2-circle fs-5"></i> XÁC NHẬN PHÁT HÀNH HÓA ĐƠN
+                                </button>
+                                <a th:href="@{/invoices}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    function formatMoney(num) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
+    }
+
+    function onSelectWaitingVisit(visitId) {
+        if (visitId) {
+            window.location.href = '/invoices/create?visitId=' + visitId;
+        }
+    }
+
+    function toggleAllItems(masterCheckbox) {
+        document.querySelectorAll('.item-checkbox').forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+        onItemCheckboxChange();
+    }
+
+    function onItemCheckboxChange() {
+        const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+        const totalCount = document.querySelectorAll('.item-checkbox').length;
+        const badge = document.getElementById('selectedCountBadge');
+        if (badge) {
+            badge.textContent = checkedCount + ' / ' + totalCount + ' dịch vụ được chọn';
+        }
+        const btnSubmit = document.getElementById('btnSubmitInvoice');
+        if (btnSubmit) {
+            btnSubmit.disabled = (checkedCount === 0);
+        }
+        triggerRecalculate();
+    }
+
+    function onItemQtyChange(input) {
+        const row = input.closest('tr');
+        recalculateRowTotal(row);
+        triggerRecalculate();
+    }
+
+    function onItemPriceChange(input) {
+        const row = input.closest('tr');
+        recalculateRowTotal(row);
+        triggerRecalculate();
+    }
+
+    function recalculateRowTotal(row) {
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+        const discountEl = row.querySelector('.item-clinical-discount');
+        const discount = discountEl ? (parseFloat(discountEl.getAttribute('data-discount')) || 0) : 0;
+        let lineTotal = (price * qty) - discount;
+        if (lineTotal < 0) lineTotal = 0;
+        row.querySelector('.item-line-total').textContent = formatMoney(lineTotal);
+        row.querySelector('.item-line-total').setAttribute('data-val', lineTotal);
+    }
+
+    async function triggerRecalculate() {
+        const profileId = document.getElementById('hiddenProfileId').value;
+        const promoId = document.getElementById('promotionId').value;
+        const voucherId = document.getElementById('voucherId').value;
+        const points = parseInt(document.getElementById('pointsToRedeem').value) || 0;
+        const manualDiscount = parseFloat(document.getElementById('manualDiscount').value) || 0;
+
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cb = row.querySelector('.item-checkbox');
+            if (cb && cb.checked) {
+                const serviceId = row.querySelector('.prop-service-id').value;
+                const performedId = row.querySelector('.prop-performed-id').value;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                items.push({
+                    performedId: performedId ? parseInt(performedId) : null,
+                    serviceId: serviceId ? parseInt(serviceId) : null,
+                    quantity: qty,
+                    unitPrice: price
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            document.getElementById('lblTotalService').textContent = '0 đ';
+            document.getElementById('lblMemberDiscount').textContent = '-0 đ';
+            document.getElementById('lblPromoDiscount').textContent = '-0 đ';
+            document.getElementById('lblPointDiscount').textContent = '-0 đ';
+            document.getElementById('lblFinalPay').textContent = '0 đ';
+            document.getElementById('lblPointsEarnable').textContent = '+0 điểm';
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/invoices/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileId: profileId ? parseInt(profileId) : null,
+                    promotionId: promoId ? parseInt(promoId) : null,
+                    voucherId: voucherId ? parseInt(voucherId) : null,
+                    pointsToRedeem: points,
+                    discountAmount: manualDiscount,
+                    items: items
+                })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                document.getElementById('lblTotalService').textContent = formatMoney(data.totalServiceAmount);
+                document.getElementById('lblMemberDiscount').textContent = '-' + formatMoney(data.memberDiscountAmount);
+                document.getElementById('lblPromoDiscount').textContent = '-' + formatMoney(data.promotionDiscountAmount);
+                document.getElementById('lblPointDiscount').textContent = '-' + formatMoney(data.pointDiscountAmount);
+                document.getElementById('lblFinalPay').textContent = formatMoney(data.totalAmount);
+                document.getElementById('lblPointsEarnable').textContent = '+' + data.pointsEarnable + ' điểm';
+            }
+        } catch (e) {
+            console.error('Calculation preview error:', e);
+        }
+    }
+
+    // Xử lý gửi form: Chỉ gửi và đánh chỉ số tuần tự cho các dòng ĐƯỢC CHỌN, vô hiệu hóa các dòng bỏ chọn
+    document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('Vui lòng chọn ít nhất 01 dịch vụ để lập hóa đơn.');
+            return false;
+        }
+
+        let index = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cb = row.querySelector('.item-checkbox');
+            const rowInputs = row.querySelectorAll('input:not(.item-checkbox)');
+            if (cb && cb.checked) {
+                rowInputs.forEach(input => {
+                    input.disabled = false;
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/items\[\d+\]/, 'items[' + index + ']'));
+                    }
+                });
+                index++;
+            } else {
+                // Vô hiệu hóa để browser KHÔNG gửi các dòng bỏ tick lên server
+                rowInputs.forEach(input => {
+                    input.disabled = true;
+                });
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        onItemCheckboxChange();
+    });
+</script>
+</body>
+</html>
