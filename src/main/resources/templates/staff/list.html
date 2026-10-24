@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý nhân sự')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('staffs')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý nhân sự')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+            <!-- DANH SÁCH NHÂN VIÊN (SCR-41.1) -->
+            <section class="panel">
+                <div class="panel__head">
+                    <div>
+                        <h3 class="panel__title">Danh sách nhân viên</h3>
+                        <p class="panel__subtitle">
+                            Hồ sơ nhân sự, chứng chỉ hành nghề và phân công chi nhánh ·
+                            <strong th:text="${totalItems}">0</strong> nhân viên
+                        </p>
+                    </div>
+                    <a th:href="@{/admin/staffs/create}" class="btn btn-primary">
+                        <i class="bi bi-person-plus" aria-hidden="true"></i> Thêm nhân viên
+                    </a>
+                </div>
+
+                <!-- Bộ lọc -->
+                <form th:action="@{/admin/staffs}" method="get" class="filter-bar">
+                    <div>
+                        <label for="keyword" class="form-label small mb-1">Tìm kiếm</label>
+                        <input type="text" id="keyword" name="keyword" th:value="${keyword}" class="form-control"
+                               placeholder="Mã NV, họ tên, CCCD, SĐT, email">
+                    </div>
+                    <div>
+                        <label for="specialty" class="form-label small mb-1">Chuyên khoa</label>
+                        <select id="specialty" name="specialty" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option th:each="sp : ${specialties}" th:value="${sp}" th:text="${sp}"
+                                    th:selected="${sp == selectedSpecialty}">Chuyên khoa
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="status" class="form-label small mb-1">Trạng thái</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                    th:selected="${selectedStatus != null and selectedStatus.name() == s.name()}"
+                                    th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : (s.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
+                                Trạng thái
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="branchId" class="form-label small mb-1">Chi nhánh</label>
+                        <select id="branchId" name="branchId" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                                Chi nhánh
+                            </option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search" aria-hidden="true"></i> Lọc
+                        </button>
+                        <a th:href="@{/admin/staffs}" class="btn btn-light">Đặt lại</a>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 staff-table">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Nhân viên</th>
+                            <th>Chuyên khoa / Chức danh</th>
+                            <th>CCHN</th>
+                            <th>Chi nhánh &amp; vai trò</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="staff : ${staffs}">
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="staff-avatar"
+                                          th:text="${#strings.toUpperCase(#strings.substring(staff.fullName, 0, 1))}">A</span>
+                                    <div>
+                                        <div class="staff-name" th:text="${staff.fullName}">Họ tên</div>
+                                        <div class="staff-sub">
+                                            <strong th:text="${staff.staffCode}">NV0001</strong>
+                                            <span th:if="${staff.phoneNumber != null}"
+                                                  th:text="' · ' + ${staff.phoneNumber}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div th:text="${staff.specialty != null ? staff.specialty : '-'}">-</div>
+                                <div class="staff-sub" th:text="${staff.positionTitle != null ? staff.positionTitle : ''}"></div>
+                            </td>
+                            <td>
+                                <span th:if="${staff.practiceLicenseNo != null}" th:text="${staff.practiceLicenseNo}">CCHN</span>
+                                <span th:unless="${staff.practiceLicenseNo != null}" class="text-muted">-</span>
+                            </td>
+                            <td>
+                                <div th:each="a : ${assignmentsByStaff[staff.staffId]}">
+                                    <span class="chip" th:classappend="${a.isPrimary} ? 'chip--primary' : ''">
+                                        <i class="bi bi-buildings" aria-hidden="true"></i>
+                                        <span th:text="${a.branch.branchName}">Chi nhánh</span>
+                                        <i th:if="${a.isPrimary}" class="bi bi-star-fill" title="Chi nhánh chính"
+                                           aria-hidden="true"></i>
+                                    </span>
+                                    <span class="chip chip--role"
+                                          th:text="${a.role.displayName != null ? a.role.displayName : a.role.roleName}">Vai trò</span>
+                                </div>
+                                <span th:if="${assignmentsByStaff[staff.staffId] == null}"
+                                      class="text-muted small">Chưa phân công</span>
+                            </td>
+                            <td>
+                                <span class="status-badge"
+                                      th:classappend="${'status-badge--' + #strings.toLowerCase(staff.status.name())}"
+                                      th:text="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : (staff.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
+                                    Trạng thái
+                                </span>
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <a th:href="@{/admin/staffs/{id}(id=${staff.staffId})}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-person-lines-fill" aria-hidden="true"></i> Chi tiết
+                                </a>
+                                <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
+                                </a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(staffs)}">
+                            <td colspan="6" class="text-center py-4 text-muted">Không tìm thấy nhân viên nào.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang -->
+                <nav th:if="${totalPages > 1}" class="mt-3" aria-label="Phân trang nhân viên">
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                            <a class="page-link"
+                               th:href="@{/admin/staffs(page=${currentPage - 1}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}">&laquo;</a>
+                        </li>
+                        <li class="page-item" th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
+                            th:classappend="${p == currentPage} ? 'active' : ''">
+                            <a class="page-link"
+                               th:href="@{/admin/staffs(page=${p}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
+                               th:text="${p + 1}">1</a>
+                        </li>
+                        <li class="page-item" th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''">
+                            <a class="page-link"
+                               th:href="@{/admin/staffs(page=${currentPage + 1}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}">&raquo;</a>
+                        </li>
+                    </ul>
+                </nav>
+            </section>
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
