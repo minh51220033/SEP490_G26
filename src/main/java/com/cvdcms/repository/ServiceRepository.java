@@ -25,6 +25,10 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
 
     Optional<Service> findByServiceCode(String serviceCode);
 
+    List<Service> findByIsParaclinicalTrueAndStatus(ServiceStatus status);
+
+    List<Service> findByServiceTypeInAndStatus(List<ServiceType> types, ServiceStatus status);
+
     // === FT02: Quản lý danh mục dịch vụ & Bảng giá ===
     // Kiểm tra mã dịch vụ đã tồn tại.
     boolean existsByServiceCodeIgnoreCase(String serviceCode);
