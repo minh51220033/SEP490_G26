@@ -400,15 +400,17 @@
                 <div class="df-foldable-bar" id="bar-orders" onclick="toggleMainBar('orders')">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
-                        <span class="df-foldable-title">CHỈ ĐỊNH</span>
-                        <span class="df-foldable-subtitle">(Thêm chỉ định như Chụp X-Quang, Xét nghiệm máu)</span>
+                        <span class="df-foldable-title">CHỈ ĐỊNH CẬN LÂM SÀNG &amp; CHẨN ĐOÁN HÌNH ẢNH</span>
+                        <span class="df-foldable-subtitle">(Chụp X-Quang, CT ConeBeam 3D, Xét nghiệm máu - SCR-11.2, SCR-11.3)</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 11px;"
-                                onclick="event.stopPropagation(); quickAddOrderPrompt();">
+                                th:disabled="${isClinicalLocked}"
+                                onclick="event.stopPropagation(); openAddParaclinicalModal();">
                             <i class="bi bi-plus-lg"></i> Thêm chỉ định
                         </button>
-                        <span class="badge bg-light text-primary border small" id="ordersCountBadge">0 chỉ định</span>
+                        <span class="badge bg-light text-primary border small" id="ordersCountBadge"
+                              th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0} + ' chỉ định'">0 chỉ định</span>
                     </div>
                 </div>
                 <div class="df-foldable-content" id="content-orders" style="display: none;">
@@ -416,44 +418,87 @@
                         <!-- CHIP CHỈ ĐỊNH NHANH -->
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                             <div class="d-flex flex-wrap align-items-center gap-1.5 small">
-                                <span class="text-secondary fw-bold me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chỉ định nhanh:</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp X-quang quanh chóp (Periapical)', 'R16', 'X_RAY')">
+                                <span class="text-secondary fw-bold me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chỉ định nhanh 1 chạm:</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
+                                        th:disabled="${isClinicalLocked}"
+                                        onclick="quickCreateParaclinicalOrder('CLS-XQ-CHOP', 'Chụp X-quang quanh chóp (Periapical)', 'R16')">
                                     + X-Quang quanh chóp
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp Panorama toàn cảnh (Toàn hàm)', 'Toàn hàm', 'X_RAY')">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
+                                        th:disabled="${isClinicalLocked}"
+                                        onclick="quickCreateParaclinicalOrder('CLS-PANO', 'Chụp Panorama toàn cảnh (Toàn hàm)', 'Toàn hàm')">
                                     + Panorama toàn cảnh
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Chụp CT ConeBeam 3D khảo sát xương', 'Hàm dưới', 'CT_SCAN')">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
+                                        th:disabled="${isClinicalLocked}"
+                                        onclick="quickCreateParaclinicalOrder('CLS-CT-3D', 'Chụp CT ConeBeam 3D khảo sát xương', 'Hàm dưới')">
                                     + CT ConeBeam 3D
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small" onclick="addClinicalOrder('Xét nghiệm máu đông (PT/APTT/INR)', 'Máu', 'LAB_TEST')">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
+                                        th:disabled="${isClinicalLocked}"
+                                        onclick="quickCreateParaclinicalOrder('CLS-XN-MAU', 'Xét nghiệm máu đông (PT/APTT/INR)', 'Máu')">
                                     + Xét nghiệm đông máu
                                 </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs" onclick="quickAddOrderPrompt()">
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs"
+                                    th:disabled="${isClinicalLocked}"
+                                    onclick="openAddParaclinicalModal()">
                                 <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
                             </button>
                         </div>
 
-                        <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG -->
+                        <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
                         <div class="table-responsive rounded-3 border">
                             <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 110px;">Mã CĐ</th>
                                         <th>Tên chỉ định cận lâm sàng</th>
-                                        <th style="width: 100px;" class="text-center">Vị trí / Vùng</th>
-                                        <th style="width: 180px;">Bác sĩ chỉ định</th>
+                                        <th style="width: 110px;" class="text-center">Vị trí / Vùng</th>
+                                        <th style="width: 170px;">Bác sĩ chỉ định</th>
                                         <th style="width: 140px;">Thời gian</th>
                                         <th style="width: 130px;" class="text-center">Trạng thái</th>
                                         <th style="width: 120px;" class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="clinicalOrdersTableBody">
-                                    <tr id="emptyOrdersRow">
+                                    <tr th:if="${paraclinicalOrders == null or #lists.isEmpty(paraclinicalOrders)}" id="emptyOrdersRow">
                                         <td colspan="7" class="text-center py-4 text-muted">
                                             <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
                                             <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                                        </td>
+                                    </tr>
+                                    <tr th:each="ord : ${paraclinicalOrders}" th:id="'order-row-' + ${ord.orderItemId}">
+                                        <td><span class="badge bg-light text-dark border fw-bold" th:text="${ord.orderCode}">CĐ1001</span></td>
+                                        <td>
+                                            <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
+                                            <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
+                                            <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary border" th:text="${ord.toothNumbers}">R16</span></td>
+                                        <td><div class="small fw-semibold text-dark" th:text="${ord.doctorName}">BS. Điều trị</div></td>
+                                        <td><span class="small text-muted" th:text="${ord.orderTime}">24/10/2026 15:30</span></td>
+                                        <td class="text-center">
+                                            <span class="badge"
+                                                  th:classappend="${ord.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
+                                                  th:text="${ord.statusLabel}">Chờ thực hiện</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-sm"
+                                                        th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'btn-outline-primary'"
+                                                        th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
+                                                        th:disabled="${isClinicalLocked}"
+                                                        th:onclick="'toggleOrderStatus(' + ${ord.orderItemId} + ', \'' + ${ord.status} + '\')'">
+                                                    <i class="bi" th:classappend="${ord.status == 'COMPLETED'} ? 'bi-check2-circle' : 'bi-check-lg'"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                                        title="Xóa chỉ định này"
+                                                        th:if="${!isClinicalLocked}"
+                                                        th:onclick="'deleteOrder(' + ${ord.orderItemId} + ')'">
+                                                    <i class="bi bi-trash3-fill"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -2257,6 +2302,69 @@
 </aside>
 
 <!-- ===================================================================== -->
+<!-- MODAL: TẠO CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2)       -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="addParaclinicalModal" tabindex="-1" aria-labelledby="addParaclinicalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
+                        <i class="bi bi-images fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="addParaclinicalModalLabel">Chỉ định Cận lâm sàng &amp; Chẩn đoán hình ảnh</h5>
+                        <small class="text-white-50">Tạo phiếu chỉ định X-quang, CT ConeBeam, Xét nghiệm (SCR-11.2)</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addParaclinicalForm" onsubmit="event.preventDefault(); submitParaclinicalOrderModal();">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">
+                            Dịch vụ cận lâm sàng <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select form-select-sm" id="pcoServiceSelect" required>
+                            <option value="">-- Chọn dịch vụ cận lâm sàng --</option>
+                            <option th:each="srv : ${paraclinicalServices}"
+                                    th:value="${srv.serviceId}"
+                                    th:text="${srv.serviceName + ' (' + #numbers.formatDecimal(srv.basePrice, 0, 'COMMA', 0, 'POINT') + ' đ / ' + srv.unit + ')'}">
+                                Chụp X-quang quanh chóp
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">
+                            Vị trí răng / Vùng can thiệp
+                        </label>
+                        <input type="text" class="form-control form-control-sm" id="pcoToothInput"
+                               placeholder="Ví dụ: R16, R26, Hàm trên, Toàn hàm, Máu...">
+                        <div class="form-text text-muted small">Nhập số răng FDI hoặc vùng giải phẫu cần chụp phim / xét nghiệm.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">
+                            Mục đích / Yêu cầu chẩn đoán
+                        </label>
+                        <textarea class="form-control form-control-sm" id="pcoNotesInput" rows="2"
+                                  placeholder="Ghi chú lâm sàng: Khảo sát chóp răng, đo mật độ xương, kiểm tra đông máu..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitParaclinical">
+                            <i class="bi bi-check-lg me-1"></i>Lưu chỉ định vào DB
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
 <!-- MODAL: HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)       -->
 <!-- Kiểm tra điều kiện (ICD-10, COMPLETED) & Khóa bệnh án BR-EMR-02        -->
 <!-- ===================================================================== -->
@@ -2980,41 +3088,202 @@
         showToast('Đã lưu thông tin triệu chứng & khám tổng quát!');
     }
 
-    let clinicalOrdersList = [];
+    // =========================================================================
+    // UC-10 / FT11: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2, 11.3)
+    // Lưu database, quản lý trạng thái, chỉ định nhanh 1 chạm & Modal chi tiết
+    // =========================================================================
+    const isClinicalLockedVal = [(${isClinicalLocked != null ? isClinicalLocked : false})];
 
-    function addClinicalOrder(orderName, region, type) {
-        const orderId = 'CĐ' + (1000 + clinicalOrdersList.length + 1);
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-        clinicalOrdersList.push({
-            id: orderId,
-            name: orderName,
-            region: region || 'Toàn hàm',
-            doctor: 'BS. CK1 Lê Hoàng Nam',
-            time: timeStr,
-            status: 'PENDING'
-        });
-
-        renderClinicalOrders();
-        showToast(`Đã thêm chỉ định: ${orderName}`);
+    function getCurrentVisitId() {
+        const el = document.getElementById('visitId') || document.getElementById('treatVisitId');
+        if (el && el.value) return el.value;
+        if (typeof ft17CurrentVisitId !== 'undefined' && ft17CurrentVisitId) return ft17CurrentVisitId;
+        return [(${visit != null and visit.visitId != null ? visit.visitId : 1})];
     }
 
-    function quickAddOrderPrompt() {
-        const name = prompt('Nhập tên chỉ định cận lâm sàng (Ví dụ: Chụp CT ConeBeam 3D, Chụp Panorama, Xét nghiệm máu):', 'Chụp X-quang quanh chóp');
-        if (!name) return;
-        const region = prompt('Vị trí răng hoặc vùng chụp (Ví dụ: R16, Hàm trên, Toàn hàm):', 'R16');
-        addClinicalOrder(name, region || 'Toàn hàm', 'OTHER');
+    function openAddParaclinicalModal() {
+        if (isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
+            return;
+        }
+        const modalEl = document.getElementById('addParaclinicalModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            document.getElementById('addParaclinicalForm')?.reset();
+            modal.show();
+        }
     }
 
-    function renderClinicalOrders() {
+    async function submitParaclinicalOrderModal() {
+        const serviceSelect = document.getElementById('pcoServiceSelect');
+        const toothInput = document.getElementById('pcoToothInput');
+        const notesInput = document.getElementById('pcoNotesInput');
+        const submitBtn = document.getElementById('btnSubmitParaclinical');
+
+        const serviceId = serviceSelect ? serviceSelect.value : null;
+        const toothNumbers = toothInput ? toothInput.value.trim() : '';
+        const notes = notesInput ? notesInput.value.trim() : '';
+
+        if (!serviceId) {
+            alert('Vui lòng chọn dịch vụ cận lâm sàng!');
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu DB...';
+        }
+
+        try {
+            const visitId = getCurrentVisitId();
+            const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    serviceId: parseInt(serviceId),
+                    toothNumbers: toothNumbers,
+                    notes: notes
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                const modalEl = document.getElementById('addParaclinicalModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                showToast('✓ Đã lưu chỉ định cận lâm sàng vào cơ sở dữ liệu!');
+                await loadParaclinicalOrders();
+            } else {
+                alert('Không thể lưu chỉ định: ' + (data.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error creating paraclinical order:', err);
+            alert('Lỗi kết nối khi tạo chỉ định: ' + err.message);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Lưu chỉ định vào DB';
+            }
+        }
+    }
+
+    async function quickCreateParaclinicalOrder(serviceCode, defaultName, defaultTooth) {
+        if (isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
+            return;
+        }
+        try {
+            const visitId = getCurrentVisitId();
+            const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customServiceName: defaultName,
+                    toothNumbers: defaultTooth,
+                    notes: 'Chỉ định 1 chạm nhanh từ bác sĩ khám lâm sàng'
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`✓ Đã thêm chỉ định: ${defaultName}`);
+                await loadParaclinicalOrders();
+            } else {
+                alert('Không thể tạo chỉ định: ' + (data.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error in quickCreateParaclinicalOrder:', err);
+            alert('Lỗi khi tạo chỉ định nhanh: ' + err.message);
+        }
+    }
+
+    async function toggleOrderStatus(orderItemId, currentStatus) {
+        if (isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể sửa trạng thái chỉ định.');
+            return;
+        }
+        const newStatus = (currentStatus === 'COMPLETED') ? 'WAITING' : 'COMPLETED';
+        let resultSummary = '';
+        if (newStatus === 'COMPLETED') {
+            const promptText = prompt('Nhập tóm tắt kết quả cận lâm sàng / chẩn đoán hình ảnh:', 'Đã chụp phim/xét nghiệm đạt chuẩn, không có bất thường');
+            if (promptText === null) return;
+            resultSummary = promptText;
+        }
+
+        try {
+            const res = await fetch(`/api/doctor/paraclinical-orders/${orderItemId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: newStatus,
+                    resultSummary: resultSummary
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast(newStatus === 'COMPLETED' ? '✓ Đã cập nhật: Đã có kết quả!' : '✓ Đã chuyển về: Chờ thực hiện');
+                await loadParaclinicalOrders();
+            } else {
+                alert('Không thể cập nhật: ' + (data.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error updating order status:', err);
+            alert('Lỗi khi cập nhật trạng thái: ' + err.message);
+        }
+    }
+
+    async function deleteOrder(orderItemId) {
+        if (isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể xóa chỉ định.');
+            return;
+        }
+        if (!confirm('Bạn có chắc chắn muốn xóa chỉ định cận lâm sàng này khỏi cơ sở dữ liệu?')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/doctor/paraclinical-orders/${orderItemId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast('✓ Đã xóa chỉ định cận lâm sàng thành công!');
+                await loadParaclinicalOrders();
+            } else {
+                alert('Không thể xóa chỉ định: ' + (data.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error deleting order:', err);
+            alert('Lỗi khi xóa chỉ định: ' + err.message);
+        }
+    }
+
+    async function loadParaclinicalOrders() {
+        try {
+            const visitId = getCurrentVisitId();
+            const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`);
+            if (!res.ok) return;
+            const orders = await res.json();
+            renderParaclinicalOrdersTable(orders);
+        } catch (err) {
+            console.error('Error loading paraclinical orders:', err);
+        }
+    }
+
+    function renderParaclinicalOrdersTable(orders) {
         const tbody = document.getElementById('clinicalOrdersTableBody');
         const badge = document.getElementById('ordersCountBadge');
         if (!tbody) return;
 
-        if (badge) badge.innerText = `${clinicalOrdersList.length} chỉ định`;
+        if (badge) {
+            badge.innerText = `${orders.length} chỉ định`;
+        }
 
-        if (clinicalOrdersList.length === 0) {
+        if (!orders || orders.length === 0) {
             tbody.innerHTML = `
                 <tr id="emptyOrdersRow">
                     <td colspan="7" class="text-center py-4 text-muted">
@@ -3027,54 +3296,50 @@
         }
 
         let rowsHtml = '';
-        clinicalOrdersList.forEach((ord, idx) => {
+        orders.forEach(ord => {
             const isDone = ord.status === 'COMPLETED';
+            const resultHtml = (ord.resultSummary && ord.resultSummary.trim().length > 0)
+                ? `<div class="small text-muted">KQ: ${escapeHtml(ord.resultSummary)}</div>`
+                : '';
+            const actionButtons = isClinicalLockedVal ? `
+                <span class="text-muted small" title="Bệnh án đã khóa (BR-EMR-02)">Đã khóa</span>
+            ` : `
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
+                            title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
+                            onclick="toggleOrderStatus(${ord.orderItemId}, '${ord.status}')">
+                        <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                            title="Xóa chỉ định này"
+                            onclick="deleteOrder(${ord.orderItemId})">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                </div>
+            `;
             rowsHtml += `
-                <tr>
-                    <td><span class="badge bg-light text-dark border fw-bold">${ord.id}</span></td>
-                    <td><strong class="text-dark">${ord.name}</strong></td>
-                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${ord.region}</span></td>
-                    <td><div class="small fw-semibold text-dark">${ord.doctor}</div></td>
-                    <td><span class="small text-muted">${ord.time}</span></td>
+                <tr id="order-row-${ord.orderItemId}">
+                    <td><span class="badge bg-light text-dark border fw-bold">${escapeHtml(ord.orderCode)}</span></td>
+                    <td>
+                        <strong class="text-dark">${escapeHtml(ord.serviceName)}</strong>
+                        <span class="badge bg-secondary-subtle text-secondary small ms-1">${escapeHtml(ord.serviceType || 'CLS')}</span>
+                        ${resultHtml}
+                    </td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${escapeHtml(ord.toothNumbers || 'Toàn hàm')}</span></td>
+                    <td><div class="small fw-semibold text-dark">${escapeHtml(ord.doctorName || 'BS. Điều trị')}</div></td>
+                    <td><span class="small text-muted">${escapeHtml(ord.orderTime || '')}</span></td>
                     <td class="text-center">
                         <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
-                            ${isDone ? 'Đã có kết quả' : 'Chờ thực hiện'}
+                            ${escapeHtml(ord.statusLabel || (isDone ? 'Đã có kết quả' : 'Chờ thực hiện'))}
                         </span>
                     </td>
                     <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
-                                    title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
-                                    onclick="toggleOrderStatus(${idx})">
-                                <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                    title="Xóa chỉ định này"
-                                    onclick="deleteOrder(${idx})">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </div>
+                        ${actionButtons}
                     </td>
                 </tr>
             `;
         });
         tbody.innerHTML = rowsHtml;
-    }
-
-    function toggleOrderStatus(idx) {
-        if (clinicalOrdersList[idx]) {
-            clinicalOrdersList[idx].status = clinicalOrdersList[idx].status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
-            renderClinicalOrders();
-            showToast('Đã cập nhật trạng thái chỉ định cận lâm sàng!');
-        }
-    }
-
-    function deleteOrder(idx) {
-        if (confirm('Bạn có chắc muốn xóa chỉ định này?')) {
-            clinicalOrdersList.splice(idx, 1);
-            renderClinicalOrders();
-            showToast('Đã xóa chỉ định.');
-        }
     }
 
     // 1. Lọc danh sách bệnh lý thường gặp
