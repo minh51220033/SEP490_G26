@@ -34,6 +34,8 @@ public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory
             Long categoryId
     );
 
+    Optional<ServiceCategory> findByCategoryCode(String categoryCode);
+
 
 
 
