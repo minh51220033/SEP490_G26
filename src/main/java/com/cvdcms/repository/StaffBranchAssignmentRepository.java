@@ -9,10 +9,68 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-// Truy vấn phân công nhân sự theo chi nhánh (staff_branch_assignments) - FT41.
 @Repository
 public interface StaffBranchAssignmentRepository extends JpaRepository<StaffBranchAssignment, Long> {
 
+    // ==========================================
+    // CÁC HÀM TỪ NHÁNH CỦA FT21 - FT22
+    // ==========================================
+    @Query("""
+        SELECT COUNT(sba) > 0 FROM StaffBranchAssignment sba
+        WHERE sba.staff.staffId = :staffId
+          AND sba.branch.branchId = :branchId
+          AND sba.status = :status
+          AND sba.startDate <= CURRENT_DATE
+          AND (sba.endDate IS NULL OR sba.endDate >= CURRENT_DATE)
+    """)
+    boolean hasActiveAssignment(
+            @Param("staffId") Long staffId,
+            @Param("branchId") Long branchId,
+            @Param("status") AssignmentStatus status
+    );
+
+    @Query("""
+        SELECT COUNT(sba) > 0 FROM StaffBranchAssignment sba
+        WHERE sba.staff.user.userId = :userId
+          AND sba.branch.branchId = :branchId
+          AND sba.status = :status
+          AND sba.startDate <= CURRENT_DATE
+          AND (sba.endDate IS NULL OR sba.endDate >= CURRENT_DATE)
+    """)
+    boolean hasActiveUserAssignment(
+            @Param("userId") Long userId,
+            @Param("branchId") Long branchId,
+            @Param("status") AssignmentStatus status
+    );
+
+    @Query("""
+        SELECT sba.branch.branchId FROM StaffBranchAssignment sba
+        WHERE sba.staff.staffId = :staffId
+          AND sba.status = :status
+          AND sba.startDate <= CURRENT_DATE
+          AND (sba.endDate IS NULL OR sba.endDate >= CURRENT_DATE)
+    """)
+    List<Long> findActiveBranchIdsByStaffId(
+            @Param("staffId") Long staffId,
+            @Param("status") AssignmentStatus status
+    );
+
+    @Query("""
+        SELECT sba.branch.branchId FROM StaffBranchAssignment sba
+        WHERE sba.staff.user.userId = :userId
+          AND sba.status = :status
+          AND sba.startDate <= CURRENT_DATE
+          AND (sba.endDate IS NULL OR sba.endDate >= CURRENT_DATE)
+    """)
+    List<Long> findActiveBranchIdsByUserId(
+            @Param("userId") Long userId,
+            @Param("status") AssignmentStatus status
+    );
+
+    // ==========================================
+    // CÁC HÀM TỪ NHÁNH DEVELOP (FT41)
+    // ==========================================
+    
     // Lịch sử phân công của một nhân viên: chi nhánh chính lên đầu, mới nhất trước.
     @Query("SELECT a FROM StaffBranchAssignment a "
             + "JOIN FETCH a.branch JOIN FETCH a.role "
@@ -26,6 +84,7 @@ public interface StaffBranchAssignmentRepository extends JpaRepository<StaffBran
             + "WHERE a.status = :status")
     List<StaffBranchAssignment> findAllByStatus(@Param("status") AssignmentStatus status);
 
+    // Đã gộp chung hàm findByStaff_StaffIdAndStatus và findByStaffStaffIdAndStatus
     List<StaffBranchAssignment> findByStaffStaffIdAndStatus(Long staffId, AssignmentStatus status);
 
     // Bác sĩ/nhân viên đang làm việc tại một chi nhánh (phục vụ các phân hệ khác chọn bác sĩ).

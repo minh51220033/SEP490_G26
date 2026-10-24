@@ -57,6 +57,9 @@ public class Payment {
     @Column(name = "transaction_ref", length = 100)
     private String transactionRef;
 
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
+
     @Column(name = "notes", length = 255)
     private String notes;
 
