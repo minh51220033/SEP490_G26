@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Thông tin dịch vụ & Giá')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Thông tin dịch vụ & Giá')}"></header>
+
+        <main class="app-content">
+
+            <div class="d-flex flex-wrap justify-content-between
+                        align-items-center gap-3 mb-4">
+                <div>
+                    <h2 class="h4 mb-1"
+                        th:text="${isEdit} ? 'Sửa dịch vụ' : 'Thêm dịch vụ'">
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Thiết lập thông tin, giá và điều kiện sử dụng dịch vụ.
+                    </p>
+                </div>
+
+                <a th:href="@{/admin/services}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Danh sách dịch vụ
+                </a>
+            </div>
+
+            <!-- CHƯA CÓ NHÓM ĐỂ CHỌN -->
+            <div class="alert alert-warning"
+                 role="alert"
+                 th:if="${#lists.isEmpty(categories)}">
+                Chưa có nhóm dịch vụ đang hoạt động.
+                <a th:href="@{/admin/services}" class="alert-link">
+                    Tạo hoặc kích hoạt nhóm dịch vụ
+                </a>
+                trước khi thêm dịch vụ.
+            </div>
+
+            <form th:object="${serviceForm}"
+                  th:action="@{${isEdit ? '/admin/services/' + serviceId + '/update' : '/admin/services'}}"
+                  method="post">
+
+                <!-- LỖI NGHIỆP VỤ -->
+                <div class="alert alert-danger"
+                     role="alert"
+                     th:if="${#fields.hasGlobalErrors()}">
+                    <ul class="mb-0">
+                        <li th:each="error : ${#fields.globalErrors()}"
+                            th:text="${error}">
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- THÔNG TIN CƠ BẢN -->
+                <section class="panel mb-4">
+
+                    <div class="panel__head">
+                        <div>
+                            <h3 class="panel__title">Thông tin cơ bản</h3>
+                            <p class="panel__subtitle">
+                                Các trường có dấu * là bắt buộc.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        <div class="row g-3">
+
+                            <!-- CHỈ BIND serviceCode KHI TẠO MỚI -->
+                            <div class="col-md-4" th:if="${!isEdit}">
+                                <label for="serviceCode" class="form-label">
+                                    Mã dịch vụ
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <input id="serviceCode"
+                                       type="text"
+                                       th:field="*{serviceCode}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('serviceCode')}
+                                            ? 'is-invalid' : ''"
+                                       minlength="2"
+                                       maxlength="30"
+                                       pattern="[A-Za-z0-9_\-]{2,30}"
+                                       title="Nhập 2–30 ký tự: chữ không dấu, số, dấu - hoặc _."
+                                       placeholder="Ví dụ: DV_CAO_VOI"
+                                       required>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{serviceCode}">
+                                </div>
+                            </div>
+
+                            <!-- KHI SỬA CHỈ HIỂN THỊ MÃ, KHÔNG GỬI LÊN -->
+                            <div class="col-md-4" th:if="${isEdit}">
+                                <label for="existingServiceCode" class="form-label">
+                                    Mã dịch vụ
+                                </label>
+
+                                <input id="existingServiceCode"
+                                       type="text"
+                                       class="form-control"
+                                       th:value="${serviceCode}"
+                                       readonly>
+
+                                <div class="form-text">
+                                    Mã dịch vụ được giữ nguyên sau khi tạo.
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label for="serviceName" class="form-label">
+                                    Tên dịch vụ
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <input id="serviceName"
+                                       type="text"
+                                       th:field="*{serviceName}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('serviceName')}
+                                            ? 'is-invalid' : ''"
+                                       maxlength="200"
+                                       placeholder="Ví dụ: Cạo vôi răng"
+                                       required>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{serviceName}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="categoryId" class="form-label">
+                                    Nhóm dịch vụ
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <select id="categoryId"
+                                        th:field="*{categoryId}"
+                                        class="form-select"
+                                        th:classappend="${#fields.hasErrors('categoryId')}
+                                            ? 'is-invalid' : ''"
+                                        required>
+
+                                    <option value="">-- Chọn nhóm --</option>
+
+                                    <option th:each="category : ${categories}"
+                                            th:value="${category.categoryId}"
+                                            th:text="${category.categoryName
+                                                + (category.isActive == true
+                                                    ? ''
+                                                    : ' — Ngừng sử dụng')}">
+                                    </option>
+                                </select>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{categoryId}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="serviceType" class="form-label">
+                                    Loại dịch vụ
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <select id="serviceType"
+                                        th:field="*{serviceType}"
+                                        class="form-select"
+                                        th:classappend="${#fields.hasErrors('serviceType')}
+                                            ? 'is-invalid' : ''"
+                                        required>
+
+                                    <option value="">-- Chọn loại --</option>
+                                    <option value="PROCEDURE">Thủ thuật nha khoa</option>
+                                    <option value="LAB">Xét nghiệm</option>
+                                    <option value="XRAY">X-Ray</option>
+                                    <option value="CONSULTATION">Khám / Tư vấn</option>
+                                </select>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{serviceType}">
+                                </div>
+
+                                <div class="form-text">
+                                    Loại dịch vụ phải trùng với loại của nhóm đã chọn.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="unit" class="form-label">
+                                    Đơn vị tính
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <input id="unit"
+                                       type="text"
+                                       th:field="*{unit}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('unit')}
+                                            ? 'is-invalid' : ''"
+                                       maxlength="30"
+                                       placeholder="Ví dụ: Lần, Răng, Phim"
+                                       required>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{unit}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">
+                                    Trạng thái
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <select id="status"
+                                        th:field="*{status}"
+                                        class="form-select"
+                                        th:classappend="${#fields.hasErrors('status')}
+                                            ? 'is-invalid' : ''"
+                                        required>
+
+                                    <option value="ACTIVE">Đang sử dụng</option>
+                                    <option value="INACTIVE">Ngừng sử dụng</option>
+                                </select>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{status}">
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="description" class="form-label">
+                                    Mô tả dịch vụ
+                                </label>
+
+                                <textarea id="description"
+                                          th:field="*{description}"
+                                          class="form-control"
+                                          rows="4"
+                                          placeholder="Nhập nội dung giới thiệu dịch vụ...">
+                                </textarea>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- GIÁ VÀ PHỤ PHÍ -->
+                <section class="panel mb-4">
+
+                    <div class="panel__head">
+                        <div>
+                            <h3 class="panel__title">Giá và phụ phí</h3>
+                            <p class="panel__subtitle">
+                                Đơn giá và phụ phí tính theo đơn vị của dịch vụ.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label for="basePrice" class="form-label">
+                                    Đơn giá chuẩn (VNĐ)
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <input id="basePrice"
+                                       type="number"
+                                       th:field="*{basePrice}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('basePrice')}
+                                            ? 'is-invalid' : ''"
+                                       min="0"
+                                       step="0.01"
+                                       required>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{basePrice}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="surchargeAmount" class="form-label">
+                                    Phụ phí (VNĐ)
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <input id="surchargeAmount"
+                                       type="number"
+                                       th:field="*{surchargeAmount}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('surchargeAmount')}
+                                            ? 'is-invalid' : ''"
+                                       min="0"
+                                       step="0.01"
+                                       required>
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{surchargeAmount}">
+                                </div>
+
+                                <div class="form-text">
+                                    Nhập 0 nếu không có phụ phí.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ĐIỀU KIỆN SỬ DỤNG -->
+                <section class="panel mb-4">
+
+                    <div class="panel__head">
+                        <div>
+                            <h3 class="panel__title">Điều kiện sử dụng</h3>
+                            <p class="panel__subtitle">
+                                Thiết lập yêu cầu chọn răng, đặt lịch và bảo hành.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input id="requiresTooth"
+                                           type="checkbox"
+                                           th:field="*{requiresTooth}"
+                                           class="form-check-input"
+                                           th:classappend="${#fields.hasErrors('requiresTooth')}
+                                                ? 'is-invalid' : ''">
+
+                                    <label for="requiresTooth"
+                                           class="form-check-label">
+                                        Bắt buộc chọn vị trí răng
+                                    </label>
+
+                                    <div class="invalid-feedback"
+                                         th:errors="*{requiresTooth}">
+                                    </div>
+                                </div>
+
+                                <p class="small text-muted mt-2 mb-0">
+                                    Áp dụng cho dịch vụ cần xác định răng thực hiện.
+                                </p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input id="isBookableOnline"
+                                           type="checkbox"
+                                           th:field="*{isBookableOnline}"
+                                           class="form-check-input"
+                                           th:classappend="${#fields.hasErrors('isBookableOnline')}
+                                                ? 'is-invalid' : ''">
+
+                                    <label for="isBookableOnline"
+                                           class="form-check-label">
+                                        Cho phép đặt lịch trực tuyến
+                                    </label>
+
+                                    <div class="invalid-feedback"
+                                         th:errors="*{isBookableOnline}">
+                                    </div>
+                                </div>
+
+                                <p class="small text-muted mt-2 mb-0">
+                                    Bệnh nhân được chọn dịch vụ này khi đặt lịch online.
+                                </p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="warrantyMonths" class="form-label">
+                                    Thời hạn bảo hành (tháng)
+                                </label>
+
+                                <input id="warrantyMonths"
+                                       type="number"
+                                       th:field="*{warrantyMonths}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('warrantyMonths')}
+                                            ? 'is-invalid' : ''"
+                                       min="0"
+                                       max="2147483647"
+                                       step="1">
+
+                                <div class="invalid-feedback"
+                                     th:errors="*{warrantyMonths}">
+                                </div>
+
+                                <div class="form-text">
+                                    Có thể để trống nếu chưa thiết lập thời hạn bảo hành.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- THAO TÁC -->
+                <div class="d-flex flex-wrap gap-2 mb-4">
+
+                    <button type="submit"
+                            class="btn btn-primary"
+                            th:disabled="${#lists.isEmpty(categories)}">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+
+                        <span th:text="${isEdit}
+                            ? 'Lưu thay đổi'
+                            : 'Thêm dịch vụ'">
+                        </span>
+                    </button>
+
+                    <a th:href="@{/admin/services}"
+                       class="btn btn-outline-secondary">
+                        Hủy
+                    </a>
+
+                    <a th:if="${isEdit}"
+                       th:href="@{/admin/services/{id}/config(id=${serviceId})}"
+                       class="btn btn-outline-primary">
+                        Cấu hình kỹ thuật
+                    </a>
+
+                </div>
+
+            </form>
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+    </div>
+</div>
+
+</body>
+</html>

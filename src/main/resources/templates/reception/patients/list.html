@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Hồ sơ bệnh nhân')}"></head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('patients')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="patient-page-heading">
+                <div><h1>Hồ sơ bệnh nhân</h1><p>Tìm và quản lý hồ sơ tại chi nhánh được phân công.</p></div>
+                <a class="btn btn-primary" th:href="@{/reception/patients/new}"><i class="bi bi-plus-lg"></i> Thêm bệnh nhân</a>
+            </div>
+            <section class="panel">
+                <form class="patient-filter" method="get" th:action="@{/reception/patients}">
+                    <div><label for="query">Mã, họ tên hoặc số điện thoại</label><input id="query" class="form-control" name="query" th:value="${query}" placeholder="Tìm hồ sơ"></div>
+                    <div><label for="dob">Ngày sinh</label><input id="dob" class="form-control" type="date" name="dob" th:value="${dob}"></div>
+                    <div th:if="${#lists.size(branches) > 1}"><label for="branchId">Chi nhánh</label><select id="branchId" class="form-select" name="branchId"><option value="">Tất cả</option><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}">Chi nhánh</option></select></div>
+                    <div><label for="status">Trạng thái</label><select id="status" class="form-select" name="status"><option value="">Tất cả</option><option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hoạt động</option><option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option></select></div>
+                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead><tr><th>Mã hồ sơ</th><th>Bệnh nhân</th><th>Ngày sinh</th><th>Số điện thoại</th><th>Chi nhánh</th><th>Trạng thái</th><th></th></tr></thead>
+                        <tbody>
+                        <tr th:each="patient : ${patients.content}">
+                            <td class="fw-semibold" th:text="${patient.code}">BN001</td>
+                            <td th:text="${patient.fullName}">Họ tên</td>
+                            <td th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : '—'}">—</td>
+                            <td th:text="${patient.phoneNumber}">—</td>
+                            <td th:text="${patient.branchName}">—</td>
+                            <td><span class="badge" th:classappend="${patient.status == 'ACTIVE'} ? 'bg-success' : 'bg-secondary'" th:text="${patient.status == 'ACTIVE'} ? 'Đang hoạt động' : 'Ngừng hoạt động'">—</span></td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/reception/patients/{id}(id=${patient.id})}">Xem hồ sơ</a></td>
+                        </tr>
+                        <tr th:if="${patients.empty}"><td colspan="7" class="text-center text-muted py-5">Không tìm thấy hồ sơ phù hợp.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="patient-pagination" th:if="${patients.totalPages > 1}">
+                    <span th:text="|Trang ${patients.number + 1} / ${patients.totalPages}|">Trang 1</span>
+                    <div class="btn-group">
+                        <a class="btn btn-outline-secondary" th:if="${patients.hasPrevious()}" th:href="@{/reception/patients(page=${patients.number - 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Trước</a>
+                        <a class="btn btn-outline-secondary" th:if="${patients.hasNext()}" th:href="@{/reception/patients(page=${patients.number + 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Sau</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+</body>
+</html>
