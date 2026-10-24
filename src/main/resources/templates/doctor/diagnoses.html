@@ -996,7 +996,7 @@
                                                      th:id="'stage-card-' + ${st.stageId}"
                                                      class="df-inline-stage-card"
                                                      th:classappend="${st.status == 'COMPLETED'} ? 'is-completed' : (${st.status == 'IN_PROGRESS'} ? 'is-in-progress' : 'is-pending')">
-                                                    
+
                                                     <!-- TIÊU ĐỀ GIAI ĐOẠN -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
                                                         <div class="d-flex align-items-center gap-2">
@@ -1441,15 +1441,15 @@
                             <!-- Lặp qua danh sách ảnh -->
                             <div class="df-photo-card" th:each="photo : ${clinicalPhotos}"
                                  th:attr="data-id=${photo.photoId}, data-stage=${photo.photoStage}, data-stagetext=${photo.photoStageText}, data-category=${photo.photoCategory}, data-visit=${photo.visitId != null ? photo.visitId : ''}, data-url=${photo.imageUrl}, data-caption=${photo.caption}, data-date=${photo.capturedAtFormatted}">
-                                
+
                                 <div class="df-photo-img-wrap" onclick="openPhotoLightboxFromCard(this)">
                                     <img th:src="@{${photo.imageUrl}}" th:alt="${photo.caption}" loading="lazy" onerror="this.src='/images/dental-placeholder.png'">
-                                    
+
                                     <!-- Stage Badge -->
                                     <span class="df-photo-stage-tag"
                                           th:classappend="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'df-photo-stage-before' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'df-photo-stage-after' : 'df-photo-stage-during')"
                                           th:text="${photo.photoStage != null ? photo.photoStage.name() : 'BEFORE'}">BEFORE</span>
-                                    
+
                                     <!-- Category Badge -->
                                     <span class="df-photo-cat-tag" th:text="${photo.photoCategoryText}">Nụ cười</span>
 
@@ -5836,101 +5836,6 @@
         });
     }
 
-    function updatePlanInlineView(plan) {
-        if (!plan || !plan.planId) return;
-
-        // 1. Cập nhật dòng bảng chính của Kế hoạch
-        const mainRow = document.getElementById(`plan-row-${plan.planId}`);
-        if (mainRow) {
-            const progressCell = mainRow.cells[3];
-            if (progressCell) {
-                progressCell.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-between mb-1 small">
-                        <span class="fw-semibold text-secondary">${plan.completedStages}/${plan.totalStages} giai đoạn</span>
-                        <strong class="text-primary">${plan.progressPercent}%</strong>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-success" role="progressbar"
-                             style="width: ${plan.progressPercent}%;"
-                             aria-valuenow="${plan.progressPercent}" aria-valuemin="0" aria-valuemax="100">
-                        </div>
-                    </div>
-                `;
-            }
-
-            const statusCell = mainRow.cells[5];
-            if (statusCell) {
-                statusCell.innerHTML = `<span class="badge ${plan.statusBadgeClass}">${plan.statusDisplayName}</span>`;
-            }
-        }
-
-        // 2. Cập nhật badge tiến độ trong roadmap
-        const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
-        if (progBadge) {
-            progBadge.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
-        }
-
-        // 3. Cập nhật từng giai đoạn và thủ thuật
-        if (plan.stages && plan.stages.length > 0) {
-            plan.stages.forEach(st => {
-                const card = document.getElementById(`stage-card-${st.stageId}`);
-                if (card) {
-                    card.classList.remove('is-completed', 'is-in-progress', 'is-pending');
-                    if (st.status === 'COMPLETED') card.classList.add('is-completed');
-                    else if (st.status === 'IN_PROGRESS') card.classList.add('is-in-progress');
-                    else card.classList.add('is-pending');
-                }
-
-                const compBadge = document.getElementById(`stage-completed-badge-${st.stageId}`);
-                if (compBadge) {
-                    if (st.completedAt) {
-                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success';
-                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>`;
-                    } else {
-                        compBadge.className = 'badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border';
-                        compBadge.innerHTML = `<i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>`;
-                    }
-                }
-
-                const stageBtnGroup = document.getElementById(`stage-btn-group-${st.stageId}`);
-                if (stageBtnGroup) {
-                    const btns = stageBtnGroup.querySelectorAll('button');
-                    if (btns.length >= 3) {
-                        btns[0].className = `btn btn-sm ${st.status === 'PENDING' ? 'btn-secondary text-white fw-bold' : 'btn-outline-secondary'}`;
-                        btns[1].className = `btn btn-sm ${st.status === 'IN_PROGRESS' ? 'btn-primary text-white fw-bold' : 'btn-outline-primary'}`;
-                        btns[2].className = `btn btn-sm ${st.status === 'COMPLETED' ? 'btn-success text-white fw-bold' : 'btn-outline-success'}`;
-                    }
-                }
-
-                if (st.items && st.items.length > 0) {
-                    st.items.forEach(it => {
-                        const itCompCell = document.getElementById(`item-completed-cell-${it.planItemId}`);
-                        if (itCompCell) {
-                            itCompCell.innerHTML = it.completedAt
-                                ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
-                                : '<span class="text-muted">---</span>';
-                        }
-
-                        const itStatusCell = document.getElementById(`item-status-cell-${it.planItemId}`);
-                        if (itStatusCell) {
-                            itStatusCell.innerHTML = `<span class="badge px-2 py-1 rounded-pill ${it.statusBadgeClass}">${it.statusDisplayName}</span>`;
-                        }
-
-                        const itBtnGroup = document.getElementById(`item-btn-group-${it.planItemId}`);
-                        if (itBtnGroup) {
-                            const btns = itBtnGroup.querySelectorAll('button');
-                            if (btns.length >= 3) {
-                                btns[0].className = `btn btn-sm ${it.status === 'COMPLETED' ? 'btn-success text-white' : 'btn-outline-success'}`;
-                                btns[1].className = `btn btn-sm ${it.status === 'IN_PROGRESS' ? 'btn-primary text-white' : 'btn-outline-primary'}`;
-                                btns[2].className = `btn btn-sm ${it.status === 'PLANNED' ? 'btn-secondary text-white' : 'btn-outline-secondary'}`;
-                            }
-                        }
-                    });
-                }
-            });
-        }
-    }
-
     function promptUpdatePlanStatus(planId, currentStatus) {
         const statuses = [
             { key: 'ACCEPTED', label: 'Đã chấp thuận (ACCEPTED)' },
@@ -6363,7 +6268,7 @@
                             <span>${escapeHtml(v.initialSymptoms || 'Khám theo yêu cầu')}</span>
                         </div>
                         <div>
-                            ${isCurrent 
+                            ${isCurrent
                                 ? '<span class="text-primary fw-bold small"><i class="bi bi-check2-circle"></i> Đang mở</span>'
                                 : '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
                             }
@@ -7043,7 +6948,7 @@
             if (!res.ok) return;
             const list = await res.json();
             renderExistingReExams(list);
-            
+
             const badge1 = document.getElementById('sessionReExamCountBadge');
             if (badge1) badge1.textContent = list.length;
             const badge2 = document.getElementById('reExamExistingCount');
