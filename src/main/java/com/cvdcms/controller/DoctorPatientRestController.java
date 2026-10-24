@@ -177,4 +177,162 @@ public class DoctorPatientRestController {
                 .hasActiveVisit(hasActive)
                 .build();
     }
+
+    @GetMapping("/daily-visits")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<com.cvdcms.DTO.DailyVisitDTO>> getDailyVisits(
+            @RequestParam(value = "date", required = false) String dateStr,
+            @RequestParam(value = "startDate", required = false) String startDateStr,
+            @RequestParam(value = "endDate", required = false) String endDateStr,
+            @RequestParam(value = "status", required = false) String statusStr,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "currentVisitId", required = false) Long currentVisitId) {
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+        boolean hasDateFilter = false;
+
+        if (startDateStr != null && !startDateStr.trim().isEmpty() && !startDateStr.equalsIgnoreCase("ALL")) {
+            try {
+                LocalDate sDate = LocalDate.parse(startDateStr.trim());
+                start = sDate.atStartOfDay();
+                hasDateFilter = true;
+            } catch (Exception e) {
+                log.warn("Invalid startDate param: {}", startDateStr);
+            }
+        }
+
+        if (endDateStr != null && !endDateStr.trim().isEmpty() && !endDateStr.equalsIgnoreCase("ALL")) {
+            try {
+                LocalDate eDate = LocalDate.parse(endDateStr.trim());
+                end = eDate.atTime(java.time.LocalTime.MAX);
+                hasDateFilter = true;
+            } catch (Exception e) {
+                log.warn("Invalid endDate param: {}", endDateStr);
+            }
+        }
+
+        if (start == null && end == null && dateStr != null && !dateStr.trim().isEmpty() && !dateStr.equalsIgnoreCase("ALL")) {
+            try {
+                LocalDate localDate = LocalDate.parse(dateStr.trim());
+                start = localDate.atStartOfDay();
+                end = localDate.atTime(java.time.LocalTime.MAX);
+                hasDateFilter = true;
+            } catch (Exception e) {
+                log.warn("Invalid date param: {}", dateStr);
+            }
+        }
+
+        VisitStatus status = null;
+        if (statusStr != null && !statusStr.trim().isEmpty() && !statusStr.equalsIgnoreCase("ALL")) {
+            try {
+                status = VisitStatus.valueOf(statusStr.trim().toUpperCase());
+            } catch (Exception e) {
+                log.warn("Invalid status param: {}", statusStr);
+            }
+        }
+
+        String searchPattern = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+
+        List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, searchPattern);
+
+        // Fallback: nếu không có ca khám nào và người dùng chưa chọn bộ lọc ngày cụ thể, hiển thị danh sách gần nhất
+        if (visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
+            visits = visitRepository.findAll().stream()
+                    .sorted((a, b) -> b.getCheckInAt().compareTo(a.getCheckInAt()))
+                    .limit(20)
+                    .collect(Collectors.toList());
+        }
+
+        List<com.cvdcms.DTO.DailyVisitDTO> result = visits.stream()
+                .map(v -> mapToDailyVisitDTO(v, currentVisitId))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
+    private com.cvdcms.DTO.DailyVisitDTO mapToDailyVisitDTO(Visit v, Long currentVisitId) {
+        PatientProfile p = v.getPatientProfile();
+
+        String patientCode = p != null ? p.getPatientCode() : "N/A";
+        String fullName = p != null ? p.getFullName() : "Khách vãng lai";
+        String phone = p != null ? p.getPhoneNumber() : "";
+        String gender = p != null ? p.getGender() : "Khác";
+
+        String age = "";
+        if (p != null && p.getDob() != null) {
+            age = String.valueOf(Period.between(p.getDob(), LocalDate.now()).getYears());
+        }
+
+        String time = v.getCheckInAt() != null ? v.getCheckInAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "--:--";
+        String date = v.getCheckInAt() != null ? v.getCheckInAt().format(DATE_FORMAT) : "";
+        String iso = v.getCheckInAt() != null ? v.getCheckInAt().toLocalDate().toString() : "";
+
+        String doctorName = v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName() : "BS trực";
+        String branchName = v.getBranch() != null ? v.getBranch().getBranchName() : "";
+        String chairName = v.getChairId() != null ? "Ghế " + v.getChairId() : "Ghế khám";
+
+        String statusName = v.getStatus() != null ? v.getStatus().name() : "WAITING";
+        String statusDisplay;
+        String badgeClass;
+
+        switch (statusName) {
+            case "IN_EXAM":
+                statusDisplay = "Đang khám";
+                badgeClass = "bg-primary text-white";
+                break;
+            case "IN_TREATMENT":
+                statusDisplay = "Đang điều trị";
+                badgeClass = "bg-info text-dark";
+                break;
+            case "WAITING":
+                statusDisplay = "Đang chờ";
+                badgeClass = "bg-warning text-dark";
+                break;
+            case "WAITING_PARACLINICAL":
+                statusDisplay = "Chờ CLS";
+                badgeClass = "bg-secondary text-white";
+                break;
+            case "WAITING_PAYMENT":
+                statusDisplay = "Chờ thanh toán";
+                badgeClass = "bg-dark text-white";
+                break;
+            case "COMPLETED":
+                statusDisplay = "Hoàn thành";
+                badgeClass = "bg-success text-white";
+                break;
+            case "CANCELLED":
+                statusDisplay = "Đã hủy";
+                badgeClass = "bg-danger text-white";
+                break;
+            default:
+                statusDisplay = statusName;
+                badgeClass = "bg-light text-secondary border";
+                break;
+        }
+
+        boolean isCurrent = currentVisitId != null && currentVisitId.equals(v.getVisitId());
+
+        return com.cvdcms.DTO.DailyVisitDTO.builder()
+                .visitId(v.getVisitId())
+                .visitCode(v.getVisitCode() != null ? v.getVisitCode() : "VIS#" + v.getVisitId())
+                .profileId(p != null ? p.getProfileId() : null)
+                .patientCode(patientCode)
+                .fullName(fullName)
+                .phoneNumber(phone)
+                .gender(gender)
+                .age(age)
+                .checkInTime(time)
+                .checkInDate(date)
+                .checkInIso(iso)
+                .status(statusName)
+                .statusDisplayName(statusDisplay)
+                .statusBadgeClass(badgeClass)
+                .initialSymptoms(v.getInitialSymptoms() != null ? v.getInitialSymptoms() : "Khám theo yêu cầu")
+                .doctorName(doctorName)
+                .branchName(branchName)
+                .chairName(chairName)
+                .isCurrentVisit(isCurrent)
+                .build();
+    }
 }

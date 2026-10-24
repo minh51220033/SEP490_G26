@@ -15,4 +15,5 @@ public class Icd10DiseaseDTO {
     private String diseaseNameVi;
     private String diseaseNameEn;
     private Boolean isDentalCommon;
+    private Boolean isActive;
 }
