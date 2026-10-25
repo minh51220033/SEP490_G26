@@ -13,8 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
             fullName: read('fullName'), dob: read('dob'), gender: read('gender'),
             phoneNumber: read('phoneNumber'), address: read('address'),
             branchId: Number(read('branchId')), guardianName: read('guardianName'),
-            guardianPhone: read('guardianPhone'), allergyDetails: read('allergyDetails'),
-            underlyingDiseaseDetails: read('underlyingDiseaseDetails'), confirmDuplicate
+            guardianPhone: read('guardianPhone'),
+            guardianRelationship: read('guardianRelationship'), idCardNumber: read('idCardNumber'),
+            healthInsuranceNumber: read('healthInsuranceNumber'), confirmDuplicate
         };
     }
 
@@ -36,6 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(body.detail || body.message || 'Không thể lưu hồ sơ. Vui lòng kiểm tra lại dữ liệu.');
             }
             const record = await response.json();
+            const avatar = form.querySelector('#avatar')?.files?.[0];
+            if (avatar) {
+                const upload = new FormData();
+                upload.append('avatar', avatar);
+                const uploaded = await fetch(`/portal/patients/${encodeURIComponent(record.id)}/avatar`, {
+                    method: 'POST', credentials: 'same-origin', body: upload
+                });
+                if (!uploaded.ok) throw new Error('Đã lưu thông tin nhưng không thể tải ảnh đại diện. Vui lòng thử lại.');
+            }
             window.location.assign(`/portal/records/${encodeURIComponent(record.id)}?saved=1`);
         } catch (cause) { showError(cause.message); }
         finally { button.disabled = false; }

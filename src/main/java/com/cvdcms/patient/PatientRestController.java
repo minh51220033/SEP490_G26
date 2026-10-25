@@ -50,7 +50,7 @@ public class PatientRestController {
                               HttpSession session) { return service.update(session, id, form); }
 
     @GetMapping("/{id}/visits")
-    public List<VisitView> visits(@PathVariable Long id, HttpSession session) {
+    public List<ReceptionVisitView> visits(@PathVariable Long id, HttpSession session) {
         return service.visits(session, id);
     }
 

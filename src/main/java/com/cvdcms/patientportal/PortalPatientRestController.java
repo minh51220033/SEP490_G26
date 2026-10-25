@@ -5,7 +5,9 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,6 +42,17 @@ public class PortalPatientRestController {
 
     @GetMapping("/{id}")
     public PortalProfileView get(HttpSession session, @PathVariable Long id) { return patients.get(session, id); }
+
+    @PostMapping("/{id}/default")
+    public PortalProfileView setDefault(HttpSession session, @PathVariable Long id) {
+        return patients.setDefault(session, id);
+    }
+
+    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PortalProfileView uploadAvatar(HttpSession session, @PathVariable Long id,
+            @RequestParam("avatar") MultipartFile avatar) {
+        return patients.uploadAvatar(session, id, avatar);
+    }
 
     @PatchMapping("/{id}")
     public PortalProfileView update(HttpSession session, @PathVariable Long id,
