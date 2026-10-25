@@ -162,6 +162,10 @@ public class DiagnosisController {
         model.addAttribute("diagnosisTypes", DiagnosisType.values());
         model.addAttribute("allVisits", otherVisits);
 
+        // Khám tổng quát & Tiền sử
+        com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
+        model.addAttribute("generalExam", generalExam);
+
         // FT16 Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);

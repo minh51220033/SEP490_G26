@@ -39,4 +39,7 @@ public class PerformedServiceResponseDTO {
     private Long workflowTemplateId;
     private Integer workflowStepCount;
     private String workflowTemplateName;
+    private Long planItemId;
+    private String planName;
+    private String stageName;
 }
