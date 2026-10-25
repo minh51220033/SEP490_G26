@@ -6,6 +6,15 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import com.cvdcms.entity.enums.DocumentType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,7 +46,8 @@ public class PatientPageController {
         model.addAttribute("query", query);
         model.addAttribute("dob", dob);
         model.addAttribute("status", status);
-        return "reception/patients/list";
+        shared(model, "/reception/patients", "patients", true, false);
+        return "patient-records/list";
     }
 
     @GetMapping("/new")
@@ -58,7 +68,11 @@ public class PatientPageController {
     public String detail(@PathVariable Long id, Model model, HttpSession session) {
         model.addAttribute("patient", service.get(session, id));
         model.addAttribute("visits", service.visits(session, id));
-        return "reception/patients/detail";
+        model.addAttribute("documents", service.documents(session, id));
+        model.addAttribute("photos", List.of());
+        model.addAttribute("plans", List.of());
+        shared(model, "/reception/patients", "patients", true, false);
+        return "patient-records/detail";
     }
 
     @GetMapping("/{id}/visits/{visitId}")
@@ -66,6 +80,39 @@ public class PatientPageController {
                         HttpSession session) {
         model.addAttribute("patient", service.get(session, id));
         model.addAttribute("detail", service.visit(session, id, visitId));
-        return "reception/patients/visit";
+        shared(model, "/reception/patients", "patients", true, false);
+        return "patient-records/visit";
+    }
+
+    @PostMapping("/{id}/documents")
+    public String uploadDocument(@PathVariable Long id, @RequestParam DocumentType documentType,
+            @RequestParam("file") MultipartFile file, HttpSession session,
+            RedirectAttributes redirect) {
+        try {
+            service.uploadDocument(session, id, documentType, file);
+            redirect.addFlashAttribute("documentSuccess", "Đã tải lên bản scan giấy tờ.");
+        } catch (ResponseStatusException ex) {
+            redirect.addFlashAttribute("documentError", ex.getReason());
+        }
+        return "redirect:/reception/patients/" + id;
+    }
+
+    @GetMapping("/{id}/documents/{documentId}")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id,
+            @PathVariable Long documentId, HttpSession session) {
+        var file = service.downloadDocument(session, id, documentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename(file.originalName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .body(file.resource());
+    }
+
+    private void shared(Model model, String basePath, String sidebarMenu,
+                        boolean canManageAdministrative, boolean canViewClinical) {
+        model.addAttribute("recordBasePath", basePath);
+        model.addAttribute("sidebarMenu", sidebarMenu);
+        model.addAttribute("canManageAdministrative", canManageAdministrative);
+        model.addAttribute("canViewClinical", canViewClinical);
     }
 }
