@@ -21,14 +21,14 @@
                         <option value="">Chọn chi nhánh</option><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${record != null and record.branchId == branch.branchId}">Chi nhánh</option></select></div>
                 </div>
                 <h2>Liên hệ</h2><div class="patient-form-grid">
+                    <div><label for="avatar">Ảnh đại diện</label><input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" class="form-control"><small>JPG, PNG hoặc WebP; tối đa 5 MB.</small></div>
                     <div><label for="phoneNumber">Số điện thoại liên hệ *</label><input id="phoneNumber" name="phoneNumber" type="tel" pattern="0[0-9]{9,10}" maxlength="11" class="form-control" required th:value="${record != null ? record.phoneNumber : ''}"><small>Có thể dùng chung số điện thoại với người thân.</small></div>
                     <div><label for="address">Địa chỉ *</label><input id="address" name="address" class="form-control" required maxlength="255" th:value="${record != null ? record.address : ''}"></div>
                     <div><label for="guardianName">Người giám hộ</label><input id="guardianName" name="guardianName" class="form-control" maxlength="100" th:value="${record != null ? record.guardianName : ''}"></div>
                     <div><label for="guardianPhone">Số điện thoại người giám hộ</label><input id="guardianPhone" name="guardianPhone" class="form-control" maxlength="20" th:value="${record != null ? record.guardianPhone : ''}"></div>
-                </div>
-                <h2>Ghi chú y tế cơ bản</h2><div class="patient-form-grid">
-                    <div><label for="allergyDetails">Dị ứng</label><textarea id="allergyDetails" name="allergyDetails" class="form-control" rows="3" maxlength="1000" th:text="${record != null ? record.allergyDetails : ''}"></textarea></div>
-                    <div><label for="underlyingDiseaseDetails">Bệnh nền</label><textarea id="underlyingDiseaseDetails" name="underlyingDiseaseDetails" class="form-control" rows="3" maxlength="1000" th:text="${record != null ? record.underlyingDiseaseDetails : ''}"></textarea></div>
+                    <div><label for="guardianRelationship">Quan hệ với người giám hộ</label><input id="guardianRelationship" name="guardianRelationship" class="form-control" maxlength="50" th:value="${record != null ? record.guardianRelationship : ''}"></div>
+                    <div><label for="idCardNumber">CCCD / giấy tờ tùy thân</label><input id="idCardNumber" name="idCardNumber" class="form-control" maxlength="20" th:value="${record != null ? record.idCardNumber : ''}"></div>
+                    <div><label for="healthInsuranceNumber">Số BHYT</label><input id="healthInsuranceNumber" name="healthInsuranceNumber" class="form-control" maxlength="20" th:value="${record != null ? record.healthInsuranceNumber : ''}"></div>
                 </div>
                 <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${record == null ? '/portal/records' : '/portal/records/' + record.id}">Hủy</a>
                     <button class="btn btn-primary" id="saveButton" type="submit">Lưu hồ sơ</button></div>

@@ -326,6 +326,12 @@ public class UserController {
                         .toList()
         );
 
+        // Hồ sơ bệnh nhân chỉ là điều kiện vào portal của tài khoản bệnh nhân.
+        if (user.getRoles().stream().noneMatch(role ->
+                "BENH_NHAN".equalsIgnoreCase(role.getRoleName()))) {
+            return "redirect:/home";
+        }
+
         // =============================================
         // KIỂM TRA HỒ SƠ CƠ BẢN CHO MỌI VAI TRÒ
         // =============================================
@@ -552,6 +558,11 @@ public class UserController {
         Role patientRole = roleRepository.findById(6)
                 .orElse(null);
 
+        // ID role thay đổi giữa các bộ seed; xác định vai trò bằng mã nghiệp vụ.
+        if (patientRole == null || !"BENH_NHAN".equalsIgnoreCase(patientRole.getRoleName())) {
+            patientRole = roleRepository.findByRoleName("BENH_NHAN").orElse(null);
+        }
+
         if (patientRole == null
                 || !Boolean.TRUE.equals(patientRole.getIsActive())) {
 
@@ -578,6 +589,7 @@ public class UserController {
         user.setPhoneNumber(phoneNumber);
         user.setIsActive(true);
         user.setStatus("ACTIVE");
+        user.setUserType(com.cvdcms.entity.enums.UserType.PATIENT);
 
         // Mô hình mới: thêm vai trò vào tập hợp roles.
         // Không dùng user.setRole(patientRole).

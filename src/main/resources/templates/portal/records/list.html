@@ -20,7 +20,7 @@
                         <td th:text="${record.dob != null ? #temporals.format(record.dob, 'dd/MM/yyyy') : '—'}">—</td>
                         <td th:text="${record.phoneNumber}">—</td>
                         <td th:text="${record.self ? 'Bản thân' : 'Người phụ thuộc'}">—</td>
-                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/portal/records/{id}(id=${record.id})}">Xem hồ sơ</a></td></tr>
+                        <td class="text-end"><span class="badge bg-primary me-2" th:if="${record.defaultProfile}">Mặc định</span><button type="button" class="btn btn-sm btn-outline-secondary me-2" th:unless="${record.defaultProfile}" th:attr="data-default-id=${record.id}">Đặt mặc định</button><a class="btn btn-sm btn-outline-primary" th:href="@{/portal/records/{id}(id=${record.id})}">Xem hồ sơ</a></td></tr>
                     <tr th:if="${#lists.isEmpty(records)}"><td colspan="6" class="text-center text-muted py-5">Chưa có hồ sơ. Bạn có thể hoàn thiện hồ sơ bản thân tại trang tài khoản.</td></tr>
                     </tbody>
                 </table></div>
@@ -28,4 +28,4 @@
             <p class="mt-3"><a th:href="@{/profile}">Thông tin tài khoản</a></p>
         </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
-</div></body></html>
+</div><script th:src="@{/js/portal-record-list.js}" defer></script></body></html>

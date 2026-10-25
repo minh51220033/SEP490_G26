@@ -14,5 +14,8 @@ public record PortalProfileForm(
         @Size(max = 1000) String underlyingDiseaseDetails,
         @Size(max = 100) String guardianName,
         @Size(max = 20) String guardianPhone,
+        @Size(max = 50) String guardianRelationship,
+        @Size(max = 20) String idCardNumber,
+        @Size(max = 20) String healthInsuranceNumber,
         boolean confirmDuplicate
 ) {}

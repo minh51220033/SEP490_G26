@@ -53,7 +53,7 @@ public class PatientTransferService {
         PatientProfile profile = entityManager.find(PatientProfile.class, profileId, LockModeType.PESSIMISTIC_WRITE);
         if (profile == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         access.requireProfile(owner, profileId);
-        if (Boolean.TRUE.equals(profile.getIsDefault()))
+        if (!isDependent(profile))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Chỉ có thể tách hồ sơ người phụ thuộc.");
         String targetEmail = form.targetEmail().trim().toLowerCase(Locale.ROOT);
         if (targetEmail.equalsIgnoreCase(owner.getEmail()))
@@ -106,6 +106,8 @@ public class PatientTransferService {
         if (!encoder.matches(form.ownerCode(), request.getOwnerCodeHash())
                 || !encoder.matches(form.targetCode(), request.getTargetCodeHash()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác minh không đúng.");
+        if (!isDependent(profile))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Hồ sơ không còn là người phụ thuộc.");
 
         User target = request.getTargetAccount();
         if (target == null) target = createTarget(request, form);
@@ -121,7 +123,9 @@ public class PatientTransferService {
             link = new AccountPatientProfile();
             link.setProfile(profile);
         }
-        boolean firstProfile = !profiles.existsByUser_UserIdAndIsDefaultTrue(target.getUserId());
+        boolean firstProfile = links.findByAccount_UserIdOrderByProfile_ProfileIdDesc(target.getUserId()).isEmpty()
+                && profiles.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(target.getUserId()).isEmpty();
+        boolean wasDefault = Boolean.TRUE.equals(profile.getIsDefault());
         link.setAccount(target);
         link.setAccessType(firstProfile ? AccountPatientProfile.AccessType.SELF
                 : AccountPatientProfile.AccessType.DEPENDENT);
@@ -131,6 +135,11 @@ public class PatientTransferService {
         profile.setSeparatedAt(LocalDateTime.now());
         profile.setIsDefault(firstProfile);
         profiles.saveAndFlush(profile);
+        if (wasDefault) {
+            profiles.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(owner.getUserId()).stream()
+                    .filter(p -> !p.getProfileId().equals(profileId)).findFirst()
+                    .ifPresent(p -> { p.setIsDefault(true); profiles.save(p); });
+        }
         request.setConsumedAt(LocalDateTime.now());
         requests.save(request);
         audit(owner, profile, target);
@@ -174,6 +183,12 @@ public class PatientTransferService {
     }
 
     private String code() { return String.format("%06d", random.nextInt(1_000_000)); }
+
+    private boolean isDependent(PatientProfile profile) {
+        return links.findByProfile_ProfileId(profile.getProfileId())
+                .map(link -> link.getAccessType() == AccountPatientProfile.AccessType.DEPENDENT)
+                .orElse(!Boolean.TRUE.equals(profile.getIsDefault()));
+    }
 
     private boolean validPatientAccount(User user) {
         return user.getUserType() == UserType.PATIENT
