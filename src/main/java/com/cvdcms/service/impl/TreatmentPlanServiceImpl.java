@@ -180,9 +180,13 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        plan.setTotalEstimatedCost(totalEstimated);
-        plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null 
-                ? request.getFinalEstimatedCost() : totalEstimated);
+        BigDecimal overallCost = (request.getTotalEstimatedCost() != null && request.getTotalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getTotalEstimatedCost()
+                : (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
+                    ? request.getFinalEstimatedCost() : totalEstimated);
+        plan.setTotalEstimatedCost(overallCost);
+        plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
+                ? request.getFinalEstimatedCost() : overallCost);
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
         log.info("Created TreatmentPlan ID: {}, Code: {}", saved.getPlanId(), saved.getPlanCode());
@@ -294,18 +298,36 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (stage != null) {
             List<TreatmentPlanItem> items = stage.getItems();
             boolean allCompleted = items != null && !items.isEmpty() && items.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+            boolean anyActive = items != null && items.stream().anyMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS);
+
             if (allCompleted) {
                 stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
-                stage.setCompletedAt(now);
-                treatmentPlanStageRepository.save(stage);
-            } else if (items != null && items.stream().anyMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS)) {
-                if (stage.getStatus() == TreatmentPlanStageStatus.PENDING) {
-                    stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
-                    treatmentPlanStageRepository.save(stage);
-                }
+                if (stage.getCompletedAt() == null) stage.setCompletedAt(now);
+            } else if (anyActive) {
+                stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                stage.setCompletedAt(null);
+            } else {
+                stage.setStatus(TreatmentPlanStageStatus.PENDING);
+                stage.setCompletedAt(null);
             }
+            treatmentPlanStageRepository.save(stage);
+
             TreatmentPlan plan = stage.getPlan();
             if (plan != null) {
+                if (plan.getStages() != null) {
+                    boolean allStagesCompleted = plan.getStages().stream()
+                            .allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
+                    boolean anyStageActive = plan.getStages().stream()
+                            .anyMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED || s.getStatus() == TreatmentPlanStageStatus.IN_PROGRESS);
+
+                    if (allStagesCompleted && !plan.getStages().isEmpty()) {
+                        plan.setStatus(TreatmentPlanStatus.COMPLETED);
+                        treatmentPlanRepository.save(plan);
+                    } else if (anyStageActive && (plan.getStatus() == TreatmentPlanStatus.DRAFT || plan.getStatus() == TreatmentPlanStatus.PROPOSED || plan.getStatus() == TreatmentPlanStatus.ACCEPTED)) {
+                        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+                        treatmentPlanRepository.save(plan);
+                    }
+                }
                 return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(plan.getPlanId()).orElse(plan));
             }
         }

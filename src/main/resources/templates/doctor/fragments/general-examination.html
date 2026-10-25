@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ========================================================================= -->
+<!-- BAR 1: KHÁM TỔNG QUÁT (CHIEF COMPLAINT, MEDICAL HISTORY, SOFT TISSUE/TMJ) -->
+<!-- Frontend Fragment: doctor/fragments/general-examination.html              -->
+<!-- ========================================================================= -->
+<div th:fragment="generalExamSection">
+    <!-- FOLDABLE HEADER -->
+    <div class="df-foldable-bar d-flex align-items-center justify-content-between" id="bar-exam" onclick="toggleMainBar('exam')">
+        <div class="d-flex align-items-center flex-grow-1">
+            <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-exam"></i>
+            <span class="df-foldable-title">KHÁM TỔNG QUÁT</span>
+            <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Triệu chứng ban đầu, tiền sử y khoa dị ứng &amp; khám mô mềm / khớp TMJ)</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 me-2" onclick="event.stopPropagation();">
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-1 fw-semibold"
+                    id="btnSaveGeneralExamHeader" onclick="saveGeneralExamination()">
+                <i class="bi bi-floppy-fill"></i>
+                <span class="d-none d-sm-inline">Lưu kết quả khám</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- FOLDABLE CONTENT -->
+    <div class="df-foldable-content" id="content-exam" style="display: none;">
+        <div class="p-3 p-md-4 bg-white border-top">
+            <div class="row g-3">
+                <!-- ========================================================= -->
+                <!-- 1. LÝ DO ĐẾN KHÁM & TRIỆU CHỨNG BAN ĐẦU                    -->
+                <!-- ========================================================= -->
+                <div class="col-lg-6">
+                    <div class="card h-100 border rounded-3 shadow-none bg-light-subtle">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="p-1 rounded bg-primary-subtle text-primary me-2">
+                                        <i class="bi bi-chat-left-text-fill"></i>
+                                    </span>
+                                    <span class="fw-bold text-dark text-uppercase small">Lý do đến khám &amp; Triệu chứng</span>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Bắt buộc</span>
+                            </div>
+
+                            <!-- Triệu chứng gợi ý nhanh + Nút Thêm triệu chứng -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <small class="text-muted fw-semibold">Gợi ý nhanh:</small>
+                                    <button type="button" class="btn btn-xs btn-outline-primary rounded-pill py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1"
+                                            onclick="toggleCustomSymptomInput()">
+                                        <i class="bi bi-plus-circle-fill"></i> Thêm triệu chứng
+                                    </button>
+                                </div>
+
+                                <!-- Thanh nhập triệu chứng tùy chỉnh (ẩn/hiện) -->
+                                <div id="customSymptomInputGroup" class="d-none mb-2">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="customSymptomText" class="form-control"
+                                               placeholder="Nhập triệu chứng mới (VD: Đau nửa đầu, Khó há miệng...)"
+                                               onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomSymptom();}">
+                                        <button class="btn btn-primary" type="button" onclick="addCustomSymptom()">
+                                            <i class="bi bi-check-lg"></i> Thêm
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleCustomSymptomInput(false)">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Danh sách chip triệu chứng -->
+                                <div class="d-flex flex-wrap gap-1" id="symptomsQuickChips">
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Đau nhức khi ăn nhai')">+ Đau khi ăn nhai</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Ê buốt nóng lạnh')">+ Ê buốt nóng lạnh</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Chảy máu chân răng')">+ Chảy máu chân răng</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Sưng đau nướu / Áp xe')">+ Sưng đau nướu</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Khám định kỳ &amp; Lấy cao răng')">+ Khám định kỳ</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Tư vấn cấy ghép Implant')">+ Tư vấn Implant</span>
+                                    <span class="badge bg-white text-secondary border cursor-pointer hover-primary shadow-xs" onclick="setQuickSymptom('Mẻ răng / Vỡ thân răng')">+ Mẻ / Vỡ răng</span>
+                                </div>
+                            </div>
+
+                            <!-- Ô nhập triệu chứng chính -->
+                            <textarea class="form-control form-control-sm" id="examSymptomsInput" rows="3"
+                                      placeholder="Mô tả chi tiết triệu chứng, vị trí răng đau, thời gian khởi phát..."
+                                      th:text="${generalExam != null and generalExam.initialSymptoms != null ? generalExam.initialSymptoms : (visit != null and visit.initialSymptoms != null ? visit.initialSymptoms : '')}"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- 2. TIỀN SỬ Y KHOA & CẢNH BÁO DỊ ỨNG                       -->
+                <!-- ========================================================= -->
+                <div class="col-lg-6">
+                    <div class="card h-100 border rounded-3 shadow-none bg-light-subtle" id="medicalHistoryCard">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="p-1 rounded bg-danger-subtle text-danger me-2">
+                                        <i class="bi bi-shield-fill-exclamation"></i>
+                                    </span>
+                                    <span class="fw-bold text-dark text-uppercase small">Tiền sử y khoa &amp; Cảnh báo dị ứng</span>
+                                </div>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Cảnh báo</span>
+                            </div>
+
+                            <!-- Dị ứng thuốc -->
+                            <div class="p-2 mb-2 rounded border bg-white" id="allergyBox">
+                                <div class="form-check mb-1 cursor-pointer">
+                                    <input class="form-check-input" type="checkbox" id="allergyCheck"
+                                           onchange="handleAllergyCheckChange()"
+                                           th:checked="${generalExam != null and generalExam.hasAllergies != null ? generalExam.hasAllergies : (patient != null and patient.hasAllergies != null ? patient.hasAllergies : false)}">
+                                    <label class="form-check-label fw-bold text-danger small cursor-pointer" for="allergyCheck">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Có tiền sử dị ứng thuốc (Penicillin, NSAIDs, Thuốc tê...)
+                                    </label>
+                                </div>
+                                <input type="text" class="form-control form-control-sm mt-1" id="allergyDetailsInput"
+                                       placeholder="Ghi rõ tên thuốc dị ứng và biểu hiện (mày đay, khó thở...)"
+                                       th:value="${generalExam != null ? generalExam.allergyDetails : (patient != null ? patient.allergyDetails : '')}">
+                            </div>
+
+                            <!-- Bệnh nền toàn thân -->
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <div class="p-2 rounded border bg-white">
+                                        <div class="form-check mb-0 cursor-pointer">
+                                            <input class="form-check-input" type="checkbox" id="cardioCheck"
+                                                   th:checked="${generalExam != null and generalExam.hasCardiovascularDisease != null ? generalExam.hasCardiovascularDisease : (patient != null and patient.hasCardiovascularDisease != null ? patient.hasCardiovascularDisease : false)}">
+                                            <label class="form-check-label text-dark fw-semibold cursor-pointer" for="cardioCheck">
+                                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Tim mạch / Tăng HA
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 rounded border bg-white">
+                                        <div class="form-check mb-0 cursor-pointer">
+                                            <input class="form-check-input" type="checkbox" id="diabetesCheck"
+                                                   th:checked="${generalExam != null and generalExam.hasDiabetes != null ? generalExam.hasDiabetes : false}">
+                                            <label class="form-check-label text-dark fw-semibold cursor-pointer" for="diabetesCheck">
+                                                <i class="bi bi-droplet-half text-warning me-1"></i>Đái tháo đường
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 rounded border bg-white">
+                                        <div class="form-check mb-0 cursor-pointer">
+                                            <input class="form-check-input" type="checkbox" id="bleedingCheck"
+                                                   th:checked="${generalExam != null and generalExam.hasBleedingDisorder != null ? generalExam.hasBleedingDisorder : false}">
+                                            <label class="form-check-label text-dark fw-semibold cursor-pointer" for="bleedingCheck">
+                                                <i class="bi bi-bandaid-fill text-danger me-1"></i>Rối loạn đông máu
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 rounded border bg-white">
+                                        <div class="form-check mb-0 cursor-pointer">
+                                            <input class="form-check-input" type="checkbox" id="pregnantCheck"
+                                                   th:checked="${generalExam != null and generalExam.isPregnant != null ? generalExam.isPregnant : false}">
+                                            <label class="form-check-label text-dark fw-semibold cursor-pointer" for="pregnantCheck">
+                                                <i class="bi bi-person-heart text-info me-1"></i>Mang thai / Cho bú
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control form-control-sm" id="underlyingDetailsInput"
+                                           placeholder="Bệnh nền khác (Dạ dày, Hen suyễn, Viêm gan, Động kinh...)"
+                                           th:value="${generalExam != null ? generalExam.underlyingDiseaseDetails : (patient != null ? patient.underlyingDiseaseDetails : '')}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- 3. KHÁM MÔ MỀM & KHỚP THÁI DƯƠNG HÀM (TMJ)                -->
+                <!-- ========================================================= -->
+                <div class="col-12">
+                    <div class="card border rounded-3 shadow-none bg-light-subtle">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="p-1 rounded bg-info-subtle text-info me-2">
+                                    <i class="bi bi-person-lines-fill"></i>
+                                </span>
+                                <span class="fw-bold text-dark text-uppercase small">Khám ngoài mặt &amp; Mô mềm trong miệng</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">
+                                        <i class="bi bi-record-circle text-primary me-1"></i>Khớp thái dương hàm (TMJ):
+                                    </label>
+                                    <select class="form-select form-select-sm" id="tmjSelect">
+                                        <option value="NORMAL" th:selected="${generalExam == null or generalExam.tmjStatus == 'NORMAL'}">Bình thường (Há ngậm êm)</option>
+                                        <option value="CLICKING" th:selected="${generalExam != null and generalExam.tmjStatus == 'CLICKING'}">Có tiếng kêu lục cục (Clicking)</option>
+                                        <option value="LIMITED" th:selected="${generalExam != null and generalExam.tmjStatus == 'LIMITED'}">Há miệng hạn chế (&lt; 35mm)</option>
+                                        <option value="PAIN" th:selected="${generalExam != null and generalExam.tmjStatus == 'PAIN'}">Đau khớp khi ăn nhai</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">
+                                        <i class="bi bi-stars text-warning me-1"></i>Vệ sinh răng miệng &amp; Cao răng:
+                                    </label>
+                                    <select class="form-select form-select-sm" id="hygieneSelect">
+                                        <option value="GOOD" th:selected="${generalExam != null and generalExam.hygieneStatus == 'GOOD'}">Tốt (Ít mảng bám)</option>
+                                        <option value="MEDIUM" th:selected="${generalExam == null or generalExam.hygieneStatus == 'MEDIUM'}">Trung bình (Cao răng độ 1-2)</option>
+                                        <option value="POOR" th:selected="${generalExam != null and generalExam.hygieneStatus == 'POOR'}">Kém (Nhiều cao răng độ 3)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">
+                                        <i class="bi bi-shield-check text-success me-1"></i>Tình trạng nướu / Mô mềm:
+                                    </label>
+                                    <select class="form-select form-select-sm" id="gingivaSelect">
+                                        <option value="HEALTHY" th:selected="${generalExam == null or generalExam.gingivaStatus == 'HEALTHY'}">Hồng hào, săn chắc</option>
+                                        <option value="GINGIVITIS" th:selected="${generalExam != null and generalExam.gingivaStatus == 'GINGIVITIS'}">Viêm nướu viền / Chảy máu</option>
+                                        <option value="PERIODONTITIS" th:selected="${generalExam != null and generalExam.gingivaStatus == 'PERIODONTITIS'}">Viêm nha chu / Có túi mủ</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- FOOTER ACTION BAR                                         -->
+                <!-- ========================================================= -->
+                <div class="col-12">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between p-2 rounded-3 border bg-white gap-2">
+                        <div class="d-flex align-items-center text-muted small">
+                            <i class="bi bi-info-circle-fill text-primary me-2 fs-6"></i>
+                            <span>Dữ liệu khám tổng quát được lưu trữ trực tiếp vào hồ sơ bệnh án EMR.</span>
+                            <span class="ms-2 fw-semibold text-success" id="generalExamSavedNotice"></span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 ms-auto">
+                            <button type="button" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm fw-bold d-inline-flex align-items-center gap-2"
+                                    id="btnSaveGeneralExamBottom" onclick="saveGeneralExamination()">
+                                <i class="bi bi-floppy-fill" id="btnSaveGeneralExamIcon"></i>
+                                <span id="btnSaveGeneralExamText">Lưu kết quả khám tổng quát</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT LOGIC CHO KHÁM TỔNG QUÁT (BAR 1)                              -->
+<!-- ========================================================================= -->
+<script th:fragment="generalExamScript">
+    /**
+     * Bật / tắt thanh nhập triệu chứng tùy chỉnh
+     */
+    function toggleCustomSymptomInput(forceState) {
+        const group = document.getElementById('customSymptomInputGroup');
+        const input = document.getElementById('customSymptomText');
+        if (!group) return;
+
+        const isCurrentlyHidden = group.classList.contains('d-none');
+        const show = (typeof forceState === 'boolean') ? forceState : isCurrentlyHidden;
+
+        if (show) {
+            group.classList.remove('d-none');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        } else {
+            group.classList.add('d-none');
+        }
+    }
+
+    /**
+     * Thêm triệu chứng tùy chỉnh do bác sĩ nhập
+     */
+    function addCustomSymptom() {
+        const input = document.getElementById('customSymptomText');
+        if (!input) return;
+        const text = input.value ? input.value.trim() : '';
+        if (!text) {
+            if (typeof showToast === 'function') {
+                showToast('Vui lòng nhập nội dung triệu chứng!', true);
+            }
+            return;
+        }
+
+        // 1. Thêm vào ô triệu chứng chính
+        setQuickSymptom(text);
+
+        // 2. Thêm chip động vào danh sách để bác sĩ tiện tái sử dụng
+        const chipsContainer = document.getElementById('symptomsQuickChips');
+        if (chipsContainer) {
+            const newChip = document.createElement('span');
+            newChip.className = 'badge bg-primary-subtle text-primary border border-primary-subtle cursor-pointer hover-primary shadow-xs';
+            newChip.textContent = '+ ' + text;
+            newChip.onclick = function() { setQuickSymptom(text); };
+            chipsContainer.appendChild(newChip);
+        }
+
+        // 3. Đóng ô nhập
+        input.value = '';
+        toggleCustomSymptomInput(false);
+
+        if (typeof showToast === 'function') {
+            showToast(`Đã thêm triệu chứng: "${text}"`);
+        }
+    }
+
+    /**
+     * Gắn triệu chứng nhanh vào ô mô tả
+     */
+    function setQuickSymptom(text) {
+        const input = document.getElementById('examSymptomsInput');
+        if (!input) return;
+        const currentVal = input.value ? input.value.trim() : '';
+        if (!currentVal) {
+            input.value = text;
+        } else if (!currentVal.toLowerCase().includes(text.toLowerCase())) {
+            input.value = currentVal + ', ' + text;
+        }
+        input.focus();
+    }
+
+    /**
+     * Đổi giao diện cảnh báo khi check dị ứng
+     */
+    function handleAllergyCheckChange() {
+        const check = document.getElementById('allergyCheck');
+        const box = document.getElementById('allergyBox');
+        const detailsInput = document.getElementById('allergyDetailsInput');
+        if (!check || !box) return;
+
+        if (check.checked) {
+            box.classList.remove('bg-white');
+            box.classList.add('bg-danger-subtle', 'border-danger');
+            if (detailsInput && !detailsInput.value) {
+                detailsInput.focus();
+            }
+        } else {
+            box.classList.remove('bg-danger-subtle', 'border-danger');
+            box.classList.add('bg-white');
+        }
+    }
+
+    /**
+     * Lưu thông tin khám tổng quát vào database
+     */
+    async function saveGeneralExamination() {
+        const visitId = (typeof getCurrentVisitId === 'function')
+            ? getCurrentVisitId()
+            : (document.getElementById('visitId')?.value || 1);
+
+        const symptomsInput = document.getElementById('examSymptomsInput');
+        const allergyCheck = document.getElementById('allergyCheck');
+        const allergyDetailsInput = document.getElementById('allergyDetailsInput');
+        const cardioCheck = document.getElementById('cardioCheck');
+        const diabetesCheck = document.getElementById('diabetesCheck');
+        const bleedingCheck = document.getElementById('bleedingCheck');
+        const pregnantCheck = document.getElementById('pregnantCheck');
+        const underlyingDetailsInput = document.getElementById('underlyingDetailsInput');
+        const tmjSelect = document.getElementById('tmjSelect');
+        const hygieneSelect = document.getElementById('hygieneSelect');
+        const gingivaSelect = document.getElementById('gingivaSelect');
+
+        const payload = {
+            visitId: parseInt(visitId),
+            initialSymptoms: symptomsInput ? symptomsInput.value.trim() : '',
+            hasAllergies: allergyCheck ? allergyCheck.checked : false,
+            allergyDetails: allergyDetailsInput ? allergyDetailsInput.value.trim() : '',
+            hasCardiovascularDisease: cardioCheck ? cardioCheck.checked : false,
+            hasDiabetes: diabetesCheck ? diabetesCheck.checked : false,
+            hasBleedingDisorder: bleedingCheck ? bleedingCheck.checked : false,
+            isPregnant: pregnantCheck ? pregnantCheck.checked : false,
+            underlyingDiseaseDetails: underlyingDetailsInput ? underlyingDetailsInput.value.trim() : '',
+            tmjStatus: tmjSelect ? tmjSelect.value : 'NORMAL',
+            hygieneStatus: hygieneSelect ? hygieneSelect.value : 'MEDIUM',
+            gingivaStatus: gingivaSelect ? gingivaSelect.value : 'HEALTHY'
+        };
+
+        // Cập nhật trạng thái loading cho nút Lưu
+        const btnHeader = document.getElementById('btnSaveGeneralExamHeader');
+        const btnBottom = document.getElementById('btnSaveGeneralExamBottom');
+        const btnText = document.getElementById('btnSaveGeneralExamText');
+        const btnIcon = document.getElementById('btnSaveGeneralExamIcon');
+
+        if (btnHeader) btnHeader.disabled = true;
+        if (btnBottom) btnBottom.disabled = true;
+        if (btnText) btnText.textContent = 'Đang lưu...';
+        if (btnIcon) btnIcon.className = 'spinner-border spinner-border-sm me-1';
+
+        try {
+            const resp = await fetch(`/api/doctor/visits/${visitId}/general-examination`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok && data.success) {
+                const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                const notice = document.getElementById('generalExamSavedNotice');
+                if (notice) notice.textContent = `✓ Đã lưu lúc ${nowStr}`;
+
+                if (typeof showToast === 'function') {
+                    showToast('✓ Đã lưu thông tin khám tổng quát thành công!');
+                }
+            } else {
+                throw new Error(data.message || 'Lỗi khi lưu kết quả khám');
+            }
+        } catch (err) {
+            console.error('Lỗi lưu khám tổng quát:', err);
+            if (typeof showToast === 'function') {
+                showToast(err.message, true);
+            } else {
+                alert('Lỗi: ' + err.message);
+            }
+        } finally {
+            if (btnHeader) btnHeader.disabled = false;
+            if (btnBottom) btnBottom.disabled = false;
+            if (btnText) btnText.textContent = 'Lưu kết quả khám tổng quát';
+            if (btnIcon) btnIcon.className = 'bi bi-floppy-fill';
+        }
+    }
+
+    // Khởi tạo trạng thái ban đầu khi tải trang
+    document.addEventListener('DOMContentLoaded', function() {
+        handleAllergyCheckChange();
+    });
+</script>
+
+</body>
+</html>

@@ -17,6 +17,9 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
            "LEFT JOIN FETCH s.category " +
            "JOIN FETCH ps.doctor d " +
            "LEFT JOIN FETCH ps.assistant a " +
+           "LEFT JOIN FETCH ps.planItem pi " +
+           "LEFT JOIN FETCH pi.plan p " +
+           "LEFT JOIN FETCH pi.stage st " +
            "WHERE ps.visit.visitId = :visitId " +
            "ORDER BY ps.completedAt DESC, ps.performedId DESC")
     List<PerformedService> findByVisitIdWithDetails(@Param("visitId") Long visitId);
