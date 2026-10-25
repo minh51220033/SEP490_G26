@@ -1,0 +1,8 @@
+.appointment-panel { padding: 1.5rem; }
+.appointment-filter { max-width: 24rem; }
+.appointment-availability { margin: 1.25rem 0; padding: .75rem 1rem; border-radius: .6rem; background: #eef5ff; color: #173a73; }
+.appointment-availability.is-error { background: #fff1f0; color: #a12222; }
+.appointment-availability.is-success { background: #eaf8f0; color: #17633b; }
+.appointment-form small { display: block; margin-top: .4rem; color: #64748b; }
+.appointment-history { margin: 1rem 0 0; padding-left: 1.3rem; }
+.appointment-history li { padding: .3rem 0; }

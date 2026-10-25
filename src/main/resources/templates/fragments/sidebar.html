@@ -47,6 +47,11 @@
            th:classappend="${activeMenu == 'portal-records'} ? 'is-active' : ''">
             <i class="bi bi-folder2-open" aria-hidden="true"></i><span>Hồ sơ của tôi</span>
         </a>
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
+           th:href="@{/portal/appointments}" class="side-link"
+           th:classappend="${activeMenu == 'portal-appointments'} ? 'is-active' : ''">
+            <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Lịch hẹn của tôi</span>
+        </a>
 
         <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
         <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'KE_TOAN'))}"
