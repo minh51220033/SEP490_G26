@@ -13,9 +13,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Service
@@ -31,39 +37,56 @@ public class PortalPatientService {
     private final ExaminationDiagnosisRepository diagnoses;
     private final PerformedServiceRepository performed;
     private final PrescriptionRepository prescriptions;
+    private final ClinicalPhotoRepository photos;
+    private final TreatmentPlanRepository plans;
     private final PatientAuditRepository audit;
     private final ObjectMapper mapper;
+
+    @Value("${app.upload-dir:uploads}")
+    private String uploadDir;
 
     public PortalPatientService(PortalAccess access, PatientProfileRepository profiles,
             AccountPatientProfileRepository links, BranchRepository branches,
             PatientSearchRepository duplicates, PatientVisitReadRepository visits,
             ClinicalExaminationRepository examinations, ExaminationDiagnosisRepository diagnoses,
             PerformedServiceRepository performed, PrescriptionRepository prescriptions,
-            PatientAuditRepository audit, ObjectMapper mapper) {
+            PatientAuditRepository audit, ClinicalPhotoRepository photos,
+            TreatmentPlanRepository plans, ObjectMapper mapper) {
         this.access = access; this.profiles = profiles; this.links = links; this.branches = branches;
         this.duplicates = duplicates; this.visits = visits; this.examinations = examinations;
         this.diagnoses = diagnoses; this.performed = performed; this.prescriptions = prescriptions;
-        this.audit = audit; this.mapper = mapper;
+        this.audit = audit; this.photos = photos; this.plans = plans; this.mapper = mapper;
     }
 
-    @Transactional(readOnly = true)
     public List<PortalProfileView> list(HttpSession session) {
         User user = access.requireUser(session);
-        Map<Long, PatientProfile> owned = new LinkedHashMap<>();
+        Map<Long, PortalProfileView> owned = new LinkedHashMap<>();
         links.findByAccount_UserIdOrderByProfile_ProfileIdDesc(user.getUserId())
-                .forEach(link -> owned.put(link.getProfile().getProfileId(), link.getProfile()));
-        // Legacy portal profiles remain readable before the V2 backfill is run.
+                .forEach(link -> owned.put(link.getProfile().getProfileId(),
+                        PortalProfileView.from(link.getProfile(),
+                                link.getAccessType() == AccountPatientProfile.AccessType.SELF)));
+        // Hồ sơ tạo qua luồng /profile cũ được gắn vào cùng bảng quyền khi mở portal.
         profiles.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(user.getUserId())
                 .forEach(profile -> {
-                    if (links.findByProfile_ProfileId(profile.getProfileId()).isEmpty())
-                        owned.putIfAbsent(profile.getProfileId(), profile);
+                    if (links.findByProfile_ProfileId(profile.getProfileId()).isEmpty()) {
+                        AccountPatientProfile link = new AccountPatientProfile();
+                        link.setAccount(user);
+                        link.setProfile(profile);
+                        link.setAccessType(Boolean.TRUE.equals(profile.getIsDefault())
+                                ? AccountPatientProfile.AccessType.SELF
+                                : AccountPatientProfile.AccessType.DEPENDENT);
+                        links.save(link);
+                        owned.putIfAbsent(profile.getProfileId(),
+                                PortalProfileView.from(profile, Boolean.TRUE.equals(profile.getIsDefault())));
+                    }
                 });
-        return owned.values().stream().map(PortalProfileView::from).toList();
+        return List.copyOf(owned.values());
     }
 
     @Transactional(readOnly = true)
     public PortalProfileView get(HttpSession session, Long id) {
-        return PortalProfileView.from(access.requireProfile(access.requireUser(session), id));
+        PatientProfile profile = access.requireProfile(access.requireUser(session), id);
+        return view(profile);
     }
 
     @Transactional(readOnly = true)
@@ -101,27 +124,43 @@ public class PortalPatientService {
         link.setAccessType(AccountPatientProfile.AccessType.DEPENDENT);
         links.save(link);
         audit(user, profile, "CREATE_DEPENDENT", null, snapshot(profile));
-        return PortalProfileView.from(profile);
+        return view(profile);
     }
 
     public PortalProfileView update(HttpSession session, Long id, PortalProfileForm form) {
         User user = access.requireUser(session);
         PatientProfile profile = access.requireProfile(user, id);
-        if (Boolean.TRUE.equals(profile.getIsDefault()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Hồ sơ bản thân dùng trang cập nhật tài khoản.");
         Branch branch = activeBranch(form.branchId());
         requireDuplicateConfirmation(session, form, id);
         Map<String, Object> before = snapshot(profile);
         apply(profile, form, branch);
         profiles.save(profile);
         audit(user, profile, "UPDATE_DEPENDENT", before, snapshot(profile));
-        return PortalProfileView.from(profile);
+        return view(profile);
     }
 
     @Transactional(readOnly = true)
     public List<VisitView> visits(HttpSession session, Long id) {
         access.requireProfile(access.requireUser(session), id);
         return visits.forPatient(id).stream().map(VisitView::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PhotoView> photos(HttpSession session, Long id) {
+        access.requireProfile(access.requireUser(session), id);
+        return photos.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(id).stream()
+                .map(photo -> new PhotoView(photo.getImageUrl(), photo.getCaption(),
+                        photo.getVisit() == null ? null : photo.getVisit().getVisitCode()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanView> plans(HttpSession session, Long id) {
+        access.requireProfile(access.requireUser(session), id);
+        return plans.findByProfileIdWithDetails(id).stream()
+                .filter(plan -> plan.getStatus() != com.cvdcms.entity.enums.TreatmentPlanStatus.DRAFT)
+                .map(plan -> new PlanView(plan.getPlanCode(), plan.getPlanName(), plan.getStatus().name()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -151,11 +190,67 @@ public class PortalPatientService {
     private void apply(PatientProfile p, PortalProfileForm f, Branch branch) {
         p.setFullName(f.fullName().trim()); p.setDob(f.dob()); p.setGender(f.gender());
         p.setPhoneNumber(f.phoneNumber().trim()); p.setAddress(f.address().trim());
-        p.setPreferredBranch(branch); p.setAllergyDetails(blank(f.allergyDetails()));
-        p.setHasAllergies(p.getAllergyDetails() != null);
-        p.setUnderlyingDiseaseDetails(blank(f.underlyingDiseaseDetails()));
-        p.setHasUnderlyingDisease(p.getUnderlyingDiseaseDetails() != null);
+        p.setPreferredBranch(branch);
         p.setGuardianName(blank(f.guardianName())); p.setGuardianPhone(blank(f.guardianPhone()));
+        p.setGuardianRelationship(blank(f.guardianRelationship()));
+        p.setIdCardNumber(blank(f.idCardNumber()));
+        p.setHealthInsuranceNumber(blank(f.healthInsuranceNumber()));
+    }
+
+    private PortalProfileView view(PatientProfile profile) {
+        return PortalProfileView.from(profile, isSelf(profile));
+    }
+
+    private boolean isSelf(PatientProfile profile) {
+        return links.findByProfile_ProfileId(profile.getProfileId())
+                .map(link -> link.getAccessType() == AccountPatientProfile.AccessType.SELF)
+                .orElse(Boolean.TRUE.equals(profile.getIsDefault()));
+    }
+
+    public PortalProfileView setDefault(HttpSession session, Long id) {
+        User user = access.requireUser(session);
+        PatientProfile selected = access.requireProfile(user, id);
+        profiles.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(user.getUserId())
+                .forEach(profile -> {
+                    if (!profile.getProfileId().equals(id) && Boolean.TRUE.equals(profile.getIsDefault())) {
+                        profile.setIsDefault(false);
+                        profiles.save(profile);
+                    }
+                });
+        selected.setIsDefault(true);
+        profiles.save(selected);
+        audit(user, selected, "SET_DEFAULT_PROFILE", null, snapshot(selected));
+        return view(selected);
+    }
+
+    public PortalProfileView uploadAvatar(HttpSession session, Long id, MultipartFile file) {
+        User user = access.requireUser(session);
+        PatientProfile profile = access.requireProfile(user, id);
+        if (file == null || file.isEmpty() || file.getSize() > 5 * 1024 * 1024)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ảnh đại diện phải có dung lượng tối đa 5 MB.");
+        String extension = switch (String.valueOf(file.getContentType())) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.");
+        };
+        try {
+            Path directory = Paths.get(uploadDir, "avatars").toAbsolutePath().normalize();
+            Files.createDirectories(directory);
+            String name = UUID.randomUUID() + extension;
+            file.transferTo(directory.resolve(name));
+            String previous = profile.getAvatarUrl();
+            profile.setAvatarUrl("/uploads/avatars/" + name);
+            profiles.save(profile);
+            audit(user, profile, "UPDATE_PROFILE_AVATAR",
+                    Map.of("avatarUrl", previous == null ? "" : previous),
+                    Map.of("avatarUrl", profile.getAvatarUrl()));
+            return view(profile);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể lưu ảnh đại diện.", ex);
+        }
     }
 
     private String blank(String value) { return value == null || value.isBlank() ? null : value.trim(); }
@@ -183,4 +278,6 @@ public class PortalPatientService {
 
     public record VisitDetails(VisitView visit, String assessment, List<String> diagnoses,
                                List<String> services, List<String> prescriptions) {}
+    public record PhotoView(String imageUrl, String caption, String visitCode) {}
+    public record PlanView(String code, String name, String status) {}
 }
