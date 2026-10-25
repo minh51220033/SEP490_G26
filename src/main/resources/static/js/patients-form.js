@@ -7,20 +7,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalElement = document.getElementById('duplicateModal');
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     const rows = document.getElementById('duplicateRows');
+    const dobInput = document.getElementById('dob');
+    const guardianNotice = document.getElementById('guardianNotice');
+    const guardianFields = ['guardianName', 'guardianPhone', 'guardianRelationship']
+        .map(name => form.elements.namedItem(name));
+
+    function localIsoDate(date) {
+        const pad = value => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function updateGuardianRequirement() {
+        dobInput.max = localIsoDate(new Date());
+        if (!dobInput.value) {
+            dobInput.setCustomValidity('');
+            guardianFields.forEach(field => field.required = false);
+            guardianNotice.hidden = true;
+            return;
+        }
+        const birthDate = new Date(`${dobInput.value}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dobInput.setCustomValidity(birthDate > today ? 'Ngày sinh không được lớn hơn ngày hiện tại.' : '');
+        const adultDate = new Date(birthDate);
+        adultDate.setFullYear(adultDate.getFullYear() + 18);
+        const minor = adultDate > today;
+        guardianFields.forEach(field => field.required = minor);
+        guardianNotice.hidden = !minor;
+    }
+
+    dobInput.addEventListener('change', updateGuardianRequirement);
+    updateGuardianRequirement();
 
     function values(confirmDuplicate = false) {
         const data = new FormData(form);
+        const read = name => String(data.get(name) || '').trim();
         return {
-            fullName: data.get('fullName').trim(),
+            fullName: read('fullName'),
             dob: data.get('dob'),
             gender: data.get('gender'),
-            phoneNumber: data.get('phoneNumber').trim(),
-            address: data.get('address').trim(),
+            phoneNumber: read('phoneNumber'),
+            address: read('address'),
             branchId: Number(data.get('branchId')),
-            guardianName: data.get('guardianName').trim(),
-            guardianPhone: data.get('guardianPhone').trim(),
-            allergyDetails: data.get('allergyDetails').trim(),
-            underlyingDiseaseDetails: data.get('underlyingDiseaseDetails').trim(),
+            guardianName: read('guardianName'),
+            guardianPhone: read('guardianPhone'),
+            guardianRelationship: read('guardianRelationship'),
+            idCardNumber: read('idCardNumber'),
+            healthInsuranceNumber: read('healthInsuranceNumber'),
             confirmDuplicate
         };
     }
@@ -83,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', async event => {
         event.preventDefault();
+        updateGuardianRequirement();
         if (!form.reportValidity()) return;
         error.hidden = true;
         saveButton.disabled = true;

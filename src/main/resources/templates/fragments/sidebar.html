@@ -42,6 +42,12 @@
             <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
         </a>
 
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
+           th:href="@{/portal/records}" class="side-link"
+           th:classappend="${activeMenu == 'portal-records'} ? 'is-active' : ''">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i><span>Hồ sơ của tôi</span>
+        </a>
+
         <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
         <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'KE_TOAN'))}"
            th:href="@{/chat}" href="#" class="side-link"
@@ -172,7 +178,7 @@
         <div th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
             <p class="app-sidebar__section">Lễ tân</p>
 
-            <a href="#" class="side-link is-disabled" aria-disabled="true"
+            <a th:href="@{/reception/patients}" class="side-link"
                th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''">
                 <i class="bi bi-person-vcard" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
             </a>
@@ -268,7 +274,13 @@
         <p class="app-sidebar__section">Hồ sơ &amp; Tái khám</p>
 
         <!-- 7. Hồ sơ bệnh nhân -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BAC_SI')}"
+           th:href="@{/doctor/patient-records}" class="side-link"
+           th:classappend="${activeMenu == 'doctor-records'} ? 'is-active' : ''">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
+        </a>
+        <a th:unless="${roleNames != null and #lists.contains(roleNames, 'BAC_SI')}"
+           href="#" class="side-link is-disabled" aria-disabled="true"
            title="Tra cứu hồ sơ bệnh nhân & bệnh án EMR">
             <i class="bi bi-folder2-open" aria-hidden="true"></i>
             <span>Hồ sơ Bệnh nhân</span>
