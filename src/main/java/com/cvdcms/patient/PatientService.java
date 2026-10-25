@@ -29,6 +29,8 @@ public class PatientService {
     private final ExaminationDiagnosisRepository diagnoses;
     private final PerformedServiceRepository performedServices;
     private final PrescriptionRepository prescriptions;
+    private final AppointmentRepository appointments;
+    private final PatientDocumentStorageService documentStorage;
     private final ObjectMapper mapper;
 
     public PatientService(PatientAccess access, ReceptionPatientRepository profiles,
@@ -37,7 +39,9 @@ public class PatientService {
                           ClinicalExaminationRepository examinations,
                           ExaminationDiagnosisRepository diagnoses,
                           PerformedServiceRepository performedServices,
-                          PrescriptionRepository prescriptions, ObjectMapper mapper) {
+                          PrescriptionRepository prescriptions, AppointmentRepository appointments,
+                          PatientDocumentStorageService documentStorage,
+                          ObjectMapper mapper) {
         this.access = access;
         this.profiles = profiles;
         this.search = search;
@@ -48,6 +52,8 @@ public class PatientService {
         this.diagnoses = diagnoses;
         this.performedServices = performedServices;
         this.prescriptions = prescriptions;
+        this.appointments = appointments;
+        this.documentStorage = documentStorage;
         this.mapper = mapper;
     }
 
@@ -105,16 +111,44 @@ public class PatientService {
         requireDuplicateConfirmation(scope, form, id);
         Map<String, Object> before = snapshot(profile);
         apply(profile, form, branch);
-        profiles.save(profile);
+        profiles.saveAndFlush(profile);
         audit(scope, branch, "UPDATE", id, before, snapshot(profile));
         return PatientView.from(profile);
     }
 
     @Transactional(readOnly = true)
-    public List<VisitView> visits(HttpSession session, Long patientId) {
+    public List<ReceptionVisitView> visits(HttpSession session, Long patientId) {
         var scope = access.require(session);
         visibleProfile(scope, patientId);
-        return visits.forPatient(patientId).stream().map(VisitView::from).toList();
+        return visits.forPatient(patientId).stream().map(ReceptionVisitView::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientDocumentView> documents(HttpSession session, Long patientId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        return documentStorage.list(patientId);
+    }
+
+    public PatientDocumentView uploadDocument(HttpSession session, Long patientId,
+            com.cvdcms.entity.enums.DocumentType type,
+            org.springframework.web.multipart.MultipartFile file) {
+        var scope = access.require(session);
+        ReceptionPatientRecord profile = visibleProfile(scope, patientId);
+        PatientDocumentView saved = documentStorage.upload(patientId, scope.user(), type, file);
+        audit(scope, profile.getPreferredBranch(),
+                "UPLOAD_PATIENT_DOCUMENT", patientId, null,
+                Map.of("documentId", saved.id(), "documentType", saved.type().name(),
+                        "documentName", saved.name()));
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public PatientDocumentStorageService.PatientDocumentFile downloadDocument(
+            HttpSession session, Long patientId, Long documentId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        return documentStorage.download(patientId, documentId);
     }
 
     @Transactional(readOnly = true)
@@ -123,15 +157,18 @@ public class PatientService {
         visibleProfile(scope, patientId);
         Visit visit = visits.oneForPatient(patientId, visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        String assessment = examinations.findByVisit_VisitId(visitId)
-                .map(ClinicalExamination::getSummaryAssessment).orElse(null);
-        return new VisitDetails(VisitView.from(visit), assessment,
-                diagnoses.findByVisit_VisitId(visitId).stream()
-                        .map(ExaminationDiagnosis::getDiagnosisText).toList(),
+        return new VisitDetails(ReceptionVisitView.from(visit),
                 performedServices.findByVisitIdWithDetails(visitId).stream()
                         .map(item -> item.getService().getServiceName()).toList(),
-                prescriptions.findByVisit_VisitIdOrderByCreatedAtDesc(visitId).stream()
-                        .map(Prescription::getPrescriptionCode).toList());
+                appointments.findByProfileIdWithDetails(patientId).stream()
+                        .filter(a -> a.getAppointmentDate().isAfter(visit.getCheckInAt().toLocalDate()))
+                        .filter(a -> a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.PENDING
+                                || a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.CONFIRMED)
+                        .map(a -> new FollowUp(a.getAppointmentCode(), a.getAppointmentDate(),
+                                a.getExpectedTime(), a.getStatus().name(),
+                                a.getDoctor() == null ? null : a.getDoctor().getFullName(),
+                                a.getService() == null ? null : a.getService().getServiceName()))
+                        .toList());
     }
 
     @Transactional(readOnly = true)
@@ -187,18 +224,27 @@ public class PatientService {
     }
 
     private void apply(ReceptionPatientRecord profile, PatientProfileForm form, Branch branch) {
+        validateGuardianForMinor(form);
         profile.setFullName(form.fullName().trim());
         profile.setDob(form.dob());
         profile.setGender(form.gender().trim());
         profile.setPhoneNumber(form.phoneNumber().trim());
         profile.setAddress(form.address() == null ? "" : form.address().trim());
         profile.setPreferredBranch(branch);
-        profile.setAllergyDetails(blankToNull(form.allergyDetails()));
-        profile.setHasAllergies(profile.getAllergyDetails() != null);
-        profile.setUnderlyingDiseaseDetails(blankToNull(form.underlyingDiseaseDetails()));
-        profile.setHasUnderlyingDisease(profile.getUnderlyingDiseaseDetails() != null);
         profile.setGuardianName(blankToNull(form.guardianName()));
         profile.setGuardianPhone(blankToNull(form.guardianPhone()));
+        profile.setGuardianRelationship(blankToNull(form.guardianRelationship()));
+        profile.setIdCardNumber(blankToNull(form.idCardNumber()));
+        profile.setHealthInsuranceNumber(blankToNull(form.healthInsuranceNumber()));
+    }
+
+    private void validateGuardianForMinor(PatientProfileForm form) {
+        if (!form.dob().plusYears(18).isAfter(LocalDate.now())) return;
+        if (blankToNull(form.guardianName()) == null || blankToNull(form.guardianPhone()) == null
+                || blankToNull(form.guardianRelationship()) == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bệnh nhân dưới 18 tuổi phải có họ tên, số điện thoại và quan hệ của người giám hộ.");
+        }
     }
 
     private String blankToNull(String value) {
@@ -209,7 +255,7 @@ public class PatientService {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("patientCode", p.getPatientCode());
         values.put("fullName", p.getFullName());
-        values.put("dob", p.getDob());
+        values.put("dob", p.getDob() == null ? null : p.getDob().toString());
         values.put("gender", p.getGender());
         values.put("phoneNumber", p.getPhoneNumber());
         values.put("address", p.getAddress());
@@ -218,6 +264,9 @@ public class PatientService {
         values.put("underlyingDiseaseDetails", p.getUnderlyingDiseaseDetails());
         values.put("guardianName", p.getGuardianName());
         values.put("guardianPhone", p.getGuardianPhone());
+        values.put("guardianRelationship", p.getGuardianRelationship());
+        values.put("idCardNumber", p.getIdCardNumber());
+        values.put("healthInsuranceNumber", p.getHealthInsuranceNumber());
         return values;
     }
 
@@ -238,6 +287,8 @@ public class PatientService {
         auditRepository.save(log);
     }
 
-    public record VisitDetails(VisitView visit, String assessment, List<String> diagnoses,
-                               List<String> services, List<String> prescriptions) {}
+    public record VisitDetails(ReceptionVisitView visit, List<String> services,
+                               List<FollowUp> followUps) {}
+    public record FollowUp(String code, LocalDate date, java.time.LocalTime expectedTime,
+                           String status, String doctorName, String serviceName) {}
 }

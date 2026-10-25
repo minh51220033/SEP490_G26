@@ -71,6 +71,18 @@ public class ReceptionPatientRecord {
     @Column(name = "guardian_phone", length = 20)
     private String guardianPhone;
 
+    @Column(name = "guardian_relationship", length = 50)
+    private String guardianRelationship;
+
+    @Column(name = "id_card_number", length = 20)
+    private String idCardNumber;
+
+    @Column(name = "health_insurance_number", length = 20)
+    private String healthInsuranceNumber;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;
 
