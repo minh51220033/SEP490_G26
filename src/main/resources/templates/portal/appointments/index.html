@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Lịch hẹn của tôi')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lịch hẹn của tôi')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/portal-appointments.css}">
+            <div class="patient-page-heading"><div><h1>Lịch hẹn của tôi</h1><p>Chọn hồ sơ để xem các lịch đã đặt và trạng thái tiếp nhận.</p></div>
+                <a class="btn btn-primary" th:href="@{/portal/appointments/new}">Đặt lịch khám</a></div>
+            <div id="pageError" class="alert alert-danger" hidden></div>
+            <section class="panel appointment-panel">
+                <label for="profileFilter" class="form-label">Hồ sơ bệnh nhân</label>
+                <select id="profileFilter" class="form-select appointment-filter" aria-label="Chọn hồ sơ bệnh nhân"></select>
+                <div class="table-responsive mt-3"><table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Mã lịch</th><th>Ngày và buổi</th><th>Chi nhánh</th><th>Bác sĩ yêu cầu</th><th>Trạng thái</th><th></th></tr></thead>
+                    <tbody id="appointmentRows"><tr><td colspan="6" class="text-muted text-center py-4">Đang tải lịch hẹn…</td></tr></tbody>
+                </table></div>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/portal-appointments.js}" defer></script></body></html>
