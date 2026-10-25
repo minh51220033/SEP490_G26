@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết lịch hẹn')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết lịch hẹn')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/portal-appointments.css}">
+            <div class="patient-page-heading"><div><a th:href="@{/portal/appointments}">← Lịch hẹn của tôi</a>
+                <h1>Chi tiết lịch hẹn</h1><p id="appointmentCode">Đang tải…</p></div></div>
+            <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
+            <div id="successMessage" class="alert alert-success" hidden role="status"></div>
+            <section class="panel patient-detail" id="appointmentDetail" th:attr="data-appointment-id=${appointmentId}">
+                <div class="patient-facts" id="appointmentFacts"></div>
+                <div id="appointmentActions" class="patient-form-actions mt-3" hidden>
+                    <a id="changeLink" class="btn btn-outline-primary" href="#">Đổi lịch</a>
+                    <button id="cancelButton" class="btn btn-outline-danger" type="button">Hủy lịch</button>
+                </div>
+                <form id="cancelForm" class="mt-3" hidden><label for="cancelReason" class="form-label">Lý do hủy *</label>
+                    <select id="cancelReason" class="form-select" required><option value="">Chọn lý do</option>
+                        <option value="Bệnh nhân bận hoặc đổi kế hoạch">Bận hoặc đổi kế hoạch</option>
+                        <option value="Không còn nhu cầu khám">Không còn nhu cầu khám</option>
+                        <option value="Sức khỏe không phù hợp">Sức khỏe không phù hợp</option>
+                        <option value="Đã đặt trùng lịch">Đã đặt trùng lịch</option>
+                        <option value="Khác">Khác</option></select>
+                    <label for="cancelNote" class="form-label mt-2">Ghi chú thêm</label><input id="cancelNote" class="form-control" maxlength="180">
+                    <button class="btn btn-danger mt-3" type="submit">Xác nhận hủy lịch</button>
+                </form>
+            </section>
+            <section class="panel appointment-panel mt-3"><h2 class="h5">Lịch sử thay đổi</h2><ol id="appointmentHistory" class="appointment-history"></ol></section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/portal-appointments.js}" defer></script></body></html>

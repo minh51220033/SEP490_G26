@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Quản lý lịch hẹn')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý lịch hẹn')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
+            <div class="patient-page-heading"><div><h1>Lịch hẹn trong ngày</h1><p>Theo dõi và xác nhận lịch theo ngày, chi nhánh và bác sĩ.</p></div>
+                <a class="btn btn-primary" th:href="@{/reception/appointments/new}"><i class="bi bi-plus-lg"></i> Tạo lịch hẹn</a></div>
+            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn">
+                <a class="is-current" th:href="@{/reception/appointments}">Dashboard</a>
+                <a th:href="@{/reception/appointments/calendar}">Lịch tuần / tháng</a>
+                <a th:href="@{/reception/appointments/no-shows}">Không đến &amp; cần nhắc</a>
+            </nav>
+            <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
+            <section class="panel appointment-panel">
+                <div class="appointment-filter">
+                    <div><label for="filterDate">Ngày khám</label><input id="filterDate" type="date" class="form-control"></div>
+                    <div><label for="filterBranch">Chi nhánh</label><select id="filterBranch" class="form-select"></select></div>
+                    <div><label for="filterDoctor">Bác sĩ yêu cầu</label><select id="filterDoctor" class="form-select"><option value="">Tất cả</option></select></div>
+                </div>
+                <div class="appointment-kpis" id="appointmentKpis" aria-live="polite"></div>
+                <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Mã lịch</th><th>Bệnh nhân</th><th>Buổi</th><th>Bác sĩ yêu cầu</th><th>Nguồn</th><th>Trạng thái</th><th></th></tr></thead>
+                    <tbody id="appointmentRows"><tr><td colspan="7" class="text-center py-4">Đang tải lịch hẹn…</td></tr></tbody>
+                </table></div>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>
