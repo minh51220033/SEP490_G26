@@ -16,6 +16,18 @@ public interface PatientVoucherRepository extends JpaRepository<PatientVoucher, 
 
     Optional<PatientVoucher> findByVoucherCode(String voucherCode);
 
+    boolean existsByVoucherCode(String voucherCode);
+
+    List<PatientVoucher> findByPromotion_PromotionIdOrderByExpiresAtDesc(Long promotionId);
+
+    long countByPromotion_PromotionId(Long promotionId);
+
+    long countByPromotion_PromotionIdAndPatientProfile_ProfileId(Long promotionId, Long profileId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT pv FROM PatientVoucher pv WHERE pv.voucherId = :id")
+    Optional<PatientVoucher> findByIdForUpdate(@Param("id") Long id);
+
     @Query("""
         SELECT pv FROM PatientVoucher pv
         JOIN FETCH pv.promotion p

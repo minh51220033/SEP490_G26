@@ -397,4 +397,50 @@ public class LoyaltyAndPromotionUnitTest {
         BigDecimal discount = promotionService.calculateDiscount(promo, new BigDecimal("1000000.00"));
         assertEquals(new BigDecimal("200000.00"), discount);
     }
+
+    @Test
+    @DisplayName("FT19 - Bảo toàn chi tiêu lẻ tích lũy qua nhiều đợt thanh toán nhỏ (15.000 + 15.000 = 3 điểm)")
+    void testRecordPaymentPoints_CumulativeFractionalSpendingPreserved() {
+        mockPatient.setMembershipTier(standardTier); // spendPerPoint = 10,000 VND
+        mockWallet.setCurrentPoints(0);
+        mockWallet.setTotalSpentAmount(BigDecimal.ZERO);
+
+        Invoice invoice = new Invoice();
+        invoice.setInvoiceId(103L);
+        invoice.setInvoiceCode("HD-003");
+        invoice.setPatientProfile(mockPatient);
+
+        // Thanh toán đợt 1: 15.000 VND -> Floor(15.000/10.000) - Floor(0) = 1 điểm. Còn dư 5.000 VND chi tiêu lẻ
+        Payment payment1 = new Payment();
+        payment1.setPaymentId(701L);
+        payment1.setInvoice(invoice);
+        payment1.setPatientProfile(mockPatient);
+        payment1.setAmount(new BigDecimal("15000.00"));
+
+        when(pointTransactionRepository.existsByPayment_PaymentId(701L)).thenReturn(false);
+        when(patientLoyaltyWalletRepository.findByProfileIdForUpdate(10L)).thenReturn(Optional.of(mockWallet));
+        when(patientProfileRepository.findById(10L)).thenReturn(Optional.of(mockPatient));
+        when(patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(10L)).thenReturn(Optional.of(mockWallet));
+        when(membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc())
+                .thenReturn(List.of(standardTier, silverTier, goldTier, diamondTier));
+
+        loyaltyService.recordPaymentPoints(payment1);
+        assertEquals(1, mockWallet.getCurrentPoints());
+        assertEquals(new BigDecimal("15000.00"), mockWallet.getTotalSpentAmount());
+
+        // Thanh toán đợt 2: 15.000 VND nữa -> Tổng chi tiêu = 30.000 VND.
+        // Floor(30.000/10.000) - Floor(15.000/10.000) = 3 - 1 = 2 điểm!
+        Payment payment2 = new Payment();
+        payment2.setPaymentId(702L);
+        payment2.setInvoice(invoice);
+        payment2.setPatientProfile(mockPatient);
+        payment2.setAmount(new BigDecimal("15000.00"));
+
+        when(pointTransactionRepository.existsByPayment_PaymentId(702L)).thenReturn(false);
+        loyaltyService.recordPaymentPoints(payment2);
+
+        // Tổng điểm nhận được qua 2 lần = 1 + 2 = 3 điểm (tương ứng chính xác 30.000 / 10.000, không mất phần lẻ!)
+        assertEquals(3, mockWallet.getCurrentPoints());
+        assertEquals(new BigDecimal("30000.00"), mockWallet.getTotalSpentAmount());
+    }
 }

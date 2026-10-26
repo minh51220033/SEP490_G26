@@ -26,6 +26,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     boolean existsByVisit_VisitIdAndStatusNot(Long visitId, InvoiceStatus status);
 
+    boolean existsByVoucher_VoucherIdAndStatusNot(Long voucherId, InvoiceStatus status);
+
     List<Invoice> findByPatientProfile_ProfileIdOrderByIssuedAtDesc(Long profileId);
 
     List<Invoice> findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(Long profileId, InvoiceStatus status);

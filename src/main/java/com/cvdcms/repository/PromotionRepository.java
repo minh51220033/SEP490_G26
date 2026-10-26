@@ -15,6 +15,16 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
 
     Optional<Promotion> findByPromoCode(String promoCode);
 
+    boolean existsByPromoCode(String promoCode);
+
+    boolean existsByPromoCodeAndPromotionIdNot(String promoCode, Long promotionId);
+
+    List<Promotion> findAllByOrderByStartDateDesc();
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Promotion p WHERE p.promotionId = :id")
+    Optional<Promotion> findByIdForUpdate(@Param("id") Long id);
+
     @Query("""
         SELECT p FROM Promotion p
         WHERE p.isActive = true

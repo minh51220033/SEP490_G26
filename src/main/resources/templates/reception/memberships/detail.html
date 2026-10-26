@@ -67,7 +67,7 @@
                     </h2>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="fin-btn fin-btn-outline" data-bs-toggle="modal" data-bs-target="#adjustModal">
+                    <button th:if="${isAdmin}" type="button" class="fin-btn fin-btn-outline" data-bs-toggle="modal" data-bs-target="#adjustModal">
                         <i class="bi bi-plus-slash-minus me-1"></i> Điều chỉnh điểm thủ công
                     </button>
                     <a th:href="@{/invoices/create(profileId=${card.profileId})}" class="fin-btn fin-btn-primary">
@@ -206,7 +206,7 @@
 </div>
 
 <!-- Modal Điều chỉnh điểm thủ công -->
-<div class="modal fade" id="adjustModal" tabindex="-1" aria-labelledby="adjustModalLabel" aria-hidden="true">
+<div th:if="${isAdmin}" class="modal fade" id="adjustModal" tabindex="-1" aria-labelledby="adjustModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form th:action="@{/reception/memberships/{id}/adjust-points(id=${card.profileId})}" method="post">

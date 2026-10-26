@@ -47,7 +47,7 @@
                             <option value="">-- Chọn ca khám đã được bác sĩ hoàn tất và bàn giao sang thu ngân --</option>
                             <option th:each="wv : ${waitingVisits}" th:value="${wv.visitId}"
                                     th:selected="${selectedVisit != null and selectedVisit.visitId == wv.visitId}"
-                                    th:text="${wv.visitCode} + ' - ' + ${wv.patientProfile.fullName} + ' (' + ${wv.patientProfile.patientCode} + ') - BS: ' + (${wv.primaryDoctor != null ? wv.primaryDoctor.fullName : 'BS trực'})">
+                                    th:text="${wv.visitCode + ' - ' + wv.patientProfile.fullName + ' (' + wv.patientProfile.patientCode + ') - BS: ' + (wv.primaryDoctor != null ? wv.primaryDoctor.fullName : 'BS trực')}">
                             </option>
                         </select>
                     </div>
@@ -200,7 +200,7 @@
                                 <select id="promotionId" name="promotionId" class="fin-select w-100" onchange="triggerRecalculate()">
                                     <option value="">-- Không áp dụng khuyến mãi --</option>
                                     <option th:each="p : ${availablePromotions}" th:value="${p.promotionId}"
-                                            th:text="${p.promoName} + ' (' + (p.promoType.name() == 'PERCENTAGE' ? p.discountValue + '%' : #numbers.formatDecimal(p.discountValue, 0, 'COMMA', 0, 'POINT') + ' đ') + ')'">
+                                            th:text="${p.displayLabel}">
                                     </option>
                                 </select>
                             </div>
@@ -211,7 +211,7 @@
                                 <select id="voucherId" name="voucherId" class="fin-select w-100" onchange="triggerRecalculate()">
                                     <option value="">-- Không dùng voucher --</option>
                                     <option th:each="v : ${availableVouchers}" th:value="${v.voucherId}"
-                                            th:text="${v.voucherCode} + ' - ' + ${v.promotion.promoName}">
+                                            th:text="${v.displayLabel}">
                                     </option>
                                 </select>
                             </div>
