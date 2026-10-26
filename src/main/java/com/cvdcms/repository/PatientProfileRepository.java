@@ -32,14 +32,33 @@ public interface PatientProfileRepository
     List<PatientProfile> findAllByUser_UserId(Long userId);
 
     @org.springframework.data.jpa.repository.Query("""
-        SELECT p FROM PatientProfile p
-        WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
-           OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :query, '%'))
-           OR p.phoneNumber LIKE CONCAT('%', :query, '%')
-        ORDER BY p.profileId DESC
+    SELECT p FROM PatientProfile p
+    WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+       OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+       OR p.phoneNumber LIKE CONCAT('%', :keyword, '%')
+       OR p.profileId = :profileId
+    ORDER BY p.profileId DESC
     """)
-    List<PatientProfile> searchPatients(@org.springframework.data.repository.query.Param("query") String query);
+    List<PatientProfile> searchPatientsByKeywordAndId(
+            @org.springframework.data.repository.query.Param("keyword")
+            String keyword,
 
+            @org.springframework.data.repository.query.Param("profileId")
+            Long profileId
+    );
+
+    default List<PatientProfile> searchPatients(String query) {
+        String keyword = query == null ? "" : query.trim();
+        Long profileId = null;
+
+        try {
+            profileId = Long.valueOf(keyword);
+        } catch (NumberFormatException ignored) {
+            // Từ khóa không phải ID: vẫn tìm theo tên, mã và số điện thoại.
+        }
+
+        return searchPatientsByKeywordAndId(keyword, profileId);
+    }
     List<PatientProfile> findTop15ByOrderByProfileIdDesc();
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
