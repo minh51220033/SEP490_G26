@@ -172,7 +172,7 @@
                             <td th:text="${inv.cashier != null ? inv.cashier.fullName : 'N/A'}">Nguyễn Thu Ngân</td>
                             <td class="text-end" th:text="${#numbers.formatDecimal(inv.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
                             <td class="text-end text-success">
-                                <span th:text="'-' + ${#numbers.formatDecimal(inv.discountAmount.add(inv.promotionDiscount).add(inv.pointDiscount), 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
+                                <span th:text="'-' + ${#numbers.formatDecimal(inv.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
                             </td>
                             <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(inv.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
                             <td class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(inv.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>

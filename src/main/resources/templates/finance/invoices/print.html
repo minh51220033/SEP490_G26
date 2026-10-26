@@ -114,10 +114,10 @@
                 <td class="text-end fw-bold"
                     th:text="${#numbers.formatDecimal(invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
             </tr>
-            <tr th:if="${invoice.discountAmount.add(invoice.promotionDiscount).add(invoice.pointDiscount).compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+            <tr th:if="${invoice.totalDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                 <td colspan="6" class="text-end text-success">Tổng giảm trừ ưu đãi (Thẻ VIP/Khuyến mãi/Voucher/Điểm):</td>
                 <td class="text-end text-success fw-bold"
-                    th:text="'-' + ${#numbers.formatDecimal(invoice.discountAmount.add(invoice.promotionDiscount).add(invoice.pointDiscount), 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
+                    th:text="'-' + ${#numbers.formatDecimal(invoice.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
             </tr>
             <tr class="table-light fs-6">
                 <td colspan="6" class="text-end fw-bold text-primary">TỔNG CỘNG THỰC THU:</td>
