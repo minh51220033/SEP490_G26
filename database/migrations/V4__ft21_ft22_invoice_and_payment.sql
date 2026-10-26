@@ -3,7 +3,7 @@
 -- Tương thích: MySQL 8.0.40 (Schema: cv_dcms_db)
 -- Đặc điểm: Idempotent (chạy nhiều lần không lỗi), bảo toàn dữ liệu, an toàn tuyệt đối
 -- =============================================================================
-
+USE cv_dcms_db;
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_upgrade_ft21_ft22$$
@@ -170,6 +170,32 @@ BEGIN
             DEALLOCATE PREPARE stmt;
         END IF;
     END IF;
+
+
+    -- Bổ sung số tiền phụ thu cho hóa đơn
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = v_schema
+          AND TABLE_NAME = 'invoices'
+          AND COLUMN_NAME = 'surcharge_amount'
+    ) THEN
+ALTER TABLE invoices
+    ADD COLUMN surcharge_amount
+        DECIMAL(15,2) NOT NULL DEFAULT 0.00;
+END IF;
+
+    -- Bổ sung nội dung phụ thu
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = v_schema
+          AND TABLE_NAME = 'invoices'
+          AND COLUMN_NAME = 'surcharge_description'
+    ) THEN
+ALTER TABLE invoices
+    ADD COLUMN surcharge_description VARCHAR(500) NULL;
+END IF;
 
 END$$
 

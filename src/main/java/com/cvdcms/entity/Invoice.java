@@ -64,6 +64,13 @@ public class Invoice {
     @Column(name = "total_service_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalServiceAmount = BigDecimal.ZERO;
 
+    @Column(name = "surcharge_amount", nullable = false, precision = 15, scale = 2)
+    @org.hibernate.annotations.ColumnDefault("0")
+    private BigDecimal surchargeAmount = BigDecimal.ZERO;
+
+    @Column(name = "surcharge_description", length = 500)
+    private String surchargeDescription;
+
     @Column(name = "discount_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
