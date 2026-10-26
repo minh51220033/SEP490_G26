@@ -127,4 +127,12 @@ public class Invoice {
             this.invoiceCode = "HD" + System.currentTimeMillis();
         }
     }
+
+    @Transient
+    public BigDecimal getTotalDiscount() {
+        BigDecimal d1 = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        BigDecimal d2 = promotionDiscount != null ? promotionDiscount : BigDecimal.ZERO;
+        BigDecimal d3 = pointDiscount != null ? pointDiscount : BigDecimal.ZERO;
+        return d1.add(d2).add(d3);
+    }
 }
