@@ -584,89 +584,80 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (request == null || request.getReason() == null || request.getReason().trim().isEmpty()) {
             throw new IllegalArgumentException("Lý do điều chỉnh hóa đơn không được để trống.");
         }
-
+        if (request.getReason().trim().length() > 500) {
+            throw new IllegalArgumentException("Lý do điều chỉnh tối đa 500 ký tự.");
+        }
         Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
-
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new IllegalStateException("Không thể điều chỉnh hóa đơn đã bị hủy.");
         }
-
         StaffProfile staff = getValidStaffProfile(staffUserId, invoice.getBranch().getBranchId());
-        BigDecimal oldTotal = invoice.getTotalAmount();
-        BigDecimal oldPaid = invoice.getPaidAmount();
-        BigDecimal oldDiscount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
-
         if (Boolean.TRUE.equals(request.getCancelInvoice())) {
             return cancelInvoice(invoiceId, request.getReason(), staffUserId);
         }
 
-        // 1. Kiểm tra tổng tiền mới không được thấp hơn số tiền đã thanh toán
+        BigDecimal oldTotal = invoice.getTotalAmount();
+        BigDecimal oldPaid = invoice.getPaidAmount();
+        BigDecimal oldDiscount = Optional.ofNullable(invoice.getDiscountAmount()).orElse(BigDecimal.ZERO);
+        BigDecimal oldSurcharge = Optional.ofNullable(invoice.getSurchargeAmount()).orElse(BigDecimal.ZERO);
+        String oldDescription = Objects.toString(invoice.getSurchargeDescription(), "");
+        BigDecimal totalService = Optional.ofNullable(invoice.getTotalServiceAmount()).orElse(BigDecimal.ZERO);
+        BigDecimal promoDiscount = Optional.ofNullable(invoice.getPromotionDiscount()).orElse(BigDecimal.ZERO);
+        BigDecimal pointDiscount = Optional.ofNullable(invoice.getPointDiscount()).orElse(BigDecimal.ZERO);
+
+        BigDecimal surcharge = validateAdjustmentMoney(
+                request.getNewSurchargeAmount() != null ? request.getNewSurchargeAmount() : oldSurcharge,
+                "Phụ thu");
+        String description = request.getNewSurchargeDescription() != null
+                ? request.getNewSurchargeDescription().trim() : oldDescription;
+        if (description.length() > 500) {
+            throw new IllegalArgumentException("Nội dung phụ thu tối đa 500 ký tự.");
+        }
+        if (surcharge.signum() > 0 && description.isBlank()) {
+            throw new IllegalArgumentException("Có phụ thu thì phải ghi rõ nội dung phụ thu.");
+        }
+        if (surcharge.signum() == 0) {
+            description = null;
+        }
+        BigDecimal discount = validateAdjustmentMoney(
+                request.getNewDiscountAmount() != null ? request.getNewDiscountAmount() : oldDiscount,
+                "Giảm giá");
+        BigDecimal beforeDiscount = totalService.add(surcharge);
+        BigDecimal total = beforeDiscount.subtract(discount).subtract(promoDiscount)
+                .subtract(pointDiscount).max(BigDecimal.ZERO);
+
+        // Giu tuong thich API cu: chi gui tong moi thi suy ra giam gia.
+        // Form moi khong gui tong; backend tu tinh tu cac khoan tien.
         if (request.getNewTotalAmount() != null) {
-            if (request.getNewTotalAmount().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Tổng tiền mới không được âm.");
+            BigDecimal requestedTotal = validateAdjustmentMoney(request.getNewTotalAmount(), "Tổng tiền mới");
+            if (requestedTotal.compareTo(oldPaid) < 0) {
+                throw new IllegalArgumentException("Tổng tiền mới không được nhỏ hơn số tiền đã thanh toán. Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
             }
-            if (request.getNewTotalAmount().compareTo(invoice.getPaidAmount()) < 0) {
-                throw new IllegalArgumentException("Tổng tiền mới (" + request.getNewTotalAmount() + " đ) không được nhỏ hơn số tiền đã thanh toán (" + invoice.getPaidAmount() + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
-            }
-        }
-
-        BigDecimal totalService = invoice.getTotalServiceAmount() != null
-                ? invoice.getTotalServiceAmount()
-                : (invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO);
-        BigDecimal promoDiscount = invoice.getPromotionDiscount() != null ? invoice.getPromotionDiscount() : BigDecimal.ZERO;
-        BigDecimal pointDiscount = invoice.getPointDiscount() != null ? invoice.getPointDiscount() : BigDecimal.ZERO;
-
-        BigDecimal effectiveDiscount = request.getNewDiscountAmount() != null ? request.getNewDiscountAmount() : oldDiscount;
-        if (effectiveDiscount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Số tiền giảm giá mới không được âm.");
-        }
-
-        BigDecimal calculatedTotal = totalService.subtract(effectiveDiscount).subtract(promoDiscount).subtract(pointDiscount);
-        if (calculatedTotal.compareTo(BigDecimal.ZERO) < 0) {
-            calculatedTotal = BigDecimal.ZERO;
-        }
-
-        BigDecimal effectiveTotal = request.getNewTotalAmount() != null ? request.getNewTotalAmount() : calculatedTotal;
-        if (effectiveTotal.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Tổng tiền mới không được âm.");
-        }
-
-        // Kiểm tra tính nhất quán giữa dòng dịch vụ, giảm giá và tổng phải trả
-        if (request.getNewTotalAmount() != null && request.getNewDiscountAmount() != null) {
-            if (effectiveTotal.compareTo(calculatedTotal) != 0) {
-                throw new IllegalArgumentException("Dữ liệu mâu thuẫn: Tổng dịch vụ (" + totalService + " đ) trừ các khoản giảm ("
-                        + effectiveDiscount.add(promoDiscount).add(pointDiscount) + " đ) cho ra " + calculatedTotal + " đ, không khớp với tổng tiền yêu cầu (" + effectiveTotal + " đ).");
-            }
-        } else if (request.getNewDiscountAmount() != null) {
-            effectiveTotal = calculatedTotal;
-        } else if (request.getNewTotalAmount() != null) {
-            BigDecimal derivedDiscount = totalService.subtract(promoDiscount).subtract(pointDiscount).subtract(effectiveTotal);
-            if (derivedDiscount.compareTo(BigDecimal.ZERO) >= 0) {
-                effectiveDiscount = derivedDiscount;
-            } else {
-                throw new IllegalArgumentException("Tổng tiền mới (" + effectiveTotal + " đ) vượt quá tổng giá trị dịch vụ (" + totalService + " đ).");
+            if (request.getNewDiscountAmount() == null && request.getNewSurchargeAmount() == null) {
+                discount = validateAdjustmentMoney(beforeDiscount.subtract(promoDiscount)
+                        .subtract(pointDiscount).subtract(requestedTotal), "Giảm giá suy ra");
+                total = requestedTotal;
+            } else if (requestedTotal.compareTo(total) != 0) {
+                throw new IllegalArgumentException("Dữ liệu mâu thuẫn: tổng tiền yêu cầu không khớp tổng dịch vụ + phụ thu - các khoản giảm = " + total + " đ.");
             }
         }
-
-        if (effectiveTotal.compareTo(invoice.getPaidAmount()) < 0) {
-            throw new IllegalArgumentException("Tổng tiền mới (" + effectiveTotal + " đ) không được nhỏ hơn số tiền đã thanh toán (" + invoice.getPaidAmount() + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
+        total = validateAdjustmentMoney(total, "Tổng tiền hóa đơn");
+        if (total.compareTo(oldPaid) < 0) {
+            throw new IllegalArgumentException("Tổng tiền mới (" + total
+                    + " đ) không được nhỏ hơn số tiền đã thanh toán (" + oldPaid
+                    + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
         }
 
-        invoice.setDiscountAmount(effectiveDiscount);
-        invoice.setTotalAmount(effectiveTotal);
-        BigDecimal newRemaining = effectiveTotal.subtract(invoice.getPaidAmount());
-        invoice.setRemainingDebt(newRemaining.compareTo(BigDecimal.ZERO) > 0 ? newRemaining : BigDecimal.ZERO);
-
-        if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
-            invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
-        } else if (invoice.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-            invoice.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
-        } else {
-            invoice.setPaymentStatus(InvoicePaymentStatus.UNPAID);
-        }
-
-        invoice.setAdjustmentReason(request.getReason());
+        invoice.setSurchargeAmount(surcharge);
+        invoice.setSurchargeDescription(description);
+        invoice.setDiscountAmount(discount);
+        invoice.setTotalAmount(total);
+        BigDecimal debt = total.subtract(oldPaid);
+        invoice.setRemainingDebt(debt);
+        invoice.setPaymentStatus(debt.signum() == 0 ? InvoicePaymentStatus.PAID
+                : oldPaid.signum() > 0 ? InvoicePaymentStatus.PARTIAL : InvoicePaymentStatus.UNPAID);
+        invoice.setAdjustmentReason(request.getReason().trim());
         invoice.setAdjustedBy(staff);
         Invoice saved = invoiceRepository.save(invoice);
 
@@ -674,18 +665,35 @@ public class InvoiceServiceImpl implements InvoiceService {
         log.setInvoice(saved);
         log.setActionType("ADJUST");
         log.setOldTotalAmount(oldTotal);
-        log.setNewTotalAmount(effectiveTotal);
+        log.setNewTotalAmount(total);
         log.setOldDiscountAmount(oldDiscount);
-        log.setNewDiscountAmount(effectiveDiscount);
+        log.setNewDiscountAmount(discount);
         log.setOldPaidAmount(oldPaid);
-        log.setNewPaidAmount(saved.getPaidAmount());
-        log.setReason(request.getReason());
-        log.setDetails(request.getNotes() != null ? request.getNotes() : "Điều chỉnh hóa đơn: Tổng tiền " + oldTotal + " -> " + effectiveTotal + " đ, Giảm giá " + oldDiscount + " -> " + effectiveDiscount + " đ");
+        log.setNewPaidAmount(oldPaid);
+        log.setReason(request.getReason().trim());
+        log.setDetails("Tổng hóa đơn: " + oldTotal + " -> " + total
+                + " đ; Giảm giá: " + oldDiscount + " -> " + discount
+                + " đ; Phụ thu: " + oldSurcharge + " -> " + surcharge
+                + " đ; Nội dung phụ thu cũ: [" + oldDescription
+                + "]; Nội dung phụ thu mới: [" + Objects.toString(description, "")
+                + "]; Ghi chú: " + Objects.toString(request.getNotes(), ""));
         log.setPerformedBy(staff);
         invoiceAuditLogRepository.save(log);
-
         return saved;
     }
+
+    private BigDecimal validateAdjustmentMoney(BigDecimal value, String fieldName) {
+        if (value == null || value.signum() < 0
+                || value.compareTo(new BigDecimal("9999999999999.99")) > 0) {
+            throw new IllegalArgumentException(fieldName + " phải từ 0 đến 9.999.999.999.999,99 đ.");
+        }
+        try {
+            return value.setScale(2, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(fieldName + " chỉ được có tối đa 2 chữ số thập phân.");
+        }
+    }
+
 
     @Override
     public Invoice cancelInvoice(Long invoiceId, String reason, Long staffUserId) {

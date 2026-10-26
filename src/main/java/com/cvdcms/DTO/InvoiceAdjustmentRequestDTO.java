@@ -15,4 +15,7 @@ public class InvoiceAdjustmentRequestDTO {
     private BigDecimal newTotalAmount;
     private BigDecimal newDiscountAmount;
     private Boolean cancelInvoice = false;
+    // Tong phu thu sau dieu chinh, khong phai so tien cong them moi lan luu.
+    private BigDecimal newSurchargeAmount;
+    private String newSurchargeDescription;
 }

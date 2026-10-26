@@ -102,9 +102,6 @@
                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
                             </td>
                             <td class="text-center">
-                                <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="btn btn-sm btn-info text-white" title="Dashboard tài chính (SCR-22.1)">
-                                    <i class="bi bi-speedometer2"></i> Dashboard
-                                </a>
                                 <a th:href="@{/payments/create(profileId=${d.profileId})}" class="btn btn-sm btn-success" title="Thu nợ">
                                     <i class="bi bi-cash"></i> Thu nợ
                                 </a>
