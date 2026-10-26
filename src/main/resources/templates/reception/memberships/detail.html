@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Chi tiết Thẻ thành viên & Lịch sử điểm (SCR-19.3)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        .vip-card-banner {
+            border-radius: 16px;
+            padding: 24px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .banner-diamond {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+        }
+        .banner-gold {
+            background: linear-gradient(135deg, #e65c00 0%, #f9d423 100%);
+            color: #1a1a1a !important;
+        }
+        .banner-silver {
+            background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%);
+            color: #1a1a1a !important;
+        }
+        .banner-standard {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        }
+        .card-chip {
+            width: 48px;
+            height: 36px;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            border-radius: 6px;
+            display: inline-block;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('reception-memberships')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết Thẻ & Lịch sử điểm')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Header điều hướng -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a th:href="@{/reception/memberships}" class="text-decoration-none text-muted small">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách tra cứu
+                    </a>
+                    <h2 class="fw-bold mt-1 m-0 text-dark">
+                        Thẻ thành viên: <span class="text-primary" th:text="${card.fullName}">Nguyễn Văn A</span>
+                        <span class="badge bg-secondary ms-2 fs-6" th:text="${card.patientCode}">BN0001</span>
+                    </h2>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-toggle="modal" data-bs-target="#adjustModal">
+                        <i class="bi bi-plus-slash-minus me-1"></i> Điều chỉnh điểm thủ công
+                    </button>
+                    <a th:href="@{/invoices/create(profileId=${card.profileId})}" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-receipt me-1"></i> Lập hóa đơn viện phí
+                    </a>
+                </div>
+            </div>
+
+            <!-- Banner Thẻ VIP Bệnh nhân -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="vip-card-banner h-100"
+                         th:classappend="${card.tierCode == 'DIAMOND' ? 'banner-diamond' : (card.tierCode == 'GOLD' ? 'banner-gold' : (card.tierCode == 'SILVER' ? 'banner-silver' : 'banner-standard'))}">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="card-chip"></div>
+                                <span class="fw-bold text-uppercase" style="letter-spacing: 2px;">CV-DCMS DENTAL VIP</span>
+                            </div>
+                            <span class="badge bg-white text-dark fw-bold px-3 py-2 fs-6" th:text="${card.tierName}">Vàng</span>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="small opacity-75">SỐ THẺ / MÃ BỆNH NHÂN</div>
+                            <h4 class="fw-bold" style="letter-spacing: 3px;" th:text="${card.patientCode}">BN000101</h4>
+                            <h5 class="fw-bold m-0" th:text="${card.fullName}">Nguyễn Văn A</h5>
+                        </div>
+
+                        <div class="row g-2 pt-2 border-top border-white border-opacity-25 small">
+                            <div class="col-6">
+                                <span class="opacity-75 d-block">CHI TIÊU TÍCH LŨY:</span>
+                                <strong class="fs-6" th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                <span class="opacity-75 d-block">ĐIỂM HIỆN CÓ:</span>
+                                <strong class="fs-5" th:text="${card.currentPoints} + ' điểm'">0 điểm</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel Quyền lợi & Tiến độ thăng hạng -->
+                <div class="col-lg-6">
+                    <div class="fin-card h-100 d-flex flex-direction-column justify-content-between">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-gift me-2 text-danger"></i>Quyền lợi hạng <span th:text="${card.tierName}">Thành viên</span></h5>
+                            <ul class="list-unstyled mb-4">
+                                <li class="d-flex align-items-start mb-2" th:each="benefit : ${card.benefits}">
+                                    <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                                    <span th:text="${benefit}">Quyền lợi</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Tiến độ lên hạng -->
+                        <div class="p-3 bg-light rounded border">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-bold text-muted">TIẾN TRÌNH LÊN HẠNG KẾ TIẾP</span>
+                                <strong class="text-primary" th:text="${card.nextTierName}">Kim Cương VIP</strong>
+                            </div>
+                            <div class="progress mb-2" style="height: 10px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                     role="progressbar" th:style="'width: ' + ${card.progressPercent} + '%'"
+                                     th:aria-valuenow="${card.progressPercent}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted" style="font-size: 11px;">
+                                <span>Đã đạt: <strong th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong></span>
+                                <span th:if="${card.amountNeededForNextTier > 0}">Cần thêm: <strong class="text-danger" th:text="${#numbers.formatDecimal(card.amountNeededForNextTier, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong></span>
+                                <span th:unless="${card.amountNeededForNextTier > 0}" class="text-success fw-bold">Đã đạt mức tối đa</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Lịch sử Giao dịch Điểm (SCR-19.3) -->
+            <div class="fin-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0 text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử Giao dịch Điểm tích lũy (SCR-19.3)</h5>
+                    <span class="text-muted small">Tất cả giao dịch cộng, trừ điểm và điều chỉnh hệ thống</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="fin-table table">
+                        <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Loại giao dịch</th>
+                            <th class="text-center">Biến động điểm</th>
+                            <th class="text-end">Số dư sau GD</th>
+                            <th>Lý do &amp; Giao dịch liên quan</th>
+                            <th class="text-center">Chứng từ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="tx : ${pointHistory}">
+                            <td th:text="${#temporals.format(tx.createdAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 10:30</td>
+                            <td>
+                                <span th:if="${tx.transactionType.name() == 'EARN'}" class="badge bg-success">
+                                    <i class="bi bi-plus-circle me-1"></i>Tích điểm (EARN)
+                                </span>
+                                <span th:if="${tx.transactionType.name() == 'REDEEM'}" class="badge bg-danger">
+                                    <i class="bi bi-dash-circle me-1"></i>Đổi điểm (REDEEM)
+                                </span>
+                                <span th:if="${tx.transactionType.name() == 'ADJUST'}" class="badge bg-warning text-dark">
+                                    <i class="bi bi-sliders me-1"></i>Điều chỉnh (ADJUST)
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <strong th:class="${tx.points > 0 ? 'text-success' : 'text-danger'}"
+                                        th:text="${(tx.points > 0 ? '+' : '') + tx.points + ' điểm'}">
+                                    +50 điểm
+                                </strong>
+                            </td>
+                            <td class="text-end fw-bold" th:text="${tx.balanceAfter} + ' điểm'">150 điểm</td>
+                            <td th:text="${tx.reason}">Tích điểm từ thanh toán</td>
+                            <td class="text-center">
+                                <a th:if="${tx.invoice != null}" th:href="@{/invoices/{id}(id=${tx.invoice.invoiceId})}"
+                                   class="badge bg-light text-primary border text-decoration-none"
+                                   th:text="${tx.invoice.invoiceCode}">HD100001</a>
+                                <span th:if="${tx.invoice == null and tx.payment != null}" class="badge bg-light text-dark border"
+                                      th:text="${tx.payment.paymentCode}">TT100001</span>
+                                <span th:if="${tx.invoice == null and tx.payment == null}" class="text-muted small">-</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(pointHistory)}">
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>Chưa có lịch sử giao dịch điểm nào cho bệnh nhân này.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Điều chỉnh điểm thủ công -->
+<div class="modal fade" id="adjustModal" tabindex="-1" aria-labelledby="adjustModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form th:action="@{/reception/memberships/{id}/adjust-points(id=${card.profileId})}" method="post">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="adjustModalLabel">
+                        <i class="bi bi-sliders text-warning me-2"></i>Điều chỉnh điểm thủ công
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">BỆNH NHÂN</label>
+                        <input type="text" class="form-control" th:value="${card.fullName + ' (' + card.patientCode + ')'}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">SỐ ĐIỂM HIỆN TẠI</label>
+                        <input type="text" class="form-control" th:value="${card.currentPoints + ' điểm'}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adjustPoints" class="form-label text-muted small fw-bold">SỐ ĐIỂM CẦN ĐIỀU CHỈNH <span class="text-danger">*</span></label>
+                        <input type="number" id="adjustPoints" name="points" class="form-control" required
+                               placeholder="Nhập số dương để cộng điểm (vd: 50), số âm để trừ điểm (vd: -20)...">
+                        <div class="form-text" style="font-size: 11px;">Nhập số dương (+) để cộng thêm điểm, nhập số âm (-) để giảm trừ điểm.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adjustReason" class="form-label text-muted small fw-bold">LÝ DO ĐIỀU CHỈNH <span class="text-danger">*</span></label>
+                        <textarea id="adjustReason" name="reason" class="form-control" rows="3" required
+                                  placeholder="Ghi rõ lý do (ví dụ: Tặng điểm sinh nhật khách hàng, Bù điểm do sai sót kỹ thuật, Đổi quà lưu niệm...)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="fin-btn fin-btn-primary" onclick="return confirm('Bạn có chắc chắn muốn thực hiện giao dịch điều chỉnh điểm này?');">
+                        <i class="bi bi-check2-circle me-1"></i> Xác nhận điều chỉnh
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
