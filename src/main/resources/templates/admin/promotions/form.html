@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head(${isEdit} ? 'Chỉnh sửa Khuyến mãi (FT20)' : 'Tạo mới Khuyến mãi (FT20)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('admin-promotions')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar(${isEdit} ? 'Chỉnh sửa Khuyến mãi' : 'Tạo mới Khuyến mãi')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a th:href="@{/admin/promotions}" class="text-decoration-none text-muted small">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách chương trình
+                    </a>
+                    <h2 class="fw-bold mt-1 m-0 text-dark">
+                        <i class="bi bi-ticket-perforated text-danger me-2"></i>
+                        <span th:text="${isEdit} ? 'Chỉnh sửa Chương trình Khuyến mãi' : 'Tạo Chương trình Khuyến mãi mới (SCR-20.2)'"></span>
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="fin-card">
+                <form th:action="@{/admin/promotions/save}" th:object="${promotionForm}" method="post">
+                    <input type="hidden" th:field="*{promotionId}">
+                    <input type="hidden" th:field="*{usedCount}">
+
+                    <div class="row g-4">
+                        <!-- Cột trái: Thông tin cơ bản -->
+                        <div class="col-lg-7">
+                            <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                                <i class="bi bi-info-circle text-primary me-2"></i>Thông tin chương trình
+                            </h5>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <label for="promoCode" class="form-label small fw-bold text-muted">MÃ KHUYẾN MÃI / VOUCHER <span class="text-danger">*</span></label>
+                                    <input type="text" id="promoCode" th:field="*{promoCode}" class="form-control"
+                                           placeholder="VD: KM-TRIAN-10, VC200K..." required style="text-transform: uppercase;">
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('promoCode')}" th:errors="*{promoCode}"></div>
+                                </div>
+                                <div class="col-md-7">
+                                    <label for="promoName" class="form-label small fw-bold text-muted">TÊN CHƯƠNG TRÌNH KHUYẾN MÃI <span class="text-danger">*</span></label>
+                                    <input type="text" id="promoName" th:field="*{promoName}" class="form-control"
+                                           placeholder="VD: Tri ân khách hàng tháng 10..." required>
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('promoName')}" th:errors="*{promoName}"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label small fw-bold text-muted">MÔ TẢ CHI TIẾT ƯU ĐÃI</label>
+                                <textarea id="description" th:field="*{description}" class="form-control" rows="3"
+                                          placeholder="Nhập nội dung chi tiết điều kiện, đối tượng và thể lệ áp dụng..."></textarea>
+                                <div class="text-danger small" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted d-block">LOẠI GIẢM GIÁ <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-3 mt-1">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" th:field="*{promoType}" id="typePercent" value="PERCENTAGE" onchange="toggleDiscountInputs()">
+                                            <label class="form-check-label fw-bold" for="typePercent">Phần trăm (%)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" th:field="*{promoType}" id="typeFixed" value="FIXED_AMOUNT" onchange="toggleDiscountInputs()">
+                                            <label class="form-check-label fw-bold" for="typeFixed">Số tiền cố định (VNĐ)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="discountValue" id="lblDiscountVal" class="form-label small fw-bold text-muted">GIÁ TRỊ GIẢM (%) <span class="text-danger">*</span></label>
+                                    <input type="number" id="discountValue" th:field="*{discountValue}" class="form-control" required min="0" step="0.5">
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('discountValue')}" th:errors="*{discountValue}"></div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6" id="boxMaxDiscount">
+                                    <label for="maxDiscountAmount" class="form-label small fw-bold text-muted">MỨC GIẢM TỐI ĐA (VNĐ)</label>
+                                    <input type="number" id="maxDiscountAmount" th:field="*{maxDiscountAmount}" class="form-control" min="0" step="10000" placeholder="Để trống nếu không giới hạn">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="minBillAmount" class="form-label small fw-bold text-muted">HÓA ĐƠN TỐI THIỂU ĐẠT ĐIỀU KIỆN (VNĐ)</label>
+                                    <input type="number" id="minBillAmount" th:field="*{minBillAmount}" class="form-control" min="0" step="50000" placeholder="0">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="startDate" class="form-label small fw-bold text-muted">THỜI GIAN BẮT ĐẦU <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" id="startDate" th:field="*{startDate}" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="endDate" class="form-label small fw-bold text-muted">THỜI GIAN KẾT THÚC <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" id="endDate" th:field="*{endDate}" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cột phải: Phạm vi & Điều kiện áp dụng -->
+                        <div class="col-lg-5">
+                            <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                                <i class="bi bi-shield-lock text-primary me-2"></i>Phạm vi &amp; Điều kiện áp dụng
+                            </h5>
+
+                            <div class="mb-3">
+                                <label for="branchId" class="form-label small fw-bold text-muted">CƠ SỞ ÁP DỤNG</label>
+                                <select id="branchId" th:field="*{branchId}" class="fin-select w-100">
+                                    <option value="">-- Áp dụng toàn hệ thống (Tất cả cơ sở) --</option>
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                                </select>
+                                <div class="form-text" style="font-size: 11px;">Để trống nếu muốn áp dụng trên tất cả cơ sở chi nhánh.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="applicableTierId" class="form-label small fw-bold text-muted">HẠNG THÀNH VIÊN TỐI THIỂU (FT19)</label>
+                                <select id="applicableTierId" th:field="*{applicableTierId}" class="fin-select w-100">
+                                    <option value="">-- Áp dụng cho mọi hạng thành viên --</option>
+                                    <option th:each="t : ${tiers}" th:value="${t.tierId}" th:text="'Từ hạng ' + ${t.tierName} + ' trở lên'"></option>
+                                </select>
+                                <div class="form-text" style="font-size: 11px;">Dữ liệu hạng được lấy trực tiếp từ cấu hình FT19 để đảm bảo đồng bộ.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="applicableServiceId" class="form-label small fw-bold text-muted">DỊCH VỤ ÁP DỤNG CỤ THỂ</label>
+                                <select id="applicableServiceId" th:field="*{applicableServiceId}" class="fin-select w-100">
+                                    <option value="">-- Áp dụng cho toàn bộ dịch vụ --</option>
+                                    <option th:each="s : ${services}" th:value="${s.serviceId}" th:text="${s.serviceName}"></option>
+                                </select>
+                                <div class="form-text" style="font-size: 11px;">Nếu chọn, chỉ hóa đơn có chứa dịch vụ này mới được áp dụng giảm giá.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="usageLimit" class="form-label small fw-bold text-muted">GIỚI HẠN TỔNG LƯỢT DÙNG</label>
+                                <input type="number" id="usageLimit" th:field="*{usageLimit}" class="form-control" min="1" placeholder="Để trống nếu không giới hạn">
+                                <div class="form-text" style="font-size: 11px;">Chống sử dụng vượt giới hạn bằng khóa xử lý đồng thời tại backend.</div>
+                            </div>
+
+                            <div class="mb-4 pt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="isActive" th:field="*{isActive}" checked>
+                                    <label class="form-check-label fw-bold" for="isActive">Kích hoạt chương trình ngay</label>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="fin-btn fin-btn-primary py-3 fs-6">
+                                    <i class="bi bi-check2-circle fs-5 me-1"></i>
+                                    <span th:text="${isEdit} ? 'LƯU THAY ĐỔI' : 'PHÁT HÀNH CHƯƠNG TRÌNH'">LƯU</span>
+                                </button>
+                                <a th:href="@{/admin/promotions}" class="fin-btn fin-btn-outline text-center">Hủy bỏ</a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function toggleDiscountInputs() {
+        const isPercent = document.getElementById('typePercent').checked;
+        const lbl = document.getElementById('lblDiscountVal');
+        const boxMax = document.getElementById('boxMaxDiscount');
+        if (isPercent) {
+            lbl.innerText = 'GIÁ TRỊ GIẢM (%) *';
+            boxMax.style.display = 'block';
+        } else {
+            lbl.innerText = 'GIÁ TRỊ GIẢM (VNĐ) *';
+            boxMax.style.display = 'none';
+        }
+    }
+    document.addEventListener('DOMContentLoaded', toggleDiscountInputs);
+</script>
+</body>
+</html>

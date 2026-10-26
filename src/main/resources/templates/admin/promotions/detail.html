@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Chi tiết Khuyến mãi & Danh sách Voucher (SCR-20.3)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('admin-promotions')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết Chương trình & Voucher')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a th:href="@{/admin/promotions}" class="text-decoration-none text-muted small">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách khuyến mãi
+                    </a>
+                    <h2 class="fw-bold mt-1 m-0 text-dark">
+                        <span th:text="${promo.promoName}">Tên khuyến mãi</span>
+                        <span class="badge bg-danger ms-2 fs-6" th:text="${promo.promoCode}">KM10</span>
+                    </h2>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal">
+                        <i class="bi bi-person-plus-fill me-1"></i> Cấp phát Voucher cho bệnh nhân
+                    </button>
+                    <a th:href="@{/admin/promotions/{id}/edit(id=${promo.promotionId})}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa
+                    </a>
+                </div>
+            </div>
+
+            <!-- 3 KPI Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="fin-card text-center p-3">
+                        <div class="text-muted small">MỨC GIẢM ƯU ĐÃI</div>
+                        <h3 class="fw-bold text-success my-2" th:if="${promo.promoType.name() == 'PERCENTAGE'}">
+                            <span th:text="${promo.discountValue}">10</span>%
+                        </h3>
+                        <h3 class="fw-bold text-primary my-2" th:if="${promo.promoType.name() == 'FIXED_AMOUNT'}"
+                            th:text="${#numbers.formatDecimal(promo.discountValue, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                            200.000 đ
+                        </h3>
+                        <span class="text-muted small" th:if="${promo.maxDiscountAmount != null}"
+                              th:text="'Tối đa: ' + ${#numbers.formatDecimal(promo.maxDiscountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                        <span class="text-muted small" th:unless="${promo.maxDiscountAmount != null}">Không giới hạn mức giảm tối đa</span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="fin-card text-center p-3">
+                        <div class="text-muted small">TỔNG LƯỢT ĐÃ DÙNG</div>
+                        <h3 class="fw-bold text-dark my-2">
+                            <span th:text="${promo.usedCount}">5</span>
+                            <span class="text-muted fs-6" th:text="' / ' + (${promo.usageLimit != null ? promo.usageLimit : '∞'})"> / 100</span>
+                        </h3>
+                        <span th:if="${promo.usageLimit != null and promo.usedCount >= promo.usageLimit}" class="badge bg-danger">Đã hết lượt dùng</span>
+                        <span th:unless="${promo.usageLimit != null and promo.usedCount >= promo.usageLimit}" class="badge bg-success">Còn lượt khả dụng</span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="fin-card text-center p-3">
+                        <div class="text-muted small">TRẠNG THÁI &amp; THỜI HẠN</div>
+                        <h4 class="fw-bold my-2" th:classappend="${promo.isActive} ? 'text-success' : 'text-danger'">
+                            <span th:if="${promo.isActive}">ĐANG KÍCH HOẠT</span>
+                            <span th:unless="${promo.isActive}">TẠM NGỪNG</span>
+                        </h4>
+                        <span class="text-muted small"
+                              th:text="${#temporals.format(promo.startDate, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(promo.endDate, 'dd/MM/yyyy')}"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Chi tiết Điều kiện áp dụng -->
+            <div class="fin-card mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Chi tiết Điều kiện áp dụng (SCR-20.3)</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted small d-block">Cơ sở áp dụng:</span>
+                            <strong th:text="${promo.branch != null ? promo.branch.branchName : 'Toàn bộ hệ thống cơ sở'}">Toàn hệ thống</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted small d-block">Đơn hàng tối thiểu:</span>
+                            <strong th:text="${#numbers.formatDecimal(promo.minBillAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted small d-block">Hạng thành viên yêu cầu (FT19):</span>
+                            <strong class="text-warning" th:if="${promo.applicableTier != null}"
+                                    th:text="'Từ hạng ' + ${promo.applicableTier.tierName} + ' trở lên'">Vàng</strong>
+                            <strong th:unless="${promo.applicableTier != null}">Mọi hạng thành viên</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted small d-block">Dịch vụ nha khoa áp dụng:</span>
+                            <strong class="text-primary" th:if="${promo.applicableService != null}"
+                                    th:text="${promo.applicableService.serviceName}">Cạo vôi răng</strong>
+                            <strong th:unless="${promo.applicableService != null}">Tất cả dịch vụ hợp lệ</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted small d-block">Mô tả thể lệ:</span>
+                            <span th:text="${promo.description ?: 'Không có ghi chú thêm.'}">Mô tả chi tiết</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Danh sách Voucher đã cấp phát -->
+            <div class="fin-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold m-0 text-dark"><i class="bi bi-ticket-detailed me-2 text-primary"></i>Danh sách Voucher cá nhân đã phát hành</h5>
+                        <p class="text-muted small m-0">Voucher được phát hành riêng cho bệnh nhân theo chương trình này</p>
+                    </div>
+                    <button type="button" class="fin-btn fin-btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#issueModal">
+                        <i class="bi bi-plus-lg me-1"></i> Cấp thêm Voucher
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="fin-table table">
+                        <thead>
+                        <tr>
+                            <th>Mã Voucher</th>
+                            <th>Bệnh nhân nhận</th>
+                            <th>Số điện thoại</th>
+                            <th class="text-center">Hạn sử dụng</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Thời điểm sử dụng</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="v : ${vouchers}">
+                            <td>
+                                <strong class="badge bg-light text-danger border fs-6" th:text="${v.voucherCode}">VC-KM10-BN01</strong>
+                            </td>
+                            <td>
+                                <strong th:text="${v.patientProfile.fullName}">Nguyễn Văn An</strong>
+                                <span class="badge bg-secondary ms-1" th:text="${v.patientProfile.patientCode}">BN000101</span>
+                            </td>
+                            <td th:text="${v.patientProfile.phoneNumber}">0987654321</td>
+                            <td class="text-center" th:text="${#temporals.format(v.expiresAt, 'dd/MM/yyyy HH:mm')}">30/11/2026</td>
+                            <td class="text-center">
+                                <span th:if="${v.status.name() == 'AVAILABLE'}" class="fin-badge fin-badge-paid">
+                                    <i class="bi bi-check-circle me-1"></i>Khả dụng
+                                </span>
+                                <span th:if="${v.status.name() == 'USED'}" class="fin-badge fin-badge-cancelled">
+                                    <i class="bi bi-check2-all me-1"></i>Đã sử dụng
+                                </span>
+                                <span th:if="${v.status.name() == 'EXPIRED'}" class="fin-badge fin-badge-unpaid">
+                                    <i class="bi bi-clock me-1"></i>Đã hết hạn
+                                </span>
+                            </td>
+                            <td class="text-center text-muted" th:text="${v.usedAt != null ? #temporals.format(v.usedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(vouchers)}">
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>Chưa có voucher cá nhân nào được phát hành theo chương trình này.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Cấp phát Voucher cho bệnh nhân -->
+<div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="issueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form th:action="@{/admin/promotions/{id}/issue-vouchers(id=${promo.promotionId})}" method="post">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="issueModalLabel">
+                        <i class="bi bi-ticket-perforated text-danger me-2"></i>Cấp phát Voucher cá nhân cho bệnh nhân
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">CHƯƠNG TRÌNH KHUYẾN MÃI</label>
+                        <input type="text" class="form-control" th:value="${promo.promoName + ' (' + promo.promoCode + ')'}" readonly>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="customPrefix" class="form-label text-muted small fw-bold">TIỀN TỐ MÃ VOUCHER</label>
+                            <input type="text" id="customPrefix" name="customPrefix" class="form-control"
+                                   th:value="'VC-' + ${promo.promoCode}" placeholder="VC-KM10...">
+                            <div class="form-text" style="font-size: 11px;">Mã phát hành tự sinh định dạng: [Tiền tố]-[MãBN]-[4 ký tự ngẫu nhiên].</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="expiresAt" class="form-label text-muted small fw-bold">HẠN DÙNG CỦA VOUCHER <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="expiresAt" name="expiresAt" class="form-control" required
+                                   th:value="${#temporals.format(promo.endDate, 'yyyy-MM-dd''T''HH:mm')}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">CHỌN BỆNH NHÂN ĐƯỢC NHẬN VOUCHER <span class="text-danger">*</span></label>
+                        <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">
+                            <div class="form-check mb-2" th:each="pt : ${patients}">
+                                <input class="form-check-input" type="checkbox" name="patientProfileIds" th:value="${pt.profileId}" th:id="'pt_' + ${pt.profileId}">
+                                <label class="form-check-label" th:for="'pt_' + ${pt.profileId}">
+                                    <strong th:text="${pt.fullName}">Nguyễn Văn An</strong>
+                                    <span class="badge bg-secondary ms-1" th:text="${pt.patientCode}">BN0001</span>
+                                    <span class="text-muted ms-2" th:text="'SĐT: ' + ${pt.phoneNumber}">0987654321</span>
+                                    <span th:if="${pt.membershipTier != null}" class="badge bg-warning text-dark ms-2" th:text="${pt.membershipTier.tierName}">Vàng</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-text" style="font-size: 11px;">Có thể chọn nhiều bệnh nhân để phát hành hàng loạt.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-send me-1"></i> Phát hành Voucher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

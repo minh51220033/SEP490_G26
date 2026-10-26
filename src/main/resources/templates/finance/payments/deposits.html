@@ -154,7 +154,7 @@
         resultsEl.style.display = 'block';
 
         try {
-            const resp = await fetch(`/api/doctor/patients/search?query=${encodeURIComponent(query)}`);
+            const resp = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query)}`);
             const data = await resp.json();
             if (data && data.length > 0) {
                 resultsEl.innerHTML = data.map(p => `
