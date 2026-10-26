@@ -111,6 +111,20 @@
                th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
                 <i class="bi bi-buildings" aria-hidden="true"></i><span>Quản lý cơ sở</span>
             </a>
+            <!-- FT19: Hạng thẻ & Tích điểm -->
+            <a th:href="@{/admin/membership-tiers}" class="side-link"
+               th:classappend="${activeMenu == 'membership-tiers'} ? 'is-active' : ''"
+               title="Quản lý hạng thành viên và quy tắc tích điểm (FT19 / UC-14)">
+                <i class="bi bi-award text-warning" aria-hidden="true"></i><span>Hạng thẻ &amp; Tích điểm</span>
+                <span class="badge bg-warning text-dark ms-auto" style="font-size: 10px;">FT19</span>
+            </a>
+            <!-- FT20: Khuyến mãi & Voucher -->
+            <a th:href="@{/admin/promotions}" class="side-link"
+               th:classappend="${activeMenu == 'admin-promotions'} ? 'is-active' : ''"
+               title="Quản lý chương trình khuyến mãi &amp; Voucher (FT20 / UC-15)">
+                <i class="bi bi-ticket-perforated text-danger" aria-hidden="true"></i><span>Khuyến mãi &amp; Voucher</span>
+                <span class="badge bg-danger text-white ms-auto" style="font-size: 10px;">FT20</span>
+            </a>
             <a href="#" class="side-link is-disabled" aria-disabled="true"
                th:classappend="${activeMenu == 'reports'} ? 'is-active' : ''">
                 <i class="bi bi-graph-up" aria-hidden="true"></i><span>Báo cáo &amp; Thống kê</span>
@@ -160,12 +174,6 @@
                 <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">SCR-22.3</span>
             </a>
 
-            <a th:href="@{/payments/deposits}" class="side-link"
-               th:classappend="${activeMenu == 'deposits'} ? 'is-active' : ''"
-               title="Quản lý Tiền tạm ứng &amp; Đặt cọc bệnh nhân">
-                <i class="bi bi-wallet2" aria-hidden="true"></i><span>Tạm ứng &amp; Đặt cọc</span>
-            </a>
-
             <a th:href="@{/payments/debts}" class="side-link"
                th:classappend="${activeMenu == 'debts'} ? 'is-active' : ''"
                title="Theo dõi &amp; Quản lý công nợ bệnh nhân">
@@ -186,6 +194,13 @@
             <a th:href="@{/reception/patients}" class="side-link"
                th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''">
                 <i class="bi bi-person-vcard" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
+            </a>
+            <!-- FT19: Tra cứu thẻ thành viên & Điểm -->
+            <a th:href="@{/reception/memberships}" class="side-link"
+               th:classappend="${activeMenu == 'reception-memberships'} ? 'is-active' : ''"
+               title="Tra cứu thẻ thành viên, điểm tích lũy &amp; quyền lợi (FT19)">
+                <i class="bi bi-credit-card text-info" aria-hidden="true"></i><span>Thẻ thành viên &amp; Điểm</span>
+                <span class="badge bg-info text-dark ms-auto" style="font-size: 10px;">FT19</span>
             </a>
             <a th:href="@{/reception/appointments}" class="side-link"
                th:classappend="${activeMenu == 'appointments'} ? 'is-active' : ''">
