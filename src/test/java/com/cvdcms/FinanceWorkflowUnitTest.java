@@ -717,11 +717,16 @@ public class FinanceWorkflowUnitTest {
         assertEquals(new BigDecimal("50000.00"), preview.getPointDiscountAmount());
         assertEquals(new BigDecimal("450000.00"), preview.getTotalAmount());
 
-        // Lưu cũng chỉ trừ tối đa 50 điểm
+        // Lưu: điểm chưa bị trừ tại thời điểm tạo hóa đơn (CONFIRMED) theo Requirement 1
         Invoice saved = invoiceService.createInvoice(req, 1L);
         assertEquals(new BigDecimal("50000.00"), saved.getPointDiscount());
         assertEquals(new BigDecimal("450000.00"), saved.getTotalAmount());
-        assertEquals(0, wallet.getCurrentPoints()); // Số dư về 0
+        assertEquals(50, wallet.getCurrentPoints()); // Vẫn còn 50 điểm trong ví
+
+        // Điểm chỉ được trừ khi chốt thanh toán (finalizeInvoiceBenefits)
+        when(patientLoyaltyWalletRepository.findByProfileIdForUpdate(1L)).thenReturn(Optional.of(wallet));
+        invoiceService.finalizeInvoiceBenefits(saved);
+        assertEquals(0, wallet.getCurrentPoints()); // Số dư về 0 sau khi chốt thanh toán
     }
 
     // =========================================================================

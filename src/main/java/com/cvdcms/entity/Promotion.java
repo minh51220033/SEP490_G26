@@ -32,6 +32,9 @@ public class Promotion {
     @Column(name = "promo_name", nullable = false, length = 200)
     private String promoName;
 
+    @Column(name = "description", length = 500)
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
     private Branch branch;
@@ -71,4 +74,22 @@ public class Promotion {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    @Transient
+    public String getFormattedDiscount() {
+        if (discountValue == null) {
+            return "0";
+        }
+        if (promoType == PromotionType.PERCENTAGE) {
+            return discountValue.stripTrailingZeros().toPlainString() + "%";
+        } else {
+            java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
+            return nf.format(discountValue) + " đ";
+        }
+    }
+
+    @Transient
+    public String getDisplayLabel() {
+        return promoName + " (" + getFormattedDiscount() + ")";
+    }
 }

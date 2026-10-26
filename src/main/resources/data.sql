@@ -29,3 +29,11 @@ INSERT IGNORE INTO materials (material_code, material_name, category, unit, min_
     ('VT-TH-KIM30G',  'Kim tiêm nha khoa siêu nhỏ 30G (Hộp 100c)', 'Tiêu hao',        'Hộp', '15.000', 1),
     ('VT-NN-GUTTA',   'Côn chính Gutta Percha nội nha F1-F3',      'Nội nha',         'Hộp', '10.000', 1),
     ('VT-PH-ALGIN',   'Bột lấy dấu răng Alginate Cavex',           'Phục hình',       'Gói', '12.000', 1);
+
+-- Dữ liệu hạt giống Hạng thành viên (FT19)
+INSERT IGNORE INTO membership_tiers (tier_id, tier_code, tier_name, min_total_spent, discount_percent, spend_per_point, point_value, display_order, is_active) VALUES
+    (1, 'STANDARD', 'Thành viên mới', 0.00,        0.00,  10000.00, 1000.00, 1, 1),
+    (2, 'SILVER',   'Thành viên Bạc', 5000000.00,  5.00,  10000.00, 1000.00, 2, 1),
+    (3, 'GOLD',     'Thành viên Vàng', 20000000.00, 10.00, 10000.00, 1000.00, 3, 1),
+    (4, 'DIAMOND',  'Kim Cương VIP',  50000000.00, 15.00, 10000.00, 1000.00, 4, 1);
+
