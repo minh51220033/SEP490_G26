@@ -282,6 +282,25 @@
         </div>
     </div>
 </div>
+<div id="paymentSuccessToast"
+     class="payment-success-toast"
+     role="status"
+     aria-live="polite"
+     aria-atomic="true"
+     hidden>
+    <div class="payment-success-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <div class="payment-success-content">
+        <strong>Thanh toán thành công</strong>
+        <span>Giao dịch đã được ghi nhận.</span>
+        <small>
+            Mã phiếu thu:
+            <b id="paymentSuccessCode"></b>
+        </small>
+    </div>
+</div>
 
 <script th:inline="javascript">
     function openQuickPayModal(btn) {
@@ -335,8 +354,13 @@
             });
             const data = await resp.json();
             if (data.success) {
-                alert(`Thanh toán thành công! Mã phiếu thu: ${data.paymentCode}`);
-                window.location.reload();
+                closeQuickPayModal();
+                document.getElementById('paymentSuccessCode').textContent =
+                    data.paymentCode || '';
+                document.getElementById('paymentSuccessToast').hidden = false;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2400);
             } else {
                 errorEl.textContent = data.error || 'Có lỗi xảy ra khi xử lý thanh toán.';
                 errorEl.style.display = 'block';

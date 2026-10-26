@@ -127,4 +127,84 @@ CREATE TABLE IF NOT EXISTS refunds (
     CONSTRAINT fk_ref_staff FOREIGN KEY (refunded_by) REFERENCES staff_profiles(staff_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 6. HẠNG THÀNH VIÊN (MEMBERSHIP_TIERS - FT19)
+CREATE TABLE IF NOT EXISTS membership_tiers (
+    tier_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tier_code VARCHAR(20) NOT NULL UNIQUE,
+    tier_name VARCHAR(50) NOT NULL,
+    min_total_spent DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    spend_per_point DECIMAL(15,2) NOT NULL DEFAULT 10000.00,
+    point_value DECIMAL(15,2) NOT NULL DEFAULT 1000.00,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    INDEX idx_tier_order (display_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. VÍ TÍCH ĐIỂM BỆNH NHÂN (PATIENT_LOYALTY_WALLETS - FT19)
+CREATE TABLE IF NOT EXISTS patient_loyalty_wallets (
+    wallet_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    profile_id BIGINT NOT NULL UNIQUE,
+    current_points INT NOT NULL DEFAULT 0,
+    total_spent_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    last_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_plw_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. LỊCH SỬ GIAO DỊCH ĐIỂM (POINT_TRANSACTIONS - FT19)
+CREATE TABLE IF NOT EXISTS point_transactions (
+    transaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    profile_id BIGINT NOT NULL,
+    invoice_id BIGINT NULL,
+    payment_id BIGINT NULL,
+    transaction_type VARCHAR(20) NOT NULL,
+    points INT NOT NULL,
+    balance_after INT NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_pt_profile (profile_id, created_at),
+    INDEX idx_pt_invoice (invoice_id),
+    CONSTRAINT fk_pt_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id) ON DELETE CASCADE,
+    CONSTRAINT fk_pt_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE SET NULL,
+    CONSTRAINT fk_pt_payment FOREIGN KEY (payment_id) REFERENCES payments(payment_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. CHƯƠNG TRÌNH KHUYẾN MÃI (PROMOTIONS - FT20)
+CREATE TABLE IF NOT EXISTS promotions (
+    promotion_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    promo_code VARCHAR(30) NOT NULL UNIQUE,
+    promo_name VARCHAR(200) NOT NULL,
+    description VARCHAR(500) NULL,
+    branch_id BIGINT NULL,
+    promo_type VARCHAR(20) NOT NULL DEFAULT 'PERCENTAGE',
+    discount_value DECIMAL(15,2) NOT NULL,
+    max_discount_amount DECIMAL(15,2) NULL,
+    min_bill_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    applicable_tier_id BIGINT NULL,
+    applicable_service_id BIGINT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    usage_limit INT NULL,
+    used_count INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    INDEX idx_promo_branch_date (branch_id, start_date, end_date),
+    CONSTRAINT fk_promo_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id) ON DELETE SET NULL,
+    CONSTRAINT fk_promo_tier FOREIGN KEY (applicable_tier_id) REFERENCES membership_tiers(tier_id) ON DELETE SET NULL,
+    CONSTRAINT fk_promo_service FOREIGN KEY (applicable_service_id) REFERENCES services(service_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. VOUCHER BỆNH NHÂN (PATIENT_VOUCHERS - FT20)
+CREATE TABLE IF NOT EXISTS patient_vouchers (
+    voucher_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    promotion_id BIGINT NOT NULL,
+    profile_id BIGINT NOT NULL,
+    voucher_code VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    INDEX idx_pv_profile_status (profile_id, status),
+    CONSTRAINT fk_pv_promo FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id) ON DELETE CASCADE,
+    CONSTRAINT fk_pv_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

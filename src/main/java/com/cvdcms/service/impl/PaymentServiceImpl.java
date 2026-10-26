@@ -34,6 +34,59 @@ public class PaymentServiceImpl implements PaymentService {
     private final PointTransactionRepository pointTransactionRepository;
     private final MembershipTierRepository membershipTierRepository;
     private final UserRepository userRepository;
+    private final com.cvdcms.service.LoyaltyService loyaltyService;
+    private final com.cvdcms.service.InvoiceService invoiceService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PaymentServiceImpl(
+            PaymentRepository paymentRepository,
+            InvoiceRepository invoiceRepository,
+            InvoiceAuditLogRepository invoiceAuditLogRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            PatientLoyaltyWalletRepository patientLoyaltyWalletRepository,
+            PointTransactionRepository pointTransactionRepository,
+            MembershipTierRepository membershipTierRepository,
+            UserRepository userRepository,
+            com.cvdcms.service.LoyaltyService loyaltyService,
+            @org.springframework.context.annotation.Lazy com.cvdcms.service.InvoiceService invoiceService
+    ) {
+        this.paymentRepository = paymentRepository;
+        this.invoiceRepository = invoiceRepository;
+        this.invoiceAuditLogRepository = invoiceAuditLogRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+        this.patientLoyaltyWalletRepository = patientLoyaltyWalletRepository;
+        this.pointTransactionRepository = pointTransactionRepository;
+        this.membershipTierRepository = membershipTierRepository;
+        this.userRepository = userRepository;
+        this.loyaltyService = loyaltyService;
+        this.invoiceService = invoiceService;
+    }
+
+    public PaymentServiceImpl(
+            PaymentRepository paymentRepository,
+            InvoiceRepository invoiceRepository,
+            InvoiceAuditLogRepository invoiceAuditLogRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            PatientLoyaltyWalletRepository patientLoyaltyWalletRepository,
+            PointTransactionRepository pointTransactionRepository,
+            MembershipTierRepository membershipTierRepository,
+            UserRepository userRepository,
+            com.cvdcms.service.LoyaltyService loyaltyService
+    ) {
+        this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
+                patientProfileRepository, branchRepository, staffProfileRepository,
+                staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
+                pointTransactionRepository, membershipTierRepository, userRepository, loyaltyService, null);
+    }
 
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
@@ -48,17 +101,10 @@ public class PaymentServiceImpl implements PaymentService {
             MembershipTierRepository membershipTierRepository,
             UserRepository userRepository
     ) {
-        this.paymentRepository = paymentRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.invoiceAuditLogRepository = invoiceAuditLogRepository;
-        this.patientProfileRepository = patientProfileRepository;
-        this.branchRepository = branchRepository;
-        this.staffProfileRepository = staffProfileRepository;
-        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
-        this.patientLoyaltyWalletRepository = patientLoyaltyWalletRepository;
-        this.pointTransactionRepository = pointTransactionRepository;
-        this.membershipTierRepository = membershipTierRepository;
-        this.userRepository = userRepository;
+        this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
+                patientProfileRepository, branchRepository, staffProfileRepository,
+                staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
+                pointTransactionRepository, membershipTierRepository, userRepository, null, null);
     }
 
     /**
@@ -213,6 +259,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (newDebt.compareTo(BigDecimal.ZERO) <= 0) {
             invoice.setRemainingDebt(BigDecimal.ZERO);
             invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
+            if (invoiceService != null) {
+                invoiceService.finalizeInvoiceBenefits(invoice);
+            }
         } else {
             invoice.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
         }
@@ -231,7 +280,11 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 11. Tích điểm và nâng hạng thành viên (chỉ khi không dùng ví tạm ứng để tránh cộng trùng điểm)
         if (request.getPaymentMethod() != PaymentMethod.DEPOSIT_WALLET) {
-            updateLoyaltyAndTier(patient, request.getAmount(), invoice);
+            if (loyaltyService != null) {
+                loyaltyService.recordPaymentPoints(savedPayment);
+            } else {
+                updateLoyaltyAndTier(patient, request.getAmount(), invoice);
+            }
         }
 
         return savedPayment;
@@ -376,7 +429,11 @@ public class PaymentServiceImpl implements PaymentService {
         Payment saved = paymentRepository.save(payment);
 
         // Khi nạp tạm ứng, cộng điểm tích lũy ngay
-        updateLoyaltyAndTier(patient, request.getAmount(), null);
+        if (loyaltyService != null) {
+            loyaltyService.recordPaymentPoints(saved);
+        } else {
+            updateLoyaltyAndTier(patient, request.getAmount(), null);
+        }
 
         return saved;
     }
