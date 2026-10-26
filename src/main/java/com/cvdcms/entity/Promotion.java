@@ -32,6 +32,9 @@ public class Promotion {
     @Column(name = "promo_name", nullable = false, length = 200)
     private String promoName;
 
+    @Column(name = "description", length = 500)
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
     private Branch branch;

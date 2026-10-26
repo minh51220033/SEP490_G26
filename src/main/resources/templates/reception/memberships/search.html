@@ -82,7 +82,7 @@
                     <div class="col-md-4">
                         <label for="branchId" class="form-label small fw-bold text-muted">CƠ SỞ / CHI NHÁNH</label>
                         <select id="branchId" name="branchId" class="fin-select w-100">
-                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:if="${isAdmin}" value="">-- Tất cả cơ sở --</option>
                             <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                     th:selected="${selectedBranchId == b.branchId}"></option>
                         </select>

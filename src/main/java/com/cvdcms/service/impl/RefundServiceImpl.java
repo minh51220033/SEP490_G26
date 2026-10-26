@@ -32,6 +32,30 @@ public class RefundServiceImpl implements RefundService {
     private final StaffProfileRepository staffProfileRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final UserRepository userRepository;
+    private final com.cvdcms.service.LoyaltyService loyaltyService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RefundServiceImpl(
+            RefundRepository refundRepository,
+            InvoiceRepository invoiceRepository,
+            InvoiceAuditLogRepository invoiceAuditLogRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            UserRepository userRepository,
+            com.cvdcms.service.LoyaltyService loyaltyService
+    ) {
+        this.refundRepository = refundRepository;
+        this.invoiceRepository = invoiceRepository;
+        this.invoiceAuditLogRepository = invoiceAuditLogRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+        this.userRepository = userRepository;
+        this.loyaltyService = loyaltyService;
+    }
 
     public RefundServiceImpl(
             RefundRepository refundRepository,
@@ -43,14 +67,9 @@ public class RefundServiceImpl implements RefundService {
             StaffBranchAssignmentRepository staffBranchAssignmentRepository,
             UserRepository userRepository
     ) {
-        this.refundRepository = refundRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.invoiceAuditLogRepository = invoiceAuditLogRepository;
-        this.patientProfileRepository = patientProfileRepository;
-        this.branchRepository = branchRepository;
-        this.staffProfileRepository = staffProfileRepository;
-        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
-        this.userRepository = userRepository;
+        this(refundRepository, invoiceRepository, invoiceAuditLogRepository,
+                patientProfileRepository, branchRepository, staffProfileRepository,
+                staffBranchAssignmentRepository, userRepository, null);
     }
 
     /**
@@ -171,6 +190,10 @@ public class RefundServiceImpl implements RefundService {
             log.setDetails("Số tiền hoàn: " + request.getAmount() + " đ qua " + refund.getRefundMethod() + ". Nợ cập nhật lại: " + invoice.getRemainingDebt() + " đ");
             log.setPerformedBy(staff);
             invoiceAuditLogRepository.save(log);
+        }
+
+        if (loyaltyService != null) {
+            loyaltyService.recordRefundAdjustment(savedRefund);
         }
 
         return savedRefund;
