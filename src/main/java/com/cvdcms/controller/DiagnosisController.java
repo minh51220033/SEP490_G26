@@ -162,6 +162,10 @@ public class DiagnosisController {
         model.addAttribute("diagnosisTypes", DiagnosisType.values());
         model.addAttribute("allVisits", otherVisits);
 
+        // Khám tổng quát & Tiền sử
+        com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
+        model.addAttribute("generalExam", generalExam);
+
         // FT16 Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
@@ -207,6 +211,10 @@ public class DiagnosisController {
         List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
         model.addAttribute("paraclinicalServices", paraclinicalServices);
+
+        boolean isClinicalLocked = visit.getStatus() != null &&
+                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
+        model.addAttribute("isClinicalLocked", isClinicalLocked);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");

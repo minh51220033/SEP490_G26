@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: CHĂM SÓC KHÁCH HÀNG (CUSTOMER CARE & POST-OP FOLLOW-UP)           -->
+<!-- Frontend Fragment: doctor/fragments/patient-care-tab.html             -->
+<!-- ===================================================================== -->
+<div th:fragment="patientCareTab">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-chat-heart-fill fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Chăm sóc bệnh nhân sau điều trị (CSKH)</h4>
+                    <span class="text-secondary small">Nhật ký gọi điện hỏi thăm, tình trạng hồi phục &amp; khảo sát độ hài lòng</span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('Chức năng thêm lịch sử chăm sóc.');">
+                <i class="bi bi-telephone-plus me-1"></i>+ Ghi nhận cuộc gọi / CSKH
+            </button>
+        </div>
+
+        <div class="card-body p-4 bg-white">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 bg-light-subtle h-100">
+                        <div class="d-flex align-items-center gap-2 text-primary fw-bold mb-2">
+                            <i class="bi bi-clock-history fs-5"></i>
+                            <span>Nhắc việc chăm sóc</span>
+                        </div>
+                        <ul class="list-unstyled small d-flex flex-column gap-2 mb-0">
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <span>Gọi điện hỏi thăm sau nhổ răng (Ngày 1)</span>
+                            </li>
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-hourglass-split text-warning"></i>
+                                <span>Nhắc bệnh nhân tái khám cắt chỉ (Ngày 7)</span>
+                            </li>
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-chat-dots text-secondary"></i>
+                                <span>Khảo sát độ hài lòng dịch vụ (Zalo / SMS)</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="border rounded-3 p-3 bg-white h-100">
+                        <h6 class="fw-bold text-dark mb-3">
+                            <i class="bi bi-journal-text text-primary me-1"></i>Lịch sử liên hệ &amp; Phản hồi của bệnh nhân
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Thời gian</th>
+                                    <th>Hình thức</th>
+                                    <th>Nhân viên CSKH</th>
+                                    <th>Nội dung trao đổi</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>21/10/2026 14:00</td>
+                                    <td><span class="badge bg-success-subtle text-success border border-success">Gọi điện</span></td>
+                                    <td>Lễ tân CSKH</td>
+                                    <td>Hỏi thăm tình trạng sưng đau sau điều trị. Bệnh nhân phản hồi đỡ đau, đã dùng thuốc theo đơn.</td>
+                                    <td><span class="badge bg-light text-dark border">Đã liên hệ</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

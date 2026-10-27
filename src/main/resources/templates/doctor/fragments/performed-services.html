@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: DỊCH VỤ THỰC HIỆN THỰC TẾ (FT16 / SCR-16.1, 16.2)               -->
+<!-- Frontend Fragment: doctor/fragments/performed-services.html           -->
+<!-- ===================================================================== -->
+<div th:fragment="performedServicesSection">
+    <div class="df-treatment-card" id="performedServicesSection">
+        <div class="df-treatment-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
+            <div class="df-treatment-title-box d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-tools fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Nội dung điều trị / Dịch vụ thực hiện tại ghế (FT16)</h4>
+                    <span class="text-secondary small">Ghi nhận dịch vụ thực hiện thực tế, bác sĩ/phụ tá &amp; tính viện phí</span>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="performedCountBadge"
+                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
+                    0 dịch vụ
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <div class="df-treatment-total-pill bg-white border rounded-pill px-3 py-1.5 shadow-xs d-flex align-items-center gap-2">
+                    <i class="bi bi-cash-stack text-success fs-6"></i>
+                    <span class="small text-secondary">Tổng thành tiền: </span>
+                    <strong id="totalPerformedText" class="text-success fs-6"
+                            th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        0 đ
+                    </strong>
+                </div>
+
+                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+                        onclick="openAddTreatmentModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>+ Thêm dịch vụ điều trị</span>
+                </button>
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                    <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
+                </span>
+            </div>
+        </div>
+
+        <!-- BẢNG DANH SÁCH DỊCH VỤ ĐÃ THỰC HIỆN TRONG CA KHÁM -->
+        <div class="table-responsive p-3 bg-white">
+            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 100px;">Mã DV</th>
+                    <th>Tên dịch vụ điều trị &amp; Quy trình</th>
+                    <th style="width: 100px;" class="text-center">Răng</th>
+                    <th style="width: 110px;" class="text-end">Đơn giá</th>
+                    <th style="width: 70px;" class="text-center">SL</th>
+                    <th style="width: 90px;" class="text-end">Giảm trừ</th>
+                    <th style="width: 120px;" class="text-end">Thành tiền</th>
+                    <th style="width: 180px;">Bác sĩ &amp; Phụ tá</th>
+                    <th style="width: 120px;" class="text-center">Trạng thái</th>
+                    <th style="width: 130px;" class="text-center">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="performedServicesTableBody">
+                <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
+                    <td colspan="10" class="text-center py-4 text-muted">
+                        <i class="bi bi-tools fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Chưa có dịch vụ điều trị nào được ghi nhận cho ca khám này. Nhấn <strong>"+ Thêm dịch vụ điều trị"</strong> để thêm mới.</span>
+                    </td>
+                </tr>
+                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
+                    <td>
+                        <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark" th:text="${ps.serviceName}">Hàn răng sâu Composite</div>
+                        <div class="small text-muted" th:if="${ps.planName != null}" th:text="'Theo KHDT: ' + ${ps.planName}"></div>
+                        <div class="small text-secondary fst-italic" th:if="${ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}" th:text="${ps.clinicalNotes}"></div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-primary-subtle text-primary border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">R16</span>
+                    </td>
+                    <td class="text-end text-muted small" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        350,000 đ
+                    </td>
+                    <td class="text-center fw-semibold" th:text="${ps.quantity != null ? ps.quantity : 1}">
+                        1
+                    </td>
+                    <td class="text-end text-danger small" th:text="${ps.discountAmount != null and ps.discountAmount > 0 ? ('-' + #numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT') + ' đ') : '-'}">
+                        -
+                    </td>
+                    <td class="text-end fw-bold text-success" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        350,000 đ
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-dark">
+                            <i class="bi bi-person-badge text-primary me-1"></i><span th:text="${ps.doctorName}">BS. Lê Hoàng Nam</span>
+                        </div>
+                        <div class="small text-muted" th:if="${ps.assistantName != null}">
+                            <i class="bi bi-person-heart text-secondary me-1"></i><span th:text="'PT: ' + ${ps.assistantName}"></span>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge"
+                              th:classappend="${ps.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
+                              th:text="${ps.status == 'COMPLETED' ? 'Hoàn thành' : 'Đang làm'}">
+                            Hoàn thành
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-sm btn-outline-info"
+                                    title="Theo dõi các bước quy trình kỹ thuật tại ghế"
+                                    th:data-service-id="${ps.serviceId}"
+                                    th:data-service-name="${ps.serviceName}"
+                                    th:data-performed-id="${ps.performedId}"
+                                    onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))">
+                                <i class="bi bi-diagram-3"></i>
+                            </button>
+                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    title="Hủy dịch vụ thực hiện này"
+                                    th:data-id="${ps.performedId}"
+                                    onclick="deletePerformedService(this.getAttribute('data-id'))">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                            <span th:if="${isClinicalLocked}" class="text-muted ms-2" title="Bệnh án đã khóa (BR-EMR-02)">
+                                <i class="bi bi-lock-fill text-secondary"></i>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
