@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý Đặt xưởng Labo & Mẫu xét nghiệm - DentalSoft')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <!-- SIDEBAR DÙNG CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('labo')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- HEADER TOPBAR DÙNG CHUNG -->
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Đặt xưởng Labo & Mẫu xét nghiệm')}"></header>
+
+        <main class="app-content p-3 p-md-4" style="background: #f8fafc !important;">
+            <style>
+                :root {
+                    --lab-primary: #0284c7;
+                    --lab-primary-dark: #0369a1;
+                    --lab-primary-light: #e0f2fe;
+                    --lab-border: #e2e8f0;
+                    --lab-text-dark: #0f172a;
+                    --lab-text-muted: #64748b;
+                }
+
+                .lab-tab-nav {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    border-bottom: 2px solid #e2e8f0;
+                    margin-bottom: 20px;
+                }
+                .lab-tab-btn {
+                    background: none;
+                    border: none;
+                    padding: 10px 18px;
+                    font-size: 14.5px;
+                    font-weight: 600;
+                    color: #64748b;
+                    cursor: pointer;
+                    position: relative;
+                    transition: all 0.2s ease;
+                }
+                .lab-tab-btn:hover {
+                    color: #0284c7;
+                }
+                .lab-tab-btn.active {
+                    color: #0284c7;
+                }
+                .lab-tab-btn.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -2px;
+                    left: 0;
+                    width: 100%;
+                    height: 3px;
+                    background: #0284c7;
+                    border-radius: 3px 3px 0 0;
+                }
+
+                .lab-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+                }
+
+                .lab-search-input {
+                    border-radius: 20px;
+                    padding-left: 36px;
+                    border: 1px solid #cbd5e1;
+                    font-size: 13.5px;
+                }
+                .lab-search-icon {
+                    position: absolute;
+                    left: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #94a3b8;
+                }
+            </style>
+
+            <!-- BREADCRUMB & HEADER -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="small text-muted mb-1">
+                        <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-secondary">Khám lâm sàng</a>
+                        <span class="mx-1">&gt;</span>
+                        <span class="text-primary fw-semibold">Quản lý Labo &amp; Xét nghiệm</span>
+                    </div>
+                    <h4 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-droplet-half text-info"></i>
+                        <span>Quản lý Đặt xưởng Labo &amp; Mẫu gửi ngoài</span>
+                    </h4>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold"
+                            onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3.5 py-1.5 fw-bold shadow-sm"
+                            onclick="openCreateLaboModalMain()">
+                        <i class="bi bi-plus-circle-fill me-1"></i>+ Thêm phiếu đặt xưởng
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4 STAT CARDS -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-secondary small fw-semibold text-uppercase" style="font-size: 11px;">Tổng phiếu xưởng / xét nghiệm</span>
+                            <div class="h4 fw-bold text-dark mb-0 mt-1" th:text="${stats != null and stats.total != null ? stats.total : #lists.size(orders)}">2</div>
+                        </div>
+                        <div class="bg-primary-subtle text-primary p-2.5 rounded-circle">
+                            <i class="bi bi-folder2-open fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-warning small fw-semibold text-uppercase" style="font-size: 11px;">Đang chế tác / Chờ kết quả</span>
+                            <div class="h4 fw-bold text-warning mb-0 mt-1" th:text="${stats != null and stats.processing != null ? stats.processing : 1}">1</div>
+                        </div>
+                        <div class="bg-warning-subtle text-warning p-2.5 rounded-circle">
+                            <i class="bi bi-hourglass-split fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-info small fw-semibold text-uppercase" style="font-size: 11px;">Đã nhận về phòng khám</span>
+                            <div class="h4 fw-bold text-info mb-0 mt-1" th:text="${stats != null and stats.delivered != null ? stats.delivered : 1}">1</div>
+                        </div>
+                        <div class="bg-info-subtle text-info p-2.5 rounded-circle">
+                            <i class="bi bi-check2-circle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-success small fw-semibold text-uppercase" style="font-size: 11px;">Có ảnh giấy KQ / Phiếu</span>
+                            <div class="h4 fw-bold text-success mb-0 mt-1" th:text="${stats != null and stats.withImage != null ? stats.withImage : 2}">2</div>
+                        </div>
+                        <div class="bg-success-subtle text-success p-2.5 rounded-circle">
+                            <i class="bi bi-camera-fill fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 MAIN TABS THEO ĐÚNG ẢNH 1, 2, 3 CỦA DENTALSOFT -->
+            <div class="lab-tab-nav">
+                <button type="button" class="lab-tab-btn" id="btnTabOrders" th:classappend="${currentTab == 'orders' or currentTab == null ? 'active' : ''}" onclick="switchLabTab('orders')">
+                    Phiếu đặt xưởng
+                </button>
+                <button type="button" class="lab-tab-btn" id="btnTabSuppliers" th:classappend="${currentTab == 'suppliers' ? 'active' : ''}" onclick="switchLabTab('suppliers')">
+                    Nhà cung cấp
+                </button>
+                <button type="button" class="lab-tab-btn" id="btnTabPricing" th:classappend="${currentTab == 'pricing' ? 'active' : ''}" onclick="switchLabTab('pricing')">
+                    Bảng giá
+                </button>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- TAB 1: PHIẾU ĐẶT XƯỞNG                                        -->
+            <!-- ============================================================= -->
+            <div class="lab-card p-3 p-md-4" id="pane-orders" th:style="${currentTab == 'orders' or currentTab == null ? 'display:block;' : 'display:none;'}">
+                <!-- TOOLBAR -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                    <div class="d-flex flex-wrap align-items-center gap-2" style="max-width: 600px; flex: 1;">
+                        <div class="position-relative" style="min-width: 260px; flex: 1;">
+                            <i class="bi bi-search lab-search-icon"></i>
+                            <input type="text" class="form-control form-control-sm lab-search-input" id="searchOrdersInput"
+                                   placeholder="Tìm theo mã phiếu, khách hàng, xưởng, răng..."
+                                   oninput="filterLaboOrdersLocal(this.value)">
+                        </div>
+                        <select class="form-select form-select-sm" id="filterStatusSelect" style="width: 170px;" onchange="filterLaboOrdersLocal()">
+                            <option value="">-- Tất cả trạng thái --</option>
+                            <option value="SENT">Mới gửi</option>
+                            <option value="PROCESSING">Đang chế tác / Chờ KQ</option>
+                            <option value="DELIVERED">Đã nhận về phòng khám</option>
+                            <option value="FITTED_SUCCESS">Đã lắp hoàn tất</option>
+                            <option value="RETURNED">Đã trả lại / Bảo hành</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" onclick="openCreateLaboModalMain()">
+                        <i class="bi bi-plus-lg me-1"></i>+ Thêm phiếu
+                    </button>
+                </div>
+
+                <!-- TABLE PHIẾU ĐẶT XƯỞNG -->
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" id="mainLaboTable" style="font-size: 13.5px;">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px;" class="text-center">TT</th>
+                            <th style="width: 105px;">Mã phiếu</th>
+                            <th>Khách hàng (Bệnh nhân)</th>
+                            <th>Dịch vụ / Phục hình / Xét nghiệm</th>
+                            <th style="width: 90px;" class="text-center">Vị trí</th>
+                            <th>Xưởng Labo / Đơn vị ngoài</th>
+                            <th style="width: 135px;">Ngày gửi / Hẹn trả</th>
+                            <th style="width: 120px;" class="text-end">Thành tiền</th>
+                            <th style="width: 125px;" class="text-center">Ảnh giấy KQ / Mẫu</th>
+                            <th style="width: 125px;" class="text-center">Trạng thái</th>
+                            <th style="width: 110px;" class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="mainLaboTableBody">
+                        <tr th:if="${orders == null or #lists.isEmpty(orders)}">
+                            <td colspan="11" class="text-center py-5 text-muted">
+                                <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào. Nhấn <strong>"+ Thêm phiếu"</strong> để tạo mới.</span>
+                            </td>
+                        </tr>
+
+                        <tr th:each="order, stat : ${orders}" th:id="'main-row-' + ${order.laboId}" class="labo-order-row">
+                            <td class="text-center text-muted" th:text="${stat.count}">1</td>
+                            <td>
+                                <strong class="text-primary" th:text="${order.laboCode}">LAB-0021</strong>
+                                <div class="small text-muted" style="font-size: 11px;" th:text="${order.orderTypeLabel}">Làm mới</div>
+                            </td>
+                            <td>
+                                <strong class="text-dark d-block" th:text="${order.patientName}">Nguyễn Văn An</strong>
+                                <div class="small text-muted">
+                                    <span th:text="${order.patientCode}">DEMO0001</span>
+                                    <span th:if="${order.patientPhone != null and !#strings.isEmpty(order.patientPhone)}" th:text="' - ' + ${order.patientPhone}"></span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark d-block" th:text="${order.materialType}">Răng sứ Zirconia DDBio</span>
+                                <div class="small text-secondary mt-0.5">
+                                    <span th:if="${order.shadeColor != null and !#strings.isEmpty(order.shadeColor)}"
+                                          class="badge bg-light text-secondary border me-1" th:text="'Màu: ' + ${order.shadeColor}">Màu: A2</span>
+                                    <span th:if="${order.crownInfo != null and !#strings.isEmpty(order.crownInfo)}"
+                                          class="badge bg-light text-secondary border me-1" th:text="${order.crownInfo}">Mão</span>
+                                    <span th:if="${order.bridgeInfo != null and !#strings.isEmpty(order.bridgeInfo)}"
+                                          class="badge bg-light text-secondary border" th:text="${order.bridgeInfo}">Cầu</span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border" th:text="${order.toothPositions != null ? order.toothPositions : '-'}">R26</span>
+                            </td>
+                            <td>
+                                <strong class="text-dark" th:text="${order.supplierName}">Labo Nha khoa Sài Gòn</strong>
+                                <div class="small text-muted" th:if="${order.supplierPhone != null}" th:text="${order.supplierPhone}">02838001122</div>
+                            </td>
+                            <td>
+                                <div class="small text-secondary">
+                                    <i class="bi bi-send text-primary me-1"></i><span th:text="${order.sentDateFormatted}">21/10/2026</span>
+                                </div>
+                                <div class="small fw-semibold mt-0.5 text-warning-emphasis">
+                                    <i class="bi bi-clock-history text-warning me-1"></i><span th:text="${order.expectedDateFormatted}">25/10/2026</span>
+                                    <span class="text-muted" th:if="${order.tryInTime != null}" th:text="' ' + ${order.tryInTime}"></span>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-dark" th:text="${#numbers.formatDecimal(order.costToClinic, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.500.000 đ</strong>
+                                <div class="small text-muted" th:text="${order.quantity} + ' x ' + ${#numbers.formatDecimal(order.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">1 x 1.500.000 đ</div>
+                            </td>
+                            <td class="text-center">
+                                <!-- NẾU CÓ ẢNH -->
+                                <div th:if="${order.imageUrl != null and !#strings.isEmpty(order.imageUrl)}" class="d-flex flex-column align-items-center gap-1">
+                                    <a href="javascript:void(0)"
+                                       th:data-image="${order.imageUrl}"
+                                       th:data-title="${order.laboCode + ' - ' + order.materialType}"
+                                       th:data-patient="${order.patientName}"
+                                       onclick="viewLaboImage(this.getAttribute('data-image'), this.getAttribute('data-title'), this.getAttribute('data-patient'))"
+                                       class="position-relative d-inline-block rounded border shadow-xs overflow-hidden"
+                                       style="width: 52px; height: 52px; cursor: pointer;">
+                                        <img th:src="${order.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Giấy xét nghiệm">
+                                        <span class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center" style="font-size: 9px; line-height: 14px;">
+                                            <i class="bi bi-zoom-in"></i> Xem
+                                        </span>
+                                    </a>
+                                </div>
+                                <!-- NẾU CHƯA CÓ ẢNH -->
+                                <div th:unless="${order.imageUrl != null and !#strings.isEmpty(order.imageUrl)}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" style="font-size: 11.5px;"
+                                            th:data-id="${order.laboId}" th:data-code="${order.laboCode}"
+                                            onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))">
+                                        <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" th:classappend="${order.statusBadgeClass}" th:text="${order.statusLabel}">Mới gửi</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="In phiếu"
+                                            th:data-id="${order.laboId}" onclick="printOrder(this.getAttribute('data-id'))">
+                                        <i class="bi bi-printer-fill"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Sửa"
+                                            th:data-id="${order.laboId}" onclick="openEditLaboModalMain(this.getAttribute('data-id'))">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa"
+                                            th:data-id="${order.laboId}" onclick="deleteOrderMain(this.getAttribute('data-id'))">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 text-muted small">
+                    <span>Hiển thị <strong th:text="${#lists.size(orders)}">2</strong> phiếu</span>
+                    <span class="fst-italic text-secondary">Tự động đồng bộ với Bệnh án lâm sàng của Bác sĩ</span>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- TAB 2: NHÀ CUNG CẤP / LABO (THEO ĐÚNG ẢNH 1 CỦA DENTALSOFT)   -->
+            <!-- ============================================================= -->
+            <div class="lab-card p-3 p-md-4" id="pane-suppliers" th:style="${currentTab == 'suppliers' ? 'display:block;' : 'display:none;'}">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                    <div class="position-relative" style="width: 340px;">
+                        <i class="bi bi-search lab-search-icon"></i>
+                        <input type="text" class="form-control form-control-sm lab-search-input" id="searchSupplierInput"
+                               placeholder="Tìm theo tên, mã, SĐT..."
+                               oninput="filterSuppliersLocal(this.value)">
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold" onclick="openAddSupplierModal()">
+                        <i class="bi bi-plus-lg me-1"></i>+ Thêm
+                    </button>
+                </div>
+
+                <!-- TABLE NHÀ CUNG CẤP CHUẨN ẢNH 1 -->
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 13.5px;">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;" class="text-center">TT</th>
+                            <th style="width: 120px;">MÃ NCC</th>
+                            <th>TÊN LABO / NHÀ CUNG CẤP</th>
+                            <th style="width: 160px;">ĐIỆN THOẠI</th>
+                            <th>ĐỊA CHỈ</th>
+                            <th style="width: 180px;">EMAIL / GHI CHÚ</th>
+                            <th style="width: 130px;" class="text-center">THAO TÁC</th>
+                        </tr>
+                        </thead>
+                        <tbody id="supplierTableBody">
+                        <tr th:if="${suppliers == null or #lists.isEmpty(suppliers)}">
+                            <td colspan="7" class="text-center py-4 text-muted">Chưa có nhà cung cấp / labo nào.</td>
+                        </tr>
+                        <tr th:each="sup, stat : ${suppliers}" class="supplier-row">
+                            <td class="text-center text-muted" th:text="${stat.count}">1</td>
+                            <td><strong class="text-primary" th:text="${sup.supplierCode}">LB01</strong></td>
+                            <td><strong class="text-dark" th:text="${sup.supplierName}">Labo Nha khoa Sài Gòn</strong></td>
+                            <td><span class="text-secondary" th:text="${sup.phoneNumber != null ? sup.phoneNumber : '-'}">02838001122</span></td>
+                            <td><span class="text-secondary" th:text="${sup.address != null ? sup.address : '-'}">Quận 5, TP. Hồ Chí Minh</span></td>
+                            <td><span class="text-muted small" th:text="${sup.taxCode != null ? 'MST: ' + sup.taxCode : '-'}">-</span></td>
+                            <td class="text-center">
+                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                    <span class="text-success fs-6" title="Đang hoạt động"><i class="bi bi-power"></i></span>
+                                    <button type="button" class="btn btn-sm btn-link text-primary p-0" title="Chỉnh sửa"
+                                            th:data-id="${sup.supplierId}" th:data-name="${sup.supplierName}" th:data-code="${sup.supplierCode}"
+                                            th:data-phone="${sup.phoneNumber}" th:data-addr="${sup.address}"
+                                            onclick="openEditSupplierModal(this.getAttribute('data-id'), this.getAttribute('data-name'), this.getAttribute('data-code'), this.getAttribute('data-phone'), this.getAttribute('data-addr'))">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"
+                                            th:data-id="${sup.supplierId}" onclick="deleteSupplier(this.getAttribute('data-id'))">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-muted small">
+                    Tổng: <strong th:text="${#lists.size(suppliers)}">2</strong> nhà cung cấp
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- TAB 3: BẢNG GIÁ LABO (THEO ĐÚNG ẢNH 3 CỦA DENTALSOFT)         -->
+            <!-- ============================================================= -->
+            <div class="lab-card p-3 p-md-4" id="pane-pricing" th:style="${currentTab == 'pricing' ? 'display:block;' : 'display:none;'}">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small fw-semibold text-secondary">Nhà cung cấp:</span>
+                            <select class="form-select form-select-sm" id="pricingSupplierSelect" style="width: 250px;" onchange="onPricingSupplierChange()">
+                                <option th:each="sup : ${suppliers}"
+                                        th:value="${sup.supplierId}"
+                                        th:text="${sup.supplierCode + ' - ' + sup.supplierName}">
+                                    LB01 - Labo Nha khoa Sài Gòn
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="position-relative" style="width: 280px;">
+                            <i class="bi bi-search lab-search-icon"></i>
+                            <input type="text" class="form-control form-control-sm lab-search-input" id="searchPricingInput"
+                                   placeholder="Tìm theo tên DV, mã hiệu..."
+                                   oninput="filterPricingLocal(this.value)">
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold" onclick="openAddPricingModal()">
+                        <i class="bi bi-plus-lg me-1"></i>+ Thêm giá
+                    </button>
+                </div>
+
+                <!-- TABLE BẢNG GIÁ LABO CHUẨN ẢNH 3 -->
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 13.5px;">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;" class="text-center">TT</th>
+                            <th style="width: 120px;">MÃ HIỆU</th>
+                            <th>TÊN DỊCH VỤ CÓ LABO / XÉT NGHIỆM</th>
+                            <th style="width: 160px;" class="text-end">ĐƠN GIÁ (đ)</th>
+                            <th>GHI CHÚ / BẢO HÀNH</th>
+                            <th style="width: 120px;" class="text-center">TRẠNG THÁI</th>
+                            <th style="width: 100px;" class="text-center">THAO TÁC</th>
+                        </tr>
+                        </thead>
+                        <tbody id="pricingTableBody">
+                        <!-- Mẫu các mục giá tiêu biểu -->
+                        <tr class="pricing-row">
+                            <td class="text-center text-muted">1</td>
+                            <td><strong class="text-primary">ZCR-DDBIO</strong></td>
+                            <td><strong class="text-dark">Răng sứ Zirconia DDBio cao cấp</strong></td>
+                            <td class="text-end fw-bold text-dark">1.500.000 đ</td>
+                            <td><span class="text-secondary small">Bảo hành chính hãng 10 năm, độ cứng 1200 MPa</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success border">Bật</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" title="Sửa"><i class="bi bi-pencil"></i></button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="pricing-row">
+                            <td class="text-center text-muted">2</td>
+                            <td><strong class="text-primary">CERCON-HT</strong></td>
+                            <td><strong class="text-dark">Răng sứ Cercon HT chính hãng Đức</strong></td>
+                            <td class="text-end fw-bold text-dark">2.200.000 đ</td>
+                            <td><span class="text-secondary small">Bảo hành 10 năm, sứ đa tầng thẩm mỹ cao</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success border">Bật</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" title="Sửa"><i class="bi bi-pencil"></i></button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="pricing-row">
+                            <td class="text-center text-muted">3</td>
+                            <td><strong class="text-primary">LAVA-PLUS</strong></td>
+                            <td><strong class="text-dark">Răng sứ Lava Plus 3M USA</strong></td>
+                            <td class="text-end fw-bold text-dark">3.500.000 đ</td>
+                            <td><span class="text-secondary small">Bảo hành 15 năm, độ trong mờ tự nhiên</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success border">Bật</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" title="Sửa"><i class="bi bi-pencil"></i></button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="pricing-row">
+                            <td class="text-center text-muted">4</td>
+                            <td><strong class="text-primary">XN-DONG-MAU</strong></td>
+                            <td><strong class="text-dark">Xét nghiệm đông máu PT/APTT/INR (Mẫu máu)</strong></td>
+                            <td class="text-end fw-bold text-dark">350.000 đ</td>
+                            <td><span class="text-secondary small">Trả kết quả trong 2 giờ, đính kèm giấy xét nghiệm</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success border">Bật</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" title="Sửa"><i class="bi bi-pencil"></i></button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-muted small">
+                    Tổng: <strong>4</strong> dịch vụ – NCC: Labo Nha khoa Sài Gòn
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL THÊM PHIẾU ĐẶT XƯỞNG (CHUẨN ẢNH 2 CỦA DENTALSOFT)               -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="mainCreateLaboModal" tabindex="-1" aria-labelledby="mainCreateLaboModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
+                        <i class="bi bi-box-seam-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="mainCreateLaboModalLabel">Thêm phiếu đặt xưởng</h5>
+                        <small class="text-white-50">Phiếu đặt xưởng labo &amp; Gửi mẫu xét nghiệm</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light-subtle">
+                <form id="mainLaboForm" onsubmit="event.preventDefault(); submitMainLaboForm();">
+                    <input type="hidden" id="mainLaboEditId" value="">
+
+                    <!-- HÀNG 1: KHÁCH HÀNG, DỊCH VỤ, NHÀ CUNG CẤP -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Khách hàng <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="mainModalPatientSelect" required>
+                                <option value="">-- Chọn khách hàng --</option>
+                                <option th:each="p : ${patients}"
+                                        th:value="${p.profileId}"
+                                        th:text="${p.fullName + ' (' + p.patientCode + ') - ' + (p.phoneNumber != null ? p.phoneNumber : '')}">
+                                    Nguyễn Văn An (DEMO0001)
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Dịch vụ <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="mainModalMaterialType" required onchange="onMainServiceSelectChange(this.value)">
+                                <option value="">- Chọn dịch vụ labo -</option>
+                                <option value="Răng sứ Zirconia DDBio cao cấp" data-price="1500000">Răng sứ Zirconia DDBio (1.500.000 đ)</option>
+                                <option value="Răng sứ Cercon HT chính hãng" data-price="2200000">Răng sứ Cercon HT (2.200.000 đ)</option>
+                                <option value="Răng sứ Lava Plus 3M USA" data-price="3500000">Răng sứ Lava Plus 3M (3.500.000 đ)</option>
+                                <option value="Mão sứ kim loại Titan" data-price="900000">Mão sứ Titan (900.000 đ)</option>
+                                <option value="Mặt dán sứ Veneer Emax Press" data-price="3000000">Mặt dán sứ Veneer Emax (3.000.000 đ)</option>
+                                <option value="Xét nghiệm đông máu PT/APTT/INR (Mẫu máu)" data-price="350000">Xét nghiệm đông máu PT/APTT/INR (350.000 đ)</option>
+                                <option value="Xét nghiệm công thức máu CBC" data-price="250000">Xét nghiệm công thức máu CBC (250.000 đ)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Nhà cung cấp <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="mainModalSupplierSelect" required>
+                                <option value="">- Chọn NCC -</option>
+                                <option th:each="s : ${suppliers}"
+                                        th:value="${s.supplierId}"
+                                        th:text="${s.supplierCode + ' - ' + s.supplierName}">
+                                    LB01 - Labo Nha khoa Sài Gòn
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- HÀNG 2: NGÀY GỬI, NGÀY THỬ/TRẢ, TRẠNG THÁI -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Ngày gửi</label>
+                            <input type="date" class="form-control form-control-sm" id="mainModalSentDate">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-dark small mb-1">Ngày thử / Hẹn trả</label>
+                            <div class="input-group input-group-sm">
+                                <input type="date" class="form-control" id="mainModalTryInDate">
+                                <span class="input-group-text bg-white small">Giờ</span>
+                                <select class="form-select" id="mainModalTryInHour" style="max-width: 80px;">
+                                    <option value="09:00" selected>09:00</option>
+                                    <option value="10:00">10:00</option>
+                                    <option value="11:00">11:00</option>
+                                    <option value="14:00">14:00</option>
+                                    <option value="15:00">15:00</option>
+                                    <option value="16:00">16:00</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Trạng thái</label>
+                            <select class="form-select form-select-sm" id="mainModalStatusSelect">
+                                <option value="SENT" selected>Mới gửi</option>
+                                <option value="PROCESSING">Đang chế tác / Chờ KQ</option>
+                                <option value="DELIVERED">Đã nhận về</option>
+                                <option value="FITTED_SUCCESS">Đã lắp hoàn tất</option>
+                                <option value="RETURNED">Đã trả lại / Bảo hành</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- HÀNG 3: SỐ LƯỢNG, ĐƠN GIÁ, THÀNH TIỀN, LOẠI PHIẾU -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Số lượng</label>
+                            <input type="number" class="form-control form-control-sm" id="mainModalQuantity" min="1" value="1" oninput="calcMainModalTotal()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ)</label>
+                            <input type="number" class="form-control form-control-sm" id="mainModalUnitPrice" min="0" value="1500000" oninput="calcMainModalTotal()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Thành tiền (đ)</label>
+                            <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="mainModalCostDisplay" value="1.500.000 đ" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Loại phiếu</label>
+                            <select class="form-select form-select-sm" id="mainModalOrderType">
+                                <option value="NEW" selected>Làm mới</option>
+                                <option value="REDO">Làm lại</option>
+                                <option value="WARRANTY">Bảo hành</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- HÀNG 4: MÀU SỨ, CẦU, MÃO -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Màu sứ</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalShadeColor" placeholder="A2, A3...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Cầu (bridge)</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalBridge" placeholder="Cầu răng...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Mão (crown)</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalCrown" placeholder="Mão đơn...">
+                        </div>
+                    </div>
+
+                    <!-- HÀNG 5: YÊU CẦU KỸ THUẬT -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Yêu cầu kỹ thuật</label>
+                        <textarea class="form-control form-control-sm" id="mainModalNotes" rows="2" placeholder="Ghi chú lâm sàng, yêu cầu xưởng chế tác..."></textarea>
+                    </div>
+
+                    <!-- HÀNG 6: ẢNH GIẤY XÉT NGHIỆM / PHIẾU GỬI LABO -->
+                    <div class="p-3 rounded-3 border bg-white mb-2">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold text-dark small">
+                                <i class="bi bi-camera-fill text-primary me-1"></i>Link ảnh hoặc File ảnh giấy kết quả xét nghiệm / Phiếu xưởng:
+                            </span>
+                            <span class="badge bg-light text-muted border small">Xem trực tiếp sau khi lưu</span>
+                        </div>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-8">
+                                <input type="url" class="form-control form-control-sm mb-2" id="mainModalImageUrl"
+                                       placeholder="Dán link ảnh (https://...) hoặc chọn file bên dưới" oninput="onMainModalUrlInput(this.value)">
+                                <input type="file" class="form-control form-control-sm" id="mainModalImageFile" accept="image/*" onchange="previewMainModalFile(event)">
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div id="mainModalPreviewContainer" class="border rounded p-1 bg-light position-relative d-inline-block" style="width: 120px; height: 80px; display: none;">
+                                    <img id="mainModalPreviewImg" src="" style="width: 100%; height: 100%; object-fit: contain;">
+                                </div>
+                                <div id="mainModalPreviewPlaceholder" class="text-muted small border rounded p-2 bg-light">
+                                    Chưa có ảnh
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
+                        <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold" id="btnSaveMainModal">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL THÊM GIÁ LABO (CHUẨN ẢNH 3 CỦA DENTALSOFT)                      -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="addPricingModal" tabindex="-1" aria-labelledby="addPricingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <div>
+                    <h5 class="modal-title fw-bold text-white mb-0" id="addPricingModalLabel">Thêm giá labo</h5>
+                    <small class="text-white-50" id="pricingModalSupplierName">Labo Nha khoa Sài Gòn</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addPricingForm" onsubmit="event.preventDefault(); submitAddPricingForm();">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Dịch vụ <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="pricingServiceSelect" required>
+                            <option value="">- Chọn dịch vụ có labo -</option>
+                            <option value="Răng sứ Zirconia DDBio cao cấp">Răng sứ Zirconia DDBio cao cấp</option>
+                            <option value="Răng sứ Cercon HT chính hãng">Răng sứ Cercon HT chính hãng</option>
+                            <option value="Răng sứ Lava Plus 3M USA">Răng sứ Lava Plus 3M USA</option>
+                            <option value="Mão sứ kim loại Titan">Mão sứ kim loại Titan</option>
+                            <option value="Xét nghiệm đông máu PT/APTT/INR">Xét nghiệm đông máu PT/APTT/INR</option>
+                            <option value="Xét nghiệm công thức máu toàn phần (CBC)">Xét nghiệm công thức máu toàn phần (CBC)</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Mã hiệu</label>
+                            <input type="text" class="form-control form-control-sm" id="pricingCodeInput" placeholder="VD: LB001, ZCR-A1...">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control form-control-sm" id="pricingPriceInput" required placeholder="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Ghi chú</label>
+                        <textarea class="form-control form-control-sm" id="pricingNoteInput" rows="2" placeholder="Ghi chú bảo hành, thời gian chế tác..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Trạng thái</label>
+                        <select class="form-select form-select-sm" id="pricingStatusSelect">
+                            <option value="1" selected>Bật</option>
+                            <option value="0">Tắt</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL THÊM / SỬA NHÀ CUNG CẤP (CHUẨN ẢNH 1 CỦA DENTALSOFT)            -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <h5 class="modal-title fw-bold text-white mb-0" id="addSupplierModalLabel">Thêm Nhà cung cấp / Labo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addSupplierForm" onsubmit="event.preventDefault(); submitAddSupplierForm();">
+                    <input type="hidden" id="supplierFormId" value="">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Mã NCC / Labo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="supplierCodeInput" required placeholder="VD: LB01, LB02, MEDLATEC...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Tên Labo / Nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="supplierNameInput" required placeholder="VD: Labo Nha khoa Sài Gòn">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Số điện thoại</label>
+                        <input type="text" class="form-control form-control-sm" id="supplierPhoneInput" placeholder="02838001122">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Địa chỉ</label>
+                        <input type="text" class="form-control form-control-sm" id="supplierAddressInput" placeholder="Quận 5, TP. Hồ Chí Minh">
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LIGHTBOX VIEWER MODAL -->
+<div class="modal fade" id="laboImageViewerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-2.5 px-3 bg-dark text-white">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-image-fill text-info fs-5"></i>
+                    <div>
+                        <h6 class="modal-title mb-0 text-white fw-bold" id="viewerModalTitle">Ảnh giấy kết quả xét nghiệm / Phiếu xưởng</h6>
+                        <small class="text-white-50" id="viewerModalSubtitle">Bệnh nhân: ---</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-light py-0.5 px-2" onclick="rotateViewerImage()">
+                        <i class="bi bi-arrow-clockwise"></i> Xoay
+                    </button>
+                    <a id="viewerDownloadBtn" href="#" target="_blank" download="ket_qua.jpg" class="btn btn-sm btn-outline-light py-0.5 px-2">
+                        <i class="bi bi-download"></i> Tải về
+                    </a>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-dark text-center" style="min-height: 480px; max-height: 80vh; overflow: auto;">
+                <img id="viewerImageElement" src="" alt="Ảnh giấy kết quả"
+                     style="max-width: 100%; max-height: 75vh; object-fit: contain; transition: transform 0.2s ease; margin: auto;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JAVASCRIPT LOGIC CHO TOÀN BỘ TRANG LABO MANAGEMENT -->
+<script>
+    let currentRotation = 0;
+
+    function switchLabTab(tabName) {
+        document.querySelectorAll('.lab-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('pane-orders').style.display = 'none';
+        document.getElementById('pane-suppliers').style.display = 'none';
+        document.getElementById('pane-pricing').style.display = 'none';
+
+        if (tabName === 'suppliers') {
+            document.getElementById('btnTabSuppliers').classList.add('active');
+            document.getElementById('pane-suppliers').style.display = 'block';
+        } else if (tabName === 'pricing') {
+            document.getElementById('btnTabPricing').classList.add('active');
+            document.getElementById('pane-pricing').style.display = 'block';
+        } else {
+            document.getElementById('btnTabOrders').classList.add('active');
+            document.getElementById('pane-orders').style.display = 'block';
+        }
+    }
+
+    function openCreateLaboModalMain() {
+        document.getElementById('mainLaboForm')?.reset();
+        document.getElementById('mainLaboEditId').value = '';
+        document.getElementById('mainCreateLaboModalLabel').innerText = 'Thêm phiếu đặt xưởng';
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('mainModalSentDate').value = todayStr;
+
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 4);
+        document.getElementById('mainModalTryInDate').value = nextDate.toISOString().split('T')[0];
+
+        clearMainModalPreview();
+        calcMainModalTotal();
+
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('mainCreateLaboModal'));
+        m.show();
+    }
+
+    async function openEditLaboModalMain(laboId) {
+        try {
+            const res = await fetch(`/api/doctor/labo-orders/${laboId}`);
+            if (!res.ok) throw new Error('Không thể tải thông tin phiếu');
+            const data = (await res.json()).data;
+            if (!data) return;
+
+            document.getElementById('mainLaboEditId').value = data.laboId;
+            document.getElementById('mainCreateLaboModalLabel').innerText = `Sửa phiếu đặt xưởng: ${data.laboCode}`;
+
+            if (data.profileId) document.getElementById('mainModalPatientSelect').value = data.profileId;
+            if (data.materialType) document.getElementById('mainModalMaterialType').value = data.materialType;
+            if (data.supplierId) document.getElementById('mainModalSupplierSelect').value = data.supplierId;
+            if (data.sentDate) document.getElementById('mainModalSentDate').value = data.sentDate;
+            if (data.tryInDate) document.getElementById('mainModalTryInDate').value = data.tryInDate;
+            if (data.tryInTime) document.getElementById('mainModalTryInHour').value = data.tryInTime;
+            if (data.status) document.getElementById('mainModalStatusSelect').value = data.status;
+            if (data.orderType) document.getElementById('mainModalOrderType').value = data.orderType;
+
+            document.getElementById('mainModalQuantity').value = data.quantity || 1;
+            document.getElementById('mainModalUnitPrice').value = data.unitPrice || 0;
+            document.getElementById('mainModalShadeColor').value = data.shadeColor || '';
+            document.getElementById('mainModalBridge').value = data.bridgeInfo || '';
+            document.getElementById('mainModalCrown').value = data.crownInfo || '';
+            document.getElementById('mainModalNotes').value = data.notes || '';
+
+            calcMainModalTotal();
+
+            if (data.imageUrl) {
+                document.getElementById('mainModalImageUrl').value = data.imageUrl;
+                setMainModalPreview(data.imageUrl);
+            } else {
+                clearMainModalPreview();
+            }
+
+            const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('mainCreateLaboModal'));
+            m.show();
+        } catch (err) {
+            alert('Lỗi: ' + err.message);
+        }
+    }
+
+    function onMainServiceSelectChange(val) {
+        const select = document.getElementById('mainModalMaterialType');
+        const opt = select.options[select.selectedIndex];
+        const price = opt ? opt.getAttribute('data-price') : null;
+        if (price) {
+            document.getElementById('mainModalUnitPrice').value = price;
+            calcMainModalTotal();
+        }
+    }
+
+    function calcMainModalTotal() {
+        const qty = parseInt(document.getElementById('mainModalQuantity')?.value || '1', 10);
+        const price = parseFloat(document.getElementById('mainModalUnitPrice')?.value || '0');
+        const total = (qty > 0 && price >= 0) ? (qty * price) : 0;
+        document.getElementById('mainModalCostDisplay').value = total.toLocaleString('vi-VN') + ' đ';
+    }
+
+    function onMainModalUrlInput(url) {
+        if (url && url.trim().length > 0) {
+            setMainModalPreview(url.trim());
+        } else {
+            clearMainModalPreview();
+        }
+    }
+
+    function previewMainModalFile(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                setMainModalPreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function setMainModalPreview(src) {
+        const c = document.getElementById('mainModalPreviewContainer');
+        const img = document.getElementById('mainModalPreviewImg');
+        const p = document.getElementById('mainModalPreviewPlaceholder');
+        if (c && img && p) {
+            img.src = src;
+            c.style.display = 'inline-block';
+            p.style.display = 'none';
+        }
+    }
+
+    function clearMainModalPreview() {
+        const c = document.getElementById('mainModalPreviewContainer');
+        const img = document.getElementById('mainModalPreviewImg');
+        const p = document.getElementById('mainModalPreviewPlaceholder');
+        const f = document.getElementById('mainModalImageFile');
+        const u = document.getElementById('mainModalImageUrl');
+        if (img) img.src = '';
+        if (c) c.style.display = 'none';
+        if (p) p.style.display = 'block';
+        if (f) f.value = '';
+        if (u) u.value = '';
+    }
+
+    async function submitMainLaboForm() {
+        const editId = document.getElementById('mainLaboEditId').value;
+        const isEdit = (editId && editId.trim().length > 0);
+
+        const profileId = document.getElementById('mainModalPatientSelect').value;
+        const materialType = document.getElementById('mainModalMaterialType').value;
+        const supplierId = document.getElementById('mainModalSupplierSelect').value;
+
+        if (!profileId) { alert('Vui lòng chọn khách hàng!'); return; }
+        if (!materialType) { alert('Vui lòng chọn dịch vụ labo!'); return; }
+        if (!supplierId) { alert('Vui lòng chọn nhà cung cấp / labo!'); return; }
+
+        const formData = new FormData();
+        formData.append('profileId', profileId);
+        formData.append('materialType', materialType);
+        formData.append('supplierId', supplierId);
+        formData.append('sentDate', document.getElementById('mainModalSentDate').value);
+        formData.append('tryInDate', document.getElementById('mainModalTryInDate').value);
+        formData.append('tryInTime', document.getElementById('mainModalTryInHour').value);
+        formData.append('status', document.getElementById('mainModalStatusSelect').value);
+        formData.append('orderType', document.getElementById('mainModalOrderType').value);
+        formData.append('quantity', document.getElementById('mainModalQuantity').value);
+        formData.append('unitPrice', document.getElementById('mainModalUnitPrice').value);
+        formData.append('shadeColor', document.getElementById('mainModalShadeColor').value);
+        formData.append('bridgeInfo', document.getElementById('mainModalBridge').value);
+        formData.append('crownInfo', document.getElementById('mainModalCrown').value);
+        formData.append('notes', document.getElementById('mainModalNotes').value);
+
+        const urlVal = document.getElementById('mainModalImageUrl').value;
+        if (urlVal && urlVal.trim().length > 0) formData.append('imageUrl', urlVal.trim());
+
+        const fileInput = document.getElementById('mainModalImageFile');
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('imageFile', fileInput.files[0]);
+        }
+
+        const btn = document.getElementById('btnSaveMainModal');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+        try {
+            const url = isEdit ? `/api/doctor/labo-orders/${editId}` : '/api/doctor/labo-orders';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            let res;
+            if (isEdit) {
+                res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileId: parseInt(profileId),
+                        supplierId: parseInt(supplierId),
+                        materialType: materialType,
+                        sentDate: document.getElementById('mainModalSentDate').value,
+                        tryInDate: document.getElementById('mainModalTryInDate').value,
+                        tryInTime: document.getElementById('mainModalTryInHour').value,
+                        status: document.getElementById('mainModalStatusSelect').value,
+                        orderType: document.getElementById('mainModalOrderType').value,
+                        quantity: parseInt(document.getElementById('mainModalQuantity').value || '1'),
+                        unitPrice: parseFloat(document.getElementById('mainModalUnitPrice').value || '0'),
+                        shadeColor: document.getElementById('mainModalShadeColor').value,
+                        bridgeInfo: document.getElementById('mainModalBridge').value,
+                        crownInfo: document.getElementById('mainModalCrown').value,
+                        notes: document.getElementById('mainModalNotes').value,
+                        imageUrl: urlVal
+                    })
+                });
+            } else {
+                res = await fetch(url, { method: 'POST', body: formData });
+            }
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('mainCreateLaboModal'))?.hide();
+                alert(isEdit ? '✓ Đã cập nhật phiếu đặt xưởng thành công!' : '✓ Đã thêm phiếu đặt xưởng thành công!');
+                location.reload();
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể lưu phiếu'));
+            }
+        } catch (err) {
+            alert('Lỗi kết nối: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Lưu';
+        }
+    }
+
+    function viewLaboImage(url, title, patientName) {
+        if (!url) return;
+        currentRotation = 0;
+        const img = document.getElementById('viewerImageElement');
+        const t = document.getElementById('viewerModalTitle');
+        const sub = document.getElementById('viewerModalSubtitle');
+        const dl = document.getElementById('viewerDownloadBtn');
+
+        if (img) { img.src = url; img.style.transform = 'rotate(0deg)'; }
+        if (t) t.innerText = title || 'Ảnh giấy kết quả';
+        if (sub) sub.innerText = `Bệnh nhân: ${patientName || '---'}`;
+        if (dl) dl.href = url;
+
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('laboImageViewerModal'));
+        m.show();
+    }
+
+    function rotateViewerImage() {
+        currentRotation = (currentRotation + 90) % 360;
+        const img = document.getElementById('viewerImageElement');
+        if (img) img.style.transform = `rotate(${currentRotation}deg)`;
+    }
+
+    async function deleteOrderMain(laboId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa phiếu đặt xưởng này?')) return;
+        try {
+            const res = await fetch(`/api/doctor/labo-orders/${laboId}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert('✓ Đã xóa phiếu thành công!');
+                location.reload();
+            } else {
+                alert('Không thể xóa phiếu');
+            }
+        } catch (err) {
+            alert('Lỗi: ' + err.message);
+        }
+    }
+
+    function printOrder(laboId) {
+        window.print();
+    }
+
+    // Lọc nhanh bảng phiếu đặt xưởng
+    function filterLaboOrdersLocal(kw) {
+        const keyword = (kw !== undefined ? kw : document.getElementById('searchOrdersInput').value || '').toLowerCase().trim();
+        const status = document.getElementById('filterStatusSelect').value;
+        const rows = document.querySelectorAll('.labo-order-row');
+
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            const matchKw = (!keyword || text.includes(keyword));
+            const matchStatus = (!status || r.innerHTML.includes(status));
+            r.style.display = (matchKw && matchStatus) ? '' : 'none';
+        });
+    }
+
+    // Lọc nhanh bảng nhà cung cấp
+    function filterSuppliersLocal(kw) {
+        const keyword = (kw || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.supplier-row');
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            r.style.display = (!keyword || text.includes(keyword)) ? '' : 'none';
+        });
+    }
+
+    // Modal Nhà cung cấp
+    function openAddSupplierModal() {
+        document.getElementById('addSupplierForm')?.reset();
+        document.getElementById('supplierFormId').value = '';
+        document.getElementById('addSupplierModalLabel').innerText = 'Thêm Nhà cung cấp / Labo';
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('addSupplierModal'));
+        m.show();
+    }
+
+    function openEditSupplierModal(id, name, code, phone, addr) {
+        document.getElementById('supplierFormId').value = id;
+        document.getElementById('supplierCodeInput').value = code || '';
+        document.getElementById('supplierNameInput').value = name || '';
+        document.getElementById('supplierPhoneInput').value = phone || '';
+        document.getElementById('supplierAddressInput').value = addr || '';
+        document.getElementById('addSupplierModalLabel').innerText = `Sửa Nhà cung cấp: ${code}`;
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('addSupplierModal'));
+        m.show();
+    }
+
+    async function submitAddSupplierForm() {
+        const id = document.getElementById('supplierFormId').value;
+        const code = document.getElementById('supplierCodeInput').value.trim();
+        const name = document.getElementById('supplierNameInput').value.trim();
+        const phone = document.getElementById('supplierPhoneInput').value.trim();
+        const addr = document.getElementById('supplierAddressInput').value.trim();
+
+        if (!code || !name) { alert('Vui lòng nhập mã và tên NCC!'); return; }
+
+        try {
+            const url = id ? `/api/suppliers/${id}` : '/api/suppliers';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    supplierCode: code,
+                    supplierName: name,
+                    phoneNumber: phone,
+                    address: addr,
+                    isActive: true
+                })
+            });
+            if (res.ok) {
+                alert('✓ Đã lưu nhà cung cấp / labo thành công!');
+                location.reload();
+            } else {
+                alert('Không thể lưu nhà cung cấp. Kiểm tra trùng mã NCC!');
+            }
+        } catch (err) {
+            alert('Lỗi kết nối: ' + err.message);
+        }
+    }
+
+    async function deleteSupplier(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa nhà cung cấp này?')) return;
+        try {
+            const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert('✓ Đã xóa nhà cung cấp!');
+                location.reload();
+            } else {
+                alert('Không thể xóa NCC này.');
+            }
+        } catch (err) {
+            alert('Lỗi: ' + err.message);
+        }
+    }
+
+    // Modal Bảng giá Labo
+    function openAddPricingModal() {
+        const suppSelect = document.getElementById('pricingSupplierSelect');
+        const suppName = suppSelect.options[suppSelect.selectedIndex]?.text || 'Labo Nha khoa Sài Gòn';
+        document.getElementById('pricingModalSupplierName').innerText = suppName;
+        document.getElementById('addPricingForm')?.reset();
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('addPricingModal'));
+        m.show();
+    }
+
+    function submitAddPricingForm() {
+        const srv = document.getElementById('pricingServiceSelect').value;
+        const code = document.getElementById('pricingCodeInput').value;
+        const price = document.getElementById('pricingPriceInput').value;
+        const note = document.getElementById('pricingNoteInput').value;
+
+        if (!srv || !price) { alert('Vui lòng chọn dịch vụ và đơn giá!'); return; }
+
+        const tbody = document.getElementById('pricingTableBody');
+        const rowCount = tbody.querySelectorAll('tr').length + 1;
+        const newRow = `
+            <tr class="pricing-row">
+                <td class="text-center text-muted">${rowCount}</td>
+                <td><strong class="text-primary">${code || 'LB' + rowCount}</strong></td>
+                <td><strong class="text-dark">${srv}</strong></td>
+                <td class="text-end fw-bold text-dark">${parseInt(price).toLocaleString('vi-VN')} đ</td>
+                <td><span class="text-secondary small">${note || 'Mới cập nhật'}</span></td>
+                <td class="text-center"><span class="badge bg-success-subtle text-success border">Bật</span></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" title="Sửa"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', newRow);
+        bootstrap.Modal.getInstance(document.getElementById('addPricingModal'))?.hide();
+        alert('✓ Đã thêm giá dịch vụ labo thành công!');
+    }
+
+    function filterPricingLocal(kw) {
+        const keyword = (kw || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.pricing-row');
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            r.style.display = (!keyword || text.includes(keyword)) ? '' : 'none';
+        });
+    }
+
+    function onPricingSupplierChange() {
+        const select = document.getElementById('pricingSupplierSelect');
+        const name = select.options[select.selectedIndex]?.text || '';
+        // Có thể load giá riêng theo từng supplier
+    }
+</script>
+
+</body>
+</html>
