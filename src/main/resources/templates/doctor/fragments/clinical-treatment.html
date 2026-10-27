@@ -515,7 +515,7 @@
                                     <i class="bi bi-calendar2-plus-fill"></i>
                                     <span>+ Hẹn tái khám</span>
                                 </button>
-                                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-presc" onclick="openAddPrescriptionModal()">
+                                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-presc" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
                                     <i class="bi bi-plus-lg"></i>
                                     <span>+ Kê đơn thuốc</span>
                                 </button>
@@ -1147,7 +1147,165 @@
 <!-- SCRIPTS CHO CHẨN ĐOÁN & ĐIỀU TRỊ (ICD-10, FT16 DỊCH VỤ, FT18 ĐƠN THUỐC) -->
 <!-- ===================================================================== -->
 <script th:fragment="clinicalTreatmentScripts">
-    // 1. Lọc danh sách bệnh lý thường gặp
+    // =========================================================================
+    // FT14: CHẨN ĐOÁN BỆNH LÝ (ICD-10) & SƠ ĐỒ RĂNG ĐỒ HỌA FDI CHUẨN GIẢI PHẪU
+    // =========================================================================
+    window.selectedTeeth = window.selectedTeeth || new Set();
+    var selectedTeeth = window.selectedTeeth;
+    window.selectedSurfaces = window.selectedSurfaces || new Set();
+    var selectedSurfaces = window.selectedSurfaces;
+    var searchTimeout = null;
+
+    const surfaceNames = {
+        'M': 'Mặt gần (Mesial)',
+        'O': 'Mặt nhai (Occlusal)',
+        'D': 'Mặt xa (Distal)',
+        'B': 'Mặt ngoài (Buccal)',
+        'L': 'Mặt trong (Lingual)'
+    };
+
+    // 1. Quản lý tương tác chọn răng FDI (Chiêu 1: Click trên sơ đồ)
+    function toggleTooth(toothNumber) {
+        const tid = String(toothNumber).trim();
+        if (selectedTeeth.has(tid)) {
+            selectedTeeth.delete(tid);
+        } else {
+            selectedTeeth.add(tid);
+        }
+        syncActiveTeethUI();
+        updateToothInputFromSet();
+    }
+
+    function selectQuickTeeth(type) {
+        selectedTeeth.clear();
+        if (type === 'ALL') {
+            document.querySelectorAll('.tooth-group').forEach(el => {
+                const tid = el.getAttribute('data-tooth');
+                if (tid) selectedTeeth.add(tid);
+            });
+        } else if (type === 'UPPER') {
+            const uppers = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'];
+            uppers.forEach(t => selectedTeeth.add(t));
+        } else if (type === 'LOWER') {
+            const lowers = ['48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+            lowers.forEach(t => selectedTeeth.add(t));
+        }
+        syncActiveTeethUI();
+        updateToothInputFromSet();
+    }
+
+    function clearTeethSelection() {
+        selectedTeeth.clear();
+        syncActiveTeethUI();
+        updateToothInputFromSet();
+    }
+
+    function syncActiveTeethUI() {
+        document.querySelectorAll('.tooth-group').forEach(el => {
+            const tid = el.getAttribute('data-tooth');
+            if (selectedTeeth.has(tid)) {
+                el.classList.add('is-selected');
+            } else {
+                el.classList.remove('is-selected');
+            }
+        });
+    }
+
+    function updateToothInputFromSet() {
+        const inputEl = document.getElementById('toothNumbersInput');
+        const hintEl = document.getElementById('toothCountHint');
+
+        if (selectedTeeth.size > 0) {
+            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
+            if (inputEl) inputEl.value = sorted.join(', ');
+            if (hintEl) hintEl.innerHTML = `<span class="badge bg-primary text-white">Đang chọn: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+        } else {
+            if (inputEl) inputEl.value = '';
+            if (hintEl) hintEl.innerText = 'Chưa chọn răng (Mặc định toàn hàm)';
+        }
+    }
+
+    // Chiều 2: Nhập số răng bằng tay -> Tự động đánh dấu màu trên sơ đồ đồ họa
+    function handleToothManualInput(val) {
+        const tokens = (val || '').toUpperCase().replace(/R/g, '').split(/[\s,]+/);
+        const parsed = new Set();
+        tokens.forEach(tok => {
+            const num = tok.trim();
+            if (num && !isNaN(num) && num.length === 2) {
+                parsed.add(num);
+            }
+        });
+        selectedTeeth = parsed;
+        syncActiveTeethUI();
+        const hintEl = document.getElementById('toothCountHint');
+        if (hintEl) {
+            hintEl.innerHTML = selectedTeeth.size > 0
+                ? `<span class="badge bg-primary text-white">Đang chọn: ${Array.from(selectedTeeth).map(t => 'R' + t).join(', ')}</span>`
+                : 'Chưa chọn răng (Mặc định toàn hàm)';
+        }
+    }
+
+    // 2. Cụm 5 mặt răng MODBL
+    function toggleSurface(chipEl, surfaceKey) {
+        if (selectedSurfaces.has(surfaceKey)) {
+            selectedSurfaces.delete(surfaceKey);
+            chipEl.classList.remove('is-active');
+        } else {
+            selectedSurfaces.add(surfaceKey);
+            chipEl.classList.add('is-active');
+        }
+        updateSurfaceFormula();
+    }
+
+    function updateSurfaceFormula() {
+        const labelEl = document.getElementById('surfaceSelectedLabel');
+        const descEl = document.getElementById('surfaceFullFormula');
+        if (!labelEl || !descEl) return;
+
+        if (selectedSurfaces.size === 0) {
+            labelEl.textContent = 'Toàn bộ thân răng';
+            descEl.innerHTML = '<i class="bi bi-info-circle me-1 text-secondary"></i>Chưa chọn mặt cụ thể (Mặc định toàn thân răng).';
+            return;
+        }
+
+        const keys = Array.from(selectedSurfaces).sort().join('');
+        labelEl.textContent = `Mặt ${keys}`;
+        const details = Array.from(selectedSurfaces).map(k => surfaceNames[k]).join(' + ');
+        descEl.innerHTML = `<i class="bi bi-check-circle-fill me-1 text-primary"></i>Đang chọn: <strong>Mặt ${keys}</strong> (${details})`;
+    }
+
+    function clearSurfaces() {
+        selectedSurfaces.clear();
+        document.querySelectorAll('.surface-chip').forEach(c => c.classList.remove('is-active'));
+        updateSurfaceFormula();
+    }
+
+    // 3. Quét bảng chẩn đoán để tô đỏ răng bị bệnh lý (has-caries) trên sơ đồ
+    function syncDiagnosedTeethFromTable() {
+        const rows = document.querySelectorAll('#diagnosisTableBody tr:not(#emptyRow)');
+        const diagnosedSet = new Set();
+
+        rows.forEach(r => {
+            const toothAttr = r.getAttribute('data-teeth') || '';
+            const textContent = r.textContent || '';
+            const combined = toothAttr + ' ' + textContent;
+            const matches = combined.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
+            if (matches) {
+                matches.forEach(m => diagnosedSet.add(m));
+            }
+        });
+
+        document.querySelectorAll('.tooth-group').forEach(el => {
+            const tid = el.getAttribute('data-tooth');
+            if (diagnosedSet.has(tid)) {
+                el.classList.add('has-caries');
+            } else {
+                el.classList.remove('has-caries');
+            }
+        });
+    }
+
+    // 4. Lọc danh sách bệnh lý thường gặp
     function filterCommonDiseasesList(keyword) {
         const term = (keyword || '').toLowerCase().trim();
         const rows = document.querySelectorAll('#commonDiseasesListBody tr');
@@ -1163,7 +1321,7 @@
         });
     }
 
-    // 2. Chọn 1 chạm từ danh sách bệnh lý thường gặp
+    // 5. Chọn 1 chạm từ danh sách bệnh lý thường gặp
     function selectFromCommonList(rowEl) {
         document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
         rowEl.classList.add('is-selected');
@@ -1179,10 +1337,11 @@
         });
     }
 
-    // 3. Autocomplete tra cứu ICD-10
+    // 6. Autocomplete tra cứu ICD-10
     function onIcdInput(query) {
         clearTimeout(searchTimeout);
         const listEl = document.getElementById('autocompleteList');
+        if (!listEl) return;
 
         if (!query || query.trim().length === 0) {
             listEl.style.display = 'none';
@@ -1202,14 +1361,15 @@
 
                     data.forEach(item => {
                         const div = document.createElement('div');
-                        div.className = 'autocomplete-item';
+                        div.className = 'autocomplete-item p-2 border-bottom d-flex align-items-center justify-content-between';
+                        div.style.cursor = 'pointer';
                         div.innerHTML = `
                             <div>
                                 <span class="badge bg-primary-subtle text-primary border me-1">${item.icd10Code}</span>
-                                <span class="item-title">${item.diseaseNameVi}</span>
-                                ${item.diseaseNameEn ? `<div class="item-sub">${item.diseaseNameEn}</div>` : ''}
+                                <span class="fw-semibold text-dark small">${item.diseaseNameVi}</span>
+                                ${item.diseaseNameEn ? `<div class="text-muted" style="font-size: 11px;">${item.diseaseNameEn}</div>` : ''}
                             </div>
-                            <span class="text-primary small"><i class="bi bi-check2-circle"></i> Chọn</span>
+                            <span class="text-primary small fw-bold"><i class="bi bi-check2-circle"></i> Chọn</span>
                         `;
                         div.onclick = () => selectIcd(item);
                         listEl.appendChild(div);
@@ -1223,78 +1383,53 @@
     }
 
     function selectIcd(item) {
-        document.getElementById('selectedIcd10Code').value = item.icd10Code;
-        document.getElementById('icdSearchInput').value = `${item.icd10Code} - ${item.diseaseNameVi}`;
-        document.getElementById('autocompleteList').style.display = 'none';
+        const selectedCodeEl = document.getElementById('selectedIcd10Code');
+        const searchInputEl = document.getElementById('icdSearchInput');
+        const autoListEl = document.getElementById('autocompleteList');
+        const nameViEl = document.getElementById('selectedDiseaseNameVi');
+        const nameEnEl = document.getElementById('selectedDiseaseNameEn');
+
+        if (selectedCodeEl) selectedCodeEl.value = item.icd10Code;
+        if (searchInputEl) searchInputEl.value = `${item.icd10Code} - ${item.diseaseNameVi}`;
+        if (nameViEl) nameViEl.value = item.diseaseNameVi;
+        if (nameEnEl) nameEnEl.value = item.diseaseNameEn || '';
+        if (autoListEl) autoListEl.style.display = 'none';
+
+        // Điền vào mô tả chẩn đoán lâm sàng nếu chưa có
+        const diagTextEl = document.getElementById('diagTextInput');
+        if (diagTextEl && !diagTextEl.value) {
+            diagTextEl.value = item.diseaseNameVi;
+        }
 
         // Hiện badge đã chọn
-        document.getElementById('selectedBadgeCode').innerText = item.icd10Code;
-        document.getElementById('selectedBadgeName').innerText = item.diseaseNameVi;
-        document.getElementById('selectedBadgeBox').classList.remove('d-none');
+        const badgeCode = document.getElementById('selectedBadgeCode');
+        const badgeName = document.getElementById('selectedBadgeName');
+        const badgeBox = document.getElementById('selectedBadgeBox');
+        if (badgeCode) badgeCode.innerText = item.icd10Code;
+        if (badgeName) badgeName.innerText = item.diseaseNameVi;
+        if (badgeBox) badgeBox.classList.remove('d-none');
     }
 
     function clearSelectedIcd() {
-        document.getElementById('selectedIcd10Code').value = '';
-        document.getElementById('icdSearchInput').value = '';
-        document.getElementById('selectedBadgeBox').classList.add('d-none');
+        const selectedCodeEl = document.getElementById('selectedIcd10Code');
+        const searchInputEl = document.getElementById('icdSearchInput');
+        const badgeBox = document.getElementById('selectedBadgeBox');
+
+        if (selectedCodeEl) selectedCodeEl.value = '';
+        if (searchInputEl) {
+            searchInputEl.value = '';
+            searchInputEl.focus();
+        }
+        if (badgeBox) badgeBox.classList.add('d-none');
         document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
-        document.getElementById('icdSearchInput').focus();
     }
 
-    // Đóng autocomplete khi click ngoài
-    document.addEventListener('click', function(e) {
-        const wrapper = document.querySelector('.autocomplete-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) {
-            document.getElementById('autocompleteList').style.display = 'none';
-        }
-    });
-
-    // 4. Quản lý chọn răng FDI
-    function toggleTooth(toothNumber) {
-        if (selectedTeeth.has(toothNumber)) {
-            selectedTeeth.delete(toothNumber);
-        } else {
-            selectedTeeth.add(toothNumber);
-        }
-        updateToothUI();
-    }
-
-    function setQuickTeeth(type) {
-        selectedTeeth.clear();
-        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
-        document.getElementById('toothNumbersInput').value = type;
-    }
-
-    function clearTeethSelection() {
-        selectedTeeth.clear();
-        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
-        document.getElementById('toothNumbersInput').value = '';
-    }
-
-    function updateToothUI() {
-        document.querySelectorAll('.tooth-btn').forEach(btn => {
-            const num = parseInt(btn.innerText);
-            if (selectedTeeth.has(num)) {
-                btn.classList.add('is-selected');
-            } else {
-                btn.classList.remove('is-selected');
-            }
-        });
-
-        if (selectedTeeth.size > 0) {
-            const sorted = Array.from(selectedTeeth).sort((a,b) => a - b);
-            document.getElementById('toothNumbersInput').value = sorted.join(', ');
-        } else {
-            document.getElementById('toothNumbersInput').value = '';
-        }
-    }
-
-    // 5. Gửi chẩn đoán qua AJAX
+    // 7. Gửi chẩn đoán qua AJAX lưu vào Backend
     function submitDiagnosis(e) {
         e.preventDefault();
-        const visitId = document.getElementById('visitId').value;
-        const icd10Code = document.getElementById('selectedIcd10Code').value;
-        const rawSearch = document.getElementById('icdSearchInput').value;
+        const visitId = document.getElementById('visitId')?.value;
+        const icd10Code = document.getElementById('selectedIcd10Code')?.value;
+        const rawSearch = document.getElementById('icdSearchInput')?.value || '';
 
         const finalCode = icd10Code || (rawSearch.includes(' - ') ? rawSearch.split(' - ')[0].trim() : rawSearch.trim());
         if (!finalCode) {
@@ -1304,20 +1439,35 @@
 
         const typeInput = document.querySelector('input[name="diagnosisType"]:checked');
         const diagnosisType = typeInput ? typeInput.value : 'MAIN';
-        const toothNumbers = document.getElementById('toothNumbersInput').value;
-        const notes = document.getElementById('notesInput').value;
+
+        // Chuẩn hóa vị trí răng & mặt răng MODBL
+        let toothNumbers = document.getElementById('toothNumbersInput')?.value.trim() || '';
+        if (selectedSurfaces.size > 0) {
+            const surfaceStr = `(Mặt ${Array.from(selectedSurfaces).sort().join('')})`;
+            if (toothNumbers && !toothNumbers.includes('(Mặt')) {
+                toothNumbers = `${toothNumbers} ${surfaceStr}`;
+            } else if (!toothNumbers) {
+                toothNumbers = surfaceStr;
+            }
+        }
+
+        const notes = document.getElementById('notesInput')?.value.trim() || '';
+        const diagText = document.getElementById('diagTextInput')?.value.trim() || document.getElementById('selectedDiseaseNameVi')?.value.trim() || '';
 
         const payload = {
             visitId: parseInt(visitId),
             icd10Code: finalCode,
             diagnosisType: diagnosisType,
-            toothNumbers: toothNumbers,
-            notes: notes
+            toothNumbers: toothNumbers || null,
+            diagnosisText: diagText || null,
+            notes: notes || null
         };
 
         const btn = document.getElementById('btnSubmitDiagnosis');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+        }
 
         fetch('/api/v1/diagnoses', {
             method: 'POST',
@@ -1331,20 +1481,23 @@
             return res.json();
         })
         .then(saved => {
-            showToast(`Đã thêm chẩn đoán ${saved.icd10Code} thành công!`);
+            showToast(`✓ Đã thêm chẩn đoán ${saved.icd10Code} (${saved.diagnosisText || ''}) thành công!`);
             addDiagnosisRowToTable(saved);
+            syncDiagnosedTeethFromTable();
             resetForm();
         })
         .catch(err => {
             showToast(err.message, true);
         })
         .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-lg"></i> Lưu chẩn đoán';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán';
+            }
         });
     }
 
-    // 6. Xóa chẩn đoán
+    // 8. Xóa chẩn đoán qua AJAX
     function deleteDiagnosis(diagId) {
         if (!confirm('Bạn có chắc chắn muốn xóa chẩn đoán này khỏi ca khám?')) {
             return;
@@ -1355,16 +1508,17 @@
         })
         .then(res => {
             if (!res.ok) {
-                return res.json().then(err => { throw new Error(err.error || 'Không thể xóa'); });
+                return res.json().then(err => { throw new Error(err.error || 'Không thể xóa chẩn đoán'); });
             }
             return res.json();
         })
         .then(data => {
-            showToast('Đã xóa chẩn đoán thành công!');
+            showToast('✓ Đã xóa chẩn đoán thành công!');
             const row = document.getElementById(`diag-row-${diagId}`);
             if (row) {
                 row.remove();
             }
+            syncDiagnosedTeethFromTable();
             updateTableCount();
         })
         .catch(err => {
@@ -1372,6 +1526,7 @@
         });
     }
 
+    // 9. Thêm hàng vào bảng tổng hợp sau khi lưu
     function addDiagnosisRowToTable(d) {
         const emptyRow = document.getElementById('emptyRow');
         if (emptyRow) {
@@ -1390,14 +1545,17 @@
         const toothDisplay = d.toothNumbers ? ('R-' + d.toothNumbers) : 'Toàn hàm';
         const notesDisplay = d.notes ? d.notes : '-';
 
-        const tbody = document.getElementById('diagnosesTableBody');
+        const tbody = document.getElementById('diagnosisTableBody');
+        if (!tbody) return;
+
         const tr = document.createElement('tr');
         tr.id = `diag-row-${d.diagnosisId}`;
+        tr.setAttribute('data-teeth', d.toothNumbers || '');
         tr.innerHTML = `
             <td><strong class="text-dark">${toothDisplay}</strong></td>
             <td><span class="df-list-code">${d.icd10Code}</span></td>
             <td>
-                <div class="fw-bold text-dark">${d.diagnosisText}</div>
+                <div class="fw-bold text-dark">${d.diagnosisText || ''}</div>
                 ${d.diseaseNameEn ? `<div class="small text-muted">${d.diseaseNameEn}</div>` : ''}
             </td>
             <td>${badgeHtml}</td>
@@ -1409,7 +1567,12 @@
             </td>
         `;
 
+        // Nếu là chẩn đoán MAIN, đưa lên đầu bảng và cập nhật badge các hàng cũ
         if (d.diagnosisType === 'MAIN') {
+            tbody.querySelectorAll('.badge-main').forEach(b => {
+                b.className = 'badge-secondary';
+                b.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Kèm theo';
+            });
             tbody.insertBefore(tr, tbody.firstChild);
         } else {
             tbody.appendChild(tr);
@@ -1419,45 +1582,66 @@
     }
 
     function updateTableCount() {
-        const rows = document.querySelectorAll('#diagnosesTableBody tr:not(#emptyRow)');
+        const rows = document.querySelectorAll('#diagnosisTableBody tr:not(#emptyRow)');
         const count = rows.length;
-        document.getElementById('totalCountBadge').innerText = `${count} chẩn đoán`;
+
+        const tableBadge = document.getElementById('tableCountBadge');
+        const summaryBadge = document.getElementById('treatmentSummaryBadge');
+        if (tableBadge) tableBadge.innerText = `${count} chẩn đoán`;
+        if (summaryBadge) summaryBadge.innerText = `${count} chẩn đoán`;
 
         if (count === 0) {
-            document.getElementById('diagnosesTableBody').innerHTML = `
-                <tr id="emptyRow">
-                    <td colspan="6">
-                        <div class="df-no-data">
-                            <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
-                            <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
-                            <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            const tbody = document.getElementById('diagnosisTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr id="emptyRow">
+                        <td colspan="6">
+                            <div class="df-no-data">
+                                <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
+                                <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
+                                <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
 
     function resetForm() {
-        document.getElementById('diagnosisForm').reset();
+        const form = document.getElementById('diagnosisForm');
+        if (form) form.reset();
         clearSelectedIcd();
         clearTeethSelection();
-        document.querySelector('input[name="diagnosisType"][value="MAIN"]').checked = true;
+        clearSurfaces();
+        const mainRadio = document.querySelector('input[name="diagnosisType"][value="MAIN"]');
+        if (mainRadio) mainRadio.checked = true;
     }
 
-    function showToast(message, isError = false) {
-        const toastEl = document.getElementById('liveToast');
-        const msgEl = document.getElementById('toastMessage');
-        msgEl.innerText = message;
+    // Gắn sự kiện khi trang hoàn tất tải DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        // Gắn sự kiện click cho từng răng trên sơ đồ đồ họa FDI
+        document.querySelectorAll('.tooth-group').forEach(toothEl => {
+            toothEl.addEventListener('click', function(e) {
+                const toothId = this.getAttribute('data-tooth');
+                if (toothId) toggleTooth(toothId);
+            });
+        });
 
-        toastEl.classList.remove('bg-success', 'bg-danger');
-        toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
+        // Đóng autocomplete khi click bên ngoài
+        document.addEventListener('click', function(e) {
+            const wrapper = document.querySelector('.autocomplete-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const listEl = document.getElementById('autocompleteList');
+                if (listEl) listEl.style.display = 'none';
+            }
+        });
 
-        const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
-        toast.show();
-    }
+        // Đồng bộ răng bị bệnh lý từ dữ liệu ban đầu
+        syncDiagnosedTeethFromTable();
+        updateSurfaceFormula();
+    });
 
-    // =====================================================================
     // FT16: DỊCH VỤ THỰC HIỆN THỰC TẾ (SCR-16.1 & SCR-16.2) JAVASCRIPT
     // =====================================================================
     let selectedTreatTeeth = new Set();
@@ -2366,23 +2550,46 @@
     };
 
     function openAddPrescriptionModal() {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
+        try {
+            const prescEl = document.getElementById('addPrescriptionModal');
+            if (!prescEl) {
+                console.error('Không tìm thấy #addPrescriptionModal trong DOM!');
+                return;
+            }
 
-        document.getElementById('prescDate').value = `${yyyy}-${mm}-${dd}`;
-        document.getElementById('prescTime').value = `${hh}:${min}`;
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                prescModalInstance = bootstrap.Modal.getOrCreateInstance(prescEl);
+            }
 
-        const tbody = document.getElementById('prescDrugsTableBody');
-        if (tbody.children.length === 0) {
-            addDrugRow();
-        }
+            const formEl = document.getElementById('prescriptionForm');
+            if (formEl) formEl.reset();
 
-        if (prescModalInstance) {
-            prescModalInstance.show();
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+
+            const dateInp = document.getElementById('prescDate');
+            if (dateInp) dateInp.value = `${yyyy}-${mm}-${dd}`;
+            const timeInp = document.getElementById('prescTime');
+            if (timeInp) timeInp.value = `${hh}:${min}`;
+
+            const tbody = document.getElementById('prescDrugsTableBody');
+            if (tbody && tbody.children.length === 0) {
+                addDrugRow();
+            }
+
+            if (prescModalInstance) {
+                prescModalInstance.show();
+            }
+        } catch (err) {
+            console.error('Lỗi khi mở modal đơn thuốc:', err);
+            const prescEl = document.getElementById('addPrescriptionModal');
+            if (prescEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(prescEl).show();
+            }
         }
     }
 
@@ -2408,14 +2615,17 @@
     function addDrugRow(drugName = '', dosage = '', quantity = 1, unit = 'Viên', usage = '') {
         drugRowIndex++;
         const tbody = document.getElementById('prescDrugsTableBody');
+        if (!tbody) return;
         const tr = document.createElement('tr');
         tr.id = `drug-row-${drugRowIndex}`;
 
         let medOptions = '<option value="">-- Chọn thuốc trong kho hoặc tự nhập --</option>';
-        availableMedications.forEach(m => {
-            const isSel = (drugName && m.drugName.toLowerCase() === drugName.toLowerCase()) ? 'selected' : '';
-            medOptions += `<option value="${m.medicationId}" data-code="${m.drugCode}" data-name="${m.drugName}" data-unit="${m.unit}" data-usage="${m.usageInstruction || ''}" ${isSel}>${m.drugName} (${m.drugCode})</option>`;
-        });
+        if (Array.isArray(availableMedications)) {
+            availableMedications.forEach(m => {
+                const isSel = (drugName && m.drugName && m.drugName.toLowerCase() === drugName.toLowerCase()) ? 'selected' : '';
+                medOptions += `<option value="${m.medicationId}" data-code="${m.drugCode}" data-name="${m.drugName}" data-unit="${m.unit}" data-usage="${m.usageInstruction || ''}" ${isSel}>${m.drugName} (${m.drugCode})</option>`;
+            });
+        }
 
         tr.innerHTML = `
             <td class="text-center fw-bold text-muted drug-tt">${tbody.children.length + 1}</td>
@@ -2740,7 +2950,9 @@
 
                 document.getElementById('printDoctorName').innerText = pr.doctorName || 'Bác sĩ điều trị';
 
-                if (printModalInstance) {
+                const printEl = document.getElementById('printPrescriptionModal');
+                if (printEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    printModalInstance = bootstrap.Modal.getOrCreateInstance(printEl);
                     printModalInstance.show();
                 }
             })

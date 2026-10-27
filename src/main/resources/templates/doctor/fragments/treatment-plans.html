@@ -7,7 +7,7 @@
 <!-- ===================================================================== -->
 <div th:fragment="treatmentPlanSection">
     <div class="df-plan-card" id="treatmentPlanSection">
-        <div class="df-plan-header">
+        <div class="df-plan-header d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="df-plan-title-box">
                 <h3 class="df-plan-title">
                     <i class="bi bi-diagram-3-fill text-info"></i>
@@ -19,10 +19,56 @@
                 </span>
             </div>
 
-            <button type="button" class="df-btn-add-plan" onclick="openAddPlanModal()">
-                <i class="bi bi-stars"></i>
-                <span>+ Lập kế hoạch (AI Assistant)</span>
-            </button>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="df-btn-add-plan" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">
+                    <i class="bi bi-stars"></i>
+                    <span>+ Lập kế hoạch (AI Assistant)</span>
+                </button>
+
+                <!-- NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (CHUYỂN SANG KẾ HOẠCH ĐIỀU TRỊ) -->
+                <div id="clinicalCompletionActionWrapper" class="d-inline-flex align-items-center gap-2">
+                    <th:block th:if="${visit != null and visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                            <i class="bi bi-hourglass-split text-warning"></i>
+                            <span>Chờ thanh toán (Đã khóa BR-EMR-02)</span>
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                th:data-visit-id="${visit.visitId}"
+                                onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
+                                title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
+                            <i class="bi bi-unlock text-secondary"></i>
+                            <span>Mở lại khám</span>
+                        </button>
+                    </th:block>
+
+                    <th:block th:if="${visit != null and visit.status != null and visit.status.name() == 'COMPLETED'}">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Đã hoàn tất &amp; Thu tiền</span>
+                        </span>
+                    </th:block>
+
+                    <th:block th:if="${visit != null and (visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'))}">
+                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
+                                th:data-visit-id="${visit.visitId}"
+                                onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
+                                id="btnCompleteExamination"
+                                title="Bác sĩ khám xong bấm nút này để hệ thống kiểm tra điều kiện (ICD-10, dịch vụ COMPLETED), khóa bệnh án BR-EMR-02 và bàn giao sang Kế toán">
+                            <i class="bi bi-check2-circle fs-6"></i>
+                            <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
+                        </button>
+                    </th:block>
+                </div>
+
+                <!-- NÚT HẸN TÁI KHÁM -->
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-xs"
+                        onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
+                    <i class="bi bi-calendar2-plus-fill text-primary"></i>
+                    <span>Hẹn tái khám</span>
+                    <span class="badge bg-primary text-white rounded-pill ms-0.5" id="sessionReExamCountBadge"
+                          th:text="${reExaminations != null ? reExaminations.size() : 0}">0</span>
+                </button>
+            </div>
         </div>
 
         <!-- BẢNG DANH SÁCH CÁC KẾ HOẠCH ĐIỀU TRỊ CỦA BỆNH NHÂN -->
@@ -43,7 +89,7 @@
                 <tr th:if="${treatmentPlans == null or treatmentPlans.isEmpty()}" id="emptyPlanRow">
                     <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-diagram-3 fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <strong>"+ Lập kế hoạch (AI Assistant)"</strong> để tạo mới hoặc bóc tách phác đồ tự động bằng AI.</span>
+                        <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-underline" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">+ Lập kế hoạch (AI Assistant)</button> để tạo mới hoặc bóc tách phác đồ tự động bằng AI.</span>
                     </td>
                 </tr>
                 <th:block th:each="plan : ${treatmentPlans}">
@@ -470,13 +516,28 @@
 <!-- ===================================================================== -->
 <th:block th:fragment="treatmentPlanScripts">
 <script th:inline="javascript">
+    if (typeof window.formatNumber !== 'function') {
+        window.formatNumber = function(amount) {
+            if (!amount && amount !== 0) return '0';
+            return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        };
+    }
+    if (typeof window.formatVnd !== 'function') {
+        window.formatVnd = function(amount) {
+            if (!amount && amount !== 0) return '0 đ';
+            return window.formatNumber(amount) + ' đ';
+        };
+    }
+
     let planModalInstance = null;
     let stageCounter = 0;
     let itemCounter = 0;
 
     document.addEventListener('DOMContentLoaded', function() {
         const planEl = document.getElementById('addTreatmentPlanModal');
-        if (planEl) planModalInstance = new bootstrap.Modal(planEl);
+        if (planEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            planModalInstance = bootstrap.Modal.getOrCreateInstance(planEl);
+        }
     });
 
     const PLAN_PRESETS = {
@@ -676,32 +737,55 @@
     };
 
     function openAddPlanModal() {
-        if (!planModalInstance) {
+        try {
             const planEl = document.getElementById('addTreatmentPlanModal');
-            if (planEl) planModalInstance = new bootstrap.Modal(planEl);
+            if (!planEl) {
+                console.error('Không tìm thấy #addTreatmentPlanModal trong DOM!');
+                return;
+            }
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                planModalInstance = bootstrap.Modal.getOrCreateInstance(planEl);
+            }
+
+            const formEl = document.getElementById('treatmentPlanForm');
+            if (formEl) formEl.reset();
+
+            const container = document.getElementById('planStagesContainer');
+            if (container) container.innerHTML = '';
+            stageCounter = 0;
+            itemCounter = 0;
+
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const startInput = document.getElementById('planStartDateInput');
+            if (startInput) startInput.value = `${y}-${m}-${d}`;
+
+            const end = new Date();
+            end.setDate(end.getDate() + 30);
+            const ey = end.getFullYear();
+            const em = String(end.getMonth() + 1).padStart(2, '0');
+            const ed = String(end.getDate()).padStart(2, '0');
+            const endInput = document.getElementById('planEndDateInput');
+            if (endInput) endInput.value = `${ey}-${em}-${ed}`;
+
+            const overallCostInput = document.getElementById('planOverallCostInput');
+            if (overallCostInput) overallCostInput.value = '';
+
+            addPlanStage('Giai đoạn 1: Chuẩn bị & Khám ban đầu', 0, 'Khám tổng quát, chụp phim và vệ sinh khoang miệng');
+            recalculatePlanTotal();
+
+            if (planModalInstance) {
+                planModalInstance.show();
+            }
+        } catch (err) {
+            console.error('Lỗi khi chuẩn bị modal kế hoạch điều trị:', err);
+            const planEl = document.getElementById('addTreatmentPlanModal');
+            if (planEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(planEl).show();
+            }
         }
-        document.getElementById('treatmentPlanForm').reset();
-        document.getElementById('planStagesContainer').innerHTML = '';
-        stageCounter = 0;
-        itemCounter = 0;
-
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        document.getElementById('planStartDateInput').value = `${y}-${m}-${d}`;
-
-        const end = new Date();
-        end.setDate(end.getDate() + 30);
-        const ey = end.getFullYear();
-        const em = String(end.getMonth() + 1).padStart(2, '0');
-        const ed = String(end.getDate()).padStart(2, '0');
-        document.getElementById('planEndDateInput').value = `${ey}-${em}-${ed}`;
-
-        addPlanStage('Giai đoạn 1: Chuẩn bị & Khám ban đầu', 0, 'Khám tổng quát, chụp phim và vệ sinh khoang miệng');
-        recalculatePlanTotal();
-
-        if (planModalInstance) planModalInstance.show();
     }
 
     function addPlanStage(stageName = '', daysFromStart = 0, stageDesc = '') {

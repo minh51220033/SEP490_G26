@@ -366,9 +366,9 @@
 <!-- ===================================================================== -->
 <!-- SCRIPTS CHO FILM ẢNH & THEO DÕI LÂM SÀNG (SCR-17.1, 17.2, 17.3)       -->
 <!-- ===================================================================== -->
-<script th:fragment="clinicalPhotosScripts">
-    const ft17PatientProfileId = [(${patient != null and patient.profileId != null ? patient.profileId : 1})];
-    const ft17CurrentVisitId = [(${visit != null and visit.visitId != null ? visit.visitId : 1})];
+<script th:fragment="clinicalPhotosScripts" th:inline="javascript">
+    const ft17PatientProfileId = /*[[${patient != null and patient.profileId != null ? patient.profileId : 1}]]*/ 1;
+    const ft17CurrentVisitId = /*[[${visit != null and visit.visitId != null ? visit.visitId : 1}]]*/ 1;
 
     let currentPhotoFilterStage = 'ALL';
     let currentPhotoFilterCategory = 'ALL';

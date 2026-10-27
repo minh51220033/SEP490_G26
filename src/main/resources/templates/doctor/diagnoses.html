@@ -148,37 +148,37 @@
                     </button>
 
                     <nav class="df-subnav" id="mainSubnav">
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thông tin bệnh nhân')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-patient-info" onclick="switchMainTab('tab-patient-info', this)">
                             <i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item active" onclick="handleSubnavClick(event, this, 'diagnosisSection', 'Khám & Điều trị')">
+                        <a href="javascript:void(0)" class="df-subnav-item active" data-tab="tab-examination" onclick="switchMainTab('tab-examination', this)">
                             <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'treatmentPlanSection', 'Kế hoạch điều trị')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
                             <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Lịch hẹn')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-appointments" onclick="switchMainTab('tab-appointments', this)">
                             <i class="bi bi-calendar-event"></i> Lịch hẹn
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Chăm sóc')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-customer-care" onclick="switchMainTab('tab-customer-care', this)">
                             <i class="bi bi-chat-heart"></i> Chăm sóc
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Đơn thuốc')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
                             <i class="bi bi-capsule"></i> Đơn thuốc
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'performedServicesSection', 'Dịch vụ thực hiện')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-performed-services" onclick="switchMainTab('tab-performed-services', this)">
                             <i class="bi bi-tools"></i> Dịch vụ thực hiện
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Đặt xưởng')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
                             <i class="bi bi-box-seam"></i> Đặt xưởng
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'bar-photos', 'Film ảnh')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-clinical-photos" onclick="switchMainTab('tab-clinical-photos', this)">
                             <i class="bi bi-images"></i> Film ảnh
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, 'prescriptionsSection', 'Lời dặn')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-instructions" onclick="switchMainTab('tab-instructions', this)">
                             <i class="bi bi-card-checklist"></i> Lời dặn
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" onclick="handleSubnavClick(event, this, null, 'Thanh toán')">
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-payment" onclick="switchMainTab('tab-payment', this)">
                             <i class="bi bi-credit-card"></i> Thanh toán
                         </a>
                     </nav>
@@ -189,229 +189,122 @@
                 </div>
             </div>
 
-            <!-- 4. KHỐI CA KHÁM THEO NGÀY (DENTALFLOW SESSION CARD) -->
-            <div class="df-session-card" id="diagnosisSection"
-                 th:with="isClinicalLocked=${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}">
+            <!-- ========================================================= -->
+            <!-- TAB CONTENT CONTAINER (CHUYỂN ĐỔI TAB & KÉO CUỘN ĐỘC LẬP) -->
+            <!-- ========================================================= -->
+            <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc; min-height: 80vh;">
 
-                <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
-                <div class="df-session-bar">
-                    <div class="df-session-title">
-                        <i class="bi bi-calendar2-event"></i>
-                        <span>NGÀY KHÁM: </span>
-                        <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
-                        <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                    </div>
+                <!-- TAB 1: THÔNG TIN BỆNH NHÂN -->
+                <div class="df-tab-pane" id="tab-patient-info" style="display: none;">
+                    <div th:replace="~{doctor/fragments/patient-info-tab :: patientInfoTab}"></div>
+                </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <!-- NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4) -->
-                        <div id="clinicalCompletionActionWrapper" class="d-inline-flex align-items-center gap-2">
-                            <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                                    <i class="bi bi-hourglass-split text-warning"></i>
-                                    <span>Chờ thanh toán (Đã khóa BR-EMR-02)</span>
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                <!-- TAB 2: KHÁM & ĐIỀU TRỊ (ACTIVE MẶC ĐỊNH - CHỨA ĐÚNG 3 MỤC KHÁM TỔNG QUÁT, CẬN LÂM SÀNG, CHẨN ĐOÁN BỆNH LÝ) -->
+                <div class="df-tab-pane active" id="tab-examination" style="display: block;">
+                    <div class="df-session-card" id="diagnosisSection"
+                         th:with="isClinicalLocked=${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}">
+
+                        <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
+                        <div class="df-session-bar">
+                            <div class="df-session-title">
+                                <i class="bi bi-calendar2-event"></i>
+                                <span>NGÀY KHÁM: </span>
+                                <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
+                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BANNER THÔNG BÁO KHÓA BỆNH ÁN KHI ĐÃ HOÀN TẤT (BR-EMR-02) -->
+                        <div th:if="${visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
+                             id="clinicalLockedBanner"
+                             class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-warning text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                                    <i class="bi bi-lock-fill fs-5"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark fs-7">
+                                        <i class="bi bi-shield-lock-fill text-warning me-1"></i>BỆNH ÁN LÂM SÀNG ĐÃ ĐƯỢC KHÓA BẤT BIẾN (QUY TẮC BR-EMR-02)
+                                    </div>
+                                    <div class="text-secondary small mt-0.5">
+                                        Bác sĩ đã hoàn tất ca khám và bàn giao dữ liệu sang bộ phận Kế toán (Người 4) để lập hóa đơn và thu tiền. Toàn bộ chẩn đoán ICD-10, dịch vụ điều trị và đơn thuốc đã được bảo vệ bất biến.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2 mt-md-0" th:if="${visit.status.name() == 'WAITING_PAYMENT'}">
+                                <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-semibold px-3 py-1"
                                         th:data-visit-id="${visit.visitId}"
-                                        onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
-                                        title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
-                                    <i class="bi bi-unlock text-secondary"></i>
-                                    <span>Mở lại khám</span>
-                                </button>
-                            </th:block>
-
-                            <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                    <span>Đã hoàn tất &amp; Thu tiền</span>
-                                </span>
-                            </th:block>
-
-                            <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
-                                <button type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
-                                        th:data-visit-id="${visit.visitId}"
-                                        onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
-                                        id="btnCompleteExamination"
-                                        title="Bác sĩ khám xong bấm nút này để hệ thống kiểm tra điều kiện (ICD-10, dịch vụ COMPLETED), khóa bệnh án BR-EMR-02 và bàn giao sang Kế toán">
-                                    <i class="bi bi-check2-circle fs-6"></i>
-                                    <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
-                                </button>
-                            </th:block>
-                        </div>
-
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-xs"
-                                onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
-                            <i class="bi bi-calendar2-plus-fill text-primary"></i>
-                            <span>Hẹn tái khám</span>
-                            <span class="badge bg-primary text-white rounded-pill ms-0.5" id="sessionReExamCountBadge"
-                                  th:text="${reExaminations != null ? reExaminations.size() : 0}">0</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- BANNER THÔNG BÁO KHÓA BỆNH ÁN KHI ĐÃ HOÀN TẤT (BR-EMR-02) -->
-                <div th:if="${visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
-                     id="clinicalLockedBanner"
-                     class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-warning text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
-                            <i class="bi bi-lock-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold text-dark fs-7">
-                                <i class="bi bi-shield-lock-fill text-warning me-1"></i>BỆNH ÁN LÂM SÀNG ĐÃ ĐƯỢC KHÓA BẤT BIẾN (QUY TẮC BR-EMR-02)
-                            </div>
-                            <div class="text-secondary small mt-0.5">
-                                Bác sĩ đã hoàn tất ca khám và bàn giao dữ liệu sang bộ phận Kế toán (Người 4) để lập hóa đơn và thu tiền. Toàn bộ chẩn đoán ICD-10, dịch vụ điều trị và đơn thuốc đã được bảo vệ bất biến.
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 mt-2 mt-md-0" th:if="${visit.status.name() == 'WAITING_PAYMENT'}">
-                        <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-semibold px-3 py-1"
-                                th:data-visit-id="${visit.visitId}"
-                                onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Mở lại ca khám
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ============================================================= -->
-                <!-- BAR 1: KHÁM TỔNG QUÁT (EXTRACTED FRAGMENT)                   -->
-                <!-- ============================================================= -->
-                <div th:replace="~{doctor/fragments/general-examination :: generalExamSection}"></div>
-
-
-                <!-- ============================================================= -->
-                <!-- ============================================================= -->
-<<<<<<< Updated upstream
-                <!-- BAR 2: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (FRAGMENT) -->
-                <!-- ============================================================= -->
-                <div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersSection}"></div>
-=======
-                <div class="df-foldable-bar" id="bar-orders" onclick="toggleMainBar('orders')">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
-                        <span class="df-foldable-title">CHỈ ĐỊNH CẬN LÂM SÀNG &amp; CHẨN ĐOÁN HÌNH ẢNH</span>
-                        <span class="df-foldable-subtitle">(Chụp X-Quang, CT ConeBeam 3D, Xét nghiệm máu - SCR-11.2, SCR-11.3)</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 11px;"
-                                th:disabled="${isClinicalLocked}"
-                                onclick="event.stopPropagation(); openAddParaclinicalModal();">
-                            <i class="bi bi-plus-lg"></i> Thêm chỉ định
-                        </button>
-                        <span class="badge bg-light text-primary border small" id="ordersCountBadge"
-                              th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0} + ' chỉ định'">0 chỉ định</span>
-                    </div>
-                </div>
-                <div class="df-foldable-content" id="content-orders" style="display: none;">
-                    <div class="p-3 p-md-4 bg-white">
-                        <!-- CHIP CHỈ ĐỊNH NHANH -->
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                            <div class="d-flex flex-wrap align-items-center gap-1.5 small">
-                                <span class="text-secondary fw-bold me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chỉ định nhanh 1 chạm:</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                                        th:disabled="${isClinicalLocked}"
-                                        onclick="quickCreateParaclinicalOrder('CLS-XQ-CHOP', 'Chụp X-quang quanh chóp (Periapical)', 'R16')">
-                                    + X-Quang quanh chóp
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                                        th:disabled="${isClinicalLocked}"
-                                        onclick="quickCreateParaclinicalOrder('CLS-PANO', 'Chụp Panorama toàn cảnh (Toàn hàm)', 'Toàn hàm')">
-                                    + Panorama toàn cảnh
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                                        th:disabled="${isClinicalLocked}"
-                                        onclick="quickCreateParaclinicalOrder('CLS-CT-3D', 'Chụp CT ConeBeam 3D khảo sát xương', 'Hàm dưới')">
-                                    + CT ConeBeam 3D
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                                        th:disabled="${isClinicalLocked}"
-                                        onclick="quickCreateParaclinicalOrder('CLS-XN-MAU', 'Xét nghiệm máu đông (PT/APTT/INR)', 'Máu')">
-                                    + Xét nghiệm đông máu
+                                        onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Mở lại ca khám
                                 </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs"
-                                    th:disabled="${isClinicalLocked}"
-                                    onclick="openAddParaclinicalModal()">
-                                <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
-                            </button>
                         </div>
 
-                        <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
-                        <div class="table-responsive rounded-3 border">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 110px;">Mã CĐ</th>
-                                        <th>Tên chỉ định cận lâm sàng</th>
-                                        <th style="width: 110px;" class="text-center">Vị trí / Vùng</th>
-                                        <th style="width: 170px;">Bác sĩ chỉ định</th>
-                                        <th style="width: 140px;">Thời gian</th>
-                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
-                                        <th style="width: 120px;" class="text-center">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="clinicalOrdersTableBody">
-                                    <tr th:if="${paraclinicalOrders == null or #lists.isEmpty(paraclinicalOrders)}" id="emptyOrdersRow">
-                                        <td colspan="7" class="text-center py-4 text-muted">
-                                            <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
-                                            <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
-                                        </td>
-                                    </tr>
-                                    <tr th:each="ord : ${paraclinicalOrders}" th:id="'order-row-' + ${ord.orderItemId}">
-                                        <td><span class="badge bg-light text-dark border fw-bold" th:text="${ord.orderCode}">CĐ1001</span></td>
-                                        <td>
-                                            <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
-                                            <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
-                                            <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
-                                        </td>
-                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary border" th:text="${ord.toothNumbers}">R16</span></td>
-                                        <td><div class="small fw-semibold text-dark" th:text="${ord.doctorName}">BS. Điều trị</div></td>
-                                        <td><span class="small text-muted" th:text="${ord.orderTime}">24/10/2026 15:30</span></td>
-                                        <td class="text-center">
-                                            <span class="badge"
-                                                  th:classappend="${ord.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
-                                                  th:text="${ord.statusLabel}">Chờ thực hiện</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button type="button" class="btn btn-sm"
-                                                        th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'btn-outline-primary'"
-                                                        th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
-                                                        th:disabled="${isClinicalLocked}"
-                                                        th:data-order-item-id="${ord.orderItemId}"
-                                                        th:data-status="${ord.status}"
-                                                        onclick="toggleOrderStatus(this.getAttribute('data-order-item-id'), this.getAttribute('data-status'))">
-                                                    <i class="bi" th:classappend="${ord.status == 'COMPLETED'} ? 'bi-check2-circle' : 'bi-check-lg'"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                                        title="Xóa chỉ định này"
-                                                        th:if="${!isClinicalLocked}"
-                                                        th:data-order-item-id="${ord.orderItemId}"
-                                                        onclick="deleteOrder(this.getAttribute('data-order-item-id'))">
-                                                    <i class="bi bi-trash3-fill"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        <!-- ============================================================= -->
+                        <!-- 1. KHÁM TỔNG QUÁT (BAR 1)                                     -->
+                        <!-- ============================================================= -->
+                        <div th:replace="~{doctor/fragments/general-examination :: generalExamSection}"></div>
+
+                        <!-- ============================================================= -->
+                        <!-- 2. CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (BAR 2)        -->
+                        <!-- ============================================================= -->
+                        <div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersSection}"></div>
+
+                        <!-- ============================================================= -->
+                        <!-- 3. CHẨN ĐOÁN BỆNH LÝ (ICD-10) (BAR 3)                         -->
+                        <!-- ============================================================= -->
+                        <div th:replace="~{doctor/fragments/icd10-diagnosis :: icd10DiagnosisSection}"></div>
+
                     </div>
                 </div>
->>>>>>> Stashed changes
 
-                <!-- ============================================================= -->
-                <!-- BAR 3: CHẨN ĐOÁN VÀ ĐIỀU TRỊ (FRAGMENT)                       -->
-                <!-- ============================================================= -->
-                <div th:replace="~{doctor/fragments/clinical-treatment :: clinicalTreatmentSection}"></div>
+                <!-- TAB 3: KẾ HOẠCH ĐIỀU TRỊ (FT15) -->
+                <div class="df-tab-pane" id="tab-treatment-plan" style="display: none;">
+                    <div th:replace="~{doctor/fragments/treatment-plans :: treatmentPlanSection}"></div>
+                </div>
 
-                <!-- ============================================================= -->
-                <!-- BAR 4: FILM ẢNH & THEO DÕI LÂM SÀNG (FRAGMENT)               -->
-                <!-- ============================================================= -->
-                <div th:replace="~{doctor/fragments/clinical-photos :: clinicalPhotosSection}"></div>
+                <!-- TAB 4: LỊCH HẸN -->
+                <div class="df-tab-pane" id="tab-appointments" style="display: none;">
+                    <div th:replace="~{doctor/fragments/appointments-tab :: appointmentsTab}"></div>
+                </div>
+
+                <!-- TAB 5: CHĂM SÓC -->
+                <div class="df-tab-pane" id="tab-customer-care" style="display: none;">
+                    <div th:replace="~{doctor/fragments/patient-care-tab :: patientCareTab}"></div>
+                </div>
+
+                <!-- TAB 6: ĐƠN THUỐC (FT18) -->
+                <div class="df-tab-pane" id="tab-prescriptions" style="display: none;">
+                    <div th:replace="~{doctor/fragments/prescriptions :: prescriptionsSection}"></div>
+                </div>
+
+                <!-- TAB 7: DỊCH VỤ THỰC HIỆN (FT16) -->
+                <div class="df-tab-pane" id="tab-performed-services" style="display: none;">
+                    <div th:replace="~{doctor/fragments/performed-services :: performedServicesSection}"></div>
+                </div>
+
+                <!-- TAB 8: ĐẶT XƯỞNG LABO -->
+                <div class="df-tab-pane" id="tab-labo" style="display: none;">
+                    <div th:replace="~{doctor/fragments/labo-tab :: laboTab}"></div>
+                </div>
+
+                <!-- TAB 9: FILM ẢNH (FT17) -->
+                <div class="df-tab-pane" id="tab-clinical-photos" style="display: none;">
+                    <div th:replace="~{doctor/fragments/clinical-photos :: clinicalPhotosSection}"></div>
+                </div>
+
+                <!-- TAB 10: LỜI DẶN -->
+                <div class="df-tab-pane" id="tab-instructions" style="display: none;">
+                    <div th:replace="~{doctor/fragments/instructions-tab :: instructionsTab}"></div>
+                </div>
+
+                <!-- TAB 11: THANH TOÁN -->
+                <div class="df-tab-pane" id="tab-payment" style="display: none;">
+                    <div th:replace="~{doctor/fragments/payment-tab :: paymentTab}"></div>
+                </div>
+
             </div>
 
         </main>
@@ -734,14 +627,15 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    const availableServicesCatalog = [(${activeServicesJson != null ? activeServicesJson : '[]'})];
+<script id="activeServicesCatalogJson" type="application/json" th:utext="${activeServicesJson != null ? activeServicesJson : '[]'}"></script>
+<script th:inline="javascript">
+    const availableServicesCatalog = JSON.parse(document.getElementById('activeServicesCatalogJson')?.textContent || '[]');
 
     let selectedTeeth = new Set();
     let searchTimeout = null;
 
     // =========================================================================
-    // SUBNAV TABS: CUỘN NGANG & HIỆU ỨNG 1 GIÂY ĐỔI VỊ TRÍ + ĐỔI MÀU NỔI BẬT
+    // SUBNAV TABS: CHUYỂN ĐỔI TAB NỘI DUNG & CUỘN TỪ TRÊN XUỐNG DƯỚI ĐỘC LẬP
     // =========================================================================
     function scrollSubnav(offset) {
         const nav = document.getElementById('mainSubnav');
@@ -750,56 +644,62 @@
         }
     }
 
-    function handleSubnavClick(event, el, sectionId, tabName) {
-        if (event) event.preventDefault();
+    function switchMainTab(tabId, el) {
+        if (!tabId) return;
 
-        // 1. Bỏ active cũ
-        document.querySelectorAll('.df-subnav-item').forEach(item => {
+        // 1. Cập nhật trạng thái active cho thanh subnav tabs
+        const subnavItems = document.querySelectorAll('.df-subnav-item');
+        subnavItems.forEach(item => {
             item.classList.remove('active', 'tab-highlight-active');
         });
 
-        // 2. Kích hoạt tab và thêm hiệu ứng sáng màu nổi bật 1 giây
-        el.classList.add('active', 'tab-highlight-active');
+        let targetTabLink = el;
+        if (!targetTabLink) {
+            targetTabLink = document.querySelector(`.df-subnav-item[data-tab="${tabId}"]`);
+        }
 
-        // 3. Đổi vị trí: tự động trượt mượt tab vào giữa tầm nhìn
-        el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        if (targetTabLink) {
+            targetTabLink.classList.add('active', 'tab-highlight-active');
+            targetTabLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            setTimeout(() => {
+                targetTabLink.classList.remove('tab-highlight-active');
+            }, 1000);
+        }
 
-        // 4. Tắt hiệu ứng sáng màu sau đúng 1 giây
-        setTimeout(() => {
-            el.classList.remove('tab-highlight-active');
-        }, 1000);
+        // 2. Ẩn tất cả các panel tab và chỉ hiển thị panel của tab được chọn
+        const tabPanes = document.querySelectorAll('.df-tab-pane');
+        tabPanes.forEach(pane => {
+            pane.classList.remove('active');
+            pane.style.display = 'none';
+        });
 
-        // 5. Mở thanh tương ứng nếu đang đóng và cuộn mượt màn hình đến phân vùng chức năng
-        if (sectionId) {
-            if (sectionId === 'bar-exam' || sectionId === 'content-exam') {
-                expandMainBar('exam');
-            } else if (sectionId === 'bar-orders' || sectionId === 'content-orders') {
-                expandMainBar('orders');
-            } else if (['diagnosisSection', 'treatmentPlanSection', 'performedServicesSection', 'prescriptionsSection'].includes(sectionId)) {
-                expandMainBar('treatment');
-            } else if (['bar-photos', 'content-photos', 'clinicalPhotosSection'].includes(sectionId)) {
-                expandMainBar('photos');
-            }
-            const targetEl = document.getElementById(sectionId);
-            if (targetEl) {
-                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                targetEl.classList.add('section-pulse-active');
-                setTimeout(() => {
-                    targetEl.classList.remove('section-pulse-active');
-                }, 1000);
-            }
-        } else if (tabName) {
-            if (tabName === 'Film ảnh') {
-                expandMainBar('photos');
-                const targetEl = document.getElementById('bar-photos');
-                if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else if (tabName === 'Lịch hẹn') {
-                openReExamModal();
-            } else {
-                showToast('Chức năng "' + tabName + '" đang được liên kết trong ca khám này.');
+        const activePane = document.getElementById(tabId);
+        if (activePane) {
+            activePane.style.display = 'block';
+            activePane.classList.add('active');
+
+            // Cuộn mượt màn hình lên đầu phân vùng nội dung
+            const container = document.getElementById('mainTabContainer');
+            if (container) {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
+
+        // 3. Cập nhật hash trên URL để khi reload không mất tab đang xem
+        if (history.replaceState) {
+            history.replaceState(null, null, '#' + tabId);
+        } else {
+            location.hash = '#' + tabId;
+        }
     }
+
+    // Tự động khôi phục tab đang mở từ URL Hash khi tải trang
+    document.addEventListener('DOMContentLoaded', function() {
+        const hash = window.location.hash ? window.location.hash.substring(1) : '';
+        if (hash && document.getElementById(hash)) {
+            switchMainTab(hash);
+        }
+    });
 
     // =========================================================================
     // ACCORDION FOLDABLE BARS (GẬP GỌN THEO CHUẨN DENTALFLOW)
@@ -846,13 +746,14 @@
     // =========================================================================
     // GLOBAL UTILITIES CHO TẤT CẢ CÁC BARS & FRAGMENTS                        
     // =========================================================================
-    const isClinicalLockedVal = [(${isClinicalLocked != null ? isClinicalLocked : false})];
+    const isClinicalLockedVal = /*[[${isClinicalLocked != null ? isClinicalLocked : false}]]*/ false;
+    const currentVisitIdFallback = /*[[${visit != null and visit.visitId != null ? visit.visitId : 1}]]*/ 1;
 
     function getCurrentVisitId() {
         const el = document.getElementById('visitId') || document.getElementById('treatVisitId');
         if (el && el.value) return el.value;
         if (typeof ft17CurrentVisitId !== 'undefined' && ft17CurrentVisitId) return ft17CurrentVisitId;
-        return [(${visit != null and visit.visitId != null ? visit.visitId : 1})];
+        return currentVisitIdFallback;
     }
 
     function escapeHtml(text) {
@@ -1617,23 +1518,26 @@
         if (modal) modal.hide();
 
         if (sectionId === 'bar-exam') {
+            switchMainTab('tab-examination');
             const content = document.getElementById('content-exam');
             if (content && content.style.display === 'none') {
                 if (typeof toggleMainBar === 'function') toggleMainBar('exam');
             }
-            document.getElementById('bar-exam')?.scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => {
+                document.getElementById('bar-treatment')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         } else if (sectionId === 'bar-treatment') {
-            const content = document.getElementById('content-treatment');
-            if (content && content.style.display === 'none') {
-                if (typeof toggleMainBar === 'function') toggleMainBar('treatment');
-            }
-            document.getElementById('performedServicesSection')?.scrollIntoView({ behavior: 'smooth' });
+            switchMainTab('tab-performed-services');
+            setTimeout(() => {
+                document.getElementById('performedServicesSection')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         } else if (sectionId === 'prescriptionsSection') {
-            const content = document.getElementById('content-treatment');
-            if (content && content.style.display === 'none') {
-                if (typeof toggleMainBar === 'function') toggleMainBar('treatment');
-            }
-            document.getElementById('prescriptionsSection')?.scrollIntoView({ behavior: 'smooth' });
+            switchMainTab('tab-prescriptions');
+            setTimeout(() => {
+                document.getElementById('prescriptionsSection')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } else if (sectionId === 'tab-appointments') {
+            switchMainTab('tab-appointments');
         }
     }
 
