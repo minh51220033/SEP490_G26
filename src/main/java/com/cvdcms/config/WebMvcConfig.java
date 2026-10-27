@@ -18,16 +18,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AccountManagementInterceptor accountManagementInterceptor;
     //FT02 dichvu
     private final AdminServiceCatalogInterceptor adminServiceCatalogInterceptor;
-
+    //FT21-22 taichinh
+    private final FinanceAccessInterceptor financeAccessInterceptor;
 
     public WebMvcConfig(
             AdminBranchInterceptor adminBranchInterceptor,
             AccountManagementInterceptor accountManagementInterceptor,
-            AdminServiceCatalogInterceptor adminServiceCatalogInterceptor //FT02
+            AdminServiceCatalogInterceptor adminServiceCatalogInterceptor, //FT02
+            FinanceAccessInterceptor financeAccessInterceptor //FT21-22
     ) {
         this.adminBranchInterceptor = adminBranchInterceptor;
         this.accountManagementInterceptor = accountManagementInterceptor;
         this.adminServiceCatalogInterceptor = adminServiceCatalogInterceptor; //FT02
+        this.financeAccessInterceptor = financeAccessInterceptor;
     }
 
     @Override
@@ -69,6 +72,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(adminServiceCatalogInterceptor)
                 .addPathPatterns("/admin/services",
                                  "/admin/services/**")
+                .excludePathPatterns(staticFilesExclusions);
+
+        // Bảo vệ phân hệ Tài chính FT21 & FT22 (cả Web UI và REST API)
+        registry.addInterceptor(financeAccessInterceptor)
+                .addPathPatterns(
+                        "/invoices", "/invoices/**",
+                        "/payments", "/payments/**",
+                        "/api/invoices", "/api/invoices/**",
+                        "/api/payments", "/api/payments/**"
+                )
                 .excludePathPatterns(staticFilesExclusions);
     }
 }

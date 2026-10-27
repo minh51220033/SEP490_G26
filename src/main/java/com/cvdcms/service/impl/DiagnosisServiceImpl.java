@@ -36,6 +36,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final PrescriptionRepository prescriptionRepository;
     private final AppointmentRepository appointmentRepository;
     private final PatientProfileRepository patientProfileRepository;
+    private final InvoiceRepository invoiceRepository;
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -286,6 +287,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         Visit visit = getVisitOrThrow(visitId);
         if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
             throw new IllegalStateException("Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: " + visit.getStatus().name());
+        }
+
+        if (invoiceRepository.existsByVisit_VisitIdAndStatusNot(visitId, com.cvdcms.entity.enums.InvoiceStatus.CANCELLED)) {
+            throw new IllegalStateException("Không thể mở lại ca khám đã có hóa đơn còn hiệu lực. Vui lòng xử lý hóa đơn trước.");
         }
 
         visit.setStatus(VisitStatus.IN_EXAM);

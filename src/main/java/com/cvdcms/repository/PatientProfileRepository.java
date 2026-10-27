@@ -41,4 +41,8 @@ public interface PatientProfileRepository
     List<PatientProfile> searchPatients(@org.springframework.data.repository.query.Param("query") String query);
 
     List<PatientProfile> findTop15ByOrderByProfileIdDesc();
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM PatientProfile p WHERE p.profileId = :profileId")
+    Optional<PatientProfile> findByIdForUpdate(@org.springframework.data.repository.query.Param("profileId") Long profileId);
 }

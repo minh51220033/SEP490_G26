@@ -33,6 +33,7 @@ build/
 .vscode/
 
 uploads/
+private-uploads/
 target/
 .idea/
 
