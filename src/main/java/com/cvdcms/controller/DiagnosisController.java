@@ -50,6 +50,8 @@ public class DiagnosisController {
     private final com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
     private final com.cvdcms.service.ReExaminationService reExaminationService;
     private final com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
+    private final com.cvdcms.service.LaboOrderService laboOrderService;
+    private final SupplierRepository supplierRepository;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
@@ -211,6 +213,14 @@ public class DiagnosisController {
         List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
         model.addAttribute("paraclinicalServices", paraclinicalServices);
+
+        // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
+        List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
+        Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
+        List<Supplier> laboSuppliers = supplierRepository.findAll();
+        model.addAttribute("laboOrders", laboOrders);
+        model.addAttribute("laboStats", laboStats);
+        model.addAttribute("laboSuppliers", laboSuppliers);
 
         boolean isClinicalLocked = visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
