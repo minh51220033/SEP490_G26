@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: ĐẶT XƯỞNG / LABO PHỤC HÌNH (DENTAL LAB ORDERS)                    -->
+<!-- Frontend Fragment: doctor/fragments/labo-tab.html                     -->
+<!-- ===================================================================== -->
+<div th:fragment="laboTab">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-box-seam-fill fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Quản lý Đặt xưởng phục hình (Dental Labo)</h4>
+                    <span class="text-secondary small">Theo dõi phiếu gửi Labo răng sứ, hàm giả tháo lắp, máng chỉnh nha &amp; ngày hẹn trả</span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+                    onclick="showToast('Chức năng tạo phiếu gửi xưởng Labo.');">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>+ Lập phiếu gửi Labo</span>
+            </button>
+        </div>
+
+        <div class="table-responsive p-3 bg-white">
+            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 110px;">Mã phiếu</th>
+                    <th>Xưởng Labo &amp; Kỹ thuật viên</th>
+                    <th>Loại phục hình</th>
+                    <th style="width: 100px;" class="text-center">Vị trí răng</th>
+                    <th style="width: 100px;" class="text-center">Màu răng</th>
+                    <th style="width: 130px;">Ngày gửi</th>
+                    <th style="width: 130px;">Hẹn trả xưởng</th>
+                    <th style="width: 130px;" class="text-center">Trạng thái</th>
+                    <th style="width: 100px;" class="text-center">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><span class="badge bg-light text-dark border fw-bold">LAB-0021</span></td>
+                    <td>
+                        <strong class="text-dark">Labo Nha Khoa Toàn Ánh</strong>
+                        <div class="small text-muted">KTV: Trần Quốc Tuấn</div>
+                    </td>
+                    <td>
+                        <span class="fw-semibold text-primary">Răng sứ Zirconia DDBio</span>
+                        <div class="small text-muted">Lấy dấu cao su / Scan 3D</div>
+                    </td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">R26</span></td>
+                    <td class="text-center"><span class="badge bg-light text-dark border fw-bold">A2 (3M)</span></td>
+                    <td><span class="small text-muted">21/10/2026</span></td>
+                    <td><strong class="text-warning-emphasis">25/10/2026</strong></td>
+                    <td class="text-center">
+                        <span class="badge bg-warning-subtle text-dark border border-warning">Đang chế tác</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary" title="Xem chi tiết phiếu" onclick="showToast('Chi tiết phiếu Labo.');">
+                            <i class="bi bi-eye-fill"></i>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

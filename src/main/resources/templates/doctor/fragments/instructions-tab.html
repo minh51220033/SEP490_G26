@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: LỜI DẶN DÒ CỦA BÁC SĨ (POST-OP & HOME CARE INSTRUCTIONS)         -->
+<!-- Frontend Fragment: doctor/fragments/instructions-tab.html            -->
+<!-- ===================================================================== -->
+<div th:fragment="instructionsTab">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-card-checklist fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Lời dặn &amp; Hướng dẫn chăm sóc tại nhà của Bác sĩ</h4>
+                    <span class="text-secondary small">Chế độ vệ sinh răng miệng, lưu ý ăn uống và xử trí khi đau nhức khẩn cấp</span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('In hướng dẫn dặn dò cho bệnh nhân.');">
+                <i class="bi bi-printer me-1"></i>In phiếu dặn dò
+            </button>
+        </div>
+
+        <div class="card-body p-4 bg-white">
+            <div class="row g-4">
+                <!-- 1. HƯỚNG DẪN CHUNG SAU ĐIỀU TRỊ -->
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 bg-light-subtle h-100">
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                            <i class="bi bi-shield-check text-success me-1"></i>Chế độ kiêng cữ &amp; Vệ sinh tại nhà
+                        </h6>
+                        <div class="d-flex flex-column gap-2.5 small text-secondary">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
+                                <span><strong>Cắn gòn / Cầm máu:</strong> Cắn chặt gạc tại vị trí can thiệp trong vòng 45 - 60 phút. Không khạc nhổ nước bọt, không dùng lưỡi hoặc vật lạ chạm vào vết mổ.</span>
+                            </div>
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
+                                <span><strong>Chườm má giảm sưng:</strong> Trong 24h đầu chườm lạnh ngoài má (15 phút chườm, 15 phút nghỉ). Từ ngày thứ 2 chườm ấm để tan máu bầm.</span>
+                            </div>
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
+                                <span><strong>Chế độ ăn uống:</strong> Dùng thức ăn mềm, nguội, lỏng (cháo, súp). Tránh đồ ăn quá cay nóng, cứng hoặc giòn. Không uống rượu bia, không hút thuốc lá.</span>
+                            </div>
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
+                                <span><strong>Vệ sinh răng miệng:</strong> Đánh răng nhẹ nhàng tránh vùng vết thương. Ngày đầu không súc miệng nước muối mạnh để tránh bong cục máu đông.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. LỜI DẶN RIÊNG CỦA BÁC SĨ TRONG CA KHÁM -->
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-chat-left-dots text-primary me-1"></i>Ghi chú dặn dò riêng cho ca khám này
+                            </h6>
+                            <div class="p-3 bg-light rounded-3 text-secondary small fst-italic mb-3">
+                                <i class="bi bi-quote fs-4 text-primary opacity-50 d-block mb-1"></i>
+                                <span th:if="${prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null}"
+                                      th:text="${prescriptions[0].adviceNotes}">
+                                    Uống thuốc đều đặn theo đơn. Sau 7 ngày quay lại tái khám và cắt chỉ. Nếu có dấu hiệu sốt cao hoặc chảy máu kéo dài hãy liên hệ hotline ngay.
+                                </span>
+                                <span th:unless="${prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null}">
+                                    Bác sĩ chưa nhập dặn dò riêng. Bệnh nhân tuân thủ đúng chế độ chăm sóc răng miệng tiêu chuẩn và uống thuốc giảm đau nếu cần.
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- HOTLINE KHẨN CẤP -->
+                        <div class="alert alert-danger border-danger-subtle d-flex align-items-center gap-3 p-3 rounded-3 mb-0">
+                            <i class="bi bi-telephone-inbound-fill fs-3 text-danger"></i>
+                            <div>
+                                <div class="fw-bold text-danger">HỖ TRỢ Y TẾ KHẨN CẤP 24/7</div>
+                                <div class="small text-secondary">Khi có triệu chứng bất thường (chảy máu ồ ạt, sưng lan tỏa, sốt &gt; 38.5°C): <strong>Hotline: 1900 6868</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
