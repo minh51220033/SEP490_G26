@@ -742,28 +742,399 @@
 
     // BAR 1: Logic khám tổng quát đã tách sang doctor/fragments/general-examination.html
 
+    let clinicalOrdersList = [];
 
-    // =========================================================================
-    // GLOBAL UTILITIES CHO TẤT CẢ CÁC BARS & FRAGMENTS                        
-    // =========================================================================
-    const isClinicalLockedVal = /*[[${isClinicalLocked != null ? isClinicalLocked : false}]]*/ false;
-    const currentVisitIdFallback = /*[[${visit != null and visit.visitId != null ? visit.visitId : 1}]]*/ 1;
+    function addClinicalOrder(orderName, region, type) {
+        const orderId = 'CĐ' + (1000 + clinicalOrdersList.length + 1);
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    function getCurrentVisitId() {
-        const el = document.getElementById('visitId') || document.getElementById('treatVisitId');
-        if (el && el.value) return el.value;
-        if (typeof ft17CurrentVisitId !== 'undefined' && ft17CurrentVisitId) return ft17CurrentVisitId;
-        return currentVisitIdFallback;
+        clinicalOrdersList.push({
+            id: orderId,
+            name: orderName,
+            region: region || 'Toàn hàm',
+            doctor: 'BS. CK1 Lê Hoàng Nam',
+            time: timeStr,
+            status: 'PENDING'
+        });
+
+        renderClinicalOrders();
+        showToast(`Đã thêm chỉ định: ${orderName}`);
     }
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+    function quickAddOrderPrompt() {
+        const name = prompt('Nhập tên chỉ định cận lâm sàng (Ví dụ: Chụp CT ConeBeam 3D, Chụp Panorama, Xét nghiệm máu):', 'Chụp X-quang quanh chóp');
+        if (!name) return;
+        const region = prompt('Vị trí răng hoặc vùng chụp (Ví dụ: R16, Hàm trên, Toàn hàm):', 'R16');
+        addClinicalOrder(name, region || 'Toàn hàm', 'OTHER');
+    }
+
+    function renderClinicalOrders() {
+        const tbody = document.getElementById('clinicalOrdersTableBody');
+        const badge = document.getElementById('ordersCountBadge');
+        if (!tbody) return;
+
+        if (badge) badge.innerText = `${clinicalOrdersList.length} chỉ định`;
+
+        if (clinicalOrdersList.length === 0) {
+            tbody.innerHTML = `
+                <tr id="emptyOrdersRow">
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let rowsHtml = '';
+        clinicalOrdersList.forEach((ord, idx) => {
+            const isDone = ord.status === 'COMPLETED';
+            rowsHtml += `
+                <tr>
+                    <td><span class="badge bg-light text-dark border fw-bold">${ord.id}</span></td>
+                    <td><strong class="text-dark">${ord.name}</strong></td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${ord.region}</span></td>
+                    <td><div class="small fw-semibold text-dark">${ord.doctor}</div></td>
+                    <td><span class="small text-muted">${ord.time}</span></td>
+                    <td class="text-center">
+                        <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
+                            ${isDone ? 'Đã có kết quả' : 'Chờ thực hiện'}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
+                                    title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
+                                    onclick="toggleOrderStatus(${idx})">
+                                <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    title="Xóa chỉ định này"
+                                    onclick="deleteOrder(${idx})">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = rowsHtml;
+    }
+
+    function toggleOrderStatus(idx) {
+        if (clinicalOrdersList[idx]) {
+            clinicalOrdersList[idx].status = clinicalOrdersList[idx].status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+            renderClinicalOrders();
+            showToast('Đã cập nhật trạng thái chỉ định cận lâm sàng!');
+        }
+    }
+
+    function deleteOrder(idx) {
+        if (confirm('Bạn có chắc muốn xóa chỉ định này?')) {
+            clinicalOrdersList.splice(idx, 1);
+            renderClinicalOrders();
+            showToast('Đã xóa chỉ định.');
+        }
+    }
+
+    // 1. Lọc danh sách bệnh lý thường gặp
+    function filterCommonDiseasesList(keyword) {
+        const term = (keyword || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#commonDiseasesListBody tr');
+        rows.forEach(row => {
+            const code = (row.getAttribute('data-code') || '').toLowerCase();
+            const name = (row.getAttribute('data-name') || '').toLowerCase();
+            const en = (row.getAttribute('data-en') || '').toLowerCase();
+            if (code.includes(term) || name.includes(term) || en.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 2. Chọn 1 chạm từ danh sách bệnh lý thường gặp
+    function selectFromCommonList(rowEl) {
+        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
+        rowEl.classList.add('is-selected');
+
+        const code = rowEl.getAttribute('data-code');
+        const name = rowEl.getAttribute('data-name');
+        const en = rowEl.getAttribute('data-en');
+
+        selectIcd({
+            icd10Code: code,
+            diseaseNameVi: name,
+            diseaseNameEn: en
+        });
+    }
+
+    // 3. Autocomplete tra cứu ICD-10
+    function onIcdInput(query) {
+        clearTimeout(searchTimeout);
+        const listEl = document.getElementById('autocompleteList');
+
+        if (!query || query.trim().length === 0) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/v1/icd10/search?q=${encodeURIComponent(query.trim())}`)
+                .then(res => res.json())
+                .then(data => {
+                    listEl.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        listEl.innerHTML = '<div class="p-3 text-muted small text-center">Không tìm thấy mã bệnh phù hợp.</div>';
+                        listEl.style.display = 'block';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.innerHTML = `
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border me-1">${item.icd10Code}</span>
+                                <span class="item-title">${item.diseaseNameVi}</span>
+                                ${item.diseaseNameEn ? `<div class="item-sub">${item.diseaseNameEn}</div>` : ''}
+                            </div>
+                            <span class="text-primary small"><i class="bi bi-check2-circle"></i> Chọn</span>
+                        `;
+                        div.onclick = () => selectIcd(item);
+                        listEl.appendChild(div);
+                    });
+                    listEl.style.display = 'block';
+                })
+                .catch(err => {
+                    console.error('Lỗi tìm kiếm ICD-10: ', err);
+                });
+        }, 250);
+    }
+
+    function selectIcd(item) {
+        document.getElementById('selectedIcd10Code').value = item.icd10Code;
+        document.getElementById('icdSearchInput').value = `${item.icd10Code} - ${item.diseaseNameVi}`;
+        document.getElementById('autocompleteList').style.display = 'none';
+
+        // Hiện badge đã chọn
+        document.getElementById('selectedBadgeCode').innerText = item.icd10Code;
+        document.getElementById('selectedBadgeName').innerText = item.diseaseNameVi;
+        document.getElementById('selectedBadgeBox').classList.remove('d-none');
+    }
+
+    function clearSelectedIcd() {
+        document.getElementById('selectedIcd10Code').value = '';
+        document.getElementById('icdSearchInput').value = '';
+        document.getElementById('selectedBadgeBox').classList.add('d-none');
+        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
+        document.getElementById('icdSearchInput').focus();
+    }
+
+    // Đóng autocomplete khi click ngoài
+    document.addEventListener('click', function(e) {
+        const wrapper = document.querySelector('.autocomplete-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            document.getElementById('autocompleteList').style.display = 'none';
+        }
+    });
+
+    // 4. Quản lý chọn răng FDI
+    function toggleTooth(toothNumber) {
+        if (selectedTeeth.has(toothNumber)) {
+            selectedTeeth.delete(toothNumber);
+        } else {
+            selectedTeeth.add(toothNumber);
+        }
+        updateToothUI();
+    }
+
+    function setQuickTeeth(type) {
+        selectedTeeth.clear();
+        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
+        document.getElementById('toothNumbersInput').value = type;
+    }
+
+    function clearTeethSelection() {
+        selectedTeeth.clear();
+        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
+        document.getElementById('toothNumbersInput').value = '';
+    }
+
+    function updateToothUI() {
+        document.querySelectorAll('.tooth-btn').forEach(btn => {
+            const num = parseInt(btn.innerText);
+            if (selectedTeeth.has(num)) {
+                btn.classList.add('is-selected');
+            } else {
+                btn.classList.remove('is-selected');
+            }
+        });
+
+        if (selectedTeeth.size > 0) {
+            const sorted = Array.from(selectedTeeth).sort((a,b) => a - b);
+            document.getElementById('toothNumbersInput').value = sorted.join(', ');
+        } else {
+            document.getElementById('toothNumbersInput').value = '';
+        }
+    }
+
+    // 5. Gửi chẩn đoán qua AJAX
+    function submitDiagnosis(e) {
+        e.preventDefault();
+        const visitId = document.getElementById('visitId').value;
+        const icd10Code = document.getElementById('selectedIcd10Code').value;
+        const rawSearch = document.getElementById('icdSearchInput').value;
+
+        const finalCode = icd10Code || (rawSearch.includes(' - ') ? rawSearch.split(' - ')[0].trim() : rawSearch.trim());
+        if (!finalCode) {
+            showToast('Vui lòng chọn hoặc nhập mã bệnh ICD-10!', true);
+            return;
+        }
+
+        const typeInput = document.querySelector('input[name="diagnosisType"]:checked');
+        const diagnosisType = typeInput ? typeInput.value : 'MAIN';
+        const toothNumbers = document.getElementById('toothNumbersInput').value;
+        const notes = document.getElementById('notesInput').value;
+
+        const payload = {
+            visitId: parseInt(visitId),
+            icd10Code: finalCode,
+            diagnosisType: diagnosisType,
+            toothNumbers: toothNumbers,
+            notes: notes
+        };
+
+        const btn = document.getElementById('btnSubmitDiagnosis');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+        fetch('/api/v1/diagnoses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Có lỗi xảy ra'); });
+            }
+            return res.json();
+        })
+        .then(saved => {
+            showToast(`Đã thêm chẩn đoán ${saved.icd10Code} thành công!`);
+            addDiagnosisRowToTable(saved);
+            resetForm();
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Lưu chẩn đoán';
+        });
+    }
+
+    // 6. Xóa chẩn đoán
+    function deleteDiagnosis(diagId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa chẩn đoán này khỏi ca khám?')) {
+            return;
+        }
+
+        fetch(`/api/v1/diagnoses/${diagId}`, {
+            method: 'DELETE'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Không thể xóa'); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            showToast('Đã xóa chẩn đoán thành công!');
+            const row = document.getElementById(`diag-row-${diagId}`);
+            if (row) {
+                row.remove();
+            }
+            updateTableCount();
+        })
+        .catch(err => {
+            showToast(err.message, true);
+        });
+    }
+
+    function addDiagnosisRowToTable(d) {
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        let badgeHtml = '';
+        if (d.diagnosisType === 'MAIN') {
+            badgeHtml = '<span class="badge-main"><i class="bi bi-star-fill me-1"></i>Chính</span>';
+        } else if (d.diagnosisType === 'SECONDARY') {
+            badgeHtml = '<span class="badge-secondary"><i class="bi bi-plus-circle me-1"></i>Kèm theo</span>';
+        } else {
+            badgeHtml = '<span class="badge-diff"><i class="bi bi-question-circle me-1"></i>Phân biệt</span>';
+        }
+
+        const toothDisplay = d.toothNumbers ? ('R-' + d.toothNumbers) : 'Toàn hàm';
+        const notesDisplay = d.notes ? d.notes : '-';
+
+        const tbody = document.getElementById('diagnosesTableBody');
+        const tr = document.createElement('tr');
+        tr.id = `diag-row-${d.diagnosisId}`;
+        tr.innerHTML = `
+            <td><strong class="text-dark">${toothDisplay}</strong></td>
+            <td><span class="df-list-code">${d.icd10Code}</span></td>
+            <td>
+                <div class="fw-bold text-dark">${d.diagnosisText}</div>
+                ${d.diseaseNameEn ? `<div class="small text-muted">${d.diseaseNameEn}</div>` : ''}
+            </td>
+            <td>${badgeHtml}</td>
+            <td><span class="text-secondary small">${notesDisplay}</span></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa" onclick="deleteDiagnosis(${d.diagnosisId})">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
+            </td>
+        `;
+
+        if (d.diagnosisType === 'MAIN') {
+            tbody.insertBefore(tr, tbody.firstChild);
+        } else {
+            tbody.appendChild(tr);
+        }
+
+        updateTableCount();
+    }
+
+    function updateTableCount() {
+        const rows = document.querySelectorAll('#diagnosesTableBody tr:not(#emptyRow)');
+        const count = rows.length;
+        document.getElementById('totalCountBadge').innerText = `${count} chẩn đoán`;
+
+        if (count === 0) {
+            document.getElementById('diagnosesTableBody').innerHTML = `
+                <tr id="emptyRow">
+                    <td colspan="6">
+                        <div class="df-no-data">
+                            <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
+                            <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
+                            <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('diagnosisForm').reset();
+        clearSelectedIcd();
+        clearTeethSelection();
+        document.querySelector('input[name="diagnosisType"][value="MAIN"]').checked = true;
     }
 
     function showToast(message, isError = false) {

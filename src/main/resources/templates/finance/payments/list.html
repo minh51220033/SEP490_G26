@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Lịch sử các đợt thanh toán (SCR-22.3) - FT22')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('payments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Thu tiền & Phiếu thu Viện phí')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-credit-card-2-front text-success"></i> Lịch sử các đợt Thanh toán (SCR-22.3)</h1>
+                    <p>Theo dõi luồng tiền thu viện phí, nộp tiền tạm ứng, phương thức thanh toán tiền mặt, chuyển khoản QR và POS.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/payments/create}" class="fin-btn fin-btn-success">
+                        <i class="bi bi-plus-lg"></i> Thu tiền viện phí
+                    </a>
+                    <a th:href="@{/payments/deposits}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-wallet2"></i> Tạm ứng / Đặt cọc
+                    </a>
+                    <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-cash-stack"></i> Quản lý công nợ
+                    </a>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="fin-card">
+                <form th:action="@{/payments}" method="get" class="fin-filter-bar">
+                    <div class="fin-form-group">
+                        <label for="branchSelect">Cơ sở</label>
+                        <select id="branchSelect" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${b.branchId == selectedBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="paymentType">Loại giao dịch</label>
+                        <select id="paymentType" name="paymentType" class="fin-select">
+                            <option value="">-- Tất cả loại --</option>
+                            <option value="PAYMENT" th:selected="${selectedPaymentType?.name() == 'PAYMENT'}">Thanh toán hóa đơn</option>
+                            <option value="ADVANCE_DEPOSIT" th:selected="${selectedPaymentType?.name() == 'ADVANCE_DEPOSIT'}">Nộp tiền tạm ứng</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="paymentMethod">Phương thức</label>
+                        <select id="paymentMethod" name="paymentMethod" class="fin-select">
+                            <option value="">-- Tất cả phương thức --</option>
+                            <option value="CASH" th:selected="${selectedPaymentMethod?.name() == 'CASH'}">💵 Tiền mặt</option>
+                            <option value="BANK_TRANSFER" th:selected="${selectedPaymentMethod?.name() == 'BANK_TRANSFER'}">🏦 Chuyển khoản QR</option>
+                            <option value="POS_CARD" th:selected="${selectedPaymentMethod?.name() == 'POS_CARD'}">💳 Quẹt thẻ POS</option>
+                            <option value="DEPOSIT_WALLET" th:selected="${selectedPaymentMethod?.name() == 'DEPOSIT_WALLET'}">👛 Ví tạm ứng</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}">
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}">
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
+                        <label for="keyword">Từ khóa tìm kiếm</label>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Mã phiếu thu, Mã HĐ, Mã BN, Tên BN, SĐT..." th:value="${keyword}">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Tìm kiếm</button>
+                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table Card -->
+            <div class="fin-card p-0">
+                <div class="fin-table-wrapper">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã phiếu</th>
+                            <th>Thời điểm</th>
+                            <th>Loại phiếu</th>
+                            <th>Bệnh nhân</th>
+                            <th>Hóa đơn liên kết</th>
+                            <th>Cơ sở</th>
+                            <th>Phương thức</th>
+                            <th class="text-end">Số tiền thu</th>
+                            <th>Thu ngân</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(payments)}">
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                Chưa có phiếu thu nào phù hợp với điều kiện tìm kiếm.
+                            </td>
+                        </tr>
+                        <tr th:each="p : ${payments}">
+                            <td>
+                                <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
+                                   class="fw-bold text-success text-decoration-none" th:text="${p.paymentCode}">TT10001</a>
+                            </td>
+                            <td>
+                                <span th:text="${#temporals.format(p.paidAt, 'dd/MM/yyyy')}">24/10/2026</span>
+                                <small class="text-muted d-block" th:text="${#temporals.format(p.paidAt, 'HH:mm')}">14:30</small>
+                            </td>
+                            <td>
+                                <span th:if="${p.paymentType.name() == 'PAYMENT'}" class="badge bg-primary text-white">Thanh toán HĐ</span>
+                                <span th:if="${p.paymentType.name() == 'ADVANCE_DEPOSIT'}" class="badge bg-warning text-dark">Nộp tạm ứng</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold" th:text="${p.patientProfile.fullName}">Nguyễn Văn An</div>
+                                <small class="text-muted" th:text="${p.patientProfile.patientCode} + ' - ' + ${p.patientProfile.phoneNumber}">BN001 - 098...</small>
+                            </td>
+                            <td>
+                                <a th:if="${p.invoice != null}" th:href="@{/invoices/{id}(id=${p.invoice.invoiceId})}"
+                                   class="text-primary fw-bold text-decoration-none" th:text="${p.invoice.invoiceCode}">HD123456</a>
+                                <span th:if="${p.invoice == null}" class="text-muted small">-</span>
+                            </td>
+                            <td th:text="${p.branch.branchName}">Cơ sở Quận 1</td>
+                            <td>
+                                <span th:if="${p.paymentMethod.name() == 'CASH'}" class="fin-badge fin-badge-method">💵 Tiền mặt</span>
+                                <span th:if="${p.paymentMethod.name() == 'BANK_TRANSFER'}" class="fin-badge fin-badge-method">🏦 Chuyển khoản QR</span>
+                                <span th:if="${p.paymentMethod.name() == 'POS_CARD'}" class="fin-badge fin-badge-method">💳 Quẹt thẻ POS</span>
+                                <span th:if="${p.paymentMethod.name() == 'DEPOSIT_WALLET'}" class="fin-badge fin-badge-method">👛 Ví tạm ứng</span>
+                                <small class="text-muted d-block" th:if="${p.transactionRef != null and !p.transactionRef.isEmpty()}" th:text="'Ref: ' + ${p.transactionRef}"></small>
+                            </td>
+                            <td class="text-end fw-bold text-success fs-6"
+                                th:text="${#numbers.formatDecimal(p.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td th:text="${p.cashier.fullName}">Nguyễn Thu Ngân</td>
+                            <td class="text-center">
+                                <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
+                                   class="btn btn-sm btn-outline-secondary" title="In phiếu thu viện phí">
+                                    <i class="bi bi-printer"></i> In phiếu
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="p-3 d-flex justify-content-between align-items-center border-top">
+                    <span class="text-muted small" th:text="'Hiển thị ' + ${payments.size()} + ' / ' + ${totalElements} + ' phiếu thu'"></span>
+                    <nav aria-label="Phân trang">
+                        <ul class="pagination pagination-sm m-0">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/payments(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}">Trước</a>
+                            </li>
+                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                                class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
+                                <a class="page-link" th:href="@{/payments(page=${i}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/payments(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

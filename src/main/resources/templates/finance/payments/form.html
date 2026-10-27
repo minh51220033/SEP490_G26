@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Ghi nhận thanh toán & Lập phiếu thu (SCR-22.2) - FT22')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('payments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lập Phiếu thu Viện phí')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-cash-coin text-success"></i> Ghi nhận Thanh toán Viện phí (SCR-22.2)</h1>
+                    <p>Hỗ trợ đa phương thức: Tiền mặt, Chuyển khoản, Quẹt thẻ POS, và Trừ tiền ví cọc tạm ứng.</p>
+                </div>
+                <div>
+                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại</a>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="fin-card">
+                        <form th:action="@{/payments/create}" method="post">
+                            <input type="hidden" name="invoiceId" th:value="${selectedInvoice != null ? selectedInvoice.invoiceId : ''}">
+                            <input type="hidden" name="profileId" th:value="${selectedPatient != null ? selectedPatient.profileId : ''}">
+                            <input type="hidden" name="branchId" th:value="${selectedBranch != null ? selectedBranch.branchId : 1}">
+
+                            <!-- Thông tin hóa đơn / Bệnh nhân -->
+                            <div th:if="${selectedInvoice != null}" class="p-3 mb-4 rounded bg-light border">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <span class="text-muted small d-block">MÃ HÓA ĐƠN</span>
+                                        <strong class="fs-5 text-primary" th:text="${selectedInvoice.invoiceCode}">HD10001</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <span class="text-muted small d-block">BỆNH NHÂN</span>
+                                        <strong th:text="${selectedInvoice.patientProfile.fullName}">Nguyễn Văn An</strong>
+                                        <span class="badge bg-secondary ms-1" th:text="${selectedInvoice.patientProfile.patientCode}">BN001</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span class="text-muted small d-block">TỔNG TIỀN PHẢI TRẢ</span>
+                                        <span class="fw-bold" th:text="${#numbers.formatDecimal(selectedInvoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span class="text-muted small d-block">ĐÃ THANH TOÁN</span>
+                                        <span class="text-success fw-bold" th:text="${#numbers.formatDecimal(selectedInvoice.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span class="text-muted small d-block">CÒN PHẢI NỘP (CÔNG NỢ)</span>
+                                        <strong class="fs-5 text-danger" th:text="${#numbers.formatDecimal(selectedInvoice.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nhập số tiền thu -->
+                            <div class="mb-3">
+                                <label for="amount" class="form-label fw-bold fs-6">Số tiền thực tế khách thanh toán (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" id="amount" name="amount" class="form-control form-control-lg fw-bold text-success"
+                                       th:value="${selectedInvoice != null ? selectedInvoice.remainingDebt : ''}" step="1000" min="1000" required>
+                                <small class="text-muted">Có thể thanh toán toàn bộ công nợ hoặc trả góp / thanh toán từng phần.</small>
+                            </div>
+
+                            <!-- Phương thức thanh toán -->
+                            <div class="mb-3">
+                                <label for="paymentMethod" class="form-label fw-bold">Phương thức thanh toán <span class="text-danger">*</span></label>
+                                <select id="paymentMethod" name="paymentMethod" class="form-select form-select-lg" required>
+                                    <option value="CASH">💵 Tiền mặt (Thu tại quầy)</option>
+                                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (Quét mã VietQR)</option>
+                                    <option value="POS_CARD">💳 Quẹt thẻ POS (Visa/Master/ATM nội địa)</option>
+                                    <option value="DEPOSIT_WALLET"
+                                            th:disabled="${selectedPatient == null or selectedPatient.depositBalance == null or selectedPatient.depositBalance.compareTo(T(java.math.BigDecimal).ZERO) <= 0}">
+                                        👛 Trừ vào Ví tiền cọc / Tạm ứng
+                                        <span th:if="${selectedPatient != null}" th:text="'(Số dư: ' + ${#numbers.formatDecimal(selectedPatient.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ)'"></span>
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Mã giao dịch -->
+                            <div class="mb-3">
+                                <label for="transactionRef" class="form-label">Mã giao dịch / Mã chuẩn chi ngân hàng (nếu có)</label>
+                                <input type="text" id="transactionRef" name="transactionRef" class="form-control"
+                                       placeholder="VD: FT241024889988, VCB-9922...">
+                            </div>
+
+                            <!-- Ghi chú -->
+                            <div class="mb-4">
+                                <label for="notes" class="form-label">Ghi chú phiếu thu</label>
+                                <textarea id="notes" name="notes" class="form-control" rows="2"
+                                          placeholder="Nội dung diễn giải phiếu thu..."></textarea>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="d-flex justify-content-end gap-2">
+                                <a th:href="@{/payments}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
+                                <button type="submit" class="fin-btn fin-btn-success py-2 px-4 fs-6">
+                                    <i class="bi bi-check2-circle"></i> Xác nhận Thu tiền &amp; Lưu phiếu
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

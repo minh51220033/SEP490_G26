@@ -11,6 +11,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn lịch hẹn (appointments) phục vụ liên kết và tổng hợp công việc CSKH (FT44).
+ * Sử dụng INNER JOIN FETCH cho patientProfile & branch và kiểm tra tính toàn vẹn khoá ngoại
+ * để tránh lỗi EntityNotFoundException khi dữ liệu test có khoá ngoại mồ côi.
+ */
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
@@ -29,7 +34,39 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByAppointmentDateBetween(LocalDate startDate, LocalDate endDate);
 
     long countByAppointmentDateBeforeAndStatusIn(LocalDate date, List<AppointmentStatus> statuses);
+    /**
+     * Lấy danh sách lịch hẹn hợp lệ theo chi nhánh kèm thông tin bệnh nhân, bác sĩ và dịch vụ.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patientProfile p
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH a.doctor d
+        LEFT JOIN FETCH a.service srv
+        WHERE (:branchId IS NULL OR b.branchId = :branchId)
+          AND (a.doctor IS NULL OR d.staffId IS NOT NULL)
+          AND (a.service IS NULL OR srv.serviceId IS NOT NULL)
+        ORDER BY a.appointmentDate DESC, a.appointmentId DESC
+        """)
+    List<Appointment> findByBranchWithDetails(@Param("branchId") Long branchId);
 
+    /**
+     * Lấy danh sách lịch hẹn hợp lệ của một bệnh nhân cụ thể.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patientProfile p
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH a.doctor d
+        LEFT JOIN FETCH a.service srv
+        WHERE p.profileId = :profileId
+          AND (a.doctor IS NULL OR d.staffId IS NOT NULL)
+          AND (a.service IS NULL OR srv.serviceId IS NOT NULL)
+        ORDER BY a.appointmentDate DESC, a.appointmentId DESC
+        """)
+    List<Appointment> findByProfileIdWithDetails(@Param("profileId") Long profileId);
     Optional<Appointment> findByAppointmentCode(String appointmentCode);
 
     @Query("SELECT a FROM Appointment a " +

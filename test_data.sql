@@ -212,6 +212,62 @@ INSERT INTO clinical_workflow_steps (step_id, version_id, step_code, step_name, 
 (505, 5, 'IM-B5', 'Bước 5: Lắp nắp đậy / Trụ lành thương và khâu vạt', 'Lắp Cover screw (nếu vùi) hoặc Healing Abutment (nếu làm thì một thì). Khâu khép vạt niêm mạc bằng chỉ phẫu thuật không tiêu hoặc tự tiêu. Chụp phim X-quang kiểm tra ngay sau cấy.', 'FOLLOW_UP', 5, 0, 'Vạt khâu kín ôm khít trụ, phim X-quang kiểm tra vị trí Implant chuẩn xác', 0, 15, 'ACTIVE')
 ON DUPLICATE KEY UPDATE step_name = VALUES(step_name), step_description = VALUES(step_description), completion_criteria = VALUES(completion_criteria);
 
+-- =====================================================================
+-- 15. KHUYẾN MÃI & ƯU ĐÃI (PROMOTIONS - TEST FT21)
+-- =====================================================================
+INSERT INTO promotions (promotion_id, promo_code, promo_name, branch_id, promo_type, discount_value, max_discount_amount, min_bill_amount, start_date, end_date, usage_limit, used_count, is_active) VALUES
+(1, 'KM-TRIAN-10', 'Tri ân khách hàng tháng 10 - Giảm 10%', 1, 'PERCENTAGE', 10.00, 1000000.00, 1000000.00, DATE_SUB(NOW(), INTERVAL 10 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 100, 5, 1),
+(2, 'KM-KHAITRUONG', 'Ưu đãi Khai trương - Giảm trực tiếp 200k', 1, 'FIXED_AMOUNT', 200000.00, 200000.00, 500000.00, DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_ADD(NOW(), INTERVAL 60 DAY), 200, 12, 1)
+ON DUPLICATE KEY UPDATE promo_name = VALUES(promo_name), is_active = VALUES(is_active);
+
+-- 16. VÍ TÍCH ĐIỂM LOYALTY (PATIENT_LOYALTY_WALLETS)
+INSERT INTO patient_loyalty_wallets (wallet_id, profile_id, current_points, total_spent_amount, last_updated) VALUES
+(1, 1, 150, 5000000.00, NOW()),
+(2, 2, 350, 25000000.00, NOW()),
+(3, 3, 600, 60000000.00, NOW())
+ON DUPLICATE KEY UPDATE current_points = VALUES(current_points);
+
+-- 17. VOUCHER BỆNH NHÂN (PATIENT_VOUCHERS)
+INSERT INTO patient_vouchers (voucher_id, promotion_id, profile_id, voucher_code, status, expires_at) VALUES
+(1, 1, 1, 'VC-AN-VIP10', 'AVAILABLE', DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(2, 2, 2, 'VC-BINH-200K', 'AVAILABLE', DATE_ADD(NOW(), INTERVAL 45 DAY))
+ON DUPLICATE KEY UPDATE voucher_code = VALUES(voucher_code);
+
+-- 18. HÓA ĐƠN VIỆN PHÍ (INVOICES - TEST FT21)
+INSERT INTO invoices (invoice_id, invoice_code, visit_id, profile_id, branch_id, cashier_id, total_service_amount, discount_amount, promotion_discount, point_discount, total_amount, paid_amount, remaining_debt, payment_status, status, issued_at) VALUES
+(1, 'HD100001', 1, 1, 1, 1, 5000000.00, 250000.00, 0.00, 0.00, 4750000.00, 4750000.00, 0.00, 'PAID', 'CONFIRMED', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(2, 'HD100002', 2, 2, 1, 1, 2000000.00, 0.00, 200000.00, 0.00, 1800000.00, 1000000.00, 800000.00, 'PARTIAL', 'CONFIRMED', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(3, 'HD100003', 3, 3, 1, 1, 300000.00, 0.00, 0.00, 0.00, 300000.00, 0.00, 300000.00, 'UNPAID', 'CONFIRMED', NOW())
+ON DUPLICATE KEY UPDATE total_amount = VALUES(total_amount), remaining_debt = VALUES(remaining_debt);
+
+-- 19. CHI TIẾT DỊCH VỤ TRONG HÓA ĐƠN (INVOICE_ITEMS)
+INSERT INTO invoice_items (item_id, invoice_id, performed_id, service_id, item_name, quantity, unit_price, final_amount) VALUES
+(1, 1, 1, 1, 'Răng sứ Titan R16, R26', 2.00, 2500000.00, 5000000.00),
+(2, 2, 2, 7, 'Tiểu phẫu nhổ răng khôn 38 mọc lệch', 1.00, 2000000.00, 2000000.00),
+(3, 3, 3, 4, 'Cạo vôi răng & Đánh bóng toàn hàm', 1.00, 300000.00, 300000.00)
+ON DUPLICATE KEY UPDATE final_amount = VALUES(final_amount);
+
+-- 20. GIAO DỊCH THANH TOÁN (PAYMENTS - TEST FT22)
+INSERT INTO payments (payment_id, payment_code, invoice_id, profile_id, branch_id, cashier_id, payment_type, payment_method, amount, transaction_ref, notes, paid_at) VALUES
+(1, 'TT100001', 1, 1, 1, 1, 'PAYMENT', 'BANK_TRANSFER', 4750000.00, 'VCB-2410229988', 'Chuyển khoản thanh toán toàn bộ HĐ100001', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(2, 'TT100002', 2, 2, 1, 1, 'PAYMENT', 'CASH', 1000000.00, NULL, 'Thanh toán đợt 1 tiền mặt HĐ100002', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(3, 'TU100001', NULL, 2, 1, 1, 'ADVANCE_DEPOSIT', 'POS_CARD', 2000000.00, 'POS-987654', 'Nộp tiền tạm ứng đợt điều trị chỉnh nha', DATE_SUB(NOW(), INTERVAL 5 DAY))
+ON DUPLICATE KEY UPDATE amount = VALUES(amount);
+
+-- 21. PHIẾU HOÀN TIỀN (REFUNDS - TEST FT22)
+INSERT INTO refunds (refund_id, refund_code, invoice_id, profile_id, branch_id, refunded_by, refund_method, amount, reason, refunded_at) VALUES
+(1, 'HT100001', 1, 1, 1, 1, 'CASH', 200000.00, 'Hoàn trả tiền chênh lệch sau điều chỉnh giảm giá đặc biệt', DATE_SUB(NOW(), INTERVAL 1 DAY))
+ON DUPLICATE KEY UPDATE amount = VALUES(amount);
+
+-- 22. NHẬT KÝ ĐIỀU CHỈNH HÓA ĐƠN (INVOICE_AUDIT_LOGS - TEST SCR-21.4)
+INSERT INTO invoice_audit_logs (log_id, invoice_id, action_type, old_total_amount, new_total_amount, old_paid_amount, new_paid_amount, reason, details, performed_by, performed_at) VALUES
+(1, 1, 'CREATE', 5000000.00, 4750000.00, 0.00, 0.00, 'Khởi tạo hóa đơn từ ca khám VIS10001', 'Tổng tiền: 5.000.000 đ, Giảm VIP 5%: 250.000 đ', 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(2, 1, 'PAYMENT', 4750000.00, 4750000.00, 0.00, 4750000.00, 'Thanh toán đủ viện phí qua chuyển khoản VCB', 'Mã giao dịch: TT100001, Ref: VCB-2410229988', 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(3, 2, 'CREATE', 2000000.00, 1800000.00, 0.00, 0.00, 'Khởi tạo hóa đơn từ ca khám VIS10002', 'Áp dụng khuyến mãi khai trương giảm 200k', 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(4, 2, 'PAYMENT', 1800000.00, 1800000.00, 0.00, 1000000.00, 'Thanh toán đợt 1 tiền mặt 1.000.000 đ', 'Còn nợ 800.000 đ', 1, DATE_SUB(NOW(), INTERVAL 1 DAY))
+ON DUPLICATE KEY UPDATE reason = VALUES(reason);
+
 SET FOREIGN_KEY_CHECKS = 1;
+
 
 
