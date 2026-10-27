@@ -3,6 +3,7 @@ package com.cvdcms.service.impl;
 import com.cvdcms.DTO.ClinicalCompletionCheckDTO;
 import com.cvdcms.DTO.DiagnosisRequestDTO;
 import com.cvdcms.DTO.DiagnosisResponseDTO;
+import com.cvdcms.DTO.GeneralExaminationRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
@@ -34,6 +35,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final PerformedServiceRepository performedServiceRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final AppointmentRepository appointmentRepository;
+    private final PatientProfileRepository patientProfileRepository;
     private final InvoiceRepository invoiceRepository;
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -349,5 +351,118 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .toothNumbers(ed.getToothNumbers())
                 .notes(ed.getNotes())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ClinicalExamination getClinicalExaminationByVisitId(Long visitId) {
+        if (visitId == null) return null;
+        return clinicalExamRepository.findByVisit_VisitId(visitId).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GeneralExaminationRequestDTO getGeneralExamination(Long visitId) {
+        Visit visit = getVisitOrThrow(visitId);
+        PatientProfile patient = visit.getPatientProfile();
+        ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visitId).orElse(null);
+
+        boolean hasCardio = patient != null && Boolean.TRUE.equals(patient.getHasCardiovascularDisease());
+        boolean hasAllergies = patient != null && Boolean.TRUE.equals(patient.getHasAllergies());
+        String allergyDetails = patient != null ? patient.getAllergyDetails() : null;
+
+        String underlyingDetails = patient != null ? patient.getUnderlyingDiseaseDetails() : null;
+        boolean hasDiabetes = underlyingDetails != null && underlyingDetails.contains("Đái tháo đường");
+        boolean hasBleeding = underlyingDetails != null && underlyingDetails.contains("Rối loạn đông máu");
+        boolean isPregnant = underlyingDetails != null && (underlyingDetails.contains("Mang thai") || underlyingDetails.contains("Cho con bú"));
+
+        return GeneralExaminationRequestDTO.builder()
+                .visitId(visitId)
+                .initialSymptoms(visit.getInitialSymptoms() != null ? visit.getInitialSymptoms() : (exam != null ? exam.getChiefComplaint() : null))
+                .hasAllergies(hasAllergies)
+                .allergyDetails(allergyDetails)
+                .hasCardiovascularDisease(hasCardio)
+                .hasDiabetes(hasDiabetes)
+                .hasBleedingDisorder(hasBleeding)
+                .isPregnant(isPregnant)
+                .underlyingDiseaseDetails(underlyingDetails)
+                .tmjStatus(exam != null && exam.getExtraoralExam() != null ? exam.getExtraoralExam() : "NORMAL")
+                .hygieneStatus(exam != null && exam.getIntraoralExam() != null ? exam.getIntraoralExam() : "MEDIUM")
+                .gingivaStatus(exam != null && exam.getPeriodontalStatus() != null ? exam.getPeriodontalStatus() : "HEALTHY")
+                .build();
+    }
+
+    @Override
+    public void saveGeneralExamination(GeneralExaminationRequestDTO request) {
+        if (request == null || request.getVisitId() == null) {
+            throw new IllegalArgumentException("Mã ca khám (visitId) không hợp lệ.");
+        }
+
+        Visit visit = getVisitOrThrow(request.getVisitId());
+
+        // Kiểm tra khóa bất biến EMR (BR-EMR-02)
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException("Hồ sơ bệnh án lâm sàng đã khóa (BR-EMR-02). Không thể chỉnh sửa thông tin khám.");
+        }
+
+        // 1. Cập nhật triệu chứng ban đầu trên Visit
+        if (request.getInitialSymptoms() != null) {
+            visit.setInitialSymptoms(request.getInitialSymptoms().trim());
+            visitRepository.save(visit);
+        }
+
+        // 2. Cập nhật tiền sử y khoa & cảnh báo dị ứng trên PatientProfile
+        PatientProfile patient = visit.getPatientProfile();
+        if (patient != null) {
+            patient.setHasAllergies(Boolean.TRUE.equals(request.getHasAllergies()));
+            patient.setAllergyDetails(request.getAllergyDetails() != null ? request.getAllergyDetails().trim() : null);
+            patient.setHasCardiovascularDisease(Boolean.TRUE.equals(request.getHasCardiovascularDisease()));
+
+            List<String> conditions = new ArrayList<>();
+            if (Boolean.TRUE.equals(request.getHasDiabetes())) {
+                conditions.add("Đái tháo đường");
+            }
+            if (Boolean.TRUE.equals(request.getHasBleedingDisorder())) {
+                conditions.add("Rối loạn đông máu");
+            }
+            if (Boolean.TRUE.equals(request.getIsPregnant())) {
+                conditions.add("Mang thai / Cho con bú");
+            }
+            if (request.getUnderlyingDiseaseDetails() != null && !request.getUnderlyingDiseaseDetails().trim().isEmpty()) {
+                String extra = request.getUnderlyingDiseaseDetails().trim();
+                if (!conditions.contains(extra)) {
+                    conditions.add(extra);
+                }
+            }
+
+            if (!conditions.isEmpty()) {
+                patient.setHasUnderlyingDisease(true);
+                patient.setUnderlyingDiseaseDetails(String.join("; ", conditions));
+            } else {
+                patient.setHasUnderlyingDisease(false);
+                patient.setUnderlyingDiseaseDetails(null);
+            }
+            patient.setMedicalHistoryCompleted(true);
+            patientProfileRepository.save(patient);
+        }
+
+        // 3. Cập nhật hoặc khởi tạo ClinicalExamination
+        ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visit.getVisitId())
+                .orElseGet(() -> createDefaultExamination(visit));
+
+        if (request.getInitialSymptoms() != null && !request.getInitialSymptoms().trim().isEmpty()) {
+            exam.setChiefComplaint(request.getInitialSymptoms().trim());
+        }
+        if (request.getTmjStatus() != null) {
+            exam.setExtraoralExam(request.getTmjStatus().trim());
+        }
+        if (request.getHygieneStatus() != null) {
+            exam.setIntraoralExam(request.getHygieneStatus().trim());
+        }
+        if (request.getGingivaStatus() != null) {
+            exam.setPeriodontalStatus(request.getGingivaStatus().trim());
+        }
+        clinicalExamRepository.save(exam);
+        log.info("Đã lưu kết quả khám tổng quát cho ca khám visitId={}", visit.getVisitId());
     }
 }
