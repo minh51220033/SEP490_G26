@@ -19,6 +19,18 @@
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
+    <style>
+        .side-icon-labo {
+            color: #0284c7 !important;
+            transition: color .15s ease;
+        }
+        .side-link:hover .side-icon-labo {
+            color: #0369a1 !important;
+        }
+        .side-link.is-active .side-icon-labo {
+            color: #38bdf8 !important;
+        }
+    </style>
 
     <div class="app-sidebar__head">
         <a th:replace="~{fragments/logo :: logo('dark')}"></a>
@@ -260,24 +272,6 @@
             <span>Điều phối ghế nha</span>
         </a>
 
-        <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
-        <a th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('prescriptionsSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Kê đơn thuốc, dặn dò & in đơn (SCR-18.3, 18.4, 18.5)">
-            <i class="bi bi-capsule text-warning" aria-hidden="true"></i>
-            <span>Đơn thuốc &amp; Dặn dò</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT18</span>
-        </a>
-
-        <!-- 6. Kế hoạch điều trị & Lộ trình (FT15) -->
-        <a th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('treatmentPlanSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Kế hoạch điều trị nhiều giai đoạn & Trợ lý AI (SCR-15.1, 15.2, 15.3 - FT15)">
-            <i class="bi bi-diagram-3-fill text-info" aria-hidden="true"></i>
-            <span>Kế hoạch điều trị</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT15</span>
-        </a>
-
         <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
            title="Kho ảnh lâm sàng Before/After">
@@ -295,13 +289,12 @@
             <span>Phim X-quang NanoPix</span>
         </a>
 
-        <!-- 6. Mẫu xét nghiệm & Labo (FT13, FT15) -->
+        <!-- 6. Quản lý Labo -->
         <a th:href="@{/doctor/labo}" class="side-link"
            th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
-           title="Quản lý phiếu đặt xưởng răng sứ & Mẫu xét nghiệm gửi ngoài (FT13, FT15)">
-            <i class="bi bi-droplet-half text-info" aria-hidden="true"></i>
-            <span>Xét nghiệm &amp; Labo</span>
-            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">Labo</span>
+           title="Quản lý labo">
+            <i class="bi bi-box-seam-fill side-icon-labo" aria-hidden="true"></i>
+            <span>Quản lý labo</span>
         </a>
 
         <!-- NHÓM: HỒ SƠ & TÁI KHÁM -->
