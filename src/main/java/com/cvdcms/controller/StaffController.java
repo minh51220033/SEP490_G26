@@ -3,6 +3,7 @@ package com.cvdcms.controller;
 import com.cvdcms.DTO.StaffAssignmentDTO;
 import com.cvdcms.DTO.StaffFormDTO;
 import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.Role;
 import com.cvdcms.entity.StaffBranchAssignment;
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.User;
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 // FT41 - Quản lý Hồ sơ nhân viên & Phân công chi nhánh (SCR-41.1, 41.2, 41.3, 41.4).
 // Chỉ ADMIN được truy cập (UC-03).
@@ -248,6 +250,8 @@ public class StaffController {
         model.addAttribute("staff", staff);
         model.addAttribute("assignments", assignments);
         model.addAttribute("activeAssignmentCount", activeCount);
+        model.addAttribute("primaryAssignment", primary);
+        model.addAttribute("primaryRole", primary != null ? primary.getRole() : null);
         model.addAttribute("assignmentForm", formDto);
         model.addAttribute("branches", activeBranches());
         model.addAttribute("roles", staffService.getAssignableRoles());
@@ -290,6 +294,22 @@ public class StaffController {
                 () -> staffService.addAssignment(id, assignment), "tab-assign");
     }
 
+    @PostMapping("/{id}/assignments/{assignmentId}/edit")
+    public String updateAssignment(
+            @PathVariable Long id,
+            @PathVariable Long assignmentId,
+            @ModelAttribute StaffAssignmentDTO assignment,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+
+        String redirect = checkAdmin(session);
+        if (redirect != null) {
+            return redirect;
+        }
+        return handle(id, redirectAttributes, "Đã cập nhật phân công chi nhánh.",
+                () -> staffService.updateAssignment(id, assignmentId, assignment), "tab-assign");
+    }
+
     @PostMapping("/{id}/assignments/{assignmentId}/end")
     public String endAssignment(
             @PathVariable Long id,
@@ -325,10 +345,25 @@ public class StaffController {
     // Dữ liệu dùng chung cho form thêm/sửa. staff = null khi thêm mới.
     private void fillFormModel(Model model, StaffFormDTO form, StaffProfile staff) {
         Long currentUserId = staff != null && staff.getUser() != null ? staff.getUser().getUserId() : null;
+        Long staffRoleId = null;
+        if (staff != null) {
+            List<StaffBranchAssignment> assignments = staffService.getAssignments(staff.getStaffId());
+            staffRoleId = assignments.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()) && a.getRole() != null)
+                    .map(a -> a.getRole().getRoleId())
+                    .findFirst()
+                    .orElseGet(() -> assignments.stream()
+                            .map(StaffBranchAssignment::getRole)
+                            .filter(Objects::nonNull)
+                            .map(Role::getRoleId)
+                            .findFirst()
+                            .orElse(null));
+        }
 
         model.addAttribute("staffForm", form);
         model.addAttribute("staff", staff);
         model.addAttribute("editMode", staff != null);
+        model.addAttribute("staffRoleId", staffRoleId);
         model.addAttribute("branches", activeBranches());
         model.addAttribute("roles", staffService.getAssignableRoles());
         model.addAttribute("users", staffService.getLinkableUsers(currentUserId));
