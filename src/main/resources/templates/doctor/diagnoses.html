@@ -433,205 +433,169 @@
 </aside>
 
 <!-- ===================================================================== -->
-<!-- ==========================================================<div class="modal fade" id="completeExaminationModal" tabindex="-1" aria-labelledby="completeExaminationModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <!-- Modal Header: Sang trọng, đồng đều theo chuẩn DentalSoft Dark Navy -->
-            <div class="modal-header py-3 px-4 text-white" style="background: #0f172a; border-bottom: 1px solid #1e293b;">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 42px; height: 42px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25);">
-                        <i class="bi bi-shield-check fs-4"></i>
+<!-- MODAL: HOÀN TẤT CA KHÁM & BÀN GIAO THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)    -->
+<!-- ===================================================================== -->
+<div class="modal fade" id="completeExaminationModal" tabindex="-1" aria-labelledby="completeExaminationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 650px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <!-- Modal Header: Chuẩn DentalSoft Dark Navy, đồng bộ, tinh tế -->
+            <div class="modal-header py-2.5 px-3.5 text-white" style="background: #0f172a;">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <i class="bi bi-shield-check fs-5"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0 text-white fs-6" id="completeExaminationModalLabel">Hoàn tất ca khám &amp; Bàn giao thanh toán</h5>
-                        <small class="text-white-50" style="font-size: 12px;">Kiểm tra điều kiện lâm sàng &amp; Bàn giao viện phí sang Kế toán thu ngân (Người 4)</small>
+                        <h5 class="modal-title fw-bold mb-0 text-white" style="font-size: 15px;" id="completeExaminationModalLabel">Hoàn tất ca khám &amp; Bàn giao thanh toán</h5>
+                        <small class="text-white-50" style="font-size: 11.5px;">Kiểm tra điều kiện lâm sàng &amp; Bàn giao sang Kế toán thu ngân (Người 4)</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <!-- Modal Body: Rộng rãi, thoáng mát, màu sắc đồng bộ trang nhã -->
-            <div class="modal-body p-4 bg-light-subtle">
-                <!-- 1. Patient & Visit Overview Bar -->
-                <div class="card border rounded-3 mb-3.5 bg-white shadow-xs">
-                    <div class="card-body p-3.5">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-7 d-flex align-items-center gap-3">
-                                <div class="df-avatar-circle bg-light text-primary fw-bold border" id="cemPatientAvatar" style="width: 48px; height: 48px; min-width: 48px; font-size: 18px;">BN</div>
+            <!-- Modal Body: Popup gọn gàng, xếp dọc đồng bộ -->
+            <div class="modal-body p-3 bg-light-subtle">
+                <!-- 1. Thông tin Bệnh nhân & Bác sĩ -->
+                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs">
+                    <div class="card-body p-2.5 px-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="df-avatar-circle bg-light text-primary fw-bold border" id="cemPatientAvatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 15px;">BN</div>
                                 <div>
-                                    <div class="fw-bold text-dark fs-6" id="cemPatientName">---</div>
-                                    <div class="text-muted small mt-0.5">
+                                    <div class="fw-bold text-dark" style="font-size: 14px;" id="cemPatientName">---</div>
+                                    <div class="text-muted small" style="font-size: 11.5px;">
                                         Mã KH: <strong class="text-dark" id="cemPatientCode">---</strong> •
                                         Mã ca: <strong class="text-primary" id="cemVisitCode">---</strong>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-5 text-md-end">
-                                <span class="small text-secondary d-block" style="font-size: 11.5px;">Bác sĩ phụ trách điều trị</span>
-                                <strong class="text-dark fs-6" id="cemDoctorName">---</strong>
+                            <div class="text-end">
+                                <span class="text-secondary small d-block" style="font-size: 11px;">Bác sĩ điều trị</span>
+                                <strong class="text-dark small" id="cemDoctorName">---</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Checklist điều kiện hoàn tất lâm sàng (Chỉ đỏ khi chưa đạt) -->
-                <div class="card border rounded-3 mb-3.5 bg-white shadow-xs">
-                    <div class="card-header bg-white py-2.5 px-3.5 border-bottom d-flex align-items-center justify-content-between">
-                        <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.4px;">
+                <!-- 2. Checklist kiểm tra điều kiện (Xếp dọc gọn gàng, màu đồng đều, chỉ đỏ khi chưa đạt) -->
+                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs">
+                    <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-dark small text-uppercase" style="font-size: 11.5px; letter-spacing: 0.3px;">
                             <i class="bi bi-clipboard2-check text-primary me-1.5"></i>Kiểm tra điều kiện hoàn tất lâm sàng
                         </span>
-                        <span class="badge px-3 py-1.5 rounded-pill" id="cemOverallBadge">Đang kiểm tra...</span>
+                        <span class="badge px-2.5 py-1 rounded-pill" style="font-size: 11px;" id="cemOverallBadge">Đang kiểm tra...</span>
                     </div>
-                    <div class="card-body p-3.5">
-                        <div class="row g-3">
-                            <!-- Điều kiện 1: Chẩn đoán ICD-10 (Bắt buộc) -->
-                            <div class="col-lg-6">
-                                <div class="p-3.5 rounded-3 border bg-white h-100 d-flex flex-column justify-content-between" id="cemDiagCard">
-                                    <div>
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="badge rounded-circle p-1" id="cemDiagCheckIcon"><i class="bi bi-check-lg"></i></span>
-                                                <strong class="text-dark small">1. Chẩn đoán ICD-10 <span class="text-danger">*</span></strong>
-                                            </div>
-                                            <span class="badge" id="cemDiagBadge">0 chẩn đoán</span>
-                                        </div>
-                                        <div id="cemDiagList" class="small text-secondary ps-4">
-                                            <!-- Render list of diagnoses -->
-                                        </div>
-                                    </div>
-                                    <div id="cemDiagAction" class="mt-2.5 ps-4" style="display: none;">
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill small fw-semibold" onclick="jumpToSection('bar-exam')">
-                                            <i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán ICD-10 ngay
-                                        </button>
-                                    </div>
+                    <div class="card-body p-2.5 px-3 d-flex flex-column gap-2">
+                        <!-- Điều kiện 1: Chẩn đoán ICD-10 -->
+                        <div class="p-2.5 rounded-3 border bg-white" id="cemDiagCard">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-circle p-1" id="cemDiagCheckIcon"><i class="bi bi-check-lg"></i></span>
+                                    <strong class="text-dark small">1. Chẩn đoán ICD-10 <span class="text-danger">*</span></strong>
                                 </div>
+                                <span class="badge" id="cemDiagBadge">0 chẩn đoán</span>
                             </div>
+                            <div id="cemDiagList" class="small text-secondary ps-4">
+                                <!-- Render list of diagnoses -->
+                            </div>
+                            <div id="cemDiagAction" class="mt-2 ps-4" style="display: none;">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small fw-semibold" onclick="jumpToSection('bar-exam')">
+                                    <i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán ICD-10 ngay
+                                </button>
+                            </div>
+                        </div>
 
-                            <!-- Điều kiện 2: Dịch vụ thực hiện COMPLETED (Bắt buộc) -->
-                            <div class="col-lg-6">
-                                <div class="p-3.5 rounded-3 border bg-white h-100 d-flex flex-column justify-content-between" id="cemSvcCard">
-                                    <div>
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="badge rounded-circle p-1" id="cemSvcCheckIcon"><i class="bi bi-check-lg"></i></span>
-                                                <strong class="text-dark small">2. Dịch vụ thực hiện (COMPLETED) <span class="text-danger">*</span></strong>
-                                            </div>
-                                            <span class="badge" id="cemSvcBadge">0 dịch vụ</span>
-                                        </div>
-                                        <div id="cemSvcList" class="small text-secondary ps-4">
-                                            <!-- Render table/list of completed services -->
-                                        </div>
-                                    </div>
-                                    <div id="cemSvcAction" class="mt-2.5 ps-4" style="display: none;">
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill small fw-semibold" onclick="jumpToSection('bar-treatment')">
-                                            <i class="bi bi-plus-circle me-1"></i>Thêm dịch vụ điều trị ngay
-                                        </button>
-                                    </div>
+                        <!-- Điều kiện 2: Dịch vụ thực hiện COMPLETED -->
+                        <div class="p-2.5 rounded-3 border bg-white" id="cemSvcCard">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-circle p-1" id="cemSvcCheckIcon"><i class="bi bi-check-lg"></i></span>
+                                    <strong class="text-dark small">2. Dịch vụ thực hiện (COMPLETED) <span class="text-danger">*</span></strong>
                                 </div>
+                                <span class="badge" id="cemSvcBadge">0 dịch vụ</span>
                             </div>
+                            <div id="cemSvcList" class="small text-secondary ps-4">
+                                <!-- Render table/list of completed services -->
+                            </div>
+                            <div id="cemSvcAction" class="mt-2 ps-4" style="display: none;">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small fw-semibold" onclick="jumpToSection('bar-treatment')">
+                                    <i class="bi bi-plus-circle me-1"></i>Thêm dịch vụ điều trị ngay
+                                </button>
+                            </div>
+                        </div>
 
-                            <!-- Điều kiện 3: Đơn thuốc & Dặn dò (Khuyến nghị) -->
-                            <div class="col-lg-6">
-                                <div class="p-3 rounded-3 border bg-white h-100 d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2.5 ps-1">
-                                        <div class="p-1.5 rounded-circle bg-light text-primary">
-                                            <i class="bi bi-capsule fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <span class="small text-dark fw-bold d-block">3. Đơn thuốc &amp; Lời dặn:</span>
-                                            <span class="small text-secondary" id="cemPrescriptionStatus">Đang kiểm tra...</span>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 small fw-semibold" onclick="jumpToSection('prescriptionsSection')">
-                                        Xem đơn thuốc
-                                    </button>
-                                </div>
+                        <!-- Điều kiện 3: Đơn thuốc & Dặn dò -->
+                        <div class="p-2.5 rounded-3 border bg-white d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2 ps-1">
+                                <i class="bi bi-capsule text-primary"></i>
+                                <span class="small text-dark fw-semibold">3. Đơn thuốc &amp; Lời dặn:</span>
+                                <span class="small text-secondary" id="cemPrescriptionStatus">Đang kiểm tra...</span>
                             </div>
+                            <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none fw-semibold" onclick="jumpToSection('prescriptionsSection')">
+                                Xem đơn thuốc
+                            </button>
+                        </div>
 
-                            <!-- Điều kiện 4: Hẹn tái khám (Khuyến nghị) -->
-                            <div class="col-lg-6">
-                                <div class="p-3 rounded-3 border bg-white h-100 d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2.5 ps-1">
-                                        <div class="p-1.5 rounded-circle bg-light text-primary">
-                                            <i class="bi bi-calendar2-event fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <span class="small text-dark fw-bold d-block">4. Lịch hẹn tái khám:</span>
-                                            <span class="small text-secondary" id="cemReExamStatus">Đang kiểm tra...</span>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 small fw-semibold" onclick="openReExamModalFromCompleteModal()">
-                                        Đặt lịch hẹn
-                                    </button>
-                                </div>
+                        <!-- Điều kiện 4: Lịch hẹn tái khám -->
+                        <div class="p-2.5 rounded-3 border bg-white d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2 ps-1">
+                                <i class="bi bi-calendar2-event text-primary"></i>
+                                <span class="small text-dark fw-semibold">4. Lịch hẹn tái khám:</span>
+                                <span class="small text-secondary" id="cemReExamStatus">Đang kiểm tra...</span>
                             </div>
+                            <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none fw-semibold" onclick="openReExamModalFromCompleteModal()">
+                                Đặt lịch hẹn
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. TỔNG HỢP TÀI CHÍNH BÀN GIAO (THEO ĐÚNG QUY TẮC: TÍNH RIÊNG KHÁM VÀ THUỐC, TỔNG HỢP LẠI) -->
-                <div class="card border rounded-3 mb-3.5 bg-white shadow-xs p-3.5">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-cash-stack text-primary fs-5"></i>
-                            <strong class="text-dark small text-uppercase" style="letter-spacing: 0.4px;">Chiết tính tài chính bàn giao Kế toán thu ngân</strong>
-                        </div>
-                        <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill small">Giá dịch vụ có sẵn + Đơn thuốc kê</span>
+                <!-- 3. BẢNG TỔNG HỢP TÀI CHÍNH BÀN GIAO (Tính riêng khám & thuốc, tổng hợp lại) -->
+                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 13px;">
+                        <span class="text-secondary"><i class="bi bi-activity text-primary me-1.5"></i>1. Tiền khám &amp; dịch vụ điều trị:</span>
+                        <strong class="text-dark" id="cemServiceAmount">0 đ</strong>
                     </div>
-
-                    <div class="row g-3 text-center">
-                        <div class="col-md-4">
-                            <div class="p-3 rounded-3 border bg-light-subtle h-100 d-flex flex-column justify-content-between">
-                                <span class="text-secondary small fw-bold text-uppercase" style="font-size: 11px;">1. Tiền khám &amp; Dịch vụ điều trị</span>
-                                <div class="h4 fw-bold text-primary my-1" id="cemServiceAmount">0 đ</div>
-                                <span class="text-muted small" style="font-size: 11.5px;" id="cemServiceCountText">0 dịch vụ hoàn thành</span>
-                            </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 13px;">
+                        <span class="text-secondary"><i class="bi bi-capsule text-primary me-1.5"></i>2. Tiền đơn thuốc mang về:</span>
+                        <strong class="text-dark" id="cemPrescriptionAmount">0 đ</strong>
+                    </div>
+                    <div class="border-top pt-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-dark small text-uppercase" style="letter-spacing: 0.3px;">TỔNG CỘNG BÀN GIAO THANH TOÁN:</strong>
+                            <small class="text-muted d-block" style="font-size: 11px;">(Đã bao gồm tiền khám, dịch vụ và đơn thuốc)</small>
                         </div>
-
-                        <div class="col-md-4">
-                            <div class="p-3 rounded-3 border bg-light-subtle h-100 d-flex flex-column justify-content-between">
-                                <span class="text-secondary small fw-bold text-uppercase" style="font-size: 11px;">2. Tiền đơn thuốc mang về</span>
-                                <div class="h4 fw-bold text-info-emphasis my-1" id="cemPrescriptionAmount">0 đ</div>
-                                <span class="text-muted small" style="font-size: 11.5px;" id="cemPrescriptionCountText">0 đơn thuốc</span>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="p-3 rounded-3 border bg-success-subtle bg-opacity-25 h-100 d-flex flex-column justify-content-between">
-                                <span class="text-success-emphasis small fw-bold text-uppercase" style="font-size: 11px;">3. TỔNG CỘNG BÀN GIAO</span>
-                                <div class="h3 fw-bold text-success my-1" id="cemTotalAmount">0 đ</div>
-                                <span class="text-muted small" style="font-size: 11.5px;">= Tiền dịch vụ + Tiền thuốc</span>
-                            </div>
+                        <div class="text-end">
+                            <span class="fs-5 fw-bold text-success mb-0" id="cemTotalAmount">0 đ</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- 4. Ghi chú dặn dò bác sĩ & Cảnh báo BR-EMR-02 -->
-                <div class="mb-3">
+                <div class="mb-2.5">
                     <label class="form-label small fw-bold text-dark mb-1">
                         <i class="bi bi-chat-text text-secondary me-1"></i>Ghi chú bàn giao / Dặn dò cho Kế toán &amp; Điều dưỡng (Tùy chọn):
                     </label>
-                    <textarea class="form-control" id="cemDoctorNotes" rows="2" style="font-size: 13.5px;"
+                    <textarea class="form-control" id="cemDoctorNotes" rows="2" style="font-size: 13px;"
                               placeholder="Nhập ghi chú xuất hóa đơn, chính sách ưu đãi, hoặc dặn dò bệnh nhân ra viện..."></textarea>
                 </div>
 
-                <div class="alert alert-light border small py-2.5 px-3 rounded-3 mb-0 d-flex align-items-start gap-2.5">
+                <div class="alert alert-light border small py-2 px-3 rounded-3 mb-0 d-flex align-items-start gap-2">
                     <i class="bi bi-shield-lock-fill text-secondary fs-5 flex-shrink-0 mt-0.5"></i>
-                    <div class="text-secondary">
-                        <strong class="text-dark">Quy tắc bất biến bệnh án (BR-EMR-02):</strong> Khi bấm xác nhận, ca khám sẽ chuyển trạng thái sang <code>WAITING_PAYMENT</code> (Chờ thanh toán) và dữ liệu lâm sàng sẽ được <strong>khóa bất biến</strong> để Kế toán lập hóa đơn. Bác sĩ chỉ có thể sửa/bổ sung sau khi bấm "Mở lại khám".
+                    <div class="text-secondary" style="font-size: 11.5px;">
+                        <strong class="text-dark">Quy tắc bất biến bệnh án (BR-EMR-02):</strong> Khi bấm xác nhận, ca khám sẽ chuyển trạng thái sang <code>WAITING_PAYMENT</code> (Chờ thanh toán) và dữ liệu lâm sàng sẽ được <strong>khóa bất biến</strong>. Bác sĩ có thể sửa/bổ sung sau khi bấm "Mở lại khám".
                     </div>
                 </div>
             </div>
 
             <!-- Modal Footer -->
-            <div class="modal-footer bg-white py-3 px-4 d-flex align-items-center justify-content-between border-top">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">
+            <div class="modal-footer bg-white py-2.5 px-3.5 d-flex align-items-center justify-content-between border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-3.5 py-1.5 fw-semibold small" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Hủy bỏ
                 </button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm text-white"
+                <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white small"
                         style="background: #1e40af; border-color: #1e40af;"
                         id="btnConfirmCompleteClinical" onclick="submitClinicalCompletion()">
-                    <i class="bi bi-check2-circle fs-5"></i>
+                    <i class="bi bi-check2-circle fs-6"></i>
                     <span>Xác nhận &amp; Chuyển thanh toán</span>
                 </button>
             </div>
@@ -1724,7 +1688,7 @@
                 diagIcon.className = 'badge bg-success text-white rounded-circle p-1';
                 diagIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
             }
-            if (diagCard) diagCard.className = 'p-3.5 rounded-3 border bg-white h-100 d-flex flex-column justify-content-between';
+            if (diagCard) diagCard.className = 'p-2.5 rounded-3 border bg-white';
             if (diagAction) diagAction.style.display = 'none';
 
             let diagHtml = '<ul class="list-unstyled mb-0 d-flex flex-column gap-1.5 mt-1">';
@@ -1754,7 +1718,7 @@
                 diagIcon.className = 'badge bg-danger text-white rounded-circle p-1';
                 diagIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
             }
-            if (diagCard) diagCard.className = 'p-3.5 rounded-3 border border-danger-subtle bg-white h-100 d-flex flex-column justify-content-between shadow-xs';
+            if (diagCard) diagCard.className = 'p-2.5 rounded-3 border border-danger-subtle bg-white';
             if (diagList) {
                 diagList.innerHTML = '<div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có chẩn đoán ICD-10. Bác sĩ bắt buộc phải xác định chẩn đoán bệnh trước khi hoàn tất ca khám và chuyển thanh toán.</div>';
             }
@@ -1777,7 +1741,7 @@
                 svcIcon.className = 'badge bg-success text-white rounded-circle p-1';
                 svcIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
             }
-            if (svcCard) svcCard.className = 'p-3.5 rounded-3 border bg-white h-100 d-flex flex-column justify-content-between';
+            if (svcCard) svcCard.className = 'p-2.5 rounded-3 border bg-white';
             if (svcAction) svcAction.style.display = 'none';
 
             let svcHtml = '<div class="table-responsive mt-1"><table class="table table-sm table-borderless mb-0" style="font-size: 12px;"><thead class="text-muted border-bottom"><tr><th>Dịch vụ</th><th>Răng</th><th class="text-center">SL</th><th class="text-end">Thành tiền</th></tr></thead><tbody>';
@@ -1803,7 +1767,7 @@
                 svcIcon.className = 'badge bg-danger text-white rounded-circle p-1';
                 svcIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
             }
-            if (svcCard) svcCard.className = 'p-3.5 rounded-3 border border-danger-subtle bg-white h-100 d-flex flex-column justify-content-between shadow-xs';
+            if (svcCard) svcCard.className = 'p-2.5 rounded-3 border border-danger-subtle bg-white';
             if (svcList) {
                 svcList.innerHTML = '<div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có dịch vụ nào hoàn thành (COMPLETED). Kế toán cần ít nhất 01 dịch vụ hoàn thành để xuất hóa đơn và thu tiền (BR-SVC-01).</div>';
             }
