@@ -19,6 +19,18 @@
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
+    <style>
+        .side-icon-labo {
+            color: #0284c7 !important;
+            transition: color .15s ease;
+        }
+        .side-link:hover .side-icon-labo {
+            color: #0369a1 !important;
+        }
+        .side-link.is-active .side-icon-labo {
+            color: #38bdf8 !important;
+        }
+    </style>
 
     <div class="app-sidebar__head">
         <a th:replace="~{fragments/logo :: logo('dark')}"></a>
@@ -265,13 +277,12 @@
             <span>Phim X-quang NanoPix</span>
         </a>
 
-        <!-- 6. Mẫu xét nghiệm & Labo (FT13, FT15) -->
+        <!-- 6. Quản lý Labo -->
         <a th:href="@{/doctor/labo}" class="side-link"
            th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
-           title="Quản lý phiếu đặt xưởng răng sứ & Mẫu xét nghiệm gửi ngoài (FT13, FT15)">
-            <i class="bi bi-droplet-half text-info" aria-hidden="true"></i>
-            <span>Xét nghiệm &amp; Labo</span>
-            <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">Labo</span>
+           title="Quản lý labo">
+            <i class="bi bi-box-seam-fill side-icon-labo" aria-hidden="true"></i>
+            <span>Quản lý labo</span>
         </a>
 
         <!-- NHÓM: HỒ SƠ & TÁI KHÁM -->
