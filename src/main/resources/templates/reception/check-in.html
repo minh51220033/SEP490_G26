@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Tiếp đón và Check-in · FT07</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/css/layout.css}" rel="stylesheet">
+    <script th:src="@{/js/layout.js}" defer></script>
     <style>
         :root { font-family: system-ui, sans-serif; color: #173044; background: #f4f8fb; } body { margin: 0; } main { max-width: 1200px; margin: auto; padding: 28px 18px 60px; }
         header { background: #10354f; color: white; padding: 18px 24px; } header a { color: #d8ecff; margin-right: 18px; } h1 { margin: 0 0 6px; font-size: 1.8rem; } h2 { margin: 0 0 16px; font-size: 1.3rem; }
@@ -15,10 +19,14 @@
         .warning { color: #9c3b12; font-weight: 600; } .patient-choice { border-top: 1px solid #e2e9ef; padding: 12px 0; } .patient-choice:first-child { border-top: 0; } .compact { margin: 4px 0; }
     </style>
 </head>
-<body>
-<header><a th:href="@{/home}">Trang chủ</a><a th:href="@{/reception/patients}">Hồ sơ bệnh nhân</a><span>FT07 · Tiếp đón và Check-in</span></header>
-<main>
+<body class="app-body"><div class="app-shell">
+<aside th:replace="~{fragments/sidebar :: sidebar('checkin')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+<div class="app-main">
+<header th:replace="~{fragments/header :: appTopbar('Tiếp đón và Check-in')}"></header>
+<main class="app-content">
     <h1>Tiếp đón và Check-in</h1>
+    <nav><a th:href="@{/reception/appointments}">Lịch hẹn</a> · <a th:href="@{/reception/patients}">Hồ sơ bệnh nhân</a> · <a th:href="@{/reception/dispatch}">Điều phối &amp; cấp số</a></nav>
     <p class="muted">Xác nhận bệnh nhân đã đến, ghi nhận triệu chứng ban đầu và tạo lượt khám chờ điều phối. F08 sẽ phân bác sĩ, phòng và ghế sau bước này.</p>
     <div class="notice" th:if="${notice}" th:text="${notice}"></div><div class="error" th:if="${error}" th:text="${error}"></div>
     <section class="card">
@@ -55,6 +63,6 @@
         <tr th:each="v : ${dashboard.visits}"><td th:text="${v.code}"></td><td th:text="|${v.patient.name} · ${v.patient.code}|"></td><td th:text="${#temporals.format(v.checkedInAt, 'HH:mm')}"></td><td th:text="${v.type}"></td><td><span class="badge" th:text="${v.status}"></span></td><td th:text="${v.symptoms}"></td></tr>
         <tr th:if="${#lists.isEmpty(dashboard.visits)}"><td colspan="6" class="muted">Chưa có lượt khám nào hôm nay.</td></tr>
     </tbody></table></div></section>
-</main>
+</main></div></div>
 </body>
 </html>
