@@ -38,6 +38,7 @@ class DiagnosisOdontogramUnitTest {
     @Mock private PrescriptionRepository prescriptionRepository;
     @Mock private AppointmentRepository appointmentRepository;
     @Mock private PatientProfileRepository patientProfileRepository;
+    @Mock private InvoiceRepository invoiceRepository; 
     @Mock private Icd10DiseaseService icd10DiseaseService;
 
     private DiagnosisServiceImpl diagnosisService;
@@ -58,7 +59,8 @@ class DiagnosisOdontogramUnitTest {
                 performedServiceRepository,
                 prescriptionRepository,
                 appointmentRepository,
-                patientProfileRepository
+                patientProfileRepository,
+                invoiceRepository
         );
         icd10RestController = new Icd10RestController(icd10DiseaseService, diagnosisService);
 

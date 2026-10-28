@@ -707,3 +707,114 @@
         padding: 10px;
     }
 }
+.patient-finance-dashboard .finance-payment-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 13px 16px;
+    border-top: 1px solid #d9e2f5;
+    background: #fff;
+}
+
+.patient-finance-dashboard .finance-payment-pagination small {
+    font-size: 11px;
+}
+
+.patient-finance-dashboard .finance-payment-pagination .page-link {
+    padding: 6px 10px;
+    border-color: #d9e2f5;
+    color: #263f91;
+    font-size: 12px;
+}
+
+.patient-finance-dashboard .finance-payment-pagination .active .page-link {
+    border-color: #263f91;
+    background: #263f91;
+    color: #fff;
+}
+
+.patient-finance-dashboard .finance-payment-pagination .disabled .page-link {
+    background: #f5f7fb;
+    color: #9aa5b6;
+}
+
+/* Dashboard Table Date Filters (SCR-22.1) */
+.patient-finance-dashboard .dashboard-table-filter {
+    background: #ffffff;
+    border: 1px solid #d9e2f5;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.patient-finance-dashboard .dashboard-table-filter form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.patient-finance-dashboard .dashboard-table-filter .filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.patient-finance-dashboard .dashboard-table-filter .filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5870;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.patient-finance-dashboard .dashboard-table-filter .filter-input {
+    height: 32px;
+    padding: 2px 8px;
+    font-size: 12.5px;
+    border: 1px solid #d9e2f5;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.patient-finance-dashboard .dashboard-table-filter .filter-input:focus {
+    border-color: #2b4fb3;
+    box-shadow: 0 0 0 2px rgba(43, 79, 179, 0.15);
+}
+
+.patient-finance-dashboard .dashboard-table-filter .filter-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+@media (max-width: 767.98px) {
+    .patient-finance-dashboard .dashboard-table-filter form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .patient-finance-dashboard .dashboard-table-filter .filter-group {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .patient-finance-dashboard .dashboard-table-filter .filter-input {
+        flex: 1;
+        max-width: 220px;
+    }
+
+    .patient-finance-dashboard .dashboard-table-filter .filter-actions {
+        margin-left: 0;
+        justify-content: flex-end;
+        width: 100%;
+    }
+}
