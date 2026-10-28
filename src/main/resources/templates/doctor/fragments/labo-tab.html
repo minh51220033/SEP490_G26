@@ -221,22 +221,17 @@
     <!-- ===================================================================== -->
     <div class="modal fade" id="laboOrderModal" tabindex="-1" aria-labelledby="laboOrderModalLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <!-- Header -->
-                <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
-                            <i class="bi bi-box-seam-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold mb-0 text-white" id="laboOrderModalLabel">Thêm phiếu đặt xưởng labo &amp; Gửi mẫu</h5>
-                            <small class="text-white-50">Phiếu đặt xưởng răng sứ, hàm tháo lắp hoặc gửi mẫu xét nghiệm (SCR-15.3, SCR-13.1)</small>
-                        </div>
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+                <!-- Header chuẩn DentalSoft: nền trắng tinh, không icon, text xám đậm -->
+                <div class="modal-header py-3 px-4 bg-white border-0 pb-1 d-flex align-items-start justify-content-between">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="laboOrderModalLabel">Thêm phiếu đặt xưởng</h5>
+                        <p class="text-muted small mb-0 mt-0.5">Phiếu đặt xưởng labo</p>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.85rem; opacity: 0.6;"></button>
                 </div>
 
-                <div class="modal-body p-4 bg-light-subtle">
+                <div class="modal-body px-4 py-3 bg-white">
                     <form id="laboOrderForm" onsubmit="event.preventDefault(); submitLaboOrderForm();">
                         <input type="hidden" id="laboFormId" value="">
 
@@ -418,10 +413,12 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
-                            <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Đóng</button>
-                            <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold" id="btnSaveLaboOrder">
-                                <i class="bi bi-check-lg me-1"></i>Lưu phiếu
+                        <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-3 border-top" style="border-color: #f1f5f9 !important;">
+                            <button type="submit" class="btn btn-sm text-white fw-semibold px-4" id="btnSaveLaboOrder" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                                Lưu
+                            </button>
+                            <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                                Đóng
                             </button>
                         </div>
                     </form>

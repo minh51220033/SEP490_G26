@@ -498,32 +498,33 @@
 <!-- ===================================================================== -->
 <!-- MODAL THÊM PHIẾU ĐẶT XƯỞNG (CHUẨN ẢNH 2 CỦA DENTALSOFT)               -->
 <!-- ===================================================================== -->
+<!-- ===================================================================== -->
+<!-- MODAL 1: THÊM / SỬA PHIẾU ĐẶT XƯỞNG LABO (CHUẨN DENTALSOFT)           -->
+<!-- ===================================================================== -->
 <div class="modal fade" id="mainCreateLaboModal" tabindex="-1" aria-labelledby="mainCreateLaboModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                <div class="d-flex align-items-center gap-2.5">
-                    <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
-                        <i class="bi bi-box-seam-fill fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0 text-white" id="mainCreateLaboModalLabel">Thêm phiếu đặt xưởng</h5>
-                        <small class="text-white-50">Phiếu đặt xưởng labo &amp; Gửi mẫu xét nghiệm</small>
-                    </div>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+            <!-- Header chuẩn DentalSoft: nền trắng tinh, không icon, text xám đậm -->
+            <div class="modal-header py-3 px-4 bg-white border-0 pb-1 d-flex align-items-start justify-content-between">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="mainCreateLaboModalLabel">Thêm phiếu đặt xưởng</h5>
+                    <p class="text-muted small mb-0 mt-0.5" id="mainCreateLaboModalSub">Phiếu đặt xưởng labo</p>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.85rem; opacity: 0.6;"></button>
             </div>
 
-            <div class="modal-body p-4 bg-light-subtle">
+            <div class="modal-body px-4 py-3 bg-white">
                 <form id="mainLaboForm" onsubmit="event.preventDefault(); submitMainLaboForm();">
                     <input type="hidden" id="mainLaboEditId" value="">
 
                     <!-- HÀNG 1: KHÁCH HÀNG, DỊCH VỤ, NHÀ CUNG CẤP -->
                     <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Khách hàng <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" id="mainModalPatientSelect" required>
-                                <option value="">-- Chọn khách hàng --</option>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">
+                                Khách hàng <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-sm" id="mainModalPatientSelect" required style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
+                                <option value="">Tìm KH theo tên, mã, SĐT...</option>
                                 <option th:each="p : ${patients}"
                                         th:value="${p.profileId}"
                                         th:text="${p.fullName + ' (' + p.patientCode + ') - ' + (p.phoneNumber != null ? p.phoneNumber : '')}">
@@ -532,8 +533,10 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Dịch vụ <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" id="mainModalMaterialType" required onchange="onMainServiceSelectChange(this.value)">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">
+                                Dịch vụ <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-sm" id="mainModalMaterialType" required onchange="onMainServiceSelectChange(this.value)" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                                 <option value="">- Chọn dịch vụ labo -</option>
                                 <option value="Răng sứ Zirconia DDBio cao cấp" data-price="1500000">Răng sứ Zirconia DDBio (1.500.000 đ)</option>
                                 <option value="Răng sứ Cercon HT chính hãng" data-price="2200000">Răng sứ Cercon HT (2.200.000 đ)</option>
@@ -544,9 +547,11 @@
                                 <option value="Xét nghiệm công thức máu CBC" data-price="250000">Xét nghiệm công thức máu CBC (250.000 đ)</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Nhà cung cấp <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" id="mainModalSupplierSelect" required>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">
+                                Nhà cung cấp <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-sm" id="mainModalSupplierSelect" required style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                                 <option value="">- Chọn NCC -</option>
                                 <option th:each="s : ${suppliers}"
                                         th:value="${s.supplierId}"
@@ -557,35 +562,36 @@
                         </div>
                     </div>
 
-                    <!-- HÀNG 2: NGÀY GỬI, NGÀY THỬ/TRẢ, TRẠNG THÁI -->
+                    <!-- HÀNG 2: NGÀY GỬI, NGÀY THỬ, TRẠNG THÁI -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Ngày gửi</label>
-                            <input type="date" class="form-control form-control-sm" id="mainModalSentDate">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Ngày gửi</label>
+                            <input type="date" class="form-control form-control-sm" id="mainModalSentDate" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-bold text-dark small mb-1">Ngày thử / Hẹn trả</label>
-                            <div class="input-group input-group-sm">
-                                <input type="date" class="form-control" id="mainModalTryInDate">
-                                <span class="input-group-text bg-white small">Giờ</span>
-                                <select class="form-select" id="mainModalTryInHour" style="max-width: 80px;">
-                                    <option value="09:00" selected>09:00</option>
-                                    <option value="10:00">10:00</option>
-                                    <option value="11:00">11:00</option>
-                                    <option value="14:00">14:00</option>
-                                    <option value="15:00">15:00</option>
-                                    <option value="16:00">16:00</option>
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Ngày thử</label>
+                            <div class="input-group input-group-sm" style="border-radius: 8px; overflow: hidden;">
+                                <input type="date" class="form-control" id="mainModalTryInDate" placeholder="dd/mm/yyyy" style="height: 38px; border-color: #e2e8f0;">
+                                <span class="input-group-text bg-white text-muted small" style="border-color: #e2e8f0;">Giờ</span>
+                                <select class="form-select" id="mainModalTryInHour" style="max-width: 75px; height: 38px; border-color: #e2e8f0;">
+                                    <option value="09:00" selected>09</option>
+                                    <option value="10:00">10</option>
+                                    <option value="11:00">11</option>
+                                    <option value="14:00">14</option>
+                                    <option value="15:00">15</option>
+                                    <option value="16:00">16</option>
                                 </select>
+                                <span class="input-group-text bg-white text-muted small" style="border-color: #e2e8f0;">00p</span>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small mb-1">Trạng thái</label>
-                            <select class="form-select form-select-sm" id="mainModalStatusSelect">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Trạng thái</label>
+                            <select class="form-select form-select-sm" id="mainModalStatusSelect" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                                 <option value="SENT" selected>Mới gửi</option>
                                 <option value="PROCESSING">Đang chế tác / Chờ KQ</option>
                                 <option value="DELIVERED">Đã nhận về</option>
                                 <option value="FITTED_SUCCESS">Đã lắp hoàn tất</option>
-                                <option value="RETURNED">Đã trả lại / Bảo hành</option>
+                                <option value="RETURNED">Làm lại / Bảo hành</option>
                             </select>
                         </div>
                     </div>
@@ -593,20 +599,20 @@
                     <!-- HÀNG 3: SỐ LƯỢNG, ĐƠN GIÁ, THÀNH TIỀN, LOẠI PHIẾU -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small mb-1">Số lượng</label>
-                            <input type="number" class="form-control form-control-sm" id="mainModalQuantity" min="1" value="1" oninput="calcMainModalTotal()">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Số lượng</label>
+                            <input type="number" class="form-control form-control-sm text-center" id="mainModalQuantity" min="1" value="1" oninput="calcMainModalTotal()" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ)</label>
-                            <input type="number" class="form-control form-control-sm" id="mainModalUnitPrice" min="0" value="1500000" oninput="calcMainModalTotal()">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Đơn giá (đ)</label>
+                            <input type="number" class="form-control form-control-sm text-end" id="mainModalUnitPrice" min="0" value="0" oninput="calcMainModalTotal()" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small mb-1">Thành tiền (đ)</label>
-                            <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="mainModalCostDisplay" value="1.500.000 đ" readonly>
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Thành tiền (đ)</label>
+                            <input type="text" class="form-control form-control-sm text-end fw-bold" id="mainModalCostDisplay" value="0" readonly style="border-radius: 8px; height: 38px; background-color: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe;">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small mb-1">Loại phiếu</label>
-                            <select class="form-select form-select-sm" id="mainModalOrderType">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Loại phiếu</label>
+                            <select class="form-select form-select-sm" id="mainModalOrderType" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                                 <option value="NEW" selected>Làm mới</option>
                                 <option value="REDO">Làm lại</option>
                                 <option value="WARRANTY">Bảo hành</option>
@@ -617,53 +623,58 @@
                     <!-- HÀNG 4: MÀU SỨ, CẦU, MÃO -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Màu sứ</label>
-                            <input type="text" class="form-control form-control-sm" id="mainModalShadeColor" placeholder="A2, A3...">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Màu sứ</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalShadeColor" placeholder="A2, A3..." style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Cầu (bridge)</label>
-                            <input type="text" class="form-control form-control-sm" id="mainModalBridge" placeholder="Cầu răng...">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Cầu (bridge)</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalBridge" placeholder="" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Mão (crown)</label>
-                            <input type="text" class="form-control form-control-sm" id="mainModalCrown" placeholder="Mão đơn...">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Mão (crown)</label>
+                            <input type="text" class="form-control form-control-sm" id="mainModalCrown" placeholder="" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                     </div>
 
                     <!-- HÀNG 5: YÊU CẦU KỸ THUẬT -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Yêu cầu kỹ thuật</label>
-                        <textarea class="form-control form-control-sm" id="mainModalNotes" rows="2" placeholder="Ghi chú lâm sàng, yêu cầu xưởng chế tác..."></textarea>
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Yêu cầu kỹ thuật</label>
+                        <textarea class="form-control form-control-sm" id="mainModalNotes" rows="3" placeholder="" style="border-radius: 8px; border-color: #e2e8f0;"></textarea>
                     </div>
 
-                    <!-- HÀNG 6: ẢNH GIẤY XÉT NGHIỆM / PHIẾU GỬI LABO -->
-                    <div class="p-3 rounded-3 border bg-white mb-2">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="fw-bold text-dark small">
-                                <i class="bi bi-camera-fill text-primary me-1"></i>Link ảnh hoặc File ảnh giấy kết quả xét nghiệm / Phiếu xưởng:
-                            </span>
-                            <span class="badge bg-light text-muted border small">Xem trực tiếp sau khi lưu</span>
+                    <!-- HÀNG 6: ĐÍNH KÈM ẢNH GIẤY KẾT QUẢ / PHIẾU XƯỞNG (TINH GỌN) -->
+                    <div class="p-2.5 rounded-3 border bg-light-subtle mb-2" style="border-color: #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                            <label class="form-label fw-semibold text-secondary small mb-0">
+                                <i class="bi bi-paperclip me-1"></i>Ảnh giấy phiếu đặt xưởng / Giấy xét nghiệm
+                            </label>
+                            <span class="text-muted" style="font-size: 11px;">Dán link ảnh hoặc chọn file tải lên</span>
                         </div>
                         <div class="row g-2 align-items-center">
-                            <div class="col-md-8">
-                                <input type="url" class="form-control form-control-sm mb-2" id="mainModalImageUrl"
-                                       placeholder="Dán link ảnh (https://...) hoặc chọn file bên dưới" oninput="onMainModalUrlInput(this.value)">
-                                <input type="file" class="form-control form-control-sm" id="mainModalImageFile" accept="image/*" onchange="previewMainModalFile(event)">
+                            <div class="col-md-9">
+                                <input type="url" class="form-control form-control-sm mb-1.5" id="mainModalImageUrl"
+                                       placeholder="Dán link ảnh (https://...)" oninput="onMainModalUrlInput(this.value)" style="border-radius: 6px; border-color: #e2e8f0;">
+                                <input type="file" class="form-control form-control-sm" id="mainModalImageFile" accept="image/*" onchange="previewMainModalFile(event)" style="border-radius: 6px; border-color: #e2e8f0;">
                             </div>
-                            <div class="col-md-4 text-center">
-                                <div id="mainModalPreviewContainer" class="border rounded p-1 bg-light position-relative d-inline-block" style="width: 120px; height: 80px; display: none;">
-                                    <img id="mainModalPreviewImg" src="" style="width: 100%; height: 100%; object-fit: contain;">
+                            <div class="col-md-3 text-center">
+                                <div id="mainModalPreviewContainer" class="border rounded p-1 bg-white position-relative d-inline-block shadow-xs" style="width: 80px; height: 60px; display: none;">
+                                    <img id="mainModalPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
                                 </div>
-                                <div id="mainModalPreviewPlaceholder" class="text-muted small border rounded p-2 bg-light">
+                                <div id="mainModalPreviewPlaceholder" class="text-muted small border rounded p-1 bg-white d-flex align-items-center justify-content-center shadow-xs" style="width: 80px; height: 60px; font-size: 11px; margin: auto;">
                                     Chưa có ảnh
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
-                        <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold" id="btnSaveMainModal">Lưu</button>
+                    <!-- FOOTER: NÚT LƯU VÀ ĐÓNG CHUẨN DENTALSOFT -->
+                    <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-3 border-top" style="border-color: #f1f5f9 !important;">
+                        <button type="submit" class="btn btn-sm text-white fw-semibold px-4" id="btnSaveMainModal" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                            Lưu
+                        </button>
+                        <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                            Đóng
+                        </button>
                     </div>
                 </form>
             </div>
@@ -674,21 +685,24 @@
 <!-- ===================================================================== -->
 <!-- MODAL THÊM GIÁ LABO (CHUẨN ẢNH 3 CỦA DENTALSOFT)                      -->
 <!-- ===================================================================== -->
+<!-- ===================================================================== -->
+<!-- MODAL THÊM GIÁ LABO (CHUẨN ẢNH 3 CỦA DENTALSOFT)                      -->
+<!-- ===================================================================== -->
 <div class="modal fade" id="addPricingModal" tabindex="-1" aria-labelledby="addPricingModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; background: #ffffff;">
+            <div class="modal-header py-3 px-4 bg-white border-0 pb-1 d-flex align-items-start justify-content-between">
                 <div>
-                    <h5 class="modal-title fw-bold text-white mb-0" id="addPricingModalLabel">Thêm giá labo</h5>
-                    <small class="text-white-50" id="pricingModalSupplierName">Labo Nha khoa Sài Gòn</small>
+                    <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="addPricingModalLabel">Thêm giá labo</h5>
+                    <p class="text-muted small mb-0 mt-0.5" id="pricingModalSupplierName">Labo Nha khoa Sài Gòn</p>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.85rem; opacity: 0.6;"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body px-4 py-3 bg-white">
                 <form id="addPricingForm" onsubmit="event.preventDefault(); submitAddPricingForm();">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Dịch vụ <span class="text-danger">*</span></label>
-                        <select class="form-select form-select-sm" id="pricingServiceSelect" required>
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Dịch vụ <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="pricingServiceSelect" required style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                             <option value="">- Chọn dịch vụ có labo -</option>
                             <option value="Răng sứ Zirconia DDBio cao cấp">Răng sứ Zirconia DDBio cao cấp</option>
                             <option value="Răng sứ Cercon HT chính hãng">Răng sứ Cercon HT chính hãng</option>
@@ -700,28 +714,32 @@
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-bold text-dark small mb-1">Mã hiệu</label>
-                            <input type="text" class="form-control form-control-sm" id="pricingCodeInput" placeholder="VD: LB001, ZCR-A1...">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Mã hiệu</label>
+                            <input type="text" class="form-control form-control-sm" id="pricingCodeInput" placeholder="VD: LB001, ZCR-A1..." style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control form-control-sm" id="pricingPriceInput" required placeholder="0">
+                            <label class="form-label fw-semibold text-secondary small mb-1.5">Đơn giá (đ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control form-control-sm" id="pricingPriceInput" required placeholder="0" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Ghi chú</label>
-                        <textarea class="form-control form-control-sm" id="pricingNoteInput" rows="2" placeholder="Ghi chú bảo hành, thời gian chế tác..."></textarea>
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Ghi chú</label>
+                        <textarea class="form-control form-control-sm" id="pricingNoteInput" rows="2" placeholder="Ghi chú bảo hành, thời gian chế tác..." style="border-radius: 8px; border-color: #e2e8f0;"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Trạng thái</label>
-                        <select class="form-select form-select-sm" id="pricingStatusSelect">
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Trạng thái</label>
+                        <select class="form-select form-select-sm" id="pricingStatusSelect" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                             <option value="1" selected>Bật</option>
                             <option value="0">Tắt</option>
                         </select>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                        <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold">Lưu</button>
+                    <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-3 border-top" style="border-color: #f1f5f9 !important;">
+                        <button type="submit" class="btn btn-sm text-white fw-semibold px-4" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                            Lưu
+                        </button>
+                        <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                            Đóng
+                        </button>
                     </div>
                 </form>
             </div>
@@ -734,33 +752,40 @@
 <!-- ===================================================================== -->
 <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                <h5 class="modal-title fw-bold text-white mb-0" id="addSupplierModalLabel">Thêm Nhà cung cấp / Labo</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; background: #ffffff;">
+            <div class="modal-header py-3 px-4 bg-white border-0 pb-1 d-flex align-items-start justify-content-between">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="addSupplierModalLabel">Thêm Nhà cung cấp / Labo</h5>
+                    <p class="text-muted small mb-0 mt-0.5">Đối tác Labo chế tác răng sứ &amp; Trung tâm xét nghiệm</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.85rem; opacity: 0.6;"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body px-4 py-3 bg-white">
                 <form id="addSupplierForm" onsubmit="event.preventDefault(); submitAddSupplierForm();">
                     <input type="hidden" id="supplierFormId" value="">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Mã NCC / Labo <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="supplierCodeInput" required placeholder="VD: LB01, LB02, MEDLATEC...">
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Mã NCC / Labo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="supplierCodeInput" required placeholder="VD: LB01, LB02, MEDLATEC..." style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Tên Labo / Nhà cung cấp <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="supplierNameInput" required placeholder="VD: Labo Nha khoa Sài Gòn">
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Tên Labo / Nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="supplierNameInput" required placeholder="VD: Labo Nha khoa Sài Gòn" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Số điện thoại</label>
-                        <input type="text" class="form-control form-control-sm" id="supplierPhoneInput" placeholder="02838001122">
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Số điện thoại</label>
+                        <input type="text" class="form-control form-control-sm" id="supplierPhoneInput" placeholder="02838001122" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small mb-1">Địa chỉ</label>
-                        <input type="text" class="form-control form-control-sm" id="supplierAddressInput" placeholder="Quận 5, TP. Hồ Chí Minh">
+                        <label class="form-label fw-semibold text-secondary small mb-1.5">Địa chỉ</label>
+                        <input type="text" class="form-control form-control-sm" id="supplierAddressInput" placeholder="Quận 5, TP. Hồ Chí Minh" style="border-radius: 8px; height: 38px; border-color: #e2e8f0;">
                     </div>
-                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                        <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold">Lưu</button>
+                    <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-3 border-top" style="border-color: #f1f5f9 !important;">
+                        <button type="submit" class="btn btn-sm text-white fw-semibold px-4" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                            Lưu
+                        </button>
+                        <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                            Đóng
+                        </button>
                     </div>
                 </form>
             </div>
