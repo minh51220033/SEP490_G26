@@ -96,4 +96,43 @@ public class DoctorExaminationRestController {
             return ResponseEntity.internalServerError().body(error);
         }
     }
+
+    /**
+     * Lấy thông tin khám tổng quát (Triệu chứng, Tiền sử dị ứng/bệnh nền, Mô mềm/TMJ)
+     */
+    @GetMapping("/{visitId}/general-examination")
+    public ResponseEntity<com.cvdcms.DTO.GeneralExaminationRequestDTO> getGeneralExamination(@PathVariable Long visitId) {
+        return ResponseEntity.ok(diagnosisService.getGeneralExamination(visitId));
+    }
+
+    /**
+     * Bác sĩ lưu kết quả khám tổng quát
+     */
+    @PostMapping("/{visitId}/general-examination")
+    public ResponseEntity<Map<String, Object>> saveGeneralExamination(
+            @PathVariable Long visitId,
+            @RequestBody com.cvdcms.DTO.GeneralExaminationRequestDTO request
+    ) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (request == null) {
+                request = new com.cvdcms.DTO.GeneralExaminationRequestDTO();
+            }
+            request.setVisitId(visitId);
+            diagnosisService.saveGeneralExamination(request);
+
+            response.put("success", true);
+            response.put("message", "Đã lưu thông tin khám tổng quát thành công!");
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            response.put("success", false);
+            response.put("message", ex.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception ex) {
+            log.error("Lỗi khi lưu khám tổng quát ca khám {}: ", visitId, ex);
+            response.put("success", false);
+            response.put("message", "Lỗi máy chủ khi lưu thông tin khám tổng quát: " + ex.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
 }

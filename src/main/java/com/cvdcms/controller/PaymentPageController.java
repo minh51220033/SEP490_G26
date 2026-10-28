@@ -167,7 +167,7 @@ public class PaymentPageController {
             HttpSession session
     ) {
         Long currentUserId = getCurrentUserId(session);
-        populateUserAndSidebar(model, session, "debts");
+        populateUserAndSidebar(model, session, "dashboard_finance");
 
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
@@ -295,15 +295,33 @@ public class PaymentPageController {
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
+        String returnUrl = request.getProfileId() != null
+                ? "redirect:/payments/dashboard?patientId="
+                + request.getProfileId()
+                : "redirect:/payments/dashboard";
+
         try {
             Long cashierUserId = getCurrentUserId(session);
-            Payment deposit = paymentService.processAdvanceDeposit(request, cashierUserId);
-            redirectAttributes.addFlashAttribute("successMessage", "Nộp tiền tạm ứng " + deposit.getPaymentCode() + " thành công (" + deposit.getAmount() + " đ)!");
-            return "redirect:/payments/deposits?profileId=" + request.getProfileId();
+
+            Payment deposit = paymentService.processAdvanceDeposit(
+                    request, cashierUserId
+            );
+
+            redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    "Nộp tiền tạm ứng "
+                            + deposit.getPaymentCode()
+                            + " thành công ("
+                            + deposit.getAmount() + " đ)!"
+            );
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi nộp tiền tạm ứng: " + e.getMessage());
-            return "redirect:/payments/deposits" + (request.getProfileId() != null ? "?profileId=" + request.getProfileId() : "");
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage",
+                    "Lỗi nộp tiền tạm ứng: " + e.getMessage()
+            );
         }
+
+        return returnUrl;
     }
 
     @GetMapping("/refunds")
@@ -347,19 +365,40 @@ public class PaymentPageController {
     @PostMapping("/refunds")
     public String saveRefund(
             @ModelAttribute RefundRequestDTO request,
+            @RequestParam(defaultValue = "false") boolean returnToDashboard,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
         try {
             Long staffUserId = getCurrentUserId(session);
             Refund refund = refundService.processRefund(request, staffUserId);
-            redirectAttributes.addFlashAttribute("successMessage", "Lập phiếu hoàn tiền " + refund.getRefundCode() + " thành công (" + refund.getAmount() + " đ)!");
+
+            redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    "Hoàn tiền thành công. Mã phiếu: " + refund.getRefundCode()
+            );
+
+            if (returnToDashboard) {
+                return "redirect:/payments/dashboard?patientId="
+                        + refund.getPatientProfile().getProfileId();
+            }
+
             if (request.getInvoiceId() != null) {
                 return "redirect:/invoices/" + request.getInvoiceId();
             }
+
             return "redirect:/payments/refunds";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi hoàn tiền: " + e.getMessage());
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage",
+                    "Lỗi hoàn tiền: " + e.getMessage()
+            );
+
+            if (returnToDashboard && request.getProfileId() != null) {
+                return "redirect:/payments/dashboard?patientId="
+                        + request.getProfileId();
+            }
+
             return "redirect:/payments/refunds";
         }
     }

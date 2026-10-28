@@ -8,6 +8,12 @@ import com.cvdcms.entity.enums.PerformedServiceStatus;
 import com.cvdcms.entity.enums.ServiceStatus;
 import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.VisitStatus;
+import com.cvdcms.entity.enums.TreatmentPlanItemStatus;
+import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
+import com.cvdcms.entity.enums.TreatmentPlanStatus;
+import com.cvdcms.repository.TreatmentPlanItemRepository;
+import com.cvdcms.repository.TreatmentPlanStageRepository;
+import com.cvdcms.repository.TreatmentPlanRepository;
 import com.cvdcms.repository.PerformedServiceRepository;
 import com.cvdcms.repository.ServiceRepository;
 import com.cvdcms.repository.StaffProfileRepository;
@@ -35,6 +41,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     private final ServiceRepository serviceRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final VisitRepository visitRepository;
+    private final TreatmentPlanItemRepository treatmentPlanItemRepository;
+    private final TreatmentPlanStageRepository treatmentPlanStageRepository;
+    private final TreatmentPlanRepository treatmentPlanRepository;
     private final com.cvdcms.repository.ClinicalWorkflowTemplateRepository workflowTemplateRepo;
     private final com.cvdcms.repository.ClinicalWorkflowVersionRepository workflowVersionRepo;
     private final com.cvdcms.repository.ClinicalWorkflowStepRepository workflowStepRepo;
@@ -135,6 +144,43 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         ps.setStatus(PerformedServiceStatus.COMPLETED); // Ghi nhận hoàn thành để bàn giao Người 4 lập hóa đơn
         ps.setClinicalNotes(requestDTO.getClinicalNotes());
 
+        if (requestDTO.getPlanItemId() != null) {
+            treatmentPlanItemRepository.findById(requestDTO.getPlanItemId()).ifPresent(planItem -> {
+                ps.setPlanItem(planItem);
+                planItem.setStatus(TreatmentPlanItemStatus.COMPLETED);
+                planItem.setCompletedAt(LocalDateTime.now());
+                treatmentPlanItemRepository.save(planItem);
+
+                // Tự động cập nhật tiến độ giai đoạn và kế hoạch
+                TreatmentPlanStage stage = planItem.getStage();
+                if (stage != null) {
+                    List<TreatmentPlanItem> stageItems = stage.getItems();
+                    boolean allDone = stageItems != null && !stageItems.isEmpty() &&
+                            stageItems.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+                    if (allDone) {
+                        stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
+                        stage.setCompletedAt(LocalDateTime.now());
+                    } else {
+                        stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                    }
+                    treatmentPlanStageRepository.save(stage);
+
+                    TreatmentPlan plan = stage.getPlan();
+                    if (plan != null) {
+                        List<TreatmentPlanStage> allStages = plan.getStages();
+                        boolean allStagesDone = allStages != null && !allStages.isEmpty() &&
+                                allStages.stream().allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
+                        if (allStagesDone) {
+                            plan.setStatus(TreatmentPlanStatus.COMPLETED);
+                        } else {
+                            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+                        }
+                        treatmentPlanRepository.save(plan);
+                    }
+                }
+            });
+        }
+
         PerformedService saved = performedServiceRepository.save(ps);
         log.info("Performed service created successfully with id={}", saved.getPerformedId());
 
@@ -152,6 +198,41 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         if (ps.getVisit() != null &&
                 (ps.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || ps.getVisit().getStatus() == VisitStatus.COMPLETED)) {
             throw new IllegalStateException("Bệnh án lâm sàng đã khóa bất biến (BR-EMR-02). Không thể xóa hoặc hủy dịch vụ đã hoàn tất.");
+        }
+
+        // Nếu dịch vụ này gắn với bước trong Kế hoạch điều trị (FT15), hoàn tác lại trạng thái của bước đó
+        if (ps.getPlanItem() != null) {
+            TreatmentPlanItem planItem = ps.getPlanItem();
+            planItem.setStatus(TreatmentPlanItemStatus.PLANNED);
+            planItem.setCompletedAt(null);
+            treatmentPlanItemRepository.save(planItem);
+
+            TreatmentPlanStage stage = planItem.getStage();
+            if (stage != null) {
+                List<TreatmentPlanItem> stageItems = stage.getItems();
+                boolean anyDone = stageItems != null && stageItems.stream().anyMatch(i ->
+                        i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS);
+                if (anyDone) {
+                    stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                } else {
+                    stage.setStatus(TreatmentPlanStageStatus.PENDING);
+                    stage.setCompletedAt(null);
+                }
+                treatmentPlanStageRepository.save(stage);
+
+                TreatmentPlan plan = stage.getPlan();
+                if (plan != null) {
+                    List<TreatmentPlanStage> allStages = plan.getStages();
+                    boolean anyStageDone = allStages != null && allStages.stream().anyMatch(s ->
+                            s.getStatus() == TreatmentPlanStageStatus.COMPLETED || s.getStatus() == TreatmentPlanStageStatus.IN_PROGRESS);
+                    if (anyStageDone) {
+                        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+                    } else {
+                        plan.setStatus(TreatmentPlanStatus.ACCEPTED);
+                    }
+                    treatmentPlanRepository.save(plan);
+                }
+            }
         }
 
         // Xóa hoàn toàn hoặc cập nhật status sang CANCELLED
@@ -203,6 +284,19 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             }
         }
 
+        Long planItemId = null;
+        String planName = null;
+        String stageName = null;
+        if (ps.getPlanItem() != null) {
+            planItemId = ps.getPlanItem().getPlanItemId();
+            if (ps.getPlanItem().getPlan() != null) {
+                planName = ps.getPlanItem().getPlan().getPlanName();
+            }
+            if (ps.getPlanItem().getStage() != null) {
+                stageName = ps.getPlanItem().getStage().getStageName();
+            }
+        }
+
         return PerformedServiceResponseDTO.builder()
                 .performedId(ps.getPerformedId())
                 .visitId(ps.getVisit() != null ? ps.getVisit().getVisitId() : null)
@@ -231,6 +325,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .workflowTemplateId(wfTemplateId)
                 .workflowStepCount(wfStepCount)
                 .workflowTemplateName(wfTemplateName)
+                .planItemId(planItemId)
+                .planName(planName)
+                .stageName(stageName)
                 .build();
     }
 }

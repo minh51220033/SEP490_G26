@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Chi tiết Hóa đơn (SCR-21.1) ' + ${invoice.invoiceCode} + ' - FT21')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Chi tiết Hóa đơn' + ${invoice.invoiceCode})}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
 <body class="app-body">
@@ -177,6 +177,15 @@
                             <span class="text-muted">Tổng tiền dịch vụ:</span>
                             <span class="fw-bold" th:text="${#numbers.formatDecimal(invoice.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</span>
                         </div>
+                        <div th:if="${invoice.surchargeAmount != null and invoice.surchargeAmount > 0}"
+                             class="fin-calc-row text-danger">
+                            <div>
+                                <span>Phụ thu:</span>
+                                <small class="d-block text-muted" th:text="${invoice.surchargeDescription}"></small>
+                            </div>
+                            <span th:text="${#numbers.formatDecimal(invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                        </div>
+
                         <div class="fin-calc-row text-success">
                             <span>Giảm giá thẻ thành viên:</span>
                             <span th:text="'-' + ${#numbers.formatDecimal(invoice.discountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
@@ -190,7 +199,7 @@
                             <span th:text="'-' + ${#numbers.formatDecimal(invoice.pointDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
                         </div>
                         <div class="fin-calc-row fin-calc-total">
-                            <span>TỔNG THỰC THU:</span>
+                            <span>TỔNG TIỀN HÓA ĐƠN:</span>
                             <span class="fs-4 text-primary" th:text="${#numbers.formatDecimal(invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</span>
                         </div>
                         <div class="fin-calc-row text-success fw-bold">

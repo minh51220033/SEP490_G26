@@ -242,130 +242,40 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         invoice.setTotalServiceAmount(totalServiceAmount);
 
-        // 6. Giảm trừ thẻ thành viên
-        BigDecimal memberDiscount = BigDecimal.ZERO;
-        if (patient.getMembershipTier() != null && patient.getMembershipTier().getDiscountPercent() != null) {
-            BigDecimal tierPercent = patient.getMembershipTier().getDiscountPercent();
-            if (tierPercent.compareTo(BigDecimal.ZERO) > 0) {
-                memberDiscount = totalServiceAmount.multiply(tierPercent).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            }
-        }
-        BigDecimal manualDiscount = (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getDiscountAmount() : BigDecimal.ZERO;
-        invoice.setDiscountAmount(memberDiscount.add(manualDiscount));
+        // 6. Tính toán và áp dụng quyền lợi / ưu đãi qua phương thức dùng chung (áp dụng duy nhất Promotion HOẶC Voucher)
+        List<Long> serviceIds = invoiceItems.stream()
+                .map(it -> it.getService().getServiceId())
+                .distinct()
+                .toList();
 
-        // 7. Khuyến mãi chung
-        BigDecimal promotionDiscount = BigDecimal.ZERO;
-        if (request.getPromotionId() != null) {
-            Optional<Promotion> promoOpt = promotionRepository.findById(request.getPromotionId());
-            if (promoOpt.isPresent()) {
-                Promotion promo = promoOpt.get();
-                LocalDateTime now = LocalDateTime.now();
-                boolean isActive = Boolean.TRUE.equals(promo.getIsActive())
-                        && (promo.getStartDate() == null || !now.isBefore(promo.getStartDate()))
-                        && (promo.getEndDate() == null || !now.isAfter(promo.getEndDate()))
-                        && (promo.getBranch() == null || promo.getBranch().getBranchId().equals(branch.getBranchId()))
-                        && (promo.getUsageLimit() == null || (promo.getUsedCount() != null ? promo.getUsedCount() : 0) < promo.getUsageLimit());
-                boolean meetsMin = promo.getMinBillAmount() == null || totalServiceAmount.compareTo(promo.getMinBillAmount()) >= 0;
+        BenefitCalculationResult benefit = calculateAndValidateBenefits(
+                totalServiceAmount,
+                patient,
+                branch.getBranchId(),
+                serviceIds,
+                request.getPromotionId(),
+                request.getVoucherId(),
+                request.getPointsToRedeem(),
+                request.getDiscountAmount()
+        );
 
-                if (isActive && meetsMin) {
-                    if (promo.getPromoType() == PromotionType.PERCENTAGE) {
-                        BigDecimal calculated = totalServiceAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                        if (promo.getMaxDiscountAmount() != null && calculated.compareTo(promo.getMaxDiscountAmount()) > 0) {
-                            calculated = promo.getMaxDiscountAmount();
-                        }
-                        promotionDiscount = calculated;
-                    } else {
-                        promotionDiscount = promo.getDiscountValue().min(totalServiceAmount);
-                    }
-                    promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
-                    promotionRepository.save(promo);
-                    invoice.setPromotion(promo);
-                }
-            }
-        }
-        invoice.setPromotionDiscount(promotionDiscount);
-
-        // 8. Voucher của bệnh nhân
-        if (request.getVoucherId() != null) {
-            Optional<PatientVoucher> voucherOpt = patientVoucherRepository.findById(request.getVoucherId());
-            if (voucherOpt.isPresent()) {
-                PatientVoucher voucher = voucherOpt.get();
-                if (!voucher.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
-                    throw new IllegalArgumentException("Voucher được chọn không thuộc sở hữu của bệnh nhân này.");
-                }
-                LocalDateTime now = LocalDateTime.now();
-                if (voucher.getStatus() == VoucherStatus.AVAILABLE && voucher.getExpiresAt() != null && voucher.getExpiresAt().isAfter(now)) {
-                    Promotion vp = voucher.getPromotion();
-                    boolean promoValid = Boolean.TRUE.equals(vp.getIsActive())
-                            && (vp.getStartDate() == null || !now.isBefore(vp.getStartDate()))
-                            && (vp.getEndDate() == null || !now.isAfter(vp.getEndDate()))
-                            && (vp.getBranch() == null || vp.getBranch().getBranchId().equals(branch.getBranchId()));
-                    boolean meetsMin = vp.getMinBillAmount() == null || totalServiceAmount.compareTo(vp.getMinBillAmount()) >= 0;
-                    if (promoValid && meetsMin) {
-                        BigDecimal vDiscount = BigDecimal.ZERO;
-                        if (vp.getPromoType() == PromotionType.PERCENTAGE) {
-                            vDiscount = totalServiceAmount.multiply(vp.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                            if (vp.getMaxDiscountAmount() != null && vDiscount.compareTo(vp.getMaxDiscountAmount()) > 0) {
-                                vDiscount = vp.getMaxDiscountAmount();
-                            }
-                        } else {
-                            vDiscount = vp.getDiscountValue().min(totalServiceAmount);
-                        }
-                        promotionDiscount = promotionDiscount.add(vDiscount);
-                        invoice.setPromotionDiscount(promotionDiscount);
-
-                        voucher.setStatus(VoucherStatus.USED);
-                        voucher.setUsedAt(LocalDateTime.now());
-                        patientVoucherRepository.save(voucher);
-                        invoice.setVoucher(voucher);
-                    }
-                }
-            }
-        }
-
-        // 9. Điểm tích lũy Loyalty
-        BigDecimal pointDiscount = BigDecimal.ZERO;
-        if (request.getPointsToRedeem() != null && request.getPointsToRedeem() > 0) {
-            Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
-            if (walletOpt.isPresent()) {
-                PatientLoyaltyWallet wallet = walletOpt.get();
-                int redeem = Math.min(request.getPointsToRedeem(), wallet.getCurrentPoints());
-                if (redeem > 0) {
-                    BigDecimal pointVal = (patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null)
-                            ? patient.getMembershipTier().getPointValue() : new BigDecimal("1000.00");
-                    pointDiscount = pointVal.multiply(new BigDecimal(redeem));
-                    wallet.setCurrentPoints(wallet.getCurrentPoints() - redeem);
-                    patientLoyaltyWalletRepository.save(wallet);
-
-                    PointTransaction pt = new PointTransaction();
-                    pt.setPatientProfile(patient);
-                    pt.setInvoice(invoice);
-                    pt.setTransactionType(PointTransactionType.REDEEM);
-                    pt.setPoints(redeem);
-                    pt.setBalanceAfter(wallet.getCurrentPoints());
-                    pt.setReason("Đổi " + redeem + " điểm tích lũy thanh toán hóa đơn");
-                    pointTransactionRepository.save(pt);
-                }
-            }
-        }
-        invoice.setPointDiscount(pointDiscount);
-
-        // 10. Tính tổng tiền phải trả (Net Amount)
-        BigDecimal netAmount = totalServiceAmount.subtract(invoice.getDiscountAmount())
-                .subtract(invoice.getPromotionDiscount())
-                .subtract(pointDiscount);
-        if (netAmount.compareTo(BigDecimal.ZERO) < 0) {
-            netAmount = BigDecimal.ZERO;
-        }
-
-        invoice.setTotalAmount(netAmount);
+        invoice.setDiscountAmount(benefit.memberDiscount.add(benefit.manualDiscount));
+        invoice.setPromotionDiscount(benefit.promoOrVoucherDiscount);
+        invoice.setPromotion(benefit.promotion);
+        invoice.setVoucher(benefit.voucher);
+        invoice.setPointDiscount(benefit.pointDiscount);
+        invoice.setTotalAmount(benefit.netAmount);
         invoice.setPaidAmount(BigDecimal.ZERO);
-        invoice.setRemainingDebt(netAmount);
-        invoice.setPaymentStatus(netAmount.compareTo(BigDecimal.ZERO) == 0 ? InvoicePaymentStatus.PAID : InvoicePaymentStatus.UNPAID);
+        invoice.setRemainingDebt(benefit.netAmount);
+        invoice.setPaymentStatus(benefit.netAmount.compareTo(BigDecimal.ZERO) == 0 ? InvoicePaymentStatus.PAID : InvoicePaymentStatus.UNPAID);
         invoice.setItems(invoiceItems);
 
         Invoice saved = invoiceRepository.save(invoice);
+
+        // Chỉ khi hóa đơn có số tiền thanh toán thực = 0 đ (đã hoàn tất 100% ngay khi tạo) mới chốt sử dụng ưu đãi
+        if (saved.getPaymentStatus() == InvoicePaymentStatus.PAID) {
+            finalizeInvoiceBenefits(saved);
+        }
 
         // Ghi Audit log
         InvoiceAuditLog log = new InvoiceAuditLog();
@@ -375,7 +285,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         log.setNewDiscountAmount(saved.getDiscountAmount());
         log.setNewPaidAmount(saved.getPaidAmount());
         log.setReason("Lập hóa đơn mới từ lượt khám " + visit.getVisitCode());
-        log.setDetails("Tổng tiền dịch vụ: " + totalServiceAmount + " đ, Thực thu: " + netAmount + " đ");
+        log.setDetails("Tổng tiền dịch vụ: " + totalServiceAmount + " đ, Thực thu: " + saved.getTotalAmount() + " đ");
         log.setPerformedBy(cashier);
         invoiceAuditLogRepository.save(log);
 
@@ -435,116 +345,38 @@ public class InvoiceServiceImpl implements InvoiceService {
                     .map(v -> v.getBranch().getBranchId()).orElse(null);
         }
 
-        BigDecimal memberDiscount = BigDecimal.ZERO;
-        BigDecimal pointVal = new BigDecimal("1000.00");
-        int maxPoints = 0;
-
-        if (patientOpt.isPresent()) {
-            PatientProfile patient = patientOpt.get();
-            if (patient.getMembershipTier() != null) {
-                MembershipTier tier = patient.getMembershipTier();
-                preview.setTierName(tier.getTierName());
-                if (tier.getDiscountPercent() != null && tier.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0) {
-                    preview.setMemberDiscountPercent(tier.getDiscountPercent());
-                    memberDiscount = totalService.multiply(tier.getDiscountPercent())
-                            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                }
-                if (tier.getPointValue() != null && tier.getPointValue().compareTo(BigDecimal.ZERO) > 0) {
-                    pointVal = tier.getPointValue();
-                }
-            }
-
-            Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
-            if (walletOpt.isPresent()) {
-                maxPoints = walletOpt.get().getCurrentPoints();
-            }
-        }
-        preview.setMemberDiscountAmount(memberDiscount);
-
-        BigDecimal promoDiscount = BigDecimal.ZERO;
-        LocalDateTime now = LocalDateTime.now();
-
-        if (request.getPromotionId() != null) {
-            Optional<Promotion> promoOpt = promotionRepository.findById(request.getPromotionId());
-            if (promoOpt.isPresent()) {
-                Promotion promo = promoOpt.get();
-                boolean isActive = Boolean.TRUE.equals(promo.getIsActive())
-                        && (promo.getStartDate() == null || !now.isBefore(promo.getStartDate()))
-                        && (promo.getEndDate() == null || !now.isAfter(promo.getEndDate()))
-                        && (promo.getBranch() == null || promo.getBranch().getBranchId().equals(branchId))
-                        && (promo.getUsageLimit() == null || (promo.getUsedCount() != null ? promo.getUsedCount() : 0) < promo.getUsageLimit());
-                boolean meetsMin = promo.getMinBillAmount() == null || totalService.compareTo(promo.getMinBillAmount()) >= 0;
-
-                if (isActive && meetsMin) {
-                    preview.setPromoName(promo.getPromoName());
-                    if (promo.getPromoType() == PromotionType.PERCENTAGE) {
-                        BigDecimal calc = totalService.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                        if (promo.getMaxDiscountAmount() != null && calc.compareTo(promo.getMaxDiscountAmount()) > 0) {
-                            calc = promo.getMaxDiscountAmount();
-                        }
-                        promoDiscount = calc;
-                    } else {
-                        promoDiscount = promo.getDiscountValue().min(totalService);
-                    }
-                }
+        List<Long> serviceIds = new ArrayList<>();
+        for (InvoiceItemRequestDTO it : request.getItems()) {
+            if (it.getServiceId() != null) {
+                serviceIds.add(it.getServiceId());
+            } else if (it.getPerformedId() != null) {
+                performedServiceRepository.findById(it.getPerformedId())
+                        .ifPresent(ps -> serviceIds.add(ps.getService().getServiceId()));
             }
         }
 
-        if (request.getVoucherId() != null && patientOpt.isPresent()) {
-            Optional<PatientVoucher> voucherOpt = patientVoucherRepository.findById(request.getVoucherId());
-            if (voucherOpt.isPresent()) {
-                PatientVoucher voucher = voucherOpt.get();
-                if (voucher.getPatientProfile().getProfileId().equals(patientOpt.get().getProfileId())
-                        && voucher.getStatus() == VoucherStatus.AVAILABLE
-                        && voucher.getExpiresAt() != null
-                        && voucher.getExpiresAt().isAfter(now)) {
-                    Promotion vp = voucher.getPromotion();
-                    boolean promoValid = Boolean.TRUE.equals(vp.getIsActive())
-                            && (vp.getStartDate() == null || !now.isBefore(vp.getStartDate()))
-                            && (vp.getEndDate() == null || !now.isAfter(vp.getEndDate()))
-                            && (vp.getBranch() == null || vp.getBranch().getBranchId().equals(branchId));
-                    boolean meetsMin = vp.getMinBillAmount() == null || totalService.compareTo(vp.getMinBillAmount()) >= 0;
-                    if (promoValid && meetsMin) {
-                        BigDecimal vDiscount = BigDecimal.ZERO;
-                        if (vp.getPromoType() == PromotionType.PERCENTAGE) {
-                            vDiscount = totalService.multiply(vp.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                            if (vp.getMaxDiscountAmount() != null && vDiscount.compareTo(vp.getMaxDiscountAmount()) > 0) {
-                                vDiscount = vp.getMaxDiscountAmount();
-                            }
-                        } else {
-                            vDiscount = vp.getDiscountValue().min(totalService);
-                        }
-                        promoDiscount = promoDiscount.add(vDiscount);
-                    }
-                }
-            }
+        BenefitCalculationResult benefit = calculateAndValidateBenefits(
+                totalService,
+                patientOpt.orElse(null),
+                branchId,
+                serviceIds,
+                request.getPromotionId(),
+                request.getVoucherId(),
+                request.getPointsToRedeem(),
+                request.getDiscountAmount()
+        );
+
+        preview.setMemberDiscountAmount(benefit.memberDiscount);
+        if (patientOpt.isPresent() && patientOpt.get().getMembershipTier() != null) {
+            preview.setTierName(patientOpt.get().getMembershipTier().getTierName());
+            preview.setMemberDiscountPercent(patientOpt.get().getMembershipTier().getDiscountPercent());
         }
-        preview.setPromotionDiscountAmount(promoDiscount);
-
-        BigDecimal pointDiscount = BigDecimal.ZERO;
-        if (request.getPointsToRedeem() != null && request.getPointsToRedeem() > 0) {
-            int redeem = Math.min(request.getPointsToRedeem(), maxPoints);
-            if (redeem > 0) {
-                pointDiscount = pointVal.multiply(new BigDecimal(redeem));
-            }
-        }
-        preview.setPointDiscountAmount(pointDiscount);
-
-        BigDecimal manualDiscount = (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getDiscountAmount() : BigDecimal.ZERO;
-
-        BigDecimal totalDiscount = memberDiscount
-                .add(promoDiscount)
-                .add(pointDiscount)
-                .add(manualDiscount);
-        preview.setTotalDiscountAmount(totalDiscount);
-
-        BigDecimal finalPay = totalService.subtract(totalDiscount);
-        if (finalPay.compareTo(BigDecimal.ZERO) < 0) {
-            finalPay = BigDecimal.ZERO;
-        }
-        preview.setTotalAmount(finalPay);
-        preview.setPointsEarnable(finalPay.divide(new BigDecimal("10000"), 0, RoundingMode.DOWN).intValue());
+        preview.setPromotionDiscountAmount(benefit.promoOrVoucherDiscount);
+        preview.setPromoName(benefit.promoOrVoucherName);
+        preview.setPointDiscountAmount(benefit.pointDiscount);
+        preview.setTotalDiscountAmount(benefit.totalDiscount);
+        preview.setTotalAmount(benefit.netAmount);
+        preview.setPointsEarnable(benefit.netAmount.divide(new BigDecimal("10000"), 0, RoundingMode.DOWN).intValue());
 
         return preview;
     }
@@ -584,89 +416,80 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (request == null || request.getReason() == null || request.getReason().trim().isEmpty()) {
             throw new IllegalArgumentException("Lý do điều chỉnh hóa đơn không được để trống.");
         }
-
+        if (request.getReason().trim().length() > 500) {
+            throw new IllegalArgumentException("Lý do điều chỉnh tối đa 500 ký tự.");
+        }
         Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
-
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new IllegalStateException("Không thể điều chỉnh hóa đơn đã bị hủy.");
         }
-
         StaffProfile staff = getValidStaffProfile(staffUserId, invoice.getBranch().getBranchId());
-        BigDecimal oldTotal = invoice.getTotalAmount();
-        BigDecimal oldPaid = invoice.getPaidAmount();
-        BigDecimal oldDiscount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
-
         if (Boolean.TRUE.equals(request.getCancelInvoice())) {
             return cancelInvoice(invoiceId, request.getReason(), staffUserId);
         }
 
-        // 1. Kiểm tra tổng tiền mới không được thấp hơn số tiền đã thanh toán
+        BigDecimal oldTotal = invoice.getTotalAmount();
+        BigDecimal oldPaid = invoice.getPaidAmount();
+        BigDecimal oldDiscount = Optional.ofNullable(invoice.getDiscountAmount()).orElse(BigDecimal.ZERO);
+        BigDecimal oldSurcharge = Optional.ofNullable(invoice.getSurchargeAmount()).orElse(BigDecimal.ZERO);
+        String oldDescription = Objects.toString(invoice.getSurchargeDescription(), "");
+        BigDecimal totalService = Optional.ofNullable(invoice.getTotalServiceAmount()).orElse(BigDecimal.ZERO);
+        BigDecimal promoDiscount = Optional.ofNullable(invoice.getPromotionDiscount()).orElse(BigDecimal.ZERO);
+        BigDecimal pointDiscount = Optional.ofNullable(invoice.getPointDiscount()).orElse(BigDecimal.ZERO);
+
+        BigDecimal surcharge = validateAdjustmentMoney(
+                request.getNewSurchargeAmount() != null ? request.getNewSurchargeAmount() : oldSurcharge,
+                "Phụ thu");
+        String description = request.getNewSurchargeDescription() != null
+                ? request.getNewSurchargeDescription().trim() : oldDescription;
+        if (description.length() > 500) {
+            throw new IllegalArgumentException("Nội dung phụ thu tối đa 500 ký tự.");
+        }
+        if (surcharge.signum() > 0 && description.isBlank()) {
+            throw new IllegalArgumentException("Có phụ thu thì phải ghi rõ nội dung phụ thu.");
+        }
+        if (surcharge.signum() == 0) {
+            description = null;
+        }
+        BigDecimal discount = validateAdjustmentMoney(
+                request.getNewDiscountAmount() != null ? request.getNewDiscountAmount() : oldDiscount,
+                "Giảm giá");
+        BigDecimal beforeDiscount = totalService.add(surcharge);
+        BigDecimal total = beforeDiscount.subtract(discount).subtract(promoDiscount)
+                .subtract(pointDiscount).max(BigDecimal.ZERO);
+
+        // Giu tuong thich API cu: chi gui tong moi thi suy ra giam gia.
+        // Form moi khong gui tong; backend tu tinh tu cac khoan tien.
         if (request.getNewTotalAmount() != null) {
-            if (request.getNewTotalAmount().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Tổng tiền mới không được âm.");
+            BigDecimal requestedTotal = validateAdjustmentMoney(request.getNewTotalAmount(), "Tổng tiền mới");
+            if (requestedTotal.compareTo(oldPaid) < 0) {
+                throw new IllegalArgumentException("Tổng tiền mới không được nhỏ hơn số tiền đã thanh toán. Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
             }
-            if (request.getNewTotalAmount().compareTo(invoice.getPaidAmount()) < 0) {
-                throw new IllegalArgumentException("Tổng tiền mới (" + request.getNewTotalAmount() + " đ) không được nhỏ hơn số tiền đã thanh toán (" + invoice.getPaidAmount() + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
-            }
-        }
-
-        BigDecimal totalService = invoice.getTotalServiceAmount() != null
-                ? invoice.getTotalServiceAmount()
-                : (invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO);
-        BigDecimal promoDiscount = invoice.getPromotionDiscount() != null ? invoice.getPromotionDiscount() : BigDecimal.ZERO;
-        BigDecimal pointDiscount = invoice.getPointDiscount() != null ? invoice.getPointDiscount() : BigDecimal.ZERO;
-
-        BigDecimal effectiveDiscount = request.getNewDiscountAmount() != null ? request.getNewDiscountAmount() : oldDiscount;
-        if (effectiveDiscount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Số tiền giảm giá mới không được âm.");
-        }
-
-        BigDecimal calculatedTotal = totalService.subtract(effectiveDiscount).subtract(promoDiscount).subtract(pointDiscount);
-        if (calculatedTotal.compareTo(BigDecimal.ZERO) < 0) {
-            calculatedTotal = BigDecimal.ZERO;
-        }
-
-        BigDecimal effectiveTotal = request.getNewTotalAmount() != null ? request.getNewTotalAmount() : calculatedTotal;
-        if (effectiveTotal.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Tổng tiền mới không được âm.");
-        }
-
-        // Kiểm tra tính nhất quán giữa dòng dịch vụ, giảm giá và tổng phải trả
-        if (request.getNewTotalAmount() != null && request.getNewDiscountAmount() != null) {
-            if (effectiveTotal.compareTo(calculatedTotal) != 0) {
-                throw new IllegalArgumentException("Dữ liệu mâu thuẫn: Tổng dịch vụ (" + totalService + " đ) trừ các khoản giảm ("
-                        + effectiveDiscount.add(promoDiscount).add(pointDiscount) + " đ) cho ra " + calculatedTotal + " đ, không khớp với tổng tiền yêu cầu (" + effectiveTotal + " đ).");
-            }
-        } else if (request.getNewDiscountAmount() != null) {
-            effectiveTotal = calculatedTotal;
-        } else if (request.getNewTotalAmount() != null) {
-            BigDecimal derivedDiscount = totalService.subtract(promoDiscount).subtract(pointDiscount).subtract(effectiveTotal);
-            if (derivedDiscount.compareTo(BigDecimal.ZERO) >= 0) {
-                effectiveDiscount = derivedDiscount;
-            } else {
-                throw new IllegalArgumentException("Tổng tiền mới (" + effectiveTotal + " đ) vượt quá tổng giá trị dịch vụ (" + totalService + " đ).");
+            if (request.getNewDiscountAmount() == null && request.getNewSurchargeAmount() == null) {
+                discount = validateAdjustmentMoney(beforeDiscount.subtract(promoDiscount)
+                        .subtract(pointDiscount).subtract(requestedTotal), "Giảm giá suy ra");
+                total = requestedTotal;
+            } else if (requestedTotal.compareTo(total) != 0) {
+                throw new IllegalArgumentException("Dữ liệu mâu thuẫn: tổng tiền yêu cầu không khớp tổng dịch vụ + phụ thu - các khoản giảm = " + total + " đ.");
             }
         }
-
-        if (effectiveTotal.compareTo(invoice.getPaidAmount()) < 0) {
-            throw new IllegalArgumentException("Tổng tiền mới (" + effectiveTotal + " đ) không được nhỏ hơn số tiền đã thanh toán (" + invoice.getPaidAmount() + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
+        total = validateAdjustmentMoney(total, "Tổng tiền hóa đơn");
+        if (total.compareTo(oldPaid) < 0) {
+            throw new IllegalArgumentException("Tổng tiền mới (" + total
+                    + " đ) không được nhỏ hơn số tiền đã thanh toán (" + oldPaid
+                    + " đ). Vui lòng hoàn tiền trước khi giảm tiền hóa đơn.");
         }
 
-        invoice.setDiscountAmount(effectiveDiscount);
-        invoice.setTotalAmount(effectiveTotal);
-        BigDecimal newRemaining = effectiveTotal.subtract(invoice.getPaidAmount());
-        invoice.setRemainingDebt(newRemaining.compareTo(BigDecimal.ZERO) > 0 ? newRemaining : BigDecimal.ZERO);
-
-        if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
-            invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
-        } else if (invoice.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-            invoice.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
-        } else {
-            invoice.setPaymentStatus(InvoicePaymentStatus.UNPAID);
-        }
-
-        invoice.setAdjustmentReason(request.getReason());
+        invoice.setSurchargeAmount(surcharge);
+        invoice.setSurchargeDescription(description);
+        invoice.setDiscountAmount(discount);
+        invoice.setTotalAmount(total);
+        BigDecimal debt = total.subtract(oldPaid);
+        invoice.setRemainingDebt(debt);
+        invoice.setPaymentStatus(debt.signum() == 0 ? InvoicePaymentStatus.PAID
+                : oldPaid.signum() > 0 ? InvoicePaymentStatus.PARTIAL : InvoicePaymentStatus.UNPAID);
+        invoice.setAdjustmentReason(request.getReason().trim());
         invoice.setAdjustedBy(staff);
         Invoice saved = invoiceRepository.save(invoice);
 
@@ -674,18 +497,35 @@ public class InvoiceServiceImpl implements InvoiceService {
         log.setInvoice(saved);
         log.setActionType("ADJUST");
         log.setOldTotalAmount(oldTotal);
-        log.setNewTotalAmount(effectiveTotal);
+        log.setNewTotalAmount(total);
         log.setOldDiscountAmount(oldDiscount);
-        log.setNewDiscountAmount(effectiveDiscount);
+        log.setNewDiscountAmount(discount);
         log.setOldPaidAmount(oldPaid);
-        log.setNewPaidAmount(saved.getPaidAmount());
-        log.setReason(request.getReason());
-        log.setDetails(request.getNotes() != null ? request.getNotes() : "Điều chỉnh hóa đơn: Tổng tiền " + oldTotal + " -> " + effectiveTotal + " đ, Giảm giá " + oldDiscount + " -> " + effectiveDiscount + " đ");
+        log.setNewPaidAmount(oldPaid);
+        log.setReason(request.getReason().trim());
+        log.setDetails("Tổng hóa đơn: " + oldTotal + " -> " + total
+                + " đ; Giảm giá: " + oldDiscount + " -> " + discount
+                + " đ; Phụ thu: " + oldSurcharge + " -> " + surcharge
+                + " đ; Nội dung phụ thu cũ: [" + oldDescription
+                + "]; Nội dung phụ thu mới: [" + Objects.toString(description, "")
+                + "]; Ghi chú: " + Objects.toString(request.getNotes(), ""));
         log.setPerformedBy(staff);
         invoiceAuditLogRepository.save(log);
-
         return saved;
     }
+
+    private BigDecimal validateAdjustmentMoney(BigDecimal value, String fieldName) {
+        if (value == null || value.signum() < 0
+                || value.compareTo(new BigDecimal("9999999999999.99")) > 0) {
+            throw new IllegalArgumentException(fieldName + " phải từ 0 đến 9.999.999.999.999,99 đ.");
+        }
+        try {
+            return value.setScale(2, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(fieldName + " chỉ được có tối đa 2 chữ số thập phân.");
+        }
+    }
+
 
     @Override
     public Invoice cancelInvoice(Long invoiceId, String reason, Long staffUserId) {
@@ -714,33 +554,51 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setAdjustmentReason(reason);
         invoice.setAdjustedBy(staff);
 
-        // Hoàn nguyên điểm nếu đã dùng
+        // Hoàn nguyên điểm nếu đã dùng (chỉ khi ĐÃ TỪNG trừ điểm và CHƯA từng hoàn lại)
         if (invoice.getPointDiscount() != null && invoice.getPointDiscount().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal pointVal = (invoice.getPatientProfile().getMembershipTier() != null && invoice.getPatientProfile().getMembershipTier().getPointValue() != null)
-                    ? invoice.getPatientProfile().getMembershipTier().getPointValue() : new BigDecimal("1000.00");
-            int points = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
-            Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(invoice.getPatientProfile().getProfileId());
-            walletOpt.ifPresent(wallet -> {
-                wallet.setCurrentPoints(wallet.getCurrentPoints() + points);
-                patientLoyaltyWalletRepository.save(wallet);
+            boolean wasRedeemed = pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionType(
+                    invoice.getInvoiceId(), PointTransactionType.REDEEM);
+            boolean alreadyReverted = pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionTypeAndPointsGreaterThan(
+                    invoice.getInvoiceId(), PointTransactionType.ADJUST, 0);
 
-                PointTransaction pt = new PointTransaction();
-                pt.setPatientProfile(invoice.getPatientProfile());
-                pt.setInvoice(invoice);
-                pt.setTransactionType(PointTransactionType.ADJUST);
-                pt.setPoints(points);
-                pt.setBalanceAfter(wallet.getCurrentPoints());
-                pt.setReason("Hoàn trả " + points + " điểm do hủy hóa đơn " + invoice.getInvoiceCode());
-                pointTransactionRepository.save(pt);
-            });
+            if (wasRedeemed && !alreadyReverted && invoice.getPatientProfile() != null) {
+                BigDecimal pointVal = (invoice.getPatientProfile().getMembershipTier() != null && invoice.getPatientProfile().getMembershipTier().getPointValue() != null)
+                        ? invoice.getPatientProfile().getMembershipTier().getPointValue() : new BigDecimal("1000.00");
+                int points = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
+                Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByProfileIdForUpdate(invoice.getPatientProfile().getProfileId());
+                walletOpt.ifPresent(wallet -> {
+                    wallet.setCurrentPoints(wallet.getCurrentPoints() + points);
+                    patientLoyaltyWalletRepository.save(wallet);
+
+                    PointTransaction pt = new PointTransaction();
+                    pt.setPatientProfile(invoice.getPatientProfile());
+                    pt.setInvoice(invoice);
+                    pt.setTransactionType(PointTransactionType.ADJUST);
+                    pt.setPoints(points);
+                    pt.setBalanceAfter(wallet.getCurrentPoints());
+                    pt.setReason("Hoàn trả " + points + " điểm do hủy hóa đơn " + invoice.getInvoiceCode());
+                    pointTransactionRepository.save(pt);
+                });
+            }
         }
 
         // Hoàn nguyên voucher nếu đã dùng
         if (invoice.getVoucher() != null) {
             PatientVoucher voucher = invoice.getVoucher();
-            voucher.setStatus(VoucherStatus.AVAILABLE);
-            voucher.setUsedAt(null);
-            patientVoucherRepository.save(voucher);
+            if (voucher.getStatus() == VoucherStatus.USED) {
+                voucher.setStatus(VoucherStatus.AVAILABLE);
+                voucher.setUsedAt(null);
+                patientVoucherRepository.save(voucher);
+            }
+        }
+
+        // Hoàn nguyên số lượt dùng khuyến mãi nếu đã từng tính
+        if (invoice.getPromotion() != null) {
+            Promotion promo = invoice.getPromotion();
+            if (promo.getUsedCount() != null && promo.getUsedCount() > 0) {
+                promo.setUsedCount(promo.getUsedCount() - 1);
+                promotionRepository.save(promo);
+            }
         }
 
         Invoice saved = invoiceRepository.save(invoice);
@@ -795,5 +653,229 @@ public class InvoiceServiceImpl implements InvoiceService {
         return allServices.stream()
                 .filter(ps -> !billedIds.contains(ps.getPerformedId()))
                 .toList();
+    }
+
+    @Override
+    public void finalizeInvoiceBenefits(Invoice invoice) {
+        if (invoice == null || invoice.getStatus() == InvoiceStatus.CANCELLED) {
+            return;
+        }
+
+        // 1. Chốt sử dụng voucher nếu có
+        if (invoice.getVoucher() != null) {
+            PatientVoucher voucher = invoice.getVoucher();
+            if (voucher.getStatus() == VoucherStatus.AVAILABLE) {
+                voucher.setStatus(VoucherStatus.USED);
+                voucher.setUsedAt(LocalDateTime.now());
+                patientVoucherRepository.save(voucher);
+            }
+        }
+
+        // 2. Chốt lượt sử dụng promotion chung nếu có
+        if (invoice.getPromotion() != null) {
+            Promotion promo = invoice.getPromotion();
+            promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
+            promotionRepository.save(promo);
+        }
+
+        // 3. Trừ điểm Loyalty và ghi nhận giao dịch REDEEM (đúng một lần duy nhất)
+        if (invoice.getPointDiscount() != null && invoice.getPointDiscount().compareTo(BigDecimal.ZERO) > 0) {
+            boolean alreadyRedeemed = pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionType(
+                    invoice.getInvoiceId(), PointTransactionType.REDEEM);
+            if (!alreadyRedeemed && invoice.getPatientProfile() != null) {
+                PatientProfile patient = invoice.getPatientProfile();
+                BigDecimal pointVal = (patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null)
+                        ? patient.getMembershipTier().getPointValue() : new BigDecimal("1000.00");
+                int pointsToDeduct = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
+                if (pointsToDeduct > 0) {
+                    Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId());
+                    walletOpt.ifPresent(wallet -> {
+                        int newBalance = Math.max(0, wallet.getCurrentPoints() - pointsToDeduct);
+                        wallet.setCurrentPoints(newBalance);
+                        patientLoyaltyWalletRepository.save(wallet);
+
+                        PointTransaction pt = new PointTransaction();
+                        pt.setPatientProfile(patient);
+                        pt.setInvoice(invoice);
+                        pt.setTransactionType(PointTransactionType.REDEEM);
+                        pt.setPoints(pointsToDeduct);
+                        pt.setBalanceAfter(newBalance);
+                        pt.setReason("Đổi " + pointsToDeduct + " điểm thanh toán hóa đơn " + invoice.getInvoiceCode());
+                        pointTransactionRepository.save(pt);
+                    });
+                }
+            }
+        }
+    }
+
+    private static class BenefitCalculationResult {
+        BigDecimal memberDiscount = BigDecimal.ZERO;
+        Promotion promotion = null;
+        PatientVoucher voucher = null;
+        BigDecimal promoOrVoucherDiscount = BigDecimal.ZERO;
+        String promoOrVoucherName = null;
+        int pointsToRedeem = 0;
+        BigDecimal pointDiscount = BigDecimal.ZERO;
+        BigDecimal manualDiscount = BigDecimal.ZERO;
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        BigDecimal netAmount = BigDecimal.ZERO;
+    }
+
+    private BenefitCalculationResult calculateAndValidateBenefits(
+            BigDecimal totalServiceAmount,
+            PatientProfile patient,
+            Long branchId,
+            List<Long> serviceIds,
+            Long promotionId,
+            Long voucherId,
+            Integer pointsToRedeem,
+            BigDecimal manualDiscountRequested
+    ) {
+        BenefitCalculationResult result = new BenefitCalculationResult();
+        BigDecimal remaining = totalServiceAmount != null ? totalServiceAmount : BigDecimal.ZERO;
+
+        // 1. Chính sách ưu đãi rõ ràng: Không cho phép cộng dồn đồng thời Promotion và Voucher
+        if (promotionId != null && voucherId != null) {
+            throw new IllegalArgumentException("Chính sách ưu đãi: Chỉ được áp dụng một trong hai hình thức: Chương trình khuyến mãi chung HOẶC Mã giảm giá (Voucher).");
+        }
+
+        // 2. Chiết khấu hạng thẻ thành viên
+        if (patient != null && patient.getMembershipTier() != null && patient.getMembershipTier().getDiscountPercent() != null) {
+            BigDecimal tierPercent = patient.getMembershipTier().getDiscountPercent();
+            if (tierPercent.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal mDiscount = totalServiceAmount.multiply(tierPercent).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                result.memberDiscount = mDiscount.min(remaining);
+                remaining = remaining.subtract(result.memberDiscount);
+            }
+        }
+
+        // 3. Khuyến mãi chung HOẶC Voucher
+        LocalDateTime now = LocalDateTime.now();
+        if (promotionId != null) {
+            Promotion promo = promotionRepository.findById(promotionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi ID: " + promotionId));
+
+            validatePromotionEligibility(promo, patient, branchId, totalServiceAmount, serviceIds, now);
+
+            BigDecimal discount = calculatePromoDiscount(promo, totalServiceAmount);
+            result.promoOrVoucherDiscount = discount.min(remaining);
+            result.promotion = promo;
+            result.promoOrVoucherName = promo.getPromoName();
+            remaining = remaining.subtract(result.promoOrVoucherDiscount);
+        } else if (voucherId != null) {
+            PatientVoucher voucher = patientVoucherRepository.findById(voucherId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy voucher ID: " + voucherId));
+
+            if (patient == null || !voucher.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
+                throw new IllegalArgumentException("Voucher được chọn không thuộc sở hữu của bệnh nhân này.");
+            }
+            if (voucher.getStatus() != VoucherStatus.AVAILABLE) {
+                throw new IllegalStateException("Voucher không ở trạng thái khả dụng (trạng thái hiện tại: " + voucher.getStatus() + ").");
+            }
+            if (voucher.getExpiresAt() != null && !voucher.getExpiresAt().isAfter(now)) {
+                throw new IllegalStateException("Voucher đã hết hạn sử dụng vào ngày " + voucher.getExpiresAt() + ".");
+            }
+            if (invoiceRepository.existsByVoucher_VoucherIdAndStatusNot(voucher.getVoucherId(), InvoiceStatus.CANCELLED)) {
+                throw new IllegalStateException("Voucher này đang được áp dụng cho một hóa đơn khác chưa hủy.");
+            }
+
+            Promotion vp = voucher.getPromotion();
+            if (vp == null) {
+                throw new IllegalStateException("Voucher không gắn với chương trình khuyến mãi hợp lệ.");
+            }
+            validatePromotionEligibility(vp, patient, branchId, totalServiceAmount, serviceIds, now);
+
+            BigDecimal discount = calculatePromoDiscount(vp, totalServiceAmount);
+            result.promoOrVoucherDiscount = discount.min(remaining);
+            result.voucher = voucher;
+            result.promoOrVoucherName = vp.getPromoName() + " (" + voucher.getVoucherCode() + ")";
+            remaining = remaining.subtract(result.promoOrVoucherDiscount);
+        }
+
+        // 4. Giảm giá thủ công (nếu có)
+        BigDecimal manual = (manualDiscountRequested != null && manualDiscountRequested.compareTo(BigDecimal.ZERO) > 0)
+                ? manualDiscountRequested : BigDecimal.ZERO;
+        result.manualDiscount = manual.min(remaining);
+        remaining = remaining.subtract(result.manualDiscount);
+
+        // 5. Điểm tích lũy Loyalty
+        if (pointsToRedeem != null && pointsToRedeem > 0 && patient != null) {
+            Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
+            if (walletOpt.isPresent()) {
+                PatientLoyaltyWallet wallet = walletOpt.get();
+                int maxPoints = wallet.getCurrentPoints();
+                int redeem = Math.min(pointsToRedeem, maxPoints);
+                if (redeem > 0) {
+                    BigDecimal pointVal = (patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null)
+                            ? patient.getMembershipTier().getPointValue() : new BigDecimal("1000.00");
+                    BigDecimal ptDiscount = pointVal.multiply(new BigDecimal(redeem));
+                    result.pointDiscount = ptDiscount.min(remaining);
+                    result.pointsToRedeem = result.pointDiscount.divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
+                    remaining = remaining.subtract(result.pointDiscount);
+                }
+            }
+        }
+
+        result.totalDiscount = result.memberDiscount
+                .add(result.promoOrVoucherDiscount)
+                .add(result.manualDiscount)
+                .add(result.pointDiscount);
+
+        result.netAmount = totalServiceAmount.subtract(result.totalDiscount).max(BigDecimal.ZERO);
+
+        return result;
+    }
+
+    private void validatePromotionEligibility(
+            Promotion promo,
+            PatientProfile patient,
+            Long branchId,
+            BigDecimal totalServiceAmount,
+            List<Long> serviceIds,
+            LocalDateTime now
+    ) {
+        if (!Boolean.TRUE.equals(promo.getIsActive())) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đang bị vô hiệu hóa.");
+        }
+        if (promo.getStartDate() != null && now.isBefore(promo.getStartDate())) {
+            throw new IllegalStateException("Chương trình khuyến mãi chưa đến thời gian áp dụng.");
+        }
+        if (promo.getEndDate() != null && now.isAfter(promo.getEndDate())) {
+            throw new IllegalStateException("Chương trình khuyến mãi đã kết thúc.");
+        }
+        if (promo.getBranch() != null && (branchId == null || !promo.getBranch().getBranchId().equals(branchId))) {
+            throw new IllegalStateException("Chương trình khuyến mãi chỉ áp dụng tại chi nhánh: " + promo.getBranch().getBranchName());
+        }
+        if (promo.getUsageLimit() != null && (promo.getUsedCount() != null ? promo.getUsedCount() : 0) >= promo.getUsageLimit()) {
+            throw new IllegalStateException("Chương trình khuyến mãi đã đạt giới hạn lượt sử dụng.");
+        }
+        if (promo.getMinBillAmount() != null && totalServiceAmount.compareTo(promo.getMinBillAmount()) < 0) {
+            throw new IllegalStateException("Hóa đơn (" + totalServiceAmount + " đ) chưa đạt giá trị tối thiểu " + promo.getMinBillAmount() + " đ để áp dụng khuyến mãi.");
+        }
+        if (promo.getApplicableTier() != null) {
+            if (patient == null || patient.getMembershipTier() == null
+                    || patient.getMembershipTier().getDisplayOrder() < promo.getApplicableTier().getDisplayOrder()) {
+                String currentTierName = (patient != null && patient.getMembershipTier() != null) ? patient.getMembershipTier().getTierName() : "Chưa có hạng";
+                throw new IllegalStateException("Chương trình chỉ áp dụng cho bệnh nhân từ hạng " + promo.getApplicableTier().getTierName()
+                        + " trở lên (Hạng hiện tại: " + currentTierName + ").");
+            }
+        }
+        if (promo.getApplicableService() != null) {
+            if (serviceIds == null || !serviceIds.contains(promo.getApplicableService().getServiceId())) {
+                throw new IllegalStateException("Chương trình chỉ áp dụng khi hóa đơn có sử dụng dịch vụ: " + promo.getApplicableService().getServiceName());
+            }
+        }
+    }
+
+    private BigDecimal calculatePromoDiscount(Promotion promo, BigDecimal totalServiceAmount) {
+        if (promo.getPromoType() == PromotionType.PERCENTAGE) {
+            BigDecimal calc = totalServiceAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            if (promo.getMaxDiscountAmount() != null && calc.compareTo(promo.getMaxDiscountAmount()) > 0) {
+                calc = promo.getMaxDiscountAmount();
+            }
+            return calc;
+        } else {
+            return promo.getDiscountValue().min(totalServiceAmount);
+        }
     }
 }

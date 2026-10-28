@@ -13,4 +13,12 @@ public interface MembershipTierRepository extends JpaRepository<MembershipTier, 
     Optional<MembershipTier> findByTierCode(String tierCode);
 
     List<MembershipTier> findByIsActiveTrueOrderByMinTotalSpentAsc();
+
+    List<MembershipTier> findAllByOrderByDisplayOrderAsc();
+
+    List<MembershipTier> findByIsActiveTrueOrderByDisplayOrderAsc();
+
+    boolean existsByTierCode(String tierCode);
+
+    boolean existsByTierCodeAndTierIdNot(String tierCode, Long tierId);
 }

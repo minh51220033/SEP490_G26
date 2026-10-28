@@ -50,6 +50,8 @@ public class DiagnosisController {
     private final com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
     private final com.cvdcms.service.ReExaminationService reExaminationService;
     private final com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
+    private final com.cvdcms.service.LaboOrderService laboOrderService;
+    private final SupplierRepository supplierRepository;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
@@ -162,6 +164,10 @@ public class DiagnosisController {
         model.addAttribute("diagnosisTypes", DiagnosisType.values());
         model.addAttribute("allVisits", otherVisits);
 
+        // Khám tổng quát & Tiền sử
+        com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
+        model.addAttribute("generalExam", generalExam);
+
         // FT16 Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
@@ -207,6 +213,18 @@ public class DiagnosisController {
         List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
         model.addAttribute("paraclinicalServices", paraclinicalServices);
+
+        // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
+        List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
+        Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
+        List<Supplier> laboSuppliers = supplierRepository.findAll();
+        model.addAttribute("laboOrders", laboOrders);
+        model.addAttribute("laboStats", laboStats);
+        model.addAttribute("laboSuppliers", laboSuppliers);
+
+        boolean isClinicalLocked = visit.getStatus() != null &&
+                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
+        model.addAttribute("isClinicalLocked", isClinicalLocked);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
