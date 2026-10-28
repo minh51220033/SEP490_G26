@@ -156,13 +156,40 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         int completedCount = completedServices.size();
         boolean hasCompletedServices = completedCount > 0;
 
-        BigDecimal totalBillableAmount = completedServices.stream()
+        BigDecimal totalServiceAmount = completedServices.stream()
                 .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId);
         int prescriptionCount = prescriptions.size();
         boolean hasPrescription = prescriptionCount > 0;
+
+        BigDecimal totalPrescriptionAmount = BigDecimal.ZERO;
+        List<Map<String, Object>> prescriptionSummaries = new ArrayList<>();
+        for (Prescription p : prescriptions) {
+            BigDecimal pTotal = BigDecimal.ZERO;
+            List<String> drugNames = new ArrayList<>();
+            if (p.getItems() != null) {
+                for (PrescriptionItem it : p.getItems()) {
+                    BigDecimal qty = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                    BigDecimal price = it.getUnitPrice() != null ? it.getUnitPrice() : BigDecimal.ZERO;
+                    BigDecimal itTotal = price.multiply(qty);
+                    pTotal = pTotal.add(itTotal);
+                    drugNames.add(it.getDrugName() + " (" + qty + " " + (it.getUnit() != null ? it.getUnit() : "viên") + ")");
+                }
+            }
+            totalPrescriptionAmount = totalPrescriptionAmount.add(pTotal);
+
+            Map<String, Object> pMap = new HashMap<>();
+            pMap.put("prescriptionId", p.getPrescriptionId());
+            pMap.put("prescriptionCode", p.getPrescriptionCode());
+            pMap.put("totalAmount", pTotal);
+            pMap.put("drugCount", p.getItems() != null ? p.getItems().size() : 0);
+            pMap.put("drugList", String.join(", ", drugNames));
+            prescriptionSummaries.add(pMap);
+        }
+
+        BigDecimal grandTotalAmount = totalServiceAmount.add(totalPrescriptionAmount);
 
         List<Appointment> upcomingAppointments = (patient != null && patient.getProfileId() != null)
                 ? appointmentRepository.findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(patient.getProfileId()).stream()
@@ -240,7 +267,9 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .hasMainDiagnosis(hasMainDiagnosis)
                 .hasCompletedServices(hasCompletedServices)
                 .completedServiceCount(completedCount)
-                .totalBillableAmount(totalBillableAmount)
+                .totalServiceAmount(totalServiceAmount)
+                .totalPrescriptionAmount(totalPrescriptionAmount)
+                .totalBillableAmount(grandTotalAmount)
                 .hasPrescription(hasPrescription)
                 .prescriptionCount(prescriptionCount)
                 .hasReExamination(hasReExam)
@@ -249,6 +278,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .warnings(warnings)
                 .diagnoses(diagnosisSummaries)
                 .services(serviceSummaries)
+                .prescriptions(prescriptionSummaries)
                 .build();
     }
 
