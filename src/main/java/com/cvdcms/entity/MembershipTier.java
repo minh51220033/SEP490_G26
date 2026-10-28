@@ -40,7 +40,7 @@ public class MembershipTier {
     private BigDecimal spendPerPoint = new BigDecimal("10000.00");
 
     @Column(name = "point_value", nullable = false, precision = 15, scale = 2)
-    private BigDecimal pointValue = new BigDecimal("1000.00");
+    private BigDecimal pointValue = new BigDecimal("10.00");
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;

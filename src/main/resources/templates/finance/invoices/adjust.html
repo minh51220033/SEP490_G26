@@ -39,6 +39,7 @@
                         <form id="invoiceAdjustmentForm"
                               th:action="@{/invoices/{id}/adjust(id=${invoice.invoiceId})}" method="post"
                               th:data-service-total="${invoice.totalServiceAmount}"
+                              th:data-medicine-total="${invoice.totalMedicineAmount}"
                               th:data-promo-discount="${invoice.promotionDiscount}"
                               th:data-point-discount="${invoice.pointDiscount}">
                             <div class="mb-3">
@@ -68,7 +69,7 @@
                                 <label for="newTotalAmount" class="form-label fw-bold">Tổng tiền hóa đơn sau điều chỉnh (VNĐ)</label>
                                 <input type="text" id="newTotalAmount" class="form-control bg-light fw-bold" readonly
                                        th:value="${invoice.totalAmount}">
-                                <small class="text-muted">Tổng dịch vụ + phụ thu − giảm giá − khuyến mãi − giảm trừ điểm. Hệ thống tự tính.</small>
+                                <small class="text-muted">Tổng dịch vụ + tổng thuốc + phụ thu − giảm giá − khuyến mãi − giảm trừ điểm. Hệ thống tự tính.</small>
                             </div>
                             <div class="mb-3">
                                 <label for="reason" class="form-label fw-bold text-danger">Lý do điều chỉnh hóa đơn *</label>
@@ -123,7 +124,7 @@
                                 <span class="badge"
                                       th:classappend="${log.actionType == 'CREATE' ? 'bg-primary' : (log.actionType == 'CANCEL' ? 'bg-danger' : (log.actionType == 'PAYMENT' ? 'bg-success' : 'bg-warning text-dark'))}"
                                       th:text="${log.actionType}">ADJUST</span>
-                                <small class="text-muted" th:text="${#temporals.format(log.performedAt, 'dd/MM/yyyy HH:mm:ss')}">24/10/2026 14:00</small>
+                                <small class="text-muted" th:text="${#temporals.format(log.performedAt, 'dd/MM/yyyy HH:mm:ss')}">24/10/2026 14:00:00</small>
                             </div>
                             <div class="fw-bold text-dark" th:text="${log.reason}">Lý do điều chỉnh</div>
                             <div class="small text-muted my-1" th:text="${log.details}">Chi tiết</div>
@@ -138,6 +139,7 @@
         </main>
     </div>
 </div>
+
 <script>
     (() => {
         const form = document.getElementById('invoiceAdjustmentForm');
@@ -149,6 +151,7 @@
         const cents = value => Math.round(Number(value || 0) * 100);
         function refreshAdjustmentPreview() {
             const amount = Math.max(0, cents(form.dataset.serviceTotal)
+                + cents(form.dataset.medicineTotal)
                 + cents(surcharge.value) - cents(discount.value)
                 - cents(form.dataset.promoDiscount) - cents(form.dataset.pointDiscount));
             total.value = new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(amount / 100) + ' đ';

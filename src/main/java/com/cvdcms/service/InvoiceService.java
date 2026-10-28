@@ -46,4 +46,10 @@ public interface InvoiceService {
     List<PerformedService> getUnbilledPerformedServices(Long visitId);
  
     void finalizeInvoiceBenefits(Invoice invoice);
+
+    Invoice createMedicineInvoice(com.cvdcms.DTO.MedicineInvoiceCreateRequestDTO request, Long cashierUserId);
+
+    void recordPrescriptionChoice(Long prescriptionId, String choice, String note, Long cashierUserId);
+
+    List<com.cvdcms.DTO.PrescriptionResponseDTO> getHandedOverPrescriptions(Long branchId, Long visitId, Long profileId);
 }

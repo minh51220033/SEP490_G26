@@ -16,8 +16,11 @@ public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> 
 
     @Query("""
         SELECT ii FROM InvoiceItem ii
-        JOIN FETCH ii.service s
+        LEFT JOIN FETCH ii.service s
         LEFT JOIN FETCH ii.performedService ps
+        LEFT JOIN FETCH ii.prescriptionItem pi
+        LEFT JOIN FETCH ii.medication m
+        LEFT JOIN FETCH ii.batch b
         WHERE ii.invoice.invoiceId = :invoiceId
     """)
     List<InvoiceItem> findWithDetailsByInvoiceId(@Param("invoiceId") Long invoiceId);
