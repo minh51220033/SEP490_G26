@@ -549,28 +549,7 @@
                     </div>
                 </div>
 
-                <!-- 3. BẢNG TỔNG HỢP TÀI CHÍNH BÀN GIAO (Tính riêng khám & thuốc, tổng hợp lại) -->
-                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 13px;">
-                        <span class="text-secondary"><i class="bi bi-activity text-primary me-1.5"></i>1. Tiền khám &amp; dịch vụ điều trị:</span>
-                        <strong class="text-dark" id="cemServiceAmount">0 đ</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 13px;">
-                        <span class="text-secondary"><i class="bi bi-capsule text-primary me-1.5"></i>2. Tiền đơn thuốc mang về:</span>
-                        <strong class="text-dark" id="cemPrescriptionAmount">0 đ</strong>
-                    </div>
-                    <div class="border-top pt-2 d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong class="text-dark small text-uppercase" style="letter-spacing: 0.3px;">TỔNG CỘNG BÀN GIAO THANH TOÁN:</strong>
-                            <small class="text-muted d-block" style="font-size: 11px;">(Đã bao gồm tiền khám, dịch vụ và đơn thuốc)</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="fs-5 fw-bold text-success mb-0" id="cemTotalAmount">0 đ</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. Ghi chú dặn dò bác sĩ & Cảnh báo BR-EMR-02 -->
+                <!-- 3. Ghi chú dặn dò bác sĩ & Cảnh báo BR-EMR-02 -->
                 <div class="mb-2.5">
                     <label class="form-label small fw-bold text-dark mb-1">
                         <i class="bi bi-chat-text text-secondary me-1"></i>Ghi chú bàn giao / Dặn dò cho Kế toán &amp; Điều dưỡng (Tùy chọn):
@@ -1654,24 +1633,6 @@
             avatar.textContent = data.patientName.trim().substring(0, 1).toUpperCase();
         }
 
-        // TÍNH TIỀN RIÊNG BIỆT: Dịch vụ & Đơn thuốc rồi tổng hợp bàn giao
-        const serviceFormatted = (data.totalServiceAmount !== null && data.totalServiceAmount !== undefined)
-            ? Number(data.totalServiceAmount).toLocaleString('vi-VN') + ' đ'
-            : '0 đ';
-        setCemText('cemServiceAmount', serviceFormatted);
-        setCemText('cemServiceCountText', (data.completedServiceCount || 0) + ' dịch vụ hoàn thành');
-
-        const prescFormatted = (data.totalPrescriptionAmount !== null && data.totalPrescriptionAmount !== undefined)
-            ? Number(data.totalPrescriptionAmount).toLocaleString('vi-VN') + ' đ'
-            : '0 đ';
-        setCemText('cemPrescriptionAmount', prescFormatted);
-        setCemText('cemPrescriptionCountText', (data.prescriptionCount || 0) + ' đơn thuốc');
-
-        const totalFormatted = (data.totalBillableAmount !== null && data.totalBillableAmount !== undefined)
-            ? Number(data.totalBillableAmount).toLocaleString('vi-VN') + ' đ'
-            : '0 đ';
-        setCemText('cemTotalAmount', totalFormatted);
-
         // 1. Chẩn đoán ICD-10 (Đồng đều màu, chỉ đỏ khi chưa đạt)
         const diagCard = document.getElementById('cemDiagCard');
         const diagBadge = document.getElementById('cemDiagBadge');
@@ -1774,16 +1735,13 @@
             if (svcAction) svcAction.style.display = 'block';
         }
 
-        // 3. Đơn thuốc
+        // 3. Đơn thuốc (Tùy chọn)
         const prescStatus = document.getElementById('cemPrescriptionStatus');
         if (prescStatus) {
             if (data.hasPrescription) {
-                const prescMoney = (data.totalPrescriptionAmount && data.totalPrescriptionAmount > 0)
-                    ? ` • ${Number(data.totalPrescriptionAmount).toLocaleString('vi-VN')} đ`
-                    : '';
-                prescStatus.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Đã kê ${data.prescriptionCount} đơn thuốc${prescMoney}</span>`;
+                prescStatus.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Đã kê ${data.prescriptionCount} đơn thuốc</span>`;
             } else {
-                prescStatus.innerHTML = '<span class="text-muted fst-italic">Không kê đơn thuốc</span>';
+                prescStatus.innerHTML = '<span class="text-muted small fst-italic">Chưa kê đơn thuốc (Tùy chọn)</span>';
             }
         }
 
