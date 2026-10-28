@@ -134,11 +134,12 @@
                         <thead>
                         <tr>
                             <th>Mã HĐ</th>
+                            <th class="text-center" style="width: 100px;">Loại HĐ</th>
                             <th>Ngày lập</th>
                             <th>Bệnh nhân</th>
                             <th>Cơ sở</th>
                             <th>Thu ngân</th>
-                            <th class="text-end">Tiền dịch vụ</th>
+                            <th class="text-end">Tiền phát sinh</th>
                             <th class="text-end">Giảm trừ</th>
                             <th class="text-end">Thực thu</th>
                             <th class="text-end">Đã thanh toán</th>
@@ -149,7 +150,7 @@
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(invoices)}">
-                            <td colspan="12" class="text-center py-5 text-muted">
+                            <td colspan="13" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
                                 Chưa có hóa đơn nào phù hợp với điều kiện tìm kiếm.
                             </td>
@@ -159,6 +160,17 @@
                                 <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fw-bold text-primary text-decoration-none"
                                    th:text="${inv.invoiceCode}">HD123456</a>
                                 <div th:if="${inv.status.name() == 'CANCELLED'}" class="badge bg-danger text-white mt-1" style="font-size: 10px;">Đã hủy</div>
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MIXED'}" class="badge text-white" style="background-color: #6f42c1;">
+                                    <i class="bi bi-receipt"></i> DV &amp; Thuốc
+                                </span>
+                                <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MEDICINE'}" class="badge bg-info text-dark border border-info">
+                                    <i class="bi bi-capsule"></i> Thuốc
+                                </span>
+                                <span th:if="${inv.invoiceType == null or inv.invoiceType.name() == 'SERVICE'}" class="badge bg-primary text-white">
+                                    <i class="bi bi-tools"></i> Dịch vụ
+                                </span>
                             </td>
                             <td>
                                 <span th:text="${#temporals.format(inv.issuedAt, 'dd/MM/yyyy')}">24/10/2026</span>

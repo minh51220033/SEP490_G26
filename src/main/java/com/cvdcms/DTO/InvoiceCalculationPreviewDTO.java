@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class InvoiceCalculationPreviewDTO {
     private BigDecimal totalServiceAmount = BigDecimal.ZERO;
+    private BigDecimal totalMedicineAmount = BigDecimal.ZERO;
     private BigDecimal memberDiscountPercent = BigDecimal.ZERO;
     private BigDecimal memberDiscountAmount = BigDecimal.ZERO;
     private BigDecimal promotionDiscountAmount = BigDecimal.ZERO;

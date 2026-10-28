@@ -94,7 +94,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             card.setTierName(tier.getTierName());
             card.setDiscountPercent(tier.getDiscountPercent() != null ? tier.getDiscountPercent() : BigDecimal.ZERO);
             card.setSpendPerPoint(tier.getSpendPerPoint() != null ? tier.getSpendPerPoint() : new BigDecimal("10000.00"));
-            card.setPointValue(tier.getPointValue() != null ? tier.getPointValue() : new BigDecimal("1000.00"));
+            card.setPointValue(tier.getPointValue() != null ? tier.getPointValue() : new BigDecimal("10.00"));
         }
 
         card.setCurrentPoints(wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0);
@@ -158,7 +158,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             BigDecimal spend = tier.getSpendPerPoint() != null ? tier.getSpendPerPoint() : new BigDecimal("10000.00");
             benefits.add("Tích lũy 1 điểm cho mỗi " + currencyFmt.format(spend) + " đ thanh toán thành công");
 
-            BigDecimal val = tier.getPointValue() != null ? tier.getPointValue() : new BigDecimal("1000.00");
+            BigDecimal val = tier.getPointValue() != null ? tier.getPointValue() : new BigDecimal("10.00");
             benefits.add("Quy đổi 1 điểm = " + currencyFmt.format(val) + " đ giảm trừ trực tiếp khi lập hóa đơn viện phí");
             benefits.add("Ưu tiên áp dụng các chương trình khuyến mãi và voucher dành riêng cho hạng " + tier.getTierName());
         } else {
