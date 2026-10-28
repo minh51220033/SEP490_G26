@@ -7,21 +7,23 @@
 <!-- Frontend Fragment: doctor/fragments/payment-tab.html                  -->
 <!-- ===================================================================== -->
 <div th:fragment="paymentTab">
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <div class="p-2 rounded bg-success text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-credit-card-2-front-fill fs-5"></i>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <!-- HEADER BẢNG KÊ VIỆN PHÍ -->
+        <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 p-3.5 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-2.5 rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px;">
+                    <i class="bi bi-receipt-cutoff fs-4"></i>
                 </div>
                 <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Bảng kê viện phí &amp; Bàn giao Kế toán (Người 4)</h4>
-                    <span class="text-secondary small">Tổng hợp chi phí điều trị, tạm ứng, công nợ &amp; trạng thái thanh toán hóa đơn</span>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Bảng kê viện phí &amp; Bàn giao thanh toán ca khám</h4>
+                    <span class="text-secondary small">Tính riêng chi phí Quá trình khám điều trị &amp; Đơn thuốc, tổng hợp viện phí bàn giao Kế toán thu ngân</span>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('In bảng kê viện phí tạm tính.');">
-                    <i class="bi bi-printer me-1"></i>In bảng kê
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" onclick="printBillingSheet()">
+                    <i class="bi bi-printer"></i>
+                    <span>In bảng kê viện phí</span>
                 </button>
                 <button th:if="${visit.status != null and visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'}"
                         type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
@@ -30,79 +32,347 @@
                     <i class="bi bi-check2-circle fs-6"></i>
                     <span>Hoàn tất &amp; Chuyển sang Kế toán</span>
                 </button>
+                <span th:if="${visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
+                      class="badge bg-success-subtle text-success border border-success px-3 py-1.5 rounded-pill fw-semibold">
+                    <i class="bi bi-shield-check me-1"></i>Đã bàn giao Kế toán thu ngân
+                </span>
             </div>
         </div>
 
-        <div class="card-body p-4 bg-white">
-            <!-- 1. CÁC THẺ CHỈ SỐ TÀI CHÍNH -->
+        <div class="card-body p-3.5 p-md-4 bg-white">
+            <!-- 1. 4 STAT KPI CARDS PHÂN ĐỊNH RÕ RÀNG TIỀN KHÁM VÀ TIỀN THUỐC -->
             <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="p-3 rounded-3 border bg-light-subtle">
-                        <span class="small text-secondary fw-semibold text-uppercase">Tổng chi phí phát sinh:</span>
-                        <div class="h3 fw-bold text-dark mb-0 mt-1"
-                             th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                            0 đ
+                <div class="col-6 col-lg-3">
+                    <div class="p-3 rounded-3 border bg-light-subtle h-100 d-flex flex-column justify-content-between shadow-xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small text-secondary fw-bold text-uppercase" style="font-size: 11px;">1. Tiền khám &amp; điều trị</span>
+                            <div class="bg-primary-subtle text-primary p-1.5 rounded-circle">
+                                <i class="bi bi-tools fs-5"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="h3 fw-bold text-primary mb-0"
+                                 th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                0 đ
+                            </div>
+                            <span class="text-muted small" style="font-size: 11.5px;">Dựa trên giá dịch vụ có sẵn</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="p-3 rounded-3 border bg-success-subtle">
-                        <span class="small text-success-emphasis fw-semibold text-uppercase">Đã thanh toán:</span>
-                        <div class="h3 fw-bold text-success mb-0 mt-1">0 đ</div>
+
+                <div class="col-6 col-lg-3">
+                    <div class="p-3 rounded-3 border bg-info-subtle bg-opacity-25 h-100 d-flex flex-column justify-content-between shadow-xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small text-info-emphasis fw-bold text-uppercase" style="font-size: 11px;">2. Tiền đơn thuốc</span>
+                            <div class="bg-info-subtle text-info p-1.5 rounded-circle">
+                                <i class="bi bi-capsule fs-5"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="h3 fw-bold text-info mb-0"
+                                 th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                0 đ
+                            </div>
+                            <span class="text-muted small" style="font-size: 11.5px;">Thuốc kê cho bệnh nhân mang về</span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="p-3 rounded-3 border bg-warning-subtle">
-                        <span class="small text-warning-emphasis fw-semibold text-uppercase">Công nợ còn lại:</span>
-                        <div class="h3 fw-bold text-danger mb-0 mt-1"
-                             th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                            0 đ
+
+                <div class="col-6 col-lg-3">
+                    <div class="p-3 rounded-3 border bg-success-subtle bg-opacity-25 h-100 d-flex flex-column justify-content-between shadow-xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small text-success-emphasis fw-bold text-uppercase" style="font-size: 11px;">3. Tổng cộng thanh toán</span>
+                            <div class="bg-success-subtle text-success p-1.5 rounded-circle">
+                                <i class="bi bi-cash-coin fs-5"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="h3 fw-bold text-success mb-0"
+                                 th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                0 đ
+                            </div>
+                            <span class="text-muted small" style="font-size: 11.5px;">= Tiền khám/dịch vụ + Tiền thuốc</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column justify-content-between shadow-xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small text-secondary fw-bold text-uppercase" style="font-size: 11px;">Trạng thái thanh toán</span>
+                            <div class="bg-warning-subtle text-warning p-1.5 rounded-circle">
+                                <i class="bi bi-hourglass-split fs-5"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mt-1">
+                                <span th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}" class="badge bg-success px-2.5 py-1.5 rounded-pill fs-7">
+                                    <i class="bi bi-check2-all me-1"></i>Đã thanh toán đủ
+                                </span>
+                                <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}" class="badge bg-warning-subtle text-dark border border-warning px-2.5 py-1.5 rounded-pill fs-7">
+                                    <i class="bi bi-clock-history me-1"></i>Chờ thu ngân thu tiền
+                                </span>
+                                <span th:if="${visit.status == null or (visit.status.name() != 'COMPLETED' and visit.status.name() != 'WAITING_PAYMENT')}" class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5 rounded-pill fs-7">
+                                    <i class="bi bi-pencil-square me-1"></i>Đang điều trị tại ghế
+                                </span>
+                            </div>
+                            <span class="text-muted small d-block mt-1" style="font-size: 11px;"
+                                  th:text="'Lượt khám: ' + (${visit.visitCode != null ? visit.visitCode : ('VIS#' + visit.visitId)})">VIS#01</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. BẢNG CHI TIẾT CÁC MỤC DỊCH VỤ CẦN THU -->
-            <h6 class="fw-bold text-dark mb-2">
-                <i class="bi bi-list-check text-primary me-1"></i>Chi tiết các khoản mục bàn giao thu tiền
-            </h6>
-            <div class="table-responsive border rounded-3 mb-3">
-                <table class="table table-hover align-middle mb-0" style="font-size: 13.5px;">
-                    <thead class="table-light">
-                    <tr>
-                        <th style="width: 50px;">STT</th>
-                        <th>Khoản mục / Dịch vụ</th>
-                        <th style="width: 100px;" class="text-center">Số lượng</th>
-                        <th style="width: 140px;" class="text-end">Đơn giá</th>
-                        <th style="width: 150px;" class="text-end">Thành tiền</th>
-                        <th style="width: 140px;" class="text-center">Trạng thái</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:if="${performedServices == null or performedServices.isEmpty()}">
-                        <td colspan="6" class="text-center py-3 text-muted">Chưa có dịch vụ nào phát sinh chi phí trong ca khám.</td>
-                    </tr>
-                    <tr th:each="ps, iter : ${performedServices}">
-                        <td class="text-center" th:text="${iter.count}">1</td>
-                        <td>
-                            <strong class="text-dark" th:text="${ps.serviceName}">Dịch vụ nha khoa</strong>
-                            <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">Toàn hàm</span>
-                        </td>
-                        <td class="text-center" th:text="${ps.quantity}">1</td>
-                        <td class="text-end" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
-                        <td class="text-end fw-bold text-success" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
-                        <td class="text-center">
-                            <span class="badge bg-warning-subtle text-dark border border-warning"
-                                  th:text="${visit.status != null and visit.status.name() == 'COMPLETED' ? 'Đã thu tiền' : 'Chờ thu tiền'}">
-                                Chờ thu tiền
-                            </span>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+            <!-- PHẦN 1: BẢNG KÊ TIỀN KHÁM & DỊCH VỤ ĐIỀU TRỊ -->
+            <div class="mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2.5 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 12px;">1</span>
+                        <h6 class="fw-bold text-dark mb-0 fs-6">
+                            Quá trình khám &amp; Dịch vụ điều trị thực tế (Theo giá dịch vụ có sẵn)
+                        </h6>
+                    </div>
+                    <div class="small text-muted">
+                        Tổng dịch vụ: <strong class="text-dark" th:text="${performedServices != null ? #lists.size(performedServices) : 0}">0</strong> mục
+                    </div>
+                </div>
+
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 13.5px;">
+                        <thead class="table-light">
+                        <tr style="font-size: 12px; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">
+                            <th style="width: 45px;" class="text-center">STT</th>
+                            <th style="width: 110px;">Mã DV</th>
+                            <th>Tên dịch vụ điều trị / Khám lâm sàng</th>
+                            <th style="width: 100px;" class="text-center">Vị trí răng</th>
+                            <th style="width: 130px;" class="text-end">Đơn giá niêm yết</th>
+                            <th style="width: 60px;" class="text-center">SL</th>
+                            <th style="width: 100px;" class="text-end">Giảm trừ</th>
+                            <th style="width: 140px;" class="text-end">Thành tiền</th>
+                            <th style="width: 170px;">Bác sĩ thực hiện</th>
+                            <th style="width: 120px;" class="text-center">Trạng thái</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${performedServices == null or performedServices.isEmpty()}">
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Chưa có dịch vụ khám điều trị nào phát sinh chi phí trong ca khám.
+                            </td>
+                        </tr>
+                        <tr th:each="ps, iter : ${performedServices}">
+                            <td class="text-center text-muted" th:text="${iter.count}">1</td>
+                            <td>
+                                <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
+                            </td>
+                            <td>
+                                <strong class="text-dark" th:text="${ps.serviceName}">Hàn răng Composite</strong>
+                                <span class="small text-muted d-block" th:if="${ps.planName != null}" th:text="'Phác đồ: ' + ${ps.planName}"></span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary-subtle text-secondary small" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">Toàn hàm</span>
+                            </td>
+                            <td class="text-end text-muted" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
+                            <td class="text-center fw-semibold" th:text="${ps.quantity}">1</td>
+                            <td class="text-end text-danger small" th:text="${ps.discountAmount != null and ps.discountAmount > 0 ? ('-' + #numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT') + ' đ') : '-'}">-</td>
+                            <td class="text-end fw-bold text-primary" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
+                            <td>
+                                <span class="small fw-semibold text-dark" th:text="${ps.doctorName}">BS. Lê Hoàng Nam</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success-subtle text-success border border-success" th:if="${ps.status != null and ps.status.name() == 'COMPLETED'}">Đã hoàn thành</span>
+                                <span class="badge bg-warning-subtle text-warning border border-warning" th:unless="${ps.status != null and ps.status.name() == 'COMPLETED'}">Đang thực hiện</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="table-light border-top" style="font-size: 13.5px;">
+                        <tr>
+                            <td colspan="7" class="text-end fw-bold text-secondary">
+                                Tổng tiền dịch vụ khám &amp; điều trị:
+                            </td>
+                            <td class="text-end fw-bold text-primary fs-6"
+                                th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                0 đ
+                            </td>
+                            <td colspan="2"></td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PHẦN 2: BẢNG KÊ TIỀN ĐƠN THUỐC ĐIỀU TRỊ -->
+            <div class="mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2.5 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-info text-dark rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 12px;">2</span>
+                        <h6 class="fw-bold text-dark mb-0 fs-6">
+                            Đơn thuốc điều trị sau khám (Theo danh mục thuốc đã kê)
+                        </h6>
+                    </div>
+                    <div class="small text-muted">
+                        Số lượng đơn thuốc: <strong class="text-dark" th:text="${prescriptions != null ? #lists.size(prescriptions) : 0}">0</strong> đơn
+                    </div>
+                </div>
+
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 13.5px;">
+                        <thead class="table-light">
+                        <tr style="font-size: 12px; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">
+                            <th style="width: 45px;" class="text-center">STT</th>
+                            <th style="width: 110px;">Mã đơn</th>
+                            <th>Tên thuốc &amp; Hoạt chất</th>
+                            <th style="width: 110px;">Hàm lượng</th>
+                            <th>Cách dùng / Liều dùng</th>
+                            <th style="width: 70px;" class="text-center">ĐVT</th>
+                            <th style="width: 70px;" class="text-center">SL</th>
+                            <th style="width: 130px;" class="text-end">Đơn giá</th>
+                            <th style="width: 140px;" class="text-end">Thành tiền</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${prescriptions == null or prescriptions.isEmpty()}">
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Bác sĩ chưa kê đơn thuốc nào cho ca khám này.
+                            </td>
+                        </tr>
+                        <th:block th:each="pr : ${prescriptions}">
+                            <tr th:each="it, itStat : ${pr.items}">
+                                <td class="text-center text-muted" th:text="${itStat.count}">1</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-bold" th:text="${pr.prescriptionCode}">DT1001</span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark" th:text="${it.drugName}">Paracetamol 500mg</strong>
+                                </td>
+                                <td>
+                                    <span class="text-secondary small" th:text="${it.dosage != null ? it.dosage : '-'}">500mg</span>
+                                </td>
+                                <td>
+                                    <span class="small text-muted" th:text="${it.usageInstruction}">Ngày uống 2 lần, mỗi lần 1 viên sau ăn</span>
+                                </td>
+                                <td class="text-center text-muted" th:text="${it.unit}">Viên</td>
+                                <td class="text-center fw-semibold text-dark" th:text="${it.quantity}">10</td>
+                                <td class="text-end text-muted" th:text="${it.unitPrice != null ? #numbers.formatDecimal(it.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
+                                <td class="text-end fw-bold text-info" th:text="${it.finalPrice != null ? #numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '-'}">-</td>
+                            </tr>
+                        </th:block>
+                        </tbody>
+                        <tfoot class="table-light border-top" style="font-size: 13.5px;">
+                        <tr>
+                            <td colspan="8" class="text-end fw-bold text-secondary">
+                                Tổng tiền thuốc theo đơn:
+                            </td>
+                            <td class="text-end fw-bold text-info fs-6"
+                                th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                0 đ
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PHẦN 3: BẢNG TỔNG HỢP VIỆN PHÍ & BÀN GIAO THANH TOÁN (TO, RỘNG, ĐẸP) -->
+            <div class="card border border-primary-subtle rounded-3 bg-light-subtle shadow-xs p-4 mb-2">
+                <div class="row g-4 align-items-center">
+                    <div class="col-lg-6">
+                        <h6 class="fw-bold text-dark mb-2.5 d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            <span>Thông tin ca khám bàn giao tài chính</span>
+                        </h6>
+                        <div class="bg-white p-3 rounded-3 border">
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <span class="text-secondary">Mã bệnh nhân:</span>
+                                    <strong class="d-block text-dark" th:text="${patient != null ? patient.patientCode : '-'}">BN001</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Họ và tên:</span>
+                                    <strong class="d-block text-primary" th:text="${patient != null ? patient.fullName : '-'}">Nguyễn Văn An</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Bác sĩ phụ trách:</span>
+                                    <span class="d-block text-dark fw-semibold" th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ điều trị'}">BS. Lê Hoàng Nam</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Thời gian khám:</span>
+                                    <span class="d-block text-dark" th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm') : '-'}">28/10/2026 10:00</span>
+                                </div>
+                                <div class="col-12 mt-1 pt-1 border-top">
+                                    <span class="text-secondary">Chẩn đoán bệnh lý chính:</span>
+                                    <span class="fw-semibold text-danger d-block" th:text="${diagnoses != null and !diagnoses.isEmpty() ? (diagnoses[0].icd10Code + ' - ' + diagnoses[0].diseaseName) : 'Khám tổng quát nha khoa'}">K02.1 - Sâu ngà răng</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="bg-white p-3.5 rounded-3 border shadow-xs">
+                            <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-cash-stack text-success me-1.5"></i>Tổng hợp viện phí ca khám</span>
+                                <span class="badge bg-success-subtle text-success">Bảng kê thu ngân</span>
+                            </h6>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span class="text-secondary">1. Tiền khám &amp; dịch vụ điều trị:</span>
+                                <strong class="text-dark" th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span class="text-secondary">2. Tiền đơn thuốc điều trị:</span>
+                                <strong class="text-dark" th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span class="text-secondary">3. Giảm trừ / Ưu đãi (Voucher):</span>
+                                <span class="text-muted">- 0 đ</span>
+                            </div>
+
+                            <hr class="my-2.5">
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="fw-bold text-dark fs-6 d-block">TỔNG CỘNG THANH TOÁN:</span>
+                                    <small class="text-muted" style="font-size: 11px;">(Đã bao gồm tiền khám, dịch vụ và đơn thuốc)</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="h3 fw-bold text-success mb-0"
+                                          th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                        0 đ
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary w-50 py-2 fw-semibold rounded-pill d-flex align-items-center justify-content-center gap-1.5" onclick="printBillingSheet()">
+                                    <i class="bi bi-printer"></i>
+                                    <span>In bảng kê</span>
+                                </button>
+                                <button th:if="${visit.status != null and visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'}"
+                                        type="button" class="btn btn-success w-50 py-2 fw-bold rounded-pill text-white shadow-sm d-flex align-items-center justify-content-center gap-1.5"
+                                        th:data-visit-id="${visit.visitId}"
+                                        onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))">
+                                    <i class="bi bi-check2-circle"></i>
+                                    <span>Bàn giao thu tiền</span>
+                                </button>
+                                <button th:unless="${visit.status != null and visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'}"
+                                        type="button" class="btn btn-outline-success w-50 py-2 fw-semibold rounded-pill" disabled>
+                                    <i class="bi bi-check-all me-1"></i>Đã bàn giao
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- SCRIPT IN BẢNG KÊ VIỆN PHÍ TỔNG HỢP -->
+    <script th:inline="javascript">
+        function printBillingSheet() {
+            window.print();
+        }
+    </script>
 </div>
 
 </body>

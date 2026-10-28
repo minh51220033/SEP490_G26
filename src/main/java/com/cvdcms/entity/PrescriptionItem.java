@@ -44,4 +44,7 @@ public class PrescriptionItem {
 
     @Column(name = "usage_instruction", nullable = false, length = 255)
     private String usageInstruction;
+
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    private BigDecimal unitPrice = BigDecimal.ZERO;
 }

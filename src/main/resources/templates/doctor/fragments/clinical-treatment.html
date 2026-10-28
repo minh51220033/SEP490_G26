@@ -997,18 +997,27 @@
                             <table class="df-drug-table mb-0">
                                 <thead>
                                 <tr>
-                                    <th style="width: 45px;" class="text-center">TT</th>
-                                    <th style="min-width: 250px;">Thuốc (Gõ tên thuốc hoặc hoạt chất)</th>
-                                    <th style="width: 110px;">Mã thuốc</th>
-                                    <th style="width: 90px;" class="text-center">ĐVT</th>
-                                    <th style="width: 80px;" class="text-center">SL</th>
+                                    <th style="width: 40px;" class="text-center">TT</th>
+                                    <th style="min-width: 230px;">Thuốc (Gõ tên thuốc hoặc hoạt chất)</th>
+                                    <th style="width: 95px;">Mã thuốc</th>
+                                    <th style="width: 75px;" class="text-center">ĐVT</th>
+                                    <th style="width: 70px;" class="text-center">SL</th>
+                                    <th style="width: 105px;" class="text-end">Đơn giá (đ)</th>
+                                    <th style="width: 105px;" class="text-end">Thành tiền</th>
                                     <th>Cách dùng</th>
-                                    <th style="width: 50px;" class="text-center">Xóa</th>
+                                    <th style="width: 45px;" class="text-center">Xóa</th>
                                 </tr>
                                 </thead>
                                 <tbody id="prescDrugsTableBody">
                                     <!-- Dynamic rows -->
                                 </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="6" class="text-end fw-bold text-secondary small py-2">Tổng tiền thuốc dự tính:</td>
+                                        <td class="text-end fw-bold text-success py-2" id="prescModalEstimatedTotal">0 đ</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -2495,8 +2504,8 @@
             advice: 'Uống thuốc sau khi ăn no. Nghỉ ngơi hợp lý, tránh thức khuya. Nếu đau tăng hoặc có sốt cao cần liên hệ phòng khám ngay.',
             followupDays: 5,
             drugs: [
-                { drugName: 'Paracetamol 500mg', dosage: '500mg', quantity: 10, unit: 'Viên', usage: 'Ngày uống 2-3 lần, mỗi lần 1 viên sau ăn khi đau' },
-                { drugName: 'Alphachymotrypsin 4.2mg', dosage: '4.2mg', quantity: 10, unit: 'Viên', usage: 'Ngậm dưới lưỡi ngày 2 lần, mỗi lần 1 viên' }
+                { drugName: 'Paracetamol 500mg', dosage: '500mg', quantity: 10, unit: 'Viên', price: 2500, usage: 'Ngày uống 2-3 lần, mỗi lần 1 viên sau ăn khi đau' },
+                { drugName: 'Alphachymotrypsin 4.2mg', dosage: '4.2mg', quantity: 10, unit: 'Viên', price: 3500, usage: 'Ngậm dưới lưỡi ngày 2 lần, mỗi lần 1 viên' }
             ]
         },
         'IMPLANT': {
@@ -2504,9 +2513,9 @@
             advice: 'Không chải răng trực tiếp vào vị trí cấy Implant trong 3 ngày đầu. Chườm lạnh ngoài má ngày đầu (15 phút/lần), chườm ấm từ ngày thứ 2. Ăn thức ăn mềm, nguội, không hút thuốc lá trong 2 tuần.',
             followupDays: 7,
             drugs: [
-                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 10, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên (sáng 1, tối 1 sau ăn no)' },
-                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 8, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn no khi đau' },
-                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', usage: 'Súc miệng nhẹ nhàng ngày 2 lần sau đánh răng, ngậm 30 giây' }
+                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 10, unit: 'Viên', price: 22000, usage: 'Ngày uống 2 lần, mỗi lần 1 viên (sáng 1, tối 1 sau ăn no)' },
+                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 8, unit: 'Viên', price: 3500, usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn no khi đau' },
+                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', price: 130000, usage: 'Súc miệng nhẹ nhàng ngày 2 lần sau đánh răng, ngậm 30 giây' }
             ]
         },
         'NHO_RANG': {
@@ -2514,10 +2523,10 @@
             advice: 'Cắn chặt bông gòn trong 45-60 phút. Tuyệt đối không khạc nhổ, không mút chíp vết thương, không súc miệng nước muối trong 24 giờ đầu. Chườm đá lạnh ngoài má ngày đầu giảm sưng. Tái khám cắt chỉ sau 7 ngày.',
             followupDays: 7,
             drugs: [
-                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 10, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên sáng/chiều sau ăn no' },
-                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 8, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn khi đau' },
-                { drugName: 'Alphachymotrypsin 4.2mg', dosage: '4.2mg', quantity: 15, unit: 'Viên', usage: 'Ngậm dưới lưỡi ngày 3 lần, mỗi lần 1 viên sau ăn' },
-                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', usage: 'Súc miệng nhẹ nhàng từ ngày thứ 2, ngày 2 lần' }
+                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 10, unit: 'Viên', price: 22000, usage: 'Ngày uống 2 lần, mỗi lần 1 viên sáng/chiều sau ăn no' },
+                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 8, unit: 'Viên', price: 3500, usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn khi đau' },
+                { drugName: 'Alphachymotrypsin 4.2mg', dosage: '4.2mg', quantity: 15, unit: 'Viên', price: 3500, usage: 'Ngậm dưới lưỡi ngày 3 lần, mỗi lần 1 viên sau ăn' },
+                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', price: 130000, usage: 'Súc miệng nhẹ nhàng từ ngày thứ 2, ngày 2 lần' }
             ]
         },
         'TRE_EM': {
@@ -2525,7 +2534,7 @@
             advice: 'Cắn gòn 30 phút. Cho trẻ ăn đồ mềm, nguội (cháo, sữa, súp). Nhắc nhở trẻ không dùng tay hoặc vật nhọn chọc vào vị trí nhổ răng.',
             followupDays: 3,
             drugs: [
-                { drugName: 'Hapacol 250mg', dosage: '250mg', quantity: 6, unit: 'Gói', usage: 'Pha 1 gói với nước ấm cho trẻ uống khi đau hoặc sốt, cách nhau ít nhất 4-6 giờ' }
+                { drugName: 'Hapacol 250mg', dosage: '250mg', quantity: 6, unit: 'Gói', price: 3000, usage: 'Pha 1 gói với nước ấm cho trẻ uống khi đau hoặc sốt, cách nhau ít nhất 4-6 giờ' }
             ]
         },
         'NHA_CHU': {
@@ -2533,8 +2542,8 @@
             advice: 'Dùng chỉ tơ nha khoa sau mỗi bữa ăn. Chải răng đúng góc 45 độ dọc thân răng. Uống thuốc đều đặn đủ liệu trình.',
             followupDays: 14,
             drugs: [
-                { drugName: 'Rodogyl', dosage: 'Spiramycin + Metronidazol', quantity: 20, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 2 viên trong bữa ăn' },
-                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', usage: 'Súc miệng ngày 2 lần sau đánh răng sáng và tối' }
+                { drugName: 'Rodogyl', dosage: 'Spiramycin + Metronidazol', quantity: 20, unit: 'Viên', price: 7000, usage: 'Ngày uống 2 lần, mỗi lần 2 viên trong bữa ăn' },
+                { drugName: 'Nước súc miệng Kin Gingival 0.12%', dosage: '0.12%', quantity: 1, unit: 'Chai', price: 130000, usage: 'Súc miệng ngày 2 lần sau đánh răng sáng và tối' }
             ]
         },
         'AP_XE': {
@@ -2542,12 +2551,26 @@
             advice: 'Tuyệt đối không chườm nóng lên má vì sẽ làm lan rộng ổ áp xe. Tránh nhai mạnh vào răng tổn thương. Uống đủ kháng sinh 7 ngày không tự ý bỏ dở.',
             followupDays: 5,
             drugs: [
-                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 14, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn' },
-                { drugName: 'Rodogyl', dosage: 'Spiramycin + Metronidazol', quantity: 20, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 2 viên trong bữa ăn' },
-                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 10, unit: 'Viên', usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn khi đau nhức' }
+                { drugName: 'Augmentin 1g', dosage: '1g', quantity: 14, unit: 'Viên', price: 22000, usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn' },
+                { drugName: 'Rodogyl', dosage: 'Spiramycin + Metronidazol', quantity: 20, unit: 'Viên', price: 7000, usage: 'Ngày uống 2 lần, mỗi lần 2 viên trong bữa ăn' },
+                { drugName: 'Ibuprofen 400mg', dosage: '400mg', quantity: 10, unit: 'Viên', price: 3500, usage: 'Ngày uống 2 lần, mỗi lần 1 viên sau ăn khi đau nhức' }
             ]
         }
     };
+
+    function estimateDrugPrice(name) {
+        if (!name) return 5000;
+        const lower = name.toLowerCase();
+        if (lower.includes('augmentin') || lower.includes('klamentin') || lower.includes('curam')) return 22000;
+        if (lower.includes('kin') || lower.includes('chlorhexidine') || lower.includes('súc miệng')) return 130000;
+        if (lower.includes('ibuprofen') || lower.includes('gofen') || lower.includes('alaxan')) return 3500;
+        if (lower.includes('alphachymotrypsin') || lower.includes('choay') || lower.includes('alpha')) return 3500;
+        if (lower.includes('paracetamol') || lower.includes('panadol') || lower.includes('efferalgan') || lower.includes('hapacol')) return 2500;
+        if (lower.includes('rodogyl') || lower.includes('spiramycin') || lower.includes('dorogyne')) return 7000;
+        if (lower.includes('amoxicillin')) return 3000;
+        if (lower.includes('cefuroxim') || lower.includes('zinnat')) return 18000;
+        return 5000;
+    }
 
     function openAddPrescriptionModal() {
         try {
@@ -2606,18 +2629,25 @@
         drugRowIndex = 0;
 
         preset.drugs.forEach(d => {
-            addDrugRow(d.drugName, d.dosage, d.quantity, d.unit, d.usage);
+            addDrugRow(d.drugName, d.dosage, d.quantity, d.unit, d.usage, d.price || 0);
         });
 
+        updatePrescModalTotal();
         showToast(`Đã áp dụng mẫu đơn: ${preset.title}`);
     }
 
-    function addDrugRow(drugName = '', dosage = '', quantity = 1, unit = 'Viên', usage = '') {
+    function addDrugRow(drugName = '', dosage = '', quantity = 1, unit = 'Viên', usage = '', price = 0) {
         drugRowIndex++;
         const tbody = document.getElementById('prescDrugsTableBody');
         if (!tbody) return;
         const tr = document.createElement('tr');
         tr.id = `drug-row-${drugRowIndex}`;
+
+        if ((!price || price <= 0) && drugName) {
+            price = estimateDrugPrice(drugName);
+        } else if (!price || price <= 0) {
+            price = 5000;
+        }
 
         let medOptions = '<option value="">-- Chọn thuốc trong kho hoặc tự nhập --</option>';
         if (Array.isArray(availableMedications)) {
@@ -2627,13 +2657,15 @@
             });
         }
 
+        const lineTotal = (quantity || 1) * price;
+
         tr.innerHTML = `
             <td class="text-center fw-bold text-muted drug-tt">${tbody.children.length + 1}</td>
             <td>
                 <select class="form-select form-select-sm mb-1 drug-select" onchange="onDrugSelectChange(this, ${drugRowIndex})">
                     ${medOptions}
                 </select>
-                <input type="text" class="form-control form-control-sm drug-custom-name" placeholder="Hoặc gõ tên thuốc / hoạt chất khác..." value="${drugName || ''}">
+                <input type="text" class="form-control form-control-sm drug-custom-name" oninput="onDrugCustomNameInput(this, ${drugRowIndex})" placeholder="Hoặc gõ tên thuốc / hoạt chất khác..." value="${drugName || ''}">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm bg-light drug-code" placeholder="Mã..." readonly>
@@ -2642,7 +2674,13 @@
                 <input type="text" class="form-control form-control-sm text-center drug-unit" value="${unit || 'Viên'}">
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-center fw-bold drug-qty" value="${quantity || 1}" min="0.5" step="0.5">
+                <input type="number" class="form-control form-control-sm text-center fw-bold drug-qty" value="${quantity || 1}" min="0.5" step="0.5" oninput="calcPrescDrugRowTotal(${drugRowIndex})">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm text-end drug-price" value="${price}" min="0" step="500" oninput="calcPrescDrugRowTotal(${drugRowIndex})">
+            </td>
+            <td class="text-end fw-semibold text-primary drug-subtotal">
+                ${new Intl.NumberFormat('vi-VN').format(lineTotal)} đ
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm drug-usage" placeholder="Cách dùng (VD: Ngày uống 2 lần, mỗi lần 1 viên sau ăn)" value="${usage || ''}">
@@ -2661,12 +2699,53 @@
             const selectEl = tr.querySelector('.drug-select');
             onDrugSelectChange(selectEl, drugRowIndex);
         }
+
+        updatePrescModalTotal();
+    }
+
+    function calcPrescDrugRowTotal(rowIdx) {
+        const tr = document.getElementById(`drug-row-${rowIdx}`);
+        if (!tr) return;
+        const qty = parseFloat(tr.querySelector('.drug-qty')?.value) || 0;
+        const price = parseFloat(tr.querySelector('.drug-price')?.value) || 0;
+        const subtotal = qty * price;
+        const subtotalEl = tr.querySelector('.drug-subtotal');
+        if (subtotalEl) {
+            subtotalEl.innerText = new Intl.NumberFormat('vi-VN').format(subtotal) + ' đ';
+        }
+        updatePrescModalTotal();
+    }
+
+    function updatePrescModalTotal() {
+        const rows = document.querySelectorAll('#prescDrugsTableBody tr');
+        let total = 0;
+        rows.forEach(r => {
+            const qty = parseFloat(r.querySelector('.drug-qty')?.value) || 0;
+            const price = parseFloat(r.querySelector('.drug-price')?.value) || 0;
+            total += qty * price;
+        });
+        const totalEl = document.getElementById('prescModalEstimatedTotal');
+        if (totalEl) {
+            totalEl.innerText = new Intl.NumberFormat('vi-VN').format(total) + ' đ';
+        }
+    }
+
+    function onDrugCustomNameInput(inputEl, rowIdx) {
+        const tr = document.getElementById(`drug-row-${rowIdx}`);
+        if (!tr) return;
+        const priceInput = tr.querySelector('.drug-price');
+        if (priceInput && (parseFloat(priceInput.value) === 5000 || !priceInput.value || parseFloat(priceInput.value) === 0)) {
+            const est = estimateDrugPrice(inputEl.value.trim());
+            priceInput.value = est;
+            calcPrescDrugRowTotal(rowIdx);
+        }
     }
 
     function removeDrugRow(btn) {
         const tr = btn.closest('tr');
         if (tr) tr.remove();
         renumberDrugRows();
+        updatePrescModalTotal();
     }
 
     function renumberDrugRows() {
@@ -2695,11 +2774,16 @@
         const codeInput = tr.querySelector('.drug-code');
         const unitInput = tr.querySelector('.drug-unit');
         const usageInput = tr.querySelector('.drug-usage');
+        const priceInput = tr.querySelector('.drug-price');
 
         if (customNameInput) customNameInput.value = name || '';
         if (codeInput) codeInput.value = code || '';
         if (unitInput) unitInput.value = unit || 'Viên';
         if (usageInput && !usageInput.value) usageInput.value = usage || '';
+        if (priceInput && name) {
+            priceInput.value = estimateDrugPrice(name);
+            calcPrescDrugRowTotal(rowIdx);
+        }
     }
 
     function submitPrescription(e) {
@@ -2733,6 +2817,7 @@
             const medId = selectEl && selectEl.value ? parseInt(selectEl.value) : null;
             const unit = r.querySelector('.drug-unit').value.trim() || 'Viên';
             const qty = parseFloat(r.querySelector('.drug-qty').value) || 1;
+            const price = parseFloat(r.querySelector('.drug-price')?.value) || 0;
             const usage = r.querySelector('.drug-usage').value.trim() || 'Uống theo chỉ dẫn';
 
             if (customName) {
@@ -2743,6 +2828,7 @@
                     durationDays: 5,
                     quantity: qty,
                     unit: unit,
+                    unitPrice: price,
                     usageInstruction: usage
                 });
             }
@@ -2807,7 +2893,10 @@
         let drugBadges = '';
         if (pr.items && pr.items.length > 0) {
             pr.items.forEach(it => {
-                drugBadges += `<span class="badge bg-secondary-subtle text-dark border small me-1 mb-1">${it.drugName} (${it.quantity} ${it.unit})</span>`;
+                const itemPriceText = (it.finalPrice !== null && it.finalPrice !== undefined)
+                    ? ` • ${new Intl.NumberFormat('vi-VN').format(it.finalPrice)}đ`
+                    : '';
+                drugBadges += `<span class="badge bg-light text-dark border small me-1 mb-1">${it.drugName} (${it.quantity} ${it.unit}${itemPriceText})</span>`;
             });
         }
 
@@ -2818,6 +2907,11 @@
         const adviceDisplay = pr.adviceNotes 
             ? `<div class="small text-muted fst-italic mt-1"><i class="bi bi-chat-left-dots"></i> ${pr.adviceNotes}</div>` 
             : '';
+
+        const formattedTotal = (pr.totalAmount !== null && pr.totalAmount !== undefined) 
+            ? new Intl.NumberFormat('vi-VN').format(pr.totalAmount) + ' đ' 
+            : '0 đ';
+        const itemCount = (pr.items && pr.items.length) ? pr.items.length : 0;
 
         tr.innerHTML = `
             <td><span class="badge bg-light text-dark border fw-bold">${pr.prescriptionCode}</span></td>
@@ -2832,6 +2926,10 @@
                 </div>
                 <div class="d-flex flex-wrap gap-1">${drugBadges}</div>
                 ${adviceDisplay}
+            </td>
+            <td class="text-end">
+                <div class="fw-bold text-success fs-6">${formattedTotal}</div>
+                <small class="text-muted">${itemCount} loại thuốc</small>
             </td>
             <td>${followupBadge}</td>
             <td class="text-center">
