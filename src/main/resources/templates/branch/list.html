@@ -47,8 +47,18 @@
                         </thead>
                         <tbody>
                         <tr th:each="branch : ${branches}">
-                            <td><strong th:text="${branch.branchCode}">CN01</strong></td>
-                            <td th:text="${branch.branchName}">Chi nhánh</td>
+                            <td>
+                                <strong th:text="${branch.branchCode}">CN01</strong>
+                                <div class="text-muted small" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
+                                    MST: <span th:text="${branch.taxCode}">0101234567</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold" th:text="${branch.branchName}">Chi nhánh</div>
+                                <small class="text-muted" th:if="${branch.managerUser != null}">
+                                    <i class="bi bi-person-badge"></i> Quản lý: <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
+                                </small>
+                            </td>
                             <td th:text="${branch.address}">Địa chỉ</td>
                             <td>
                                 <div th:text="${branch.phone != null ? branch.phone : '-'}">-</div>
@@ -123,7 +133,7 @@
                     <input type="text" id="address" th:field="*{address}" class="form-control"
                            maxlength="255" required>
                 </div>
-                <div class="row g-3">
+                <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label for="phone" class="form-label">Số điện thoại</label>
                         <input type="tel" id="phone" th:field="*{phone}" class="form-control"
@@ -133,6 +143,22 @@
                     <div class="col-md-6">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" id="email" th:field="*{email}" class="form-control" maxlength="100">
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="taxCode" class="form-label">Mã số thuế</label>
+                        <input type="text" id="taxCode" th:field="*{taxCode}" class="form-control" maxlength="20"
+                               pattern="^([0-9]{10}|[0-9]{13}|[0-9]{10}-[0-9]{3})$"
+                               title="Mã số thuế gồm 10 số (doanh nghiệp) hoặc 13 số (chi nhánh). Ví dụ: 0101234567 hoặc 0101234567-001"
+                               placeholder="Ví dụ: 0101234567">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="managerUserId" class="form-label">Người quản lý cơ sở</label>
+                        <select id="managerUserId" th:field="*{managerUser.userId}" class="form-select">
+                            <option value="">-- Chưa chỉ định --</option>
+                            <option th:each="m : ${managers}" th:value="${m.userId}" th:text="${m.displayName}">Quản lý</option>
+                        </select>
                     </div>
                 </div>
             </div>
