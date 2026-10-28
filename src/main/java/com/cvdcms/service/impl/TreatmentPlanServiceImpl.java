@@ -145,6 +145,13 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         if (itemReq.getServiceId() != null) {
                             service = serviceRepository.findById(itemReq.getServiceId()).orElse(null);
                         }
+                        if (service == null && itemReq.getCustomServiceName() != null && !itemReq.getCustomServiceName().trim().isEmpty()) {
+                            String custom = itemReq.getCustomServiceName().trim().toLowerCase();
+                            service = serviceRepository.findAll().stream()
+                                    .filter(s -> s.getServiceName() != null && (s.getServiceName().toLowerCase().contains(custom) || custom.contains(s.getServiceName().toLowerCase())))
+                                    .findFirst()
+                                    .orElse(null);
+                        }
                         if (service == null) {
                             service = serviceRepository.findAll().stream().findFirst().orElse(null);
                         }
@@ -156,7 +163,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         item.setQuantity(qty);
 
                         BigDecimal price = itemReq.getEstimatedPrice();
-                        if (price == null) {
+                        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
                             price = (service != null && service.getBasePrice() != null) 
                                     ? service.getBasePrice() : BigDecimal.ZERO;
                         }
@@ -359,7 +366,11 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 if (s.getItems() != null) {
                     for (TreatmentPlanItem it : s.getItems()) {
                         com.cvdcms.entity.Service svc = it.getService();
-                        BigDecimal itemTotal = it.getEstimatedPrice().multiply(it.getQuantity());
+                        BigDecimal estPrice = (it.getEstimatedPrice() != null && it.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                                ? it.getEstimatedPrice()
+                                : (svc != null && svc.getBasePrice() != null ? svc.getBasePrice() : BigDecimal.ZERO);
+                        BigDecimal qtyVal = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                        BigDecimal itemTotal = estPrice.multiply(qtyVal);
                         stageTotalCost = stageTotalCost.add(itemTotal);
 
                         itemDTOs.add(TreatmentPlanItemResponseDTO.builder()
@@ -370,8 +381,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                 .categoryName(svc != null && svc.getCategory() != null ? svc.getCategory().getCategoryName() : null)
                                 .unit(svc != null ? svc.getUnit() : "Lần")
                                 .toothNumbers(it.getToothNumbers())
-                                .quantity(it.getQuantity())
-                                .estimatedPrice(it.getEstimatedPrice())
+                                .quantity(qtyVal)
+                                .estimatedPrice(estPrice)
                                 .totalPrice(itemTotal)
                                 .status(it.getStatus() != null ? it.getStatus().name() : "PLANNED")
                                 .statusBadgeClass(getItemStatusBadgeClass(it.getStatus()))

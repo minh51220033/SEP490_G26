@@ -38,7 +38,7 @@ class DiagnosisOdontogramUnitTest {
     @Mock private PrescriptionRepository prescriptionRepository;
     @Mock private AppointmentRepository appointmentRepository;
     @Mock private PatientProfileRepository patientProfileRepository;
-    @Mock private InvoiceRepository invoiceRepository; 
+    @Mock private InvoiceRepository invoiceRepository;
     @Mock private Icd10DiseaseService icd10DiseaseService;
 
     private DiagnosisServiceImpl diagnosisService;
