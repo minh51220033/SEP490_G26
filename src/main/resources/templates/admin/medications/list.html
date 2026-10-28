@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý danh mục thuốc')}"></head>
 
-<body class="app-body">
+<body class="app-body medication-catalog-page">
 <div class="app-shell">
 
   <aside th:replace="~{fragments/sidebar :: sidebar('medications')}"></aside>
@@ -21,7 +21,7 @@
            th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
       <!-- TIÊU ĐỀ + NÚT THÊM -->
-      <section class="panel mb-4">
+      <section class="panel mb-4 medication-catalog-list">
         <div class="panel__head flex-wrap gap-3">
           <div>
             <h3 class="panel__title">Danh mục thuốc nha khoa</h3>

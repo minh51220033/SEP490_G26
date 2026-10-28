@@ -25,7 +25,7 @@
             <!-- Page Header -->
             <div class="fin-header">
                 <div>
-                    <h1><i class="bi bi-arrow-counterclockwise text-danger"></i> Quản lý Hoàn tiền Viện phí (SCR-22.3)</h1>
+                    <h1> Quản lý Hoàn tiền Viện phí (SCR-22.3)</h1>
                     <p>Lập phiếu hoàn trả tiền cho bệnh nhân khi hủy dịch vụ, hoàn số tiền nộp thừa hoặc đổi lộ trình điều trị.</p>
                 </div>
                 <div class="d-flex gap-2">
@@ -167,7 +167,11 @@
         <form th:action="@{/payments/refunds}" method="post" class="p-4">
             <div class="mb-3">
                 <label for="refundPatientSearch" class="form-label fw-bold">Tìm Bệnh nhân nhận tiền hoàn <span class="text-danger">*</span></label>
-                <input type="text" id="refundPatientSearch" class="form-control" placeholder="Nhập Mã BN, Tên BN hoặc SĐT..." onkeyup="searchPatientForRefund(this.value)">
+                <input type="text"
+                       id="refundPatientSearch"
+                       class="form-control"
+                       placeholder="Nhập tên, ID hồ sơ, mã bệnh nhân hoặc SĐT..."
+                       oninput="searchPatientForRefund(this.value)">
                 <input type="hidden" name="profileId" id="refundProfileId" required>
                 <div id="selectedRefundPatientName" class="mt-2 fw-bold text-primary" style="display: none;"></div>
                 <div id="refundPatientList" class="list-group mt-2" style="max-height: 160px; overflow-y: auto; display: none;"></div>
@@ -219,14 +223,14 @@
     function searchPatientForRefund(query) {
         clearTimeout(searchTimer);
         const listEl = document.getElementById('refundPatientList');
-        if (!query || query.trim().length < 2) {
+        if (!query || !query.trim()) {
             listEl.style.display = 'none';
             return;
         }
 
         searchTimer = setTimeout(async () => {
             try {
-                const resp = await fetch(`/api/doctor/patients/search?query=${encodeURIComponent(query)}`);
+                const resp = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query.trim())}`);
                 const data = await resp.json();
                 if (data && data.length > 0) {
                     listEl.innerHTML = data.map(p => `
