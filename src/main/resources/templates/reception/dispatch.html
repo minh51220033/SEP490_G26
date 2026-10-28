@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Điều phối và cấp số')}"></head>
+<body class="app-body"><div class="app-shell">
+<aside th:replace="~{fragments/sidebar :: sidebar('queue')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+<div class="app-main">
+<header th:replace="~{fragments/header :: appTopbar('Điều phối và cấp số')}"></header>
+<main class="app-content">
+<h1>FT08 · Phân công &amp; FT09 · Cấp số thứ tự</h1>
+<p>Phân bác sĩ đang làm việc, phòng và ghế tùy chọn. Việc phân công không giữ ghế; chỉ lượt thực sự đang khám mới chiếm ghế.</p>
+<nav class="mb-3"><a th:href="@{/reception/check-in}">Tiếp đón FT07</a> · <a th:href="@{/reception/appointments}">Lịch hẹn FT05</a> · <a th:href="@{/reception/queue}">Hàng chờ FT10</a> · <a th:href="@{/doctor/daily-visits}">Danh sách khám</a></nav>
+<div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+<div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+<form th:action="@{/reception/dispatch}" method="get" class="d-flex gap-2 align-items-end mb-3">
+<div><label for="branchId">Chi nhánh</label><select id="branchId" name="branchId" class="form-select">
+<option th:each="b : ${board.branches}" th:value="${b.branchId}" th:selected="${b.branchId == board.branchId}" th:text="${b.branchName}"></option>
+</select></div><button class="btn btn-primary">Xem</button></form>
+<h2>Lượt khám trong ngày</h2>
+<div class="table-responsive"><table class="table table-bordered align-middle"><thead><tr><th>Lượt / Bệnh nhân</th><th>Trạng thái</th><th>Phân công</th><th>Số khám</th></tr></thead><tbody>
+<tr th:each="v : ${board.visits}">
+<td><strong th:text="${v.visitCode}"></strong><br><span th:text="${v.patientProfile.fullName}"></span><br><small th:text="${v.visitType}"></small></td>
+<td th:text="${v.status}"></td>
+<td>
+<form th:if="${v.status.name() == 'WAITING'}" th:action="@{/reception/dispatch/{id}/assign(id=${v.visitId})}" method="post">
+<input type="hidden" name="branchId" th:value="${board.branchId}">
+<label>Bác sĩ <select name="doctorId" required class="form-select">
+<option value="">Chọn bác sĩ</option><option th:each="d : ${board.doctors}" th:value="${d.id}" th:selected="${v.primaryDoctor != null and v.primaryDoctor.staffId == d.id}" th:text="|${d.name} · ${d.waiting} đang chờ|"></option>
+</select></label>
+<label>Phòng <select name="roomId" class="form-select"><option value="">Chưa chỉ định</option>
+<option th:each="r : ${board.rooms}" th:value="${r.roomId}" th:selected="${v.roomId == r.roomId}" th:text="${r.roomName}"></option></select></label>
+<label>Ghế <select name="chairId" class="form-select"><option value="">Chưa chỉ định</option>
+<option th:each="c : ${board.chairs}" th:if="${c.status.name() == 'AVAILABLE' and c.room != null}" th:value="${c.chairId}" th:selected="${v.chairId == c.chairId}" th:text="|${c.chairName} · ${c.room.roomName}|"></option></select></label>
+<button class="btn btn-outline-primary mt-2">Lưu phân công</button></form>
+<span th:if="${v.primaryDoctor != null}" th:text="|${v.primaryDoctor.fullName} · phòng ${v.roomId ?: '—'} · ghế ${v.chairId ?: '—'}|"></span>
+</td>
+<td><form th:if="${v.status.name() == 'WAITING' and v.primaryDoctor != null}" th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post">
+<input type="hidden" name="branchId" th:value="${board.branchId}">
+<label><input type="checkbox" name="priority" value="true" th:checked="${v.visitType.name() == 'EMERGENCY'}"> Ưu tiên</label>
+<label>Lý do ưu tiên (nếu chọn)<input type="text" name="reason" maxlength="255" class="form-control" placeholder="Ít nhất 10 ký tự; cấp cứu dùng triệu chứng check-in"></label>
+<button class="btn btn-primary mt-2">Cấp / in lại số khám</button></form></td>
+</tr><tr th:if="${#lists.isEmpty(board.visits)}"><td colspan="4">Chưa có lượt khám hôm nay.</td></tr>
+</tbody></table></div>
+<h2>Danh sách số khám</h2><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Số</th><th>Bệnh nhân</th><th>Lượt</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+<tr th:each="t : ${board.tickets}"><td><strong th:text="${t.number}"></strong><span th:if="${t.emergency}"> · Cấp cứu</span></td><td th:text="${t.patient}"></td><td th:text="${t.visit}"></td><td th:text="${t.status}"></td><td><a th:href="@{/reception/dispatch/tickets/{id}(id=${t.id})}">In phiếu</a></td></tr>
+</tbody></table></div>
+</main></div></div></body></html>
