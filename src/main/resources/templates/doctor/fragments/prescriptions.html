@@ -35,6 +35,14 @@
                     <i class="bi bi-plus-circle-fill"></i>
                     <span>+ Kê đơn thuốc mới</span>
                 </button>
+                <button th:if="${visit != null and (visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'))}"
+                        type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
+                        th:data-visit-id="${visit.visitId}"
+                        onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
+                        title="Bác sĩ kiểm tra điều kiện lâm sàng và chuyển sang Kế toán thu ngân">
+                    <i class="bi bi-check2-circle fs-6"></i>
+                    <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
+                </button>
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>
