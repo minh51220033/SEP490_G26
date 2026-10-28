@@ -251,6 +251,14 @@
                                               th:text="${a.status.name() == 'ACTIVE' ? 'Đang hiệu lực' : 'Đã kết thúc'}">Trạng thái</span>
                                     </td>
                                     <td class="text-center text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-assignment me-1"
+                                                th:data-id="${a.assignmentId}"
+                                                th:data-branch-name="${a.branch.branchName}"
+                                                th:data-start-date="${a.startDate}"
+                                                th:data-end-date="${a.endDate}"
+                                                th:data-is-primary="${a.isPrimary}">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
+                                        </button>
                                         <form th:if="${a.status.name() == 'ACTIVE' and !a.isPrimary}"
                                               th:action="@{/admin/staffs/{id}/assignments/{aid}/primary(id=${staff.staffId}, aid=${a.assignmentId})}"
                                               method="post" class="d-inline">
@@ -299,12 +307,13 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label for="assignRole" class="form-label">Vai trò <span class="text-danger">*</span></label>
-                    <select id="assignRole" th:field="*{roleId}" class="form-select" required>
-                        <option value="">-- Chọn vai trò --</option>
-                        <option th:each="r : ${roles}" th:value="${r.roleId}"
-                                th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
-                    </select>
+                    <label class="form-label">Vai trò chuyên môn</label>
+                    <div class="form-control-plaintext p-0 d-flex align-items-center gap-2">
+                        <span class="chip chip--role" th:if="${primaryRole != null}"
+                              th:text="${primaryRole.displayName != null ? primaryRole.displayName : primaryRole.roleName}">Vai trò</span>
+                        <span class="text-muted small">(Cố định theo chức danh của nhân sự trên toàn hệ thống)</span>
+                    </div>
+                    <input type="hidden" th:field="*{roleId}" id="assignRole" />
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -328,6 +337,45 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- MODAL: SỬA PHÂN CÔNG CHI NHÁNH -->
+<div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-labelledby="editAssignmentModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="editAssignmentForm" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAssignmentModalTitle">Sửa phân công chi nhánh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Chi nhánh</label>
+                    <input type="text" id="editAssignBranchName" class="form-control" readonly disabled>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="editAssignStart" class="form-label">Ngày bắt đầu</label>
+                        <input type="date" id="editAssignStart" name="startDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="editAssignEnd" class="form-label">Ngày kết thúc</label>
+                        <input type="date" id="editAssignEnd" name="endDate" class="form-control">
+                    </div>
+                </div>
+                <div class="form-check mt-3">
+                    <input type="checkbox" id="editAssignPrimary" name="isPrimary" value="true" class="form-check-input">
+                    <label for="editAssignPrimary" class="form-check-label">Đặt làm chi nhánh chính</label>
+                </div>
+                <div class="form-hint mt-2">Bỏ trống ngày kết thúc nếu nhân viên làm việc không giới hạn thời gian.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
 document.addEventListener('DOMContentLoaded', function () {
@@ -340,7 +388,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (targetTabId) {
-        // Tìm button tab theo id (ví dụ: tab-assign) hoặc target pane id (ví dụ: pane-assign)
         let tabBtn = document.getElementById(targetTabId);
         if (!tabBtn) {
             tabBtn = document.querySelector(`button[data-bs-target="#${targetTabId}"]`);
@@ -357,6 +404,33 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('shown.bs.tab', function (e) {
             if (e.target && e.target.id) {
                 history.replaceState(null, null, '#' + e.target.id);
+            }
+        });
+    });
+
+    // 3. Xử lý mở modal sửa phân công
+    const staffId = /*[[${staff.staffId}]]*/ 0;
+    const editModalEl = document.getElementById('editAssignmentModal');
+    const editModal = editModalEl ? bootstrap.Modal.getOrCreateInstance(editModalEl) : null;
+
+    document.querySelectorAll('.btn-edit-assignment').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const aid = this.getAttribute('data-id');
+            const branchName = this.getAttribute('data-branch-name');
+            const startDate = this.getAttribute('data-start-date') || '';
+            const endDate = this.getAttribute('data-end-date') || '';
+            const isPrimary = this.getAttribute('data-is-primary') === 'true';
+
+            document.getElementById('editAssignBranchName').value = branchName;
+            document.getElementById('editAssignStart').value = startDate;
+            document.getElementById('editAssignEnd').value = endDate;
+            document.getElementById('editAssignPrimary').checked = isPrimary;
+
+            const form = document.getElementById('editAssignmentForm');
+            form.action = `/admin/staffs/${staffId}/assignments/${aid}/edit`;
+
+            if (editModal) {
+                editModal.show();
             }
         });
     });

@@ -111,6 +111,18 @@
                th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
                 <i class="bi bi-buildings" aria-hidden="true"></i><span>Quản lý cơ sở</span>
             </a>
+            <!-- Phân ca làm việc (FT33) -->
+            <a th:href="@{/admin/schedules}" class="side-link"
+               th:classappend="${activeMenu == 'schedules'} ? 'is-active' : ''"
+               title="Phân ca làm việc hàng tuần theo chi nhánh (SCR-33.1)">
+                <i class="bi bi-calendar-range" aria-hidden="true"></i><span>Phân ca làm việc</span>
+            </a>
+            <!-- Chấm công chi nhánh (FT33) -->
+            <a th:href="@{/admin/attendance}" class="side-link"
+               th:classappend="${activeMenu == 'attendance'} ? 'is-active' : ''"
+               title="Bảng theo dõi chấm công toàn chi nhánh (SCR-33.4)">
+                <i class="bi bi-fingerprint" aria-hidden="true"></i><span>Chấm công chi nhánh</span>
+            </a>
             <!-- FT19: Hạng thẻ & Tích điểm -->
             <a th:href="@{/admin/membership-tiers}" class="side-link"
                th:classappend="${activeMenu == 'membership-tiers'} ? 'is-active' : ''"
@@ -317,22 +329,32 @@
             <span>Chăm sóc khách hàng</span>
         </a>
 
-        <!-- NHÓM: CÁ NHÂN BÁC SĨ -->
-        <p class="app-sidebar__section">Cá nhân</p>
+        <!-- NHÓM: CÁ NHÂN NHÂN VIÊN (Bác sĩ, Lễ tân, Kế toán, Quản lý kho) -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO'))}">
+            <p class="app-sidebar__section">Cá nhân</p>
 
-        <!-- 9. Lịch trực & Chấm công -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Lịch trực tuần & Chấm công">
-            <i class="bi bi-calendar-check" aria-hidden="true"></i>
-            <span>Lịch trực &amp; Chấm công</span>
-        </a>
+            <!-- 9. Lịch trực & Chấm công -->
+            <a th:href="@{/schedules/my}" class="side-link"
+               th:classappend="${activeMenu == 'my-schedule'} ? 'is-active' : ''"
+               title="Lịch làm việc cá nhân hàng tuần (SCR-33.3)">
+                <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                <span>Lịch trực &amp; Chấm công</span>
+            </a>
 
-        <!-- 10. Đơn xin nghỉ / Khóa lịch -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Gửi yêu cầu nghỉ phép & Khóa lịch">
-            <i class="bi bi-calendar-x" aria-hidden="true"></i>
-            <span>Yêu cầu nghỉ / Khóa lịch</span>
-        </a>
+            <!-- 9b. Check-in / Check-out -->
+            <a th:href="@{/attendance/my}" class="side-link"
+               th:classappend="${activeMenu == 'my-attendance'} ? 'is-active' : ''"
+               title="Check-in / Check-out &amp; lịch sử chấm công (SCR-33.2, SCR-33.4)">
+                <i class="bi bi-fingerprint" aria-hidden="true"></i>
+                <span>Chấm công</span>
+            </a>
+
+            <!-- 10. Đơn xin nghỉ / Khóa lịch (Chỉ dành cho Bác sĩ theo SRS) -->
+            <a th:if="${#lists.contains(roleNames, 'BAC_SI')}" href="#" class="side-link is-disabled" aria-disabled="true" title="Gửi yêu cầu nghỉ phép &amp; Khóa lịch">
+                <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                <span>Yêu cầu nghỉ / Khóa lịch</span>
+            </a>
+        </div>
     </nav>
 
     <!-- THẺ NGƯỜI DÙNG -->
