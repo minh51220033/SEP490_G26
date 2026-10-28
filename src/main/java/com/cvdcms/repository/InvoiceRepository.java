@@ -220,5 +220,62 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("profileId") Long profileId,
             @Param("branchIds") List<Long> branchIds
     );
+    Page<Invoice> findByPatientProfile_ProfileIdAndStatusNot(
+            Long profileId,
+            InvoiceStatus status,
+            Pageable pageable
+    );
+
+    Page<Invoice> findByPatientProfile_ProfileIdAndStatusNotAndBranch_BranchIdIn(
+            Long profileId,
+            InvoiceStatus status,
+            List<Long> branchIds,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT i FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(i) FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """)
+    Page<Invoice> findInvoicesByPatientAndDates(
+            @Param("profileId") Long profileId,
+            @Param("status") InvoiceStatus status,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT i FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND i.branch.branchId IN :branchIds
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(i) FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND i.branch.branchId IN :branchIds
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """)
+    Page<Invoice> findInvoicesByPatientAndBranchesAndDates(
+            @Param("profileId") Long profileId,
+            @Param("status") InvoiceStatus status,
+            @Param("branchIds") List<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
 }
 

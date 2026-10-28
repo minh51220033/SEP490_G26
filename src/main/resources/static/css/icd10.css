@@ -1,0 +1,159 @@
+/* Chỉ áp dụng cho trang danh mục ICD-10 */
+body.icd10-catalog-page .app-main {
+    background: #f4f6fb;
+}
+
+body.icd10-catalog-page .app-content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+}
+
+/* Bỏ khung lớn bao chung tiêu đề, tìm kiếm và bảng */
+body.icd10-catalog-page main.app-content > section.panel {
+    padding: 0;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Banner xanh */
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head {
+    position: relative;
+    min-height: 100px;
+    margin: 0 0 16px;
+    padding: 32px 22px 18px;
+    align-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #1d306c, #3052b3);
+    box-shadow: 0 10px 22px rgba(29, 49, 107, .16);
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head::before {
+    content: "CV-DCMS · QUẢN LÝ DANH MỤC ICD-10";
+    position: absolute;
+    top: 12px;
+    left: 22px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #e8efff;
+    color: #4262ab;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head .panel__title {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head .panel__subtitle {
+    color: #dce5ff;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head .btn {
+    background: #fff;
+    border-color: #fff;
+    color: #243e87;
+    font-weight: 700;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > .panel__head .btn:hover {
+    background: #eef2ff;
+    border-color: #eef2ff;
+}
+
+/* Khung tìm kiếm riêng */
+body.icd10-catalog-page
+main.app-content > section.panel > form {
+    margin-bottom: 16px;
+    padding: 14px 16px !important;
+    border: 1px solid #dce4f1 !important;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(28, 44, 85, .05);
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > form .form-control {
+    border-color: #cbd5e5;
+    border-radius: 7px;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > form .btn-primary {
+    background: #294690;
+    border-color: #294690;
+}
+
+body.icd10-catalog-page
+main.app-content > section.panel > form .btn-primary:hover {
+    background: #1d3677;
+    border-color: #1d3677;
+}
+
+/* Khung bảng ICD-10 riêng */
+body.icd10-catalog-page
+main.app-content > section.panel > .table-responsive {
+    border: 1px solid #dce4f1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
+    overflow-x: auto;
+}
+
+body.icd10-catalog-page #tblIcd10 {
+    min-width: 850px;
+    margin: 0;
+    font-size: 13px;
+}
+
+body.icd10-catalog-page
+#tblIcd10 > :not(caption) > * > * {
+    padding: 12px;
+    border-color: #e7ecf5;
+    vertical-align: middle;
+}
+
+body.icd10-catalog-page #tblIcd10 thead th {
+    background: #f5f7fb;
+    color: #53617b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+body.icd10-catalog-page #tblIcd10 tbody tr:hover td {
+    background: #f7f9fd;
+}
+
+@media (max-width: 575.98px) {
+    body.icd10-catalog-page .app-content {
+        padding: 12px;
+    }
+
+    body.icd10-catalog-page
+    main.app-content > section.panel > .panel__head {
+        gap: 12px;
+        padding: 34px 16px 16px;
+    }
+
+    body.icd10-catalog-page
+    main.app-content > section.panel > .panel__head::before {
+        left: 16px;
+    }
+}
