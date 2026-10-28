@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn thuốc riêng - FT21')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lập Hóa đơn Thuốc')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-capsule text-primary"></i> Lập Hóa đơn thuốc riêng</h1>
+                    <p>Khởi tạo hóa đơn thuốc độc lập từ đơn thuốc được bác sĩ kê. Hỗ trợ mua toàn bộ hoặc mua một phần đơn thuốc.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/invoices/create(visitId=${selectedVisit != null ? selectedVisit.visitId : ''})}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-arrow-left"></i> Quay lại ca khám
+                    </a>
+                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-receipt"></i> Danh sách hóa đơn
+                    </a>
+                </div>
+            </div>
+
+            <!-- Thông tin Đơn thuốc & Bệnh nhân -->
+            <div class="fin-card mb-4">
+                <h4 class="fw-bold mb-3 text-primary d-flex align-items-center">
+                    <i class="bi bi-person-vcard me-2"></i> Thông tin Bệnh nhân &amp; Đơn thuốc nguồn
+                </h4>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">MÃ &amp; HỌ TÊN BỆNH NHÂN</span>
+                        <strong class="fs-6 text-dark" th:text="${selectedPatient != null ? selectedPatient.fullName : 'Bệnh nhân'}">Nguyễn Văn An</strong>
+                        <span class="badge bg-secondary d-inline-block ms-1" th:text="${selectedPatient != null ? selectedPatient.patientCode : ''}">BN000101</span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">SỐ ĐIỆN THOẠI &amp; GIỚI TÍNH</span>
+                        <span th:text="${selectedPatient != null ? selectedPatient.phoneNumber : ''}">0987654321</span>
+                        <span class="text-muted" th:text="'(' + ${selectedPatient != null ? selectedPatient.gender : ''} + ')'"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">CƠ SỞ ĐIỀU TRỊ</span>
+                        <span class="badge bg-primary text-white" th:text="${selectedBranch != null ? selectedBranch.branchName : 'Phòng khám'}">Cơ sở Quận 1</span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">MÃ ĐƠN THUỐC BÁC SĨ KÊ</span>
+                        <strong class="text-primary fs-6" th:text="${prescription.prescriptionCode}">TOA10001</strong>
+                        <span class="badge bg-info-subtle text-primary border border-primary ms-1" th:text="${prescription.status != null ? prescription.status.name() : 'PENDING'}">PENDING</span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">BÁC SĨ KÊ ĐƠN</span>
+                        <span class="fw-semibold text-dark" th:text="${selectedDoctor != null ? selectedDoctor.fullName : (prescription.doctor != null ? prescription.doctor.fullName : 'Bác sĩ')}">BS Nam</span>
+                        <small class="text-muted d-block" th:text="${selectedDoctor != null ? selectedDoctor.positionTitle : ''}">Bác sĩ điều trị</small>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">CA KHÁM LIÊN KẾT</span>
+                        <span th:if="${selectedVisit != null}" class="badge bg-light text-dark border" th:text="${selectedVisit.visitCode}">VIS10001</span>
+                        <span th:unless="${selectedVisit != null}" class="text-muted small">Kê đơn trực tiếp</span>
+                    </div>
+                    <div class="col-12" th:if="${prescription.diagnosisText != null and !prescription.diagnosisText.isEmpty()}">
+                        <span class="text-muted small d-block">CHẨN ĐOÁN LÂM SÀNG</span>
+                        <span class="text-dark fw-medium" th:text="${prescription.diagnosisText}">Sâu ngà răng</span>
+                    </div>
+                    <div class="col-12" th:if="${prescription.adviceNotes != null and !prescription.adviceNotes.isEmpty()}">
+                        <span class="text-muted small d-block">LỜI DẶN DÙNG THUỐC</span>
+                        <span class="text-secondary fst-italic" th:text="${prescription.adviceNotes}">Uống sau ăn no</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Lập Hóa Đơn Thuốc -->
+            <form th:action="@{/invoices/create-medicine}" method="post" id="medicineInvoiceForm">
+                <input type="hidden" name="prescriptionId" th:value="${prescription.prescriptionId}" id="hiddenPrescriptionId">
+
+                <div class="fin-grid-2col">
+                    <!-- Cột trái: Danh sách thuốc kê & Lựa chọn số lượng mua -->
+                    <div>
+                        <div class="fin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
+                                        <i class="bi bi-capsule-pill me-2"></i> Danh mục Thuốc trong đơn bác sĩ kê
+                                    </h4>
+                                    <small class="text-muted">Chọn các thuốc bệnh nhân mua tại phòng khám. Có thể chỉnh số lượng mua không vượt quá số lượng còn lại.</small>
+                                </div>
+                                <span class="badge bg-info text-dark" id="selectedMedicineCountBadge">
+                                    0 thuốc được chọn
+                                </span>
+                            </div>
+
+                            <div class="fin-table-wrapper">
+                                <table class="fin-table" id="medicineTable">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 40px;">
+                                            <input type="checkbox" id="checkAllMeds" checked onchange="toggleAllMeds(this)">
+                                        </th>
+                                        <th>Tên thuốc &amp; Cách dùng</th>
+                                        <th class="text-center" style="width: 70px;">ĐVT</th>
+                                        <th class="text-center" style="width: 75px;">Kê đơn</th>
+                                        <th class="text-center" style="width: 75px;">Đã mua</th>
+                                        <th class="text-center" style="width: 75px;">Còn lại</th>
+                                        <th class="text-center" style="width: 105px;">SL Mua</th>
+                                        <th class="text-end" style="width: 115px;">Đơn giá</th>
+                                        <th class="text-end" style="width: 130px;">Thành tiền</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="medsBody">
+                                    <tr th:if="${prescription.items == null or prescription.items.isEmpty()}">
+                                        <td colspan="9" class="text-center py-4 text-muted">
+                                            Đơn thuốc không có danh mục thuốc nào.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="it, iterStat : ${prescription.items}"
+                                        class="med-row"
+                                        th:classappend="${it.isFullyBought()} ? 'table-light opacity-75' : ''"
+                                        th:data-item-id="${it.itemId}">
+                                        <td>
+                                            <input type="checkbox" class="med-checkbox"
+                                                   th:checked="${!it.isFullyBought()}"
+                                                   th:disabled="${it.isFullyBought()}"
+                                                   onchange="onMedCheckboxChange()">
+                                            <input type="hidden" class="prop-item-id" th:value="${it.itemId}">
+                                        </td>
+                                        <td>
+                                            <strong class="text-dark d-block" th:text="${it.drugName}">Paracetamol 500mg</strong>
+                                            <small class="text-muted d-block" th:if="${it.dosage != null and !it.dosage.isEmpty()}"
+                                                   th:text="'Liều: ' + ${it.dosage}"></small>
+                                            <small class="text-secondary fst-italic d-block" th:if="${it.usageInstruction != null and !it.usageInstruction.isEmpty()}"
+                                                   th:text="'Cách dùng: ' + ${it.usageInstruction}"></small>
+                                            <span th:if="${it.isFullyBought()}" class="badge bg-success-subtle text-success border border-success mt-1">Đã mua đủ</span>
+                                        </td>
+                                        <td class="text-center text-muted" th:text="${it.unit}">Viên</td>
+                                        <td class="text-center fw-semibold" th:text="${it.quantity}">10</td>
+                                        <td class="text-center text-secondary" th:text="${it.boughtQuantity != null ? it.boughtQuantity : 0}">0</td>
+                                        <td class="text-center fw-bold text-primary med-rem-qty"
+                                            th:data-rem="${it.getRemainingQuantity()}"
+                                            th:text="${it.getRemainingQuantity()}">10</td>
+                                        <td class="text-center">
+                                            <input type="number"
+                                                   class="form-control form-control-sm text-center med-buy-qty"
+                                                   step="1" min="1"
+                                                   th:max="${it.getRemainingQuantity()}"
+                                                   th:value="${it.isFullyBought() ? 0 : it.getRemainingQuantity()}"
+                                                   th:disabled="${it.isFullyBought()}"
+                                                   onchange="onMedQtyChange(this)">
+                                        </td>
+                                        <td class="text-end text-muted med-price"
+                                            th:data-price="${it.unitPrice != null ? it.unitPrice : 5000}"
+                                            th:text="${#numbers.formatDecimal(it.unitPrice != null ? it.unitPrice : 5000, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            5.000 đ
+                                        </td>
+                                        <td class="text-end fw-bold text-dark med-line-total"
+                                            th:text="${#numbers.formatDecimal((it.unitPrice != null ? it.unitPrice : 5000) * (it.isFullyBought() ? 0 : it.getRemainingQuantity()), 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            50.000 đ
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Ghi chú hóa đơn thuốc -->
+                        <div class="fin-card">
+                            <label for="medicineNotes" class="form-label fw-bold">
+                                <i class="bi bi-chat-left-text me-1"></i> Ghi chú hóa đơn thuốc
+                            </label>
+                            <textarea id="medicineNotes" name="notes" class="form-control" rows="3"
+                                      placeholder="Ghi chú thêm về việc cấp/bán thuốc, bệnh nhân mua một phần..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Tính tiền & Xác nhận phát hành -->
+                    <div>
+                        <div class="fin-calculation-box mb-4">
+                            <h4 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                                <i class="bi bi-receipt me-2 text-primary"></i> Tổng tiền Hóa đơn Thuốc
+                            </h4>
+
+                            <!-- Cảnh báo nghiệp vụ xuất thuốc đồng thời (Point 4) -->
+                            <div class="alert alert-warning py-2 px-3 mb-3 small border-start border-warning border-4">
+                                <i class="bi bi-box-seam-fill text-warning me-1 fs-6"></i>
+                                <strong>XÁC NHẬN XUẤT THUỐC ĐỒNG THỜI:</strong>
+                                <ul class="m-0 ps-3 mt-1">
+                                    <li>Thao tác phát hành hóa đơn thuốc sẽ <strong>ĐỒNG THỜI XÁC NHẬN CẤP/XUẤT THUỐC THỰC TẾ</strong> và tự động sinh chứng từ xuất kho (PX...).</li>
+                                    <li>Tồn kho và lô hạn dùng (FEFO) được trừ trực tiếp ngay tại bước này. <strong>Tuyệt đối không trừ kho lần 2 khi ghi nhận thanh toán sau.</strong></li>
+                                    <li>Hóa đơn mang <strong>mã chứng từ riêng (HDT...)</strong> và công nợ hoàn toàn độc lập với hóa đơn dịch vụ.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Tóm tắt thanh toán -->
+                            <div class="fin-calc-row">
+                                <span class="text-muted">Số loại thuốc mua:</span>
+                                <strong id="lblSelectedCount">0 loại</strong>
+                            </div>
+                            <div class="fin-calc-row">
+                                <span class="text-muted">Tổng số lượng thuốc mua:</span>
+                                <strong id="lblTotalUnits">0</strong>
+                            </div>
+                            <div class="fin-calc-row fin-calc-total mt-3 pt-3 border-top">
+                                <span>TỔNG TIỀN THUỐC PHẢI THU:</span>
+                                <span id="lblMedicineTotal" class="fs-4 text-primary">0 đ</span>
+                            </div>
+
+                            <!-- Nút Lưu Hóa đơn Thuốc -->
+                            <div class="mt-4 d-grid gap-2">
+                                <button type="submit" id="btnSubmitMedicineInvoice" class="fin-btn fin-btn-primary py-3 fs-6">
+                                    <i class="bi bi-box-arrow-up-right fs-5"></i> PHÁT HÀNH HÓA ĐƠN &amp; XUẤT THUỐC
+                                </button>
+                                <a th:href="@{/invoices/create(visitId=${selectedVisit != null ? selectedVisit.visitId : ''})}" class="fin-btn fin-btn-outline">
+                                    Hủy bỏ / Quay lại
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    function formatMoney(num) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
+    }
+
+    function toggleAllMeds(masterCheckbox) {
+        document.querySelectorAll('.med-checkbox:not(:disabled)').forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+        onMedCheckboxChange();
+    }
+
+    function onMedCheckboxChange() {
+        const rows = document.querySelectorAll('.med-row');
+        let selectedKinds = 0;
+        let totalUnits = 0;
+        let totalMoney = 0;
+
+        rows.forEach(row => {
+            const cb = row.querySelector('.med-checkbox');
+            const qtyInput = row.querySelector('.med-buy-qty');
+            const price = parseFloat(row.querySelector('.med-price').getAttribute('data-price')) || 0;
+
+            if (cb && cb.checked && !cb.disabled) {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const lineTotal = qty * price;
+                row.querySelector('.med-line-total').textContent = formatMoney(lineTotal);
+                selectedKinds++;
+                totalUnits += qty;
+                totalMoney += lineTotal;
+            } else {
+                row.querySelector('.med-line-total').textContent = '0 đ';
+            }
+        });
+
+        const badge = document.getElementById('selectedMedicineCountBadge');
+        if (badge) {
+            badge.textContent = selectedKinds + ' loại thuốc được chọn';
+        }
+
+        document.getElementById('lblSelectedCount').textContent = selectedKinds + ' loại';
+        document.getElementById('lblTotalUnits').textContent = totalUnits;
+        document.getElementById('lblMedicineTotal').textContent = formatMoney(totalMoney);
+
+        const btnSubmit = document.getElementById('btnSubmitMedicineInvoice');
+        if (btnSubmit) {
+            btnSubmit.disabled = (selectedKinds === 0 || totalMoney <= 0);
+        }
+    }
+
+    function onMedQtyChange(input) {
+        const max = parseFloat(input.getAttribute('max')) || 0;
+        let val = parseFloat(input.value) || 0;
+        if (val < 1) {
+            val = 1;
+            input.value = 1;
+        } else if (val > max) {
+            alert('Số lượng mua không được vượt quá số lượng còn lại của đơn thuốc (' + max + ').');
+            val = max;
+            input.value = max;
+        }
+        onMedCheckboxChange();
+    }
+
+    // Khi submit form: Đánh chỉ mục items[0], items[1]... cho chỉ những dòng được chọn
+    document.getElementById('medicineInvoiceForm').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.med-checkbox:checked:not(:disabled)');
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('Vui lòng chọn ít nhất 01 loại thuốc để lập hóa đơn thuốc.');
+            return false;
+        }
+
+        // Xóa các input ẩn sinh ra từ lần submit trước nếu có
+        document.querySelectorAll('.dynamic-item-input').forEach(el => el.remove());
+
+        let index = 0;
+        checkedBoxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const prescItemId = row.querySelector('.prop-item-id').value;
+            const qty = row.querySelector('.med-buy-qty').value;
+
+            // Tạo các input hidden gửi đúng cấu trúc DTO: items[i].prescriptionItemId & items[i].quantity
+            const inputId = document.createElement('input');
+            inputId.type = 'hidden';
+            inputId.className = 'dynamic-item-input';
+            inputId.name = 'items[' + index + '].prescriptionItemId';
+            inputId.value = prescItemId;
+            this.appendChild(inputId);
+
+            const inputQty = document.createElement('input');
+            inputQty.type = 'hidden';
+            inputQty.className = 'dynamic-item-input';
+            inputQty.name = 'items[' + index + '].quantity';
+            inputQty.value = qty;
+            this.appendChild(inputQty);
+
+            index++;
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        onMedCheckboxChange();
+    });
+</script>
+</body>
+</html>

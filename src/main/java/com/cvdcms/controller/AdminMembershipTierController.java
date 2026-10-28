@@ -79,6 +79,7 @@ public class AdminMembershipTierController {
                     .map(e -> e.getDefaultMessage())
                     .findFirst().orElse("Dữ liệu cấu hình hạng thành viên không hợp lệ.");
             redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
+            redirectAttributes.addFlashAttribute("formTier", dto);
             return "redirect:/admin/membership-tiers";
         }
 
@@ -92,6 +93,7 @@ public class AdminMembershipTierController {
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("formTier", dto);
         }
 
         return "redirect:/admin/membership-tiers";

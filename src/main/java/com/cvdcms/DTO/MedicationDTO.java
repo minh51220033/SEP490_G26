@@ -17,4 +17,6 @@ public class MedicationDTO {
     private String unit;
     private String usageInstruction;
     private Boolean isActive;
+    private java.math.BigDecimal salePrice;
+    private Long materialId;
 }
