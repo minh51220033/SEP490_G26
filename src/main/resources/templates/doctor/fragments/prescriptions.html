@@ -9,20 +9,24 @@
 <div th:fragment="prescriptionsSection">
     <div class="df-presc-card" id="prescriptionsSection">
         <div class="df-presc-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
-            <div class="df-presc-title-box d-flex align-items-center gap-2">
+            <div class="df-presc-title-box d-flex flex-wrap align-items-center gap-2">
                 <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
                     <i class="bi bi-capsule fs-5"></i>
                 </div>
                 <div>
                     <h4 class="mb-0 fw-bold text-dark fs-6">Đơn thuốc &amp; Dặn dò dùng thuốc sau điều trị (FT18)</h4>
-                    <span class="text-secondary small">Kê đơn thuốc theo mẫu nha khoa chuẩn (Augmentin, Giảm đau, Kháng viêm, Nước súc miệng)</span>
+                    <span class="text-secondary small">Đã đồng bộ sang Kế toán (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự mua ngoài)</span>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="prescCountBadge"
                       th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn thuốc'">
                     0 đơn thuốc
                 </span>
                 <span class="badge bg-success-subtle text-success border border-success ms-1" id="prescTotalAmountBadge">
-                    Tổng tiền thuốc: <strong th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                    Giá thuốc dự kiến (Tạm tính): <strong id="prescTotalAmountText" th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                </span>
+                <span class="badge bg-info-subtle text-primary border border-primary-subtle ms-1"
+                      title="Thông tin giá thuốc dự kiến được đồng bộ sang Kế toán — Bệnh nhân có quyền chọn mua tại phòng khám hoặc tự mua ngoài">
+                    <i class="bi bi-send-check-fill me-1"></i>Đã đồng bộ sang Kế toán (BN tự chọn mua tại PK / mua ngoài)
                 </span>
             </div>
 
@@ -34,14 +38,6 @@
                 <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
                     <i class="bi bi-plus-circle-fill"></i>
                     <span>+ Kê đơn thuốc mới</span>
-                </button>
-                <button th:if="${visit != null and (visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'))}"
-                        type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
-                        th:data-visit-id="${visit.visitId}"
-                        onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
-                        title="Bác sĩ kiểm tra điều kiện lâm sàng và chuyển sang Kế toán thu ngân">
-                    <i class="bi bi-check2-circle fs-6"></i>
-                    <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
                 </button>
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
@@ -58,7 +54,7 @@
                     <th style="width: 130px;">Thời gian kê</th>
                     <th style="width: 180px;">Bác sĩ kê đơn</th>
                     <th>Chẩn đoán &amp; Thuốc kê chi tiết</th>
-                    <th style="width: 140px;" class="text-end">Tiền thuốc (đ)</th>
+                    <th style="width: 185px;" class="text-end">Giá thuốc dự kiến (Tạm tính)</th>
                     <th style="width: 120px;">Hẹn tái khám</th>
                     <th style="width: 120px;" class="text-center">Thao tác</th>
                 </tr>
@@ -97,8 +93,13 @@
                         </div>
                     </td>
                     <td class="text-end">
-                        <div class="fw-bold text-success fs-6" th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
-                        <small class="text-muted" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
+                        <div class="fw-bold text-success fs-6 presc-row-amount"
+                             th:data-amount="${pr.totalAmount != null ? pr.totalAmount : 0}"
+                             th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                        <small class="text-muted d-block" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
+                        <span class="badge bg-light text-secondary border mt-0.5" style="font-size: 10px;">
+                            <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán (Tự chọn mua)
+                        </span>
                     </td>
                     <td>
                         <span class="badge bg-warning-subtle text-dark border border-warning"

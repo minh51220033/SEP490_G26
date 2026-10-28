@@ -118,26 +118,45 @@
                         </div>
                     </div>
 
-                    <!-- 3 CHỈ SỐ TÀI CHÍNH -->
-                    <div class="d-flex align-items-center gap-4 text-end">
-                        <div>
-                            <div class="df-stat-title">PHÁT SINH</div>
-                            <div class="df-stat-value text-dark" id="headerPhatSinh"
-                                 th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') : (totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0')}">
-                                0
-                            </div>
+                    <!-- NÚT CHUYÊN MÔN HOÀN TẤT KHÁM & BÀN GIAO SANG KẾ TOÁN (TÁCH BIỆT CHUYÊN MÔN & TÀI CHÍNH) -->
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                            <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
+                                <button type="button" id="btnDirectHandover"
+                                        class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                                        style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
+                                        th:data-visit-id="${visit.visitId}"
+                                        onclick="confirmDirectHandover(this.getAttribute('data-visit-id'))"
+                                        title="Khóa bệnh án lâm sàng (BR-EMR-02) và chuyển thông tin giá dự kiến sang hàng chờ của Kế toán">
+                                    <i class="bi bi-check2-circle fs-5"></i>
+                                    <span>Hoàn tất khám (Chuyển Kế toán)</span>
+                                </button>
+                            </th:block>
+
+                            <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <i class="bi bi-send-check-fill text-warning"></i>
+                                    <span>Đã chuyển Kế toán xử lý (Khóa BR-EMR-02)</span>
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                        th:data-visit-id="${visit.visitId}"
+                                        onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
+                                        title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
+                                    <i class="bi bi-unlock text-secondary"></i>
+                                    <span>Mở lại khám</span>
+                                </button>
+                            </th:block>
+
+                            <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                    <span>Đã hoàn tất ca khám</span>
+                                </span>
+                            </th:block>
                         </div>
-                        <div>
-                            <div class="df-stat-title">THANH TOÁN</div>
-                            <div class="df-stat-value text-success">0</div>
-                        </div>
-                        <div>
-                            <div class="df-stat-title text-danger">CÔNG NỢ</div>
-                            <div class="df-stat-value text-danger" id="headerCongNo"
-                                 th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') : (totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0')}">
-                                0
-                            </div>
-                        </div>
+                        <small class="text-muted" style="font-size: 11px;">
+                            <i class="bi bi-shield-check text-primary me-1"></i>Giá dự kiến KHDT &amp; Đơn thuốc tự động đồng bộ sang Kế toán xử lý
+                        </small>
                     </div>
                 </div>
 
@@ -177,9 +196,6 @@
                         </a>
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-instructions" onclick="switchMainTab('tab-instructions', this)">
                             <i class="bi bi-card-checklist"></i> Lời dặn
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-payment" onclick="switchMainTab('tab-payment', this)">
-                            <i class="bi bi-credit-card"></i> Thanh toán
                         </a>
                     </nav>
 
@@ -300,11 +316,6 @@
                     <div th:replace="~{doctor/fragments/instructions-tab :: instructionsTab}"></div>
                 </div>
 
-                <!-- TAB 11: THANH TOÁN -->
-                <div class="df-tab-pane" id="tab-payment" style="display: none;">
-                    <div th:replace="~{doctor/fragments/payment-tab :: paymentTab}"></div>
-                </div>
-
             </div>
 
         </main>
@@ -312,8 +323,9 @@
 </div>
 
 <!-- ===================================================================== -->
-<!-- MODALS CHO BAR 3: CHẨN ĐOÁN & ĐIỀU TRỊ (FRAGMENT)                    -->
+<!-- MODALS CHO BAR 2 & BAR 3: CẬN LÂM SÀNG, CHẨN ĐOÁN & ĐIỀU TRỊ         -->
 <!-- ===================================================================== -->
+<div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersModal}"></div>
 <div th:replace="~{doctor/fragments/clinical-treatment :: clinicalTreatmentModals}"></div>
 
 <!-- ========================================================= -->
@@ -432,155 +444,7 @@
     </div>
 </aside>
 
-<!-- ===================================================================== -->
-<!-- MODAL: HOÀN TẤT CA KHÁM & BÀN GIAO THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)    -->
-<!-- ===================================================================== -->
-<div class="modal fade" id="completeExaminationModal" tabindex="-1" aria-labelledby="completeExaminationModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 650px;">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
-            <!-- Modal Header: Chuẩn DentalSoft Dark Navy, đồng bộ, tinh tế -->
-            <div class="modal-header py-2.5 px-3.5 text-white" style="background: #0f172a;">
-                <div class="d-flex align-items-center gap-2.5">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
-                        <i class="bi bi-shield-check fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0 text-white" style="font-size: 15px;" id="completeExaminationModalLabel">Hoàn tất ca khám &amp; Bàn giao thanh toán</h5>
-                        <small class="text-white-50" style="font-size: 11.5px;">Kiểm tra điều kiện lâm sàng &amp; Bàn giao sang Kế toán thu ngân (Người 4)</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
 
-            <!-- Modal Body: Popup gọn gàng, xếp dọc đồng bộ -->
-            <div class="modal-body p-3 bg-light-subtle">
-                <!-- 1. Thông tin Bệnh nhân & Bác sĩ -->
-                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs">
-                    <div class="card-body p-2.5 px-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2.5">
-                                <div class="df-avatar-circle bg-light text-primary fw-bold border" id="cemPatientAvatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 15px;">BN</div>
-                                <div>
-                                    <div class="fw-bold text-dark" style="font-size: 14px;" id="cemPatientName">---</div>
-                                    <div class="text-muted small" style="font-size: 11.5px;">
-                                        Mã KH: <strong class="text-dark" id="cemPatientCode">---</strong> •
-                                        Mã ca: <strong class="text-primary" id="cemVisitCode">---</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <span class="text-secondary small d-block" style="font-size: 11px;">Bác sĩ điều trị</span>
-                                <strong class="text-dark small" id="cemDoctorName">---</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Checklist kiểm tra điều kiện (Xếp dọc gọn gàng, màu đồng đều, chỉ đỏ khi chưa đạt) -->
-                <div class="card border rounded-3 mb-2.5 bg-white shadow-xs">
-                    <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
-                        <span class="fw-bold text-dark small text-uppercase" style="font-size: 11.5px; letter-spacing: 0.3px;">
-                            <i class="bi bi-clipboard2-check text-primary me-1.5"></i>Kiểm tra điều kiện hoàn tất lâm sàng
-                        </span>
-                        <span class="badge px-2.5 py-1 rounded-pill" style="font-size: 11px;" id="cemOverallBadge">Đang kiểm tra...</span>
-                    </div>
-                    <div class="card-body p-2.5 px-3 d-flex flex-column gap-2">
-                        <!-- Điều kiện 1: Chẩn đoán ICD-10 -->
-                        <div class="p-2.5 rounded-3 border bg-white" id="cemDiagCard">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge rounded-circle p-1" id="cemDiagCheckIcon"><i class="bi bi-check-lg"></i></span>
-                                    <strong class="text-dark small">1. Chẩn đoán ICD-10 <span class="text-danger">*</span></strong>
-                                </div>
-                                <span class="badge" id="cemDiagBadge">0 chẩn đoán</span>
-                            </div>
-                            <div id="cemDiagList" class="small text-secondary ps-4">
-                                <!-- Render list of diagnoses -->
-                            </div>
-                            <div id="cemDiagAction" class="mt-2 ps-4" style="display: none;">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small fw-semibold" onclick="jumpToSection('bar-exam')">
-                                    <i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán ICD-10 ngay
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Điều kiện 2: Dịch vụ thực hiện COMPLETED -->
-                        <div class="p-2.5 rounded-3 border bg-white" id="cemSvcCard">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge rounded-circle p-1" id="cemSvcCheckIcon"><i class="bi bi-check-lg"></i></span>
-                                    <strong class="text-dark small">2. Dịch vụ thực hiện (COMPLETED) <span class="text-danger">*</span></strong>
-                                </div>
-                                <span class="badge" id="cemSvcBadge">0 dịch vụ</span>
-                            </div>
-                            <div id="cemSvcList" class="small text-secondary ps-4">
-                                <!-- Render table/list of completed services -->
-                            </div>
-                            <div id="cemSvcAction" class="mt-2 ps-4" style="display: none;">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill small fw-semibold" onclick="jumpToSection('bar-treatment')">
-                                    <i class="bi bi-plus-circle me-1"></i>Thêm dịch vụ điều trị ngay
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Điều kiện 3: Đơn thuốc & Dặn dò -->
-                        <div class="p-2.5 rounded-3 border bg-white d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2 ps-1">
-                                <i class="bi bi-capsule text-primary"></i>
-                                <span class="small text-dark fw-semibold">3. Đơn thuốc &amp; Lời dặn:</span>
-                                <span class="small text-secondary" id="cemPrescriptionStatus">Đang kiểm tra...</span>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none fw-semibold" onclick="jumpToSection('prescriptionsSection')">
-                                Xem đơn thuốc
-                            </button>
-                        </div>
-
-                        <!-- Điều kiện 4: Lịch hẹn tái khám -->
-                        <div class="p-2.5 rounded-3 border bg-white d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2 ps-1">
-                                <i class="bi bi-calendar2-event text-primary"></i>
-                                <span class="small text-dark fw-semibold">4. Lịch hẹn tái khám:</span>
-                                <span class="small text-secondary" id="cemReExamStatus">Đang kiểm tra...</span>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-link text-primary p-0 small text-decoration-none fw-semibold" onclick="openReExamModalFromCompleteModal()">
-                                Đặt lịch hẹn
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. Ghi chú dặn dò bác sĩ & Cảnh báo BR-EMR-02 -->
-                <div class="mb-2.5">
-                    <label class="form-label small fw-bold text-dark mb-1">
-                        <i class="bi bi-chat-text text-secondary me-1"></i>Ghi chú bàn giao / Dặn dò cho Kế toán &amp; Điều dưỡng (Tùy chọn):
-                    </label>
-                    <textarea class="form-control" id="cemDoctorNotes" rows="2" style="font-size: 13px;"
-                              placeholder="Nhập ghi chú xuất hóa đơn, chính sách ưu đãi, hoặc dặn dò bệnh nhân ra viện..."></textarea>
-                </div>
-
-                <div class="alert alert-light border small py-2 px-3 rounded-3 mb-0 d-flex align-items-start gap-2">
-                    <i class="bi bi-shield-lock-fill text-secondary fs-5 flex-shrink-0 mt-0.5"></i>
-                    <div class="text-secondary" style="font-size: 11.5px;">
-                        <strong class="text-dark">Quy tắc bất biến bệnh án (BR-EMR-02):</strong> Khi bấm xác nhận, ca khám sẽ chuyển trạng thái sang <code>WAITING_PAYMENT</code> (Chờ thanh toán) và dữ liệu lâm sàng sẽ được <strong>khóa bất biến</strong>. Bác sĩ có thể sửa/bổ sung sau khi bấm "Mở lại khám".
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="modal-footer bg-white py-2.5 px-3.5 d-flex align-items-center justify-content-between border-top">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-3.5 py-1.5 fw-semibold small" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Hủy bỏ
-                </button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white small"
-                        style="background: #1e40af; border-color: #1e40af;"
-                        id="btnConfirmCompleteClinical" onclick="submitClinicalCompletion()">
-                    <i class="bi bi-check2-circle fs-6"></i>
-                    <span>Xác nhận &amp; Chuyển thanh toán</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- ===================================================================== -->
 <!-- MODAL: HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)                    -->
@@ -609,9 +473,26 @@
 <script id="activeServicesCatalogJson" type="application/json" th:utext="${activeServicesJson != null ? activeServicesJson : '[]'}"></script>
 <script th:inline="javascript">
     const availableServicesCatalog = JSON.parse(document.getElementById('activeServicesCatalogJson')?.textContent || '[]');
+    const isClinicalLockedVal = /*[[${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}]]*/ false;
+    const currentServerVisitId = /*[[${visit != null and visit.visitId != null ? visit.visitId : 1}]]*/ 1;
 
-    let selectedTeeth = new Set();
-    let searchTimeout = null;
+    function getCurrentVisitId() {
+        const vEl = document.getElementById('visitId');
+        if (vEl && vEl.value && Number(vEl.value) > 0) {
+            return Number(vEl.value);
+        }
+        return currentServerVisitId || 1;
+    }
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     // =========================================================================
     // SUBNAV TABS: CHUYỂN ĐỔI TAB NỘI DUNG & CUỘN TỪ TRÊN XUỐNG DƯỚI ĐỘC LẬP
@@ -722,401 +603,8 @@
     }
 
     // BAR 1: Logic khám tổng quát đã tách sang doctor/fragments/general-examination.html
-
-    let clinicalOrdersList = [];
-
-    function addClinicalOrder(orderName, region, type) {
-        const orderId = 'CĐ' + (1000 + clinicalOrdersList.length + 1);
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-        clinicalOrdersList.push({
-            id: orderId,
-            name: orderName,
-            region: region || 'Toàn hàm',
-            doctor: 'BS. CK1 Lê Hoàng Nam',
-            time: timeStr,
-            status: 'PENDING'
-        });
-
-        renderClinicalOrders();
-        showToast(`Đã thêm chỉ định: ${orderName}`);
-    }
-
-    function quickAddOrderPrompt() {
-        const name = prompt('Nhập tên chỉ định cận lâm sàng (Ví dụ: Chụp CT ConeBeam 3D, Chụp Panorama, Xét nghiệm máu):', 'Chụp X-quang quanh chóp');
-        if (!name) return;
-        const region = prompt('Vị trí răng hoặc vùng chụp (Ví dụ: R16, Hàm trên, Toàn hàm):', 'R16');
-        addClinicalOrder(name, region || 'Toàn hàm', 'OTHER');
-    }
-
-    function renderClinicalOrders() {
-        const tbody = document.getElementById('clinicalOrdersTableBody');
-        const badge = document.getElementById('ordersCountBadge');
-        if (!tbody) return;
-
-        if (badge) badge.innerText = `${clinicalOrdersList.length} chỉ định`;
-
-        if (clinicalOrdersList.length === 0) {
-            tbody.innerHTML = `
-                <tr id="emptyOrdersRow">
-                    <td colspan="7" class="text-center py-4 text-muted">
-                        <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        let rowsHtml = '';
-        clinicalOrdersList.forEach((ord, idx) => {
-            const isDone = ord.status === 'COMPLETED';
-            rowsHtml += `
-                <tr>
-                    <td><span class="badge bg-light text-dark border fw-bold">${ord.id}</span></td>
-                    <td><strong class="text-dark">${ord.name}</strong></td>
-                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${ord.region}</span></td>
-                    <td><div class="small fw-semibold text-dark">${ord.doctor}</div></td>
-                    <td><span class="small text-muted">${ord.time}</span></td>
-                    <td class="text-center">
-                        <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
-                            ${isDone ? 'Đã có kết quả' : 'Chờ thực hiện'}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
-                                    title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
-                                    onclick="toggleOrderStatus(${idx})">
-                                <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                    title="Xóa chỉ định này"
-                                    onclick="deleteOrder(${idx})">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = rowsHtml;
-    }
-
-    function toggleOrderStatus(idx) {
-        if (clinicalOrdersList[idx]) {
-            clinicalOrdersList[idx].status = clinicalOrdersList[idx].status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
-            renderClinicalOrders();
-            showToast('Đã cập nhật trạng thái chỉ định cận lâm sàng!');
-        }
-    }
-
-    function deleteOrder(idx) {
-        if (confirm('Bạn có chắc muốn xóa chỉ định này?')) {
-            clinicalOrdersList.splice(idx, 1);
-            renderClinicalOrders();
-            showToast('Đã xóa chỉ định.');
-        }
-    }
-
-    // 1. Lọc danh sách bệnh lý thường gặp
-    function filterCommonDiseasesList(keyword) {
-        const term = (keyword || '').toLowerCase().trim();
-        const rows = document.querySelectorAll('#commonDiseasesListBody tr');
-        rows.forEach(row => {
-            const code = (row.getAttribute('data-code') || '').toLowerCase();
-            const name = (row.getAttribute('data-name') || '').toLowerCase();
-            const en = (row.getAttribute('data-en') || '').toLowerCase();
-            if (code.includes(term) || name.includes(term) || en.includes(term)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    // 2. Chọn 1 chạm từ danh sách bệnh lý thường gặp
-    function selectFromCommonList(rowEl) {
-        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
-        rowEl.classList.add('is-selected');
-
-        const code = rowEl.getAttribute('data-code');
-        const name = rowEl.getAttribute('data-name');
-        const en = rowEl.getAttribute('data-en');
-
-        selectIcd({
-            icd10Code: code,
-            diseaseNameVi: name,
-            diseaseNameEn: en
-        });
-    }
-
-    // 3. Autocomplete tra cứu ICD-10
-    function onIcdInput(query) {
-        clearTimeout(searchTimeout);
-        const listEl = document.getElementById('autocompleteList');
-
-        if (!query || query.trim().length === 0) {
-            listEl.style.display = 'none';
-            return;
-        }
-
-        searchTimeout = setTimeout(() => {
-            fetch(`/api/v1/icd10/search?q=${encodeURIComponent(query.trim())}`)
-                .then(res => res.json())
-                .then(data => {
-                    listEl.innerHTML = '';
-                    if (!data || data.length === 0) {
-                        listEl.innerHTML = '<div class="p-3 text-muted small text-center">Không tìm thấy mã bệnh phù hợp.</div>';
-                        listEl.style.display = 'block';
-                        return;
-                    }
-
-                    data.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'autocomplete-item';
-                        div.innerHTML = `
-                            <div>
-                                <span class="badge bg-primary-subtle text-primary border me-1">${item.icd10Code}</span>
-                                <span class="item-title">${item.diseaseNameVi}</span>
-                                ${item.diseaseNameEn ? `<div class="item-sub">${item.diseaseNameEn}</div>` : ''}
-                            </div>
-                            <span class="text-primary small"><i class="bi bi-check2-circle"></i> Chọn</span>
-                        `;
-                        div.onclick = () => selectIcd(item);
-                        listEl.appendChild(div);
-                    });
-                    listEl.style.display = 'block';
-                })
-                .catch(err => {
-                    console.error('Lỗi tìm kiếm ICD-10: ', err);
-                });
-        }, 250);
-    }
-
-    function selectIcd(item) {
-        document.getElementById('selectedIcd10Code').value = item.icd10Code;
-        document.getElementById('icdSearchInput').value = `${item.icd10Code} - ${item.diseaseNameVi}`;
-        document.getElementById('autocompleteList').style.display = 'none';
-
-        // Hiện badge đã chọn
-        document.getElementById('selectedBadgeCode').innerText = item.icd10Code;
-        document.getElementById('selectedBadgeName').innerText = item.diseaseNameVi;
-        document.getElementById('selectedBadgeBox').classList.remove('d-none');
-    }
-
-    function clearSelectedIcd() {
-        document.getElementById('selectedIcd10Code').value = '';
-        document.getElementById('icdSearchInput').value = '';
-        document.getElementById('selectedBadgeBox').classList.add('d-none');
-        document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
-        document.getElementById('icdSearchInput').focus();
-    }
-
-    // Đóng autocomplete khi click ngoài
-    document.addEventListener('click', function(e) {
-        const wrapper = document.querySelector('.autocomplete-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) {
-            document.getElementById('autocompleteList').style.display = 'none';
-        }
-    });
-
-    // 4. Quản lý chọn răng FDI
-    function toggleTooth(toothNumber) {
-        if (selectedTeeth.has(toothNumber)) {
-            selectedTeeth.delete(toothNumber);
-        } else {
-            selectedTeeth.add(toothNumber);
-        }
-        updateToothUI();
-    }
-
-    function setQuickTeeth(type) {
-        selectedTeeth.clear();
-        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
-        document.getElementById('toothNumbersInput').value = type;
-    }
-
-    function clearTeethSelection() {
-        selectedTeeth.clear();
-        document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('is-selected'));
-        document.getElementById('toothNumbersInput').value = '';
-    }
-
-    function updateToothUI() {
-        document.querySelectorAll('.tooth-btn').forEach(btn => {
-            const num = parseInt(btn.innerText);
-            if (selectedTeeth.has(num)) {
-                btn.classList.add('is-selected');
-            } else {
-                btn.classList.remove('is-selected');
-            }
-        });
-
-        if (selectedTeeth.size > 0) {
-            const sorted = Array.from(selectedTeeth).sort((a,b) => a - b);
-            document.getElementById('toothNumbersInput').value = sorted.join(', ');
-        } else {
-            document.getElementById('toothNumbersInput').value = '';
-        }
-    }
-
-    // 5. Gửi chẩn đoán qua AJAX
-    function submitDiagnosis(e) {
-        e.preventDefault();
-        const visitId = document.getElementById('visitId').value;
-        const icd10Code = document.getElementById('selectedIcd10Code').value;
-        const rawSearch = document.getElementById('icdSearchInput').value;
-
-        const finalCode = icd10Code || (rawSearch.includes(' - ') ? rawSearch.split(' - ')[0].trim() : rawSearch.trim());
-        if (!finalCode) {
-            showToast('Vui lòng chọn hoặc nhập mã bệnh ICD-10!', true);
-            return;
-        }
-
-        const typeInput = document.querySelector('input[name="diagnosisType"]:checked');
-        const diagnosisType = typeInput ? typeInput.value : 'MAIN';
-        const toothNumbers = document.getElementById('toothNumbersInput').value;
-        const notes = document.getElementById('notesInput').value;
-
-        const payload = {
-            visitId: parseInt(visitId),
-            icd10Code: finalCode,
-            diagnosisType: diagnosisType,
-            toothNumbers: toothNumbers,
-            notes: notes
-        };
-
-        const btn = document.getElementById('btnSubmitDiagnosis');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
-
-        fetch('/api/v1/diagnoses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(err => { throw new Error(err.error || 'Có lỗi xảy ra'); });
-            }
-            return res.json();
-        })
-        .then(saved => {
-            showToast(`Đã thêm chẩn đoán ${saved.icd10Code} thành công!`);
-            addDiagnosisRowToTable(saved);
-            resetForm();
-        })
-        .catch(err => {
-            showToast(err.message, true);
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-lg"></i> Lưu chẩn đoán';
-        });
-    }
-
-    // 6. Xóa chẩn đoán
-    function deleteDiagnosis(diagId) {
-        if (!confirm('Bạn có chắc chắn muốn xóa chẩn đoán này khỏi ca khám?')) {
-            return;
-        }
-
-        fetch(`/api/v1/diagnoses/${diagId}`, {
-            method: 'DELETE'
-        })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(err => { throw new Error(err.error || 'Không thể xóa'); });
-            }
-            return res.json();
-        })
-        .then(data => {
-            showToast('Đã xóa chẩn đoán thành công!');
-            const row = document.getElementById(`diag-row-${diagId}`);
-            if (row) {
-                row.remove();
-            }
-            updateTableCount();
-        })
-        .catch(err => {
-            showToast(err.message, true);
-        });
-    }
-
-    function addDiagnosisRowToTable(d) {
-        const emptyRow = document.getElementById('emptyRow');
-        if (emptyRow) {
-            emptyRow.remove();
-        }
-
-        let badgeHtml = '';
-        if (d.diagnosisType === 'MAIN') {
-            badgeHtml = '<span class="badge-main"><i class="bi bi-star-fill me-1"></i>Chính</span>';
-        } else if (d.diagnosisType === 'SECONDARY') {
-            badgeHtml = '<span class="badge-secondary"><i class="bi bi-plus-circle me-1"></i>Kèm theo</span>';
-        } else {
-            badgeHtml = '<span class="badge-diff"><i class="bi bi-question-circle me-1"></i>Phân biệt</span>';
-        }
-
-        const toothDisplay = d.toothNumbers ? ('R-' + d.toothNumbers) : 'Toàn hàm';
-        const notesDisplay = d.notes ? d.notes : '-';
-
-        const tbody = document.getElementById('diagnosesTableBody');
-        const tr = document.createElement('tr');
-        tr.id = `diag-row-${d.diagnosisId}`;
-        tr.innerHTML = `
-            <td><strong class="text-dark">${toothDisplay}</strong></td>
-            <td><span class="df-list-code">${d.icd10Code}</span></td>
-            <td>
-                <div class="fw-bold text-dark">${d.diagnosisText}</div>
-                ${d.diseaseNameEn ? `<div class="small text-muted">${d.diseaseNameEn}</div>` : ''}
-            </td>
-            <td>${badgeHtml}</td>
-            <td><span class="text-secondary small">${notesDisplay}</span></td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Xóa" onclick="deleteDiagnosis(${d.diagnosisId})">
-                    <i class="bi bi-trash3-fill"></i>
-                </button>
-            </td>
-        `;
-
-        if (d.diagnosisType === 'MAIN') {
-            tbody.insertBefore(tr, tbody.firstChild);
-        } else {
-            tbody.appendChild(tr);
-        }
-
-        updateTableCount();
-    }
-
-    function updateTableCount() {
-        const rows = document.querySelectorAll('#diagnosesTableBody tr:not(#emptyRow)');
-        const count = rows.length;
-        document.getElementById('totalCountBadge').innerText = `${count} chẩn đoán`;
-
-        if (count === 0) {
-            document.getElementById('diagnosesTableBody').innerHTML = `
-                <tr id="emptyRow">
-                    <td colspan="6">
-                        <div class="df-no-data">
-                            <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
-                            <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
-                            <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('diagnosisForm').reset();
-        clearSelectedIcd();
-        clearTeethSelection();
-        document.querySelector('input[name="diagnosisType"][value="MAIN"]').checked = true;
-    }
+    // BAR 2: Logic cận lâm sàng đã tách sang doctor/fragments/paraclinical-orders.html
+    // BAR 3: Logic chẩn đoán ICD-10, sơ đồ răng FDI, dịch vụ thực hiện & đơn thuốc đã tách sang doctor/fragments/clinical-treatment.html
 
     function showToast(message, isError = false) {
         const toastEl = document.getElementById('liveToast');
@@ -1565,276 +1053,8 @@
     // NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)
     // Quy tắc BR-EMR-02 (Khóa bệnh án lâm sàng) & BR-SVC-01 (Bàn giao dịch vụ COMPLETED)
     // =====================================================================
-    let currentCompletionCheckData = null;
-
-    function setCemText(id, val) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = (val !== null && val !== undefined) ? val : '';
-    }
-
-    async function openCompleteExaminationModal(visitId) {
-        const targetVisitId = visitId || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
-        if (!targetVisitId) {
-            alert('Không xác định được mã ca khám!');
-            return;
-        }
-
-        const modalEl = document.getElementById('completeExaminationModal');
-        if (!modalEl) return;
-
-        // Reset modal state
-        const overallBadge = document.getElementById('cemOverallBadge');
-        if (overallBadge) {
-            overallBadge.className = 'badge bg-secondary-subtle text-secondary border px-2.5 py-1 rounded-pill';
-            overallBadge.textContent = 'Đang kiểm tra...';
-        }
-        const diagList = document.getElementById('cemDiagList');
-        if (diagList) diagList.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Đang tải dữ liệu chẩn đoán...</div>';
-        const svcList = document.getElementById('cemSvcList');
-        if (svcList) svcList.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Đang tải dữ liệu dịch vụ...</div>';
-        const diagAction = document.getElementById('cemDiagAction');
-        if (diagAction) diagAction.style.display = 'none';
-        const svcAction = document.getElementById('cemSvcAction');
-        if (svcAction) svcAction.style.display = 'none';
-        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
-        if (confirmBtn) confirmBtn.disabled = true;
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        try {
-            const res = await fetch(`/api/doctor/visits/${targetVisitId}/completion-check`);
-            if (!res.ok) {
-                throw new Error('Không thể tải dữ liệu kiểm tra điều kiện ca khám.');
-            }
-            const data = await res.json();
-            currentCompletionCheckData = data;
-            renderCompletionCheckModal(data);
-        } catch (err) {
-            console.error('Error fetching completion check:', err);
-            if (overallBadge) {
-                overallBadge.className = 'badge bg-danger-subtle text-danger border border-danger px-2.5 py-1 rounded-pill';
-                overallBadge.textContent = 'Lỗi kết nối';
-            }
-            if (diagList) {
-                diagList.innerHTML = `<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>${err.message}</div>`;
-            }
-        }
-    }
-
-    function renderCompletionCheckModal(data) {
-        // Patient & Doctor Overview
-        setCemText('cemPatientName', data.patientName || '---');
-        setCemText('cemPatientCode', data.patientCode || '---');
-        setCemText('cemVisitCode', data.visitCode || ('VIS#' + data.visitId));
-        setCemText('cemDoctorName', data.doctorName || '---');
-        const avatar = document.getElementById('cemPatientAvatar');
-        if (avatar && data.patientName) {
-            avatar.textContent = data.patientName.trim().substring(0, 1).toUpperCase();
-        }
-
-        // 1. Chẩn đoán ICD-10 (Đồng đều màu, chỉ đỏ khi chưa đạt)
-        const diagCard = document.getElementById('cemDiagCard');
-        const diagBadge = document.getElementById('cemDiagBadge');
-        const diagIcon = document.getElementById('cemDiagCheckIcon');
-        const diagList = document.getElementById('cemDiagList');
-        const diagAction = document.getElementById('cemDiagAction');
-
-        if (data.hasDiagnosis) {
-            if (diagBadge) {
-                diagBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1';
-                diagBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Đạt (${data.diagnosisCount} chẩn đoán)`;
-            }
-            if (diagIcon) {
-                diagIcon.className = 'badge bg-success text-white rounded-circle p-1';
-                diagIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
-            }
-            if (diagCard) diagCard.className = 'p-2.5 rounded-3 border bg-white';
-            if (diagAction) diagAction.style.display = 'none';
-
-            let diagHtml = '<ul class="list-unstyled mb-0 d-flex flex-column gap-1.5 mt-1">';
-            (data.diagnoses || []).forEach(d => {
-                const typeBadge = d.diagnosisType === 'MAIN'
-                    ? '<span class="badge bg-primary text-white" style="font-size: 10px;">Chính</span>'
-                    : '<span class="badge bg-secondary text-white" style="font-size: 10px;">Kèm theo</span>';
-                diagHtml += `
-                    <li class="d-flex align-items-center justify-content-between py-1 border-bottom border-light">
-                        <div>
-                            <strong class="text-primary">${d.icd10Code}</strong>:
-                            <span class="text-dark fw-medium">${d.diseaseName}</span>
-                            <span class="text-muted ms-1">(${d.toothNumbers || 'Toàn hàm'})</span>
-                        </div>
-                        <div>${typeBadge}</div>
-                    </li>
-                `;
-            });
-            diagHtml += '</ul>';
-            if (diagList) diagList.innerHTML = diagHtml;
-        } else {
-            if (diagBadge) {
-                diagBadge.className = 'badge bg-danger text-white rounded-pill px-2.5 py-1';
-                diagBadge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Chưa đạt (0 chẩn đoán)';
-            }
-            if (diagIcon) {
-                diagIcon.className = 'badge bg-danger text-white rounded-circle p-1';
-                diagIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
-            }
-            if (diagCard) diagCard.className = 'p-2.5 rounded-3 border border-danger-subtle bg-white';
-            if (diagList) {
-                diagList.innerHTML = '<div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có chẩn đoán ICD-10. Bác sĩ bắt buộc phải xác định chẩn đoán bệnh trước khi hoàn tất ca khám và chuyển thanh toán.</div>';
-            }
-            if (diagAction) diagAction.style.display = 'block';
-        }
-
-        // 2. Dịch vụ thực hiện (COMPLETED - Đồng đều màu, chỉ đỏ khi chưa đạt)
-        const svcCard = document.getElementById('cemSvcCard');
-        const svcBadge = document.getElementById('cemSvcBadge');
-        const svcIcon = document.getElementById('cemSvcCheckIcon');
-        const svcList = document.getElementById('cemSvcList');
-        const svcAction = document.getElementById('cemSvcAction');
-
-        if (data.hasCompletedServices) {
-            if (svcBadge) {
-                svcBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1';
-                svcBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Đạt (${data.completedServiceCount} dịch vụ)`;
-            }
-            if (svcIcon) {
-                svcIcon.className = 'badge bg-success text-white rounded-circle p-1';
-                svcIcon.innerHTML = '<i class="bi bi-check-lg"></i>';
-            }
-            if (svcCard) svcCard.className = 'p-2.5 rounded-3 border bg-white';
-            if (svcAction) svcAction.style.display = 'none';
-
-            let svcHtml = '<div class="table-responsive mt-1"><table class="table table-sm table-borderless mb-0" style="font-size: 12px;"><thead class="text-muted border-bottom"><tr><th>Dịch vụ</th><th>Răng</th><th class="text-center">SL</th><th class="text-end">Thành tiền</th></tr></thead><tbody>';
-            (data.services || []).forEach(s => {
-                const priceStr = Number(s.finalPrice || 0).toLocaleString('vi-VN') + ' đ';
-                svcHtml += `
-                    <tr>
-                        <td><strong>${s.serviceName}</strong></td>
-                        <td>${s.toothNumbers || '---'}</td>
-                        <td class="text-center">${s.quantity || 1}</td>
-                        <td class="text-end fw-bold text-primary">${priceStr}</td>
-                    </tr>
-                `;
-            });
-            svcHtml += '</tbody></table></div>';
-            if (svcList) svcList.innerHTML = svcHtml;
-        } else {
-            if (svcBadge) {
-                svcBadge.className = 'badge bg-danger text-white rounded-pill px-2.5 py-1';
-                svcBadge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Chưa đạt (0 dịch vụ)';
-            }
-            if (svcIcon) {
-                svcIcon.className = 'badge bg-danger text-white rounded-circle p-1';
-                svcIcon.innerHTML = '<i class="bi bi-x-lg"></i>';
-            }
-            if (svcCard) svcCard.className = 'p-2.5 rounded-3 border border-danger-subtle bg-white';
-            if (svcList) {
-                svcList.innerHTML = '<div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa có dịch vụ nào hoàn thành (COMPLETED). Kế toán cần ít nhất 01 dịch vụ hoàn thành để xuất hóa đơn và thu tiền (BR-SVC-01).</div>';
-            }
-            if (svcAction) svcAction.style.display = 'block';
-        }
-
-        // 3. Đơn thuốc (Tùy chọn)
-        const prescStatus = document.getElementById('cemPrescriptionStatus');
-        if (prescStatus) {
-            if (data.hasPrescription) {
-                prescStatus.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Đã kê ${data.prescriptionCount} đơn thuốc</span>`;
-            } else {
-                prescStatus.innerHTML = '<span class="text-muted small fst-italic">Chưa kê đơn thuốc (Tùy chọn)</span>';
-            }
-        }
-
-        // 4. Lịch hẹn tái khám
-        const reExamStatus = document.getElementById('cemReExamStatus');
-        if (reExamStatus) {
-            if (data.hasReExamination) {
-                reExamStatus.innerHTML = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Đã có ${data.reExaminationCount} lịch hẹn</span>`;
-            } else {
-                reExamStatus.innerHTML = '<span class="text-muted fst-italic">Chưa đặt lịch hẹn tái khám</span>';
-            }
-        }
-
-        // Overall status & Submit button
-        const overallBadge = document.getElementById('cemOverallBadge');
-        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
-
-        if (data.ready) {
-            if (overallBadge) {
-                overallBadge.className = 'badge bg-success text-white px-3 py-1.5 rounded-pill';
-                overallBadge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Đủ điều kiện hoàn tất';
-            }
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.className = 'btn btn-primary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm text-white';
-                confirmBtn.style.background = '#1e40af';
-                confirmBtn.style.borderColor = '#1e40af';
-            }
-        } else {
-            if (overallBadge) {
-                overallBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill';
-                overallBadge.innerHTML = '<i class="bi bi-exclamation-octagon-fill me-1"></i>Chưa đủ điều kiện';
-            }
-            if (confirmBtn) {
-                confirmBtn.disabled = true;
-                confirmBtn.className = 'btn btn-secondary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 text-white';
-                confirmBtn.style.background = '';
-                confirmBtn.style.borderColor = '';
-            }
-        }
-    }
-
-    async function submitClinicalCompletion() {
-        if (!currentCompletionCheckData || !currentCompletionCheckData.visitId) {
-            alert('Không tìm thấy thông tin ca khám!');
-            return;
-        }
-
-        const confirmBtn = document.getElementById('btnConfirmCompleteClinical');
-        if (confirmBtn) {
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang xử lý...';
-        }
-
-        const doctorNotes = document.getElementById('cemDoctorNotes')?.value || '';
-
-        try {
-            const res = await fetch(`/api/doctor/visits/${currentCompletionCheckData.visitId}/complete-clinical`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ doctorNotes: doctorNotes })
-            });
-
-            const result = await res.json();
-            if (res.ok && result.success) {
-                const modalEl = document.getElementById('completeExaminationModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-
-                if (typeof showToast === 'function') {
-                    showToast('✓ Hoàn tất ca khám & Bàn giao Kế toán thành công! Bệnh án đã được khóa (BR-EMR-02).');
-                } else {
-                    alert('✓ Hoàn tất ca khám & Bàn giao Kế toán thành công! Bệnh án đã được khóa (BR-EMR-02).');
-                }
-
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                alert('Không thể hoàn tất ca khám: ' + (result.message || 'Lỗi không xác định'));
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i><span>Xác nhận &amp; Chuyển thanh toán</span>';
-                }
-            }
-        } catch (err) {
-            console.error('Error submitting completion:', err);
-            alert('Lỗi kết nối: ' + err.message);
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i><span>Xác nhận &amp; Chuyển thanh toán</span>';
-            }
-        }
+    function openCompleteExaminationModal(visitId) {
+        confirmDirectHandover(visitId);
     }
 
     async function reopenClinicalExamination(visitId) {
@@ -1868,44 +1088,88 @@
         }
     }
 
+    async function confirmDirectHandover(visitId) {
+        const targetVisitId = visitId || getCurrentExamVisitId() || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+        if (!targetVisitId) {
+            alert('Không tìm thấy thông tin ca khám.');
+            return;
+        }
+
+        const notesInput = document.getElementById('paymentHandoverNotes');
+        const doctorNotes = notesInput ? notesInput.value.trim() : '';
+
+        if (!confirm('Xác nhận Hoàn tất khám & chuyển ca khám sang hàng chờ của Kế toán?\n\n• Toàn bộ Giá dự kiến của Kế hoạch điều trị, Dịch vụ thực hiện và Đơn thuốc (Tạm tính) sẽ được gửi sang Kế toán xử lý.\n• Bệnh án lâm sàng sẽ được khóa bất biến theo quy tắc BR-EMR-02.')) {
+            return;
+        }
+
+        const btn = document.getElementById('btnDirectHandover');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang chuyển Kế toán...';
+        }
+
+        try {
+            const res = await fetch(`/api/doctor/visits/${targetVisitId}/complete-clinical`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doctorNotes: doctorNotes })
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                if (typeof showToast === 'function') {
+                    showToast('✓ ' + (result.message || 'Đã hoàn tất khám và chuyển thông tin giá dự kiến sang Kế toán thành công!'));
+                } else {
+                    alert('✓ ' + (result.message || 'Đã hoàn tất khám và chuyển thông tin giá dự kiến sang Kế toán thành công!'));
+                }
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Không thể hoàn tất khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng trước khi chuyển Kế toán.'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám (Chuyển Kế toán)</span>';
+                }
+            }
+        } catch (err) {
+            console.error('Error completing clinical exam:', err);
+            alert('Lỗi kết nối khi bàn giao: ' + err.message);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám (Chuyển Kế toán)</span>';
+            }
+        }
+    }
+
     function jumpToSection(sectionId) {
         const modalEl = document.getElementById('completeExaminationModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
 
-        if (sectionId === 'bar-exam') {
+        if (sectionId === 'bar-exam' || sectionId === 'tab-examination') {
             switchMainTab('tab-examination');
-            const content = document.getElementById('content-exam');
-            if (content && content.style.display === 'none') {
-                if (typeof toggleMainBar === 'function') toggleMainBar('exam');
-            }
-            setTimeout(() => {
-                document.getElementById('bar-treatment')?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        } else if (sectionId === 'bar-treatment') {
+        } else if (sectionId === 'bar-treatment' || sectionId === 'tab-performed-services') {
             switchMainTab('tab-performed-services');
-            setTimeout(() => {
-                document.getElementById('performedServicesSection')?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
         } else if (sectionId === 'prescriptionsSection' || sectionId === 'tab-prescriptions') {
             switchMainTab('tab-prescriptions');
-            setTimeout(() => {
-                document.getElementById('prescriptionsSection')?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
         } else if (sectionId === 'treatmentPlanSection' || sectionId === 'tab-treatment-plan') {
             switchMainTab('tab-treatment-plan');
-            setTimeout(() => {
-                document.getElementById('treatmentPlanSection')?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
         } else if (sectionId === 'tab-appointments') {
             switchMainTab('tab-appointments');
+        } else if (sectionId === 'tab-payment') {
+            switchMainTab('tab-payment');
         }
     }
 
     function openReExamModalFromCompleteModal() {
         const modalEl = document.getElementById('completeExaminationModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
         if (typeof openReExamModal === 'function') openReExamModal();
     }
 </script>
