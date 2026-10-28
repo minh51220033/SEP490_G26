@@ -8,8 +8,8 @@
 <div th:fragment="treatmentPlanSection">
     <div class="df-plan-card" id="treatmentPlanSection">
         <div class="df-plan-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div class="df-plan-title-box">
-                <h3 class="df-plan-title">
+            <div class="df-plan-title-box d-flex flex-wrap align-items-center gap-2">
+                <h3 class="df-plan-title mb-0">
                     <i class="bi bi-diagram-3-fill text-info"></i>
                     <span>Kế hoạch &amp; Lộ trình điều trị (FT15)</span>
                 </h3>
@@ -17,48 +17,20 @@
                       th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' kế hoạch'">
                     0 kế hoạch
                 </span>
+                <span class="badge bg-info-subtle text-primary border border-primary-subtle px-2.5 py-1.5 rounded-pill fw-semibold small"
+                      title="Bác sĩ lập kế hoạch kèm giá dự kiến — Bộ phận Kế toán sẽ tiếp nhận để tư vấn tài chính và thu tiền">
+                    <i class="bi bi-send-check-fill me-1"></i>Giá dự kiến tự động đồng bộ sang Kế toán xử lý
+                </span>
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="df-btn-add-plan" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">
+                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-plan" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">
                     <i class="bi bi-stars"></i>
                     <span>+ Lập kế hoạch (AI Assistant)</span>
                 </button>
-
-                <!-- NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (CHUYỂN SANG KẾ HOẠCH ĐIỀU TRỊ) -->
-                <div id="clinicalCompletionActionWrapper" class="d-inline-flex align-items-center gap-2">
-                    <th:block th:if="${visit != null and visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
-                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                            <i class="bi bi-hourglass-split text-warning"></i>
-                            <span>Chờ thanh toán (Đã khóa BR-EMR-02)</span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
-                                th:data-visit-id="${visit.visitId}"
-                                onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
-                                title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
-                            <i class="bi bi-unlock text-secondary"></i>
-                            <span>Mở lại khám</span>
-                        </button>
-                    </th:block>
-
-                    <th:block th:if="${visit != null and visit.status != null and visit.status.name() == 'COMPLETED'}">
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                            <i class="bi bi-check-circle-fill text-success"></i>
-                            <span>Đã hoàn tất &amp; Thu tiền</span>
-                        </span>
-                    </th:block>
-
-                    <th:block th:if="${visit != null and (visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED'))}">
-                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white"
-                                th:data-visit-id="${visit.visitId}"
-                                onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
-                                id="btnCompleteExamination"
-                                title="Bác sĩ khám xong bấm nút này để hệ thống kiểm tra điều kiện (ICD-10, dịch vụ COMPLETED), khóa bệnh án BR-EMR-02 và bàn giao sang Kế toán">
-                            <i class="bi bi-check2-circle fs-6"></i>
-                            <span>Hoàn tất ca khám &amp; Chuyển thanh toán</span>
-                        </button>
-                    </th:block>
-                </div>
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                    <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
+                </span>
 
                 <!-- NÚT HẸN TÁI KHÁM -->
                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-xs"
@@ -80,7 +52,7 @@
                     <th>Tên phác đồ / Kế hoạch điều trị</th>
                     <th style="width: 180px;">Thời gian thực hiện</th>
                     <th style="width: 180px;">Tiến độ các giai đoạn</th>
-                    <th style="width: 140px;" class="text-end">Dự toán chi phí</th>
+                    <th style="width: 170px;" class="text-end">Giá dự kiến (Tạm tính)</th>
                     <th style="width: 150px;" class="text-center">Trạng thái</th>
                     <th style="width: 110px;" class="text-center">Thao tác</th>
                 </tr>
@@ -127,10 +99,13 @@
                         </div>
                     </td>
                     <td class="text-end">
-                        <strong class="text-primary fs-6"
+                        <strong class="text-primary fs-6 d-block"
                                 th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                             15.500.000 đ
                         </strong>
+                        <span class="text-muted" style="font-size: 11px;">
+                            <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán
+                        </span>
                     </td>
                     <td class="text-center" th:id="'plan-status-cell-' + ${plan.planId}">
                         <!-- DROPDOWN ĐỔI TRẠNG THÁI TRỰC TIẾP (THAY THẾ POPUP PROMPT CŨ) -->
@@ -240,7 +215,7 @@
                                         Mô tả chi tiết
                                     </div>
 
-                                    <!-- BẢNG CÁC BƯỚC THỰC HIỆN LÂM SÀNG (CHỈ HIỆN BƯỚC LÀM, KHÔNG TÍNH TIỀN TỪNG BƯỚC) -->
+                                    <!-- BẢNG CÁC BƯỚC THỰC HIỆN LÂM SÀNG & GIÁ DỰ KIẾN TỪNG BƯỚC -->
                                     <div class="table-responsive bg-white rounded-3 border">
                                         <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
                                             <thead class="table-light">
@@ -249,13 +224,14 @@
                                                     <th>Tên bước thực hiện / Quy trình thủ thuật</th>
                                                     <th style="width: 95px;" class="text-center">Vị trí răng</th>
                                                     <th style="width: 65px;" class="text-center">SL</th>
-                                                    <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
-                                                    <th style="width: 200px;" class="text-center">Trạng thái &amp; Thao tác</th>
+                                                    <th style="width: 140px;" class="text-end">Giá dự kiến (đ)</th>
+                                                    <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
+                                                    <th style="width: 195px;" class="text-center">Trạng thái &amp; Thao tác</th>
                                                 </tr>
                                             </thead>
                                             <tbody th:id="'stage-items-body-' + ${st.stageId}">
                                                 <tr th:if="${st.items == null or st.items.isEmpty()}">
-                                                    <td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td>
+                                                    <td colspan="7" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td>
                                                 </tr>
                                                 <tr th:each="it, itStat : ${st.items}" th:id="'item-row-' + ${it.planItemId}">
                                                     <td class="text-center text-muted" th:text="${itStat.index + 1}">1</td>
@@ -268,6 +244,9 @@
                                                         <span class="text-muted" th:unless="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}">-</span>
                                                     </td>
                                                     <td class="text-center fw-bold" th:text="${it.quantity}">1</td>
+                                                    <td class="text-end">
+                                                        <strong class="text-primary" th:text="${it.totalPrice != null ? #numbers.formatDecimal(it.totalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : (it.estimatedPrice != null ? #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ')}">0 đ</strong>
+                                                    </td>
                                                     <td class="text-center small" th:id="'item-completed-cell-' + ${it.planItemId}">
                                                         <span class="badge bg-success-subtle text-success border" th:if="${it.completedAt != null}">
                                                             <i class="bi bi-check-circle-fill me-1"></i><span th:text="${it.completedAt}">11:20 22/10</span>
@@ -337,20 +316,20 @@
                         <input type="hidden" id="planPatientId" th:value="${patient != null ? patient.profileId : null}">
                         <input type="hidden" id="planBranchId" th:value="${visit.branch != null ? visit.branch.branchId : 1}">
 
-                        <!-- 1. HỘP TRỢ LÝ AI BÓC TÁCH PHÁC ĐỒ (GEMINI 3.5 FLASH) -->
+                        <!-- 1. HỘP TRỢ LÝ AI BÓC TÁCH PHÁC ĐỒ (CHUẨN BRAND DỰ ÁN) -->
                         <div class="df-ai-assistant-card">
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="df-ai-badge">
-                                        <i class="bi bi-stars"></i> Trợ lý AI Bóc Tách Phác Đồ
+                                        <i class="bi bi-cpu me-1"></i>Trợ lý AI bóc tách phác đồ
                                     </span>
-                                    <span class="badge bg-white text-primary border fw-semibold small">Gemini 3.5 Flash</span>
+                                    <span class="badge bg-white text-primary border border-primary-subtle fw-semibold small">Gemini 3.5 Flash</span>
                                 </div>
                                 <small class="text-secondary fw-semibold">
-                                    <i class="bi bi-book me-1"></i>Hỗ trợ đọc tài liệu "Kỹ thuật Răng-Hàm-Mặt - Bộ Y Tế"
+                                    <i class="bi bi-book me-1"></i>Hỗ trợ đọc tài liệu Kỹ thuật Răng - Hàm - Mặt Bộ Y Tế
                                 </small>
                             </div>
-                            <p class="text-muted small mb-2">
+                            <p class="text-secondary small mb-2">
                                 Bác sĩ có thể <strong>dán văn bản kỹ thuật</strong> hoặc <strong>tải ảnh chụp tài liệu / bệnh án</strong>. AI sẽ tự động phân tích cấu trúc, chia các giai đoạn (Stages) và điền các bước thủ thuật tương ứng vào kế hoạch!
                             </p>
                             <div class="row g-2 align-items-end">
@@ -358,54 +337,55 @@
                                     <label class="form-label small fw-bold text-dark mb-1">
                                         <i class="bi bi-file-text me-1"></i>Nội dung kỹ thuật y khoa / Ghi chú phác đồ
                                     </label>
-                                    <textarea class="form-control form-control-sm" id="aiMedicalTextInput" rows="2"
+                                    <textarea class="form-control form-control-sm border-secondary-subtle" id="aiMedicalTextInput" rows="2"
                                               placeholder="Dán đoạn văn bản kỹ thuật từ tài liệu (VD: Các bước cấy ghép Implant đơn lẻ, niềng răng, cầu răng sứ...)"></textarea>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label small fw-bold text-dark mb-1">
                                         <i class="bi bi-image me-1"></i>Hoặc chọn ảnh tài liệu
                                     </label>
-                                    <input type="file" class="form-control form-control-sm" id="aiDocumentImageInput" accept="image/*">
+                                    <input type="file" class="form-control form-control-sm border-secondary-subtle" id="aiDocumentImageInput" accept="image/*">
                                 </div>
                                 <div class="col-md-2">
-                                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-1"
-                                            id="btnTriggerAi" onclick="triggerAiParse()" style="height: 31px; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
-                                        <i class="bi bi-magic"></i>
+                                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1"
+                                            id="btnTriggerAi" onclick="triggerAiParse()" style="height: 31px; background-color: #24408e; border-color: #24408e;">
+                                        <i class="bi bi-cpu"></i>
                                         <span>Bóc tách AI</span>
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Vùng hiển thị trạng thái AI đang xử lý -->
-                            <div id="aiLoadingIndicator" class="mt-2 py-2 px-3 bg-white border border-info rounded-3 text-info small d-none align-items-center gap-2">
-                                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-                                <span class="fw-semibold">AI Gemini 3.5 Flash đang đọc và bóc tách phác đồ nhiều giai đoạn... (vui lòng chờ 2-3 giây)</span>
+                            <div id="aiLoadingIndicator" class="mt-2 py-2 px-3 bg-white border border-primary-subtle rounded-2 text-primary small d-none align-items-center gap-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span class="fw-semibold">AI Gemini 3.5 Flash đang đọc và bóc tách phác đồ... (vui lòng chờ 2-3 giây)</span>
                             </div>
                         </div>
 
-                        <!-- 2. PHÁC ĐỒ CHUẨN CỦA PHÒNG KHÁM (1 CHẠM ÁP DỤNG NGAY) -->
-                        <div class="mb-3 pb-2 border-bottom">
-                            <label class="form-label small fw-bold text-secondary mb-1">
-                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>HOẶC CHỌN MẪU PHÁC ĐỒ CHUẨN (ÁP DỤNG 1 CHẠM):
+                        <!-- 2. PHÁC ĐỒ CHUẨN CỦA PHÒNG KHÁM (THANH DANH SÁCH CHUẨN BRAND DỰ ÁN) -->
+                        <div class="mb-3 pb-3 border-bottom">
+                            <label class="form-label small fw-bold text-dark mb-1.5 d-flex align-items-center gap-1.5">
+                                <i class="bi bi-list-task text-primary"></i>
+                                <span>DANH SÁCH MẪU PHÁC ĐỒ CHUẨN (ÁP DỤNG 1 CHẠM):</span>
                             </label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold" onclick="applyPlanPreset('IMPLANT')">
-                                    <i class="bi bi-plus-circle me-1"></i>Cấy ghép Implant đơn lẻ (Trọn gói: 20tr)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill fw-semibold" onclick="applyPlanPreset('ORTHODONTIC')">
-                                    <i class="bi bi-plus-circle me-1"></i>Niềng răng mắc cài kim loại (Trọn gói: 35tr)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-semibold" onclick="applyPlanPreset('ZIRCONIA_CROWN')">
-                                    <i class="bi bi-plus-circle me-1"></i>Cầu răng sứ Zirconia 3 răng (Trọn gói: 12.5tr)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill fw-semibold" onclick="applyPlanPreset('ENDODONTIC')">
-                                    <i class="bi bi-plus-circle me-1"></i>Điều trị tủy &amp; Trám răng (Trọn gói: 2.05tr)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold" onclick="applyPlanPreset('WISDOM_TOOTH')">
-                                    <i class="bi bi-plus-circle me-1"></i>Nhổ răng khôn mọc lệch (Trọn gói: 2.5tr)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill fw-semibold" onclick="applyPlanPreset('PERIODONTITIS')">
-                                    <i class="bi bi-plus-circle me-1"></i>Điều trị viêm nha chu toàn diện (Trọn gói: 3.2tr)
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-primary border-secondary-subtle">
+                                    <i class="bi bi-journal-text"></i>
+                                </span>
+                                <select class="form-select border-secondary-subtle text-dark fw-semibold" id="planPresetSelect" onchange="if(this.value) applyPlanPreset(this.value)">
+                                    <option value="" selected>-- Chọn mẫu phác đồ chuẩn điều trị trong danh sách --</option>
+                                    <option value="IMPLANT">Cấy ghép Implant đơn lẻ (Trọn gói: 20.000.000 đ)</option>
+                                    <option value="ORTHODONTIC">Niềng răng mắc cài kim loại (Trọn gói: 35.000.000 đ)</option>
+                                    <option value="ZIRCONIA_CROWN">Cầu răng sứ Zirconia 3 răng (Trọn gói: 12.500.000 đ)</option>
+                                    <option value="ENDODONTIC">Điều trị tủy &amp; Trám răng (Trọn gói: 2.050.000 đ)</option>
+                                    <option value="WISDOM_TOOTH">Nhổ răng khôn mọc lệch (Trọn gói: 2.500.000 đ)</option>
+                                    <option value="PERIODONTITIS">Điều trị viêm nha chu toàn diện (Trọn gói: 3.200.000 đ)</option>
+                                </select>
+                                <button type="button" class="btn btn-primary fw-bold px-3 d-flex align-items-center gap-1"
+                                        style="background-color: #24408e; border-color: #24408e;"
+                                        onclick="applyPlanPreset(document.getElementById('planPresetSelect').value)">
+                                    <i class="bi bi-check2"></i>
+                                    <span>Áp dụng</span>
                                 </button>
                             </div>
                         </div>
@@ -449,11 +429,11 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-primary">
-                                    <i class="bi bi-cash-stack me-1"></i>Dự toán chi phí theo dịch vụ tổng thể (VNĐ) <span class="text-danger">*</span>
+                                    <i class="bi bi-cash-stack me-1"></i>Tổng giá tiền dự kiến toàn phác đồ (VNĐ) <span class="text-danger">*</span>
                                 </label>
                                 <input type="number" class="form-control form-control-sm fw-bold text-primary fs-6" id="planOverallCostInput"
                                        placeholder="VD: 20000000" min="0" step="50000" oninput="onPlanOverallCostChange()">
-                                <small class="text-muted" style="font-size: 11px;">* Chi phí tính theo toàn bộ gói dịch vụ phác đồ, không tính lẻ từng bước.</small>
+                                <small class="text-muted" style="font-size: 11px;">* Tự động tính từ đơn giá dự kiến từng thủ thuật bên dưới hoặc nhập giá trọn gói. Giá dự kiến này sẽ gửi đến Kế toán xử lý.</small>
                             </div>
 
                             <div class="col-md-6">
@@ -473,7 +453,7 @@
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5" style="font-size: 13.5px;">
                                     <i class="bi bi-list-task text-primary"></i>
-                                    <span>Lộ trình các giai đoạn (Stages) &amp; Các bước lâm sàng</span>
+                                    <span>Lộ trình các giai đoạn (Stages) &amp; Giá dự kiến từng thủ thuật</span>
                                 </h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="addPlanStage()">
                                     <i class="bi bi-plus-circle-fill me-1"></i>+ Thêm giai đoạn mới
@@ -486,14 +466,20 @@
                             </div>
                         </div>
 
-                        <!-- 5. TỔNG CHI PHÍ DỰ TOÁN (THEO DỊCH VỤ TỔNG THỂ) -->
+                        <!-- 5. TỔNG CHI PHÍ DỰ KIẾN (GỬI SANG KẾ TOÁN XỬ LÝ) -->
                         <div class="df-plan-total-summary">
                             <div>
-                                <span class="text-muted small d-block">CHI PHÍ DỰ TOÁN THEO DỊCH VỤ TỔNG THỂ:</span>
-                                <span class="small text-secondary fw-semibold" id="planStageSummaryText">0 giai đoạn &bull; 0 bước thực hiện</span>
+                                <span class="text-dark fw-bold small d-block">
+                                    <i class="bi bi-calculator-fill text-primary me-1"></i>TỔNG GIÁ TIỀN DỰ KIẾN (GỬI KẾ TOÁN XỬ LÝ):
+                                </span>
+                                <span class="small text-secondary fw-semibold d-block" id="planStageSummaryText">0 giai đoạn &bull; 0 bước thực hiện</span>
+                                <span class="badge bg-info-subtle text-primary border border-primary-subtle mt-1">
+                                    <i class="bi bi-send-check me-1"></i>Bác sĩ tập trung chuyên môn — Thông tin giá dự kiến sẽ được gửi đến Kế toán để thu tiền
+                                </span>
                             </div>
                             <div class="text-end">
-                                <span class="fs-4 fw-bold text-primary" id="planTotalEstimatedCostDisplay">0 đ</span>
+                                <span class="fs-4 fw-bold text-primary d-block" id="planTotalEstimatedCostDisplay">0 đ</span>
+                                <small class="text-muted">Giá dự kiến (Tạm tính)</small>
                             </div>
                         </div>
 
@@ -826,10 +812,12 @@
                         <thead>
                             <tr>
                                 <th>Tên bước thực hiện / Thủ thuật chuyên môn</th>
-                                <th style="width: 100px;" class="text-center">Vị trí răng</th>
-                                <th style="width: 75px;" class="text-center">SL</th>
+                                <th style="width: 90px;" class="text-center">Vị trí răng</th>
+                                <th style="width: 70px;" class="text-center">SL</th>
+                                <th style="width: 135px;" class="text-end">Đơn giá dự kiến (đ)</th>
+                                <th style="width: 120px;" class="text-end">Thành tiền dự kiến</th>
                                 <th>Ghi chú kỹ thuật</th>
-                                <th style="width: 50px;" class="text-center">Xóa</th>
+                                <th style="width: 45px;" class="text-center">Xóa</th>
                             </tr>
                         </thead>
                         <tbody class="stage-items-tbody" id="stage-tbody-${stageId}">
@@ -862,13 +850,21 @@
         const tbody = document.getElementById(`stage-tbody-${stageId}`);
         if (!tbody) return;
 
+        let resolvedPrice = parseFloat(price) || 0;
         let optHtml = '<option value="">-- Chọn dịch vụ trong danh mục hoặc tự gõ bên dưới --</option>';
         if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog && availableServicesCatalog.length > 0) {
             availableServicesCatalog.forEach(s => {
                 const isSel = (serviceId && String(s.serviceId) === String(serviceId)) || (!serviceId && customName && s.serviceName.toLowerCase() === customName.toLowerCase());
-                optHtml += `<option value="${s.serviceId}" data-price="${s.basePrice}" data-name="${s.serviceName}" ${isSel ? 'selected' : ''}>${s.serviceName}</option>`;
+                if (isSel && (!resolvedPrice || resolvedPrice <= 0)) {
+                    resolvedPrice = parseFloat(s.basePrice) || 0;
+                }
+                const priceHint = s.basePrice ? ` (${formatVnd(s.basePrice)})` : '';
+                optHtml += `<option value="${s.serviceId}" data-price="${s.basePrice || 0}" data-name="${s.serviceName}" ${isSel ? 'selected' : ''}>${s.serviceName}${priceHint}</option>`;
             });
         }
+
+        const numQty = parseFloat(qty) || 1;
+        const rowTotal = resolvedPrice * numQty;
 
         const tr = document.createElement('tr');
         tr.id = `plan-item-row-${itemId}`;
@@ -883,12 +879,18 @@
                 <input type="text" class="form-control form-control-sm item-tooth" placeholder="VD: 16" value="${tooth}">
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-center fw-bold item-qty" value="${qty}" min="0.5" step="0.5">
+                <input type="number" class="form-control form-control-sm text-center fw-bold item-qty" value="${numQty}" min="0.5" step="0.5" oninput="onPlanItemPriceOrQtyChange(${itemId})">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm text-end fw-semibold text-primary item-price" value="${resolvedPrice}" min="0" step="10000" placeholder="0" oninput="onPlanItemPriceOrQtyChange(${itemId})">
+            </td>
+            <td class="text-end align-middle">
+                <strong class="text-primary small item-row-total" id="plan-item-total-${itemId}">${formatVnd(rowTotal)}</strong>
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú bước" value="${notes}">
             </td>
-            <td class="text-center">
+            <td class="text-center align-middle">
                 <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removePlanItem(this)">
                     <i class="bi bi-trash3"></i>
                 </button>
@@ -915,14 +917,27 @@
             const price = parseFloat(opt.getAttribute('data-price')) || 0;
 
             const nameInput = tr.querySelector('.item-custom-name');
-            if (nameInput && !nameInput.value) nameInput.value = name || '';
+            if (nameInput) nameInput.value = name || '';
 
-            const overallCostInput = document.getElementById('planOverallCostInput');
-            if (overallCostInput && (!overallCostInput.value || parseFloat(overallCostInput.value) === 0)) {
-                overallCostInput.value = price;
-                onPlanOverallCostChange();
+            const priceInput = tr.querySelector('.item-price');
+            if (priceInput) {
+                priceInput.value = price;
+            }
+            onPlanItemPriceOrQtyChange(itemId);
+        }
+    }
+
+    function onPlanItemPriceOrQtyChange(itemId) {
+        const tr = document.getElementById(`plan-item-row-${itemId}`);
+        if (tr) {
+            const qty = parseFloat(tr.querySelector('.item-qty')?.value) || 1;
+            const price = parseFloat(tr.querySelector('.item-price')?.value) || 0;
+            const totalEl = document.getElementById(`plan-item-total-${itemId}`);
+            if (totalEl) {
+                totalEl.innerText = formatVnd(qty * price);
             }
         }
+        recalculatePlanTotal(true);
     }
 
     function onPlanOverallCostChange() {
@@ -934,20 +949,40 @@
         }
     }
 
-    function recalculatePlanTotal() {
+    function recalculatePlanTotal(syncFromItems = false) {
         const stageCards = document.querySelectorAll('#planStagesContainer .df-plan-stage-card');
         const itemRows = document.querySelectorAll('#planStagesContainer .stage-items-tbody tr');
+
+        let sumItemsCost = 0;
+        itemRows.forEach(r => {
+            const qty = parseFloat(r.querySelector('.item-qty')?.value) || 1;
+            const price = parseFloat(r.querySelector('.item-price')?.value) || 0;
+            sumItemsCost += (qty * price);
+        });
 
         const summaryText = document.getElementById('planStageSummaryText');
         if (summaryText) {
             summaryText.innerText = `${stageCards.length} giai đoạn • ${itemRows.length} bước thực hiện`;
         }
+
+        const overallCostInput = document.getElementById('planOverallCostInput');
+        if (overallCostInput && (syncFromItems || sumItemsCost > 0)) {
+            if (sumItemsCost > 0) {
+                overallCostInput.value = Math.round(sumItemsCost);
+            }
+        }
         onPlanOverallCostChange();
     }
 
     function applyPlanPreset(presetKey) {
+        if (!presetKey) return;
         const preset = PLAN_PRESETS[presetKey];
         if (!preset) return;
+
+        const selectEl = document.getElementById('planPresetSelect');
+        if (selectEl && selectEl.value !== presetKey) {
+            selectEl.value = presetKey;
+        }
 
         document.getElementById('planNameInput').value = preset.name;
         document.getElementById('planNotesInput').value = preset.notes;
@@ -977,17 +1012,40 @@
         stageCounter = 0;
         itemCounter = 0;
 
+        let totalPresetItems = 0;
+        preset.stages.forEach(st => {
+            totalPresetItems += (st.items ? st.items.length : 0);
+        });
+        const defaultStepPrice = (preset.totalCost && totalPresetItems > 0)
+            ? Math.round(preset.totalCost / totalPresetItems)
+            : 0;
+
         preset.stages.forEach(st => {
             const stageId = addPlanStage(st.name, st.days, st.desc);
             st.items.forEach(it => {
                 let matchedServiceId = '';
+                let matchedPrice = it.price || 0;
                 if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog) {
                     const found = availableServicesCatalog.find(s => s.serviceName.toLowerCase().includes(it.customName.toLowerCase()) || it.customName.toLowerCase().includes(s.serviceName.toLowerCase()));
-                    if (found) matchedServiceId = found.serviceId;
+                    if (found) {
+                        matchedServiceId = found.serviceId;
+                        matchedPrice = parseFloat(found.basePrice) || 0;
+                    }
                 }
-                addPlanItem(stageId, matchedServiceId, it.customName, it.tooth, it.qty, 0, it.notes);
+                if (!matchedPrice || matchedPrice <= 0) {
+                    matchedPrice = Math.round(defaultStepPrice / (parseFloat(it.qty) || 1));
+                }
+                addPlanItem(stageId, matchedServiceId, it.customName, it.tooth, it.qty, matchedPrice, it.notes);
             });
         });
+
+        if (preset.totalCost) {
+            const overallCostInput = document.getElementById('planOverallCostInput');
+            if (overallCostInput) {
+                overallCostInput.value = preset.totalCost;
+                onPlanOverallCostChange();
+            }
+        }
 
         showToast(`Đã áp dụng mẫu phác đồ chuẩn: ${preset.name}`);
     }
@@ -1068,13 +1126,17 @@
                         if (st.steps && st.steps.length > 0) {
                             st.steps.forEach(step => {
                                 let matchedId = '';
+                                let matchedPrice = parseFloat(step.estimatedCost) || 0;
                                 if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog) {
                                     const found = availableServicesCatalog.find(s => s.serviceName.toLowerCase().includes(step.stepName.toLowerCase()) || step.stepName.toLowerCase().includes(s.serviceName.toLowerCase()));
                                     if (found) {
                                         matchedId = found.serviceId;
+                                        if (!matchedPrice || matchedPrice <= 0) {
+                                            matchedPrice = parseFloat(found.basePrice) || 0;
+                                        }
                                     }
                                 }
-                                addPlanItem(stageId, matchedId, step.stepName, step.suggestedTooth || '', 1, 0, step.notes || '');
+                                addPlanItem(stageId, matchedId, step.stepName, step.suggestedTooth || '', 1, matchedPrice, step.notes || '');
                             });
                         }
                     });
@@ -1130,7 +1192,7 @@
         }
 
         const stages = [];
-        const grandTotal = parseFloat(document.getElementById('planOverallCostInput')?.value) || 0;
+        let calculatedItemsSum = 0;
 
         stageCards.forEach((c, sIdx) => {
             const stageName = c.querySelector('.stage-name-input').value.trim() || `Giai đoạn ${sIdx + 1}`;
@@ -1145,15 +1207,17 @@
                 const customName = r.querySelector('.item-custom-name').value.trim();
                 const tooth = r.querySelector('.item-tooth').value.trim();
                 const qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+                const estPrice = parseFloat(r.querySelector('.item-price')?.value) || 0;
                 const itemNotes = r.querySelector('.item-notes').value.trim();
 
                 if (customName || (sel && sel.value)) {
+                    calculatedItemsSum += (qty * estPrice);
                     items.push({
                         serviceId: sel && sel.value ? parseInt(sel.value) : null,
                         customServiceName: customName,
                         toothNumbers: tooth || null,
                         quantity: qty,
-                        estimatedPrice: 0,
+                        estimatedPrice: estPrice,
                         status: 'PLANNED',
                         notes: itemNotes || null
                     });
@@ -1169,6 +1233,9 @@
                 items: items
             });
         });
+
+        const manualGrandTotal = parseFloat(document.getElementById('planOverallCostInput')?.value) || 0;
+        const grandTotal = manualGrandTotal > 0 ? manualGrandTotal : calculatedItemsSum;
 
         const payload = {
             patientId: patientId ? parseInt(patientId) : null,
@@ -1201,7 +1268,7 @@
             return res.json();
         })
         .then(result => {
-            showToast('Đã tạo kế hoạch & lộ trình điều trị thành công!');
+            showToast('Đã tạo kế hoạch điều trị & đồng bộ giá dự kiến sang Kế toán thành công!');
             addPlanRowToTable(result.data);
             if (planModalInstance) {
                 planModalInstance.hide();
@@ -1258,9 +1325,12 @@
                 </div>
             </td>
             <td class="text-end">
-                <strong class="text-primary fs-6">
+                <strong class="text-primary fs-6 d-block">
                     ${formatVnd(plan.finalEstimatedCost)}
                 </strong>
+                <span class="text-muted" style="font-size: 11px;">
+                    <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán
+                </span>
             </td>
             <td class="text-center" id="plan-status-cell-${plan.planId}">
                 <div class="dropdown d-inline-block">
@@ -1334,6 +1404,9 @@
                         const completedItemHtml = it.completedAt
                             ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
                             : '<span class="text-muted">---</span>';
+                        const itemEstPrice = (it.totalPrice !== null && it.totalPrice !== undefined)
+                            ? formatVnd(it.totalPrice)
+                            : formatVnd(it.estimatedPrice || 0);
 
                         const isComp = it.status === 'COMPLETED';
                         const isProg = it.status === 'IN_PROGRESS';
@@ -1375,13 +1448,14 @@
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center fw-bold">${it.quantity}</td>
+                                <td class="text-end"><strong class="text-primary">${itemEstPrice}</strong></td>
                                 <td class="text-center small" id="item-completed-cell-${it.planItemId}">${completedItemHtml}</td>
                                 <td class="text-center" id="item-action-cell-${it.planItemId}">${actionBtnHtml}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    itemsRows = '<tr><td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
+                    itemsRows = '<tr><td colspan="7" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
                 }
 
                 const stageStatusClass = st.status === 'COMPLETED' ? 'bg-success-subtle text-success border border-success fw-bold' : (st.status === 'IN_PROGRESS' ? 'bg-primary-subtle text-primary border border-primary fw-bold' : 'bg-light text-secondary border');
@@ -1417,8 +1491,9 @@
                                         <th>Tên bước thực hiện / Quy trình thủ thuật</th>
                                         <th style="width: 95px;" class="text-center">Vị trí răng</th>
                                         <th style="width: 65px;" class="text-center">SL</th>
-                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
-                                        <th style="width: 200px;" class="text-center">Trạng thái &amp; Thao tác</th>
+                                        <th style="width: 140px;" class="text-end">Giá dự kiến (đ)</th>
+                                        <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 195px;" class="text-center">Trạng thái &amp; Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stage-items-body-${st.stageId}">
@@ -1668,9 +1743,8 @@
         }
         const summaryBadge = document.getElementById('treatmentSummaryBadge');
         if (summaryBadge) {
-            const diagCount = document.querySelectorAll('#diagnosesTableBody tr[id^="diag-row-"]').length;
-            const perfCount = document.querySelectorAll('#performedServicesTableBody tr[id^="performed-row-"]').length;
-            summaryBadge.innerHTML = `<span>${diagCount} chẩn đoán</span><span> • </span><span>${rows.length} KHDT</span><span> • </span><span>${perfCount} điều trị</span>`;
+            const diagCount = document.querySelectorAll('#diagnosisTableBody tr[id^="diag-row-"]').length;
+            summaryBadge.innerText = `${diagCount} chẩn đoán`;
         }
     }
 </script>

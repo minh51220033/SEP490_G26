@@ -20,4 +20,6 @@ public class PrescriptionItemResponseDTO {
     private BigDecimal quantity;
     private String unit;
     private String usageInstruction;
+    private BigDecimal unitPrice;
+    private BigDecimal finalPrice;
 }
