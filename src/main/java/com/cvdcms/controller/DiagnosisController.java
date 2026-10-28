@@ -248,6 +248,14 @@ public class DiagnosisController {
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
         model.addAttribute("isClinicalLocked", isClinicalLocked);
 
+        com.cvdcms.DTO.ClinicalCompletionCheckDTO clinicalCheck = null;
+        try {
+            clinicalCheck = diagnosisService.checkClinicalCompletionReadiness(visitId);
+        } catch (Exception ex) {
+            log.warn("Không thể kiểm tra điều kiện lâm sàng cho visitId={}: {}", visitId, ex.getMessage());
+        }
+        model.addAttribute("clinicalCheck", clinicalCheck);
+
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
 

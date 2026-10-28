@@ -36,6 +36,10 @@ public class ClinicalCompletionCheckDTO {
     private boolean hasPrescription;
     private int prescriptionCount;
 
+    private boolean hasTreatmentPlan;
+    private int treatmentPlanCount;
+    private BigDecimal totalEstimatedPlanAmount;
+
     private boolean hasReExamination;
     private int reExaminationCount;
 
@@ -45,4 +49,5 @@ public class ClinicalCompletionCheckDTO {
     private List<Map<String, Object>> diagnoses;
     private List<Map<String, Object>> services;
     private List<Map<String, Object>> prescriptions;
+    private List<Map<String, Object>> treatmentPlans;
 }
