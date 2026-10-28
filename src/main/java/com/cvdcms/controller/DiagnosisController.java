@@ -5,6 +5,7 @@ import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.DTO.Icd10DiseaseDTO;
 import com.cvdcms.DTO.MedicationDTO;
 import com.cvdcms.DTO.PerformedServiceResponseDTO;
+import com.cvdcms.DTO.PrescriptionItemResponseDTO;
 import com.cvdcms.DTO.PrescriptionResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
