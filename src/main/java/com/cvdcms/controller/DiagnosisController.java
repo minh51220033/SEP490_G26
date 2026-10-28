@@ -186,6 +186,27 @@ public class DiagnosisController {
         model.addAttribute("prescriptions", prescriptions);
         model.addAttribute("activeMedications", activeMedications);
 
+        // Tính tổng tiền đơn thuốc & tổng hợp thanh toán (Dịch vụ khám + Đơn thuốc)
+        BigDecimal totalPrescriptionAmount = BigDecimal.ZERO;
+        if (prescriptions != null) {
+            for (PrescriptionResponseDTO pr : prescriptions) {
+                if (pr.getTotalAmount() != null) {
+                    totalPrescriptionAmount = totalPrescriptionAmount.add(pr.getTotalAmount());
+                } else if (pr.getItems() != null) {
+                    for (PrescriptionItemResponseDTO it : pr.getItems()) {
+                        if (it.getFinalPrice() != null) {
+                            totalPrescriptionAmount = totalPrescriptionAmount.add(it.getFinalPrice());
+                        }
+                    }
+                }
+            }
+        }
+        model.addAttribute("totalPrescriptionAmount", totalPrescriptionAmount);
+
+        BigDecimal grandTotalAmount = (totalPerformedAmount != null ? totalPerformedAmount : BigDecimal.ZERO)
+                .add(totalPrescriptionAmount);
+        model.addAttribute("grandTotalAmount", grandTotalAmount);
+
         // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
                 ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())

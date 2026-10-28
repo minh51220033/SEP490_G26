@@ -123,8 +123,8 @@
                         <div>
                             <div class="df-stat-title">PHÁT SINH</div>
                             <div class="df-stat-value text-dark" id="headerPhatSinh"
-                                 th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0'}">
-                                5.000.000
+                                 th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') : (totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0')}">
+                                0
                             </div>
                         </div>
                         <div>
@@ -134,8 +134,8 @@
                         <div>
                             <div class="df-stat-title text-danger">CÔNG NỢ</div>
                             <div class="df-stat-value text-danger" id="headerCongNo"
-                                 th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0'}">
-                                5.000.000
+                                 th:text="${grandTotalAmount != null ? #numbers.formatDecimal(grandTotalAmount, 0, 'COMMA', 0, 'POINT') : (totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') : '0')}">
+                                0
                             </div>
                         </div>
                     </div>
@@ -157,14 +157,14 @@
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
                             <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
                         </a>
+                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
+                            <i class="bi bi-capsule"></i> Đơn thuốc
+                        </a>
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-appointments" onclick="switchMainTab('tab-appointments', this)">
                             <i class="bi bi-calendar-event"></i> Lịch hẹn
                         </a>
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-customer-care" onclick="switchMainTab('tab-customer-care', this)">
                             <i class="bi bi-chat-heart"></i> Chăm sóc
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
-                            <i class="bi bi-capsule"></i> Đơn thuốc
                         </a>
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-performed-services" onclick="switchMainTab('tab-performed-services', this)">
                             <i class="bi bi-tools"></i> Dịch vụ thực hiện
@@ -265,19 +265,19 @@
                     <div th:replace="~{doctor/fragments/treatment-plans :: treatmentPlanSection}"></div>
                 </div>
 
-                <!-- TAB 4: LỊCH HẸN -->
+                <!-- TAB 4: ĐƠN THUỐC (FT18) -->
+                <div class="df-tab-pane" id="tab-prescriptions" style="display: none;">
+                    <div th:replace="~{doctor/fragments/prescriptions :: prescriptionsSection}"></div>
+                </div>
+
+                <!-- TAB 5: LỊCH HẸN -->
                 <div class="df-tab-pane" id="tab-appointments" style="display: none;">
                     <div th:replace="~{doctor/fragments/appointments-tab :: appointmentsTab}"></div>
                 </div>
 
-                <!-- TAB 5: CHĂM SÓC -->
+                <!-- TAB 6: CHĂM SÓC -->
                 <div class="df-tab-pane" id="tab-customer-care" style="display: none;">
                     <div th:replace="~{doctor/fragments/patient-care-tab :: patientCareTab}"></div>
-                </div>
-
-                <!-- TAB 6: ĐƠN THUỐC (FT18) -->
-                <div class="df-tab-pane" id="tab-prescriptions" style="display: none;">
-                    <div th:replace="~{doctor/fragments/prescriptions :: prescriptionsSection}"></div>
                 </div>
 
                 <!-- TAB 7: DỊCH VỤ THỰC HIỆN (FT16) -->

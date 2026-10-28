@@ -38,6 +38,7 @@ public class PrescriptionResponseDTO {
     private String adviceNotes;
     private String followupDate;
     private String createdAt;
+    private BigDecimal totalAmount;
 
     @Builder.Default
     private List<PrescriptionItemResponseDTO> items = new ArrayList<>();

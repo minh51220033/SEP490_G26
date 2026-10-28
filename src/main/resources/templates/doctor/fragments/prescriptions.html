@@ -21,6 +21,9 @@
                       th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn thuốc'">
                     0 đơn thuốc
                 </span>
+                <span class="badge bg-success-subtle text-success border border-success ms-1" id="prescTotalAmountBadge">
+                    Tổng tiền thuốc: <strong th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                </span>
             </div>
 
             <div class="d-flex align-items-center flex-wrap gap-2">
@@ -43,17 +46,18 @@
             <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
                 <thead class="table-light">
                 <tr>
-                    <th style="width: 120px;">Mã đơn</th>
-                    <th style="width: 140px;">Thời gian kê</th>
-                    <th style="width: 200px;">Bác sĩ kê đơn</th>
+                    <th style="width: 110px;">Mã đơn</th>
+                    <th style="width: 130px;">Thời gian kê</th>
+                    <th style="width: 180px;">Bác sĩ kê đơn</th>
                     <th>Chẩn đoán &amp; Thuốc kê chi tiết</th>
-                    <th style="width: 130px;">Hẹn tái khám</th>
-                    <th style="width: 130px;" class="text-center">Thao tác</th>
+                    <th style="width: 140px;" class="text-end">Tiền thuốc (đ)</th>
+                    <th style="width: 120px;">Hẹn tái khám</th>
+                    <th style="width: 120px;" class="text-center">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody id="prescriptionsTableBody">
                 <tr th:if="${prescriptions == null or prescriptions.isEmpty()}" id="emptyPrescRow">
-                    <td colspan="6" class="text-center py-4 text-muted">
+                    <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-prescription2 fs-3 d-block mb-1 text-secondary"></i>
                         <span>Chưa có đơn thuốc nào được kê cho ca khám này. Nhấn <button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-underline" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">+ Kê đơn thuốc mới</button> để chọn từ mẫu nhanh hoặc nhập thuốc.</span>
                     </td>
@@ -75,14 +79,18 @@
                             <span th:text="${pr.diagnosisText}">Sâu ngà răng</span>
                         </div>
                         <div class="d-flex flex-wrap gap-1">
-                            <span th:each="it : ${pr.items}" class="badge bg-secondary-subtle text-dark border small"
-                                  th:text="${it.drugName + ' (' + it.quantity + ' ' + it.unit + ')'}">
-                                Paracetamol 500mg (6 Viên)
+                            <span th:each="it : ${pr.items}" class="badge bg-light text-dark border small"
+                                  th:text="${it.drugName + ' (' + it.quantity + ' ' + it.unit + (it.finalPrice != null ? ' • ' + #numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '') + ')'}">
+                                Paracetamol 500mg (6 Viên • 15.000đ)
                             </span>
                         </div>
                         <div class="small text-muted fst-italic mt-1" th:if="${pr.adviceNotes != null and !pr.adviceNotes.isEmpty()}">
                             <i class="bi bi-chat-left-dots"></i> <span th:text="${pr.adviceNotes}"></span>
                         </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-bold text-success fs-6" th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                        <small class="text-muted" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
                     </td>
                     <td>
                         <span class="badge bg-warning-subtle text-dark border border-warning"
