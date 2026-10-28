@@ -29,6 +29,10 @@ public class PointTransaction {
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_id")
+    private Payment payment;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 20)
     private PointTransactionType transactionType;

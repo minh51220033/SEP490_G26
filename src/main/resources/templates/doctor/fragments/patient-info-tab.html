@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+    <!-- ===================================================================== -->
+    <!-- TAB: THÔNG TIN BỆNH NHÂN (PATIENT DEMOGRAPHICS & PROFILE)             -->
+    <!-- Frontend Fragment: doctor/fragments/patient-info-tab.html             -->
+    <!-- ===================================================================== -->
+    <div th:fragment="patientInfoTab">
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-header bg-light d-flex align-items-center justify-content-between p-3 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center"
+                        style="width: 36px; height: 36px;">
+                        <i class="bi bi-person-lines-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 fw-bold text-dark fs-6">Hồ sơ thông tin hành chính bệnh nhân</h4>
+                        <span class="text-secondary small">Chi tiết thông tin liên hệ, tiền sử y khoa, người bảo hộ
+                            &amp; cơ sở điều trị</span>
+                    </div>
+                </div>
+                <span
+                    class="badge bg-primary-subtle text-primary border border-primary px-3 py-1.5 rounded-pill fw-bold"
+                    th:text="${patient != null ? patient.patientCode : 'BN0001'}">
+                    BN0001
+                </span>
+            </div>
+
+            <div class="card-body p-4 bg-white">
+                <div class="row g-4">
+                    <!-- 1. THÔNG TIN CÁ NHÂN -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-badge text-primary me-1"></i>Thông tin cá nhân
+                            </h6>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div><span class="text-muted">Họ và tên:</span> <strong class="text-dark"
+                                        th:text="${patient != null ? patient.fullName : 'Chưa cập nhật'}">Nguyễn Văn
+                                        A</strong></div>
+                                <div><span class="text-muted">Mã bệnh nhân:</span> <span
+                                        class="badge bg-light text-dark border fw-bold"
+                                        th:text="${patient != null ? patient.patientCode : 'BN0001'}">BN0001</span>
+                                </div>
+                                <div><span class="text-muted">Giới tính:</span> <strong
+                                        th:text="${patient != null and patient.gender != null ? patient.gender : 'Chưa rõ'}">Nam</strong>
+                                </div>
+                                <div><span class="text-muted">Ngày sinh:</span> <span
+                                        th:text="${patient != null and patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa cập nhật'}">01/01/1990</span>
+                                </div>
+                                <div><span class="text-muted">Số CCCD / CMND:</span> <span
+                                        th:text="${patient != null and patient.idCardNumber != null ? patient.idCardNumber : 'Chưa có'}">-</span>
+                                </div>
+                                <div><span class="text-muted">Bảo hiểm y tế:</span> <span
+                                        th:text="${patient != null and patient.healthInsuranceNumber != null ? patient.healthInsuranceNumber : 'Chưa có'}">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. THÔNG TIN LIÊN HỆ -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-telephone text-primary me-1"></i>Thông tin liên hệ
+                            </h6>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div><span class="text-muted">Số điện thoại:</span> <strong class="text-primary"
+                                        th:text="${patient != null ? patient.phoneNumber : 'Chưa có'}">0987654321</strong>
+                                </div>
+                                <div><span class="text-muted">Email:</span> <span
+                                        th:text="${patient != null and patient.user != null and patient.user.email != null ? patient.user.email : 'Chưa có'}">-</span>
+                                </div>
+                                <div><span class="text-muted">Địa chỉ:</span> <span
+                                        th:text="${patient != null and patient.address != null ? patient.address : 'Chưa có'}">Hà
+                                        Nội</span></div>
+                                <div><span class="text-muted">Người bảo hộ / Liên hệ:</span> <span
+                                        th:text="${patient != null and patient.guardianName != null ? (patient.guardianName + (patient.guardianPhone != null ? ' (' + patient.guardianPhone + ')' : '') + (patient.guardianRelationship != null ? ' - ' + patient.guardianRelationship : '')) : 'Chưa có'}">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. TIỀN SỬ Y KHOA & DỊ ỨNG -->
+                    <div class="col-md-12 col-lg-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Tiền sử y khoa &amp; Cảnh báo
+                            </h6>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div>
+                                    <span class="text-muted">Dị ứng thuốc:</span>
+                                    <span class="badge ms-1"
+                                        th:classappend="${patient != null and patient.hasAllergies == true} ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-success-subtle text-success border border-success-subtle'"
+                                        th:text="${patient != null and patient.hasAllergies == true and patient.allergyDetails != null ? patient.allergyDetails : (patient != null and patient.hasAllergies == false ? 'Không có dị ứng' : 'Chưa ghi nhận')}">
+                                        Không có ghi nhận dị ứng
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Bệnh tim mạch:</span>
+                                    <span
+                                        th:text="${patient != null and patient.hasCardiovascularDisease == true and patient.cardiovascularDetails != null ? patient.cardiovascularDetails : 'Bình thường'}">
+                                        Bình thường
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Bệnh toàn thân:</span>
+                                    <span
+                                        th:text="${patient != null and patient.hasUnderlyingDisease == true and patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Sức khỏe bình thường'}">
+                                        Bình thường
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Cơ sở đăng ký:</span>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1"
+                                        th:text="${visit.branch != null ? visit.branch.branchName : 'Cơ sở chính'}">
+                                        Nha Khoa Sài Gòn
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Bác sĩ phụ trách chính:</span>
+                                    <strong class="text-dark"
+                                        th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS.
+                                        Lê Hoàng Nam</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

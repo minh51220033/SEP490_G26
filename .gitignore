@@ -36,3 +36,9 @@ uploads/
 private-uploads/
 target/
 .idea/
+
+# Scratch & temporary files
+*.py
+*.pyc
+__pycache__/
+*.jsonl

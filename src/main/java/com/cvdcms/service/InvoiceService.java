@@ -44,4 +44,6 @@ public interface InvoiceService {
     FinancialMetricsDTO getFinancialMetrics(Long branchId, LocalDateTime startDate, LocalDateTime endDate);
 
     List<PerformedService> getUnbilledPerformedServices(Long visitId);
+ 
+    void finalizeInvoiceBenefits(Invoice invoice);
 }

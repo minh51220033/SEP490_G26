@@ -172,7 +172,7 @@
                             <td th:text="${inv.cashier != null ? inv.cashier.fullName : 'N/A'}">Nguyễn Thu Ngân</td>
                             <td class="text-end" th:text="${#numbers.formatDecimal(inv.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
                             <td class="text-end text-success">
-                                <span th:text="'-' + ${#numbers.formatDecimal(inv.discountAmount.add(inv.promotionDiscount).add(inv.pointDiscount), 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
+                                <span th:text="'-' + ${#numbers.formatDecimal(inv.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
                             </td>
                             <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(inv.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
                             <td class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(inv.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
@@ -282,6 +282,25 @@
         </div>
     </div>
 </div>
+<div id="paymentSuccessToast"
+     class="payment-success-toast"
+     role="status"
+     aria-live="polite"
+     aria-atomic="true"
+     hidden>
+    <div class="payment-success-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <div class="payment-success-content">
+        <strong>Thanh toán thành công</strong>
+        <span>Giao dịch đã được ghi nhận.</span>
+        <small>
+            Mã phiếu thu:
+            <b id="paymentSuccessCode"></b>
+        </small>
+    </div>
+</div>
 
 <script th:inline="javascript">
     function openQuickPayModal(btn) {
@@ -335,8 +354,13 @@
             });
             const data = await resp.json();
             if (data.success) {
-                alert(`Thanh toán thành công! Mã phiếu thu: ${data.paymentCode}`);
-                window.location.reload();
+                closeQuickPayModal();
+                document.getElementById('paymentSuccessCode').textContent =
+                    data.paymentCode || '';
+                document.getElementById('paymentSuccessToast').hidden = false;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2400);
             } else {
                 errorEl.textContent = data.error || 'Có lỗi xảy ra khi xử lý thanh toán.';
                 errorEl.style.display = 'block';
