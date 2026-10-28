@@ -695,7 +695,9 @@
 
     // Tự động khôi phục tab đang mở từ URL Hash khi tải trang
     document.addEventListener('DOMContentLoaded', function() {
-        const hash = window.location.hash ? window.location.hash.substring(1) : '';
+        let hash = window.location.hash ? window.location.hash.substring(1) : '';
+        if (hash === 'treatmentPlanSection') hash = 'tab-treatment-plan';
+        if (hash === 'prescriptionsSection') hash = 'tab-prescriptions';
         if (hash && document.getElementById(hash)) {
             switchMainTab(hash);
         }
@@ -1902,10 +1904,15 @@
             setTimeout(() => {
                 document.getElementById('performedServicesSection')?.scrollIntoView({ behavior: 'smooth' });
             }, 100);
-        } else if (sectionId === 'prescriptionsSection') {
+        } else if (sectionId === 'prescriptionsSection' || sectionId === 'tab-prescriptions') {
             switchMainTab('tab-prescriptions');
             setTimeout(() => {
                 document.getElementById('prescriptionsSection')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } else if (sectionId === 'treatmentPlanSection' || sectionId === 'tab-treatment-plan') {
+            switchMainTab('tab-treatment-plan');
+            setTimeout(() => {
+                document.getElementById('treatmentPlanSection')?.scrollIntoView({ behavior: 'smooth' });
             }, 100);
         } else if (sectionId === 'tab-appointments') {
             switchMainTab('tab-appointments');
