@@ -223,6 +223,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 BigDecimal fPrice = uPrice.multiply(qty);
                 totalPrescAmount = totalPrescAmount.add(fPrice);
 
+                BigDecimal bought = it.getBoughtQuantity() != null ? it.getBoughtQuantity() : BigDecimal.ZERO;
+                BigDecimal rem = it.getRemainingQuantity();
+
                 itemDTOs.add(PrescriptionItemResponseDTO.builder()
                         .itemId(it.getItemId())
                         .medicationId(it.getMedication() != null ? it.getMedication().getMedicationId() : null)
@@ -230,6 +233,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                         .dosage(it.getDosage())
                         .durationDays(it.getDurationDays())
                         .quantity(it.getQuantity())
+                        .boughtQuantity(bought)
+                        .remainingQuantity(rem)
                         .unit(it.getUnit())
                         .usageInstruction(it.getUsageInstruction())
                         .unitPrice(uPrice)
@@ -237,6 +242,15 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                         .build());
             }
         }
+
+        String statusName = p.getStatus() != null ? p.getStatus().name() : "PENDING";
+        String statusDisplay = switch (statusName) {
+            case "EXTERNAL_PURCHASE" -> "Tự mua ngoài";
+            case "CLINIC_PURCHASE_PARTIAL" -> "Đã mua 1 phần";
+            case "CLINIC_PURCHASE_COMPLETED" -> "Đã mua đủ tại PK";
+            case "CANCELLED" -> "Đã hủy";
+            default -> "Chờ tiếp nhận";
+        };
 
         return PrescriptionResponseDTO.builder()
                 .prescriptionId(p.getPrescriptionId())
@@ -262,6 +276,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .followupDate(p.getFollowupDate() != null ? p.getFollowupDate().format(DATE_FORMATTER) : null)
                 .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_TIME_FORMATTER) : null)
                 .totalAmount(totalPrescAmount)
+                .status(statusName)
+                .statusDisplay(statusDisplay)
+                .purchaseChoice(p.getPurchaseChoice() != null ? p.getPurchaseChoice().name() : null)
+                .choiceNote(p.getChoiceNote())
+                .handledByName(p.getHandledBy() != null ? p.getHandledBy().getFullName() : null)
+                .handledAt(p.getHandledAt() != null ? p.getHandledAt().format(DATE_TIME_FORMATTER) : null)
                 .items(itemDTOs)
                 .build();
     }

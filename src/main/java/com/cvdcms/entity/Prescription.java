@@ -56,6 +56,24 @@ public class Prescription {
     @Column(name = "followup_date")
     private LocalDate followupDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private com.cvdcms.entity.enums.PrescriptionStatus status = com.cvdcms.entity.enums.PrescriptionStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchase_choice", length = 30)
+    private com.cvdcms.entity.enums.PrescriptionPurchaseChoice purchaseChoice;
+
+    @Column(name = "choice_note", length = 255)
+    private String choiceNote;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "handled_by")
+    private StaffProfile handledBy;
+
+    @Column(name = "handled_at")
+    private LocalDateTime handledAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -153,7 +153,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                     .orElse(null);
                         }
                         if (service == null) {
-                            service = serviceRepository.findAll().stream().findFirst().orElse(null);
+                            throw new IllegalArgumentException("Dịch vụ '" + (itemReq.getCustomServiceName() != null ? itemReq.getCustomServiceName() : "ID " + itemReq.getServiceId()) + "' không tồn tại trong danh mục điều trị.");
                         }
                         item.setService(service);
 
@@ -164,8 +164,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
                         BigDecimal price = itemReq.getEstimatedPrice();
                         if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
-                            price = (service != null && service.getBasePrice() != null) 
-                                    ? service.getBasePrice() : BigDecimal.ZERO;
+                            price = service.getBasePrice();
+                        }
+                        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+                            throw new IllegalArgumentException("Dịch vụ '" + service.getServiceName() + "' chưa có đơn giá hợp lệ trong bảng giá chi nhánh. Không thể lập kế hoạch với giá 0 đ.");
                         }
                         item.setEstimatedPrice(price);
 
@@ -187,10 +189,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        BigDecimal overallCost = (request.getTotalEstimatedCost() != null && request.getTotalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getTotalEstimatedCost()
-                : (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
-                    ? request.getFinalEstimatedCost() : totalEstimated);
+        BigDecimal overallCost = totalEstimated;
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
                 ? request.getFinalEstimatedCost() : overallCost);

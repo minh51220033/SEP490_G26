@@ -30,6 +30,12 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
+import com.cvdcms.DTO.MedicineInvoiceCreateRequestDTO;
+import com.cvdcms.DTO.PrescriptionResponseDTO;
+import com.cvdcms.entity.enums.PrescriptionStatus;
+import com.cvdcms.repository.PrescriptionRepository;
+import com.cvdcms.repository.TreatmentPlanRepository;
+
 @Controller
 @RequestMapping("/invoices")
 public class InvoicePageController {
@@ -45,6 +51,8 @@ public class InvoicePageController {
     private final PatientLoyaltyWalletRepository patientLoyaltyWalletRepository;
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    private final PrescriptionRepository prescriptionRepository;
+    private final TreatmentPlanRepository treatmentPlanRepository;
 
     public InvoicePageController(
             InvoiceService invoiceService,
@@ -57,7 +65,9 @@ public class InvoicePageController {
             PatientVoucherRepository patientVoucherRepository,
             PatientLoyaltyWalletRepository patientLoyaltyWalletRepository,
             UserRepository userRepository,
-            StaffBranchAssignmentRepository staffBranchAssignmentRepository
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            PrescriptionRepository prescriptionRepository,
+            TreatmentPlanRepository treatmentPlanRepository
     ) {
         this.invoiceService = invoiceService;
         this.paymentService = paymentService;
@@ -70,6 +80,8 @@ public class InvoicePageController {
         this.patientLoyaltyWalletRepository = patientLoyaltyWalletRepository;
         this.userRepository = userRepository;
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+        this.prescriptionRepository = prescriptionRepository;
+        this.treatmentPlanRepository = treatmentPlanRepository;
     }
 
     private void populateUserAndSidebar(Model model, HttpSession session) {
@@ -199,6 +211,13 @@ public class InvoicePageController {
 
                 model.addAttribute("availablePromotions", promotionRepository.findAvailablePromotions(visit.getBranch().getBranchId(), LocalDateTime.now()));
                 model.addAttribute("availableVouchers", patientVoucherRepository.findAvailableVouchersForPatient(pid, VoucherStatus.AVAILABLE, LocalDateTime.now()));
+
+                // Bàn giao đơn thuốc từ ca khám này
+                List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(visit.getBranch().getBranchId(), visitId, pid);
+                model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+
+                // Kế hoạch điều trị tham khảo (không tính vào hóa đơn)
+                model.addAttribute("referenceTreatmentPlans", treatmentPlanRepository.findByProfileIdWithDetails(pid));
             });
         } else if (profileId != null) {
             patientProfileRepository.findById(profileId).ifPresent(patient -> {
@@ -207,7 +226,18 @@ public class InvoicePageController {
                 model.addAttribute("patientVisits", visits);
                 patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(profileId)
                         .ifPresent(w -> model.addAttribute("loyaltyWallet", w));
+
+                // Bàn giao đơn thuốc của bệnh nhân
+                List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, profileId);
+                model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+
+                // Kế hoạch điều trị tham khảo
+                model.addAttribute("referenceTreatmentPlans", treatmentPlanRepository.findByProfileIdWithDetails(profileId));
             });
+        } else {
+            // Hiển thị các đơn thuốc chờ xử lý tại chi nhánh
+            List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, null);
+            model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
         }
 
         return "finance/invoices/create";
@@ -222,12 +252,85 @@ public class InvoicePageController {
         try {
             Long cashierUserId = getCurrentUserId(session);
             Invoice invoice = invoiceService.createInvoice(request, cashierUserId);
-            redirectAttributes.addFlashAttribute("successMessage", "Đã tạo hóa đơn thành công: " + invoice.getInvoiceCode());
+            redirectAttributes.addFlashAttribute("successMessage", "Đã phát hành hóa đơn thành công: " + invoice.getInvoiceCode());
             return "redirect:/invoices/" + invoice.getInvoiceId();
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo hóa đơn: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi phát hành hóa đơn: " + e.getMessage());
             return "redirect:/invoices/create" + (request.getVisitId() != null ? "?visitId=" + request.getVisitId() : "");
         }
+    }
+
+    @GetMapping("/create-medicine")
+    public String createMedicineInvoiceForm(
+            @RequestParam Long prescriptionId,
+            Model model,
+            HttpSession session
+    ) {
+        Long currentUserId = getCurrentUserId(session);
+        populateUserAndSidebar(model, session);
+
+        Prescription prescription = prescriptionRepository.findByIdWithDetails(prescriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
+
+        resolveBranchId(prescription.getBranch().getBranchId(), currentUserId);
+
+        if (prescription.getStatus() == PrescriptionStatus.CANCELLED) {
+            throw new IllegalStateException("Đơn thuốc này đã bị hủy, không thể lập hóa đơn thuốc.");
+        }
+        if (prescription.getStatus() == PrescriptionStatus.CLINIC_PURCHASE_COMPLETED) {
+            throw new IllegalStateException("Đơn thuốc này đã mua đủ toàn bộ tại phòng khám.");
+        }
+
+        model.addAttribute("prescription", prescription);
+        model.addAttribute("selectedPatient", prescription.getPatientProfile());
+        model.addAttribute("selectedBranch", prescription.getBranch());
+        model.addAttribute("selectedDoctor", prescription.getDoctor());
+        model.addAttribute("selectedVisit", prescription.getVisit());
+
+        return "finance/invoices/create-medicine";
+    }
+
+    @PostMapping("/create-medicine")
+    public String saveMedicineInvoice(
+            @ModelAttribute MedicineInvoiceCreateRequestDTO request,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        try {
+            Long cashierUserId = getCurrentUserId(session);
+            Invoice invoice = invoiceService.createMedicineInvoice(request, cashierUserId);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã lập Hóa đơn thuốc riêng thành công: " + invoice.getInvoiceCode());
+            return "redirect:/invoices/" + invoice.getInvoiceId();
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo hóa đơn thuốc: " + e.getMessage());
+            return "redirect:/invoices/create-medicine?prescriptionId=" + (request != null ? request.getPrescriptionId() : "");
+        }
+    }
+
+    @PostMapping("/prescriptions/{id}/choice")
+    public String updatePrescriptionChoice(
+            @PathVariable Long id,
+            @RequestParam String choice,
+            @RequestParam(required = false) String note,
+            @RequestParam(required = false) Long visitId,
+            @RequestParam(required = false) Long profileId,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        try {
+            Long cashierUserId = getCurrentUserId(session);
+            invoiceService.recordPrescriptionChoice(id, choice, note, cashierUserId);
+            String choiceLabel = "EXTERNAL".equalsIgnoreCase(choice) ? "Bệnh nhân tự mua ngoài" : "Mua thuốc tại phòng khám";
+            redirectAttributes.addFlashAttribute("successMessage", "Đã lưu trạng thái đơn thuốc: " + choiceLabel);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi cập nhật lựa chọn đơn thuốc: " + e.getMessage());
+        }
+        if (visitId != null) {
+            return "redirect:/invoices/create?visitId=" + visitId;
+        } else if (profileId != null) {
+            return "redirect:/invoices/create?profileId=" + profileId;
+        }
+        return "redirect:/invoices/create";
     }
 
     @GetMapping("/{id}")

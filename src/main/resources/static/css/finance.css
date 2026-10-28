@@ -817,4 +817,179 @@
         justify-content: flex-end;
         width: 100%;
     }
+    /* Chỉ áp dụng cho trang lập hóa đơn */
+    .invoice-create-page {
+        gap: 16px;
+    }
+
+    .invoice-create-page #invoiceForm {
+        margin: 0;
+        min-width: 0;
+    }
+
+    .invoice-create-page .fin-grid-2col {
+        align-items: start;
+        gap: 18px;
+    }
+
+    .invoice-create-page .fin-grid-2col > div {
+        min-width: 0;
+    }
+
+    .invoice-create-page .fin-card {
+        padding: 18px;
+        border: 1px solid #dce4f3;
+        border-radius: 10px;
+        box-shadow: 0 3px 12px rgb(30 58 138 / 5%);
+    }
+
+    .invoice-create-page h4 {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .invoice-create-page .fin-calculation-box {
+        margin-bottom: 0 !important;
+        padding: 18px;
+        border-color: #dce4f3;
+        background: #fff;
+    }
+
+    /* Ô số lượng và đơn giá không bị cắt chữ */
+    .invoice-create-page #invoiceForm .fin-table input[type="number"] {
+        width: 100%;
+        min-width: 90px;
+        min-height: 34px;
+        padding: 6px 9px;
+        text-align: right;
+        font-size: 13px;
+    }
+
+    /* Khu vực đơn thuốc */
+    .invoice-create-page .medicine-handover {
+        margin-top: 0 !important;
+        border: 1px solid #dce4f3 !important;
+        border-top: 3px solid #294594 !important;
+    }
+
+    .invoice-create-page .medicine-handover > .d-flex {
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px !important;
+    }
+
+    .invoice-create-page .medicine-handover h4 {
+        color: #294594 !important;
+    }
+
+    .invoice-create-page .medicine-handover > .alert {
+        padding: 10px 12px !important;
+        border: 1px solid #dce7fc;
+        border-radius: 7px;
+        background: #f2f6ff;
+        color: #526581;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    /* Từng đơn thuốc */
+    .invoice-create-page .prescription-card {
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid #dce4f3;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .invoice-create-page .prescription-card > .d-flex {
+        align-items: flex-start !important;
+        gap: 12px !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 12px !important;
+        border-color: #e7edf7 !important;
+    }
+
+    .invoice-create-page .prescription-card > .d-flex > div {
+        min-width: 0;
+        line-height: 1.8;
+    }
+
+    .invoice-create-page .prescription-card > .d-flex > .d-flex {
+        flex-wrap: wrap;
+    }
+
+    .invoice-create-page .prescription-card .fin-btn {
+        min-height: 34px;
+        padding: 7px 11px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .invoice-create-page .prescription-card .badge {
+        font-size: 11px !important;
+    }
+
+    /* Bảng thuốc đồng bộ với bảng dịch vụ */
+    .invoice-create-page .prescription-card .table-responsive {
+        border: 1px solid #dce4f3;
+        border-radius: 7px;
+        overflow-x: auto;
+    }
+
+    .invoice-create-page .prescription-card table {
+        width: 100%;
+        min-width: 820px;
+        margin: 0;
+        border-collapse: collapse;
+        font-size: 13px !important;
+    }
+
+    .invoice-create-page .prescription-card table th,
+    .invoice-create-page .prescription-card table td {
+        padding: 11px 12px;
+        border: 0;
+        border-bottom: 1px solid #edf1f7;
+        vertical-align: middle;
+        box-shadow: none;
+    }
+
+    .invoice-create-page .prescription-card table thead th {
+        background: #f5f7fc;
+        color: #52617d;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .invoice-create-page .prescription-card table th:first-child,
+    .invoice-create-page .prescription-card table td:first-child {
+        width: 34%;
+        text-align: left;
+    }
+
+    .invoice-create-page .prescription-card table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .invoice-create-page .prescription-card table tbody tr:hover td {
+        background: #f7faff;
+    }
+
+    .invoice-create-page .prescription-card table td small {
+        margin-top: 4px;
+        color: #7a879c !important;
+        font-size: 11px;
+    }
+
+    @media (min-width: 1100px) {
+        .invoice-create-page .fin-grid-2col {
+            grid-template-columns: minmax(0, 1fr) 380px;
+        }
+    }
+
+    @media (max-width: 1099.98px) {
+        .invoice-create-page .fin-grid-2col {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
 }

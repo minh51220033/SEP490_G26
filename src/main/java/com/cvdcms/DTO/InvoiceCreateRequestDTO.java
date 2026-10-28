@@ -20,5 +20,8 @@ public class InvoiceCreateRequestDTO {
     private Long promotionId;
     private Long voucherId;
     private Integer pointsToRedeem = 0;
+    private Long prescriptionId;
+    private Boolean buyMedicineAtClinic = false;
+    private List<MedicineItemRequestDTO> medicineItems = new ArrayList<>();
     private String notes;
 }
