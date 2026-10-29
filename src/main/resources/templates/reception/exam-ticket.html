@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><title>Phiếu số khám</title>
+<style>body{font-family:Arial,sans-serif;max-width:350px;margin:30px auto;text-align:center}strong{font-size:72px}p{margin:8px}.actions{margin-top:28px}@media print{.actions{display:none}}</style></head>
+<body><h1>PHIẾU CHỜ KHÁM</h1><strong th:text="${ticket.displayNumber}"></strong>
+<p th:if="${ticket.isEmergency}">CẤP CỨU</p>
+<p th:text="${ticket.visit.patientProfile.fullName}"></p>
+<p th:text="|Lượt: ${ticket.visit.visitCode}|"></p>
+<p th:text="|Ngày: ${ticket.queueDate} · ${ticket.branch.branchName}|"></p>
+<p>Vui lòng theo dõi màn hình hoặc thông báo gọi số.</p>
+<div class="actions"><button onclick="window.print()">In phiếu</button> <a th:href="@{/reception/dispatch(branchId=${ticket.branch.branchId})}">Về điều phối</a></div>
+</body></html>

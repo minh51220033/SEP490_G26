@@ -1,0 +1,320 @@
+/* =========================================================
+   DANH SÁCH DỊCH VỤ ADMIN
+   Chỉ áp dụng cho body.service-catalog-page
+   ========================================================= */
+
+body.service-catalog-page .app-main {
+    background: #f4f6fb;
+}
+
+/* Nội dung trải rộng, cách sidebar và mép phải 20px */
+body.service-catalog-page .app-content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+    gap: 18px;
+}
+
+body.service-catalog-page .app-content > * {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Bỏ lớp khung lớn đang bọc chung banner, lọc và bảng */
+body.service-catalog-page .service-catalog-list {
+    padding: 0;
+    margin-bottom: 0 !important;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Banner xanh */
+body.service-catalog-page .service-catalog-list > .panel__head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 100px;
+    margin-bottom: 16px;
+    padding: 32px 22px 18px;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #1d306c, #3052b3);
+    box-shadow: 0 10px 22px rgba(29, 49, 107, .16);
+}
+
+body.service-catalog-page .service-catalog-list > .panel__head::before {
+    content: "CV-DCMS · QUẢN LÝ DỊCH VỤ & BẢNG GIÁ";
+    position: absolute;
+    top: 12px;
+    left: 22px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #e8efff;
+    color: #4262ab;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+body.service-catalog-page .service-catalog-list > .panel__head .panel__title {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+body.service-catalog-page .service-catalog-list > .panel__head .panel__subtitle {
+    color: #dce5ff;
+}
+
+body.service-catalog-page .service-catalog-list > .panel__head .btn {
+    background: #fff;
+    border-color: #fff;
+    color: #243e87;
+    font-weight: 700;
+}
+
+body.service-catalog-page .service-catalog-list > .panel__head .btn:hover {
+    background: #eef2ff;
+    border-color: #eef2ff;
+}
+
+/* Khung bộ lọc riêng */
+body.service-catalog-page .service-catalog-list > form {
+    margin-bottom: 16px;
+    padding: 14px 16px !important;
+    border: 1px solid #dce4f1 !important;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(28, 44, 85, .05);
+}
+
+body.service-catalog-page .form-control,
+body.service-catalog-page .form-select {
+    border-color: #cbd5e5;
+    border-radius: 7px;
+}
+
+body.service-catalog-page .btn-primary {
+    background: #294690;
+    border-color: #294690;
+}
+
+body.service-catalog-page .btn-primary:hover {
+    background: #1d3677;
+    border-color: #1d3677;
+}
+
+/* Khung bảng dịch vụ riêng */
+body.service-catalog-page .service-catalog-list > .table-responsive {
+    border: 1px solid #dce4f1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
+    overflow-x: auto;
+}
+
+/* Khung nhóm danh mục */
+body.service-catalog-page #service-categories {
+    padding: 0;
+    border: 1px solid #dce4f1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
+    overflow: hidden;
+}
+
+body.service-catalog-page #service-categories > .panel__head {
+    align-items: center;
+    margin: 0;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e7ecf5;
+}
+
+/* Cả hai bảng */
+body.service-catalog-page .table-responsive {
+    overflow-x: auto;
+}
+
+body.service-catalog-page .table {
+    min-width: 850px;
+    margin: 0;
+    font-size: 13px;
+}
+
+body.service-catalog-page .table > :not(caption) > * > * {
+    padding: 12px;
+    border-color: #e7ecf5;
+    vertical-align: middle;
+}
+
+body.service-catalog-page .table thead th {
+    background: #f5f7fb;
+    color: #53617b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+body.service-catalog-page .table tbody tr:hover td {
+    background: #f7f9fd;
+}
+
+body.service-catalog-page .table td .btn {
+    white-space: nowrap;
+}
+
+/* Màn hình nhỏ */
+@media (max-width: 575.98px) {
+    body.service-catalog-page .app-content {
+        padding: 12px;
+    }
+
+    body.service-catalog-page .service-catalog-list > .panel__head {
+        gap: 12px;
+        padding: 34px 16px 16px;
+    }
+
+    body.service-catalog-page .service-catalog-list > .panel__head::before {
+        left: 16px;
+    }
+}
+/* Tách phần nhóm thành banner xanh và bảng trắng */
+body.service-catalog-page #service-categories {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+body.service-catalog-page #service-categories > .panel__head {
+    position: relative;
+    min-height: 100px;
+    margin: 0 0 16px;
+    padding: 32px 22px 18px;
+    align-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #1d306c, #3052b3);
+    box-shadow: 0 10px 22px rgba(29, 49, 107, .16);
+}
+
+body.service-catalog-page #service-categories > .panel__head::before {
+    content: "CV-DCMS · QUẢN LÝ NHÓM DỊCH VỤ";
+    position: absolute;
+    top: 12px;
+    left: 22px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #e8efff;
+    color: #4262ab;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+body.service-catalog-page #service-categories > .panel__head .panel__title {
+    color: #fff;
+    font-size: 20px;
+}
+
+body.service-catalog-page #service-categories > .panel__head .panel__subtitle {
+    color: #dce5ff;
+}
+
+body.service-catalog-page #service-categories > .panel__head .btn {
+    background: #fff;
+    border-color: #fff;
+    color: #243e87;
+    font-weight: 700;
+}
+
+body.service-catalog-page #service-categories > .table-responsive {
+    border: 1px solid #dce4f1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
+    overflow-x: auto;
+}
+/* Khối Danh sách dịch vụ đầu tiên: bỏ khung bọc chung */
+body.service-catalog-page main.app-content > section.panel:first-of-type {
+    padding: 0;
+    margin-bottom: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Banner xanh của Danh sách dịch vụ */
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .panel__head {
+    position: relative;
+    min-height: 100px;
+    margin: 0 0 16px;
+    padding: 32px 22px 18px;
+    align-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #1d306c, #3052b3);
+    box-shadow: 0 10px 22px rgba(29, 49, 107, .16);
+}
+
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .panel__head::before {
+    content: "CV-DCMS · QUẢN LÝ DỊCH VỤ & BẢNG GIÁ";
+    position: absolute;
+    top: 12px;
+    left: 22px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #e8efff;
+    color: #4262ab;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .panel__head .panel__title {
+    color: #fff;
+    font-size: 20px;
+}
+
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .panel__head .panel__subtitle {
+    color: #dce5ff;
+}
+
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .panel__head .btn {
+    background: #fff;
+    border-color: #fff;
+    color: #243e87;
+}
+
+/* Khung lọc riêng */
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > form {
+    margin-bottom: 16px;
+    padding: 14px 16px !important;
+    border: 1px solid #dce4f1 !important;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(28, 44, 85, .05);
+}
+
+/* Khung bảng dịch vụ riêng */
+body.service-catalog-page
+main.app-content > section.panel:first-of-type > .table-responsive {
+    border: 1px solid #dce4f1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
+    overflow-x: auto;
+}

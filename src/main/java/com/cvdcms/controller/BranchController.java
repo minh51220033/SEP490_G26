@@ -70,6 +70,8 @@ public class BranchController {
         model.addAttribute("branches", branches);
         model.addAttribute("roomCounts", roomCounts);
         model.addAttribute("chairCounts", chairCounts);
+        model.addAttribute("managers", branchService.getPotentialManagers());
+        model.addAttribute("managerDisplayMap", branchService.getManagerDisplayMap());
 
         // Tạo đối tượng rỗng để Thymeleaf liên kết dữ liệu biểu mẫu.
         model.addAttribute("branchForm", new Branch());
@@ -148,6 +150,8 @@ public class BranchController {
         model.addAttribute("roomTypes", RoomType.values());
         model.addAttribute("roomStatuses", RoomStatus.values());
         model.addAttribute("chairStatuses", ChairStatus.values());
+        model.addAttribute("managers", branchService.getPotentialManagers());
+        model.addAttribute("managerDisplayMap", branchService.getManagerDisplayMap());
 
         return "branch/detail";
     }

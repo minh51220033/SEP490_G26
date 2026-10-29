@@ -249,6 +249,22 @@
                                     <input type="email" id="infoEmail" name="email" class="form-control"
                                            th:value="${branch.email}" maxlength="100">
                                 </div>
+                                <div class="col-md-6">
+                                    <label for="infoTaxCode" class="form-label">Mã số thuế</label>
+                                    <input type="text" id="infoTaxCode" name="taxCode" class="form-control"
+                                           pattern="^([0-9]{10}|[0-9]{13}|[0-9]{10}-[0-9]{3})$"
+                                           title="Mã số thuế gồm 10 số (doanh nghiệp) hoặc 13 số (chi nhánh). Ví dụ: 0101234567 hoặc 0101234567-001"
+                                           th:value="${branch.taxCode}" maxlength="20" placeholder="Ví dụ: 0101234567">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoManager" class="form-label">Người quản lý cơ sở</label>
+                                    <select id="infoManager" name="managerUser.userId" class="form-select">
+                                        <option value="">-- Chưa chỉ định --</option>
+                                        <option th:each="m : ${managers}" th:value="${m.userId}"
+                                                th:selected="${branch.managerUser != null and branch.managerUser.userId == m.userId}"
+                                                th:text="${m.displayName}">Quản lý</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mt-3">
                                 <button type="submit" class="btn btn-primary">

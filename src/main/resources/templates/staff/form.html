@@ -208,13 +208,16 @@
                             </div>
                             <div class="col-md-8">
                                 <label for="userId" class="form-label">Tài khoản đăng nhập liên kết</label>
+                                <input type="hidden" id="editStaffRoleId" th:value="${staffRoleId}" th:if="${editMode}">
                                 <select id="userId" th:field="*{userId}" class="form-select">
                                     <option value="">-- Chưa liên kết --</option>
                                     <option th:each="u : ${users}" th:value="${u.userId}"
-                                            th:text="${u.username + ' (' + u.email + ')'}">username (email)</option>
+                                            th:data-role-ids="${u.roleIds}"
+                                            th:data-role-names="${u.roleNames}"
+                                            th:text="${u.displayName}">username (email)</option>
                                 </select>
                                 <div class="form-hint">
-                                    Chỉ hiện tài khoản nhân sự chưa gắn hồ sơ. Cần liên kết để nhân viên đăng nhập.
+                                    Danh sách tự động lọc tài khoản có vai trò khớp với chức vụ đã chọn.
                                 </div>
                             </div>
                             <div class="col-12" th:if="${editMode}">
@@ -247,6 +250,8 @@
 <script th:inline="javascript">
 document.addEventListener('DOMContentLoaded', function () {
     const roleSelect = document.getElementById('roleId');
+    const userSelect = document.getElementById('userId');
+    const editStaffRoleIdInput = document.getElementById('editStaffRoleId');
     const sectionSpecialty = document.getElementById('sectionSpecialty');
     const nonDoctorNotice = document.getElementById('nonDoctorNotice');
     const cchnInput = document.getElementById('practiceLicenseNo');
@@ -259,7 +264,38 @@ document.addEventListener('DOMContentLoaded', function () {
         return roleName.includes('BAC_SI') || roleName.includes('DOCTOR') || roleText.includes('BÁC SĨ') || roleText.includes('BAC SI');
     }
 
+    function filterLinkableUsers() {
+        if (!userSelect) return;
+        const selectedRoleId = roleSelect ? roleSelect.value : (editStaffRoleIdInput ? editStaffRoleIdInput.value : '');
+        const currentValue = userSelect.value;
+        let currentStillVisible = false;
+
+        Array.from(userSelect.options).forEach(opt => {
+            if (!opt.value) return; // Luôn giữ option "-- Chưa liên kết --"
+            const roleIds = (opt.getAttribute('data-role-ids') || '').split(',').map(s => s.trim());
+
+            // Nếu chưa chọn vai trò: hiện tất cả
+            // Nếu đã chọn vai trò: chỉ hiện tài khoản có role_id khớp với vai trò đang chọn
+            const isMatch = !selectedRoleId || roleIds.includes(selectedRoleId);
+            if (isMatch) {
+                opt.hidden = false;
+                opt.disabled = false;
+                if (opt.value === currentValue) currentStillVisible = true;
+            } else {
+                opt.hidden = true;
+                opt.disabled = true;
+            }
+        });
+
+        // Nếu tài khoản đang chọn bị ẩn đi do không khớp vai trò mới -> reset về Chưa liên kết
+        if (currentValue && !currentStillVisible) {
+            userSelect.value = '';
+        }
+    }
+
     function updateRoleView() {
+        filterLinkableUsers();
+
         if (!roleSelect) return;
 
         const selectedOption = roleSelect.options[roleSelect.selectedIndex];
@@ -298,6 +334,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (roleSelect) {
         roleSelect.addEventListener('change', updateRoleView);
         updateRoleView(); // Kích hoạt ngay khi load form
+    } else {
+        filterLinkableUsers(); // Khi ở màn hình sửa (không có roleSelect)
     }
 });
 </script>
