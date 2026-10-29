@@ -41,6 +41,13 @@ public class PrescriptionResponseDTO {
     private String createdAt;
     private BigDecimal totalAmount;
 
+    private String status;
+    private String statusDisplay;
+    private String purchaseChoice;
+    private String choiceNote;
+    private String handledByName;
+    private String handledAt;
+
     @Builder.Default
     private List<PrescriptionItemResponseDTO> items = new ArrayList<>();
 }

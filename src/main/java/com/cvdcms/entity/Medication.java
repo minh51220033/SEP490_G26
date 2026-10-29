@@ -34,9 +34,16 @@ public class Medication {
     @Column(name = "unit", nullable = false, length = 30)
     private String unit = "Viên";
 
+    @Column(name = "sale_price", nullable = false, precision = 15, scale = 2)
+    private java.math.BigDecimal salePrice = java.math.BigDecimal.ZERO;
+
     @Column(name = "usage_instruction", length = 255)
     private String usageInstruction;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "material_id")
+    private Material material;
 }

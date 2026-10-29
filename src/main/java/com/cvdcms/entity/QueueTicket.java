@@ -61,6 +61,9 @@ public class QueueTicket {
     @Column(name = "priority_score", nullable = false)
     private Integer priorityScore = 0;
 
+    @Column(name = "priority_reason", length = 255)
+    private String priorityReason;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private QueueStatus status = QueueStatus.WAITING;

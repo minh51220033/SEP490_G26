@@ -13,12 +13,14 @@ import com.cvdcms.service.PromotionService;
 import com.cvdcms.service.impl.LoyaltyServiceImpl;
 import com.cvdcms.service.impl.MembershipTierServiceImpl;
 import com.cvdcms.service.impl.PromotionServiceImpl;
+import com.cvdcms.controller.AdminMembershipTierController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -81,7 +83,7 @@ public class LoyaltyAndPromotionUnitTest {
         standardTier.setMinTotalSpent(BigDecimal.ZERO);
         standardTier.setDiscountPercent(BigDecimal.ZERO);
         standardTier.setSpendPerPoint(new BigDecimal("10000.00"));
-        standardTier.setPointValue(new BigDecimal("1000.00"));
+        standardTier.setPointValue(new BigDecimal("10.00"));
         standardTier.setDisplayOrder(1);
         standardTier.setIsActive(true);
 
@@ -92,7 +94,7 @@ public class LoyaltyAndPromotionUnitTest {
         silverTier.setMinTotalSpent(new BigDecimal("5000000.00"));
         silverTier.setDiscountPercent(new BigDecimal("5.00"));
         silverTier.setSpendPerPoint(new BigDecimal("10000.00"));
-        silverTier.setPointValue(new BigDecimal("1000.00"));
+        silverTier.setPointValue(new BigDecimal("10.00"));
         silverTier.setDisplayOrder(2);
         silverTier.setIsActive(true);
 
@@ -103,7 +105,7 @@ public class LoyaltyAndPromotionUnitTest {
         goldTier.setMinTotalSpent(new BigDecimal("20000000.00"));
         goldTier.setDiscountPercent(new BigDecimal("10.00"));
         goldTier.setSpendPerPoint(new BigDecimal("10000.00"));
-        goldTier.setPointValue(new BigDecimal("1000.00"));
+        goldTier.setPointValue(new BigDecimal("10.00"));
         goldTier.setDisplayOrder(3);
         goldTier.setIsActive(true);
 
@@ -114,7 +116,7 @@ public class LoyaltyAndPromotionUnitTest {
         diamondTier.setMinTotalSpent(new BigDecimal("50000000.00"));
         diamondTier.setDiscountPercent(new BigDecimal("15.00"));
         diamondTier.setSpendPerPoint(new BigDecimal("10000.00"));
-        diamondTier.setPointValue(new BigDecimal("1000.00"));
+        diamondTier.setPointValue(new BigDecimal("10.00"));
         diamondTier.setDisplayOrder(4);
         diamondTier.setIsActive(true);
 
@@ -141,7 +143,7 @@ public class LoyaltyAndPromotionUnitTest {
         dto.setMinTotalSpent(new BigDecimal("35000000.00"));
         dto.setDiscountPercent(new BigDecimal("12.00"));
         dto.setSpendPerPoint(new BigDecimal("10000.00"));
-        dto.setPointValue(new BigDecimal("1000.00"));
+        dto.setPointValue(new BigDecimal("10.00"));
         dto.setDisplayOrder(5);
         dto.setIsActive(true);
 
@@ -442,5 +444,136 @@ public class LoyaltyAndPromotionUnitTest {
         // Tổng điểm nhận được qua 2 lần = 1 + 2 = 3 điểm (tương ứng chính xác 30.000 / 10.000, không mất phần lẻ!)
         assertEquals(3, mockWallet.getCurrentPoints());
         assertEquals(new BigDecimal("30000.00"), mockWallet.getTotalSpentAmount());
+    }
+
+    // ==================== FT19: Membership Tier Controller & Service Tests ====================
+
+    @Test
+    @DisplayName("FT19 - Cập nhật hạng thành viên thành công (bảo toàn ID, cập nhật đúng bản ghi)")
+    void testUpdateMembershipTier_Success() {
+        MembershipTierDTO dto = new MembershipTierDTO();
+        dto.setTierId(2L);
+        dto.setTierCode("SILVER_VIP");
+        dto.setTierName("Hội viên Bạc VIP");
+        dto.setMinTotalSpent(new BigDecimal("6000000.00"));
+        dto.setDiscountPercent(new BigDecimal("6.00"));
+        dto.setSpendPerPoint(new BigDecimal("10000.00"));
+        dto.setPointValue(new BigDecimal("10.00"));
+        dto.setDisplayOrder(2);
+        dto.setIsActive(true);
+
+        when(membershipTierRepository.findById(2L)).thenReturn(Optional.of(silverTier));
+        when(membershipTierRepository.existsByTierCodeAndTierIdNot("SILVER_VIP", 2L)).thenReturn(false);
+        when(membershipTierRepository.save(any(MembershipTier.class))).thenAnswer(i -> i.getArgument(0));
+
+        MembershipTier updated = membershipTierService.updateTier(2L, dto);
+
+        assertNotNull(updated);
+        assertEquals(2L, updated.getTierId());
+        assertEquals("SILVER_VIP", updated.getTierCode());
+        assertEquals("Hội viên Bạc VIP", updated.getTierName());
+        assertEquals(new BigDecimal("6.00"), updated.getDiscountPercent());
+        assertEquals(new BigDecimal("10.00"), updated.getPointValue());
+        verify(membershipTierRepository).save(silverTier);
+    }
+
+    @Test
+    @DisplayName("FT19 - Từ chối cập nhật hạng thành viên nếu mã hạng bị trùng với hạng khác")
+    void testUpdateMembershipTier_DuplicateCode_ThrowsException() {
+        MembershipTierDTO dto = new MembershipTierDTO();
+        dto.setTierId(2L);
+        dto.setTierCode("GOLD"); // trùng mã với tier 3
+        dto.setTierName("Bạc đổi tên thành Vàng");
+        dto.setMinTotalSpent(new BigDecimal("5000000.00"));
+        dto.setDiscountPercent(new BigDecimal("5.00"));
+        dto.setSpendPerPoint(new BigDecimal("10000.00"));
+        dto.setPointValue(new BigDecimal("10.00"));
+        dto.setDisplayOrder(2);
+
+        when(membershipTierRepository.findById(2L)).thenReturn(Optional.of(silverTier));
+        when(membershipTierRepository.existsByTierCodeAndTierIdNot("GOLD", 2L)).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                membershipTierService.updateTier(2L, dto));
+        assertTrue(ex.getMessage().contains("đã được sử dụng"));
+        verify(membershipTierRepository, never()).save(any(MembershipTier.class));
+    }
+
+    @Test
+    @DisplayName("FT19 Controller - Tạo mới hạng thành công qua Admin Controller")
+    void testAdminMembershipTierController_CreateTier_Success() {
+        AdminMembershipTierController controller = new AdminMembershipTierController(membershipTierService);
+
+        MockHttpSession session = new MockHttpSession();
+        User adminUser = new User();
+        adminUser.setUserId(1L);
+        adminUser.setUsername("admin");
+        session.setAttribute("loggedInUser", adminUser);
+        session.setAttribute("roleNames", List.of("ADMIN"));
+
+        MembershipTierDTO dto = new MembershipTierDTO();
+        dto.setTierCode("PLATINUM");
+        dto.setTierName("Bạch Kim");
+        dto.setMinTotalSpent(new BigDecimal("35000000.00"));
+        dto.setDiscountPercent(new BigDecimal("12.00"));
+        dto.setSpendPerPoint(new BigDecimal("10000.00"));
+        dto.setPointValue(new BigDecimal("10.00"));
+        dto.setDisplayOrder(5);
+        dto.setIsActive(true);
+
+        when(membershipTierRepository.existsByTierCode("PLATINUM")).thenReturn(false);
+        when(membershipTierRepository.save(any(MembershipTier.class))).thenAnswer(i -> {
+            MembershipTier t = i.getArgument(0);
+            t.setTierId(5L);
+            return t;
+        });
+
+        org.springframework.validation.BeanPropertyBindingResult bindingResult =
+                new org.springframework.validation.BeanPropertyBindingResult(dto, "tierForm");
+        org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap redirectAttributes =
+                new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap();
+
+        String view = controller.saveTier(dto, bindingResult, redirectAttributes, session);
+
+        assertEquals("redirect:/admin/membership-tiers", view);
+        assertTrue(redirectAttributes.getFlashAttributes().containsKey("successMessage"));
+        assertTrue(redirectAttributes.getFlashAttributes().get("successMessage").toString().contains("Tạo mới hạng"));
+    }
+
+    @Test
+    @DisplayName("FT19 Controller - Khi lỗi trùng mã hoặc validation thất bại, hiển thị lỗi và bảo toàn dữ liệu formTier")
+    void testAdminMembershipTierController_DuplicateCode_PreservesFormTierAndShowsError() {
+        AdminMembershipTierController controller = new AdminMembershipTierController(membershipTierService);
+
+        MockHttpSession session = new MockHttpSession();
+        User adminUser = new User();
+        adminUser.setUserId(1L);
+        adminUser.setUsername("admin");
+        session.setAttribute("loggedInUser", adminUser);
+        session.setAttribute("roleNames", List.of("ADMIN"));
+
+        MembershipTierDTO dto = new MembershipTierDTO();
+        dto.setTierCode("GOLD");
+        dto.setTierName("Vàng mới");
+        dto.setMinTotalSpent(new BigDecimal("20000000.00"));
+        dto.setDiscountPercent(new BigDecimal("10.00"));
+        dto.setSpendPerPoint(new BigDecimal("10000.00"));
+        dto.setPointValue(new BigDecimal("10.00"));
+        dto.setDisplayOrder(3);
+
+        when(membershipTierRepository.existsByTierCode("GOLD")).thenReturn(true);
+
+        org.springframework.validation.BeanPropertyBindingResult bindingResult =
+                new org.springframework.validation.BeanPropertyBindingResult(dto, "tierForm");
+        org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap redirectAttributes =
+                new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap();
+
+        String view = controller.saveTier(dto, bindingResult, redirectAttributes, session);
+
+        assertEquals("redirect:/admin/membership-tiers", view);
+        assertTrue(redirectAttributes.getFlashAttributes().containsKey("errorMessage"));
+        assertTrue(redirectAttributes.getFlashAttributes().get("errorMessage").toString().contains("đã tồn tại"));
+        // BẢO VỆ: FormTier được giữ lại để mở lại modal với dữ liệu đã nhập
+        assertEquals(dto, redirectAttributes.getFlashAttributes().get("formTier"));
     }
 }

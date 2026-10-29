@@ -1,0 +1,61 @@
+/* FT33 - Chấm công (SCR-33.2, SCR-33.4). Dùng lại biến màu của layout.css. */
+
+/* ---------- Thẻ check-in / check-out ---------- */
+.checkin-card {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--brand-50), #ffffff);
+    border: 1px solid #dbe6f7;
+    margin-bottom: 20px;
+}
+.checkin-card__clock { font-size: 2.6rem; font-weight: 800; color: var(--brand-700); line-height: 1; letter-spacing: 1px; }
+.checkin-card__date { color: var(--muted); font-weight: 600; margin-top: 4px; }
+.checkin-card__ip { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+.checkin-card__actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.checkin-btn { min-width: 150px; font-weight: 700; padding: 10px 18px; border-radius: 12px; }
+
+.checkin-shifts { display: flex; flex-direction: column; gap: 8px; }
+.checkin-shifts__title { font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.checkin-shift {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e6eaf1;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: .88rem;
+}
+.checkin-shift strong { color: var(--brand-700); }
+.checkin-state {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px dashed #c9d2e0;
+    font-size: .88rem;
+}
+
+/* ---------- Thống kê nhanh ---------- */
+.att-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.att-stat { padding: 12px 14px; border-radius: 12px; background: #fafbfd; border: 1px solid #e6eaf1; }
+.att-stat span { display: block; font-size: .74rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.att-stat strong { font-size: 1.35rem; color: var(--ink); }
+.att-stat--late strong { color: #b4351f; }
+.att-stat--early strong { color: #b36b00; }
+
+/* ---------- Badge trạng thái chấm công ---------- */
+.status-badge--on_time     { background: #e3f6ed; color: #14744b; }
+.status-badge--late        { background: #fde4e0; color: #b4351f; }
+.status-badge--early_leave { background: #fff3d6; color: #8a5a00; }
+.status-badge--absent      { background: #eceff4; color: #5b6578; }
+
+.net-ok { color: #14744b; }
+.net-bad { color: #b4351f; }
+
+@media (max-width: 768px) {
+    .checkin-card { grid-template-columns: 1fr; }
+}
