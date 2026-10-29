@@ -13,7 +13,9 @@
     Các giá trị activeMenu: home, news, chat, accounts, admin-news, bans, branches,
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
-<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
+<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống"
+       th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
+                displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? session.loggedInUser.username : '')}">
     <style>
         .side-icon-labo {
             color: #0284c7 !important;
