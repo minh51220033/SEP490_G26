@@ -230,11 +230,11 @@
                th:classappend="${activeMenu == 'appointments'} ? 'is-active' : ''">
                 <i class="bi bi-calendar3" aria-hidden="true"></i><span>Quản lý lịch hẹn</span>
             </a>
-            <a href="#" class="side-link is-disabled" aria-disabled="true"
+            <a th:href="@{/reception/check-in}" class="side-link"
                th:classappend="${activeMenu == 'checkin'} ? 'is-active' : ''">
                 <i class="bi bi-person-check" aria-hidden="true"></i><span>Tiếp đón &amp; Check-in</span>
             </a>
-            <a href="#" class="side-link is-disabled" aria-disabled="true"
+            <a th:href="@{/reception/queue}" class="side-link"
                th:classappend="${activeMenu == 'queue'} ? 'is-active' : ''">
                 <i class="bi bi-list-ol" aria-hidden="true"></i><span>Hàng chờ khám</span>
             </a>
@@ -266,8 +266,10 @@
         </a>
 
         <!-- 3. Điều phối & Ghế khám Kanban -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Bảng điều phối ghế & hàng chờ">
+        <a th:if="${roleNames != null and (#lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'ADMIN'))}"
+           th:href="@{/reception/dispatch}" class="side-link"
+           th:classappend="${activeMenu == 'queue'} ? 'is-active' : ''"
+           title="Bảng điều phối lượt khám &amp; cấp số">
             <i class="bi bi-kanban" aria-hidden="true"></i>
             <span>Điều phối ghế nha</span>
         </a>
