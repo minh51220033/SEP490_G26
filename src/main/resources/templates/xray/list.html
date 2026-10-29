@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Quản lý Phim X-quang NanoPix')}"></head>
+
+<body class="app-body">
+
+<!-- CSS và Script riêng của chức năng FT12 NanoPix -->
+<link rel="stylesheet" th:href="@{/css/nanopix-xray.css}">
+<script th:src="@{/js/nanopix-xray.js}" defer></script>
+
+<!-- Header công khai hệ thống -->
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- Khung quản trị với Sidebar đồng bộ hệ thống -->
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('xray')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <main class="xray-page">
+
+            <!-- HEADER TRANG QUẢN LÝ X-QUANG NANOPIX (FT12) -->
+            <header class="xray-topbar">
+                <div>
+                    <p class="eyebrow">CV-DCMS · QUẢN LÝ KẾT QUẢ CẬN LÂM SÀNG &amp; HÌNH ẢNH (FT12)</p>
+                    <h1>Quản lý Kết quả Phim X-quang NanoPix</h1>
+                    <p class="subtitle">
+                        Kho lưu trữ phim X-quang kỹ thuật số, trình soi phim đa chế độ tại ghế, đối chiếu hồ sơ ca khám và giám sát kết nối cảm biến Eighteeth NanoPix.
+                    </p>
+                </div>
+                <div class="topbar-actions">
+                    <a class="button button-secondary" th:href="@{/home}">← Trang chủ</a>
+                    <button id="openIngestBtn" class="button button-primary-white" type="button" title="Nạp file ảnh chụp xuất ra từ máy NanoPix">
+                        + Nạp phim NanoPix
+                    </button>
+                    <button id="checkConnectionBtn" class="button button-secondary" type="button" title="Kiểm tra trạng thái kết nối adapter thiết bị">
+                        ⚡ Kiểm tra kết nối
+                    </button>
+                    <button id="refreshAllBtn" class="button button-secondary" type="button">
+                        ↻ Làm mới
+                    </button>
+                </div>
+            </header>
+
+            <!-- 4 THẺ CHỈ SỐ TỔNG QUAN (SCR-12.4) -->
+            <section class="stats-grid" aria-label="Thống kê kết quả phim X-quang">
+                <article class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Tổng số phim X-quang</span>
+                        <span class="stat-icon" style="background:#eff6ff;color:#1d4ed8;">📷</span>
+                    </div>
+                    <strong id="statTotalCount" class="stat-value">—</strong>
+                    <span class="stat-meta">Tổng phim nhận từ cảm biến</span>
+                </article>
+
+                <article class="stat-card stat-success">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Đã khớp hồ sơ &amp; Ca khám</span>
+                        <span class="stat-icon" style="background:#ecfdf5;color:#047857;">✓</span>
+                    </div>
+                    <strong id="statMatchedCount" class="stat-value">—</strong>
+                    <span class="stat-meta">Sẵn sàng trong bệnh án bác sĩ</span>
+                </article>
+
+                <article class="stat-card stat-warning">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Chưa khớp hồ sơ (Chờ đối chiếu)</span>
+                        <span class="stat-icon" style="background:#fffbeb;color:#b45309;">⏳</span>
+                    </div>
+                    <strong id="statUnmatchedCount" class="stat-value">—</strong>
+                    <span class="stat-meta">Cần Lễ tân / Bác sĩ liên kết</span>
+                </article>
+
+                <article class="stat-card stat-info">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Kết nối Sensor NanoPix1</span>
+                        <span class="stat-icon" style="background:#f0f9ff;color:#0284c7;">🔌</span>
+                    </div>
+                    <strong id="statAdapterStatus" class="stat-value" style="font-size:18px;">Kiểm tra...</strong>
+                    <span class="stat-meta">Eighteeth S/N: EN1E0408A032</span>
+                </article>
+            </section>
+
+            <!-- THANH ĐIỀU HƯỚNG TABS -->
+            <nav class="tabs-bar" aria-label="Điều hướng các phân hệ X-quang">
+                <button type="button" class="tab active" data-tab="ARCHIVE">
+                    🖼️ Kho phim X-quang (SCR-12.1)
+                </button>
+                <button type="button" class="tab" data-tab="UNMATCHED">
+                    ⚠️ Chưa khớp hồ sơ (SCR-12.2)
+                    <span id="unmatchedTabBadge" class="tab-badge">0</span>
+                </button>
+                <button type="button" class="tab" data-tab="MONITOR">
+                    🔌 Trạng thái kết nối &amp; Thiết bị (SCR-12.4)
+                </button>
+            </nav>
+
+            <!-- ========================================================================= -->
+            <!-- TAB 1: KHO PHIM X-QUANG & TRÌNH XEM ẢNH (SCR-12.1)                        -->
+            <!-- ========================================================================= -->
+            <div id="archivePanel">
+                <!-- Bộ lọc tìm kiếm -->
+                <section class="filter-card">
+                    <div class="filter-grid">
+                        <div class="filter-field">
+                            <label for="filterKeyword">Tìm kiếm phim</label>
+                            <input id="filterKeyword" type="text" placeholder="Nhập tên BN, mã BN, mã ca khám hoặc Study UID...">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterBranch">Cơ sở hoạt động</label>
+                            <select id="filterBranch">
+                                <option th:if="${isAdmin}" value="">Tất cả cơ sở</option>
+                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}" th:selected="${b.branchId == currentBranchId}"></option>
+                            </select>
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterStatus">Trạng thái đối chiếu</label>
+                            <select id="filterStatus">
+                                <option value="ALL">Tất cả trạng thái</option>
+                                <option value="MATCHED">✓ Đã khớp hồ sơ</option>
+                                <option value="UNMATCHED">⏳ Chưa khớp hồ sơ</option>
+                                <option value="ERROR">❌ Lỗi kết nối / đồng bộ</option>
+                            </select>
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterFromDate">Từ ngày chụp</label>
+                            <input id="filterFromDate" type="date">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterToDate">Đến ngày chụp</label>
+                            <input id="filterToDate" type="date">
+                        </div>
+                        <div class="filter-actions">
+                            <button id="searchBtn" type="button" class="button button-primary">🔍 Tìm kiếm</button>
+                            <button id="resetFilterBtn" type="button" class="button button-secondary">Đặt lại</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Lưới hiển thị danh sách thẻ phim X-quang -->
+                <section id="xrayCardsGrid" class="xray-grid"></section>
+
+                <!-- Phân trang -->
+                <div class="pagination-wrap">
+                    <span id="pageInfoText">Đang tải phân trang...</span>
+                    <div class="pager-buttons">
+                        <button id="prevPageBtn" class="button button-secondary button-sm" type="button">← Trang trước</button>
+                        <button id="nextPageBtn" class="button button-secondary button-sm" type="button">Trang sau →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- TAB 2: DANH SÁCH KẾT QUẢ CHƯA KHỚP HỒ SƠ (SCR-12.2)                       -->
+            <!-- ========================================================================= -->
+            <div id="unmatchedPanel" hidden>
+                <section class="filter-card" style="margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:280px;display:flex;gap:8px;">
+                            <input id="unmatchedKeyword" type="text" placeholder="Tìm theo mã tham chiếu NanoPix, tên trên máy chụp...">
+                            <button id="unmatchedSearchBtn" type="button" class="button button-primary">Tìm kiếm</button>
+                        </div>
+                        <div style="font-size:12.5px;color:#b45309;font-weight:600;">
+                            💡 Chọn "Đối chiếu ngay" để liên kết kết quả vào hồ sơ bệnh nhân và ca khám đang điều trị.
+                        </div>
+                    </div>
+                </section>
+
+                <div class="table-wrap">
+                    <table class="xray-table">
+                        <thead>
+                            <tr>
+                                <th>Ảnh</th>
+                                <th>Mã tham chiếu máy chụp (Study UID)</th>
+                                <th>Tên trên máy NanoPix</th>
+                                <th>Thời điểm chụp</th>
+                                <th>Trạng thái</th>
+                                <th>Lý do chưa khớp</th>
+                                <th style="text-align:center;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unmatchedTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center;padding:24px;">Đang tải danh sách chưa đối chiếu...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- TAB 3: TRẠNG THÁI KẾT NỐI & CẤU HÌNH THIẾT BỊ NANOPIX (SCR-12.4)          -->
+            <!-- ========================================================================= -->
+            <div id="monitorPanel" hidden>
+                <section class="hardware-card">
+                    <div class="hardware-header">
+                        <div>
+                            <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--brand-900);">
+                                📡 Giám sát Kết nối Cảm biến NanoPix (Changzhou Sifary Medical / Eighteeth)
+                            </h3>
+                            <p style="margin:4px 0 0;font-size:13px;color:var(--muted);">
+                                Theo dõi trạng thái hoạt động của bộ chuyển tiếp cảm biến X-quang kỹ thuật số nha khoa.
+                            </p>
+                        </div>
+                        <span id="monitorStatusText" class="badge badge-matched" style="font-size:12px;padding:6px 12px;">
+                            ĐANG KIỂM TRA...
+                        </span>
+                    </div>
+
+                    <div class="hardware-specs-grid">
+                        <div class="viewer-info-item">
+                            <span>Thiết bị cảm biến (Sensor)</span>
+                            <strong id="monitorDeviceModel">NanoPix1</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Số Serial phần cứng (S/N)</span>
+                            <strong id="monitorDeviceSN" class="code">EN1E0408A032</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Nhà sản xuất / Hãng</span>
+                            <strong>Changzhou Sifary Medical / Eighteeth</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Chuẩn giao tiếp</span>
+                            <strong>USB 2.0 (Cáp liền sensor bảo vệ IP68)</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Đồng bộ gần nhất</span>
+                            <strong id="monitorLastSync">—</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Thư mục lưu trữ an toàn</span>
+                            <strong id="monitorStorageDir" class="code" style="font-size:11px;">uploads/nanopix/</strong>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:16px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#166534;">
+                        <strong>Thông báo bộ điều hợp:</strong> <span id="monitorMessage">Bộ điều hợp nội bộ sẵn sàng.</span>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 1: TRÌNH SOI PHIM X-QUANG ĐA CHẾ ĐỘ / RVG VIEWER (SCR-12.1)         -->
+<!-- ========================================================================= -->
+<div id="viewerModal" class="xray-modal-backdrop" hidden>
+    <div class="xray-modal-dialog modal-xl" role="dialog" aria-modal="true" aria-labelledby="viewerModalTitle">
+        <div class="xray-modal-header" style="background:#111827;border-bottom:1px solid #1f2937;color:#fff;">
+            <h3 id="viewerModalTitle" style="color:#fff;font-size:16px;">Soi phim X-quang NanoPix</h3>
+            <button type="button" class="modal-close-btn" data-close-modal="viewerModal" style="background:#1f2937;color:#fff;" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="viewer-layout">
+            <!-- Vùng hiển thị ảnh và toolbar soi phim -->
+            <div class="viewer-canvas-wrap">
+                <div class="viewer-toolbar">
+                    <button id="viewerZoomInBtn" type="button" class="viewer-btn" title="Phóng to">🔍 Zoom +</button>
+                    <button id="viewerZoomOutBtn" type="button" class="viewer-btn" title="Thu nhỏ">🔍 Zoom -</button>
+                    <button id="viewerResetBtn" type="button" class="viewer-btn" title="Đặt lại kích thước ban đầu">↺ Reset</button>
+                    <span style="color:#475569;">|</span>
+                    <button id="viewerRotateLeftBtn" type="button" class="viewer-btn" title="Xoay trái 90°">🔄 Xoay trái</button>
+                    <button id="viewerRotateRightBtn" type="button" class="viewer-btn" title="Xoay phải 90°">🔃 Xoay phải</button>
+                    <span style="color:#475569;">|</span>
+                    <button id="viewerInvertBtn" type="button" class="viewer-btn" title="Đảo màu âm bản / dương bản">🌓 Đảo âm bản</button>
+                    
+                    <div class="viewer-slider-group">
+                        <label for="viewerBrightnessRange">☀️ Sáng</label>
+                        <input id="viewerBrightnessRange" type="range" min="30" max="200" value="100">
+                    </div>
+
+                    <div class="viewer-slider-group">
+                        <label for="viewerContrastRange">◐ Tương phản</label>
+                        <input id="viewerContrastRange" type="range" min="30" max="250" value="100">
+                    </div>
+
+                    <button id="viewerDownloadBtn" type="button" class="viewer-btn" style="background:#047857;border-color:#059669;" title="Tải ảnh gốc về máy">📥 Tải ảnh</button>
+                </div>
+
+                <div id="viewerStage" class="viewer-stage" title="Kéo chuột để di chuyển ảnh, lăn chuột để phóng to/thu nhỏ">
+                    <img id="viewerMainImg" class="viewer-main-img" src="" alt="X-ray view">
+                </div>
+            </div>
+
+            <!-- Cột thông tin hồ sơ và chỉ định bên phải -->
+            <aside class="viewer-sidebar">
+                <div>
+                    <h4>👤 Thông tin Bệnh nhân</h4>
+                    <div class="viewer-info-item">
+                        <span>Họ và tên</span>
+                        <strong id="viewerPatientName">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Mã bệnh nhân</span>
+                        <strong id="viewerPatientCode" class="code">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Ngày sinh / Tuổi</span>
+                        <strong id="viewerPatientDob">—</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <h4>🏥 Lượt khám &amp; Chỉ định</h4>
+                    <div class="viewer-info-item">
+                        <span>Mã lượt khám</span>
+                        <strong id="viewerVisitCode" class="code">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Vị trí răng chụp</span>
+                        <strong id="viewerToothNumbers" style="color:#38bdf8;font-size:14px;">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Thời điểm chụp</span>
+                        <strong id="viewerCapturedAt">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Thời điểm nhận ảnh</span>
+                        <strong id="viewerSyncTime">—</strong>
+                    </div>
+                    <div class="viewer-info-item">
+                        <span>Cảm biến / Thiết bị</span>
+                        <strong id="viewerDeviceSN">—</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <h4>📝 Ghi chú chuyên môn</h4>
+                    <p id="viewerNotes" style="font-size:12.5px;color:#cbd5e1;margin:0;line-height:1.4;">—</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 2: FORM ĐỐI CHIẾU & LIÊN KẾT KẾT QUẢ (SCR-12.3)                     -->
+<!-- ========================================================================= -->
+<div id="reconcileModal" class="xray-modal-backdrop" hidden>
+    <div class="xray-modal-dialog" style="max-width:820px;" role="dialog" aria-modal="true" aria-labelledby="reconcileModalTitle">
+        <div class="xray-modal-header">
+            <div>
+                <h3 id="reconcileModalTitle">Đối chiếu &amp; Liên kết kết quả X-quang (SCR-12.3)</h3>
+                <span style="font-size:12px;color:var(--muted);">Gắn kết quả từ cảm biến NanoPix vào đúng Hồ sơ và Ca khám</span>
+            </div>
+            <button type="button" class="modal-close-btn" data-close-modal="reconcileModal" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="reconcileForm">
+            <input type="hidden" id="reconcileSyncLogId">
+
+            <div class="xray-modal-body">
+                <div class="reconcile-grid">
+                    <!-- Cột trái: Thông tin nguồn máy chụp -->
+                    <div class="reconcile-source-card">
+                        <h4 style="margin:0 0 10px;font-size:13.5px;color:var(--brand-900);text-transform:uppercase;">📌 Nguồn ảnh NanoPix</h4>
+                        <img id="reconcilePreviewImg" class="reconcile-preview-img" src="" alt="preview">
+
+                        <div class="viewer-info-item">
+                            <span>Mã tham chiếu máy chụp</span>
+                            <strong id="reconcileStudyUid" class="study-uid-code">—</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Tên ghi trên máy chụp</span>
+                            <strong id="reconcileRawName">—</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Thời điểm chụp</span>
+                            <strong id="reconcileCapturedAt">—</strong>
+                        </div>
+                        <div class="viewer-info-item">
+                            <span>Cảm biến</span>
+                            <strong id="reconcileDevice">—</strong>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Chọn hồ sơ & Ca khám trên CV-DCMS -->
+                    <div class="reconcile-target-card">
+                        <h4 style="margin:0 0 12px;font-size:13.5px;color:var(--brand-800);text-transform:uppercase;">🎯 Chọn Hồ sơ Bệnh nhân &amp; Ca khám</h4>
+
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                            <label class="form-field">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">Hồ sơ bệnh nhân <strong style="color:#dc2626;">*</strong></span>
+                                <select id="reconcileProfileSelect" required>
+                                    <option value="">-- Đang tải bệnh nhân... --</option>
+                                </select>
+                            </label>
+
+                            <label class="form-field">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">Lượt khám tương ứng <strong style="color:#dc2626;">*</strong></span>
+                                <select id="reconcileVisitSelect" required>
+                                    <option value="">-- Vui lòng chọn bệnh nhân trước --</option>
+                                </select>
+                            </label>
+
+                            <label class="form-field">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">Chỉ định cận lâm sàng X-quang (Tùy chọn)</span>
+                                <select id="reconcileOrderItemSelect">
+                                    <option value="">-- Không liên kết chỉ định CLS --</option>
+                                </select>
+                            </label>
+
+                            <label class="form-field">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">Vị trí răng chụp (Tooth Numbers)</span>
+                                <input id="reconcileToothNumbers" type="text" placeholder="Ví dụ: Răng 18, 21, 36, 47...">
+                            </label>
+
+                            <label class="form-field">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">Ghi chú đối chiếu</span>
+                                <textarea id="reconcileNotes" rows="2" placeholder="Ghi chú thêm về tổn thương, hình ảnh chụp lại..."></textarea>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xray-modal-footer">
+                <button type="button" class="button button-secondary" data-close-modal="reconcileModal">Hủy</button>
+                <button id="submitReconcileBtn" type="submit" class="button button-primary">✓ Xác nhận liên kết hồ sơ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL 3: NẠP PHIM X-QUANG TỪ NANOPIX (SCR-12.4 CONTROLLED INGESTION)      -->
+<!-- ========================================================================= -->
+<div id="ingestModal" class="xray-modal-backdrop" hidden>
+    <div class="xray-modal-dialog" style="max-width:600px;" role="dialog" aria-modal="true" aria-labelledby="ingestModalTitle">
+        <div class="xray-modal-header">
+            <div>
+                <h3 id="ingestModalTitle">Nạp phim X-quang từ máy NanoPix</h3>
+                <span style="font-size:12px;color:var(--muted);">Tiếp nhận ảnh chụp từ phần mềm Eighteeth NanoPix vào hệ thống</span>
+            </div>
+            <button type="button" class="modal-close-btn" data-close-modal="ingestModal" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="ingestForm">
+            <div class="xray-modal-body">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <label class="form-field">
+                        <span style="font-size:12px;font-weight:700;color:#334155;">File ảnh chụp X-quang (JPEG, PNG, DICOM) <strong style="color:#dc2626;">*</strong></span>
+                        <input id="ingestFileInput" type="file" accept="image/*,.dcm,.dicom" required>
+                    </label>
+
+                    <div class="form-grid-2">
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Mã tham chiếu máy chụp (Study UID) <strong style="color:#dc2626;">*</strong></span>
+                            <input id="ingestStudyUid" type="text" required placeholder="Ví dụ: 20261025_193542_kim_ngoc">
+                        </label>
+
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Tên BN trên máy NanoPix</span>
+                            <input id="ingestRawName" type="text" placeholder="Nhập tên trên máy chụp...">
+                        </label>
+
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Mã bệnh nhân hệ thống (nếu có để tự động khớp)</span>
+                            <input id="ingestPatientCode" type="text" placeholder="Ví dụ: BN2026001">
+                        </label>
+
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Thời điểm chụp</span>
+                            <input id="ingestCapturedAt" type="datetime-local">
+                        </label>
+
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Số Serial cảm biến</span>
+                            <input id="ingestDeviceSN" type="text" value="EN1E0408A032">
+                        </label>
+
+                        <label class="form-field">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Model cảm biến</span>
+                            <input id="ingestDeviceModel" type="text" value="NanoPix1">
+                        </label>
+
+                        <label class="form-field span-2">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Vị trí răng</span>
+                            <input id="ingestToothNumbers" type="text" placeholder="Ví dụ: 18, 21, 36, 47...">
+                        </label>
+
+                        <label class="form-field span-2">
+                            <span style="font-size:12px;font-weight:700;color:#334155;">Ghi chú</span>
+                            <textarea id="ingestNotes" rows="2" placeholder="Ghi chú kỹ thuật hoặc thông số chụp..."></textarea>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xray-modal-footer">
+                <button type="button" class="button button-secondary" data-close-modal="ingestModal">Hủy</button>
+                <button id="submitIngestBtn" type="submit" class="button button-primary">✓ Nạp ảnh vào hệ thống</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TOAST THÔNG BÁO -->
+<div id="xrayToast" class="xray-toast"></div>
+
+<style>
+.xray-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1090;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    color: #fff;
+    pointer-events: none;
+}
+.xray-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.toast-success { background: #059669; }
+.toast-error { background: #dc2626; }
+.toast-warning { background: #d97706; }
+.toast-info { background: #2563eb; }
+</style>
+
+</body>
+</html>

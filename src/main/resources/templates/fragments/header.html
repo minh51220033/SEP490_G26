@@ -3,7 +3,7 @@
 <body>
 
 <!-- ===================================================================== -->
-<!-- 1. HEADER TRANG CÔNG KHAI (giống mẫu: thanh thông báo + menu + mega menu) -->
+<!-- 1. HEADER TRANG CÔNG KHAI: thanh thông báo + menu chính + mega menu      -->
 <!--    Cách dùng: <header th:replace="~{fragments/header :: siteHeader}"></header> -->
 <!-- ===================================================================== -->
 
@@ -11,14 +11,12 @@
 
     <div class="announcement-bar">
         <div class="container-xl announcement-bar__inner">
-            <i class="bi bi-bell" aria-hidden="true"></i>
+            <i class="bi bi-megaphone" aria-hidden="true"></i>
             <p class="mb-0">
-                Ưu đãi tháng này: <strong class="text-accent">giảm 20%</strong>
-                cho dịch vụ <strong>tẩy trắng &amp; cạo vôi răng</strong>
-                tại tất cả cơ sở Cường Việt Dental.
+                Ưu đãi tháng này: <strong>giảm 20%</strong> dịch vụ tẩy trắng &amp; cạo vôi răng tại mọi cơ sở.
             </p>
             <a th:href="@{/news}" href="#" class="announcement-bar__cta">
-                Xem chi tiết <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                Xem chi tiết <i class="bi bi-chevron-right" aria-hidden="true"></i>
             </a>
         </div>
     </div>
@@ -28,6 +26,7 @@
 
             <a th:replace="~{fragments/logo :: logo('dark')}"></a>
 
+            <!-- Nút hamburger: chỉ hiện trên mobile/tablet -->
             <button type="button" class="site-header__toggle" data-nav-toggle
                     aria-controls="siteNav" aria-expanded="false" aria-label="Mở menu">
                 <i class="bi bi-list" aria-hidden="true"></i>
@@ -42,96 +41,96 @@
                             Tính năng <i class="bi bi-chevron-down" aria-hidden="true"></i>
                         </button>
 
-                        <div class="mega-menu" role="menu">
+                        <div class="mega-menu">
                             <div class="mega-menu__grid">
-                                <a th:href="@{/home}" href="#" class="mega-item" role="menuitem">
+                                <a th:href="@{/home}" href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-grid" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Tổng quan</span>
-                                        <span class="mega-item__desc">Theo dõi hoạt động phòng khám, lịch hẹn và doanh thu trong ngày.</span>
+                                        <span class="mega-item__desc">Hoạt động phòng khám, lịch hẹn và doanh thu trong ngày.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Hồ sơ bệnh nhân</span>
-                                        <span class="mega-item__desc">Hồ sơ, sơ đồ răng, chẩn đoán, đơn thuốc, phim X-quang.</span>
+                                        <span class="mega-item__desc">Sơ đồ răng, chẩn đoán, đơn thuốc, phim X-quang.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Lịch hẹn</span>
                                         <span class="mega-item__desc">Lịch theo bác sĩ, nhắc hẹn tự động, in phiếu hẹn.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-person-check" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Tiếp đón &amp; Check-in</span>
-                                        <span class="mega-item__desc">Tiếp nhận bệnh nhân nhanh chóng khi đến phòng khám.</span>
+                                        <span class="mega-item__desc">Tiếp nhận bệnh nhân nhanh khi đến phòng khám.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Hàng chờ khám</span>
-                                        <span class="mega-item__desc">Quản lý số thứ tự và trạng thái hàng chờ theo thời gian thực.</span>
+                                        <span class="mega-item__desc">Số thứ tự và trạng thái hàng chờ theo thời gian thực.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-tags" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Dịch vụ &amp; Bảng giá</span>
-                                        <span class="mega-item__desc">Danh mục dịch vụ nha khoa, giá và chương trình khuyến mãi.</span>
+                                        <span class="mega-item__desc">Danh mục dịch vụ, giá và chương trình khuyến mãi.</span>
                                     </span>
                                 </a>
-                                <a th:href="@{/accounts}" href="#" class="mega-item" role="menuitem">
+                                <a th:href="@{/accounts}" href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Tài khoản</span>
-                                        <span class="mega-item__desc">Tạo, khoá / mở khoá và phân quyền tài khoản người dùng.</span>
+                                        <span class="mega-item__desc">Tạo, khoá / mở khoá và phân quyền người dùng.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Nhân sự</span>
                                         <span class="mega-item__desc">Hồ sơ nhân viên, phân công công việc theo ca.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-buildings" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Cơ sở</span>
-                                        <span class="mega-item__desc">Quản lý nhiều chi nhánh, địa chỉ và thông tin liên hệ.</span>
+                                        <span class="mega-item__desc">Quản lý nhiều chi nhánh và thông tin liên hệ.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Báo cáo &amp; Thống kê</span>
-                                        <span class="mega-item__desc">Doanh thu, lượt khám và hiệu suất theo từng cơ sở.</span>
+                                        <span class="mega-item__desc">Doanh thu, lượt khám và hiệu suất từng cơ sở.</span>
                                     </span>
                                 </a>
-                                <a th:href="@{/news}" href="#" class="mega-item" role="menuitem">
+                                <a th:href="@{/news}" href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-newspaper" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Tin tức</span>
-                                        <span class="mega-item__desc">Đăng tải tin tức, kiến thức nha khoa và khuyến mãi.</span>
+                                        <span class="mega-item__desc">Kiến thức nha khoa và chương trình khuyến mãi.</span>
                                     </span>
                                 </a>
-                                <a href="#" class="mega-item" role="menuitem">
+                                <a href="#" class="mega-item">
                                     <span class="icon-tile"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Nhật ký thao tác</span>
-                                        <span class="mega-item__desc">Lưu vết mọi thao tác quan trọng để kiểm soát hệ thống.</span>
+                                        <span class="mega-item__desc">Lưu vết thao tác quan trọng để kiểm soát hệ thống.</span>
                                     </span>
                                 </a>
                             </div>
 
                             <div class="mega-menu__footer">
-                                <span>Xem tất cả tính năng chi tiết</span>
+                                <span>Khám phá toàn bộ tính năng của CV-DCMS</span>
                                 <a href="#">Xem thêm <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             </div>
                         </div>
@@ -142,20 +141,16 @@
                         <button type="button" class="site-nav__link" data-dropdown-toggle aria-expanded="false">
                             Dịch vụ <i class="bi bi-chevron-down" aria-hidden="true"></i>
                         </button>
-                        <div class="simple-menu" role="menu">
-                            <a href="#" role="menuitem">Niềng răng</a>
-                            <a href="#" role="menuitem">Cấy ghép Implant</a>
-                            <a href="#" role="menuitem">Bọc răng sứ</a>
-                            <a href="#" role="menuitem">Tẩy trắng răng</a>
-                            <a href="#" role="menuitem">Nha khoa trẻ em</a>
+                        <div class="simple-menu">
+                            <a href="#">Niềng răng</a>
+                            <a href="#">Cấy ghép Implant</a>
+                            <a href="#">Bọc răng sứ</a>
+                            <a href="#">Tẩy trắng răng</a>
+                            <a href="#">Nha khoa trẻ em</a>
                         </div>
                     </li>
 
-                    <li class="site-nav__item">
-                        <a th:href="@{/services}" class="site-nav__link">
-                            Bảng giá
-                        </a>
-                    </li>
+                    <li class="site-nav__item"><a th:href="@{/services}" href="#" class="site-nav__link">Bảng giá</a></li>
                     <li class="site-nav__item"><a href="#" class="site-nav__link">Bác sĩ</a></li>
                     <li class="site-nav__item"><a th:href="@{/news}" href="#" class="site-nav__link">Tin tức</a></li>
                     <li class="site-nav__item"><a href="#" class="site-nav__link">Liên hệ</a></li>
@@ -168,7 +163,7 @@
 
                     <a th:if="${session.loggedInUser == null}"
                        th:href="@{/login}" href="#" class="btn-outline-brand">
-                        <i class="bi bi-lock" aria-hidden="true"></i> Đăng nhập
+                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Đăng nhập
                     </a>
 
                     <a th:if="${session.loggedInUser != null}"
@@ -188,48 +183,115 @@
 <!-- ===================================================================== -->
 <!-- 2. TOPBAR TRONG HỆ THỐNG (dùng chung với sidebar)                       -->
 <!--    Cách dùng: <header th:replace="~{fragments/header :: appTopbar('Trang chủ')}"></header> -->
+<!--    Model tuỳ chọn: systemNotice, currentBranchName, roleNames,              -->
+<!--                    unreadNotificationCount, displayName, defaultPatientProfile -->
 <!-- ===================================================================== -->
 
-<header th:fragment="appTopbar(pageTitle)" class="app-topbar">
+<header th:fragment="appTopbar(pageTitle)" class="app-topbar" data-topbar>
 
-    <!-- Thông báo hệ thống (tuỳ chọn) - controller truyền model "systemNotice" -->
-    <div class="app-notice" th:if="${systemNotice != null and !#strings.isEmpty(systemNotice)}">
+    <!-- Thông báo hệ thống (tuỳ chọn) -->
+    <div class="app-notice" th:if="${systemNotice != null and !#strings.isEmpty(systemNotice)}" role="status">
         <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
         <span th:text="${systemNotice}">Thông báo hệ thống</span>
     </div>
 
     <div class="app-topbar__bar">
+
+        <!-- TRÁI: hamburger + logo (mobile) + tiêu đề trang -->
         <div class="app-topbar__left">
-            <button type="button" class="icon-button" data-sidebar-toggle aria-label="Thu gọn / mở menu">
+            <button type="button" class="topbar-btn" data-sidebar-toggle
+                    aria-controls="appSidebar" aria-expanded="false" aria-label="Mở / thu gọn menu">
                 <i class="bi bi-list" aria-hidden="true"></i>
             </button>
-            <div>
+
+            <span class="app-topbar__brand">
+                <a th:replace="~{fragments/logo :: logo('light')}"></a>
+            </span>
+
+            <div class="app-topbar__heading">
                 <h1 class="app-topbar__title" th:text="${pageTitle}">Trang chủ</h1>
                 <p class="app-topbar__date"
-                   th:text="${#temporals.format(T(java.time.LocalDate).now(), 'dd/MM/yyyy')}">19/10/2026</p>
+                   th:text="${#temporals.format(T(java.time.LocalDate).now(), 'dd/MM/yyyy')}">29/10/2026</p>
             </div>
         </div>
 
+        <!-- GIỮA: thanh tìm kiếm (Ctrl + K hoặc "/" để focus) -->
+        <form class="app-search" role="search" th:action="@{/search}" action="#" method="get" data-search>
+            <i class="bi bi-search app-search__icon" aria-hidden="true"></i>
+            <label for="globalSearch" class="visually-hidden">Tìm kiếm trong hệ thống</label>
+            <input id="globalSearch" name="q" type="search" class="app-search__input"
+                   placeholder="Tìm bệnh nhân, lịch hẹn, hoá đơn..." autocomplete="off" data-search-input>
+            <kbd class="app-search__kbd" aria-hidden="true">Ctrl K</kbd>
+            <button type="button" class="app-search__close" data-search-toggle aria-label="Đóng tìm kiếm">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+        </form>
+
+        <!-- PHẢI: thao tác nhanh, cơ sở, vai trò, thông báo, tài khoản -->
         <div class="app-topbar__right">
 
-            <span class="chip" th:if="${currentBranchName != null}">
+            <button type="button" class="topbar-btn app-topbar__search-btn" data-search-toggle aria-label="Tìm kiếm">
+                <i class="bi bi-search" aria-hidden="true"></i>
+            </button>
+
+            <!-- THAO TÁC NHANH -->
+            <div class="topbar-dropdown" data-dropdown th:if="${session.loggedInUser != null}">
+                <button type="button" class="btn-topbar" data-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i><span class="btn-topbar__label">Tạo mới</span>
+                </button>
+                <div class="dropdown-panel dropdown-panel--sm">
+                    <p class="dropdown-panel__title">Thao tác nhanh</p>
+                    <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))}"
+                       th:href="@{/reception/appointments}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-calendar-plus" aria-hidden="true"></i> Tạo lịch hẹn
+                    </a>
+                    <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))}"
+                       th:href="@{/reception/patients}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-person-plus" aria-hidden="true"></i> Thêm bệnh nhân
+                    </a>
+                    <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'KE_TOAN'))}"
+                       th:href="@{/invoices}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-receipt" aria-hidden="true"></i> Tạo hoá đơn
+                    </a>
+                    <a th:href="@{/chat}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-chat-dots" aria-hidden="true"></i> Gửi tin nhắn
+                    </a>
+                </div>
+            </div>
+
+            <span class="topbar-chip" th:if="${currentBranchName != null}" th:title="${currentBranchName}">
                 <i class="bi bi-buildings" aria-hidden="true"></i>
                 <span th:text="${currentBranchName}">Cơ sở chính</span>
             </span>
 
-            <span class="chip chip--primary"
+            <span class="topbar-chip topbar-chip--solid"
                   th:if="${roleNames != null and !#lists.isEmpty(roleNames)}"
                   th:text="${#strings.listJoin(roleNames, ', ')}">ADMIN</span>
 
-            <button type="button" class="icon-button icon-button--bordered" aria-label="Thông báo">
-                <i class="bi bi-bell" aria-hidden="true"></i>
-                <span class="icon-button__dot" aria-hidden="true"></span>
-            </button>
+            <!-- THÔNG BÁO -->
+            <div class="topbar-dropdown" data-dropdown>
+                <button type="button" class="topbar-btn" data-dropdown-toggle aria-expanded="false" aria-label="Thông báo">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <span class="topbar-btn__badge"
+                          th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                          th:text="${unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}">3</span>
+                </button>
+                <div class="dropdown-panel dropdown-panel--md">
+                    <div class="dropdown-panel__head">
+                        <p class="dropdown-panel__title mb-0">Thông báo</p>
+                        <a href="#" class="dropdown-panel__action">Đánh dấu đã đọc</a>
+                    </div>
+                    <div class="dropdown-empty">
+                        <i class="bi bi-bell-slash" aria-hidden="true"></i>
+                        <p class="mb-0">Bạn chưa có thông báo mới</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- MENU TÀI KHOẢN -->
-            <div class="user-menu" data-dropdown th:if="${session.loggedInUser != null}">
+            <div class="topbar-dropdown user-menu" data-dropdown th:if="${session.loggedInUser != null}">
                 <button type="button" class="avatar-button" data-dropdown-toggle
-                        aria-expanded="false" aria-label="Mở menu tài khoản">
+                        aria-expanded="false" aria-haspopup="true" aria-label="Mở menu tài khoản">
                     <img th:if="${defaultPatientProfile != null
                               and defaultPatientProfile.avatarUrl != null
                               and !#strings.isEmpty(defaultPatientProfile.avatarUrl)}"
@@ -246,7 +308,7 @@
                                   : 'U'}">U</span>
                 </button>
 
-                <div class="user-dropdown" role="menu">
+                <div class="dropdown-panel dropdown-panel--sm user-dropdown">
                     <div class="user-dropdown__header">
                         <div class="user-dropdown__name"
                              th:text="${displayName != null and !#strings.isEmpty(displayName)
@@ -256,12 +318,12 @@
                                      ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Vai trò</div>
                     </div>
 
-                    <a th:href="@{/profile}" href="#" class="user-dropdown__link" role="menuitem">
+                    <a th:href="@{/profile}" href="#" class="dropdown-item-link">
                         <i class="bi bi-person" aria-hidden="true"></i> Thông tin cá nhân
                     </a>
 
                     <form th:action="@{/logout}" method="post" class="m-0">
-                        <button type="submit" class="user-dropdown__link user-dropdown__link--danger" role="menuitem">
+                        <button type="submit" class="dropdown-item-link dropdown-item-link--danger">
                             <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
                         </button>
                     </form>
