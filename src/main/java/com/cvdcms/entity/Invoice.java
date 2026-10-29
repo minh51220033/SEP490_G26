@@ -64,6 +64,13 @@ public class Invoice {
     @Column(name = "total_service_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalServiceAmount = BigDecimal.ZERO;
 
+    @Column(name = "surcharge_amount", nullable = false, precision = 15, scale = 2)
+    @org.hibernate.annotations.ColumnDefault("0")
+    private BigDecimal surchargeAmount = BigDecimal.ZERO;
+
+    @Column(name = "surcharge_description", length = 500)
+    private String surchargeDescription;
+
     @Column(name = "discount_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
@@ -85,6 +92,10 @@ public class Invoice {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 20)
     private InvoicePaymentStatus paymentStatus = InvoicePaymentStatus.UNPAID;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private com.cvdcms.entity.enums.InvoiceStatus status = com.cvdcms.entity.enums.InvoiceStatus.CONFIRMED;
 
     @CreationTimestamp
     @Column(name = "issued_at", nullable = false, updatable = false)
@@ -115,5 +126,13 @@ public class Invoice {
         if (this.invoiceCode == null || this.invoiceCode.isEmpty()) {
             this.invoiceCode = "HD" + System.currentTimeMillis();
         }
+    }
+
+    @Transient
+    public BigDecimal getTotalDiscount() {
+        BigDecimal d1 = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        BigDecimal d2 = promotionDiscount != null ? promotionDiscount : BigDecimal.ZERO;
+        BigDecimal d3 = pointDiscount != null ? pointDiscount : BigDecimal.ZERO;
+        return d1.add(d2).add(d3);
     }
 }

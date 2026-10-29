@@ -63,4 +63,18 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
             @Param("status") VisitStatus status,
             @Param("search") String search
     );
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE v.status = :status
+          AND (:branchId IS NULL OR b.branchId = :branchId)
+        ORDER BY v.checkInAt DESC
+    """)
+    List<Visit> findVisitsByStatusAndBranch(
+            @Param("status") VisitStatus status,
+            @Param("branchId") Long branchId
+    );
 }

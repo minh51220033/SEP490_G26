@@ -19,6 +19,18 @@
     reports, audit, patients, appointments, checkin, queue, inventory, suppliers, customer-care
 -->
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống">
+    <style>
+        .side-icon-labo {
+            color: #0284c7 !important;
+            transition: color .15s ease;
+        }
+        .side-link:hover .side-icon-labo {
+            color: #0369a1 !important;
+        }
+        .side-link.is-active .side-icon-labo {
+            color: #38bdf8 !important;
+        }
+    </style>
 
     <div class="app-sidebar__head">
         <a th:replace="~{fragments/logo :: logo('dark')}"></a>
@@ -40,6 +52,17 @@
         <a th:href="@{/news}" href="#" class="side-link"
            th:classappend="${activeMenu == 'news'} ? 'is-active' : ''">
             <i class="bi bi-newspaper" aria-hidden="true"></i><span>Tin tức</span>
+        </a>
+
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
+           th:href="@{/portal/records}" class="side-link"
+           th:classappend="${activeMenu == 'portal-records'} ? 'is-active' : ''">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i><span>Hồ sơ của tôi</span>
+        </a>
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
+           th:href="@{/portal/appointments}" class="side-link"
+           th:classappend="${activeMenu == 'portal-appointments'} ? 'is-active' : ''">
+            <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Lịch hẹn của tôi</span>
         </a>
 
         <!-- HỘP THƯ TIN NHẮN REALTIME THEO CƠ SỞ (Chỉ hiển thị cho Nhân viên cơ sở & Admin) -->
@@ -100,6 +123,20 @@
                th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
                 <i class="bi bi-buildings" aria-hidden="true"></i><span>Quản lý cơ sở</span>
             </a>
+            <!-- FT19: Hạng thẻ & Tích điểm -->
+            <a th:href="@{/admin/membership-tiers}" class="side-link"
+               th:classappend="${activeMenu == 'membership-tiers'} ? 'is-active' : ''"
+               title="Quản lý hạng thành viên và quy tắc tích điểm (FT19 / UC-14)">
+                <i class="bi bi-award text-warning" aria-hidden="true"></i><span>Hạng thẻ &amp; Tích điểm</span>
+                <span class="badge bg-warning text-dark ms-auto" style="font-size: 10px;">FT19</span>
+            </a>
+            <!-- FT20: Khuyến mãi & Voucher -->
+            <a th:href="@{/admin/promotions}" class="side-link"
+               th:classappend="${activeMenu == 'admin-promotions'} ? 'is-active' : ''"
+               title="Quản lý chương trình khuyến mãi &amp; Voucher (FT20 / UC-15)">
+                <i class="bi bi-ticket-perforated text-danger" aria-hidden="true"></i><span>Khuyến mãi &amp; Voucher</span>
+                <span class="badge bg-danger text-white ms-auto" style="font-size: 10px;">FT20</span>
+            </a>
             <a href="#" class="side-link is-disabled" aria-disabled="true"
                th:classappend="${activeMenu == 'reports'} ? 'is-active' : ''">
                 <i class="bi bi-graph-up" aria-hidden="true"></i><span>Báo cáo &amp; Thống kê</span>
@@ -124,15 +161,60 @@
             </a>
         </div>
 
+        <!-- TÀI CHÍNH & KẾ TOÁN (FT21 & FT22) -->
+        <div th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))}">
+            <p class="app-sidebar__section">Tài chính &amp; Kế toán</p>
+
+            <a th:href="@{/payments/dashboard}" class="side-link"
+               th:classappend="${activeMenu == 'dashboard_finance'} ? 'is-active' : ''"
+               title="Dashboard Tài chính Bệnh nhân (SCR-22.1)">
+                <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard Bệnh nhân</span>
+                <span class="badge bg-info text-dark ms-auto" style="font-size: 10px;">SCR-22.1</span>
+            </a>
+
+            <a th:href="@{/invoices}" class="side-link"
+               th:classappend="${activeMenu == 'invoices'} ? 'is-active' : ''"
+               title="Danh sách Hóa đơn &amp; Viện phí (SCR-21.2)">
+                <i class="bi bi-receipt" aria-hidden="true"></i><span>Quản lý Hóa đơn</span>
+                <span class="badge bg-primary text-white ms-auto" style="font-size: 10px;">SCR-21.2</span>
+            </a>
+
+            <a th:href="@{/payments}" class="side-link"
+               th:classappend="${activeMenu == 'payments'} ? 'is-active' : ''"
+               title="Lịch sử các đợt thanh toán (SCR-22.3)">
+                <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span>Lịch sử Thanh toán</span>
+                <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">SCR-22.3</span>
+            </a>
+
+            <a th:href="@{/payments/debts}" class="side-link"
+               th:classappend="${activeMenu == 'debts'} ? 'is-active' : ''"
+               title="Theo dõi &amp; Quản lý công nợ bệnh nhân">
+                <i class="bi bi-cash-stack" aria-hidden="true"></i><span>Công nợ bệnh nhân</span>
+            </a>
+
+            <a th:href="@{/payments/refunds}" class="side-link"
+               th:classappend="${activeMenu == 'refunds'} ? 'is-active' : ''"
+               title="Hoàn tiền dịch vụ &amp; Hủy điều trị">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span>Quản lý Hoàn tiền</span>
+            </a>
+        </div>
+
         <!-- LỄ TÂN -->
         <div th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
             <p class="app-sidebar__section">Lễ tân</p>
 
-            <a href="#" class="side-link is-disabled" aria-disabled="true"
+            <a th:href="@{/reception/patients}" class="side-link"
                th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''">
                 <i class="bi bi-person-vcard" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
             </a>
-            <a href="#" class="side-link is-disabled" aria-disabled="true"
+            <!-- FT19: Tra cứu thẻ thành viên & Điểm -->
+            <a th:href="@{/reception/memberships}" class="side-link"
+               th:classappend="${activeMenu == 'reception-memberships'} ? 'is-active' : ''"
+               title="Tra cứu thẻ thành viên, điểm tích lũy &amp; quyền lợi (FT19)">
+                <i class="bi bi-credit-card text-info" aria-hidden="true"></i><span>Thẻ thành viên &amp; Điểm</span>
+                <span class="badge bg-info text-dark ms-auto" style="font-size: 10px;">FT19</span>
+            </a>
+            <a th:href="@{/reception/appointments}" class="side-link"
                th:classappend="${activeMenu == 'appointments'} ? 'is-active' : ''">
                 <i class="bi bi-calendar3" aria-hidden="true"></i><span>Quản lý lịch hẹn</span>
             </a>
@@ -178,24 +260,6 @@
             <span>Điều phối ghế nha</span>
         </a>
 
-        <!-- 5. Kê đơn thuốc & Dặn dò (FT18) -->
-        <a th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('prescriptionsSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Kê đơn thuốc, dặn dò & in đơn (SCR-18.3, 18.4, 18.5)">
-            <i class="bi bi-capsule text-warning" aria-hidden="true"></i>
-            <span>Đơn thuốc &amp; Dặn dò</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT18</span>
-        </a>
-
-        <!-- 6. Kế hoạch điều trị & Lộ trình (FT15) -->
-        <a th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link"
-           onclick="if(window.location.pathname.includes('/doctor/examination/')){ event.preventDefault(); document.getElementById('treatmentPlanSection')?.scrollIntoView({behavior: 'smooth'}); }"
-           title="Kế hoạch điều trị nhiều giai đoạn & Trợ lý AI (SCR-15.1, 15.2, 15.3 - FT15)">
-            <i class="bi bi-diagram-3-fill text-info" aria-hidden="true"></i>
-            <span>Kế hoạch điều trị</span>
-            <span class="badge bg-success text-white ms-auto" style="font-size: 10px;">FT15</span>
-        </a>
-
         <!-- 7. Kho ảnh lâm sàng Trước/Sau (FT17) -->
         <a href="#" class="side-link is-disabled" aria-disabled="true"
            title="Kho ảnh lâm sàng Before/After">
@@ -213,18 +277,25 @@
             <span>Phim X-quang NanoPix</span>
         </a>
 
-        <!-- 6. Mẫu xét nghiệm & Labo -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
-           title="Mẫu xét nghiệm gửi ngoài & Labo">
-            <i class="bi bi-droplet-half" aria-hidden="true"></i>
-            <span>Xét nghiệm &amp; Labo</span>
+        <!-- 6. Quản lý Labo -->
+        <a th:href="@{/doctor/labo}" class="side-link"
+           th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
+           title="Quản lý labo">
+            <i class="bi bi-box-seam-fill side-icon-labo" aria-hidden="true"></i>
+            <span>Quản lý labo</span>
         </a>
 
         <!-- NHÓM: HỒ SƠ & TÁI KHÁM -->
         <p class="app-sidebar__section">Hồ sơ &amp; Tái khám</p>
 
         <!-- 7. Hồ sơ bệnh nhân -->
-        <a href="#" class="side-link is-disabled" aria-disabled="true"
+        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BAC_SI')}"
+           th:href="@{/doctor/patient-records}" class="side-link"
+           th:classappend="${activeMenu == 'doctor-records'} ? 'is-active' : ''">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i><span>Hồ sơ bệnh nhân</span>
+        </a>
+        <a th:unless="${roleNames != null and #lists.contains(roleNames, 'BAC_SI')}"
+           href="#" class="side-link is-disabled" aria-disabled="true"
            title="Tra cứu hồ sơ bệnh nhân & bệnh án EMR">
             <i class="bi bi-folder2-open" aria-hidden="true"></i>
             <span>Hồ sơ Bệnh nhân</span>

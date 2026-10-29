@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Khách không đến cần nhắc')}"></head>
+<body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div><div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Khách không đến cần nhắc')}"></header>
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
+            <div class="patient-page-heading"><div><h1>Khách không đến &amp; cần nhắc</h1><p>Danh sách lịch không đến trong 7 ngày gần nhất. Công việc liên hệ được chuyển sang chăm sóc khách hàng.</p></div></div>
+            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn"><a th:href="@{/reception/appointments}">Dashboard</a>
+                <a th:href="@{/reception/appointments/calendar}">Lịch tuần / tháng</a><a class="is-current" th:href="@{/reception/appointments/no-shows}">Không đến &amp; cần nhắc</a></nav>
+            <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
+            <section class="panel appointment-panel"><div class="appointment-filter"><div><label for="filterBranch">Chi nhánh</label><select id="filterBranch" class="form-select"></select></div>
+                <a class="btn btn-outline-primary align-self-end" th:href="@{/customer-care}">Mở công việc chăm sóc khách hàng</a></div>
+                <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Ngày / buổi</th><th>Mã lịch</th><th>Bệnh nhân</th><th>Số điện thoại</th><th>Chi nhánh</th><th></th></tr></thead>
+                    <tbody id="noShowRows"><tr><td colspan="6" class="text-center py-4">Đang tải danh sách…</td></tr></tbody></table></div>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>

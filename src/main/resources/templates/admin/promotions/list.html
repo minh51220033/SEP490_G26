@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Khuyến mãi & Voucher (FT20 / UC-15)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('admin-promotions')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Khuyến mãi & Mã giảm giá')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header mb-4">
+                <div>
+                    <h1><i class="bi bi-ticket-perforated text-danger"></i> Quản lý Khuyến mãi &amp; Voucher (SCR-20.1)</h1>
+                    <p class="text-muted">Cấu hình các chiến dịch ưu đãi, giảm giá phần trăm hoặc tiền cố định, giới hạn lượt dùng và phát hành voucher cho bệnh nhân.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/admin/promotions/create}" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Tạo chương trình khuyến mãi
+                    </a>
+                    <a th:href="@{/admin/membership-tiers}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-award me-1"></i> Cấu hình hạng thành viên
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bộ lọc tìm kiếm -->
+            <div class="fin-card mb-4">
+                <form th:action="@{/admin/promotions}" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="keyword" class="form-label small fw-bold text-muted">TÌM KIẾM MÃ / TÊN</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="keyword" name="keyword" class="form-control"
+                                   th:value="${keyword}" placeholder="Nhập mã hoặc tên chương trình...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label small fw-bold text-muted">TRẠNG THÁI HIỆU LỰC</label>
+                        <select id="status" name="status" class="fin-select w-100">
+                            <option value="ALL" th:selected="${status == 'ALL'}">-- Tất cả trạng thái --</option>
+                            <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang có hiệu lực</option>
+                            <option value="UPCOMING" th:selected="${status == 'UPCOMING'}">Sắp diễn ra</option>
+                            <option value="EXPIRED" th:selected="${status == 'EXPIRED'}">Đã hết hạn</option>
+                            <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Tạm ngưng / Vô hiệu</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="branchId" class="form-label small fw-bold text-muted">CƠ SỞ ÁP DỤNG</label>
+                        <select id="branchId" name="branchId" class="fin-select w-100">
+                            <option value="">-- Toàn hệ thống --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId == b.branchId}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex gap-2">
+                        <button type="submit" class="fin-btn fin-btn-primary flex-grow-1">
+                            <i class="bi bi-funnel me-1"></i> Lọc
+                        </button>
+                        <a th:href="@{/admin/promotions}" class="fin-btn fin-btn-outline">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bảng danh sách chương trình khuyến mãi -->
+            <div class="fin-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0 text-dark"><i class="bi bi-tags me-2 text-primary"></i>Danh sách Chương trình Khuyến mãi &amp; Voucher</h5>
+                    <span class="text-muted small" th:text="'Tổng cộng: ' + ${#lists.size(promotions)} + ' chương trình'"></span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="fin-table table">
+                        <thead>
+                        <tr>
+                            <th>Mã KM</th>
+                            <th>Tên chương trình</th>
+                            <th>Mức giảm</th>
+                            <th>Thời hạn áp dụng</th>
+                            <th>Điều kiện áp dụng</th>
+                            <th class="text-center">Lượt dùng</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-end" style="width: 160px;">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${promotions}">
+                            <td>
+                                <strong class="badge bg-light text-primary border fs-6" th:text="${p.promoCode}">KM10</strong>
+                                <div class="text-muted small mt-1" th:text="${p.branch != null ? p.branch.branchName : 'Toàn hệ thống'}">Toàn hệ thống</div>
+                            </td>
+                            <td>
+                                <strong class="text-dark" th:text="${p.promoName}">Tri ân khách hàng</strong>
+                                <div class="text-muted small text-truncate" style="max-width: 250px;" th:text="${p.description}">Mô tả</div>
+                            </td>
+                            <td>
+                                <span th:if="${p.promoType.name() == 'PERCENTAGE'}" class="fw-bold text-success">
+                                    <i class="bi bi-percent me-1"></i>Giảm <span th:text="${p.discountValue}">10</span>%
+                                </span>
+                                <span th:if="${p.promoType.name() == 'FIXED_AMOUNT'}" class="fw-bold text-primary">
+                                    <i class="bi bi-cash me-1"></i>Giảm <span th:text="${#numbers.formatDecimal(p.discountValue, 0, 'COMMA', 0, 'POINT')} + ' đ'">100.000 đ</span>
+                                </span>
+                                <div th:if="${p.maxDiscountAmount != null and p.promoType.name() == 'PERCENTAGE'}" class="text-muted small"
+                                     th:text="'Tối đa: ' + ${#numbers.formatDecimal(p.maxDiscountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <span>Từ: </span><strong th:text="${#temporals.format(p.startDate, 'dd/MM/yyyy')}">01/10/2026</strong>
+                                </div>
+                                <div class="small">
+                                    <span>Đến: </span><strong th:text="${#temporals.format(p.endDate, 'dd/MM/yyyy')}">31/10/2026</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-muted" th:if="${p.minBillAmount > 0}">
+                                    Đơn từ: <strong class="text-dark" th:text="${#numbers.formatDecimal(p.minBillAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</strong>
+                                </div>
+                                <div class="small text-muted" th:if="${p.applicableTier != null}">
+                                    Hạng: <span class="badge bg-warning text-dark" th:text="${p.applicableTier.tierName}">Vàng</span> trở lên
+                                </div>
+                                <div class="small text-muted" th:if="${p.applicableService != null}">
+                                    Dịch vụ: <span class="badge bg-info text-dark" th:text="${p.applicableService.serviceName}">Răng sứ</span>
+                                </div>
+                                <div class="small text-muted" th:if="${p.minBillAmount == 0 and p.applicableTier == null and p.applicableService == null}">
+                                    Không giới hạn
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold" th:text="${p.usedCount}">5</span>
+                                <span class="text-muted" th:text="' / ' + (${p.usageLimit != null ? p.usageLimit : '∞'})"> / 100</span>
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${p.isActive and p.startDate.isBefore(#temporals.createNow()) and p.endDate.isAfter(#temporals.createNow())}" class="fin-badge fin-badge-paid">
+                                    <i class="bi bi-check-circle me-1"></i>Đang chạy
+                                </span>
+                                <span th:if="${p.isActive and p.startDate.isAfter(#temporals.createNow())}" class="fin-badge fin-badge-partial">
+                                    <i class="bi bi-hourglass-split me-1"></i>Sắp tới
+                                </span>
+                                <span th:if="${p.isActive and p.endDate.isBefore(#temporals.createNow())}" class="fin-badge fin-badge-unpaid">
+                                    <i class="bi bi-clock-history me-1"></i>Hết hạn
+                                </span>
+                                <span th:unless="${p.isActive}" class="fin-badge fin-badge-cancelled">
+                                    <i class="bi bi-slash-circle me-1"></i>Tạm ngưng
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a th:href="@{/admin/promotions/{id}(id=${p.promotionId})}" class="fin-btn fin-btn-outline py-1 px-2 btn-sm" title="Xem chi tiết & Cấp voucher">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a th:href="@{/admin/promotions/{id}/edit(id=${p.promotionId})}" class="fin-btn fin-btn-outline py-1 px-2 btn-sm" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form th:action="@{/admin/promotions/{id}/toggle-status(id=${p.promotionId})}" method="post" style="display:inline;"
+                                          onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái chương trình này?');">
+                                        <button type="submit" class="fin-btn py-1 px-2 btn-sm"
+                                                th:classappend="${p.isActive} ? 'fin-btn-outline text-danger' : 'fin-btn-outline text-success'"
+                                                th:title="${p.isActive} ? 'Tạm dừng' : 'Kích hoạt'">
+                                            <i th:class="${p.isActive} ? 'bi bi-pause-circle' : 'bi bi-play-circle'"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(promotions)}">
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-ticket-detailed fs-1 d-block mb-2 text-muted"></i>
+                                Không có chương trình khuyến mãi nào phù hợp với bộ lọc.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

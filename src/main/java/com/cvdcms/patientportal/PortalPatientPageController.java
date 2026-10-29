@@ -45,7 +45,6 @@ public class PortalPatientPageController {
     @GetMapping("/{id}/edit")
     public String edit(HttpSession session, @PathVariable Long id, Model model) {
         PortalProfileView record = patients.get(session, id);
-        if (record.self()) throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
         model.addAttribute("record", record);
         model.addAttribute("branches", patients.branches(session));
         return "portal/records/form";
@@ -55,6 +54,8 @@ public class PortalPatientPageController {
     public String detail(HttpSession session, @PathVariable Long id, Model model) {
         model.addAttribute("record", patients.get(session, id));
         model.addAttribute("visits", patients.visits(session, id));
+        model.addAttribute("photos", patients.photos(session, id));
+        model.addAttribute("plans", patients.plans(session, id));
         return "portal/records/detail";
     }
 

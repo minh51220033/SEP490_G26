@@ -145,6 +145,13 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         if (itemReq.getServiceId() != null) {
                             service = serviceRepository.findById(itemReq.getServiceId()).orElse(null);
                         }
+                        if (service == null && itemReq.getCustomServiceName() != null && !itemReq.getCustomServiceName().trim().isEmpty()) {
+                            String custom = itemReq.getCustomServiceName().trim().toLowerCase();
+                            service = serviceRepository.findAll().stream()
+                                    .filter(s -> s.getServiceName() != null && (s.getServiceName().toLowerCase().contains(custom) || custom.contains(s.getServiceName().toLowerCase())))
+                                    .findFirst()
+                                    .orElse(null);
+                        }
                         if (service == null) {
                             service = serviceRepository.findAll().stream().findFirst().orElse(null);
                         }
@@ -156,7 +163,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         item.setQuantity(qty);
 
                         BigDecimal price = itemReq.getEstimatedPrice();
-                        if (price == null) {
+                        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
                             price = (service != null && service.getBasePrice() != null) 
                                     ? service.getBasePrice() : BigDecimal.ZERO;
                         }
@@ -180,9 +187,13 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        plan.setTotalEstimatedCost(totalEstimated);
-        plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null 
-                ? request.getFinalEstimatedCost() : totalEstimated);
+        BigDecimal overallCost = (request.getTotalEstimatedCost() != null && request.getTotalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getTotalEstimatedCost()
+                : (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
+                    ? request.getFinalEstimatedCost() : totalEstimated);
+        plan.setTotalEstimatedCost(overallCost);
+        plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
+                ? request.getFinalEstimatedCost() : overallCost);
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
         log.info("Created TreatmentPlan ID: {}, Code: {}", saved.getPlanId(), saved.getPlanCode());
@@ -294,18 +305,36 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (stage != null) {
             List<TreatmentPlanItem> items = stage.getItems();
             boolean allCompleted = items != null && !items.isEmpty() && items.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+            boolean anyActive = items != null && items.stream().anyMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS);
+
             if (allCompleted) {
                 stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
-                stage.setCompletedAt(now);
-                treatmentPlanStageRepository.save(stage);
-            } else if (items != null && items.stream().anyMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS)) {
-                if (stage.getStatus() == TreatmentPlanStageStatus.PENDING) {
-                    stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
-                    treatmentPlanStageRepository.save(stage);
-                }
+                if (stage.getCompletedAt() == null) stage.setCompletedAt(now);
+            } else if (anyActive) {
+                stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                stage.setCompletedAt(null);
+            } else {
+                stage.setStatus(TreatmentPlanStageStatus.PENDING);
+                stage.setCompletedAt(null);
             }
+            treatmentPlanStageRepository.save(stage);
+
             TreatmentPlan plan = stage.getPlan();
             if (plan != null) {
+                if (plan.getStages() != null) {
+                    boolean allStagesCompleted = plan.getStages().stream()
+                            .allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
+                    boolean anyStageActive = plan.getStages().stream()
+                            .anyMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED || s.getStatus() == TreatmentPlanStageStatus.IN_PROGRESS);
+
+                    if (allStagesCompleted && !plan.getStages().isEmpty()) {
+                        plan.setStatus(TreatmentPlanStatus.COMPLETED);
+                        treatmentPlanRepository.save(plan);
+                    } else if (anyStageActive && (plan.getStatus() == TreatmentPlanStatus.DRAFT || plan.getStatus() == TreatmentPlanStatus.PROPOSED || plan.getStatus() == TreatmentPlanStatus.ACCEPTED)) {
+                        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+                        treatmentPlanRepository.save(plan);
+                    }
+                }
                 return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(plan.getPlanId()).orElse(plan));
             }
         }
@@ -337,7 +366,11 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 if (s.getItems() != null) {
                     for (TreatmentPlanItem it : s.getItems()) {
                         com.cvdcms.entity.Service svc = it.getService();
-                        BigDecimal itemTotal = it.getEstimatedPrice().multiply(it.getQuantity());
+                        BigDecimal estPrice = (it.getEstimatedPrice() != null && it.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                                ? it.getEstimatedPrice()
+                                : (svc != null && svc.getBasePrice() != null ? svc.getBasePrice() : BigDecimal.ZERO);
+                        BigDecimal qtyVal = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                        BigDecimal itemTotal = estPrice.multiply(qtyVal);
                         stageTotalCost = stageTotalCost.add(itemTotal);
 
                         itemDTOs.add(TreatmentPlanItemResponseDTO.builder()
@@ -348,8 +381,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                 .categoryName(svc != null && svc.getCategory() != null ? svc.getCategory().getCategoryName() : null)
                                 .unit(svc != null ? svc.getUnit() : "Lần")
                                 .toothNumbers(it.getToothNumbers())
-                                .quantity(it.getQuantity())
-                                .estimatedPrice(it.getEstimatedPrice())
+                                .quantity(qtyVal)
+                                .estimatedPrice(estPrice)
                                 .totalPrice(itemTotal)
                                 .status(it.getStatus() != null ? it.getStatus().name() : "PLANNED")
                                 .statusBadgeClass(getItemStatusBadgeClass(it.getStatus()))
