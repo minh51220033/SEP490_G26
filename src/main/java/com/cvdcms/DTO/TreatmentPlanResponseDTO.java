@@ -32,6 +32,7 @@ public class TreatmentPlanResponseDTO {
     private String statusDisplayName;
     private String startDate;
     private String expectedEndDate;
+    private String diagnosisText;
     private String notes;
     private String createdAt;
     private Integer totalStages;

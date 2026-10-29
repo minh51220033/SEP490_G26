@@ -4,1126 +4,2454 @@
 <head th:replace="~{fragments/head :: head('Danh sách ca khám trong ngày - DentalFlow')}"></head>
 
 <body class="app-body">
-<div class="app-shell">
-
-    <!-- SIDEBAR DÙNG CHUNG -->
-    <aside th:replace="~{fragments/sidebar :: sidebar('daily-visits')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-
-    <div class="app-main">
-        <!-- HEADER TOPBAR DÙNG CHUNG -->
-        <header th:replace="~{fragments/header :: appTopbar('Danh sách ca khám trong ngày')}"></header>
-
-        <main class="app-content p-3 p-md-4" style="background: #f8fafc !important;">
-            <style>
-                :root {
-                    --dv-primary: #0284c7;
-                    --dv-primary-dark: #0369a1;
-                    --dv-primary-light: #e0f2fe;
-                    --dv-border: #e2e8f0;
-                    --dv-text-dark: #0f172a;
-                    --dv-text-muted: #64748b;
-                }
-
-                /* Header & Breadcrumb */
-                .dv-breadcrumb {
-                    font-size: 13px;
-                    color: #64748b;
-                }
-                .dv-breadcrumb a {
-                    color: #0284c7;
-                    text-decoration: none;
-                    font-weight: 500;
-                }
-                .dv-breadcrumb a:hover {
-                    text-decoration: underline;
-                }
-
-                .dv-page-title {
-                    font-size: 24px;
-                    font-weight: 800;
-                    color: #0f172a;
-                    letter-spacing: -0.5px;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 4px;
-                }
-
-                /* 4 KPI Stat Cards */
-                .dv-stat-card {
-                    background: #ffffff;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 14px;
-                    padding: 16px 20px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                    transition: all 0.2s ease;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }
-                .dv-stat-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-                }
-                .dv-stat-icon-wrapper {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 22px;
-                    flex-shrink: 0;
-                }
-                .dv-stat-num {
-                    font-size: 26px;
-                    font-weight: 800;
-                    line-height: 1.1;
-                    color: #0f172a;
-                }
-                .dv-stat-label {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #64748b;
-                    margin-top: 3px;
-                }
-
-                /* Filter Container */
-                .dv-filter-card {
-                    background: #ffffff;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 14px;
-                    padding: 18px 20px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                    margin-bottom: 20px;
-                }
-
-                .dv-search-input-group {
-                    position: relative;
-                }
-                .dv-search-input-group input {
-                    width: 100%;
-                    padding: 10px 40px 10px 42px;
-                    border: 1.5px solid #cbd5e1;
-                    border-radius: 10px;
-                    font-size: 14px;
-                    outline: none;
-                    background: #f8fafc;
-                    transition: all 0.2s;
-                }
-                .dv-search-input-group input:focus {
-                    background: #ffffff;
-                    border-color: #0284c7;
-                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-                }
-                .dv-search-icon {
-                    position: absolute;
-                    left: 14px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    color: #64748b;
-                    font-size: 17px;
-                    pointer-events: none;
-                }
-                .dv-clear-btn {
-                    position: absolute;
-                    right: 12px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    background: none;
-                    border: none;
-                    color: #94a3b8;
-                    cursor: pointer;
-                    font-size: 18px;
-                    display: none;
-                }
-
-                /* Date button chips */
-                .dv-date-chip {
-                    border: 1.5px solid #cbd5e1;
-                    background: #ffffff;
-                    color: #475569;
-                    border-radius: 8px;
-                    padding: 7px 14px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .dv-date-chip:hover {
-                    background: #f1f5f9;
-                    border-color: #94a3b8;
-                }
-                .dv-date-chip.is-active {
-                    background: #0284c7;
-                    border-color: #0284c7;
-                    color: #ffffff;
-                }
-
-                /* Status Pills Bar */
-                .dv-status-tabs {
-                    display: flex;
-                    gap: 8px;
-                    overflow-x: auto;
-                    padding-bottom: 4px;
-                    margin-top: 14px;
-                    scrollbar-width: thin;
-                }
-                .dv-status-tab {
-                    white-space: nowrap;
-                    padding: 6px 14px;
-                    border-radius: 20px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    border: 1.5px solid #e2e8f0;
-                    background: #ffffff;
-                    color: #475569;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .dv-status-tab:hover {
-                    background: #f1f5f9;
-                }
-                .dv-status-tab.is-active {
-                    background: #0f172a;
-                    border-color: #0f172a;
-                    color: #ffffff;
-                }
-                .dv-status-tab.is-active .badge {
-                    background: rgba(255,255,255,0.25) !important;
-                    color: #ffffff !important;
-                }
-
-                /* View Switcher */
-                .dv-view-switch {
-                    background: #f1f5f9;
-                    border-radius: 8px;
-                    padding: 3px;
-                    display: inline-flex;
-                    border: 1px solid #cbd5e1;
-                }
-                .dv-view-btn {
-                    border: none;
-                    background: transparent;
-                    color: #64748b;
-                    padding: 5px 12px;
-                    border-radius: 6px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.15s;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                }
-                .dv-view-btn.is-active {
-                    background: #ffffff;
-                    color: #0284c7;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                }
-
-                /* Table View */
-                .dv-table-card {
-                    background: #ffffff;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 14px;
-                    overflow: hidden;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                }
-                .dv-table thead th {
-                    background: #f8fafc;
-                    color: #475569;
-                    font-weight: 700;
-                    font-size: 12.5px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.4px;
-                    border-bottom: 1.5px solid #e2e8f0;
-                    padding: 14px 16px;
-                }
-                .dv-table tbody td {
-                    padding: 14px 16px;
-                    vertical-align: middle;
-                    border-bottom: 1px solid #f1f5f9;
-                    font-size: 13.5px;
-                }
-                .dv-table tbody tr:hover {
-                    background: #f8fafc;
-                }
-
-                .dv-avatar {
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #0284c7, #38bdf8);
-                    color: #ffffff;
-                    font-weight: 700;
-                    font-size: 16px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                }
-
-                /* Grid Card View */
-                .dv-grid-container {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-                    gap: 18px;
-                }
-                .dv-patient-card {
-                    background: #ffffff;
-                    border: 1.5px solid #e2e8f0;
-                    border-radius: 14px;
-                    padding: 18px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                    transition: all 0.2s ease;
-                    position: relative;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                }
-                .dv-patient-card:hover {
-                    border-color: #38bdf8;
-                    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.1);
-                    transform: translateY(-2px);
-                }
-                .dv-patient-card.is-active-visit {
-                    border: 2px solid #0284c7;
-                    background: #f0f9ff;
-                }
-            </style>
-
-            <!-- 1. BREADCRUMB & PAGE HEADER -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-                <div>
-                    <div class="dv-breadcrumb mb-1">
-                        <a th:href="@{/home}">Trang chủ</a>
-                        <span class="mx-1">&gt;</span>
-                        <a th:href="@{/doctor/diagnoses}">Bác sĩ &amp; Điều phối</a>
-                        <span class="mx-1">&gt;</span>
-                        <span class="text-dark fw-semibold">Danh sách ca khám trong ngày</span>
-                    </div>
-                    <h1 class="dv-page-title">
-                        <i class="bi bi-calendar2-week-fill text-primary"></i>
-                        <span>Danh sách ca khám trong ngày</span>
-                    </h1>
-                    <div class="text-muted small">
-                        Theo dõi danh sách bệnh nhân tiếp đón, trạng thái khám, điều phối tại ghế và chuyển tiếp ca khám thời gian thực.
-                    </div>
-                </div>
-
-                <!-- NÚT HÀNH ĐỘNG HEADER -->
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3 bg-white shadow-sm"
-                            onclick="loadDailyVisits()" title="Tải lại danh sách ca khám">
-                        <i class="bi bi-arrow-clockwise fs-6"></i>
-                        <span>Làm mới</span>
-                    </button>
-
-                    <!-- VIEW SWITCHER -->
-                    <div class="dv-view-switch">
-                        <button type="button" class="dv-view-btn is-active" id="btnViewTable" onclick="switchViewMode('TABLE')">
-                            <i class="bi bi-table"></i>
-                            <span>Bảng</span>
-                        </button>
-                        <button type="button" class="dv-view-btn" id="btnViewGrid" onclick="switchViewMode('GRID')">
-                            <i class="bi bi-grid-fill"></i>
-                            <span>Thẻ</span>
-                        </button>
-                    </div>
-
-                    <a th:href="@{/doctor/diagnoses}" class="btn btn-primary btn-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3 shadow-sm">
-                        <i class="bi bi-person-video2"></i>
-                        <span>Vào bàn khám ngay</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 2. 4 THẺ THỐNG KÊ KPI TRONG NGÀY -->
-            <div class="row g-3 mb-4">
-                <!-- KPI 1: TỔNG CA KHÁM -->
-                <div class="col-6 col-lg-3">
-                    <div class="dv-stat-card">
-                        <div>
-                            <div class="dv-stat-num text-primary" id="kpiTotalVisits">0</div>
-                            <div class="dv-stat-label">Tổng ca khám</div>
-                        </div>
-                        <div class="dv-stat-icon-wrapper" style="background: #e0f2fe; color: #0284c7;">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPI 2: CHỜ KHÁM -->
-                <div class="col-6 col-lg-3">
-                    <div class="dv-stat-card">
-                        <div>
-                            <div class="dv-stat-num text-warning" id="kpiWaitingVisits">0</div>
-                            <div class="dv-stat-label">Đang chờ khám</div>
-                        </div>
-                        <div class="dv-stat-icon-wrapper" style="background: #fef3c7; color: #d97706;">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPI 3: ĐANG KHÁM & ĐIỀU TRỊ -->
-                <div class="col-6 col-lg-3">
-                    <div class="dv-stat-card">
-                        <div>
-                            <div class="dv-stat-num text-info" id="kpiInProgressVisits">0</div>
-                            <div class="dv-stat-label">Đang khám &amp; Điều trị</div>
-                        </div>
-                        <div class="dv-stat-icon-wrapper" style="background: #e0e7ff; color: #4f46e5;">
-                            <i class="bi bi-heart-pulse-fill"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPI 4: ĐÃ HOÀN THÀNH -->
-                <div class="col-6 col-lg-3">
-                    <div class="dv-stat-card">
-                        <div>
-                            <div class="dv-stat-num text-success" id="kpiCompletedVisits">0</div>
-                            <div class="dv-stat-label">Đã hoàn thành</div>
-                        </div>
-                        <div class="dv-stat-icon-wrapper" style="background: #dcfce7; color: #16a34a;">
-                            <i class="bi bi-check2-circle"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. THANH CÔNG CỤ TÌM KIẾM & BỘ LỌC ĐA NĂNG -->
-            <div class="dv-filter-card">
-                <!-- HÀNG 1: TÌM KIẾM & LỌC THEO THỜI GIAN (HÔM NAY / TUẦN NÀY / TUẦN TRƯỚC / THÁNG NÀY / TẤT CẢ) -->
-                <div class="row g-3 align-items-center">
-                    <!-- Ô TÌM KIẾM -->
-                    <div class="col-12 col-xl-4">
-                        <div class="dv-search-input-group">
-                            <i class="bi bi-search dv-search-icon"></i>
-                            <input type="text" id="searchInput"
-                                   placeholder="🔍 Tìm theo Họ tên BN, Mã BN, Số điện thoại, Mã ca khám, Bác sĩ..."
-                                   autocomplete="off"
-                                   oninput="handleSearchInput(this.value)">
-                            <button type="button" id="clearSearchBtn" class="dv-clear-btn" onclick="clearSearch()">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- LỌC THEO THỜI GIAN: NGÀY / TUẦN / THÁNG -->
-                    <div class="col-12 col-xl-8">
-                        <div class="d-flex align-items-center justify-content-xl-end gap-1.5 flex-wrap">
-                            <button type="button" class="dv-date-chip is-active" id="btnDateToday" onclick="setDateFilter('TODAY')" title="Khám hôm nay">
-                                <i class="bi bi-calendar-event"></i> Hôm nay
-                            </button>
-                            <button type="button" class="dv-date-chip" id="btnDateYesterday" onclick="setDateFilter('YESTERDAY')" title="Khám hôm qua">
-                                Hôm qua
-                            </button>
-                            <button type="button" class="dv-date-chip" id="btnDateThisWeek" onclick="setDateFilter('THIS_WEEK')" title="Xem toàn bộ ca khám tuần này (Thứ 2 - Chủ Nhật)">
-                                <i class="bi bi-calendar2-range-fill text-warning"></i> Tuần này
-                            </button>
-                            <button type="button" class="dv-date-chip" id="btnDateLastWeek" onclick="setDateFilter('LAST_WEEK')" title="Xem toàn bộ ca khám tuần trước">
-                                Tuần trước
-                            </button>
-                            <button type="button" class="dv-date-chip" id="btnDateThisMonth" onclick="setDateFilter('THIS_MONTH')" title="Xem toàn bộ ca khám trong tháng này">
-                                Tháng này
-                            </button>
-                            <button type="button" class="dv-date-chip" id="btnDateAll" onclick="setDateFilter('ALL')" title="Xem tất cả các ngày">
-                                Tất cả ngày
-                            </button>
-
-                            <!-- BỘ ĐIỀU HƯỚNG TUẦN / NGÀY -->
-                            <div class="d-flex align-items-center gap-1 ms-1 bg-white p-1 rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important;">
-                                <button type="button" class="btn btn-sm btn-light border py-1 px-2" id="btnPrevPeriod" onclick="navigatePeriod(-1)" title="Lùi lại 1 tuần / 1 ngày">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <input type="date" id="datePicker" class="form-control form-control-sm border-0 py-0 px-1 text-center font-monospace" style="height: 28px; width: 125px; font-size: 13px;" title="Chọn ngày cụ thể" onchange="handleDateChange(this.value)">
-                                <button type="button" class="btn btn-sm btn-light border py-1 px-2" id="btnNextPeriod" onclick="navigatePeriod(1)" title="Tiến tới 1 tuần / 1 ngày">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- HÀNG 2: TABS LỌC THEO TRẠNG THÁI CHI TIẾT -->
-                <div class="dv-status-tabs" id="statusTabsContainer">
-                    <button type="button" class="dv-status-tab is-active" data-status="ALL" onclick="setStatusFilter('ALL')">
-                        Tất cả <span class="badge bg-secondary rounded-pill" id="tabCountAll">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="WAITING" onclick="setStatusFilter('WAITING')">
-                        <span class="rounded-circle d-inline-block bg-warning" style="width: 8px; height: 8px;"></span>
-                        Chờ khám <span class="badge bg-warning text-dark rounded-pill" id="tabCountWaiting">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="IN_EXAM" onclick="setStatusFilter('IN_EXAM')">
-                        <span class="rounded-circle d-inline-block bg-primary" style="width: 8px; height: 8px;"></span>
-                        Đang khám <span class="badge bg-primary text-white rounded-pill" id="tabCountInExam">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="IN_TREATMENT" onclick="setStatusFilter('IN_TREATMENT')">
-                        <span class="rounded-circle d-inline-block bg-info" style="width: 8px; height: 8px;"></span>
-                        Đang điều trị <span class="badge bg-info text-dark rounded-pill" id="tabCountInTreatment">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="WAITING_PARACLINICAL" onclick="setStatusFilter('WAITING_PARACLINICAL')">
-                        Chờ Cận lâm sàng <span class="badge bg-secondary text-white rounded-pill" id="tabCountWaitingCls">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="WAITING_PAYMENT" onclick="setStatusFilter('WAITING_PAYMENT')">
-                        Chờ Thanh toán <span class="badge bg-dark text-white rounded-pill" id="tabCountWaitingPayment">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="COMPLETED" onclick="setStatusFilter('COMPLETED')">
-                        <span class="rounded-circle d-inline-block bg-success" style="width: 8px; height: 8px;"></span>
-                        Hoàn thành <span class="badge bg-success text-white rounded-pill" id="tabCountCompleted">0</span>
-                    </button>
-                    <button type="button" class="dv-status-tab" data-status="CANCELLED" onclick="setStatusFilter('CANCELLED')">
-                        Đã hủy <span class="badge bg-danger text-white rounded-pill" id="tabCountCancelled">0</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 4. KHU VỰC KẾT QUẢ DANH SÁCH CA KHÁM -->
-            <div class="d-flex align-items-center justify-content-between mb-3 px-1">
-                <div class="small text-muted" id="filterSummaryText">
-                    Đang tải danh sách ca khám...
-                </div>
-                <div class="small fw-semibold text-primary" style="cursor: pointer;" onclick="resetAllFilters()">
-                    <i class="bi bi-arrow-counterclockwise"></i> Đặt lại toàn bộ bộ lọc
-                </div>
-            </div>
-
-            <!-- CHẾ ĐỘ 1: DẠNG BẢNG (TABLE VIEW) -->
-            <div id="tableViewSection" class="dv-table-card">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 dv-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;" class="text-center">STT</th>
-                                <th style="width: 120px;">Mã ca</th>
-                                <th style="width: 130px;">Giờ vào</th>
-                                <th style="min-width: 220px;">Bệnh nhân</th>
-                                <th style="width: 130px;">Số điện thoại</th>
-                                <th style="min-width: 160px;">Bác sĩ phụ trách</th>
-                                <th style="width: 120px;">Ghế khám</th>
-                                <th style="min-width: 240px;">Lý do khám / Triệu chứng</th>
-                                <th style="width: 140px;" class="text-center">Trạng thái</th>
-                                <th style="width: 140px;" class="text-end text-nowrap">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="visitsTableBody">
-                            <!-- Dynamic Rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- CHẾ ĐỘ 2: DẠNG THẺ LƯỚI (GRID CARDS VIEW) -->
-            <div id="gridViewSection" class="dv-grid-container" style="display: none;">
-                <!-- Dynamic Cards -->
-            </div>
-
-            <!-- EMPTY STATE KHI KHÔNG TÌM THẤY KẾT QUẢ -->
-            <div id="emptyState" class="text-center py-5 bg-white rounded-4 border my-3" style="display: none;">
-                <div class="mb-3">
-                    <i class="bi bi-inbox fs-1 text-secondary opacity-50"></i>
-                </div>
-                <h5 class="fw-bold text-dark">Không tìm thấy ca khám nào</h5>
-                <p class="text-muted small mb-3">Vui lòng thử tìm kiếm với từ khóa khác hoặc điều chỉnh lại bộ lọc ngày / trạng thái.</p>
-                <button type="button" class="btn btn-outline-primary btn-sm px-4 rounded-pill fw-bold" onclick="resetAllFilters()">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Xóa bộ lọc tìm kiếm
-                </button>
-            </div>
-        </main>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // =========================================================================
-    // DEDICATED DAILY VISITS PAGE CONTROLLER
-    // =========================================================================
-    let state = {
-        viewMode: 'TABLE', // 'TABLE' | 'GRID'
-        dateMode: 'THIS_WEEK', // Default to THIS_WEEK so all real visits are immediately visible!
-        dateValue: null,
-        startDate: null,
-        endDate: null,
-        periodLabel: '',
-        weekOffset: 0,
-        monthOffset: 0,
-        status: 'ALL',
-        search: '',
-        debounceTimer: null,
-        rawVisits: []
-    };
-
-    function formatDateIso(d) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    function formatVnDate(d) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        return `${day}/${month}/${year}`;
-    }
-
-    function getTodayIso() {
-        return formatDateIso(new Date());
-    }
-
-    function getYesterdayIso() {
-        const d = new Date();
-        d.setDate(d.getDate() - 1);
-        return formatDateIso(d);
-    }
-
-    function getIsoWeekNumber(d) {
-        const target = new Date(d.valueOf());
-        const dayNr = (d.getDay() + 6) % 7;
-        target.setDate(target.getDate() - dayNr + 3);
-        const firstThursday = target.valueOf();
-        target.setMonth(0, 1);
-        if (target.getDay() !== 4) {
-            target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-        }
-        return 1 + Math.ceil((firstThursday - target) / 604800000);
-    }
-
-    function computeWeekRange(refDate, offset = 0) {
-        const d = new Date(refDate);
-        d.setDate(d.getDate() + (offset * 7));
-        const day = d.getDay(); // 0 is Sun, 1 is Mon...
-        const diffToMonday = (day === 0 ? -6 : 1) - day;
-        const monday = new Date(d);
-        monday.setDate(d.getDate() + diffToMonday);
-
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-
-        const weekNum = getIsoWeekNumber(monday);
-        let prefix = `Tuần ${weekNum}`;
-        if (offset === 0) prefix = `Tuần này (T${weekNum})`;
-        else if (offset === -1) prefix = `Tuần trước (T${weekNum})`;
-
-        return {
-            startDate: formatDateIso(monday),
-            endDate: formatDateIso(sunday),
-            label: `${prefix}: ${formatVnDate(monday)} – ${formatVnDate(sunday)}`
-        };
-    }
-
-    function computeMonthRange(refDate, offset = 0) {
-        const d = new Date(refDate);
-        d.setMonth(d.getMonth() + offset);
-        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
-        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-
-        let prefix = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-        if (offset === 0) prefix = `Tháng này (${d.getMonth() + 1}/${d.getFullYear()})`;
-
-        return {
-            startDate: formatDateIso(firstDay),
-            endDate: formatDateIso(lastDay),
-            label: `${prefix}: ${formatVnDate(firstDay)} – ${formatVnDate(lastDay)}`
-        };
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    // Switch between Table and Grid View
-    function switchViewMode(mode) {
-        state.viewMode = mode;
-        const btnTable = document.getElementById('btnViewTable');
-        const btnGrid = document.getElementById('btnViewGrid');
-        const tableSec = document.getElementById('tableViewSection');
-        const gridSec = document.getElementById('gridViewSection');
-
-        if (mode === 'TABLE') {
-            btnTable.classList.add('is-active');
-            btnGrid.classList.remove('is-active');
-            tableSec.style.display = 'block';
-            gridSec.style.display = 'none';
-        } else {
-            btnGrid.classList.add('is-active');
-            btnTable.classList.remove('is-active');
-            gridSec.style.display = 'grid';
-            tableSec.style.display = 'none';
-        }
-        applyFiltersAndRender();
-    }
-
-    // Date & Week Filters
-    function setDateFilter(mode) {
-        state.dateMode = mode;
-        const allChips = document.querySelectorAll('.dv-date-chip');
-        allChips.forEach(b => b.classList.remove('is-active'));
-
-        const picker = document.getElementById('datePicker');
-
-        if (mode === 'TODAY') {
-            document.getElementById('btnDateToday')?.classList.add('is-active');
-            state.startDate = null;
-            state.endDate = null;
-            state.dateValue = getTodayIso();
-            state.periodLabel = "Hôm nay (" + formatVnDate(new Date()) + ")";
-            if (picker) picker.value = state.dateValue;
-        } else if (mode === 'YESTERDAY') {
-            document.getElementById('btnDateYesterday')?.classList.add('is-active');
-            state.startDate = null;
-            state.endDate = null;
-            state.dateValue = getYesterdayIso();
-            const yDate = new Date();
-            yDate.setDate(yDate.getDate() - 1);
-            state.periodLabel = "Hôm qua (" + formatVnDate(yDate) + ")";
-            if (picker) picker.value = state.dateValue;
-        } else if (mode === 'THIS_WEEK') {
-            document.getElementById('btnDateThisWeek')?.classList.add('is-active');
-            state.weekOffset = 0;
-            const range = computeWeekRange(new Date(), state.weekOffset);
-            state.startDate = range.startDate;
-            state.endDate = range.endDate;
-            state.dateValue = null;
-            state.periodLabel = range.label;
-            if (picker) picker.value = range.startDate;
-        } else if (mode === 'LAST_WEEK') {
-            document.getElementById('btnDateLastWeek')?.classList.add('is-active');
-            state.weekOffset = -1;
-            const range = computeWeekRange(new Date(), state.weekOffset);
-            state.startDate = range.startDate;
-            state.endDate = range.endDate;
-            state.dateValue = null;
-            state.periodLabel = range.label;
-            if (picker) picker.value = range.startDate;
-        } else if (mode === 'THIS_MONTH') {
-            document.getElementById('btnDateThisMonth')?.classList.add('is-active');
-            state.monthOffset = 0;
-            const range = computeMonthRange(new Date(), state.monthOffset);
-            state.startDate = range.startDate;
-            state.endDate = range.endDate;
-            state.dateValue = null;
-            state.periodLabel = range.label;
-            if (picker) picker.value = range.startDate;
-        } else if (mode === 'ALL') {
-            document.getElementById('btnDateAll')?.classList.add('is-active');
-            state.startDate = null;
-            state.endDate = null;
-            state.dateValue = 'ALL';
-            state.periodLabel = "Tất cả các ngày";
-            if (picker) picker.value = '';
-        }
-
-        loadDailyVisits();
-    }
-
-    function handleDateChange(customDate) {
-        if (!customDate) return;
-        state.dateMode = 'CUSTOM';
-        state.dateValue = customDate;
-        state.startDate = null;
-        state.endDate = null;
-        state.periodLabel = `Ngày: ${formatVnDate(new Date(customDate))}`;
-        document.querySelectorAll('.dv-date-chip').forEach(b => b.classList.remove('is-active'));
-        loadDailyVisits();
-    }
-
-    function navigatePeriod(step) {
-        if (state.dateMode === 'THIS_WEEK' || state.dateMode === 'LAST_WEEK' || state.dateMode === 'WEEK_CUSTOM') {
-            state.dateMode = 'WEEK_CUSTOM';
-            state.weekOffset = (state.weekOffset || 0) + step;
-            const range = computeWeekRange(new Date(), state.weekOffset);
-            state.startDate = range.startDate;
-            state.endDate = range.endDate;
-            state.dateValue = null;
-            state.periodLabel = range.label;
-            document.querySelectorAll('.dv-date-chip').forEach(b => b.classList.remove('is-active'));
-            const picker = document.getElementById('datePicker');
-            if (picker) picker.value = range.startDate;
-        } else if (state.dateMode === 'THIS_MONTH' || state.dateMode === 'MONTH_CUSTOM') {
-            state.dateMode = 'MONTH_CUSTOM';
-            state.monthOffset = (state.monthOffset || 0) + step;
-            const range = computeMonthRange(new Date(), state.monthOffset);
-            state.startDate = range.startDate;
-            state.endDate = range.endDate;
-            state.dateValue = null;
-            state.periodLabel = range.label;
-            document.querySelectorAll('.dv-date-chip').forEach(b => b.classList.remove('is-active'));
-            const picker = document.getElementById('datePicker');
-            if (picker) picker.value = range.startDate;
-        } else {
-            // Day navigation
-            let curDate = state.dateValue && state.dateValue !== 'ALL' ? new Date(state.dateValue) : new Date();
-            curDate.setDate(curDate.getDate() + step);
-            const iso = formatDateIso(curDate);
-            handleDateChange(iso);
-            const picker = document.getElementById('datePicker');
-            if (picker) picker.value = iso;
-            return;
-        }
-
-        loadDailyVisits();
-    }
-
-    // Status Tab Filters
-    function setStatusFilter(status) {
-        state.status = status;
-        document.querySelectorAll('#statusTabsContainer .dv-status-tab').forEach(tab => {
-            if (tab.getAttribute('data-status') === status) {
-                tab.classList.add('is-active');
-            } else {
-                tab.classList.remove('is-active');
-            }
-        });
-        applyFiltersAndRender();
-    }
-
-    // Search Input
-    function handleSearchInput(query) {
-        const clearBtn = document.getElementById('clearSearchBtn');
-        if (clearBtn) {
-            clearBtn.style.display = (query && query.trim().length > 0) ? 'block' : 'none';
-        }
-
-        clearTimeout(state.debounceTimer);
-        state.debounceTimer = setTimeout(() => {
-            state.search = query.trim();
-            loadDailyVisits();
-        }, 220);
-    }
-
-    function clearSearch() {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.value = '';
-            document.getElementById('clearSearchBtn').style.display = 'none';
-            state.search = '';
-            loadDailyVisits();
-            searchInput.focus();
-        }
-    }
-
-    function resetAllFilters() {
-        state.status = 'ALL';
-        state.search = '';
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = '';
-        const clearBtn = document.getElementById('clearSearchBtn');
-        if (clearBtn) clearBtn.style.display = 'none';
-        setDateFilter('THIS_WEEK');
-    }
-
-    // Load Data from API
-    async function loadDailyVisits() {
-        const tbody = document.getElementById('visitsTableBody');
-        const grid = document.getElementById('gridViewSection');
-        const emptyState = document.getElementById('emptyState');
-        if (emptyState) emptyState.style.display = 'none';
-
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="10" class="text-center py-5 text-muted">
-                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
-                        <span class="ms-2 small">Đang tải danh sách ca khám...</span>
-                    </td>
-                </tr>
-            `;
-        }
-
-        try {
-            const params = new URLSearchParams();
-            if (state.startDate && state.endDate) {
-                params.append('startDate', state.startDate);
-                params.append('endDate', state.endDate);
-            } else if (state.dateValue) {
-                params.append('date', state.dateValue);
-            }
-            if (state.search) params.append('search', state.search);
-
-            const res = await fetch(`/api/doctor/patients/daily-visits?${params.toString()}`);
-            if (!res.ok) throw new Error('Không thể kết nối đến máy chủ');
-            const data = await res.json();
-            state.rawVisits = data || [];
-
-            updateKpis(state.rawVisits);
-            updateStatusTabs(state.rawVisits);
-            applyFiltersAndRender();
-        } catch (err) {
-            console.error(err);
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="10" class="text-center py-5 text-danger small">
-                            <i class="bi bi-exclamation-triangle fs-3 d-block mb-1"></i>
-                            <span>Lỗi khi tải dữ liệu ca khám: ${err.message}</span>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-    }
-
-    function updateKpis(visits) {
-        let total = visits.length;
-        let waiting = 0;
-        let inProgress = 0;
-        let completed = 0;
-
-        visits.forEach(v => {
-            if (v.status === 'WAITING') waiting++;
-            else if (v.status === 'IN_EXAM' || v.status === 'IN_TREATMENT' || v.status === 'WAITING_PARACLINICAL') inProgress++;
-            else if (v.status === 'COMPLETED') completed++;
-        });
-
-        const setVal = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        };
-
-        setVal('kpiTotalVisits', total);
-        setVal('kpiWaitingVisits', waiting);
-        setVal('kpiInProgressVisits', inProgress);
-        setVal('kpiCompletedVisits', completed);
-    }
-
-    function updateStatusTabs(visits) {
-        const counts = {
-            ALL: visits.length,
-            WAITING: 0,
-            IN_EXAM: 0,
-            IN_TREATMENT: 0,
-            WAITING_PARACLINICAL: 0,
-            WAITING_PAYMENT: 0,
-            COMPLETED: 0,
-            CANCELLED: 0
-        };
-
-        visits.forEach(v => {
-            if (counts[v.status] !== undefined) counts[v.status]++;
-        });
-
-        const setVal = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        };
-
-        setVal('tabCountAll', counts.ALL);
-        setVal('tabCountWaiting', counts.WAITING);
-        setVal('tabCountInExam', counts.IN_EXAM);
-        setVal('tabCountInTreatment', counts.IN_TREATMENT);
-        setVal('tabCountWaitingCls', counts.WAITING_PARACLINICAL);
-        setVal('tabCountWaitingPayment', counts.WAITING_PAYMENT);
-        setVal('tabCountCompleted', counts.COMPLETED);
-        setVal('tabCountCancelled', counts.CANCELLED);
-    }
-
-    function applyFiltersAndRender() {
-        let filtered = state.rawVisits || [];
-        if (state.status !== 'ALL') {
-            filtered = filtered.filter(v => v.status === state.status);
-        }
-
-        const count = filtered.length;
-        const summary = document.getElementById('filterSummaryText');
-        if (summary) {
-            let dateStr = state.periodLabel || (state.dateMode === 'TODAY' ? 'Hôm nay' : (state.dateMode === 'YESTERDAY' ? 'Hôm qua' : (state.dateMode === 'ALL' ? 'Tất cả các ngày' : state.dateValue)));
-            summary.innerHTML = `Hiển thị <strong>${count}</strong> ca khám • <span class="text-primary fw-bold">${dateStr}</span>${state.status !== 'ALL' ? ' • Trạng thái: ' + state.status : ''}`;
-        }
-
-        const emptyState = document.getElementById('emptyState');
-        const tableSec = document.getElementById('tableViewSection');
-        const gridSec = document.getElementById('gridViewSection');
-
-        if (count === 0) {
-            if (emptyState) emptyState.style.display = 'block';
-            if (tableSec) tableSec.style.display = 'none';
-            if (gridSec) gridSec.style.display = 'none';
-            return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-        if (state.viewMode === 'TABLE') {
-            if (tableSec) tableSec.style.display = 'block';
-            if (gridSec) gridSec.style.display = 'none';
-            renderTableView(filtered);
-        } else {
-            if (gridSec) gridSec.style.display = 'grid';
-            if (tableSec) tableSec.style.display = 'none';
-            renderGridView(filtered);
-        }
-    }
-
-    function renderTableView(visits) {
-        const tbody = document.getElementById('visitsTableBody');
-        if (!tbody) return;
-
-        let html = '';
-        visits.forEach((v, index) => {
-            const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
-            const genderBadge = v.gender === 'Nữ'
-                ? '<span class="text-danger small"><i class="bi bi-gender-female"></i> Nữ</span>'
-                : '<span class="text-primary small"><i class="bi bi-gender-male"></i> Nam</span>';
-            const ageText = v.age ? ` • ${v.age} tuổi` : '';
-
-            html += `
-                <tr>
-                    <td class="text-center text-muted fw-semibold">${index + 1}</td>
-                    <td>
-                        <span class="badge bg-light text-primary border" style="font-family: monospace; font-size: 12px; padding: 6px 10px;">
-                            ${escapeHtml(v.visitCode)}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark">${v.checkInTime}</div>
-                        <div class="text-muted small">${v.checkInDate}</div>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="dv-avatar">
-                                ${firstLetter}
-                            </div>
-                            <div>
-                                <a href="/doctor/examination/${v.visitId}/diagnoses" class="fw-bold text-dark text-decoration-none hover-primary" style="font-size: 14.5px;">
-                                    ${escapeHtml(v.fullName)}
-                                </a>
-                                <div class="text-muted small mt-0.5">
-                                    <span class="badge bg-light text-secondary border me-1" style="font-family: monospace; font-size: 10px;">${escapeHtml(v.patientCode)}</span>
-                                    ${genderBadge}${ageText}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="text-dark"><i class="bi bi-telephone text-secondary me-1"></i>${escapeHtml(v.phoneNumber || '---')}</span>
-                    </td>
-                    <td>
-                        <span class="fw-semibold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(v.doctorName)}</span>
-                    </td>
-                    <td>
-                        <span class="badge bg-light text-secondary border px-2 py-1"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(v.chairName)}</span>
-                    </td>
-                    <td>
-                        <div class="text-truncate text-secondary" style="max-width: 280px;" title="${escapeHtml(v.initialSymptoms || '')}">
-                            ${escapeHtml(v.initialSymptoms || 'Khám theo yêu cầu')}
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge ${v.statusBadgeClass} px-3 py-1.5 rounded-pill" style="font-size: 12px;">
-                            ${escapeHtml(v.statusDisplayName)}
-                        </span>
-                    </td>
-                    <td class="text-end text-nowrap">
-                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill shadow-sm d-inline-flex align-items-center gap-1 text-nowrap" style="white-space: nowrap;">
-                            <span>Vào khám</span>
-                            <i class="bi bi-arrow-right-short fs-6"></i>
-                        </a>
-                    </td>
-                </tr>
-            `;
-        });
-
-        tbody.innerHTML = html;
-    }
-
-    function renderGridView(visits) {
-        const grid = document.getElementById('gridViewSection');
-        if (!grid) return;
-
-        let html = '';
-        visits.forEach(v => {
-            const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
-            const genderBadge = v.gender === 'Nữ'
-                ? '<span class="text-danger small"><i class="bi bi-gender-female"></i> Nữ</span>'
-                : '<span class="text-primary small"><i class="bi bi-gender-male"></i> Nam</span>';
-            const ageText = v.age ? ` • ${v.age} tuổi` : '';
-
-            html += `
-                <div class="dv-patient-card">
+    <div class="app-shell">
+
+        <!-- SIDEBAR DÙNG CHUNG -->
+        <aside th:replace="~{fragments/sidebar :: sidebar('daily-visits')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+        <div class="app-main">
+            <!-- HEADER TOPBAR DÙNG CHUNG -->
+            <header th:replace="~{fragments/header :: appTopbar('Danh sách ca khám trong ngày')}"></header>
+
+            <main class="app-content p-3 p-md-4"
+                style="background: #f1f5f9 !important; min-height: calc(100vh - 64px);">
+                <style>
+                    :root {
+                        --dv-primary: #0284c7;
+                        --dv-primary-dark: #0369a1;
+                        --dv-primary-light: #e0f2fe;
+                        --dv-indigo: #2563eb;
+                        --dv-border: #cbd5e1;
+                        --dv-border-soft: #e2e8f0;
+                        --dv-text-dark: #0f172a;
+                        --dv-text-secondary: #334155;
+                        --dv-text-muted: #64748b;
+                        --dv-surface: #ffffff;
+                    }
+
+                    /* =========================================================================
+                   1. HEADER & KPI CARDS (Lấy cảm hứng từ MISA AMIS CRM & VTTech Dental)
+                   ========================================================================= */
+                    .dv-breadcrumb {
+                        font-size: 13.5px;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+
+                    .dv-breadcrumb a {
+                        color: #0284c7;
+                        text-decoration: none;
+                        font-weight: 600;
+                    }
+
+                    .dv-breadcrumb a:hover {
+                        text-decoration: underline;
+                    }
+
+                    .dv-page-title {
+                        font-size: 26px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        letter-spacing: -0.5px;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        margin-bottom: 4px;
+                    }
+
+                    .dv-kpi-card {
+                        background: #ffffff;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 20px 24px;
+                        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+                        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        cursor: pointer;
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    .dv-kpi-card::before {
+                        content: '';
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        bottom: 0;
+                        width: 5px;
+                        background: var(--kpi-accent, #0284c7);
+                        border-radius: 16px 0 0 16px;
+                    }
+
+                    .dv-kpi-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+                        border-color: #cbd5e1;
+                    }
+
+                    .dv-kpi-card.active-kpi {
+                        border-color: var(--kpi-accent, #0284c7);
+                        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                        box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
+                    }
+
+                    .dv-kpi-num {
+                        font-size: 34px;
+                        font-weight: 800;
+                        line-height: 1.05;
+                        color: #0f172a;
+                        letter-spacing: -0.8px;
+                    }
+
+                    .dv-kpi-label {
+                        font-size: 14.5px;
+                        font-weight: 700;
+                        color: #475569;
+                        margin-top: 6px;
+                    }
+
+                    .dv-kpi-sub {
+                        font-size: 12px;
+                        color: #94a3b8;
+                        font-weight: 600;
+                        margin-top: 2px;
+                    }
+
+                    .dv-kpi-icon {
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 26px;
+                        flex-shrink: 0;
+                    }
+
+                    /* =========================================================================
+                   2. COMPACT FILTER BAR & ADVANCED FILTER DRAWER (Chuẩn Ant Design ProTable & HubSpot)
+                   ========================================================================= */
+                    .dv-toolbar-card {
+                        background: #ffffff;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 18px 22px;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                        margin-bottom: 18px;
+                    }
+
+                    /* Search Input cỡ lớn */
+                    .dv-search-box {
+                        position: relative;
+                        flex: 1;
+                        min-width: 290px;
+                    }
+
+                    .dv-search-box input {
+                        width: 100%;
+                        height: 46px;
+                        padding: 10px 42px 10px 44px;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        font-weight: 500;
+                        color: #0f172a;
+                        background: #f8fafc;
+                        transition: all 0.2s;
+                    }
+
+                    .dv-search-box input:focus {
+                        background: #ffffff;
+                        border-color: #0284c7;
+                        box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+                        outline: none;
+                    }
+
+                    .dv-search-box .search-lead-icon {
+                        position: absolute;
+                        left: 15px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #64748b;
+                        font-size: 17px;
+                        pointer-events: none;
+                    }
+
+                    .dv-search-box .search-clear-btn {
+                        position: absolute;
+                        right: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border: none;
+                        background: #e2e8f0;
+                        color: #475569;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        font-size: 12px;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                    }
+
+                    .dv-search-box .search-clear-btn:hover {
+                        background: #cbd5e1;
+                        color: #0f172a;
+                    }
+
+                    /* 3-4 Quick Filter Segmented Controls */
+                    .dv-quick-segment {
+                        display: inline-flex;
+                        background: #f1f5f9;
+                        padding: 4px;
+                        border-radius: 12px;
+                        border: 1px solid #e2e8f0;
+                        gap: 3px;
+                    }
+
+                    .dv-seg-btn {
+                        border: none;
+                        background: transparent;
+                        color: #475569;
+                        font-size: 14px;
+                        font-weight: 700;
+                        padding: 8px 15px;
+                        border-radius: 9px;
+                        cursor: pointer;
+                        transition: all 0.15s ease;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        white-space: nowrap;
+                    }
+
+                    .dv-seg-btn:hover {
+                        color: #0f172a;
+                        background: rgba(255, 255, 255, 0.6);
+                    }
+
+                    .dv-seg-btn.active {
+                        background: #ffffff;
+                        color: #0284c7;
+                        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+                    }
+
+                    .dv-seg-count {
+                        font-size: 11.5px;
+                        font-weight: 800;
+                        padding: 1px 7px;
+                        border-radius: 20px;
+                        background: #e2e8f0;
+                        color: #334155;
+                    }
+
+                    .dv-seg-btn.active .dv-seg-count {
+                        background: #e0f2fe;
+                        color: #0369a1;
+                    }
+
+                    /* Nút Lọc Nâng Cao + Badge Đỏ Chớp Nháy (Pulsing Red Badge) */
+                    .dv-adv-filter-btn {
+                        height: 46px;
+                        padding: 0 18px;
+                        border-radius: 12px;
+                        border: 1.5px solid #cbd5e1;
+                        background: #ffffff;
+                        color: #0f172a;
+                        font-size: 14.5px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 9px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        position: relative;
+                        white-space: nowrap;
+                    }
+
+                    .dv-adv-filter-btn:hover,
+                    .dv-adv-filter-btn.is-open {
+                        border-color: #0284c7;
+                        color: #0284c7;
+                        background: #f0f9ff;
+                    }
+
+                    .dv-adv-filter-btn.has-active-filters {
+                        border-color: #0284c7;
+                        background: #f0f9ff;
+                        color: #0369a1;
+                    }
+
+                    /* Số lượng filter đang áp dụng chớp đỏ */
+                    @keyframes dvRedPulse {
+                        0% {
+                            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.75);
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            box-shadow: 0 0 0 7px rgba(239, 68, 68, 0);
+                            transform: scale(1.08);
+                        }
+
+                        100% {
+                            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                            transform: scale(1);
+                        }
+                    }
+
+                    .dv-filter-pulse-badge {
+                        background: #ef4444;
+                        color: #ffffff;
+                        font-size: 12px;
+                        font-weight: 800;
+                        min-width: 22px;
+                        height: 22px;
+                        padding: 0 6px;
+                        border-radius: 999px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        animation: dvRedPulse 1.5s infinite;
+                        border: 2px solid #ffffff;
+                    }
+
+                    /* Khung Lọc Nâng Cao Mở Rộng (Advanced Filter Panel) */
+                    .dv-adv-filter-panel {
+                        display: none;
+                        margin-top: 16px;
+                        padding-top: 18px;
+                        border-top: 1.5px dashed #cbd5e1;
+                        animation: dvFadeSlideDown 0.2s ease-out;
+                    }
+
+                    .dv-adv-filter-panel.show {
+                        display: block;
+                    }
+
+                    @keyframes dvFadeSlideDown {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-6px);
+                        }
+
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+
+                    .dv-adv-label {
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #334155;
+                        margin-bottom: 6px;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+
+                    .dv-adv-control {
+                        height: 42px;
+                        border-radius: 10px;
+                        border: 1.5px solid #cbd5e1;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #0f172a;
+                        padding: 6px 12px;
+                        background: #ffffff;
+                        width: 100%;
+                    }
+
+                    .dv-adv-control:focus {
+                        border-color: #0284c7;
+                        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+                        outline: none;
+                    }
+
+                    /* Active Filter Chips */
+                    .dv-active-tags-bar {
+                        display: flex;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        margin-top: 14px;
+                        padding-top: 12px;
+                        border-top: 1px solid #f1f5f9;
+                    }
+
+                    .dv-filter-chip {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: #e0f2fe;
+                        color: #0369a1;
+                        border: 1px solid #bae6fd;
+                        padding: 5px 12px;
+                        border-radius: 999px;
+                        font-size: 13px;
+                        font-weight: 700;
+                    }
+
+                    .dv-filter-chip button {
+                        border: none;
+                        background: rgba(3, 105, 161, 0.12);
+                        color: #0369a1;
+                        width: 18px;
+                        height: 18px;
+                        border-radius: 50%;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 11px;
+                        cursor: pointer;
+                        padding: 0;
+                    }
+
+                    .dv-filter-chip button:hover {
+                        background: #0369a1;
+                        color: #ffffff;
+                    }
+
+                    /* =========================================================================
+                   3. ENTERPRISE DATA TABLE (Chuẩn MISA AMIS amisapp.misa.vn & KiotViet)
+                      - Hover Floating Action Bar (Không tách cột Action riêng)
+                      - Ghim cột (Sticky Pin Column) + Đổi thứ tự cột + Ẩn/Hiện cột
+                   ========================================================================= */
+                    .dv-grid-card {
+                        background: #ffffff;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+                        overflow: hidden;
+                        position: relative;
+                    }
+
+                    .dv-grid-topbar {
+                        padding: 14px 22px;
+                        background: #f8fafc;
+                        border-bottom: 1.5px solid #e2e8f0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                    }
+
+                    .dv-table-scroll-container {
+                        width: 100%;
+                        overflow-x: auto;
+                        position: relative;
+                        scroll-behavior: smooth;
+                    }
+
+                    .dv-amis-table {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 0;
+                        min-width: 1950px;
+                    }
+
+                    .dv-amis-table thead th {
+                        background: #f1f5f9;
+                        color: #334155;
+                        font-size: 13px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 0.4px;
+                        padding: 15px 18px;
+                        border-bottom: 2px solid #cbd5e1;
+                        border-right: 1px solid #e2e8f0;
+                        white-space: nowrap;
+                        position: sticky;
+                        top: 0;
+                        z-index: 10;
+                        user-select: none;
+                        transition: background 0.15s;
+                    }
+
+                    .dv-amis-table thead th:hover {
+                        background: #e2e8f0;
+                    }
+
+                    /* Nút Ghim cột (Pin Column) ngay trên Header */
+                    .dv-th-inner {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+
+                    .dv-pin-btn {
+                        border: none;
+                        background: transparent;
+                        color: #94a3b8;
+                        width: 26px;
+                        height: 26px;
+                        border-radius: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 13px;
+                        cursor: pointer;
+                        transition: all 0.15s;
+                    }
+
+                    .dv-pin-btn:hover {
+                        background: #cbd5e1;
+                        color: #0f172a;
+                    }
+
+                    .dv-pin-btn.is-pinned {
+                        color: #0284c7;
+                        background: #e0f2fe;
+                    }
+
+                    /* Dòng dữ liệu cỡ lớn, thoáng rộng */
+                    .dv-amis-table tbody tr.dv-data-row {
+                        position: relative;
+                        transition: background-color 0.12s ease;
+                    }
+
+                    .dv-amis-table tbody tr.dv-data-row td {
+                        padding: 16px 18px;
+                        border-bottom: 1px solid #e2e8f0;
+                        border-right: 1px solid #f1f5f9;
+                        vertical-align: middle;
+                        font-size: 14.5px;
+                        color: #1e293b;
+                        background: #ffffff;
+                        transition: background-color 0.12s ease;
+                    }
+
+                    .dv-amis-table tbody tr.dv-data-row:hover td {
+                        background: #f0f9ff !important;
+                    }
+
+                    /* Cột được Ghim bên Trái (Sticky Pinned Left Column) */
+                    .dv-amis-table th.dv-col-pinned,
+                    .dv-amis-table td.dv-col-pinned {
+                        position: sticky !important;
+                        z-index: 15 !important;
+                    }
+
+                    .dv-amis-table thead th.dv-col-pinned {
+                        z-index: 25 !important;
+                        background: #e0f2fe !important;
+                        color: #0369a1;
+                    }
+
+                    .dv-amis-table th.dv-col-pinned-last,
+                    .dv-amis-table td.dv-col-pinned-last {
+                        border-right: 2px solid #93c5fd !important;
+                        box-shadow: 6px 0 14px -4px rgba(15, 23, 42, 0.12);
+                    }
+
+                    /* Cột Thao Tác Ghim Cố Định Bên Phải (Sticky Pinned Right Action Column)
+                       Khi lăn chuột / cuộn scroll ngang trái phải, cột này luôn dính cố định ở mép phải */
+                    .dv-amis-table th.dv-col-pinned-right,
+                    .dv-amis-table td.dv-col-pinned-right {
+                        position: sticky !important;
+                        right: 0 !important;
+                        z-index: 18 !important;
+                        background: #ffffff !important;
+                        border-left: 1.5px solid #cbd5e1 !important;
+                        box-shadow: -8px 0 16px -4px rgba(15, 23, 42, 0.08);
+                        width: 370px !important;
+                        min-width: 370px !important;
+                        max-width: 370px !important;
+                        padding: 12px 14px !important;
+                        text-align: center;
+                    }
+
+                    .dv-amis-table thead th.dv-col-pinned-right {
+                        z-index: 28 !important;
+                        background: #f1f5f9 !important;
+                        color: #0369a1;
+                    }
+
+                    .dv-amis-table tbody tr.dv-data-row:hover td.dv-col-pinned-right {
+                        background: #f0f9ff !important;
+                    }
+
+                    /* Nút Thao Tác Nhanh */
+                    
+                    /* =========================================================================
+                       CƠ CHẾ NÚT ẤN NHANH Ở CUỐI BẢNG (CHUẨN DEMO-TABLE.HTML)
+                       - Cột "Nút ấn nhanh" là một cột bình thường ở cuối bảng, không đè lấp dữ liệu
+                       - Khi hover vào dòng: Hiện mượt mà cụm 3 nút thao tác
+                       - 3 nút có chiều dài cân bằng tuyệt đối (128px / 120px)
+                       ========================================================================= */
+                    
+                    /* Cột Nút ấn nhanh ở cuối: Luôn hiển thị đầy đủ trên mọi hàng */
+                    .dv-actions-cell-always {
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-start;
+                        gap: 8px;
+                        white-space: nowrap;
+                    }
+
+                    /* Khung Hover nổi chuẩn demo-table.html: Khi cuộn ngang ở bất kỳ cột nào, hover qua hàng sẽ nổi cụm nút ở mép phải */
+                    
+
+                    .dv-row-actions-wrap {
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-start;
+                        gap: 8px;
+                        white-space: nowrap;
+                        opacity: 0;
+                        visibility: hidden;
+                        transform: scale(0.97);
+                        transition: opacity 0.16s ease, visibility 0.16s ease, transform 0.16s ease;
+                    }
+
+                    .dv-amis-table tbody tr.dv-data-row:hover 
+                    /* Cột Nút ấn nhanh ở cuối: Luôn hiển thị đầy đủ trên mọi hàng */
+                    .dv-actions-cell-always {
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-start;
+                        gap: 8px;
+                        white-space: nowrap;
+                    }
+
+                    /* Khung Hover nổi chuẩn demo-table.html: Khi cuộn ngang ở bất kỳ cột nào, hover qua hàng sẽ nổi cụm nút ở mép phải */
+                    .dv-floating-actions-track {
+                        position: sticky !important;
+                        right: 0 !important;
+                        width: 0 !important;
+                        min-width: 0 !important;
+                        max-width: 0 !important;
+                        height: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        overflow: visible !important;
+                        z-index: 25;
+                        background: transparent !important;
+                    }
+
+                    .dv-floating-actions-bar {
+                        position: absolute;
+                        right: 0;
+                        top: 50%;
+                        transform: translateY(-50%) translateX(10px);
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 8px 16px 8px 36px;
+                        background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 20%, #f0f9ff 100%);
+                        opacity: 0;
+                        visibility: hidden;
+                        pointer-events: none;
+                        transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                        white-space: nowrap;
+                        z-index: 30;
+                    }
+
+                    /* Rê chuột vào dòng: Nổi thanh thao tác nhanh ở mép phải màn hình */
+                    .dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: translateY(-50%) translateX(0);
+                        pointer-events: auto;
+                    }
+
+                    .dv-row-actions-wrap {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: scale(1);
+                    }
+
+                    .dv-equal-btn-primary {
+                        width: 128px;
+                        height: 38px;
+                        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+                        color: #ffffff !important;
+                        border: none;
+                        border-radius: 9px;
+                        font-size: 13.5px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        text-decoration: none !important;
+                        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
+                        transition: all 0.15s ease;
+                        flex-shrink: 0;
+                        white-space: nowrap;
+                    }
+
+                    .dv-equal-btn-primary:hover {
+                        background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 14px rgba(2, 132, 199, 0.38);
+                    }
+
+                    .dv-equal-btn-secondary {
+                        width: 120px;
+                        height: 38px;
+                        background: #ffffff;
+                        color: #0f172a !important;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 9px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 5px;
+                        text-decoration: none !important;
+                        transition: all 0.15s ease;
+                        flex-shrink: 0;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+                        white-space: nowrap;
+                    }
+
+                    .dv-equal-btn-secondary:hover {
+                        background: #e0f2fe;
+                        border-color: #7dd3fc;
+                        color: #0369a1 !important;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+                    }
+.dv-hover-btn-primary {
+                        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+                        color: #ffffff !important;
+                        border: none;
+                        padding: 7px 15px;
+                        border-radius: 9px;
+                        font-size: 13.5px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        text-decoration: none !important;
+                        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25);
+                        transition: all 0.15s;
+                        white-space: nowrap;
+                    }
+
+                    .dv-hover-btn-primary:hover {
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 12px rgba(2, 132, 199, 0.35);
+                    }
+
+                    .dv-hover-btn-secondary {
+                        background: #f8fafc;
+                        color: #0f172a !important;
+                        border: 1.5px solid #cbd5e1;
+                        padding: 6px 12px;
+                        border-radius: 9px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        text-decoration: none !important;
+                        transition: all 0.15s;
+                        white-space: nowrap;
+                    }
+
+                    .dv-hover-btn-secondary:hover {
+                        background: #e0f2fe;
+                        border-color: #7dd3fc;
+                        color: #0369a1 !important;
+                    }
+
+                    
+                    /* 3 NÚT THAO TÁC CÓ CHIỀU DÀI BẰNG NHAU (WIDTH: 110PX) */
+                    .dv-btn-action-eq {
+                        width: 110px;
+                        height: 38px;
+                        border-radius: 9px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 5px;
+                        text-decoration: none !important;
+                        white-space: nowrap;
+                        box-sizing: border-box;
+                        flex-shrink: 0;
+                        transition: all 0.15s ease;
+                    }
+
+                    .dv-btn-action-eq-primary {
+                        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+                        color: #ffffff !important;
+                        border: none;
+                        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
+                    }
+
+                    .dv-btn-action-eq-primary:hover {
+                        background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+                        transform: translateY(-1px);
+                        box-shadow: 0 5px 12px rgba(2, 132, 199, 0.38);
+                    }
+
+                    .dv-btn-action-eq-secondary {
+                        background: #ffffff;
+                        color: #1e293b !important;
+                        border: 1.5px solid #cbd5e1;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+                    }
+
+                    .dv-btn-action-eq-secondary:hover {
+                        background: #e0f2fe;
+                        border-color: #7dd3fc;
+                        color: #0369a1 !important;
+                        transform: translateY(-1px);
+                    }
+
+                    /* Avatar & Patient Info Cell cỡ lớn */
+                    .dv-patient-avatar {
+                        width: 46px;
+                        height: 46px;
+                        min-width: 46px;
+                        border-radius: 13px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 800;
+                        font-size: 18px;
+                        color: #ffffff;
+                        background: linear-gradient(135deg, #0284c7 0%, #3b82f6 100%);
+                        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22);
+                    }
+
+                    .dv-patient-name {
+                        font-size: 15.5px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        text-decoration: none;
+                        line-height: 1.25;
+                    }
+
+                    .dv-patient-name:hover {
+                        color: #0284c7;
+                        text-decoration: underline;
+                    }
+
+                    .dv-code-pill {
+                        font-family: 'JetBrains Mono', Consolas, monospace;
+                        font-size: 12.5px;
+                        font-weight: 700;
+                        padding: 3px 9px;
+                        border-radius: 6px;
+                        background: #f1f5f9;
+                        color: #0369a1;
+                        border: 1px solid #cbd5e1;
+                    }
+
+                    /* =========================================================================
+                   4. PANEL TÙY BIẾN CỘT & GHIM CỘT (COLUMN CUSTOMIZER POPOVER)
+                   ========================================================================= */
+                    .dv-col-customizer-wrapper {
+                        position: relative;
+                    }
+
+                    .dv-col-popover {
+                        position: absolute;
+                        right: 0;
+                        top: calc(100% + 8px);
+                        width: 360px;
+                        background: #ffffff;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 16px;
+                        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+                        z-index: 100;
+                        display: none;
+                        overflow: hidden;
+                    }
+
+                    .dv-col-popover.show {
+                        display: block;
+                        animation: dvFadeSlideDown 0.18s ease-out;
+                    }
+
+                    .dv-col-item {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 10px 14px;
+                        border-bottom: 1px solid #f1f5f9;
+                        background: #ffffff;
+                        transition: background 0.15s;
+                        cursor: grab;
+                    }
+
+                    .dv-col-item:hover {
+                        background: #f8fafc;
+                    }
+
+                    .dv-col-item.dragging {
+                        opacity: 0.5;
+                        background: #e0f2fe;
+                    }
+
+                    .dv-col-order-btn {
+                        border: 1px solid #e2e8f0;
+                        background: #f8fafc;
+                        color: #475569;
+                        width: 26px;
+                        height: 26px;
+                        border-radius: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        cursor: pointer;
+                    }
+
+                    .dv-col-order-btn:hover {
+                        background: #e2e8f0;
+                        color: #0f172a;
+                    }
+
+                    /* =========================================================================
+                   5. EMPTY STATE MINH HỌA SVG THÂN THIỆN (Không hiện bảng trống rỗng)
+                   ========================================================================= */
+                    .dv-empty-state-box {
+                        padding: 64px 24px;
+                        text-align: center;
+                        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                    }
+
+                    .dv-empty-svg-wrap {
+                        width: 180px;
+                        height: 150px;
+                        margin: 0 auto 20px;
+                    }
+
+                    .dv-empty-title {
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        margin-bottom: 8px;
+                    }
+
+                    .dv-empty-desc {
+                        font-size: 15px;
+                        color: #64748b;
+                        max-width: 520px;
+                        margin: 0 auto 24px;
+                        line-height: 1.55;
+                    }
+
+                    /* Chế độ xem dạng Thẻ (Card Grid View) */
+                    .dv-card-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                        gap: 18px;
+                        padding: 20px;
+                    }
+
+                    .dv-visit-card-item {
+                        background: #ffffff;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 20px;
+                        transition: all 0.2s;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    }
+
+                    .dv-visit-card-item:hover {
+                        border-color: #0284c7;
+                        box-shadow: 0 10px 24px rgba(2, 132, 199, 0.1);
+                        transform: translateY(-2px);
+                    }
+                </style>
+
+                <!-- ========================================================================= -->
+                <!-- 1. TIÊU ĐỀ TRANG & NÚT ĐIỀU HƯỚNG NHANH                                   -->
+                <!-- ========================================================================= -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                     <div>
-                        <!-- Header thẻ -->
+                        <div class="dv-breadcrumb mb-1">
+                            <a href="/doctor/dashboard"><i class="bi bi-house-door me-1"></i>Trang chủ</a>
+                            <span class="mx-1">/</span>
+                            <span>Bác sĩ &amp; Điều phối lâm sàng</span>
+                            <span class="mx-1">/</span>
+                            <span class="text-dark fw-bold">Danh sách ca khám trong ngày</span>
+                        </div>
+                        <h1 class="dv-page-title">
+                            <span
+                                class="d-inline-flex align-items-center justify-content-center rounded-3 text-white shadow-sm"
+                                style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7, #1d4ed8); font-size: 20px;">
+                                <i class="bi bi-calendar2-check-fill"></i>
+                            </span>
+                            <span>Danh sách ca khám &amp; Điều phối ghế khám</span>
+                        </h1>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2.5 flex-wrap">
+                        <button type="button"
+                            class="btn btn-white bg-white border fw-bold px-3.5 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-2"
+                            style="font-size: 14px; border-color: #cbd5e1 !important;" onclick="fetchDailyVisits()">
+                            <i class="bi bi-arrow-clockwise text-primary fs-6"></i>
+                            <span>Làm mới dữ liệu</span>
+                        </button>
+
+                        <div class="dv-quick-segment">
+                            <button type="button" class="dv-seg-btn active" id="btnViewTable"
+                                onclick="switchViewMode('TABLE')">
+                                <i class="bi bi-table"></i> Bảng dữ liệu
+                            </button>
+                            <button type="button" class="dv-seg-btn" id="btnViewCard" onclick="switchViewMode('CARD')">
+                                <i class="bi bi-grid-3x3-gap-fill"></i> Thẻ (Card)
+                            </button>
+                        </div>
+
+                        <a href="/doctor/examination"
+                            class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                            <i class="bi bi-person-workspace"></i>
+                            <span>Vào bàn khám ngay</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- 2. 4 THẺ KPI THỐNG KÊ CỠ LỚN (Bấm vào thẻ để lọc nhanh)                   -->
+                <!-- ========================================================================= -->
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" onclick="setPrimaryStatusFilter('ALL')">
+                            <div>
+                                <div class="dv-kpi-num" id="statTotal">0</div>
+                                <div class="dv-kpi-label">Tổng số ca khám</div>
+                                <div class="dv-kpi-sub" id="statPeriodLabel">Toàn bộ danh sách</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;"
+                            onclick="setPrimaryStatusFilter('WAITING')">
+                            <div>
+                                <div class="dv-kpi-num text-warning" id="statWaiting">0</div>
+                                <div class="dv-kpi-label">Đang chờ khám</div>
+                                <div class="dv-kpi-sub">Cần gọi vào ghế khám</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #6366f1;"
+                            onclick="setPrimaryStatusFilter('EXAMINING')">
+                            <div>
+                                <div class="dv-kpi-num" style="color: #4f46e5;" id="statInProgress">0</div>
+                                <div class="dv-kpi-label">Đang khám &amp; Điều trị</div>
+                                <div class="dv-kpi-sub">Đang thao tác lâm sàng</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
+                                <i class="bi bi-heart-pulse-fill"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;"
+                            onclick="setPrimaryStatusFilter('COMPLETED')">
+                            <div>
+                                <div class="dv-kpi-num text-success" id="statCompleted">0</div>
+                                <div class="dv-kpi-label">Đã hoàn thành</div>
+                                <div class="dv-kpi-sub">Đã khóa bệnh án / thu ngân</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- 3. BỘ LỌC TỐI GIẢN (3-4 FILTER CHÍNH) + NÚT "LỌC NÂNG CAO" CÓ SỐ CHỚP ĐỎ  -->
+                <!-- ========================================================================= -->
+                <div class="dv-toolbar-card">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <!-- Filter Chính #1: Tìm kiếm từ khóa -->
+                        <div class="dv-search-box">
+                            <i class="bi bi-search search-lead-icon"></i>
+                            <input type="text" id="dvSearchInput"
+                                placeholder="Tìm nhanh theo Họ tên BN, Mã BN (BN00...), Số điện thoại, Mã ca khám..."
+                                oninput="handleSearchDebounce(this.value)">
+                            <button type="button" class="search-clear-btn" id="dvClearSearchBtn"
+                                onclick="clearSearchInput()" title="Xóa từ khóa">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- Filter Chính #2: Mốc thời gian nhanh (4 lựa chọn thông dụng nhất) -->
+                        <div class="dv-quick-segment" aria-label="Bộ lọc thời gian nhanh">
+                            <button type="button" class="dv-seg-btn" data-quick-date="TODAY"
+                                onclick="applyQuickDatePreset('TODAY')">
+                                <i class="bi bi-calendar-check"></i> Hôm nay
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-quick-date="THIS_WEEK"
+                                onclick="applyQuickDatePreset('THIS_WEEK')">
+                                <i class="bi bi-calendar-week"></i> Tuần này
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-quick-date="THIS_MONTH"
+                                onclick="applyQuickDatePreset('THIS_MONTH')">
+                                <i class="bi bi-calendar-month"></i> Tháng này
+                            </button>
+                            <button type="button" class="dv-seg-btn active" data-quick-date="ALL"
+                                onclick="applyQuickDatePreset('ALL')">
+                                <i class="bi bi-infinity"></i> Tất cả ngày
+                            </button>
+                        </div>
+
+                        <!-- Filter Chính #3: Trạng thái chính (4 trạng thái cốt lõi) -->
+                        <div class="dv-quick-segment" aria-label="Bộ lọc trạng thái chính">
+                            <button type="button" class="dv-seg-btn active" data-pri-status="ALL"
+                                onclick="setPrimaryStatusFilter('ALL')">
+                                Tất cả <span class="dv-seg-count" id="cntAll">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-pri-status="WAITING"
+                                onclick="setPrimaryStatusFilter('WAITING')">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#f59e0b;"></span>
+                                Chờ khám <span class="dv-seg-count" id="cntWaiting">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-pri-status="EXAMINING"
+                                onclick="setPrimaryStatusFilter('EXAMINING')">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#3b82f6;"></span>
+                                Đang khám <span class="dv-seg-count" id="cntExamining">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-pri-status="COMPLETED"
+                                onclick="setPrimaryStatusFilter('COMPLETED')">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#10b981;"></span>
+                                Hoàn thành <span class="dv-seg-count" id="cntCompleted">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Nút "Lọc nâng cao" kèm Huy hiệu số lượng filter đang áp dụng chớp đỏ -->
+                        <button type="button" class="dv-adv-filter-btn" id="btnToggleAdvFilter"
+                            onclick="toggleAdvancedFilterPanel()">
+                            <i class="bi bi-funnel-fill"></i>
+                            <span>Lọc nâng cao</span>
+                            <span class="dv-filter-pulse-badge" id="advFilterActiveCountBadge"
+                                style="display: none;">1</span>
+                            <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
+                        </button>
+                    </div>
+
+                    <!-- ===================================================================== -->
+                    <!-- KHUNG LỌC NÂNG CAO (Giấu các filter phụ + Toán tử lọc linh hoạt)      -->
+                    <!-- ===================================================================== -->
+                    <div class="dv-adv-filter-panel" id="advFilterPanel">
                         <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="dv-avatar">
-                                    ${firstLetter}
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold text-dark" style="font-size: 15.5px;">${escapeHtml(v.fullName)}</h5>
-                                    <div class="text-muted small mt-0.5">
-                                        <span class="badge bg-light text-primary border" style="font-family: monospace; font-size: 10px;">${escapeHtml(v.patientCode)}</span>
-                                        ${genderBadge}${ageText}
-                                    </div>
+                            <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 15px;">
+                                <i class="bi bi-sliders2-vertical text-primary"></i>
+                                <span>Bộ lọc chuyên sâu &amp; Toán tử so sánh linh hoạt</span>
+                            </div>
+                            <button type="button"
+                                class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
+                                onclick="resetAllFilters()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- 1. Toán tử lọc Ngày khám -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-calendar-range text-primary"></i> Toán tử lọc Ngày khám
+                                </label>
+                                <select class="dv-adv-control" id="advDateOperator"
+                                    onchange="onAdvDateOperatorChange()">
+                                    <option value="ALL">-- Không giới hạn ngày --</option>
+                                    <option value="EQ">= Chính xác ngày (Bằng ngày)</option>
+                                    <option value="GT">&gt; Lớn hơn (Sau ngày)</option>
+                                    <option value="LT">&lt; Nhỏ hơn (Trước ngày)</option>
+                                    <option value="BETWEEN">↔ Trong khoảng ngày (Từ - Đến)</option>
+                                    <option value="THIS_WEEK">📅 Trong tuần này</option>
+                                    <option value="THIS_MONTH">🗓️ Trong tháng này</option>
+                                </select>
+                            </div>
+
+                            <!-- 2. Giá trị Ngày 1 (và Ngày 2 nếu chọn BETWEEN) -->
+                            <div class="col-lg-3 col-md-6" id="advDateValueCol">
+                                <label class="dv-adv-label" id="advDateValueLabel">
+                                    <i class="bi bi-calendar-event text-secondary"></i> Chọn mốc ngày
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="date" class="dv-adv-control" id="advDateVal1"
+                                        onchange="applyAdvancedFilters()">
+                                    <span id="advDateDash" style="display: none; font-weight: 800;">→</span>
+                                    <input type="date" class="dv-adv-control" id="advDateVal2" style="display: none;"
+                                        onchange="applyAdvancedFilters()">
                                 </div>
                             </div>
-                            <span class="badge ${v.statusBadgeClass} px-2.5 py-1 rounded-pill" style="font-size: 11.5px;">
-                                ${escapeHtml(v.statusDisplayName)}
+
+                            <!-- 3. Toán tử lọc Độ tuổi bệnh nhân (=, >, <) -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-person-bounding-box text-primary"></i> Toán tử Độ tuổi BN
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="dv-adv-control" id="advAgeOperator" style="width: 58%;"
+                                        onchange="applyAdvancedFilters()">
+                                        <option value="ALL">Mọi độ tuổi</option>
+                                        <option value="EQ">= Bằng tuổi</option>
+                                        <option value="GT">&gt; Lớn hơn</option>
+                                        <option value="LT">&lt; Nhỏ hơn</option>
+                                    </select>
+                                    <input type="number" class="dv-adv-control" id="advAgeValue" style="width: 42%;"
+                                        placeholder="Tuổi..." min="0" max="120" oninput="applyAdvancedFilters()">
+                                </div>
+                            </div>
+
+                            <!-- 4. Trạng thái phụ (Đang ĐT, Chờ CLS, Chờ TT, Đã hủy) -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-activity text-primary"></i> Trạng thái chi tiết
+                                </label>
+                                <select class="dv-adv-control" id="advSubStatus"
+                                    onchange="onAdvSubStatusChange(this.value)">
+                                    <option value="ALL">-- Tất cả trạng thái --</option>
+                                    <option value="WAITING">Chờ khám (WAITING)</option>
+                                    <option value="EXAMINING">Đang khám (EXAMINING)</option>
+                                    <option value="IN_TREATMENT">Đang điều trị (IN_TREATMENT)</option>
+                                    <option value="ORDERED">Chờ Cận lâm sàng (ORDERED)</option>
+                                    <option value="WAITING_PAYMENT">Chờ Thanh toán (WAITING_PAYMENT)</option>
+                                    <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
+                                    <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                                </select>
+                            </div>
+
+                            <!-- 5. Bác sĩ phụ trách -->
+                            <div class="col-lg-4 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-person-badge text-primary"></i> Bác sĩ điều trị
+                                </label>
+                                <select class="dv-adv-control" id="advDoctorSelect" onchange="applyAdvancedFilters()">
+                                    <option value="ALL">-- Tất cả Bác sĩ --</option>
+                                </select>
+                            </div>
+
+                            <!-- 6. Ghế khám / Phòng khám -->
+                            <div class="col-lg-4 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-geo-alt text-primary"></i> Ghế khám / Phòng lâm sàng
+                                </label>
+                                <select class="dv-adv-control" id="advChairSelect" onchange="applyAdvancedFilters()">
+                                    <option value="ALL">-- Tất cả Ghế khám --</option>
+                                </select>
+                            </div>
+
+                            <!-- 7. Giới tính -->
+                            <div class="col-lg-4 col-md-6">
+                                <label class="dv-adv-label">
+                                    <i class="bi bi-gender-ambiguous text-primary"></i> Giới tính bệnh nhân
+                                </label>
+                                <select class="dv-adv-control" id="advGenderSelect" onchange="applyAdvancedFilters()">
+                                    <option value="ALL">-- Tất cả Giới tính --</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thanh hiển thị các Filter Chips đang áp dụng -->
+                    <div class="dv-active-tags-bar" id="activeFilterTagsBar" style="display: none;">
+                        <span class="small fw-bold text-secondary"><i class="bi bi-funnel me-1"></i>Đang lọc
+                            theo:</span>
+                        <div id="activeFilterChipsList" class="d-flex flex-wrap gap-2"></div>
+                        <button type="button"
+                            class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0 ms-auto"
+                            onclick="resetAllFilters()">
+                            <i class="bi bi-x-circle me-1"></i>Xóa tất cả bộ lọc
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- 4. KHỐI BẢNG DỮ LIỆU THÔNG MINH (MISA AMIS DATA GRID)                     -->
+                <!-- ========================================================================= -->
+                <div class="dv-grid-card">
+                    <!-- Thanh công cụ phía trên bảng -->
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                                Hiển thị <span class="text-primary fw-bolder" id="visibleCountText">0</span> ca khám
+                                <span class="text-muted mx-1">•</span>
+                                <span class="text-secondary fw-semibold" id="currentDateRangeLabel">Tất cả các
+                                    ngày</span>
+                            </div>
+                            <span class="badge rounded-pill px-3 py-1.5"
+                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh
+                                (Không cần cuộn ngang)
                             </span>
                         </div>
 
-                        <!-- Thông tin lâm sàng -->
-                        <div class="bg-light p-2.5 rounded-3 mb-3 small">
-                            <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                <span class="text-muted"><i class="bi bi-clock-history me-1 text-primary"></i>Giờ tiếp đón:</span>
-                                <strong class="text-dark">${v.checkInTime} • ${v.checkInDate}</strong>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                <span class="text-muted"><i class="bi bi-hash me-1 text-secondary"></i>Mã ca khám:</span>
-                                <strong class="text-dark font-monospace">${escapeHtml(v.visitCode)}</strong>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                <span class="text-muted"><i class="bi bi-telephone me-1 text-secondary"></i>Số điện thoại:</span>
-                                <span class="text-dark">${escapeHtml(v.phoneNumber || '---')}</span>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted"><i class="bi bi-person-badge me-1 text-secondary"></i>Bác sĩ:</span>
-                                <strong class="text-primary">${escapeHtml(v.doctorName)}</strong>
-                            </div>
-                        </div>
+                        <!-- Nút Tùy biến cột & Ghim cột (Pin Column) -->
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="dv-col-customizer-wrapper" id="colCustomizerWrapper">
+                                <button type="button"
+                                    class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                    style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                    onclick="toggleColumnCustomizer(event)">
+                                    <i class="bi bi-layout-three-columns text-primary"></i>
+                                    <span>Tùy biến cột &amp; Ghim cột</span>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill"
+                                        id="pinnedColCountBadge">1 ghim</span>
+                                </button>
 
-                        <!-- Triệu chứng -->
-                        <div class="small text-muted mb-3">
-                            <i class="bi bi-chat-left-dots text-secondary me-1"></i>
-                            <span class="text-dark fw-semibold">Lý do khám:</span>
-                            <span>${escapeHtml(v.initialSymptoms || 'Khám và tư vấn theo yêu cầu')}</span>
+                                <!-- Popover Tùy biến cột chuẩn MISA AMIS -->
+                                <div class="dv-col-popover" id="colCustomizerPopover" onclick="event.stopPropagation()">
+                                    <div
+                                        class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size: 14.5px;">
+                                                <i class="bi bi-sliders text-primary me-1"></i>Tùy chỉnh cột hiển thị
+                                            </div>
+                                            <div class="text-muted" style="font-size: 11.5px;">Ẩn/hiện, kéo thả đổi thứ
+                                                tự hoặc bấm 📌 để ghim cột</div>
+                                        </div>
+                                        <button type="button"
+                                            class="btn btn-sm btn-link text-primary fw-bold text-decoration-none p-0"
+                                            onclick="resetDefaultColumns()">
+                                            Mặc định
+                                        </button>
+                                    </div>
+                                    <div id="colCustomizerList" style="max-height: 340px; overflow-y: auto;">
+                                        <!-- Render động bằng JS -->
+                                    </div>
+                                    <div class="p-2.5 bg-light border-top text-end">
+                                        <button type="button" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill"
+                                            onclick="closeColumnCustomizer()">
+                                            Hoàn tất
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Footer nút hành động -->
-                    <div class="pt-2 border-top d-flex align-items-center justify-content-between">
-                        <span class="badge bg-white text-secondary border px-2 py-1"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(v.chairName)}</span>
-                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="btn btn-primary btn-sm px-3.5 py-1.5 fw-bold rounded-pill shadow-sm d-flex align-items-center gap-1">
-                            <span>Vào khám ca này</span>
-                            <i class="bi bi-arrow-right-short fs-6"></i>
+                    <!-- TRẠNG THÁI ĐANG TẢI (LOADING) -->
+                    <div id="dvLoadingState" class="text-center py-5" style="display: none;">
+                        <div class="spinner-border text-primary" style="width: 2.5rem; height: 2.5rem;" role="status">
+                        </div>
+                        <div class="mt-3 fw-bold text-secondary" style="font-size: 15px;">Đang đồng bộ danh sách ca
+                            khám...</div>
+                    </div>
+
+                    <!-- CHẾ ĐỘ 1: BẢNG DỮ LIỆU THÔNG MINH (ẨN HOÀN TOÀN KHI EMPTY STATE) -->
+                    <div class="dv-table-scroll-container" id="dvTableContainer">
+                        <table class="dv-amis-table" id="dvMainDataTable">
+                            <thead id="dvTableHead">
+                                <!-- Header được render theo cấu hình cột tùy biến -->
+                            </thead>
+                            <tbody id="dvTableBody">
+                                <!-- Dữ liệu dòng + Thanh thao tác nổi khi Hover -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- CHẾ ĐỘ 2: XEM DẠNG THẺ (CARD VIEW) -->
+                    <div class="dv-card-grid" id="dvCardContainer" style="display: none;"></div>
+
+                    <!-- ===================================================================== -->
+                    <!-- TRẠNG THÁI TRỐNG (EMPTY STATE): MINH HỌA SVG THÂN THIỆN, ẨN BẢNG TRỐNG -->
+                    <!-- ===================================================================== -->
+                    <div class="dv-empty-state-box" id="dvEmptyState" style="display: none;">
+                        <div class="dv-empty-svg-wrap">
+                            <!-- Hình minh họa Vector Y tế / Nha khoa thân thiện -->
+                            <svg viewBox="0 0 220 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <ellipse cx="110" cy="148" rx="76" ry="12" fill="#E2E8F0" opacity="0.7" />
+                                <rect x="48" y="24" width="96" height="118" rx="14" fill="#FFFFFF" stroke="#94A3B8"
+                                    stroke-width="3" />
+                                <rect x="76" y="14" width="40" height="18" rx="6" fill="#0284C7" />
+                                <rect x="64" y="48" width="44" height="8" rx="4" fill="#BAE6FD" />
+                                <rect x="64" y="66" width="64" height="7" rx="3.5" fill="#E2E8F0" />
+                                <rect x="64" y="82" width="52" height="7" rx="3.5" fill="#E2E8F0" />
+                                <rect x="64" y="98" width="60" height="7" rx="3.5" fill="#E2E8F0" />
+                                <circle cx="148" cy="102" r="32" fill="#EFF6FF" stroke="#0284C7" stroke-width="3" />
+                                <path
+                                    d="M138 95C138 89.5 142.5 85 148 85C153.5 85 158 89.5 158 95C158 101 155 105 153 112C152 115 149.5 115 148 111C146.5 115 144 115 143 112C141 105 138 101 138 95Z"
+                                    fill="#38BDF8" stroke="#0369A1" stroke-width="2" />
+                                <line x1="171" y1="124" x2="190" y2="143" stroke="#0284C7" stroke-width="6"
+                                    stroke-linecap="round" />
+                                <circle cx="40" cy="54" r="6" fill="#FDE047" />
+                                <circle cx="182" cy="48" r="8" fill="#BAE6FD" />
+                            </svg>
+                        </div>
+                        <h3 class="dv-empty-title">Chưa có dữ liệu</h3>
+                        <p class="dv-empty-desc" id="dvEmptyDesc">
+                            Hiện chưa có ca khám nào khớp với điều kiện lọc hiện tại. Bác sĩ có thể chọn xem
+                            <strong>"Tất cả ngày"</strong> hoặc xóa bộ lọc để xem toàn bộ danh sách bệnh nhân.
+                        </p>
+                        <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+                            <button type="button" class="btn btn-primary rounded-pill px-4 py-2.5 fw-bold shadow-sm"
+                                style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 14.5px;"
+                                onclick="applyQuickDatePreset('ALL')">
+                                <i class="bi bi-calendar2-range me-1.5"></i>Xem tất cả các ngày
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold"
+                                style="font-size: 14.5px;" onclick="resetAllFilters()">
+                                <i class="bi bi-arrow-counterclockwise me-1.5"></i>Đặt lại toàn bộ bộ lọc
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT ENGINE: MISA AMIS DATA GRID + PIN COLUMN + FLEXIBLE OPERATORS  -->
+    <!-- ========================================================================= -->
+    <script th:inline="javascript">
+        const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v10';
+
+        // Cấu hình cột mặc định: Ghim cột Họ tên bên trái VÀ Cột 'Nút ấn nhanh' ở cuối bảng giống bao cột khác
+        const DEFAULT_COLUMNS = [
+            { id: 'patient',   label: 'Họ và tên Bệnh nhân',       visible: true, pinned: 'left', minWidth: 580 },
+            { id: 'visitCode', label: 'Mã ca khám',                visible: true, pinned: false,  minWidth: 145 },
+            { id: 'checkIn',   label: 'Giờ tiếp đón',              visible: true, pinned: false,  minWidth: 165 },
+            { id: 'symptoms',  label: 'Lý do khám / Triệu chứng',  visible: true, pinned: false,  minWidth: 320 },
+            { id: 'chair',     label: 'Ghế khám',                  visible: true, pinned: false,  minWidth: 155 },
+            { id: 'doctor',    label: 'Bác sĩ phụ trách',          visible: true, pinned: false,  minWidth: 210 },
+            { id: 'status',    label: 'Trạng thái ca khám',        visible: true, pinned: false,  minWidth: 200 },
+            { id: 'actions',   label: 'Nút ấn nhanh',              visible: true, pinned: false,  minWidth: 390, nonHidable: true }
+        ];
+
+        let columnConfig = loadColumnConfig();
+        let currentViewMode = 'TABLE'; // TABLE | CARD
+        let rawServerVisits = [];      // Dữ liệu gốc tải từ API
+        let filteredVisits = [];       // Dữ liệu sau khi áp dụng các toán tử lọc nâng cao
+        let searchTimer = null;
+        let draggedColIndex = null;
+
+        // State của Bộ lọc
+        let filterState = {
+            search: '',
+            quickDate: 'ALL',          // TODAY | THIS_WEEK | THIS_MONTH | ALL | CUSTOM
+            primaryStatus: 'ALL',      // ALL | WAITING | EXAMINING | COMPLETED
+            advDateOperator: 'ALL',    // ALL | EQ | GT | LT | BETWEEN | THIS_WEEK | THIS_MONTH
+            advDateVal1: '',
+            advDateVal2: '',
+            advAgeOperator: 'ALL',     // ALL | EQ | GT | LT
+            advAgeValue: '',
+            advSubStatus: 'ALL',
+            advDoctor: 'ALL',
+            advChair: 'ALL',
+            advGender: 'ALL'
+        };
+
+        function loadColumnConfig() {
+            try {
+                const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length === DEFAULT_COLUMNS.length) {
+                        const act = parsed.find(c => c.id === 'actions');
+                        if (act) {
+                            act.label = 'Nút ấn nhanh';
+                            if (act.pinned === 'right') act.pinned = false;
+                        }
+                        return parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load saved column config:', e);
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+        }
+
+        function saveColumnConfig() {
+            try {
+                localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
+            } catch (e) { }
+            updatePinnedBadgeCount();
+        }
+
+        function updatePinnedBadgeCount() {
+            const pinnedCount = columnConfig.filter(c => c.visible && c.pinned).length;
+            const badge = document.getElementById('pinnedColCountBadge');
+            if (badge) {
+                badge.textContent = `${pinnedCount} ghim`;
+            }
+        }
+
+        // Định dạng ngày YYYY-MM-DD
+        function toIsoDate(d) {
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const da = String(d.getDate()).padStart(2, '0');
+            return `${yr}-${mo}-${da}`;
+        }
+
+        function formatVnDate(isoStr) {
+            if (!isoStr) return '';
+            const parts = isoStr.split('-');
+            if (parts.length !== 3) return isoStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // Chuyển đổi mốc thời gian nhanh
+        function applyQuickDatePreset(preset) {
+            filterState.quickDate = preset;
+            const today = new Date();
+
+            document.querySelectorAll('[data-quick-date]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-quick-date') === preset);
+            });
+
+            const opSelect = document.getElementById('advDateOperator');
+            const v1Input = document.getElementById('advDateVal1');
+            const v2Input = document.getElementById('advDateVal2');
+
+            if (preset === 'TODAY') {
+                const iso = toIsoDate(today);
+                filterState.advDateOperator = 'EQ';
+                filterState.advDateVal1 = iso;
+                filterState.advDateVal2 = '';
+                if (opSelect) opSelect.value = 'EQ';
+                if (v1Input) v1Input.value = iso;
+            } else if (preset === 'THIS_WEEK') {
+                filterState.advDateOperator = 'THIS_WEEK';
+                if (opSelect) opSelect.value = 'THIS_WEEK';
+            } else if (preset === 'THIS_MONTH') {
+                filterState.advDateOperator = 'THIS_MONTH';
+                if (opSelect) opSelect.value = 'THIS_MONTH';
+            } else {
+                filterState.advDateOperator = 'ALL';
+                filterState.advDateVal1 = '';
+                filterState.advDateVal2 = '';
+                if (opSelect) opSelect.value = 'ALL';
+                if (v1Input) v1Input.value = '';
+                if (v2Input) v2Input.value = '';
+            }
+
+            syncDateInputsVisibility();
+            fetchDailyVisits();
+        }
+
+        function onAdvDateOperatorChange() {
+            const op = document.getElementById('advDateOperator').value;
+            filterState.advDateOperator = op;
+            const todayIso = toIsoDate(new Date());
+            const v1 = document.getElementById('advDateVal1');
+            const v2 = document.getElementById('advDateVal2');
+
+            if ((op === 'EQ' || op === 'GT' || op === 'LT' || op === 'BETWEEN') && !v1.value) {
+                v1.value = todayIso;
+            }
+            if (op === 'BETWEEN' && !v2.value) {
+                v2.value = todayIso;
+            }
+
+            // Đồng bộ nút Quick Date
+            let matchedQuick = 'CUSTOM';
+            if (op === 'ALL') matchedQuick = 'ALL';
+            else if (op === 'THIS_WEEK') matchedQuick = 'THIS_WEEK';
+            else if (op === 'THIS_MONTH') matchedQuick = 'THIS_MONTH';
+            else if (op === 'EQ' && v1.value === todayIso) matchedQuick = 'TODAY';
+
+            filterState.quickDate = matchedQuick;
+            document.querySelectorAll('[data-quick-date]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-quick-date') === matchedQuick);
+            });
+
+            syncDateInputsVisibility();
+            applyAdvancedFilters();
+        }
+
+        function syncDateInputsVisibility() {
+            const op = document.getElementById('advDateOperator').value;
+            const col = document.getElementById('advDateValueCol');
+            const v1 = document.getElementById('advDateVal1');
+            const v2 = document.getElementById('advDateVal2');
+            const dash = document.getElementById('advDateDash');
+            const lbl = document.getElementById('advDateValueLabel');
+
+            if (op === 'ALL' || op === 'THIS_WEEK' || op === 'THIS_MONTH') {
+                col.style.opacity = '0.45';
+                v1.disabled = true;
+                v2.style.display = 'none';
+                dash.style.display = 'none';
+            } else if (op === 'BETWEEN') {
+                col.style.opacity = '1';
+                v1.disabled = false;
+                v2.style.display = 'block';
+                dash.style.display = 'inline';
+                lbl.innerHTML = '<i class="bi bi-calendar-range text-primary"></i> Từ ngày → Đến ngày';
+            } else {
+                col.style.opacity = '1';
+                v1.disabled = false;
+                v2.style.display = 'none';
+                dash.style.display = 'none';
+                lbl.innerHTML = '<i class="bi bi-calendar-event text-primary"></i> Chọn mốc ngày so sánh';
+            }
+        }
+
+        function setPrimaryStatusFilter(status) {
+            filterState.primaryStatus = status;
+            filterState.advSubStatus = status;
+            const subSelect = document.getElementById('advSubStatus');
+            if (subSelect) subSelect.value = status;
+
+            document.querySelectorAll('[data-pri-status]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-pri-status') === status);
+            });
+
+            applyClientFiltersAndRender();
+        }
+
+        function onAdvSubStatusChange(val) {
+            filterState.advSubStatus = val;
+            filterState.primaryStatus = val;
+            document.querySelectorAll('[data-pri-status]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-pri-status') === val);
+            });
+            applyClientFiltersAndRender();
+        }
+
+        function handleSearchDebounce(val) {
+            filterState.search = (val || '').trim();
+            const clearBtn = document.getElementById('dvClearSearchBtn');
+            if (clearBtn) {
+                clearBtn.style.display = filterState.search.length > 0 ? 'inline-flex' : 'none';
+            }
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                applyClientFiltersAndRender();
+            }, 180);
+        }
+
+        function clearSearchInput() {
+            const inp = document.getElementById('dvSearchInput');
+            if (inp) inp.value = '';
+            filterState.search = '';
+            const clearBtn = document.getElementById('dvClearSearchBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            applyClientFiltersAndRender();
+        }
+
+        function toggleAdvancedFilterPanel() {
+            const panel = document.getElementById('advFilterPanel');
+            const btn = document.getElementById('btnToggleAdvFilter');
+            const chev = document.getElementById('advFilterChevron');
+            const isShown = panel.classList.toggle('show');
+            btn.classList.toggle('is-open', isShown);
+            if (chev) {
+                chev.className = isShown ? 'bi bi-chevron-up small ms-1' : 'bi bi-chevron-down small ms-1';
+            }
+        }
+
+        function applyAdvancedFilters() {
+            filterState.advDateOperator = document.getElementById('advDateOperator').value;
+            filterState.advDateVal1 = document.getElementById('advDateVal1').value;
+            filterState.advDateVal2 = document.getElementById('advDateVal2').value;
+            filterState.advAgeOperator = document.getElementById('advAgeOperator').value;
+            filterState.advAgeValue = document.getElementById('advAgeValue').value;
+            filterState.advDoctor = document.getElementById('advDoctorSelect').value;
+            filterState.advChair = document.getElementById('advChairSelect').value;
+            filterState.advGender = document.getElementById('advGenderSelect').value;
+            applyClientFiltersAndRender();
+        }
+
+        function resetAllFilters() {
+            filterState = {
+                search: '',
+                quickDate: 'ALL',
+                primaryStatus: 'ALL',
+                advDateOperator: 'ALL',
+                advDateVal1: '',
+                advDateVal2: '',
+                advAgeOperator: 'ALL',
+                advAgeValue: '',
+                advSubStatus: 'ALL',
+                advDoctor: 'ALL',
+                advChair: 'ALL',
+                advGender: 'ALL'
+            };
+            document.getElementById('dvSearchInput').value = '';
+            document.getElementById('dvClearSearchBtn').style.display = 'none';
+            document.getElementById('advDateOperator').value = 'ALL';
+            document.getElementById('advDateVal1').value = '';
+            document.getElementById('advDateVal2').value = '';
+            document.getElementById('advAgeOperator').value = 'ALL';
+            document.getElementById('advAgeValue').value = '';
+            document.getElementById('advSubStatus').value = 'ALL';
+            document.getElementById('advDoctorSelect').value = 'ALL';
+            document.getElementById('advChairSelect').value = 'ALL';
+            document.getElementById('advGenderSelect').value = 'ALL';
+
+            document.querySelectorAll('[data-quick-date]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-quick-date') === 'ALL');
+            });
+            document.querySelectorAll('[data-pri-status]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-pri-status') === 'ALL');
+            });
+
+            syncDateInputsVisibility();
+            fetchDailyVisits();
+        }
+
+        // Tải toàn bộ danh sách từ API để hỗ trợ lọc tức thì với mọi toán tử
+        async function fetchDailyVisits() {
+            const loading = document.getElementById('dvLoadingState');
+            const tableContainer = document.getElementById('dvTableContainer');
+            const emptyState = document.getElementById('dvEmptyState');
+
+            if (loading) loading.style.display = 'block';
+            if (tableContainer) tableContainer.style.opacity = '0.5';
+            if (emptyState) emptyState.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/doctor/patients/daily-visits?date=ALL&status=ALL');
+                if (!res.ok) throw new Error('Không thể tải dữ liệu ca khám');
+                rawServerVisits = await res.json();
+                populateDynamicFilterOptions(rawServerVisits);
+                applyClientFiltersAndRender();
+            } catch (err) {
+                console.error('Error loading visits:', err);
+                rawServerVisits = [];
+                applyClientFiltersAndRender();
+            } finally {
+                if (loading) loading.style.display = 'none';
+                if (tableContainer) tableContainer.style.opacity = '1';
+            }
+        }
+
+        function populateDynamicFilterOptions(visits) {
+            const docSelect = document.getElementById('advDoctorSelect');
+            const chairSelect = document.getElementById('advChairSelect');
+            if (!docSelect || !chairSelect) return;
+
+            const currentDoc = docSelect.value || 'ALL';
+            const currentChair = chairSelect.value || 'ALL';
+
+            const doctors = Array.from(new Set(visits.map(v => v.doctorName).filter(Boolean))).sort();
+            const chairs = Array.from(new Set(visits.map(v => v.chairName).filter(Boolean))).sort();
+
+            docSelect.innerHTML = '<option value="ALL">-- Tất cả Bác sĩ --</option>' +
+                doctors.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+            chairSelect.innerHTML = '<option value="ALL">-- Tất cả Ghế khám --</option>' +
+                chairs.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+            if (doctors.includes(currentDoc)) docSelect.value = currentDoc;
+            if (chairs.includes(currentChair)) chairSelect.value = currentChair;
+        }
+
+        // Chuyển đổi chuỗi dd/MM/yyyy từ DTO sang YYYY-MM-DD để so sánh toán tử
+        function parseCheckInDateToIso(vnDateStr) {
+            if (!vnDateStr) return null;
+            const parts = vnDateStr.trim().split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return vnDateStr;
+        }
+
+        function getThisWeekBounds() {
+            const now = new Date();
+            const day = now.getDay();
+            const diffToMon = day === 0 ? -6 : 1 - day;
+            const mon = new Date(now);
+            mon.setDate(now.getDate() + diffToMon);
+            const sun = new Date(mon);
+            sun.setDate(mon.getDate() + 6);
+            return { start: toIsoDate(mon), end: toIsoDate(sun) };
+        }
+
+        function getThisMonthBounds() {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            return { start: toIsoDate(first), end: toIsoDate(last) };
+        }
+
+        // Thực thi toàn bộ toán tử lọc (Ngày, Tuổi, Trạng thái, Bác sĩ, Ghế, Từ khóa)
+        function applyClientFiltersAndRender() {
+            const opDate = filterState.advDateOperator;
+            const dVal1 = filterState.advDateVal1;
+            const dVal2 = filterState.advDateVal2;
+            const weekBounds = getThisWeekBounds();
+            const monthBounds = getThisMonthBounds();
+
+            // Cập nhật nhãn phạm vi ngày
+            const rangeLabelEl = document.getElementById('currentDateRangeLabel');
+            if (rangeLabelEl) {
+                if (opDate === 'ALL') rangeLabelEl.textContent = 'Tất cả các ngày';
+                else if (opDate === 'EQ' && dVal1) rangeLabelEl.textContent = `Ngày (=) ${formatVnDate(dVal1)}`;
+                else if (opDate === 'GT' && dVal1) rangeLabelEl.textContent = `Sau ngày (>) ${formatVnDate(dVal1)}`;
+                else if (opDate === 'LT' && dVal1) rangeLabelEl.textContent = `Trước ngày (<) ${formatVnDate(dVal1)}`;
+                else if (opDate === 'BETWEEN' && dVal1 && dVal2) rangeLabelEl.textContent = `Từ ${formatVnDate(dVal1)} đến ${formatVnDate(dVal2)}`;
+                else if (opDate === 'THIS_WEEK') rangeLabelEl.textContent = `Tuần này (${formatVnDate(weekBounds.start)} - ${formatVnDate(weekBounds.end)})`;
+                else if (opDate === 'THIS_MONTH') rangeLabelEl.textContent = `Tháng này (${formatVnDate(monthBounds.start)} - ${formatVnDate(monthBounds.end)})`;
+            }
+
+            // Lọc theo ngày + các điều kiện nâng cao trước để tính KPI theo phạm vi ngày
+            const dateAndAdvMatched = rawServerVisits.filter(v => {
+                const vIsoDate = parseCheckInDateToIso(v.checkInDate);
+
+                // 1. Toán tử Ngày
+                if (opDate === 'EQ' && dVal1) {
+                    if (vIsoDate !== dVal1) return false;
+                } else if (opDate === 'GT' && dVal1) {
+                    if (!vIsoDate || vIsoDate <= dVal1) return false;
+                } else if (opDate === 'LT' && dVal1) {
+                    if (!vIsoDate || vIsoDate >= dVal1) return false;
+                } else if (opDate === 'BETWEEN' && dVal1 && dVal2) {
+                    if (!vIsoDate || vIsoDate < dVal1 || vIsoDate > dVal2) return false;
+                } else if (opDate === 'THIS_WEEK') {
+                    if (!vIsoDate || vIsoDate < weekBounds.start || vIsoDate > weekBounds.end) return false;
+                } else if (opDate === 'THIS_MONTH') {
+                    if (!vIsoDate || vIsoDate < monthBounds.start || vIsoDate > monthBounds.end) return false;
+                }
+
+                // 2. Toán tử Độ tuổi (=, >, <)
+                const ageOp = filterState.advAgeOperator;
+                const ageTarget = parseInt(filterState.advAgeValue, 10);
+                if (ageOp !== 'ALL' && !isNaN(ageTarget)) {
+                    const pAge = parseInt(v.age, 10);
+                    if (isNaN(pAge)) return false;
+                    if (ageOp === 'EQ' && pAge !== ageTarget) return false;
+                    if (ageOp === 'GT' && pAge <= ageTarget) return false;
+                    if (ageOp === 'LT' && pAge >= ageTarget) return false;
+                }
+
+                // 3. Bác sĩ
+                if (filterState.advDoctor !== 'ALL' && v.doctorName !== filterState.advDoctor) {
+                    return false;
+                }
+
+                // 4. Ghế khám
+                if (filterState.advChair !== 'ALL' && v.chairName !== filterState.advChair) {
+                    return false;
+                }
+
+                // 5. Giới tính
+                if (filterState.advGender !== 'ALL' && v.gender !== filterState.advGender) {
+                    return false;
+                }
+
+                // 6. Từ khóa tìm kiếm
+                if (filterState.search) {
+                    const q = filterState.search.toLowerCase();
+                    const haystack = [
+                        v.fullName, v.patientCode, v.phoneNumber, v.visitCode, v.initialSymptoms, v.doctorName
+                    ].filter(Boolean).join(' ').toLowerCase();
+                    if (!haystack.includes(q)) return false;
+                }
+
+                return true;
+            });
+
+            // Cập nhật KPI & Số đếm trên các tab trạng thái
+            updateKpiAndStatusCounts(dateAndAdvMatched);
+
+            // Áp dụng lọc Trạng thái
+            const stFilter = filterState.advSubStatus || filterState.primaryStatus;
+            filteredVisits = dateAndAdvMatched.filter(v => {
+                if (!stFilter || stFilter === 'ALL') return true;
+                if (stFilter === 'EXAMINING') {
+                    return v.status === 'EXAMINING' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED';
+                }
+                return v.status === stFilter;
+            });
+
+            // Cập nhật Badge số lượng filter đang áp dụng (Chớp đỏ) & Active Filter Chips
+            updateActiveFilterBadgeAndChips();
+
+            // Render bảng hoặc Empty State
+            renderMainView();
+        }
+
+        function updateKpiAndStatusCounts(baseList) {
+            let total = baseList.length;
+            let waiting = 0;
+            let examining = 0;
+            let completed = 0;
+
+            baseList.forEach(v => {
+                if (v.status === 'WAITING') waiting++;
+                else if (v.status === 'EXAMINING' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED') examining++;
+                else if (v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT') completed++;
+            });
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statWaiting').textContent = waiting;
+            document.getElementById('statInProgress').textContent = examining;
+            document.getElementById('statCompleted').textContent = completed;
+
+            document.getElementById('cntAll').textContent = total;
+            document.getElementById('cntWaiting').textContent = waiting;
+            document.getElementById('cntExamining').textContent = examining;
+            document.getElementById('cntCompleted').textContent = completed;
+        }
+
+        // Tính số lượng bộ lọc đang áp dụng & hiển thị Badge số đỏ nhấp nháy trên nút "Lọc nâng cao"
+        function updateActiveFilterBadgeAndChips() {
+            const chips = [];
+
+            if (filterState.search) {
+                chips.push({ label: `Từ khóa: "${filterState.search}"`, clear: () => clearSearchInput() });
+            }
+            if (filterState.advDateOperator !== 'ALL') {
+                const opMap = {
+                    'EQ': `Ngày = ${formatVnDate(filterState.advDateVal1)}`,
+                    'GT': `Ngày > ${formatVnDate(filterState.advDateVal1)}`,
+                    'LT': `Ngày < ${formatVnDate(filterState.advDateVal1)}`,
+                    'BETWEEN': `Ngày: ${formatVnDate(filterState.advDateVal1)} → ${formatVnDate(filterState.advDateVal2)}`,
+                    'THIS_WEEK': 'Thời gian: Trong tuần này',
+                    'THIS_MONTH': 'Thời gian: Trong tháng này'
+                };
+                chips.push({
+                    label: opMap[filterState.advDateOperator] || 'Lọc ngày',
+                    clear: () => applyQuickDatePreset('ALL')
+                });
+            }
+            if (filterState.advSubStatus !== 'ALL') {
+                chips.push({
+                    label: `Trạng thái: ${filterState.advSubStatus}`,
+                    clear: () => setPrimaryStatusFilter('ALL')
+                });
+            }
+            if (filterState.advAgeOperator !== 'ALL' && filterState.advAgeValue !== '') {
+                const sym = filterState.advAgeOperator === 'EQ' ? '=' : (filterState.advAgeOperator === 'GT' ? '>' : '<');
+                chips.push({
+                    label: `Độ tuổi ${sym} ${filterState.advAgeValue}`,
+                    clear: () => {
+                        document.getElementById('advAgeOperator').value = 'ALL';
+                        document.getElementById('advAgeValue').value = '';
+                        applyAdvancedFilters();
+                    }
+                });
+            }
+            if (filterState.advDoctor !== 'ALL') {
+                chips.push({
+                    label: `Bác sĩ: ${filterState.advDoctor}`,
+                    clear: () => {
+                        document.getElementById('advDoctorSelect').value = 'ALL';
+                        applyAdvancedFilters();
+                    }
+                });
+            }
+            if (filterState.advChair !== 'ALL') {
+                chips.push({
+                    label: `Ghế: ${filterState.advChair}`,
+                    clear: () => {
+                        document.getElementById('advChairSelect').value = 'ALL';
+                        applyAdvancedFilters();
+                    }
+                });
+            }
+            if (filterState.advGender !== 'ALL') {
+                chips.push({
+                    label: `Giới tính: ${filterState.advGender}`,
+                    clear: () => {
+                        document.getElementById('advGenderSelect').value = 'ALL';
+                        applyAdvancedFilters();
+                    }
+                });
+            }
+
+            const badge = document.getElementById('advFilterActiveCountBadge');
+            const btn = document.getElementById('btnToggleAdvFilter');
+            const bar = document.getElementById('activeFilterTagsBar');
+            const listEl = document.getElementById('activeFilterChipsList');
+
+            if (chips.length > 0) {
+                badge.textContent = chips.length;
+                badge.style.display = 'inline-flex';
+                btn.classList.add('has-active-filters');
+                bar.style.display = 'flex';
+                listEl.innerHTML = '';
+                chips.forEach(c => {
+                    const chipEl = document.createElement('span');
+                    chipEl.className = 'dv-filter-chip';
+                    chipEl.innerHTML = `<span>${escapeHtml(c.label)}</span>`;
+                    const closeBtn = document.createElement('button');
+                    closeBtn.type = 'button';
+                    closeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                    closeBtn.onclick = c.clear;
+                    chipEl.appendChild(closeBtn);
+                    listEl.appendChild(chipEl);
+                });
+            } else {
+                badge.style.display = 'none';
+                btn.classList.remove('has-active-filters');
+                bar.style.display = 'none';
+            }
+        }
+
+        // =========================================================================
+        // RENDER BẢNG DỮ LIỆU CHUẨN MISA AMIS (STICKY PINNED COLUMNS + HOVER ACTIONS)
+        // =========================================================================
+        function renderMainView() {
+            const countEl = document.getElementById('visibleCountText');
+            if (countEl) countEl.textContent = filteredVisits.length;
+
+            const tableContainer = document.getElementById('dvTableContainer');
+            const cardContainer = document.getElementById('dvCardContainer');
+            const emptyState = document.getElementById('dvEmptyState');
+
+            // KHI KHÔNG CÓ DỮ LIỆU -> ẨN HOÀN TOÀN BẢNG TRỐNG, HIỆN EMPTY STATE MINH HỌA
+            if (filteredVisits.length === 0) {
+                tableContainer.style.display = 'none';
+                cardContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            if (currentViewMode === 'TABLE') {
+                tableContainer.style.display = 'block';
+                cardContainer.style.display = 'none';
+                renderAmisDataTable(filteredVisits);
+            } else {
+                tableContainer.style.display = 'none';
+                cardContainer.style.display = 'grid';
+                renderCardGrid(filteredVisits);
+            }
+        }
+
+        function renderAmisDataTable(visits) {
+            const thead = document.getElementById('dvTableHead');
+            const tbody = document.getElementById('dvTableBody');
+
+            // Phân loại cột: Ghim Trái (Left), Cột Giữa (Normal), Ghim Phải (Right - Thao tác)
+            const visibleCols = columnConfig.filter(c => c.visible);
+            const leftCols = visibleCols.filter(c => c.pinned === true || c.pinned === 'left');
+            const rightCols = visibleCols.filter(c => c.pinned === 'right');
+            const midCols = visibleCols.filter(c => !c.pinned || (c.pinned !== true && c.pinned !== 'left' && c.pinned !== 'right'));
+            const orderedCols = [...leftCols, ...midCols, ...rightCols];
+
+            // Tính tọa độ left cho các cột ghim trái
+            let cumulativeLeft = 0;
+            const colStickyMeta = {};
+            leftCols.forEach((col, idx) => {
+                colStickyMeta[col.id] = {
+                    type: 'left',
+                    left: cumulativeLeft,
+                    isLastLeft: idx === leftCols.length - 1
+                };
+                cumulativeLeft += (col.minWidth || 200);
+            });
+
+            // Cột ghim phải (Actions) luôn dính cố định ở right: 0
+            rightCols.forEach(col => {
+                colStickyMeta[col.id] = {
+                    type: 'right',
+                    right: 0
+                };
+            });
+
+            // 1. Render THEAD
+            let trHeadHtml = '<tr>';
+            orderedCols.forEach(col => {
+                const meta = colStickyMeta[col.id] || { type: 'normal' };
+                const classes = [];
+                let style = `min-width: ${col.minWidth}px;`;
+                if (meta.type === 'left') {
+                    classes.push('dv-col-pinned');
+                    if (meta.isLastLeft) classes.push('dv-col-pinned-last');
+                    style += ` left: ${meta.left}px;`;
+                } else if (meta.type === 'right') {
+                    classes.push('dv-col-pinned-right');
+                    style += ` right: 0;`;
+                }
+
+                const pinBtnHtml = col.id !== 'actions' ? `
+                <button type="button"
+                        class="dv-pin-btn ${(col.pinned === true || col.pinned === 'left') ? 'is-pinned' : ''}"
+                        title="${(col.pinned === true || col.pinned === 'left') ? 'Bỏ ghim cột này' : 'Ghim cột này cố định bên trái khi cuộn ngang'}"
+                        onclick="togglePinColumn('${col.id}')">
+                    <i class="bi ${(col.pinned === true || col.pinned === 'left') ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                </button>
+            ` : '';
+
+                trHeadHtml += `
+                <th class="${classes.join(' ')}" style="${style}">
+                    <div class="dv-th-inner">
+                        <span>${escapeHtml(col.label)}</span>
+                        ${pinBtnHtml}
+                    </div>
+                </th>
+            `;
+            });
+            trHeadHtml += '<th class="dv-floating-actions-track"></th></tr>';
+            thead.innerHTML = trHeadHtml;
+
+            // 2. Render TBODY: Cột Thao tác ghim cố định bên phải (Sticky Pinned Right)
+            let tbodyHtml = '';
+            visits.forEach((v, rowIdx) => {
+                tbodyHtml += `<tr class="dv-data-row" ondblclick="window.location.href='/doctor/examination/${v.visitId}/diagnoses'">`;
+
+                orderedCols.forEach(col => {
+                    const meta = colStickyMeta[col.id] || { type: 'normal' };
+                    const classes = [];
+                    let style = `min-width: ${col.minWidth}px;`;
+                    if (meta.type === 'left') {
+                        classes.push('dv-col-pinned');
+                        if (meta.isLastLeft) classes.push('dv-col-pinned-last');
+                        style += ` left: ${meta.left}px;`;
+                    } else if (meta.type === 'right') {
+                        classes.push('dv-col-pinned-right');
+                        style += ` right: 0;`;
+                    }
+
+                    const cellContent = renderCellByColumnId(col.id, v);
+                    tbodyHtml += `<td class="${classes.join(' ')}" style="${style}">${cellContent}</td>`;
+                });
+
+                // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn demo-table.html)
+                tbodyHtml += `
+                    <td class="dv-floating-actions-track">
+                        <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                            <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay">
+                                <i class="bi bi-heart-pulse-fill"></i>
+                                <span>Vào khám ngay</span>
+                            </a>
+                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị">
+                                <i class="bi bi-diagram-3-fill text-primary"></i>
+                                <span>Lập phác đồ</span>
+                            </a>
+                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-patient-info" class="dv-equal-btn-secondary" title="Xem hồ sơ hành chính & bệnh sử">
+                                <i class="bi bi-person-vcard text-secondary"></i>
+                                <span>Xem hồ sơ</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = tbodyHtml;
+        }
+
+        function renderCellByColumnId(colId, v) {
+            const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
+            const genderHtml = v.gender === 'Nữ'
+                ? '<span class="badge rounded-pill" style="background:#ffe4e6;color:#e11d48;font-size:11.5px;"><i class="bi bi-gender-female"></i> Nữ</span>'
+                : '<span class="badge rounded-pill" style="background:#e0f2fe;color:#0284c7;font-size:11.5px;"><i class="bi bi-gender-male"></i> Nam</span>';
+            const ageHtml = v.age ? `<span class="text-secondary fw-semibold">${v.age} tuổi</span>` : '';
+
+            switch (colId) {
+                case 'patient':
+                    return `
+                    <div class="d-flex align-items-center gap-3" style="white-space: nowrap; padding-right: 12px;">
+                        <div class="dv-patient-avatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 16px; border-radius: 11px;">${escapeHtml(firstLetter)}</div>
+                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap;">${escapeHtml(v.fullName)}</a>
+                        <span class="dv-code-pill" style="font-size: 12.5px; padding: 4px 10px;">${escapeHtml(v.patientCode)}</span>
+                        ${genderHtml}
+                        ${ageHtml ? `<span class="text-secondary fw-bold" style="font-size: 13.5px;"><span class="text-muted mx-1">•</span>${ageHtml}</span>` : ''}
+                        <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span class="text-muted mx-1">•</span><i class="bi bi-telephone text-primary me-1"></i>${escapeHtml(v.phoneNumber || 'Chưa có SĐT')}</span>
+                    </div>
+                `;
+                case 'actions':
+                    return `
+                    <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
+                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay">
+                            <i class="bi bi-heart-pulse-fill"></i>
+                            <span>Vào khám ngay</span>
+                        </a>
+                        <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị">
+                            <i class="bi bi-diagram-3-fill text-primary"></i>
+                            <span>Lập phác đồ</span>
+                        </a>
+                        <a href="/doctor/examination/${v.visitId}/diagnoses#tab-patient-info" class="dv-equal-btn-secondary" title="Xem hồ sơ hành chính & bệnh sử">
+                            <i class="bi bi-person-vcard text-secondary"></i>
+                            <span>Xem hồ sơ</span>
+                        </a>
+                    </div>
+                `;
+                case 'visitCode':
+                    return `
+                    <span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                          style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">
+                        ${escapeHtml(v.visitCode)}
+                    </span>
+                `;
+                case 'checkIn':
+                    return `
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size: 15px;">
+                            <i class="bi bi-clock text-primary me-1"></i>${escapeHtml(v.checkInTime || '--:--')}
+                        </div>
+                        <div class="text-muted fw-semibold" style="font-size: 12.5px;">${escapeHtml(v.checkInDate || '')}</div>
+                    </div>
+                `;
+                case 'symptoms':
+                    return `
+                    <div class="fw-semibold text-dark" style="max-width: 340px; line-height: 1.4;">
+                        ${escapeHtml(v.initialSymptoms || 'Khám & tư vấn răng hàm mặt tổng quát')}
+                    </div>
+                `;
+                case 'chair':
+                    return `
+                    <span class="badge rounded-pill px-3 py-2 fw-bold"
+                          style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;">
+                        <i class="bi bi-geo-alt-fill text-primary me-1"></i>${escapeHtml(v.chairName || 'Chưa phân ghế')}
+                    </span>
+                `;
+                case 'doctor':
+                    return `
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                              style="width:30px;height:30px;background:#e0f2fe;color:#0284c7;font-weight:800;font-size:13px;">
+                            <i class="bi bi-person-badge-fill"></i>
+                        </span>
+                        <span class="fw-bold text-dark" style="font-size: 14px;">${escapeHtml(v.doctorName || 'Chưa phân công')}</span>
+                    </div>
+                `;
+                case 'status':
+                    return renderStatusBadge(v);
+                default:
+                    return '';
+            }
+        }
+
+        function renderStatusBadge(v) {
+            const map = {
+                'WAITING': { bg: '#fef3c7', color: '#b45309', border: '#fcd34d', icon: 'bi-hourglass-split' },
+                'EXAMINING': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd', icon: 'bi-heart-pulse-fill' },
+                'IN_TREATMENT': { bg: '#e0e7ff', color: '#4338ca', border: '#a5b4fc', icon: 'bi-tools' },
+                'ORDERED': { bg: '#f3e8ff', color: '#7e22ce', border: '#d8b4fe', icon: 'bi-Prescription2' },
+                'WAITING_PAYMENT': { bg: '#ffedd5', color: '#c2410c', border: '#fdba74', icon: 'bi-cash-coin' },
+                'COMPLETED': { bg: '#d1fae5', color: '#047857', border: '#6ee7b7', icon: 'bi-check-circle-fill' },
+                'CANCELLED': { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', icon: 'bi-x-circle-fill' }
+            };
+            const st = map[v.status] || { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: 'bi-circle-fill' };
+            return `
+            <span class="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1.5"
+                  style="background:${st.bg};color:${st.color};border:1.5px solid ${st.border};font-size:13px;">
+                <i class="bi ${st.icon}"></i>
+                <span>${escapeHtml(v.statusDisplayName || v.status)}</span>
+            </span>
+        `;
+        }
+
+        function renderCardGrid(visits) {
+            const grid = document.getElementById('dvCardContainer');
+            let html = '';
+            visits.forEach(v => {
+                const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
+                html += `
+                <div class="dv-visit-card-item">
+                    <div>
+                        <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="dv-patient-avatar">${escapeHtml(firstLetter)}</div>
+                                <div>
+                                    <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name d-block">${escapeHtml(v.fullName)}</a>
+                                    <div class="mt-1 d-flex align-items-center gap-2">
+                                        <span class="dv-code-pill">${escapeHtml(v.patientCode)}</span>
+                                        <span class="text-secondary small fw-semibold">${v.age ? v.age + ' tuổi' : ''}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            ${renderStatusBadge(v)}
+                        </div>
+                        <div class="p-3 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;">
+                            <div class="d-flex justify-content-between mb-1.5">
+                                <span class="text-secondary">Mã ca khám:</span>
+                                <strong class="font-monospace text-dark">${escapeHtml(v.visitCode)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1.5">
+                                <span class="text-secondary">Tiếp đón:</span>
+                                <strong class="text-dark">${escapeHtml(v.checkInTime)} • ${escapeHtml(v.checkInDate)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-secondary">Bác sĩ:</span>
+                                <strong class="text-primary">${escapeHtml(v.doctorName)}</strong>
+                            </div>
+                        </div>
+                        <div class="mb-3" style="font-size:14px;">
+                            <span class="fw-bold text-secondary">Lý do khám:</span>
+                            <span class="text-dark fw-semibold ms-1">${escapeHtml(v.initialSymptoms || 'Khám và tư vấn theo yêu cầu')}</span>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-top d-flex align-items-center justify-content-between">
+                        <span class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:12.5px;">
+                            <i class="bi bi-geo-alt-fill text-primary me-1"></i>${escapeHtml(v.chairName)}
+                        </span>
+                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-hover-btn-primary">
+                            <i class="bi bi-heart-pulse-fill"></i> Vào khám ngay
                         </a>
                     </div>
                 </div>
             `;
+            });
+            grid.innerHTML = html;
+        }
+
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+            document.getElementById('btnViewTable').classList.toggle('active', mode === 'TABLE');
+            document.getElementById('btnViewCard').classList.toggle('active', mode === 'CARD');
+            renderMainView();
+        }
+
+        // =========================================================================
+        // TÙY BIẾN CỘT: ẨN/HIỆN, KÉO THẢ ĐỔI THỨ TỰ, GHIM CỘT (PIN COLUMN)
+        // =========================================================================
+        function toggleColumnCustomizer(e) {
+            e.stopPropagation();
+            const pop = document.getElementById('colCustomizerPopover');
+            const isShown = pop.classList.toggle('show');
+            if (isShown) {
+                renderColumnCustomizerList();
+            }
+        }
+
+        function closeColumnCustomizer() {
+            const pop = document.getElementById('colCustomizerPopover');
+            if (pop) pop.classList.remove('show');
+        }
+
+        function togglePinColumn(colId) {
+            const col = columnConfig.find(c => c.id === colId);
+            if (!col) return;
+            col.pinned = !col.pinned;
+            if (col.pinned) col.visible = true;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            renderMainView();
+        }
+
+        function toggleColumnVisibility(colId, checked) {
+            const visibleCount = columnConfig.filter(c => c.visible).length;
+            if (!checked && visibleCount <= 2) {
+                alert('Cần giữ lại tối thiểu 2 cột hiển thị trên bảng dữ liệu!');
+                renderColumnCustomizerList();
+                return;
+            }
+            const col = columnConfig.find(c => c.id === colId);
+            if (col) {
+                col.visible = checked;
+                if (!checked) col.pinned = false;
+                saveColumnConfig();
+                renderColumnCustomizerList();
+                renderMainView();
+            }
+        }
+
+        function moveColumnOrder(idx, direction) {
+            const targetIdx = idx + direction;
+            if (targetIdx < 0 || targetIdx >= columnConfig.length) return;
+            const temp = columnConfig[idx];
+            columnConfig[idx] = columnConfig[targetIdx];
+            columnConfig[targetIdx] = temp;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            renderMainView();
+        }
+
+        function resetDefaultColumns() {
+            columnConfig = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            renderMainView();
+        }
+
+        function renderColumnCustomizerList() {
+            const container = document.getElementById('colCustomizerList');
+            if (!container) return;
+
+            let html = '';
+            columnConfig.forEach((col, idx) => {
+                const isActions = col.id === 'actions';
+                html += `
+                <div class="dv-col-item"
+                     ${!isActions ? `draggable="true" ondragstart="onColDragStart(event, ${idx})" ondragover="onColDragOver(event)" ondrop="onColDrop(event, ${idx})"` : ''}>
+                    <div class="d-flex align-items-center gap-2.5">
+                        <i class="bi ${!isActions ? 'bi-grip-vertical text-muted' : 'bi-lock-fill text-primary'}" style="${!isActions ? 'cursor: grab;' : ''}"></i>
+                        <input type="checkbox" class="form-check-input mt-0"
+                               style="width: 17px; height: 17px; cursor: pointer;"
+                               ${col.visible ? 'checked' : ''}
+                               ${isActions ? 'disabled checked' : ''}
+                               onchange="toggleColumnVisibility('${col.id}', this.checked)">
+                        <span class="fw-bold text-dark" style="font-size: 13.5px;">${escapeHtml(col.label)} ${isActions ? '<span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 10px;">Cuối bảng</span>' : ''}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        ${!isActions ? `
+                            <button type="button"
+                                    class="dv-pin-btn ${(col.pinned === true || col.pinned === 'left') ? 'is-pinned' : ''}"
+                                    title="${(col.pinned === true || col.pinned === 'left') ? 'Đang ghim cố định trái (Bấm để bỏ ghim)' : 'Ghim cột này cố định bên trái'}"
+                                    onclick="togglePinColumn('${col.id}')">
+                                <i class="bi ${(col.pinned === true || col.pinned === 'left') ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột lên trước" onclick="moveColumnOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-up"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột xuống sau" onclick="moveColumnOrder(${idx}, 1)" ${idx === columnConfig.length - 1 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-down"></i>
+                            </button>
+                        ` : '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 11px;">Cố định</span>'}
+                    </div>
+                </div>
+            `;
+            });
+            container.innerHTML = html;
+        }
+
+        function onColDragStart(e, idx) {
+            draggedColIndex = idx;
+            e.currentTarget.classList.add('dragging');
+        }
+        function onColDragOver(e) {
+            e.preventDefault();
+        }
+        function onColDrop(e, dropIdx) {
+            e.preventDefault();
+            if (draggedColIndex === null || draggedColIndex === dropIdx) return;
+            const moved = columnConfig.splice(draggedColIndex, 1)[0];
+            columnConfig.splice(dropIdx, 0, moved);
+            draggedColIndex = null;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            renderMainView();
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('colCustomizerWrapper');
+            if (wrap && !wrap.contains(e.target)) {
+                closeColumnCustomizer();
+            }
         });
 
-        grid.innerHTML = html;
-    }
-
-    // Init on load
-    window.addEventListener('DOMContentLoaded', () => {
-        // Mặc định nạp "Tuần này" để hiển thị trọn vẹn toàn bộ ca khám trong tuần
-        setDateFilter('THIS_WEEK');
-    });
-</script>
+        window.addEventListener('DOMContentLoaded', () => {
+            updatePinnedBadgeCount();
+            syncDateInputsVisibility();
+            fetchDailyVisits();
+        });
+    </script>
 </body>
+
 </html>
