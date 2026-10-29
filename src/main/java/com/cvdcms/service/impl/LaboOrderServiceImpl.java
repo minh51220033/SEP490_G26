@@ -323,6 +323,9 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     }
 
     private void seedDemoOrdersForVisit(Visit visit) {
+        if (visit == null || visit.getVisitId() == null || visit.getPatientProfile() == null) {
+            return;
+        }
         try {
             Supplier s1 = findOrCreateDefaultSupplier();
 
@@ -346,57 +349,65 @@ public class LaboOrderServiceImpl implements LaboOrderService {
                 return supplierRepository.save(supp);
             });
 
-            // 1. Phiếu Răng sứ Zirconia
-            LaboOrder o1 = new LaboOrder();
-            o1.setLaboCode("LAB-0021");
-            o1.setVisit(visit);
-            o1.setPatientProfile(visit.getPatientProfile());
-            o1.setBranch(visit.getBranch());
-            o1.setDoctor(visit.getPrimaryDoctor());
-            o1.setSupplier(s1);
-            o1.setOrderType(LaboOrderType.NEW);
-            o1.setToothPositions("R26");
-            o1.setMaterialType("Răng sứ Zirconia DDBio cao cấp");
-            o1.setShadeColor("A2 (3M)");
-            o1.setQuantity(1);
-            o1.setUnitPrice(BigDecimal.valueOf(1500000));
-            o1.setCostToClinic(BigDecimal.valueOf(1500000));
-            o1.setSentDate(LocalDate.now().minusDays(3));
-            o1.setTryInDate(LocalDate.now().plusDays(1));
-            o1.setTryInTime("09:30");
-            o1.setExpectedDate(LocalDate.now().plusDays(2));
-            o1.setStatus(LaboOrderStatus.PROCESSING);
-            o1.setCrownInfo("Mão đơn lẻ R26");
-            o1.setNotes("Lấy dấu cao su 2 thì, đường hoàn tất bờ vai 0.5mm, khớp cắn chuẩn giải phẫu, bề mặt đánh bóng kỹ.");
-            o1.setImageUrl("https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80");
-            laboOrderRepository.save(o1);
+            String code1 = "LAB-V" + visit.getVisitId() + "-01";
+            if (code1.length() > 20) code1 = code1.substring(0, 20);
+            if (laboOrderRepository.findByLaboCodeIgnoreCase(code1).isEmpty()) {
+                // 1. Phiếu Răng sứ Zirconia
+                LaboOrder o1 = new LaboOrder();
+                o1.setLaboCode(code1);
+                o1.setVisit(visit);
+                o1.setPatientProfile(visit.getPatientProfile());
+                o1.setBranch(visit.getBranch());
+                o1.setDoctor(visit.getPrimaryDoctor());
+                o1.setSupplier(s1);
+                o1.setOrderType(LaboOrderType.NEW);
+                o1.setToothPositions("R26");
+                o1.setMaterialType("Răng sứ Zirconia DDBio cao cấp");
+                o1.setShadeColor("A2 (3M)");
+                o1.setQuantity(1);
+                o1.setUnitPrice(BigDecimal.valueOf(1500000));
+                o1.setCostToClinic(BigDecimal.valueOf(1500000));
+                o1.setSentDate(LocalDate.now().minusDays(3));
+                o1.setTryInDate(LocalDate.now().plusDays(1));
+                o1.setTryInTime("09:30");
+                o1.setExpectedDate(LocalDate.now().plusDays(2));
+                o1.setStatus(LaboOrderStatus.PROCESSING);
+                o1.setCrownInfo("Mão đơn lẻ R26");
+                o1.setNotes("Lấy dấu cao su 2 thì, đường hoàn tất bờ vai 0.5mm, khớp cắn chuẩn giải phẫu, bề mặt đánh bóng kỹ.");
+                o1.setImageUrl("https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80");
+                laboOrderRepository.save(o1);
+            }
 
-            // 2. Phiếu Mẫu Máu & Giấy xét nghiệm đông máu (PT/APTT/INR)
-            LaboOrder o2 = new LaboOrder();
-            o2.setLaboCode("XN-2026-88");
-            o2.setVisit(visit);
-            o2.setPatientProfile(visit.getPatientProfile());
-            o2.setBranch(visit.getBranch());
-            o2.setDoctor(visit.getPrimaryDoctor());
-            o2.setSupplier(sMedlatec);
-            o2.setOrderType(LaboOrderType.NEW);
-            o2.setToothPositions("Mẫu máu ngoại vi");
-            o2.setMaterialType("Xét nghiệm đông máu PT/APTT/INR & Công thức máu (CBC)");
-            o2.setShadeColor("Ống nghiệm EDTA/Citrate");
-            o2.setQuantity(1);
-            o2.setUnitPrice(BigDecimal.valueOf(350000));
-            o2.setCostToClinic(BigDecimal.valueOf(350000));
-            o2.setSentDate(LocalDate.now().minusDays(1));
-            o2.setTryInDate(LocalDate.now());
-            o2.setTryInTime("14:00");
-            o2.setExpectedDate(LocalDate.now());
-            o2.setReceivedDate(LocalDate.now());
-            o2.setStatus(LaboOrderStatus.DELIVERED);
-            o2.setNotes("Bệnh nhân chuẩn bị cấy ghép Implant & nhổ răng khôn R38. Kiểm tra chỉ số đông máu: PT = 12.5s (bình thường), INR = 1.02. Đủ điều kiện phẫu thuật.");
-            o2.setImageUrl("https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80");
-            laboOrderRepository.save(o2);
+            String code2 = "XN-V" + visit.getVisitId() + "-02";
+            if (code2.length() > 20) code2 = code2.substring(0, 20);
+            if (laboOrderRepository.findByLaboCodeIgnoreCase(code2).isEmpty()) {
+                // 2. Phiếu Mẫu Máu & Giấy xét nghiệm đông máu (PT/APTT/INR)
+                LaboOrder o2 = new LaboOrder();
+                o2.setLaboCode(code2);
+                o2.setVisit(visit);
+                o2.setPatientProfile(visit.getPatientProfile());
+                o2.setBranch(visit.getBranch());
+                o2.setDoctor(visit.getPrimaryDoctor());
+                o2.setSupplier(sMedlatec);
+                o2.setOrderType(LaboOrderType.NEW);
+                o2.setToothPositions("Mẫu máu ngoại vi");
+                o2.setMaterialType("Xét nghiệm đông máu PT/APTT/INR & Công thức máu (CBC)");
+                o2.setShadeColor("Ống nghiệm EDTA/Citrate");
+                o2.setQuantity(1);
+                o2.setUnitPrice(BigDecimal.valueOf(350000));
+                o2.setCostToClinic(BigDecimal.valueOf(350000));
+                o2.setSentDate(LocalDate.now().minusDays(1));
+                o2.setTryInDate(LocalDate.now());
+                o2.setTryInTime("14:00");
+                o2.setExpectedDate(LocalDate.now());
+                o2.setReceivedDate(LocalDate.now());
+                o2.setStatus(LaboOrderStatus.DELIVERED);
+                o2.setNotes("Bệnh nhân chuẩn bị cấy ghép Implant & nhổ răng khôn R38. Kiểm tra chỉ số đông máu: PT = 12.5s (bình thường), INR = 1.02. Đủ điều kiện phẫu thuật.");
+                o2.setImageUrl("https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80");
+                laboOrderRepository.save(o2);
+            }
 
-            log.info("Seeded 2 demo labo & blood test orders for visit: {}", visit.getVisitId());
+            log.info("Seeded demo labo & blood test orders for visit: {}", visit.getVisitId());
         } catch (Exception e) {
             log.warn("Could not seed demo labo orders: {}", e.getMessage());
         }

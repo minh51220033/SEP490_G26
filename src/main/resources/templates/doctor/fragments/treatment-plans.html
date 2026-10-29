@@ -25,8 +25,8 @@
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-plan" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">
-                    <i class="bi bi-stars"></i>
-                    <span>+ Lập kế hoạch (AI Assistant)</span>
+                    <i class="bi bi-plus-lg"></i>
+                    <span>+ Lập kế hoạch</span>
                 </button>
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
@@ -73,7 +73,7 @@
                 <tr th:if="${treatmentPlans == null or treatmentPlans.isEmpty()}" id="emptyPlanRow">
                     <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-diagram-3 fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-underline" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">+ Lập kế hoạch (AI Assistant)</button> để tạo mới hoặc bóc tách phác đồ tự động bằng AI.</span>
+                        <span>Bệnh nhân chưa có kế hoạch điều trị nào. Nhấn <button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-underline" onclick="openAddPlanModal()" data-bs-toggle="modal" data-bs-target="#addTreatmentPlanModal">+ Lập kế hoạch</button> để tạo mới.</span>
                     </td>
                 </tr>
                 <th:block th:each="plan : ${treatmentPlans}">
@@ -83,6 +83,11 @@
                     </td>
                     <td>
                         <div class="fw-bold text-dark mb-1" th:text="${plan.planName}">Phác đồ Cấy ghép Implant</div>
+                        <div class="mb-1" th:if="${plan.diagnosisText != null and !plan.diagnosisText.isEmpty()}">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 11px;">
+                                <i class="bi bi-clipboard2-pulse-fill me-1"></i>Chẩn đoán: <span th:text="${plan.diagnosisText}">K02.1</span>
+                            </span>
+                        </div>
                         <div class="small text-muted" th:if="${plan.notes != null and !plan.notes.isEmpty()}">
                             <i class="bi bi-info-circle me-1"></i><span th:text="${plan.notes}">Ghi chú</span>
                         </div>
@@ -234,16 +239,15 @@
                                                 <tr>
                                                     <th style="width: 45px;" class="text-center">#</th>
                                                     <th>Tên bước thực hiện / Quy trình thủ thuật</th>
-                                                    <th style="width: 95px;" class="text-center">Vị trí răng</th>
-                                                    <th style="width: 65px;" class="text-center">SL</th>
-                                                    <th style="width: 140px;" class="text-end">Giá dự kiến (đ)</th>
-                                                    <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
-                                                    <th style="width: 195px;" class="text-center">Trạng thái &amp; Thao tác</th>
+                                                    <th style="width: 110px;" class="text-center">Vị trí răng</th>
+                                                    <th style="width: 75px;" class="text-center">SL</th>
+                                                    <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                                    <th style="width: 205px;" class="text-center">Trạng thái &amp; Thao tác</th>
                                                 </tr>
                                             </thead>
                                             <tbody th:id="'stage-items-body-' + ${st.stageId}">
                                                 <tr th:if="${st.items == null or st.items.isEmpty()}">
-                                                    <td colspan="7" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td>
+                                                    <td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td>
                                                 </tr>
                                                 <tr th:each="it, itStat : ${st.items}" th:id="'item-row-' + ${it.planItemId}">
                                                     <td class="text-center text-muted" th:text="${itStat.index + 1}">1</td>
@@ -256,9 +260,6 @@
                                                         <span class="text-muted" th:unless="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}">-</span>
                                                     </td>
                                                     <td class="text-center fw-bold" th:text="${it.quantity}">1</td>
-                                                    <td class="text-end">
-                                                        <strong class="text-primary" th:text="${it.totalPrice != null ? #numbers.formatDecimal(it.totalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : (it.estimatedPrice != null ? #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ')}">0 đ</strong>
-                                                    </td>
                                                     <td class="text-center small" th:id="'item-completed-cell-' + ${it.planItemId}">
                                                         <span class="badge bg-success-subtle text-success border" th:if="${it.completedAt != null}">
                                                             <i class="bi bi-check-circle-fill me-1"></i><span th:text="${it.completedAt}">11:20 22/10</span>
@@ -311,164 +312,215 @@
 <!-- ===================================================================== -->
 <div th:fragment="treatmentPlanModal">
     <div class="modal fade" id="addTreatmentPlanModal" tabindex="-1" aria-labelledby="addTreatmentPlanModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 14px 20px;">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 1420px; width: 96vw;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 18px 28px;">
                     <div>
-                        <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0" id="addTreatmentPlanModalLabel">
+                        <h4 class="modal-title fw-bold d-flex align-items-center gap-2 mb-1" id="addTreatmentPlanModalLabel" style="font-size: 19px;">
                             <i class="bi bi-diagram-3-fill text-info"></i>
                             <span>Lập Kế hoạch &amp; Lộ trình điều trị (SCR-15.2)</span>
-                        </h5>
-                        <small class="text-white-50" style="font-size: 11.5px;">Phác đồ nhiều giai đoạn &bull; Tích hợp AI Gemini Flash bóc tách quy trình y khoa &bull; Chuẩn Bộ Y Tế</small>
+                        </h4>
+                        <div class="text-white-50" style="font-size: 13px;">Thiết kế chuẩn Enterprise MISA AMIS &amp; VTTech Dental &bull; Liên kết trực tiếp Chẩn đoán (FT14) &amp; Bảng giá Dịch vụ</div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="treatmentPlanForm" onsubmit="submitTreatmentPlan(event)">
-                    <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
+                    <div class="modal-body p-4" style="max-height: 80vh; overflow-y: auto; background: #f8fafc;">
                         <input type="hidden" id="planPatientId" th:value="${patient != null ? patient.profileId : null}">
                         <input type="hidden" id="planBranchId" th:value="${visit.branch != null ? visit.branch.branchId : 1}">
 
-                        <!-- 1. HỘP TRỢ LÝ AI BÓC TÁCH PHÁC ĐỒ (CHUẨN BRAND DỰ ÁN) -->
-                        <div class="df-ai-assistant-card">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="df-ai-badge">
-                                        <i class="bi bi-cpu me-1"></i>Trợ lý AI bóc tách phác đồ
-                                    </span>
-                                    <span class="badge bg-white text-primary border border-primary-subtle fw-semibold small">Gemini 3.5 Flash</span>
-                                </div>
-                                <small class="text-secondary fw-semibold">
-                                    <i class="bi bi-book me-1"></i>Hỗ trợ đọc tài liệu Kỹ thuật Răng - Hàm - Mặt Bộ Y Tế
-                                </small>
-                            </div>
-                            <p class="text-secondary small mb-2">
-                                Bác sĩ có thể <strong>dán văn bản kỹ thuật</strong> hoặc <strong>tải ảnh chụp tài liệu / bệnh án</strong>. AI sẽ tự động phân tích cấu trúc, chia các giai đoạn (Stages) và điền các bước thủ thuật tương ứng vào kế hoạch!
-                            </p>
-                            <div class="row g-2 align-items-end">
-                                <div class="col-md-7">
-                                    <label class="form-label small fw-bold text-dark mb-1">
-                                        <i class="bi bi-file-text me-1"></i>Nội dung kỹ thuật y khoa / Ghi chú phác đồ
-                                    </label>
-                                    <textarea class="form-control form-control-sm border-secondary-subtle" id="aiMedicalTextInput" rows="2"
-                                              placeholder="Dán đoạn văn bản kỹ thuật từ tài liệu (VD: Các bước cấy ghép Implant đơn lẻ, niềng răng, cầu răng sứ...)"></textarea>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-dark mb-1">
-                                        <i class="bi bi-image me-1"></i>Hoặc chọn ảnh tài liệu
-                                    </label>
-                                    <input type="file" class="form-control form-control-sm border-secondary-subtle" id="aiDocumentImageInput" accept="image/*">
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1"
-                                            id="btnTriggerAi" onclick="triggerAiParse()" style="height: 31px; background-color: #24408e; border-color: #24408e;">
-                                        <i class="bi bi-cpu"></i>
-                                        <span>Bóc tách AI</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Vùng hiển thị trạng thái AI đang xử lý -->
-                            <div id="aiLoadingIndicator" class="mt-2 py-2 px-3 bg-white border border-primary-subtle rounded-2 text-primary small d-none align-items-center gap-2">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                <span class="fw-semibold">AI Gemini 3.5 Flash đang đọc và bóc tách phác đồ... (vui lòng chờ 2-3 giây)</span>
-                            </div>
-                        </div>
-
-                        <!-- 2. PHÁC ĐỒ CHUẨN CỦA PHÒNG KHÁM (THANH DANH SÁCH CHUẨN BRAND DỰ ÁN) -->
-                        <div class="mb-3 pb-3 border-bottom">
-                            <label class="form-label small fw-bold text-dark mb-1.5 d-flex align-items-center gap-1.5">
-                                <i class="bi bi-list-task text-primary"></i>
-                                <span>DANH SÁCH MẪU PHÁC ĐỒ CHUẨN (ÁP DỤNG 1 CHẠM):</span>
+                        <!-- 1. PHÁC ĐỒ CHUẨN CỦA PHÒNG KHÁM (ÁP DỤNG 1 CHẠM) -->
+                        <div class="p-3 mb-3 bg-white rounded-4 border shadow-xs" style="border-color: #cbd5e1 !important;">
+                            <label class="form-label fw-bold text-dark mb-2 d-flex align-items-center gap-2" style="font-size: 14px;">
+                                <i class="bi bi-journal-medical text-primary fs-5"></i>
+                                <span>1. CHỌN NHANH MẪU PHÁC ĐỒ CHUẨN BỘ Y TẾ (ÁP DỤNG 1 CHẠM):</span>
                             </label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light text-primary border-secondary-subtle">
-                                    <i class="bi bi-journal-text"></i>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-primary border-secondary-subtle px-3">
+                                    <i class="bi bi-list-Columns-reverse fs-5"></i>
                                 </span>
-                                <select class="form-select border-secondary-subtle text-dark fw-semibold" id="planPresetSelect" onchange="if(this.value) applyPlanPreset(this.value)">
-                                    <option value="" selected>-- Chọn mẫu phác đồ chuẩn điều trị trong danh sách --</option>
-                                    <option value="IMPLANT">Cấy ghép Implant đơn lẻ (Trọn gói: 20.000.000 đ)</option>
-                                    <option value="ORTHODONTIC">Niềng răng mắc cài kim loại (Trọn gói: 35.000.000 đ)</option>
-                                    <option value="ZIRCONIA_CROWN">Cầu răng sứ Zirconia 3 răng (Trọn gói: 12.500.000 đ)</option>
-                                    <option value="ENDODONTIC">Điều trị tủy &amp; Trám răng (Trọn gói: 2.050.000 đ)</option>
-                                    <option value="WISDOM_TOOTH">Nhổ răng khôn mọc lệch (Trọn gói: 2.500.000 đ)</option>
-                                    <option value="PERIODONTITIS">Điều trị viêm nha chu toàn diện (Trọn gói: 3.200.000 đ)</option>
+                                <select class="form-select border-secondary-subtle text-dark fw-bold" id="planPresetSelect"
+                                        style="height: 46px; font-size: 15px;"
+                                        onchange="if(this.value) applyPlanPreset(this.value)">
+                                    <option value="" selected>-- Chọn mẫu phác đồ chuẩn điều trị trong danh sách để tự động điền các giai đoạn --</option>
+                                    <option value="IMPLANT">🦷 Cấy ghép Implant đơn lẻ &amp; Phục hình sứ (Trọn gói dự kiến: 20.000.000 đ)</option>
+                                    <option value="ORTHODONTIC">✨ Niềng răng chỉnh nha mắc cài kim loại (Trọn gói dự kiến: 35.000.000 đ)</option>
+                                    <option value="ZIRCONIA_CROWN">👑 Cầu răng sứ Zirconia 3 răng CAD/CAM (Trọn gói dự kiến: 12.500.000 đ)</option>
+                                    <option value="ENDODONTIC">🔬 Điều trị tủy nội nha &amp; Trám phục hồi (Trọn gói dự kiến: 2.050.000 đ)</option>
+                                    <option value="WISDOM_TOOTH">🩺 Phẫu thuật nhổ răng khôn mọc lệch Piezotome (Trọn gói dự kiến: 2.500.000 đ)</option>
+                                    <option value="PERIODONTITIS">🌿 Điều trị viêm nha chu toàn diện &amp; Nạo túi lợi (Trọn gói dự kiến: 3.200.000 đ)</option>
                                 </select>
-                                <button type="button" class="btn btn-primary fw-bold px-3 d-flex align-items-center gap-1"
-                                        style="background-color: #24408e; border-color: #24408e;"
+                                <button type="button" class="btn btn-primary fw-bold px-4 d-flex align-items-center gap-2"
+                                        style="background: #0284c7; border-color: #0284c7; font-size: 15px;"
                                         onclick="applyPlanPreset(document.getElementById('planPresetSelect').value)">
-                                    <i class="bi bi-check2"></i>
-                                    <span>Áp dụng</span>
+                                    <i class="bi bi-check2-circle fs-5"></i>
+                                    <span>Áp dụng mẫu</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- 3. THÔNG TIN CHUNG KẾ HOẠCH & DỰ TOÁN TỔNG THỂ -->
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-dark">Tên phác đồ / Kế hoạch điều trị <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm fw-bold" id="planNameInput" required
-                                       placeholder="VD: Phác đồ cấy ghép Implant răng 16 &amp; phục hình sứ">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-dark">Bác sĩ phụ trách <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="planDoctorSelect" required>
-                                    <option th:each="doc : ${doctors}"
-                                            th:value="${doc.staffId}"
-                                            th:text="${doc.fullName}"
-                                            th:selected="${visit.primaryDoctor != null and visit.primaryDoctor.staffId == doc.staffId}">
-                                        BS. Nguyễn Văn A
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-dark">Trạng thái ban đầu</label>
-                                <select class="form-select form-select-sm" id="planStatusSelect">
-                                    <option value="ACCEPTED" selected>Bệnh nhân đã đồng ý (ACCEPTED)</option>
-                                    <option value="IN_PROGRESS">Đang tiến hành điều trị (IN_PROGRESS)</option>
-                                    <option value="PROPOSED">Đã tư vấn / Chờ BN đồng ý (PROPOSED)</option>
-                                    <option value="DRAFT">Bản nháp chuyên môn (DRAFT)</option>
-                                </select>
+                        <!-- 2. LIÊN KẾT TRỰC TIẾP VỚI DANH SÁCH CHẨN ĐOÁN TRONG CA KHÁM (ẢNH 4 <-> ẢNH 5) -->
+                        <div class="mb-3 p-3.5 bg-white rounded-4 border shadow-xs" style="padding: 18px 22px; border: 1.5px solid #93c5fd !important; background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary text-white px-3 py-1.5 rounded-pill fw-bold" style="font-size: 12.5px;">
+                                        <i class="bi bi-link-45deg me-1"></i>LIÊN KẾT CHẨN ĐOÁN CA KHÁM (FT14 &rarr; FT15)
+                                    </span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;">
+                                        Tích chọn các chẩn đoán từ Bảng Chẩn đoán trong ca khám để tự động lấy <strong>Mã ICD-10</strong>, <strong>Vị trí răng</strong> và <strong>Gợi ý phác đồ</strong>:
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-outline-primary px-3 py-1.5 rounded-pill fw-bold" style="font-size: 13px;" onclick="selectAllVisitDiagnosesForPlan()">
+                                        <i class="bi bi-check2-all me-1"></i>Chọn tất cả chẩn đoán
+                                    </button>
+                                    <button type="button" class="btn btn-primary px-3 py-1.5 rounded-pill fw-bold shadow-xs" style="font-size: 13px; background: #0284c7; border: none;" onclick="autoSuggestPresetFromDiagnosis()">
+                                        <i class="bi bi-magic me-1"></i>Tự động gợi ý Phác đồ theo Chẩn đoán
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-dark">Ngày bắt đầu</label>
-                                <input type="date" class="form-control form-control-sm" id="planStartDateInput"
-                                       th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-dark">Dự kiến kết thúc</label>
-                                <input type="date" class="form-control form-control-sm" id="planEndDateInput">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-primary">
-                                    <i class="bi bi-cash-stack me-1"></i>Tổng giá tiền dự kiến toàn phác đồ (VNĐ) <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" class="form-control form-control-sm fw-bold text-primary fs-6" id="planOverallCostInput"
-                                       placeholder="VD: 20000000" min="0" step="50000" oninput="onPlanOverallCostChange()">
-                                <small class="text-muted" style="font-size: 11px;">* Tự động tính từ đơn giá dự kiến từng thủ thuật bên dưới hoặc nhập giá trọn gói. Giá dự kiến này sẽ gửi đến Kế toán xử lý.</small>
+                            <!-- Danh sách Thẻ Chẩn đoán lấy trực tiếp từ Bảng Chẩn đoán (Ảnh 4) -->
+                            <div id="modalLinkedDiagnosesContainer" class="d-flex flex-wrap gap-2 mb-3">
+                                <!-- Dynamic Diagnosis Cards from #diagnosisTableBody -->
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-dark">Chẩn đoán liên quan (ICD-10)</label>
-                                <input type="text" class="form-control form-control-sm" id="planDiagnosisInput"
-                                       placeholder="Gõ chẩn đoán hoặc mã ICD-10">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-dark">Dặn dò &amp; Ghi chú tổng thể</label>
-                                <input type="text" class="form-control form-control-sm" id="planNotesInput"
-                                       placeholder="Lưu ý vệ sinh, đơn thuốc hoặc chống chỉ định cho bệnh nhân">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold text-dark mb-1" style="font-size: 13.5px;">
+                                        <i class="bi bi-clipboard2-pulse text-primary me-1"></i>Chẩn đoán liên quan (ICD-10) đã liên kết:
+                                    </label>
+                                    <input type="text" class="form-control fw-bold text-dark" id="planDiagnosisInput"
+                                           style="height: 44px; font-size: 14.5px; border-color: #93c5fd;"
+                                           placeholder="Tự động điền khi tích chọn chẩn đoán phía trên hoặc gõ bổ sung...">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary mb-1" style="font-size: 13.5px;">
+                                        <i class="bi bi-bullseye me-1"></i>Vị trí răng điều trị (Đồng bộ xuống các bước):
+                                    </label>
+                                    <input type="text" class="form-control fw-bold text-primary" id="planLinkedTeethInput"
+                                           style="height: 44px; font-size: 15px; border-color: #93c5fd; background: #ffffff;"
+                                           placeholder="VD: 15, 16 hoặc Toàn hàm" oninput="syncPlanTeethToEmptyItems(this.value)">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- 4. LẬP CÁC GIAI ĐOẠN ĐIỀU TRỊ & BƯỚC LÂM SÀNG -->
+                        <!-- 3. THÔNG TIN CHUNG KẾ HOẠCH & ĐỊNH GIÁ TỔNG TỪ BẢNG GIÁ DỊCH VỤ -->
+                        <div class="p-3.5 mb-3 bg-white rounded-4 border shadow-xs" style="padding: 20px 22px; border-color: #cbd5e1 !important;">
+                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 15px;">
+                                <i class="bi bi-info-circle-fill text-primary"></i>
+                                <span>2. THÔNG TIN CHUNG &amp; TỔNG CHI PHÍ DỰ KIẾN (LẤY TỪ BẢNG GIÁ DỊCH VỤ)</span>
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Tên phác đồ / Kế hoạch điều trị <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control fw-bold text-dark" id="planNameInput" required
+                                           style="height: 44px; font-size: 15px;"
+                                           placeholder="VD: Phác đồ cấy ghép Implant răng 16 &amp; phục hình sứ">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Bác sĩ phụ trách <span class="text-danger">*</span></label>
+                                    <select class="form-select fw-semibold" id="planDoctorSelect" required style="height: 44px; font-size: 14.5px;">
+                                        <option th:each="doc : ${doctors}"
+                                                th:value="${doc.staffId}"
+                                                th:text="${doc.fullName}"
+                                                th:selected="${visit.primaryDoctor != null and visit.primaryDoctor.staffId == doc.staffId}">
+                                            BS. Nguyễn Văn A
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Trạng thái ban đầu</label>
+                                    <select class="form-select fw-semibold" id="planStatusSelect" style="height: 44px; font-size: 14.5px;">
+                                        <option value="ACCEPTED" selected>Bệnh nhân đã đồng ý (ACCEPTED)</option>
+                                        <option value="IN_PROGRESS">Đang tiến hành điều trị (IN_PROGRESS)</option>
+                                        <option value="PROPOSED">Đã tư vấn / Chờ BN đồng ý (PROPOSED)</option>
+                                        <option value="DRAFT">Bản nháp chuyên môn (DRAFT)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Ngày bắt đầu</label>
+                                    <input type="date" class="form-control fw-semibold" id="planStartDateInput"
+                                           style="height: 44px; font-size: 14.5px;"
+                                           th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Dự kiến kết thúc</label>
+                                    <input type="date" class="form-control fw-semibold" id="planEndDateInput"
+                                           style="height: 44px; font-size: 14.5px;">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark" style="font-size: 13.5px;">Dặn dò &amp; Ghi chú tổng thể</label>
+                                    <input type="text" class="form-control" id="planNotesInput"
+                                           style="height: 44px; font-size: 14.5px;"
+                                           placeholder="Lưu ý vệ sinh, đơn thuốc hoặc chống chỉ định cho bệnh nhân">
+                                </div>
+
+                                <!-- LẤY GIÁ TỔNG TỪ DANH MỤC DỊCH VỤ (THAY VÌ ĐƠN GIÁ TỪNG BƯỚC) -->
+                                <div class="col-12 mt-3">
+                                    <div class="p-3.5 rounded-4 border" style="padding: 18px 22px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #7dd3fc !important;">
+                                        <div class="row g-3 align-items-center">
+                                            <div class="col-lg-7">
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                                    <label class="form-label fw-bold text-dark mb-0" style="font-size: 14px;">
+                                                        <i class="bi bi-tags-fill text-primary me-1"></i>Chọn Dịch vụ điều trị (Lấy giá tổng trực tiếp từ Bảng giá Dịch vụ):
+                                                    </label>
+                                                    <button type="button" class="btn btn-sm btn-white bg-white border border-primary text-primary fw-bold rounded-pill px-3 py-1 shadow-xs" style="font-size: 12.5px;" onclick="syncPriceFromVisitPerformedServices()">
+                                                        <i class="bi bi-arrow-repeat me-1"></i>Đồng bộ giá từ Dịch vụ trong ca khám
+                                                    </button>
+                                                </div>
+                                                <div class="input-group">
+                                                    <select class="form-select border-secondary-subtle fw-bold text-dark" id="planServicePricePicker"
+                                                            style="height: 46px; font-size: 14.5px;"
+                                                            onchange="onSelectPlanServiceForTotal(this)">
+                                                        <option value="">-- Chọn dịch vụ nha khoa để lấy đơn giá chuẩn vào Tổng phác đồ --</option>
+                                                    </select>
+                                                    <span class="input-group-text bg-white border-secondary-subtle fw-bold">SL:</span>
+                                                    <input type="number" class="form-control border-secondary-subtle text-center fw-bold" id="planServicePriceQty"
+                                                           value="1" min="1" style="max-width: 80px; height: 46px; font-size: 15px;"
+                                                           oninput="recalcSelectedServicesTotal()">
+                                                    <button type="button" class="btn btn-primary fw-bold px-3.5" style="height: 46px; font-size: 14.5px; background: #0284c7;" onclick="addSelectedServiceToPlanTotal()">
+                                                        <i class="bi bi-plus-circle-fill me-1"></i>Cộng vào Giá tổng
+                                                    </button>
+                                                </div>
+                                                <div id="planSelectedServicesList" class="d-flex flex-wrap gap-2 mt-2"></div>
+                                            </div>
+                                            <div class="col-lg-5">
+                                                <div class="bg-white p-3 rounded-3 border border-primary-subtle shadow-xs">
+                                                    <label class="form-label fw-bold text-primary mb-1 d-flex align-items-center justify-content-between" style="font-size: 14px;">
+                                                        <span><i class="bi bi-cash-stack me-1"></i>TỔNG GIÁ DỰ KIẾN TOÀN PHÁC ĐỒ (VNĐ) <span class="text-danger">*</span></span>
+                                                        <span class="badge bg-primary-subtle text-primary border">Giá tổng trọn gói</span>
+                                                    </label>
+                                                    <input type="number" class="form-control fw-bold text-primary" id="planOverallCostInput"
+                                                           style="height: 48px; font-size: 20px; letter-spacing: 0.3px; border: 2px solid #0284c7;"
+                                                           placeholder="VD: 20000000" min="0" step="50000" oninput="onPlanOverallCostChange()">
+                                                    <small class="text-secondary fw-semibold d-block mt-1" style="font-size: 12px;">
+                                                        <i class="bi bi-check2-circle text-success me-1"></i>Lấy theo tổng giá dịch vụ (Không chia lẻ đơn giá vào từng bước thủ thuật).
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. LỘ TRÌNH CÁC GIAI ĐOẠN ĐIỀU TRỊ & BƯỚC LÂM SÀNG (KHÔNG CÓ ĐƠN GIÁ TỪNG BƯỚC) -->
                         <div class="mb-3">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5" style="font-size: 13.5px;">
-                                    <i class="bi bi-list-task text-primary"></i>
-                                    <span>Lộ trình các giai đoạn (Stages) &amp; Giá dự kiến từng thủ thuật</span>
-                                </h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="addPlanStage()">
-                                    <i class="bi bi-plus-circle-fill me-1"></i>+ Thêm giai đoạn mới
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 px-1">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style="font-size: 16.5px;">
+                                        <i class="bi bi-diagram-3-fill text-primary"></i>
+                                        <span>3. LỘ TRÌNH CÁC GIAI ĐOẠN (STAGES) &amp; CÁC BƯỚC THỦ THUẬT CHUYÊN MÔN</span>
+                                    </h5>
+                                    <small class="text-muted" style="font-size: 13px;">Mỗi giai đoạn đều có nút <strong>"+ Tạo giai đoạn tiếp theo"</strong> để chèn nhanh giai đoạn mới ngay bên dưới.</small>
+                                </div>
+                                <button type="button" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-xs d-flex align-items-center gap-2"
+                                        style="background: #0284c7; border: none; font-size: 14px;"
+                                        onclick="addPlanStage()">
+                                    <i class="bi bi-plus-circle-fill"></i>
+                                    <span>+ Thêm giai đoạn mới (Cuối lộ trình)</span>
                                 </button>
                             </div>
 
@@ -481,26 +533,28 @@
                         <!-- 5. TỔNG CHI PHÍ DỰ KIẾN (GỬI SANG KẾ TOÁN XỬ LÝ) -->
                         <div class="df-plan-total-summary">
                             <div>
-                                <span class="text-dark fw-bold small d-block">
-                                    <i class="bi bi-calculator-fill text-primary me-1"></i>TỔNG GIÁ TIỀN DỰ KIẾN (GỬI KẾ TOÁN XỬ LÝ):
+                                <span class="text-dark fw-bold d-block" style="font-size: 15px;">
+                                    <i class="bi bi-calculator-fill text-primary me-1"></i>TỔNG GIÁ TIỀN DỰ KIẾN TOÀN PHÁC ĐỒ (GỬI KẾ TOÁN XỬ LÝ):
                                 </span>
-                                <span class="small text-secondary fw-semibold d-block" id="planStageSummaryText">0 giai đoạn &bull; 0 bước thực hiện</span>
-                                <span class="badge bg-info-subtle text-primary border border-primary-subtle mt-1">
-                                    <i class="bi bi-send-check me-1"></i>Bác sĩ tập trung chuyên môn — Thông tin giá dự kiến sẽ được gửi đến Kế toán để thu tiền
+                                <span class="text-secondary fw-bold d-block mt-1" style="font-size: 14px;" id="planStageSummaryText">0 giai đoạn &bull; 0 bước thực hiện</span>
+                                <span class="badge bg-white text-primary border border-primary-subtle mt-2 px-3 py-1.5" style="font-size: 12.5px;">
+                                    <i class="bi bi-send-check-fill me-1"></i>Bác sĩ tập trung chuyên môn — Giá tổng dự kiến được đồng bộ tự động sang phân hệ Kế toán
                                 </span>
                             </div>
                             <div class="text-end">
-                                <span class="fs-4 fw-bold text-primary d-block" id="planTotalEstimatedCostDisplay">0 đ</span>
-                                <small class="text-muted">Giá dự kiến (Tạm tính)</small>
+                                <span class="fw-bold text-primary d-block" style="font-size: 28px; letter-spacing: -0.5px;" id="planTotalEstimatedCostDisplay">0 đ</span>
+                                <span class="text-secondary fw-semibold" style="font-size: 13px;">Tổng chi phí dự kiến (Tạm tính)</span>
                             </div>
                         </div>
 
                     </div>
-                    <div class="modal-footer bg-light px-4 py-3">
-                        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="submitPlanBtn"
-                                style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
-                            <i class="bi bi-check-circle-fill me-1"></i> Lưu kế hoạch điều trị
+                    <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-bold rounded-3" style="font-size: 14.5px;" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg me-1"></i>Đóng cửa sổ
+                        </button>
+                        <button type="submit" class="btn btn-primary px-5 py-2.5 fw-bold rounded-3 shadow-sm" id="submitPlanBtn"
+                                style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; font-size: 15.5px;">
+                            <i class="bi bi-check-circle-fill me-1.5"></i>Lưu Kế hoạch &amp; Lộ trình điều trị
                         </button>
                     </div>
                 </form>
@@ -734,7 +788,298 @@
         }
     };
 
-    function openAddPlanModal() {
+    let selectedPlanServicesForTotal = [];
+
+    function populatePlanServicePicker() {
+        const picker = document.getElementById('planServicePricePicker');
+        if (!picker) return;
+        let html = '<option value="">-- Chọn dịch vụ nha khoa để lấy giá tổng --</option>';
+        if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog && availableServicesCatalog.length > 0) {
+            availableServicesCatalog.forEach(s => {
+                const p = parseFloat(s.basePrice) || 0;
+                html += `<option value="${s.serviceId}" data-price="${p}" data-name="${s.serviceName}">${s.serviceName} — ${formatVnd(p)}</option>`;
+            });
+        }
+        picker.innerHTML = html;
+    }
+
+    function onSelectPlanServiceForTotal(selectEl) {
+        if (!selectEl || !selectEl.value) return;
+        const opt = selectEl.options[selectEl.selectedIndex];
+        const price = parseFloat(opt.getAttribute('data-price')) || 0;
+        const qty = parseFloat(document.getElementById('planServicePriceQty')?.value) || 1;
+        // If no services added to badge list yet, immediately set overall cost to this service's total price
+        if (selectedPlanServicesForTotal.length === 0 && price > 0) {
+            const overallCostInput = document.getElementById('planOverallCostInput');
+            if (overallCostInput) {
+                overallCostInput.value = Math.round(price * qty);
+                onPlanOverallCostChange();
+            }
+        }
+    }
+
+    function recalcSelectedServicesTotal() {
+        const picker = document.getElementById('planServicePricePicker');
+        if (selectedPlanServicesForTotal.length === 0 && picker && picker.value) {
+            onSelectPlanServiceForTotal(picker);
+        }
+    }
+
+    function addSelectedServiceToPlanTotal() {
+        const picker = document.getElementById('planServicePricePicker');
+        if (!picker || !picker.value) {
+            showToast('Vui lòng chọn một dịch vụ trong danh sách!', true);
+            return;
+        }
+        const opt = picker.options[picker.selectedIndex];
+        const serviceId = picker.value;
+        const serviceName = opt.getAttribute('data-name') || opt.textContent;
+        const price = parseFloat(opt.getAttribute('data-price')) || 0;
+        const qty = parseFloat(document.getElementById('planServicePriceQty')?.value) || 1;
+
+        selectedPlanServicesForTotal.push({
+            serviceId,
+            serviceName,
+            price,
+            qty
+        });
+        renderSelectedPlanServicesBadges();
+    }
+
+    function removeSelectedServiceFromPlanTotal(idx) {
+        selectedPlanServicesForTotal.splice(idx, 1);
+        renderSelectedPlanServicesBadges();
+    }
+
+    function renderSelectedPlanServicesBadges() {
+        const container = document.getElementById('planSelectedServicesList');
+        if (!container) return;
+        if (selectedPlanServicesForTotal.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        let sum = 0;
+        let html = '';
+        selectedPlanServicesForTotal.forEach((item, idx) => {
+            const sub = item.price * item.qty;
+            sum += sub;
+            html += `
+                <span class="badge bg-white text-dark border border-primary-subtle px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1.5 shadow-xs">
+                    <i class="bi bi-check-circle-fill text-primary"></i>
+                    <span>${item.serviceName} (x${item.qty}): <strong class="text-primary">${formatVnd(sub)}</strong></span>
+                    <button type="button" class="btn-close" style="font-size: 9px;" onclick="removeSelectedServiceFromPlanTotal(${idx})"></button>
+                </span>
+            `;
+        });
+        container.innerHTML = html;
+        const overallCostInput = document.getElementById('planOverallCostInput');
+        if (overallCostInput) {
+            overallCostInput.value = Math.round(sum);
+            onPlanOverallCostChange();
+        }
+    }
+
+    function syncPriceFromVisitPerformedServices() {
+        const psRows = document.querySelectorAll('#performedServicesTableBody tr[id^="ps-row-"]');
+        if (!psRows || psRows.length === 0) {
+            showToast('Chưa có dịch vụ thực hiện nào trong ca khám để đồng bộ giá!', true);
+            return;
+        }
+        selectedPlanServicesForTotal = [];
+        psRows.forEach(r => {
+            const nameEl = r.querySelector('.fw-bold.text-dark');
+            const name = nameEl ? nameEl.textContent.trim() : 'Dịch vụ ca khám';
+            // Find price from availableServicesCatalog
+            let price = 0;
+            let serviceId = '';
+            if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog) {
+                const found = availableServicesCatalog.find(s => s.serviceName.toLowerCase() === name.toLowerCase());
+                if (found) {
+                    price = parseFloat(found.basePrice) || 0;
+                    serviceId = found.serviceId;
+                }
+            }
+            const tds = r.querySelectorAll('td');
+            const qty = tds.length > 4 ? (parseFloat(tds[4].textContent.trim()) || 1) : 1;
+            if (price > 0) {
+                selectedPlanServicesForTotal.push({ serviceId, serviceName: name, price, qty });
+            }
+        });
+        renderSelectedPlanServicesBadges();
+        showToast('Đã đồng bộ giá tổng từ các dịch vụ trong ca khám!');
+    }
+
+    // =========================================================================
+    // LIÊN KẾT CHẨN ĐOÁN CA KHÁM (FT14) VỚI KẾ HOẠCH ĐIỀU TRỊ (FT15)
+    // =========================================================================
+    function getVisitDiagnosesFromDom() {
+        const rows = document.querySelectorAll('#diagnosisTableBody tr[id^="diag-row-"]');
+        const list = [];
+        rows.forEach(r => {
+            const diagId = r.id.replace('diag-row-', '');
+            const teethAttr = r.getAttribute('data-teeth') || '';
+            const firstTd = r.querySelector('td:nth-child(1)')?.textContent.trim() || 'Toàn hàm';
+            const icdCode = r.getAttribute('data-icd') || r.querySelector('.df-list-code')?.textContent.trim() || '';
+            const diagText = r.getAttribute('data-text') || r.querySelector('td:nth-child(3) .fw-bold')?.textContent.trim() || '';
+            const isMain = r.querySelector('.badge-main') !== null || r.getAttribute('data-type') === 'MAIN';
+            const cleanTeeth = teethAttr || (firstTd.startsWith('R-') ? firstTd.substring(2) : (firstTd !== 'Toàn hàm' ? firstTd : ''));
+            list.push({
+                diagId,
+                icdCode,
+                diagText,
+                toothDisplay: firstTd,
+                cleanTeeth,
+                isMain
+            });
+        });
+        return list;
+    }
+
+    function renderModalLinkedDiagnoses(preselectedDiagId = null) {
+        const container = document.getElementById('modalLinkedDiagnosesContainer');
+        if (!container) return;
+        const diags = getVisitDiagnosesFromDom();
+        if (diags.length === 0) {
+            container.innerHTML = `
+                <div class="small text-muted fst-italic py-1">
+                    <i class="bi bi-info-circle me-1"></i>Ca khám hiện chưa ghi nhận chẩn đoán nào ở bảng Chẩn đoán (FT14). Bác sĩ có thể nhập trực tiếp bên dưới.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        diags.forEach((d, idx) => {
+            const shouldSelect = preselectedDiagId
+                ? (String(d.diagId) === String(preselectedDiagId))
+                : (d.isMain || idx === 0);
+            const typeBadge = d.isMain
+                ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:10px;">★ Chính</span>'
+                : '<span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size:10px;">⊕ Kèm theo</span>';
+
+            html += `
+                <label class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border bg-white shadow-xs diag-link-chip"
+                       style="cursor: pointer; font-size: 14px; transition: all 0.15s; border-width: 1.5px !important;"
+                       data-diag-id="${d.diagId}"
+                       data-icd="${d.icdCode}"
+                       data-text="${d.diagText}"
+                       data-teeth="${d.cleanTeeth}"
+                       data-tooth-display="${d.toothDisplay}">
+                    <input type="checkbox" class="form-check-input m-0 diag-link-checkbox"
+                           style="width: 18px; height: 18px; cursor: pointer;"
+                           ${shouldSelect ? 'checked' : ''}
+                           onchange="onToggleLinkedDiagnosisChip()">
+                    ${typeBadge}
+                    <span class="badge bg-primary text-white px-2 py-1 rounded-2 fw-bold"><i class="bi bi-bullseye me-1"></i>${d.toothDisplay}</span>
+                    <span class="badge bg-light text-primary border font-monospace px-2 py-1" style="font-size: 13px;">${d.icdCode}</span>
+                    <strong class="text-dark">${d.diagText}</strong>
+                </label>
+            `;
+        });
+        container.innerHTML = html;
+        onToggleLinkedDiagnosisChip(false);
+    }
+
+    function onToggleLinkedDiagnosisChip(showFeedback = false) {
+        const chips = document.querySelectorAll('#modalLinkedDiagnosesContainer .diag-link-chip');
+        const selectedParts = [];
+        const teethParts = [];
+
+        chips.forEach(chip => {
+            const cb = chip.querySelector('.diag-link-checkbox');
+            if (cb && cb.checked) {
+                chip.style.borderColor = '#0284c7';
+                chip.style.backgroundColor = '#e0f2fe';
+                const icd = chip.getAttribute('data-icd') || '';
+                const text = chip.getAttribute('data-text') || '';
+                const toothDisp = chip.getAttribute('data-tooth-display') || '';
+                const cleanTeeth = chip.getAttribute('data-teeth') || '';
+                selectedParts.push(`[${icd}] ${text} (${toothDisp})`);
+                if (cleanTeeth && !teethParts.includes(cleanTeeth)) {
+                    teethParts.push(cleanTeeth);
+                }
+            } else {
+                chip.style.borderColor = '#dee2e6';
+                chip.style.backgroundColor = '#ffffff';
+            }
+        });
+
+        const diagInput = document.getElementById('planDiagnosisInput');
+        if (diagInput && selectedParts.length > 0) {
+            diagInput.value = selectedParts.join(' ; ');
+        }
+
+        const teethInput = document.getElementById('planLinkedTeethInput');
+        if (teethInput && teethParts.length > 0) {
+            teethInput.value = teethParts.join(', ');
+            syncPlanTeethToEmptyItems(teethInput.value);
+        }
+    }
+
+    function selectAllVisitDiagnosesForPlan() {
+        document.querySelectorAll('#modalLinkedDiagnosesContainer .diag-link-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+        onToggleLinkedDiagnosisChip(true);
+        showToast('Đã liên kết toàn bộ chẩn đoán trong ca khám vào kế hoạch!');
+    }
+
+    function syncPlanTeethToEmptyItems(teethVal) {
+        if (!teethVal) return;
+        document.querySelectorAll('#planStagesContainer .item-tooth').forEach(inp => {
+            if (!inp.value || inp.value.trim() === '') {
+                inp.value = teethVal;
+            }
+        });
+    }
+
+    function autoSuggestPresetFromDiagnosis() {
+        const diagVal = (document.getElementById('planDiagnosisInput')?.value || '').toLowerCase();
+        const teethVal = document.getElementById('planLinkedTeethInput')?.value || '';
+        if (!diagVal) {
+            showToast('Vui lòng chọn ít nhất 1 chẩn đoán để hệ thống gợi ý phác đồ!', true);
+            return;
+        }
+        let suggestedKey = 'ENDODONTIC';
+        if (diagVal.includes('k01') || diagVal.includes('răng khôn') || diagVal.includes('mọc kẹt') || diagVal.includes('mọc ngầm')) {
+            suggestedKey = 'WISDOM_TOOTH';
+        } else if (diagVal.includes('k00') || diagVal.includes('vô răng') || diagVal.includes('mất răng')) {
+            suggestedKey = 'IMPLANT';
+        } else if (diagVal.includes('k05') || diagVal.includes('nha chu') || diagVal.includes('viêm lợi') || diagVal.includes('cao răng')) {
+            suggestedKey = 'PERIODONTITIS';
+        } else if (diagVal.includes('k07') || diagVal.includes('lệch') || diagVal.includes('khớp cắn') || diagVal.includes('chỉnh nha')) {
+            suggestedKey = 'ORTHODONTIC';
+        } else if (diagVal.includes('k02') || diagVal.includes('k04') || diagVal.includes('sâu') || diagVal.includes('tủy')) {
+            suggestedKey = 'ENDODONTIC';
+        }
+        applyPlanPreset(suggestedKey);
+        if (teethVal) {
+            document.querySelectorAll('#planStagesContainer .item-tooth').forEach(inp => {
+                inp.value = teethVal;
+            });
+        }
+    }
+
+    function openPlanModalFromDiagnoses() {
+        if (typeof switchMainTab === 'function') {
+            switchMainTab('tab-treatment-plan');
+        }
+        openAddPlanModal(null, true);
+    }
+
+    function openPlanModalForSingleDiagRow(trEl) {
+        if (!trEl) return;
+        const diagId = trEl.id ? trEl.id.replace('diag-row-', '') : null;
+        if (typeof switchMainTab === 'function') {
+            switchMainTab('tab-treatment-plan');
+        }
+        openAddPlanModal(diagId, false);
+        setTimeout(() => {
+            autoSuggestPresetFromDiagnosis();
+        }, 120);
+    }
+
+    function openAddPlanModal(preselectedDiagId = null, selectAllDiags = false) {
         try {
             const planEl = document.getElementById('addTreatmentPlanModal');
             if (!planEl) {
@@ -747,6 +1092,10 @@
 
             const formEl = document.getElementById('treatmentPlanForm');
             if (formEl) formEl.reset();
+
+            selectedPlanServicesForTotal = [];
+            populatePlanServicePicker();
+            renderSelectedPlanServicesBadges();
 
             const container = document.getElementById('planStagesContainer');
             if (container) container.innerHTML = '';
@@ -771,7 +1120,15 @@
             const overallCostInput = document.getElementById('planOverallCostInput');
             if (overallCostInput) overallCostInput.value = '';
 
-            addPlanStage('Giai đoạn 1: Chuẩn bị & Khám ban đầu', 0, 'Khám tổng quát, chụp phim và vệ sinh khoang miệng');
+            // Liên kết tự động với danh sách chẩn đoán trong ca khám (Ảnh 4 -> Ảnh 5)
+            renderModalLinkedDiagnoses(preselectedDiagId);
+            if (selectAllDiags) {
+                selectAllVisitDiagnosesForPlan();
+            }
+
+            const firstStageId = addPlanStage('Giai đoạn 1: Chuẩn bị & Khám ban đầu', 0, 'Khám tổng quát, chụp phim và vệ sinh khoang miệng');
+            const linkedTeeth = document.getElementById('planLinkedTeethInput')?.value || '';
+            addPlanItem(firstStageId, '', '', linkedTeeth, 1, '');
             recalculatePlanTotal();
 
             if (planModalInstance) {
@@ -786,7 +1143,7 @@
         }
     }
 
-    function addPlanStage(stageName = '', daysFromStart = 0, stageDesc = '') {
+    function addPlanStage(stageName = '', daysFromStart = 0, stageDesc = '', insertAfterStageId = null) {
         stageCounter++;
         const stageId = stageCounter;
         const container = document.getElementById('planStagesContainer');
@@ -798,38 +1155,42 @@
 
         card.innerHTML = `
             <div class="df-plan-stage-card-header">
-                <div class="d-flex align-items-center gap-2 flex-grow-1">
-                    <span class="badge bg-dark rounded-pill fw-bold">Giai đoạn ${stageId}</span>
+                <div class="d-flex align-items-center gap-2.5 flex-grow-1" style="min-width: 0;">
+                    <span class="badge bg-dark rounded-pill fw-bold stage-order-badge px-3 py-2" style="font-size: 13.5px; flex-shrink: 0;">Giai đoạn ${stageId}</span>
                     <input type="text" class="df-plan-stage-title-input stage-name-input"
-                           placeholder="Nhập tên giai đoạn (VD: Khám & Cấy ghép trụ)..."
+                           placeholder="Nhập tên giai đoạn (VD: Khám & Cấy ghép trụ Implant)..."
                            value="${stageName || `Giai đoạn ${stageId}`}">
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="input-group input-group-sm" style="width: 175px;">
-                        <span class="input-group-text bg-white text-muted" style="font-size: 11px;">Cách bắt đầu:</span>
-                        <input type="number" class="form-control text-center stage-days-input" value="${daysFromStart}" min="0" placeholder="0">
-                        <span class="input-group-text bg-white" style="font-size: 11px;">ngày</span>
+                <div class="d-flex align-items-center gap-2" style="flex-shrink: 0;">
+                    <div class="input-group" style="width: 245px;">
+                        <span class="input-group-text bg-white text-secondary fw-semibold" style="font-size: 13px;">Cách bắt đầu:</span>
+                        <input type="number" class="form-control text-center fw-bold text-primary stage-days-input"
+                               style="font-size: 15px; height: 40px;"
+                               value="${daysFromStart}" min="0" placeholder="0">
+                        <span class="input-group-text bg-white text-secondary fw-semibold" style="font-size: 13px;">ngày</span>
                     </div>
-                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="removePlanStage(${stageId})" title="Xóa giai đoạn này">
-                        <i class="bi bi-trash3"></i>
+                    <button type="button" class="btn btn-outline-danger px-2.5 py-1.5 rounded-3 ms-1" onclick="removePlanStage(${stageId})" title="Xóa giai đoạn này">
+                        <i class="bi bi-trash3-fill"></i>
                     </button>
                 </div>
             </div>
-            <div class="p-3">
-                <input type="text" class="form-control form-control-sm mb-2 stage-desc-input"
-                       placeholder="Ghi chú mục tiêu giai đoạn này (tùy chọn)..." value="${stageDesc}">
+            <div class="p-3.5" style="padding: 18px 20px;">
+                <div class="mb-3">
+                    <input type="text" class="form-control stage-desc-input"
+                           style="height: 42px; font-size: 14px; background: #f8fafc;"
+                           placeholder="Mô tả mục tiêu lâm sàng của giai đoạn này (VD: Làm sạch môi trường miệng, nhổ răng tạo khoảng)..."
+                           value="${stageDesc}">
+                </div>
 
-                <div class="table-responsive rounded border mb-2">
+                <div class="table-responsive rounded-3 border mb-3">
                     <table class="df-plan-items-table">
                         <thead>
                             <tr>
-                                <th>Tên bước thực hiện / Thủ thuật chuyên môn</th>
-                                <th style="width: 90px;" class="text-center">Vị trí răng</th>
-                                <th style="width: 70px;" class="text-center">SL</th>
-                                <th style="width: 135px;" class="text-end">Đơn giá dự kiến (đ)</th>
-                                <th style="width: 120px;" class="text-end">Thành tiền dự kiến</th>
-                                <th>Ghi chú kỹ thuật</th>
-                                <th style="width: 45px;" class="text-center">Xóa</th>
+                                <th style="width: 44%;">Tên bước thực hiện / Thủ thuật chuyên môn</th>
+                                <th style="width: 175px;" class="text-center">Vị trí răng</th>
+                                <th style="width: 95px;" class="text-center">Số lượng</th>
+                                <th style="width: 30%;">Ghi chú kỹ thuật / Hướng xử trí</th>
+                                <th style="width: 65px;" class="text-center">Xóa</th>
                             </tr>
                         </thead>
                         <tbody class="stage-items-tbody" id="stage-tbody-${stageId}">
@@ -837,38 +1198,97 @@
                     </table>
                 </div>
 
-                <button type="button" class="btn btn-sm btn-light border text-primary fw-semibold" onclick="addPlanItem(${stageId})">
-                    <i class="bi bi-plus-circle me-1"></i>+ Thêm bước / thủ thuật vào giai đoạn này
-                </button>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+                    <button type="button" class="df-btn-add-item" onclick="addPlanItem(${stageId})">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span>+ Thêm bước / thủ thuật vào giai đoạn này</span>
+                    </button>
+                    <button type="button" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                            style="background: #0284c7; border: none; font-size: 13.5px;"
+                            onclick="insertPlanStageAfter(${stageId})"
+                            title="Tạo thêm một giai đoạn mới chèn ngay bên dưới giai đoạn này">
+                        <i class="bi bi-node-plus-fill fs-6"></i>
+                        <span>+ Tạo giai đoạn tiếp theo (Ngay dưới giai đoạn này)</span>
+                    </button>
+                </div>
             </div>
         `;
 
-        container.appendChild(card);
+        if (insertAfterStageId) {
+            const refCard = document.getElementById(`plan-stage-card-${insertAfterStageId}`);
+            if (refCard && refCard.nextSibling) {
+                container.insertBefore(card, refCard.nextSibling);
+            } else {
+                container.appendChild(card);
+            }
+        } else {
+            container.appendChild(card);
+        }
+
+        renumberPlanStages();
         recalculatePlanTotal();
         return stageId;
+    }
+
+    function insertPlanStageAfter(currentStageId) {
+        const refCard = document.getElementById(`plan-stage-card-${currentStageId}`);
+        let prevDays = 0;
+        if (refCard) {
+            prevDays = parseInt(refCard.querySelector('.stage-days-input')?.value) || 0;
+        }
+        const nextDays = prevDays + 7;
+        const newStageId = addPlanStage('', nextDays, '', currentStageId);
+        const linkedTeeth = document.getElementById('planLinkedTeethInput')?.value || '';
+        addPlanItem(newStageId, '', '', linkedTeeth, 1, '');
+        const newCard = document.getElementById(`plan-stage-card-${newStageId}`);
+        if (newCard) {
+            newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const titleInput = newCard.querySelector('.stage-name-input');
+            if (titleInput) titleInput.focus();
+        }
+    }
+
+    function renumberPlanStages() {
+        const cards = document.querySelectorAll('#planStagesContainer .df-plan-stage-card');
+        cards.forEach((card, index) => {
+            const order = index + 1;
+            const badge = card.querySelector('.stage-order-badge');
+            if (badge) {
+                badge.textContent = `Giai đoạn ${order}`;
+            }
+            const nameInput = card.querySelector('.stage-name-input');
+            if (nameInput && /^Giai đoạn \d+$/.test(nameInput.value.trim())) {
+                nameInput.value = `Giai đoạn ${order}`;
+            }
+        });
     }
 
     function removePlanStage(stageId) {
         const card = document.getElementById(`plan-stage-card-${stageId}`);
         if (card) {
             card.remove();
+            renumberPlanStages();
             recalculatePlanTotal();
         }
     }
 
-    function addPlanItem(stageId, serviceId = '', customName = '', tooth = '', qty = 1, price = 0, notes = '') {
+    function addPlanItem(stageId, serviceId = '', customName = '', tooth = '', qty = 1, notes = '') {
         itemCounter++;
         const itemId = itemCounter;
         const tbody = document.getElementById(`stage-tbody-${stageId}`);
         if (!tbody) return;
 
-        let resolvedPrice = parseFloat(price) || 0;
+        if (!tooth) {
+            tooth = document.getElementById('planLinkedTeethInput')?.value || '';
+        }
+
+        let matchedPrice = 0;
         let optHtml = '<option value="">-- Chọn dịch vụ trong danh mục hoặc tự gõ bên dưới --</option>';
         if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog && availableServicesCatalog.length > 0) {
             availableServicesCatalog.forEach(s => {
                 const isSel = (serviceId && String(s.serviceId) === String(serviceId)) || (!serviceId && customName && s.serviceName.toLowerCase() === customName.toLowerCase());
-                if (isSel && (!resolvedPrice || resolvedPrice <= 0)) {
-                    resolvedPrice = parseFloat(s.basePrice) || 0;
+                if (isSel) {
+                    matchedPrice = parseFloat(s.basePrice) || 0;
                 }
                 const priceHint = s.basePrice ? ` (${formatVnd(s.basePrice)})` : '';
                 optHtml += `<option value="${s.serviceId}" data-price="${s.basePrice || 0}" data-name="${s.serviceName}" ${isSel ? 'selected' : ''}>${s.serviceName}${priceHint}</option>`;
@@ -876,35 +1296,39 @@
         }
 
         const numQty = parseFloat(qty) || 1;
-        const rowTotal = resolvedPrice * numQty;
 
         const tr = document.createElement('tr');
         tr.id = `plan-item-row-${itemId}`;
+        tr.setAttribute('data-catalog-price', matchedPrice);
         tr.innerHTML = `
             <td>
-                <select class="form-select form-select-sm mb-1 item-service-select" onchange="onPlanItemServiceChange(this, ${itemId})">
+                <select class="form-select mb-1.5 fw-semibold text-dark item-service-select"
+                        style="height: 40px; font-size: 14px;"
+                        onchange="onPlanItemServiceChange(this, ${itemId})">
                     ${optHtml}
                 </select>
-                <input type="text" class="form-control form-control-sm item-custom-name" placeholder="Gõ tên bước / thủ thuật chi tiết..." value="${customName}">
+                <input type="text" class="form-control fw-bold text-dark item-custom-name"
+                       style="height: 40px; font-size: 14px;"
+                       placeholder="Gõ tên bước thực hiện / thủ thuật chuyên môn..." value="${customName}">
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm item-tooth" placeholder="VD: 16" value="${tooth}">
+                <input type="text" class="form-control text-center fw-bold text-primary item-tooth"
+                       style="height: 42px; font-size: 14.5px;"
+                       placeholder="VD: 15, 16 / Toàn hàm" value="${tooth}">
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-center fw-bold item-qty" value="${numQty}" min="0.5" step="0.5" oninput="onPlanItemPriceOrQtyChange(${itemId})">
+                <input type="number" class="form-control text-center fw-bold item-qty"
+                       style="height: 42px; font-size: 15px;"
+                       value="${numQty}" min="0.5" step="0.5" oninput="recalculatePlanTotal(true)">
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-end fw-semibold text-primary item-price" value="${resolvedPrice}" min="0" step="10000" placeholder="0" oninput="onPlanItemPriceOrQtyChange(${itemId})">
-            </td>
-            <td class="text-end align-middle">
-                <strong class="text-primary small item-row-total" id="plan-item-total-${itemId}">${formatVnd(rowTotal)}</strong>
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú bước" value="${notes}">
+                <input type="text" class="form-control item-notes"
+                       style="height: 42px; font-size: 14px;"
+                       placeholder="Ghi chú kỹ thuật / hướng xử trí..." value="${notes}">
             </td>
             <td class="text-center align-middle">
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removePlanItem(this)">
-                    <i class="bi bi-trash3"></i>
+                <button type="button" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-3" onclick="removePlanItem(this)" title="Xóa bước này">
+                    <i class="bi bi-trash3-fill"></i>
                 </button>
             </td>
         `;
@@ -916,7 +1340,7 @@
     function removePlanItem(btn) {
         const tr = btn.closest('tr');
         if (tr) tr.remove();
-        recalculatePlanTotal();
+        recalculatePlanTotal(true);
     }
 
     function onPlanItemServiceChange(selectEl, itemId) {
@@ -931,25 +1355,12 @@
             const nameInput = tr.querySelector('.item-custom-name');
             if (nameInput) nameInput.value = name || '';
 
-            const priceInput = tr.querySelector('.item-price');
-            if (priceInput) {
-                priceInput.value = price;
-            }
-            onPlanItemPriceOrQtyChange(itemId);
+            tr.setAttribute('data-catalog-price', price);
+            recalculatePlanTotal(true);
+        } else {
+            tr.setAttribute('data-catalog-price', '0');
+            recalculatePlanTotal(true);
         }
-    }
-
-    function onPlanItemPriceOrQtyChange(itemId) {
-        const tr = document.getElementById(`plan-item-row-${itemId}`);
-        if (tr) {
-            const qty = parseFloat(tr.querySelector('.item-qty')?.value) || 1;
-            const price = parseFloat(tr.querySelector('.item-price')?.value) || 0;
-            const totalEl = document.getElementById(`plan-item-total-${itemId}`);
-            if (totalEl) {
-                totalEl.innerText = formatVnd(qty * price);
-            }
-        }
-        recalculatePlanTotal(true);
     }
 
     function onPlanOverallCostChange() {
@@ -961,15 +1372,15 @@
         }
     }
 
-    function recalculatePlanTotal(syncFromItems = false) {
+    function recalculatePlanTotal(syncFromCatalogItems = false) {
         const stageCards = document.querySelectorAll('#planStagesContainer .df-plan-stage-card');
         const itemRows = document.querySelectorAll('#planStagesContainer .stage-items-tbody tr');
 
-        let sumItemsCost = 0;
+        let sumCatalogCost = 0;
         itemRows.forEach(r => {
             const qty = parseFloat(r.querySelector('.item-qty')?.value) || 1;
-            const price = parseFloat(r.querySelector('.item-price')?.value) || 0;
-            sumItemsCost += (qty * price);
+            const catPrice = parseFloat(r.getAttribute('data-catalog-price')) || 0;
+            sumCatalogCost += (qty * catPrice);
         });
 
         const summaryText = document.getElementById('planStageSummaryText');
@@ -977,10 +1388,11 @@
             summaryText.innerText = `${stageCards.length} giai đoạn • ${itemRows.length} bước thực hiện`;
         }
 
-        const overallCostInput = document.getElementById('planOverallCostInput');
-        if (overallCostInput && (syncFromItems || sumItemsCost > 0)) {
-            if (sumItemsCost > 0) {
-                overallCostInput.value = Math.round(sumItemsCost);
+        // Only overwrite overallCostInput from step catalog services if no package/service badges were explicitly picked
+        if (syncFromCatalogItems && selectedPlanServicesForTotal.length === 0 && sumCatalogCost > 0) {
+            const overallCostInput = document.getElementById('planOverallCostInput');
+            if (overallCostInput) {
+                overallCostInput.value = Math.round(sumCatalogCost);
             }
         }
         onPlanOverallCostChange();
@@ -999,14 +1411,6 @@
         document.getElementById('planNameInput').value = preset.name;
         document.getElementById('planNotesInput').value = preset.notes;
 
-        if (preset.totalCost) {
-            const overallCostInput = document.getElementById('planOverallCostInput');
-            if (overallCostInput) {
-                overallCostInput.value = preset.totalCost;
-                onPlanOverallCostChange();
-            }
-        }
-
         const startDateInput = document.getElementById('planStartDateInput');
         let baseDate = new Date();
         if (startDateInput && startDateInput.value) {
@@ -1024,30 +1428,20 @@
         stageCounter = 0;
         itemCounter = 0;
 
-        let totalPresetItems = 0;
-        preset.stages.forEach(st => {
-            totalPresetItems += (st.items ? st.items.length : 0);
-        });
-        const defaultStepPrice = (preset.totalCost && totalPresetItems > 0)
-            ? Math.round(preset.totalCost / totalPresetItems)
-            : 0;
+        const linkedTeeth = document.getElementById('planLinkedTeethInput')?.value || '';
 
         preset.stages.forEach(st => {
             const stageId = addPlanStage(st.name, st.days, st.desc);
             st.items.forEach(it => {
                 let matchedServiceId = '';
-                let matchedPrice = it.price || 0;
                 if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog) {
                     const found = availableServicesCatalog.find(s => s.serviceName.toLowerCase().includes(it.customName.toLowerCase()) || it.customName.toLowerCase().includes(s.serviceName.toLowerCase()));
                     if (found) {
                         matchedServiceId = found.serviceId;
-                        matchedPrice = parseFloat(found.basePrice) || 0;
                     }
                 }
-                if (!matchedPrice || matchedPrice <= 0) {
-                    matchedPrice = Math.round(defaultStepPrice / (parseFloat(it.qty) || 1));
-                }
-                addPlanItem(stageId, matchedServiceId, it.customName, it.tooth, it.qty, matchedPrice, it.notes);
+                const toothToUse = linkedTeeth || it.tooth || '';
+                addPlanItem(stageId, matchedServiceId, it.customName, toothToUse, it.qty, it.notes);
             });
         });
 
@@ -1060,128 +1454,6 @@
         }
 
         showToast(`Đã áp dụng mẫu phác đồ chuẩn: ${preset.name}`);
-    }
-
-    function triggerAiParse() {
-        const text = (document.getElementById('aiMedicalTextInput').value || '').trim();
-        const fileInput = document.getElementById('aiDocumentImageInput');
-        const hasFile = fileInput.files && fileInput.files[0];
-
-        if (!text && !hasFile) {
-            showToast('Vui lòng dán đoạn văn bản kỹ thuật hoặc chọn ảnh tài liệu để AI phân tích!', true);
-            return;
-        }
-
-        const btn = document.getElementById('btnTriggerAi');
-        const indicator = document.getElementById('aiLoadingIndicator');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
-        indicator.classList.remove('d-none');
-        indicator.classList.add('d-flex');
-
-        const executeParse = (base64Data, mimeType) => {
-            const payload = {
-                text: text,
-                medicalText: text,
-                imageBase64: base64Data || null,
-                mimeType: mimeType || null
-            };
-
-            fetch('/api/doctor/treatment-plans/ai-parse', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(err => { throw new Error(err.message || 'Lỗi bóc tách AI'); });
-                }
-                return res.json();
-            })
-            .then(result => {
-                const parsed = result.data;
-                if (!parsed) throw new Error('Không có dữ liệu trả về từ AI');
-
-                document.getElementById('planNameInput').value = parsed.planTitle || 'Phác đồ điều trị chuyên khoa';
-
-                if (parsed.totalEstimatedDays) {
-                    const baseDate = new Date();
-                    baseDate.setDate(baseDate.getDate() + parsed.totalEstimatedDays);
-                    const y = baseDate.getFullYear();
-                    const m = String(baseDate.getMonth() + 1).padStart(2, '0');
-                    const d = String(baseDate.getDate()).padStart(2, '0');
-                    document.getElementById('planEndDateInput').value = `${y}-${m}-${d}`;
-                }
-
-                if (parsed.totalEstimatedCost) {
-                    const overallCostInput = document.getElementById('planOverallCostInput');
-                    if (overallCostInput) {
-                        overallCostInput.value = parsed.totalEstimatedCost;
-                        onPlanOverallCostChange();
-                    }
-                }
-
-                let notes = '';
-                if (parsed.procedureCode) notes += `Mã kỹ thuật gợi ý: ${parsed.procedureCode}. `;
-                if (parsed.postOpAdvice) notes += `Dặn dò: ${parsed.postOpAdvice} `;
-                if (parsed.contraindications) notes += `Chống chỉ định: ${parsed.contraindications}`;
-                document.getElementById('planNotesInput').value = notes.trim();
-
-                const container = document.getElementById('planStagesContainer');
-                container.innerHTML = '';
-                stageCounter = 0;
-                itemCounter = 0;
-
-                if (parsed.stages && parsed.stages.length > 0) {
-                    parsed.stages.forEach(st => {
-                        const stageId = addPlanStage(st.stageName, st.estimatedDaysFromStart || 0, st.description || '');
-                        if (st.steps && st.steps.length > 0) {
-                            st.steps.forEach(step => {
-                                let matchedId = '';
-                                let matchedPrice = parseFloat(step.estimatedCost) || 0;
-                                if (typeof availableServicesCatalog !== 'undefined' && availableServicesCatalog) {
-                                    const found = availableServicesCatalog.find(s => s.serviceName.toLowerCase().includes(step.stepName.toLowerCase()) || step.stepName.toLowerCase().includes(s.serviceName.toLowerCase()));
-                                    if (found) {
-                                        matchedId = found.serviceId;
-                                        if (!matchedPrice || matchedPrice <= 0) {
-                                            matchedPrice = parseFloat(found.basePrice) || 0;
-                                        }
-                                    }
-                                }
-                                addPlanItem(stageId, matchedId, step.stepName, step.suggestedTooth || '', 1, matchedPrice, step.notes || '');
-                            });
-                        }
-                    });
-                } else {
-                    addPlanStage('Giai đoạn 1: Chuẩn bị & Tiến hành', 0, '');
-                }
-
-                showToast(`Trợ lý AI đã bóc tách thành công ${parsed.stages ? parsed.stages.length : 1} giai đoạn phác đồ!`);
-            })
-            .catch(err => {
-                showToast(err.message, true);
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-magic"></i> <span>Bóc tách AI</span>';
-                indicator.classList.remove('d-flex');
-                indicator.classList.add('d-none');
-            });
-        };
-
-        if (hasFile) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const dataUrl = e.target.result;
-                const parts = dataUrl.split(',');
-                const mime = parts[0].match(/:(.*?);/)[1];
-                const base64 = parts[1];
-                executeParse(base64, mime);
-            };
-            reader.readAsDataURL(fileInput.files[0]);
-        } else {
-            executeParse(null, null);
-        }
     }
 
     function submitTreatmentPlan(e) {
@@ -1219,17 +1491,17 @@
                 const customName = r.querySelector('.item-custom-name').value.trim();
                 const tooth = r.querySelector('.item-tooth').value.trim();
                 const qty = parseFloat(r.querySelector('.item-qty').value) || 1;
-                const estPrice = parseFloat(r.querySelector('.item-price')?.value) || 0;
+                const catPrice = parseFloat(r.getAttribute('data-catalog-price')) || 0;
                 const itemNotes = r.querySelector('.item-notes').value.trim();
 
                 if (customName || (sel && sel.value)) {
-                    calculatedItemsSum += (qty * estPrice);
+                    calculatedItemsSum += (qty * catPrice);
                     items.push({
                         serviceId: sel && sel.value ? parseInt(sel.value) : null,
                         customServiceName: customName,
                         toothNumbers: tooth || null,
                         quantity: qty,
-                        estimatedPrice: estPrice,
+                        estimatedPrice: catPrice,
                         status: 'PLANNED',
                         notes: itemNotes || null
                     });
@@ -1280,7 +1552,7 @@
             return res.json();
         })
         .then(result => {
-            showToast('Đã tạo kế hoạch điều trị & đồng bộ giá dự kiến sang Kế toán thành công!');
+            showToast('Đã tạo kế hoạch điều trị & đồng bộ giá tổng sang Kế toán thành công!');
             addPlanRowToTable(result.data);
             if (planModalInstance) {
                 planModalInstance.hide();
@@ -1303,6 +1575,9 @@
         const tr = document.createElement('tr');
         tr.id = `plan-row-${plan.planId}`;
 
+        const diagDisplay = plan.diagnosisText
+            ? `<div class="mb-1"><span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 11px;"><i class="bi bi-clipboard2-pulse-fill me-1"></i>Chẩn đoán: ${plan.diagnosisText}</span></div>`
+            : '';
         const notesDisplay = plan.notes ? `<div class="small text-muted"><i class="bi bi-info-circle me-1"></i>${plan.notes}</div>` : '';
         const startStr = plan.startDate || '---';
         const endStr = plan.expectedEndDate || '---';
@@ -1313,6 +1588,7 @@
             </td>
             <td>
                 <div class="fw-bold text-dark mb-1">${plan.planName}</div>
+                ${diagDisplay}
                 ${notesDisplay}
             </td>
             <td>
@@ -1384,7 +1660,6 @@
         roadmapTr.className = 'df-plan-roadmap-row';
         roadmapTr.innerHTML = renderPlanInlineRoadmapHtml(plan);
 
-        // Prepend plan row and roadmap row
         tbody.insertBefore(roadmapTr, tbody.firstChild);
         tbody.insertBefore(tr, roadmapTr);
         updatePlanCountBadge();
@@ -1416,12 +1691,8 @@
                         const completedItemHtml = it.completedAt
                             ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
                             : '<span class="text-muted">---</span>';
-                        const itemEstPrice = (it.totalPrice !== null && it.totalPrice !== undefined)
-                            ? formatVnd(it.totalPrice)
-                            : formatVnd(it.estimatedPrice || 0);
 
                         const isComp = it.status === 'COMPLETED';
-                        const isProg = it.status === 'IN_PROGRESS';
 
                         let actionBtnHtml = '';
                         if (isComp) {
@@ -1460,14 +1731,13 @@
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center fw-bold">${it.quantity}</td>
-                                <td class="text-end"><strong class="text-primary">${itemEstPrice}</strong></td>
                                 <td class="text-center small" id="item-completed-cell-${it.planItemId}">${completedItemHtml}</td>
                                 <td class="text-center" id="item-action-cell-${it.planItemId}">${actionBtnHtml}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    itemsRows = '<tr><td colspan="7" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
+                    itemsRows = '<tr><td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
                 }
 
                 const stageStatusClass = st.status === 'COMPLETED' ? 'bg-success-subtle text-success border border-success fw-bold' : (st.status === 'IN_PROGRESS' ? 'bg-primary-subtle text-primary border border-primary fw-bold' : 'bg-light text-secondary border');
@@ -1501,11 +1771,10 @@
                                     <tr>
                                         <th style="width: 45px;" class="text-center">#</th>
                                         <th>Tên bước thực hiện / Quy trình thủ thuật</th>
-                                        <th style="width: 95px;" class="text-center">Vị trí răng</th>
-                                        <th style="width: 65px;" class="text-center">SL</th>
-                                        <th style="width: 140px;" class="text-end">Giá dự kiến (đ)</th>
-                                        <th style="width: 155px;" class="text-center">Ngày làm (now)</th>
-                                        <th style="width: 195px;" class="text-center">Trạng thái &amp; Thao tác</th>
+                                        <th style="width: 110px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 75px;" class="text-center">SL</th>
+                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 205px;" class="text-center">Trạng thái &amp; Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stage-items-body-${st.stageId}">

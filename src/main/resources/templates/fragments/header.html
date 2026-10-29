@@ -187,7 +187,9 @@
 <!--                    unreadNotificationCount, displayName, defaultPatientProfile -->
 <!-- ===================================================================== -->
 
-<header th:fragment="appTopbar(pageTitle)" class="app-topbar" data-topbar>
+<header th:fragment="appTopbar(pageTitle)" class="app-topbar" data-topbar
+        th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
+                 displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? session.loggedInUser.username : '')}">
 
     <!-- Thông báo hệ thống (tuỳ chọn) -->
     <div class="app-notice" th:if="${systemNotice != null and !#strings.isEmpty(systemNotice)}" role="status">
