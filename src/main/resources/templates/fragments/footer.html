@@ -1,5 +1,9 @@
-!-- ===================================================================== -->
-<!-- 1. KHỐI KÊU GỌI HÀNH ĐỘNG (đặt ngay trên footer ở trang công khai)       -->
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- 1. KHỐI KÊU GỌI HÀNH ĐỘNG (đặt ngay trên siteFooter ở trang công khai)  -->
 <!--    Cách dùng: <section th:replace="~{fragments/footer :: ctaBanner}"></section> -->
 <!-- ===================================================================== -->
 
@@ -7,13 +11,12 @@
     <div class="container-xl">
         <div class="cta-card">
             <div>
-                <h2 class="cta-card__title">Đặt lịch khám ngay hôm nay!</h2>
+                <h2 class="cta-card__title">Đặt lịch khám ngay hôm nay</h2>
                 <p class="cta-card__desc">
-                    Bạn còn băn khoăn về tình trạng răng miệng? Để đội ngũ bác sĩ Cường Việt Dental
-                    tư vấn miễn phí và lên kế hoạch điều trị phù hợp nhất cho bạn.
+                    Đội ngũ bác sĩ Cường Việt Dental tư vấn miễn phí và lên kế hoạch điều trị phù hợp nhất cho bạn.
                 </p>
             </div>
-            <a href="#" class="btn-outline-brand btn-outline-brand--lg">
+            <a href="#" class="btn-brand btn-brand--lg">
                 Đặt lịch tư vấn <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
@@ -22,7 +25,7 @@
 
 
 <!-- ===================================================================== -->
-<!-- 2. FOOTER CHÍNH (nền xanh đậm)                                          -->
+<!-- 2. FOOTER TRANG CÔNG KHAI (tối giản, nền trắng)                          -->
 <!--    Cách dùng: <footer th:replace="~{fragments/footer :: siteFooter}"></footer> -->
 <!-- ===================================================================== -->
 
@@ -31,91 +34,92 @@
 
         <div class="site-footer__top">
             <div class="site-footer__about">
-                <a th:replace="~{fragments/logo :: logo('light')}"></a>
-
+                <a th:replace="~{fragments/logo :: logo('dark')}"></a>
                 <p class="site-footer__desc">
-                    Hệ thống quản lý phòng khám nha khoa Cường Việt — quản lý bệnh nhân, lịch hẹn,
-                    dịch vụ và nhân sự trên <strong>một nền tảng duy nhất</strong>.
+                    Hệ thống quản lý phòng khám nha khoa Cường Việt — bệnh nhân, lịch hẹn, dịch vụ
+                    và nhân sự trên một nền tảng duy nhất.
                 </p>
-
                 <ul class="site-footer__contact">
                     <li>
-                        <i class="bi bi-telephone text-success" aria-hidden="true"></i>
-                        <a href="tel:0900000000"><strong>0900 000 000</strong></a>
+                        <i class="bi bi-telephone" aria-hidden="true"></i>
+                        <a href="tel:0900000000">0900 000 000</a>
                         <span class="text-muted-light">· 8h00 - 20h00</span>
                     </li>
                     <li>
-                        <i class="bi bi-envelope text-info" aria-hidden="true"></i>
+                        <i class="bi bi-envelope" aria-hidden="true"></i>
                         <a href="mailto:support@cuongvietdental.vn">support@cuongvietdental.vn</a>
                     </li>
                 </ul>
-
-                <div class="site-footer__socials">
-                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>
-                    <a href="#" aria-label="Zalo"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i></a>
-                    <a href="#" aria-label="YouTube"><i class="bi bi-youtube" aria-hidden="true"></i></a>
-                    <a href="#" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>
-                    <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>
-                </div>
-
-                <span class="site-footer__badge">
-                    <span class="status-dot" aria-hidden="true"></span>
-                    Đồng hành cùng nụ cười Việt <strong>từ năm 2020</strong>
-                </span>
             </div>
 
-            <div class="site-footer__col">
+            <nav class="site-footer__col" aria-label="Về chúng tôi">
                 <h3 class="site-footer__heading">Về chúng tôi</h3>
                 <ul>
                     <li><a href="#">Giới thiệu</a></li>
                     <li><a href="#">Đội ngũ bác sĩ</a></li>
                     <li><a th:href="@{/news}" href="#">Tin tức</a></li>
                     <li><a href="#">Hệ thống cơ sở</a></li>
-                    <li><a href="#">Liên hệ</a></li>
                 </ul>
-            </div>
+            </nav>
 
-            <div class="site-footer__col">
+            <nav class="site-footer__col" aria-label="Dịch vụ">
                 <h3 class="site-footer__heading">Dịch vụ</h3>
                 <ul>
                     <li><a href="#">Niềng răng</a></li>
                     <li><a href="#">Cấy ghép Implant</a></li>
                     <li><a href="#">Bọc răng sứ</a></li>
-                    <li><a href="#">Tẩy trắng răng</a></li>
-                    <li><a href="#">Bảng giá</a></li>
-                    <li><a href="#">Đặt lịch khám</a></li>
+                    <li><a th:href="@{/services}" href="#">Bảng giá</a></li>
                 </ul>
-            </div>
+            </nav>
 
-            <div class="site-footer__col">
+            <nav class="site-footer__col" aria-label="Trợ giúp">
                 <h3 class="site-footer__heading">Trợ giúp</h3>
                 <ul>
                     <li><a href="#">Câu hỏi thường gặp</a></li>
-                    <li><a href="tel:0900000000">Hotline 0900 000 000</a></li>
                     <li><a href="#">Chính sách quyền riêng tư</a></li>
-                    <li><a href="#">Bảo mật dữ liệu</a></li>
                     <li><a href="#">Điều khoản sử dụng</a></li>
                 </ul>
-            </div>
+            </nav>
         </div>
 
         <div class="site-footer__bottom">
             <p class="mb-0">
                 &copy; 2020–<span th:text="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy')}">2026</span>
-                <strong>Cường Việt Dental Clinic</strong>. All rights reserved.
+                Cường Việt Dental Clinic. GPKD số 0000000000.
             </p>
-            <div class="site-footer__legal">
-                <p class="mb-0">
-                    GPKD số: 0000000000 do Sở Kế hoạch &amp; Đầu tư cấp<br>
-                    Địa chỉ: 123 Đường ABC, Phường XYZ, TP. Hồ Chí Minh, Việt Nam
-                </p>
-                <button type="button" class="back-to-top" data-back-to-top aria-label="Lên đầu trang">
-                    <i class="bi bi-arrow-up" aria-hidden="true"></i>
-                </button>
+            <div class="site-footer__socials">
+                <a href="#" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>
+                <a href="#" aria-label="Zalo"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i></a>
+                <a href="#" aria-label="YouTube"><i class="bi bi-youtube" aria-hidden="true"></i></a>
+                <a href="#" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>
             </div>
         </div>
-
     </div>
+
+    <button type="button" class="back-to-top" data-back-to-top aria-label="Lên đầu trang">
+        <i class="bi bi-arrow-up" aria-hidden="true"></i>
+    </button>
+</footer>
+
+
+<!-- ===================================================================== -->
+<!-- 3. FOOTER TRONG HỆ THỐNG (1 dòng, gọn nhẹ - đặt cuối .app-main)          -->
+<!--    Cách dùng: <footer th:replace="~{fragments/footer :: appFooter}"></footer> -->
+<!-- ===================================================================== -->
+
+<footer th:fragment="appFooter" class="app-footer">
+    <p class="mb-0">
+        &copy; <span th:text="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy')}">2026</span>
+        <strong>CV-DCMS</strong> · Cường Việt Dental Clinic
+    </p>
+    <nav class="app-footer__links" aria-label="Liên kết chân trang">
+        <a href="#">Trợ giúp</a>
+        <a href="#">Điều khoản</a>
+        <a href="tel:0900000000">Hotline 0900 000 000</a>
+    </nav>
+    <button type="button" class="back-to-top" data-back-to-top aria-label="Lên đầu trang">
+        <i class="bi bi-arrow-up" aria-hidden="true"></i>
+    </button>
 </footer>
 
 </body>

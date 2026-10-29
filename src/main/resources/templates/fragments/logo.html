@@ -3,9 +3,13 @@
 <body>
 
 <!--
+    LOGO thương hiệu.
     Cách dùng:
-    <a th:replace="~{fragments/logo :: logo('dark')}"></a>   nền sáng (header, sidebar)
-    <a th:replace="~{fragments/logo :: logo('light')}"></a>  nền tối (footer)
+        <a th:replace="~{fragments/logo :: logo('dark')}"></a>    chữ xanh - dùng trên nền sáng (header công khai)
+        <a th:replace="~{fragments/logo :: logo('light')}"></a>   chữ trắng - dùng trên nền xanh (sidebar head, topbar mobile)
+
+    Chế độ thu gọn: khi sidebar ở dạng icon (desktop collapsed), CSS tự ẩn .brand__text
+    và chỉ giữ lại .brand__mark - không cần fragment riêng.
 -->
 <a th:fragment="logo(theme)"
    th:href="@{/home}"
@@ -23,7 +27,7 @@
 
     <span class="brand__text">
         <span class="brand__name">CV-DCMS</span>
-        <span class="brand__tagline">Cường Việt Dental Clinic</span>
+        <span class="brand__tagline">Cường Việt Dental</span>
     </span>
 </a>
 
