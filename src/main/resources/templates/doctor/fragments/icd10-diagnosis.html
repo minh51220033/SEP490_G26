@@ -427,17 +427,31 @@
             </div>
 
             <!-- BẢNG DANH SÁCH CHẨN ĐOÁN ĐÃ GHI NHẬN CỦA CA KHÁM -->
-            <div class="df-treatment-card">
-                <div class="df-treatment-header">
-                    <div class="df-treatment-title-box">
-                        <h3 class="df-treatment-title">
-                            <i class="bi bi-clipboard2-pulse text-primary"></i>
-                            <span>Danh sách chẩn đoán trong ca khám</span>
+            <div class="df-treatment-card shadow-sm" style="border-radius: 16px; border: 1.5px solid #cbd5e1; overflow: hidden;">
+                <div class="df-treatment-header d-flex flex-wrap align-items-center justify-content-between gap-3" style="padding: 18px 24px; background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%); border-bottom: 1.5px solid #e2e8f0;">
+                    <div class="df-treatment-title-box d-flex align-items-center gap-3">
+                        <h3 class="df-treatment-title mb-0" style="font-size: 16px; font-weight: 800; color: #0f172a;">
+                            <i class="bi bi-clipboard2-pulse-fill text-primary me-1"></i>
+                            <span>DANH SÁCH CHẨN ĐOÁN TRONG CA KHÁM</span>
                         </h3>
                         <span class="df-treatment-count-badge" id="tableCountBadge"
+                              style="font-size: 13px; padding: 5px 14px; background: #e0f2fe; color: #0369a1; font-weight: 800;"
                               th:text="${diagnoses != null ? #lists.size(diagnoses) : 0} + ' chẩn đoán'">
                             0 chẩn đoán
                         </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2" th:if="${!isClinicalLocked}">
+                        <span class="text-secondary d-none d-md-inline" style="font-size: 12.5px; font-weight: 600;">
+                            <i class="bi bi-link-45deg text-primary"></i> Liên kết trực tiếp sang Lập Kế hoạch điều trị:
+                        </span>
+                        <button type="button"
+                                class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm"
+                                style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 13.5px;"
+                                onclick="openPlanModalFromDiagnoses()"
+                                title="Chuyển toàn bộ chẩn đoán trong ca khám sang lập Kế hoạch &amp; Lộ trình điều trị (SCR-15.2)">
+                            <i class="bi bi-diagram-3-fill"></i>
+                            <span>+ Lập Kế hoạch điều trị từ tất cả Chẩn đoán</span>
+                        </button>
                     </div>
                 </div>
 
@@ -445,12 +459,12 @@
                     <table class="df-treatment-table">
                         <thead>
                         <tr>
-                            <th style="width: 140px;">Vị trí răng</th>
-                            <th style="width: 100px;">Mã ICD</th>
-                            <th>Chẩn đoán bệnh lý</th>
-                            <th style="width: 130px;">Phân loại</th>
-                            <th>Ghi chú / Hướng xử trí</th>
-                            <th style="width: 80px;" class="text-center">Thao tác</th>
+                            <th style="width: 150px; font-size: 12.5px; padding: 14px 20px;">VỊ TRÍ RĂNG</th>
+                            <th style="width: 110px; font-size: 12.5px; padding: 14px 16px;">MÃ ICD-10</th>
+                            <th style="font-size: 12.5px; padding: 14px 16px;">CHẨN ĐOÁN BỆNH LÝ</th>
+                            <th style="width: 145px; font-size: 12.5px; padding: 14px 16px;">PHÂN LOẠI</th>
+                            <th style="font-size: 12.5px; padding: 14px 16px;">GHI CHÚ / HƯỚNG XỬ TRÍ</th>
+                            <th style="width: 220px; font-size: 12.5px; padding: 14px 20px;" class="text-center">LIÊN KẾT PHÁC ĐỒ &amp; THAO TÁC</th>
                         </tr>
                         </thead>
                         <tbody id="diagnosisTableBody">
@@ -466,40 +480,56 @@
                         </tr>
 
                         <!-- DANH SÁCH HÀNG DỮ LIỆU ĐÃ CÓ TỪ DATABASE -->
-                        <tr th:each="d : ${diagnoses}" th:id="'diag-row-' + ${d.diagnosisId}" th:data-teeth="${d.toothNumbers}">
-                            <td>
-                                <strong class="text-dark" th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</strong>
+                        <tr th:each="d : ${diagnoses}"
+                            th:id="'diag-row-' + ${d.diagnosisId}"
+                            th:data-teeth="${d.toothNumbers}"
+                            th:data-icd="${d.icd10Code}"
+                            th:data-text="${d.diagnosisText}"
+                            th:data-type="${d.diagnosisType != null ? d.diagnosisType.name() : 'SECONDARY'}">
+                            <td style="padding: 16px 20px;">
+                                <span class="badge rounded-pill px-3 py-2" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 800;"
+                                      th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</span>
                             </td>
-                            <td>
-                                <span class="df-list-code" th:text="${d.icd10Code}">K02.1</span>
+                            <td style="padding: 16px;">
+                                <span class="df-list-code" style="font-size: 13.5px; padding: 5px 12px;" th:text="${d.icd10Code}">K02.1</span>
                             </td>
-                            <td>
-                                <div class="fw-bold text-dark" th:text="${d.diagnosisText}">Sâu ngà răng</div>
-                                <div class="small text-muted" th:if="${d.diseaseNameEn != null}" th:text="${d.diseaseNameEn}">Caries of dentine</div>
+                            <td style="padding: 16px;">
+                                <div class="fw-bold text-dark" style="font-size: 15px;" th:text="${d.diagnosisText}">Sâu ngà răng</div>
+                                <div class="text-muted mt-0.5" style="font-size: 12.5px;" th:if="${d.diseaseNameEn != null}" th:text="${d.diseaseNameEn}">Caries of dentine</div>
                             </td>
-                            <td>
-                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'MAIN'}" class="badge-main">
+                            <td style="padding: 16px;">
+                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'MAIN'}" class="badge-main" style="font-size: 12.5px; padding: 6px 12px;">
                                     <i class="bi bi-star-fill me-1"></i>Chính
                                 </span>
-                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'SECONDARY'}" class="badge-secondary">
+                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'SECONDARY'}" class="badge-secondary" style="font-size: 12.5px; padding: 6px 12px;">
                                     <i class="bi bi-plus-circle me-1"></i>Kèm theo
                                 </span>
-                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'DIFFERENTIAL'}" class="badge-diff">
+                                <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'DIFFERENTIAL'}" class="badge-diff" style="font-size: 12.5px; padding: 6px 12px;">
                                     <i class="bi bi-question-circle me-1"></i>Phân biệt
                                 </span>
                             </td>
-                            <td>
-                                <span class="text-secondary small" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
+                            <td style="padding: 16px;">
+                                <span class="text-secondary" style="font-size: 13.5px; font-weight: 500;" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
                             </td>
-                            <td class="text-center">
-                                <button th:if="${!isClinicalLocked}"
-                                        type="button"
-                                        class="btn btn-sm btn-link text-danger p-0"
-                                        title="Xóa chẩn đoán này"
-                                        th:data-id="${d.diagnosisId}"
-                                        onclick="deleteDiagnosis(this.getAttribute('data-id'))">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
+                            <td class="text-center" style="padding: 16px 20px;">
+                                <div class="d-inline-flex align-items-center justify-content-center gap-2" th:if="${!isClinicalLocked}">
+                                    <button type="button"
+                                            class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                            style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;"
+                                            title="Chuyển ngay chẩn đoán &amp; vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)"
+                                            onclick="openPlanModalForSingleDiagRow(this.closest('tr'))">
+                                        <i class="bi bi-diagram-3-fill"></i>
+                                        <span>Lập phác đồ</span>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-light text-danger rounded-circle d-inline-flex align-items-center justify-content-center"
+                                            style="width: 34px; height: 34px; border: 1px solid #fecdd3; background: #fff1f2;"
+                                            title="Xóa chẩn đoán này"
+                                            th:data-id="${d.diagnosisId}"
+                                            onclick="deleteDiagnosis(this.getAttribute('data-id'))">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
                                 <span th:if="${isClinicalLocked}" class="text-muted" title="Bệnh án đã khóa (BR-EMR-02)">
                                     <i class="bi bi-lock-fill text-secondary"></i>
                                 </span>

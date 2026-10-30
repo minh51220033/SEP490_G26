@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản Demo Mockup: Bảng dữ liệu Ca khám - Cột Nút Chọn Nhanh</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 30px 24px;
+        }
+
+        .demo-container {
+            max-width: 1680px;
+            margin: 0 auto;
+        }
+
+        /* BANNER HƯỚNG DẪN TEST */
+        .demo-guide-card {
+            background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+        }
+
+        .demo-guide-badge {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* KHUNG BẢNG CHÍNH */
+        .dv-grid-card {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dv-grid-topbar {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-bottom: 1.5px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* SCROLL CONTAINER CỦA BẢNG */
+        .dv-table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .dv-amis-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 1850px;
+        }
+
+        /* HEADER CHUẨN ĐỒNG BỘ CHO TẤT CẢ CÁC CỘT (KỂ CẢ CỘT NÚT CHỌN NHANH) */
+        .dv-amis-table thead th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 16px 20px;
+            border-bottom: 2px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        /* CỘT BỆNH NHÂN GHIM CỐ ĐỊNH BÊN TRÁI (STICKY LEFT) */
+        .dv-col-patient-pinned {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 15 !important;
+            background: #ffffff !important;
+            border-right: 2px solid #93c5fd !important;
+            box-shadow: 6px 0 16px -4px rgba(15, 23, 42, 0.12);
+        }
+
+        .dv-amis-table thead th.dv-col-patient-pinned {
+            z-index: 25 !important;
+            background: #e0f2fe !important;
+            color: #0369a1;
+        }
+
+        /* DÒNG DỮ LIỆU */
+        .dv-amis-table tbody tr.dv-data-row {
+            transition: background-color 0.12s ease;
+        }
+
+        .dv-amis-table tbody tr.dv-data-row td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 14.5px;
+            color: #1e293b;
+            background: #ffffff;
+            transition: background-color 0.12s ease;
+        }
+
+        .dv-amis-table tbody tr.dv-data-row:hover td {
+            background: #f0f9ff !important;
+        }
+
+        /* AVATAR & THÔNG TIN BỆNH NHÂN DÃN RỘNG (1 HÀNG NGANG) */
+        .dv-patient-avatar {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0284c7 0%, #3b82f6 100%);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22);
+        }
+
+        .dv-patient-name {
+            font-size: 15.5px;
+            font-weight: 800;
+            color: #0f172a;
+            text-decoration: none;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .dv-patient-name:hover {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        .dv-code-pill {
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 7px;
+            background: #f1f5f9;
+            color: #0369a1;
+            border: 1px solid #cbd5e1;
+            white-space: nowrap;
+        }
+
+        /* =========================================================================
+           CỘT VÀ Ô NÚT CHỌN NHANH (KHÔNG ĐÈ LÊN CỘT KHÁC, ĐỌC RÕ 100% THÔNG TIN)
+           ========================================================================= */
+        .dv-col-action-cell {
+            padding: 12px 18px !important;
+            border-right: none !important;
+            white-space: nowrap;
+        }
+
+        /* CONTAINER 3 NÚT NẰM TRONG Ô CỦA CỘT NÚT CHỌN NHANH */
+        .dv-action-btns-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(2px);
+            transition: opacity 0.16s ease, visibility 0.16s ease, transform 0.16s ease;
+        }
+
+        /* KHI HOVER VÀO DÒNG BẤT KỲ: 3 NÚT TẠI DÒNG ĐÓ HIỂN THỊ RÕ RÀNG */
+        .dv-amis-table tbody tr.dv-data-row:hover .dv-action-btns-wrap {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* 3 NÚT CÓ CHIỀU DÀI BẰNG NHAU TUYỆT ĐỐI (WIDTH: 124PX) */
+        .dv-equal-btn-primary {
+            width: 124px;
+            height: 38px;
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+            color: #ffffff !important;
+            border: none;
+            border-radius: 9px;
+            font-size: 13.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none !important;
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .dv-equal-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(2, 132, 199, 0.38);
+        }
+
+        .dv-equal-btn-secondary {
+            width: 124px;
+            height: 38px;
+            background: #ffffff;
+            color: #0f172a !important;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none !important;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .dv-equal-btn-secondary:hover {
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1 !important;
+            transform: translateY(-1px);
+        }
+
+        /* TÙY CHỌN: GHIM CỐ ĐỊNH CỘT NÚT CHỌN NHANH Ở MÉP PHẢI (STICKY RIGHT COLUMN) */
+        .is-sticky-action-col .dv-col-action-cell,
+        .is-sticky-action-col th.dv-col-action-header {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 15 !important;
+            border-left: 2px solid #cbd5e1 !important;
+            box-shadow: -6px 0 16px -4px rgba(15, 23, 42, 0.08);
+        }
+
+        .is-sticky-action-col th.dv-col-action-header {
+            z-index: 25 !important;
+            background: #f1f5f9 !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="demo-container">
+
+        <!-- BANNER HƯỚNG DẪN KIỂM TRA MOCKUP -->
+        <div class="demo-guide-card">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="demo-guide-badge">Front-end Mockup Demo</span>
+                    <h3 class="mb-0 fw-bold fs-5">Bảng Ca khám: Cột "Nút chọn nhanh" & Cơ chế Hover thông minh</h3>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="btnTogglePinAction" class="btn btn-sm btn-light fw-bold text-primary rounded-pill px-3 shadow-sm" onclick="togglePinActionCol()">
+                        <i class="bi bi-pin-angle-fill me-1"></i> Bật ghim cột Nút chọn nhanh (Sticky Right)
+                    </button>
+                    <span class="badge bg-white text-primary fw-bold px-3 py-2 rounded-pill">Đang kiểm thử</span>
+                </div>
+            </div>
+            <p class="mb-3 opacity-90" style="font-size: 14.5px; line-height: 1.55;">
+                Đã tối ưu hoàn toàn theo đúng yêu cầu của bạn:
+                <br>1. <strong>Thêm thanh "NÚT CHỌN NHANH" ở cuối bảng</strong>: Cột tiêu đề có thiết kế chuẩn đẹp đồng bộ 100% với các thanh khác (màu xám nhạt, border, font chữ in hoa đậm).
+                <br>2. <strong>Không bị trùng đè lên bất kỳ cột nào khác</strong>: Nút thao tác nằm gọn gàng bên trong ô riêng của cột "Nút chọn nhanh", chữ ở cột <em>Lý do khám / Triệu chứng</em>, <em>Ghế khám</em> và toàn bộ các hàng khác hiển thị trọn vẹn, đọc rõ 100%!
+                <br>3. <strong>3 nút có chiều dài bằng nhau tuyệt đối</strong>: Cả 3 nút <code>[🩺 Vào khám ngay]</code>, <code>[📋 Lập phác đồ]</code>, <code>[👤 Xem hồ sơ]</code> đều có độ rộng <strong>124px</strong> và chiều cao <strong>38px</strong> đều tăm tắp.
+                <br>4. <strong>Chỉ hiện nút khi hover vào dòng đó</strong>: Khi không hover thì ô trống thoáng đãng, khi di chuột qua dòng nào thì 3 nút của dòng đó xuất hiện mượt mà.
+            </p>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button type="button" class="btn btn-light fw-bold px-3 py-1.5 rounded-pill text-primary"
+                    onclick="scrollTableTo(0)">
+                    <i class="bi bi-arrow-left me-1"></i> Cuộn sang Trái (Đầu bảng)
+                </button>
+                <button type="button" class="btn btn-light fw-bold px-3 py-1.5 rounded-pill text-primary"
+                    onclick="scrollTableTo(500)">
+                    <i class="bi bi-arrows-expand me-1"></i> Cuộn vào Giữa bảng
+                </button>
+                <button type="button" class="btn btn-light fw-bold px-3 py-1.5 rounded-pill text-primary"
+                    onclick="scrollTableTo(1200)">
+                    <i class="bi bi-arrow-right me-1"></i> Cuộn sang Phải (Thấy cột Nút chọn nhanh)
+                </button>
+            </div>
+        </div>
+
+        <!-- KHUNG BẢNG CHÍNH -->
+        <div class="dv-grid-card">
+            <div class="dv-grid-topbar">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span class="fw-bold text-dark fs-6">
+                        Hiển thị <span class="text-primary fw-bolder">8</span> ca khám bệnh nhân
+                    </span>
+                    <span class="badge rounded-pill px-3 py-1.5"
+                        style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 13px; font-weight: 700;">
+                        <i class="bi bi-cursor-fill me-1"></i>Di chuột vào dòng bất kỳ để hiện 3 nút thao tác tại ô "Nút chọn nhanh"
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary small fw-bold">
+                        <i class="bi bi-check2-circle text-success me-1"></i>Đọc được 100% nội dung tất cả các hàng & cột
+                    </span>
+                </div>
+            </div>
+
+            <div class="dv-table-scroll-container" id="mockTableContainer">
+                <table class="dv-amis-table" id="mainAmisTable">
+                    <thead>
+                        <tr>
+                            <!-- 1. HỌ VÀ TÊN BỆNH NHÂN (GHIM TRÁI) -->
+                            <th class="dv-col-patient-pinned" style="min-width: 580px;">HỌ VÀ TÊN BỆNH NHÂN</th>
+                            <!-- 2. MÃ CA KHÁM -->
+                            <th style="min-width: 145px;">MÃ CA KHÁM</th>
+                            <!-- 3. GIỜ TIẾP ĐÓN -->
+                            <th style="min-width: 165px;">GIỜ TIẾP ĐÓN</th>
+                            <!-- 4. LÝ DO KHÁM / TRIỆU CHỨNG (HIỂN THỊ TRỌN VẸN 100% KHÔNG BỊ NÚT ĐÈ LÊN) -->
+                            <th style="min-width: 320px;">LÝ DO KHÁM / TRIỆU CHỨNG</th>
+                            <!-- 5. GHẾ KHÁM -->
+                            <th style="min-width: 155px;">GHẾ KHÁM</th>
+                            <!-- 6. BÁC SĨ PHỤ TRÁCH -->
+                            <th style="min-width: 210px;">BÁC SĨ PHỤ TRÁCH</th>
+                            <!-- 7. TRẠNG THÁI CA KHÁM -->
+                            <th style="min-width: 180px;">TRẠNG THÁI CA KHÁM</th>
+                            <!-- 8. NÚT CHỌN NHANH (THANH TIÊU ĐỀ ĐỒNG BỘ Y HỆT CÁC CỘT KHÁC) -->
+                            <th class="dv-col-action-header text-center" style="min-width: 420px;">NÚT CHỌN NHANH</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- DÒNG 1: Đặng Ngọc Mai -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar">Đ</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Đặng Ngọc Mai</a>
+                                    <span class="dv-code-pill">BN000109</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#ffe4e6;color:#e11d48;font-size:11.5px;"><i
+                                            class="bi bi-gender-female"></i> Nữ</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>32 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0945667788</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10008</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>16:19</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Khám và kiểm tra răng số 8
+                                    hàm dưới sưng đau, nuốt vướng</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế khám 01</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                     CK1 Lê Hoàng Nam</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;"><i
+                                        class="bi bi-heart-pulse-fill me-1"></i>Đang khám</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH (HIỂN THỊ KHI HOVER, 3 NÚT BẰNG NHAU) -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Đặng Ngọc Mai')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Đặng Ngọc Mai')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Đặng Ngọc Mai')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 2: Đỗ Quỳnh Anh -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar">Đ</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Đỗ Quỳnh Anh</a>
+                                    <span class="dv-code-pill">BN000107</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#ffe4e6;color:#e11d48;font-size:11.5px;"><i
+                                            class="bi bi-gender-female"></i> Nữ</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>26 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0982334455</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10007</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>15:55</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Khám định kỳ chỉnh nha,
+                                    thay thun siết răng hàm trên</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế chỉnh nha 02</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                    Trần Mai Anh</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;"><i
+                                        class="bi bi-heart-pulse-fill me-1"></i>Đang khám</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Đỗ Quỳnh Anh')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Đỗ Quỳnh Anh')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Đỗ Quỳnh Anh')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 3: Phạm Minh Đức -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar"
+                                        style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">P</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Phạm Minh Đức</a>
+                                    <span class="dv-code-pill">BN000104</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#e0f2fe;color:#0284c7;font-size:11.5px;"><i
+                                            class="bi bi-gender-male"></i> Nam</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>36 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0978112233</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10004</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>15:50</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Đau nhức ê buốt vùng răng
+                                    hàm dưới bên trái khi ăn nóng lạnh</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế điều trị 03</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                     CK1 Lê Hoàng Nam</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;"><i
+                                        class="bi bi-heart-pulse-fill me-1"></i>Đang khám</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Phạm Minh Đức')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Phạm Minh Đức')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Phạm Minh Đức')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 4: Hoàng Thu Thảo -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar">H</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Hoàng Thu Thảo</a>
+                                    <span class="dv-code-pill">BN000105</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#ffe4e6;color:#e11d48;font-size:11.5px;"><i
+                                            class="bi bi-gender-female"></i> Nữ</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>29 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0934556677</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10005</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>15:50</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Tái khám lấy dấu làm răng
+                                    sứ thẩm mỹ Cercon HT</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế phục hình 01</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                    Nguyễn Văn Hùng</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#fef3c7;color:#b45309;border:1.5px solid #fcd34d;font-size:13px;"><i
+                                        class="bi bi-hourglass-split me-1"></i>Đang chờ</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Hoàng Thu Thảo')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Hoàng Thu Thảo')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Hoàng Thu Thảo')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 5: Vũ Hải Đăng -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar"
+                                        style="background: linear-gradient(135deg, #0284c7, #0369a1);">V</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Vũ Hải Đăng</a>
+                                    <span class="dv-code-pill">BN000106</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#e0f2fe;color:#0284c7;font-size:11.5px;"><i
+                                            class="bi bi-gender-male"></i> Nam</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>41 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0918223344</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10006</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>15:50</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Thăm khám tư vấn cấy ghép
+                                    Implant đơn lẻ răng 36</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế phẫu thuật 01</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                     CK1 Lê Hoàng Nam</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#e0e7ff;color:#4338ca;border:1.5px solid #a5b4fc;font-size:13px;"><i
+                                        class="bi bi-tools me-1"></i>Đang điều trị</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Vũ Hải Đăng')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Vũ Hải Đăng')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Vũ Hải Đăng')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 6: Trần Thị Bình -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar">T</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Trần Thị Bình</a>
+                                    <span class="dv-code-pill">BN000102</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#ffe4e6;color:#e11d48;font-size:11.5px;"><i
+                                            class="bi bi-gender-female"></i> Nữ</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>28 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0912345678</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10002</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>09:18</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Răng khôn hàm dưới sưng
+                                    đau, tái khám sau 3 ngày dùng thuốc</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế khám 01</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                     CK1 Lê Hoàng Nam</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;"><i
+                                        class="bi bi-heart-pulse-fill me-1"></i>Đang khám</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Trần Thị Bình')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Trần Thị Bình')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Trần Thị Bình')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 7: Lê Quốc Cường -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar"
+                                        style="background: linear-gradient(135deg, #0284c7, #3b82f6);">L</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Lê Quốc Cường</a>
+                                    <span class="dv-code-pill">BN000103</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#e0f2fe;color:#0284c7;font-size:11.5px;"><i
+                                            class="bi bi-gender-male"></i> Nam</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>37 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0903998877</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS10003</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>09:18</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Khám tổng quát, cạo vôi
+                                    răng & đánh bóng 2 hàm</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế khám 03</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                    Phạm Văn Đạt</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#d1fae5;color:#047857;border:1.5px solid #6ee7b7;font-size:13px;"><i
+                                        class="bi bi-check-circle-fill me-1"></i>Hoàn thành</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Lê Quốc Cường')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Lê Quốc Cường')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Lê Quốc Cường')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- DÒNG 8: Nguyễn Văn An -->
+                        <tr class="dv-data-row">
+                            <td class="dv-col-patient-pinned">
+                                <div class="d-flex align-items-center gap-3" style="white-space: nowrap;">
+                                    <div class="dv-patient-avatar">N</div>
+                                    <a href="javascript:void(0)" class="dv-patient-name">Nguyễn Văn An</a>
+                                    <span class="dv-code-pill">BN-MAU-01</span>
+                                    <span class="badge rounded-pill"
+                                        style="background:#e0f2fe;color:#0284c7;font-size:11.5px;"><i
+                                            class="bi bi-gender-male"></i> Nam</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span>31 tuổi</span>
+                                    <span class="text-secondary fw-semibold" style="font-size: 13.5px;"><span
+                                            class="text-muted mx-1">•</span><i
+                                            class="bi bi-telephone text-primary me-1"></i>0987654321</span>
+                                </div>
+                            </td>
+                            <td><span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                                    style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">VIS-MAU-01</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 15px;"><i
+                                        class="bi bi-clock text-primary me-1"></i>08:38</div>
+                                <div class="text-muted fw-semibold" style="font-size: 12.5px;">21/10/2026</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark" style="line-height: 1.45;">Đau buốt răng số 16 khi
+                                    nhai, yêu cầu chụp X-quang & điều trị tủy</div>
+                            </td>
+                            <td><span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:13px;"><i
+                                        class="bi bi-geo-alt-fill text-primary me-1"></i>Ghế điều trị 01</span></td>
+                            <td><span class="fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>BS.
+                                     CK1 Lê Hoàng Nam</span></td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                    style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;"><i
+                                        class="bi bi-heart-pulse-fill me-1"></i>Đang khám</span>
+                            </td>
+                            <!-- Ô CỦA CỘT NÚT CHỌN NHANH -->
+                            <td class="dv-col-action-cell text-center">
+                                <div class="dv-action-btns-wrap">
+                                    <a href="javascript:void(0)" class="dv-equal-btn-primary" onclick="alert('Bắt đầu ca khám cho Nguyễn Văn An')"><i
+                                            class="bi bi-heart-pulse-fill"></i> Vào khám ngay</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Mở lập phác đồ cho Nguyễn Văn An')"><i
+                                            class="bi bi-diagram-3-fill text-primary"></i> Lập phác đồ</a>
+                                    <a href="javascript:void(0)" class="dv-equal-btn-secondary" onclick="alert('Xem hồ sơ của Nguyễn Văn An')"><i
+                                            class="bi bi-person-vcard text-secondary"></i> Xem hồ sơ</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function scrollTableTo(pos) {
+            const container = document.getElementById('mockTableContainer');
+            if (container) {
+                container.scrollTo({ left: pos, behavior: 'smooth' });
+            }
+        }
+
+        // Bật/tắt ghim cột Nút chọn nhanh bên phải
+        let isPinned = false;
+        function togglePinActionCol() {
+            isPinned = !isPinned;
+            const table = document.getElementById('mainAmisTable');
+            const btn = document.getElementById('btnTogglePinAction');
+            if (isPinned) {
+                table.classList.add('is-sticky-action-col');
+                btn.innerHTML = '<i class="bi bi-pin-angle me-1"></i> Bỏ ghim cột Nút chọn nhanh (Cuộn tự do)';
+                btn.classList.remove('btn-light', 'text-primary');
+                btn.classList.add('btn-warning', 'text-dark');
+            } else {
+                table.classList.remove('is-sticky-action-col');
+                btn.innerHTML = '<i class="bi bi-pin-angle-fill me-1"></i> Bật ghim cột Nút chọn nhanh (Sticky Right)';
+                btn.classList.remove('btn-warning', 'text-dark');
+                btn.classList.add('btn-light', 'text-primary');
+            }
+        }
+    </script>
+
+</body>
+
+</html>
