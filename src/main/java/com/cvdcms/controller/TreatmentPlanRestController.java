@@ -169,7 +169,11 @@ public class TreatmentPlanRestController {
                 }
             }
 
-            BigDecimal unitPrice = item.getEstimatedPrice() != null ? item.getEstimatedPrice() : BigDecimal.ZERO;
+            BigDecimal unitPrice = (item.getEstimatedPrice() != null && item.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                    ? item.getEstimatedPrice()
+                    : (item.getService() != null && item.getService().getBasePrice() != null
+                        ? item.getService().getBasePrice()
+                        : BigDecimal.ZERO);
             BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
             BigDecimal finalPrice = unitPrice.multiply(qty);
 

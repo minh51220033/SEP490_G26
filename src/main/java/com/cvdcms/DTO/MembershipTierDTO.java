@@ -38,7 +38,7 @@ public class MembershipTierDTO {
 
     @NotNull(message = "Giá trị quy đổi 1 điểm không được để trống")
     @DecimalMin(value = "0.00", message = "Giá trị quy đổi của 1 điểm phải >= 0 đ")
-    private BigDecimal pointValue = new BigDecimal("1000.00");
+    private BigDecimal pointValue = new BigDecimal("10.00");
 
     @NotNull(message = "Thứ tự hiển thị không được để trống")
     @Min(value = 1, message = "Thứ tự hiển thị phải lớn hơn 0")

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Hàng chờ khám')}"></head>
+<body class="app-body"><div class="app-shell">
+<aside th:replace="~{fragments/sidebar :: sidebar('queue')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+<div class="app-main">
+<header th:replace="~{fragments/header :: appTopbar('Hàng chờ khám')}"></header>
+<main class="app-content">
+<h1>FT10 · Hàng chờ khám</h1>
+<p>Gọi số, tạm dừng, tiếp tục và bắt đầu khám. Số cấp cứu được xếp trước; số đã cấp không đổi khi kích hoạt cấp cứu.</p>
+<nav class="mb-3"><a th:href="@{/reception/check-in}">Check-in</a> · <a th:href="@{/reception/dispatch}">Phân công &amp; cấp số</a> · <a th:href="@{/reception/queue/tv/{id}(id=${board.branchId})}" target="_blank">Màn hình Tivi</a></nav>
+<div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+<div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+<form method="get" th:action="@{/reception/queue}" class="d-flex gap-2 align-items-end mb-3">
+<div><label for="branchId">Chi nhánh</label><select id="branchId" name="branchId" class="form-select">
+<option th:each="b : ${board.branches}" th:value="${b.branchId}" th:selected="${b.branchId == board.branchId}" th:text="${b.branchName}"></option>
+</select></div><button class="btn btn-primary">Xem</button></form>
+<div id="queueRows" th:replace="~{reception/queue-rows :: rows}"></div>
+<p class="text-muted">Bảng tự cập nhật mỗi 10 giây khi không nhập lý do. Các thao tác luôn kiểm tra lại trạng thái trên máy chủ.</p>
+</main></div></div>
+<script th:inline="javascript">
+const queueBranch = /*[[${board.branchId}]]*/ 0;
+setInterval(async () => {
+  if (document.activeElement?.matches('input,select,textarea')) return;
+  try {
+    const response = await fetch('/reception/queue/rows?branchId=' + encodeURIComponent(queueBranch), {cache: 'no-store'});
+    if (response.ok) document.getElementById('queueRows').outerHTML = await response.text();
+  } catch (_) { /* keep the last board during a network interruption */ }
+}, 10000);
+</script>
+</body></html>

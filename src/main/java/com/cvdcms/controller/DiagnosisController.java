@@ -5,6 +5,7 @@ import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.DTO.Icd10DiseaseDTO;
 import com.cvdcms.DTO.MedicationDTO;
 import com.cvdcms.DTO.PerformedServiceResponseDTO;
+import com.cvdcms.DTO.PrescriptionItemResponseDTO;
 import com.cvdcms.DTO.PrescriptionResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
@@ -186,6 +187,27 @@ public class DiagnosisController {
         model.addAttribute("prescriptions", prescriptions);
         model.addAttribute("activeMedications", activeMedications);
 
+        // Tính tổng tiền đơn thuốc & tổng hợp thanh toán (Dịch vụ khám + Đơn thuốc)
+        BigDecimal totalPrescriptionAmount = BigDecimal.ZERO;
+        if (prescriptions != null) {
+            for (PrescriptionResponseDTO pr : prescriptions) {
+                if (pr.getTotalAmount() != null) {
+                    totalPrescriptionAmount = totalPrescriptionAmount.add(pr.getTotalAmount());
+                } else if (pr.getItems() != null) {
+                    for (PrescriptionItemResponseDTO it : pr.getItems()) {
+                        if (it.getFinalPrice() != null) {
+                            totalPrescriptionAmount = totalPrescriptionAmount.add(it.getFinalPrice());
+                        }
+                    }
+                }
+            }
+        }
+        model.addAttribute("totalPrescriptionAmount", totalPrescriptionAmount);
+
+        BigDecimal grandTotalAmount = (totalPerformedAmount != null ? totalPerformedAmount : BigDecimal.ZERO)
+                .add(totalPrescriptionAmount);
+        model.addAttribute("grandTotalAmount", grandTotalAmount);
+
         // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
                 ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())
@@ -225,6 +247,14 @@ public class DiagnosisController {
         boolean isClinicalLocked = visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
         model.addAttribute("isClinicalLocked", isClinicalLocked);
+
+        com.cvdcms.DTO.ClinicalCompletionCheckDTO clinicalCheck = null;
+        try {
+            clinicalCheck = diagnosisService.checkClinicalCompletionReadiness(visitId);
+        } catch (Exception ex) {
+            log.warn("Không thể kiểm tra điều kiện lâm sàng cho visitId={}: {}", visitId, ex.getMessage());
+        }
+        model.addAttribute("clinicalCheck", clinicalCheck);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");

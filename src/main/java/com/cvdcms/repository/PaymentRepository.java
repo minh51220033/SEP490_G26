@@ -122,4 +122,55 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+    Page<Payment> findByPatientProfile_ProfileId(
+            Long profileId,
+            Pageable pageable
+    );
+
+    Page<Payment> findByPatientProfile_ProfileIdAndBranch_BranchIdIn(
+            Long profileId,
+            List<Long> branchIds,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT p FROM Payment p
+        LEFT JOIN FETCH p.invoice
+        WHERE p.patientProfile.profileId = :profileId
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(p) FROM Payment p
+        WHERE p.patientProfile.profileId = :profileId
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt < :endDate)
+    """)
+    Page<Payment> findPaymentsByPatientAndDates(
+            @Param("profileId") Long profileId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT p FROM Payment p
+        LEFT JOIN FETCH p.invoice
+        WHERE p.patientProfile.profileId = :profileId
+          AND p.branch.branchId IN :branchIds
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(p) FROM Payment p
+        WHERE p.patientProfile.profileId = :profileId
+          AND p.branch.branchId IN :branchIds
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt < :endDate)
+    """)
+    Page<Payment> findPaymentsByPatientAndBranchesAndDates(
+            @Param("profileId") Long profileId,
+            @Param("branchIds") List<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
 }

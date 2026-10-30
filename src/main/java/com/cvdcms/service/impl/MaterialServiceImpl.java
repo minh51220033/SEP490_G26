@@ -147,6 +147,18 @@ public class MaterialServiceImpl implements MaterialService {
         Material material = getById(id);
         String code = normalizeCode(dto.getMaterialCode());
 
+        // Mặt hàng đồng bộ từ danh mục thuốc: mã, tên, đơn vị do Admin quản lý tại /admin/medications.
+        if (material.getMedication() != null) {
+            String newName = normalizeRequired(dto.getMaterialName(), "Tên vật tư");
+            String newUnit = normalizeRequired(dto.getUnit(), "Đơn vị tính");
+            if (!code.equalsIgnoreCase(material.getMaterialCode())
+                    || !newName.equals(material.getMaterialName())
+                    || !newUnit.equals(material.getUnit())) {
+                throw new IllegalArgumentException(
+                        "Mặt hàng này được đồng bộ từ danh mục thuốc. Mã, tên và đơn vị chỉ được sửa tại trang Quản lý danh mục thuốc.");
+            }
+        }
+
         if (materialRepository.existsByMaterialCodeIgnoreCaseAndMaterialIdNot(code, id)) {
             throw new IllegalArgumentException("Mã vật tư đã được sử dụng bởi vật tư khác.");
         }
@@ -175,6 +187,11 @@ public class MaterialServiceImpl implements MaterialService {
     @Transactional
     public Material activate(Long id) {
         Material material = getById(id);
+        // Không kích hoạt lại mặt hàng kho khi thuốc gốc đang ngừng sử dụng (giữ trạng thái nhất quán).
+        if (material.getMedication() != null && !Boolean.TRUE.equals(material.getMedication().getIsActive())) {
+            throw new IllegalArgumentException(
+                    "Thuốc gốc đang ngừng sử dụng. Hãy kích hoạt lại thuốc tại trang Quản lý danh mục thuốc.");
+        }
         if (Boolean.TRUE.equals(material.getIsActive())) {
             throw new IllegalArgumentException("Vật tư đang hoạt động.");
         }

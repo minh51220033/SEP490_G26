@@ -26,11 +26,11 @@
             <!-- Page Header -->
             <div class="fin-header mb-4">
                 <div>
-                    <h1><i class="bi bi-award text-warning"></i> Quản lý Hạng thành viên &amp; Quy tắc tích điểm (SCR-19.1)</h1>
+                    <h1>Quản lý Hạng thành viên &amp; Quy tắc tích điểm (SCR-19.1)</h1>
                     <p class="text-muted">Cấu hình các hạng thành viên, quyền lợi chiết khấu, quy tắc quy đổi điểm chi tiêu và điều kiện thăng hạng.</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#tierModal" onclick="openCreateModal()">
+                    <button type="button" class="fin-btn fin-btn-primary" onclick="openCreateModal()">
                         <i class="bi bi-plus-lg"></i> Thêm hạng thành viên mới
                     </button>
                     <a th:href="@{/reception/memberships}" class="fin-btn fin-btn-outline">
@@ -197,33 +197,34 @@
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label for="modalMinSpent" class="form-label fw-bold small text-muted">CHI TIÊU TỐI THIỂU (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="modalMinSpent" name="minTotalSpent" required min="0" step="100000" placeholder="0">
+                            <input type="number" class="form-control" id="modalMinSpent" name="minTotalSpent" required min="0" step="any" placeholder="0">
                         </div>
                         <div class="col-6">
                             <label for="modalDiscount" class="form-label fw-bold small text-muted">CHIẾT KHẤU (%) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="modalDiscount" name="discountPercent" required min="0" max="100" step="0.5" placeholder="0">
+                            <input type="number" class="form-control" id="modalDiscount" name="discountPercent" required min="0" max="100" step="any" placeholder="0">
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label for="modalSpendPerPoint" class="form-label fw-bold small text-muted">CHI TIÊU / 1 ĐIỂM (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="modalSpendPerPoint" name="spendPerPoint" required min="1000" step="1000" value="10000">
+                            <input type="number" class="form-control" id="modalSpendPerPoint" name="spendPerPoint" required min="1000" step="any" value="10000">
                         </div>
                         <div class="col-6">
                             <label for="modalPointVal" class="form-label fw-bold small text-muted">GIÁ TRỊ 1 ĐIỂM (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="modalPointVal" name="pointValue" required min="0" step="100" value="1000">
+                            <input type="number" class="form-control" id="modalPointVal" name="pointValue" required min="1" step="1" value="10">
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label for="modalOrder" class="form-label fw-bold small text-muted">THỨ TỰ HIỂN THỊ <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="modalOrder" name="displayOrder" required min="1" value="1">
+                            <input type="number" class="form-control" id="modalOrder" name="displayOrder" required min="1" step="1" value="1">
                         </div>
                         <div class="col-6 d-flex align-items-center mt-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="modalIsActive" name="isActive" value="true" checked>
+                                <input type="hidden" name="_isActive" value="on">
                                 <label class="form-check-label fw-bold" for="modalIsActive">Kích hoạt áp dụng</label>
                             </div>
                         </div>
@@ -241,8 +242,10 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openCreateModal() {
+        document.getElementById('tierForm').reset();
         document.getElementById('tierModalLabel').innerHTML = '<i class="bi bi-award text-warning me-2"></i>Thêm hạng thành viên mới';
         document.getElementById('modalTierId').value = '';
         document.getElementById('modalTierCode').value = '';
@@ -251,26 +254,60 @@
         document.getElementById('modalMinSpent').value = '0';
         document.getElementById('modalDiscount').value = '0';
         document.getElementById('modalSpendPerPoint').value = '10000';
-        document.getElementById('modalPointVal').value = '1000';
+        document.getElementById('modalPointVal').value = '10';
         document.getElementById('modalOrder').value = '1';
         document.getElementById('modalIsActive').checked = true;
+
+        const modalEl = document.getElementById('tierModal');
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
     }
 
     function openEditModal(btn) {
         document.getElementById('tierModalLabel').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa hạng thành viên';
-        document.getElementById('modalTierId').value = btn.getAttribute('data-id');
-        document.getElementById('modalTierCode').value = btn.getAttribute('data-code');
-        document.getElementById('modalTierName').value = btn.getAttribute('data-name');
-        document.getElementById('modalMinSpent').value = btn.getAttribute('data-minspent');
-        document.getElementById('modalDiscount').value = btn.getAttribute('data-discount');
-        document.getElementById('modalSpendPerPoint').value = btn.getAttribute('data-spendperpoint');
-        document.getElementById('modalPointVal').value = btn.getAttribute('data-pointval');
-        document.getElementById('modalOrder').value = btn.getAttribute('data-order');
+        document.getElementById('modalTierId').value = btn.getAttribute('data-id') || '';
+        document.getElementById('modalTierCode').value = btn.getAttribute('data-code') || '';
+        document.getElementById('modalTierCode').readOnly = false;
+        document.getElementById('modalTierName').value = btn.getAttribute('data-name') || '';
+        document.getElementById('modalMinSpent').value = btn.getAttribute('data-minspent') || '0';
+        document.getElementById('modalDiscount').value = btn.getAttribute('data-discount') || '0';
+        document.getElementById('modalSpendPerPoint').value = btn.getAttribute('data-spendperpoint') || '10000';
+        document.getElementById('modalPointVal').value = btn.getAttribute('data-pointval') || '10';
+        document.getElementById('modalOrder').value = btn.getAttribute('data-order') || '1';
         document.getElementById('modalIsActive').checked = btn.getAttribute('data-active') === 'true';
 
-        var myModal = new bootstrap.Modal(document.getElementById('tierModal'));
-        myModal.show();
+        const modalEl = document.getElementById('tierModal');
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
     }
+</script>
+
+<script th:if="${formTier != null}" th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEl = document.getElementById('tierModal');
+        if (modalEl && window.bootstrap && bootstrap.Modal) {
+            document.getElementById('modalTierId').value = /*[[${formTier.tierId}]]*/ '';
+            document.getElementById('modalTierCode').value = /*[[${formTier.tierCode}]]*/ '';
+            document.getElementById('modalTierName').value = /*[[${formTier.tierName}]]*/ '';
+            document.getElementById('modalMinSpent').value = /*[[${formTier.minTotalSpent}]]*/ '0';
+            document.getElementById('modalDiscount').value = /*[[${formTier.discountPercent}]]*/ '0';
+            document.getElementById('modalSpendPerPoint').value = /*[[${formTier.spendPerPoint}]]*/ '10000';
+            document.getElementById('modalPointVal').value = /*[[${formTier.pointValue}]]*/ '10';
+            document.getElementById('modalOrder').value = /*[[${formTier.displayOrder}]]*/ '1';
+            document.getElementById('modalIsActive').checked = /*[[${formTier.isActive != null ? formTier.isActive : true}]]*/ true;
+
+            const isEdit = document.getElementById('modalTierId').value !== '';
+            document.getElementById('tierModalLabel').innerHTML = isEdit
+                ? '<i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa hạng thành viên'
+                : '<i class="bi bi-award text-warning me-2"></i>Thêm hạng thành viên mới';
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    });
+    /*]]>*/
 </script>
 </body>
 </html>

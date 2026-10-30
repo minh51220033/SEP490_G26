@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -70,6 +71,18 @@ public class FinanceWorkflowUnitTest {
     private MembershipTierRepository membershipTierRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private PrescriptionRepository prescriptionRepository;
+    @Mock
+    private PrescriptionItemRepository prescriptionItemRepository;
+    @Mock
+    private MaterialBatchRepository materialBatchRepository;
+    @Mock
+    private BranchInventoryRepository branchInventoryRepository;
+    @Mock
+    private MedicationRepository medicationRepository;
+    @Mock
+    private StockIssueRepository stockIssueRepository;
 
     private InvoiceServiceImpl invoiceService;
     private PaymentServiceImpl paymentService;
@@ -95,7 +108,9 @@ public class FinanceWorkflowUnitTest {
                 staffProfileRepository, staffBranchAssignmentRepository,
                 serviceRepository, performedServiceRepository, promotionRepository,
                 patientVoucherRepository, patientLoyaltyWalletRepository,
-                pointTransactionRepository, userRepository, paymentRepository, refundRepository
+                pointTransactionRepository, userRepository, paymentRepository, refundRepository,
+                prescriptionRepository, prescriptionItemRepository, materialBatchRepository,
+                branchInventoryRepository, medicationRepository, stockIssueRepository
         );
 
         paymentService = new PaymentServiceImpl(
@@ -123,7 +138,7 @@ public class FinanceWorkflowUnitTest {
         mockTier.setTierId(2L);
         mockTier.setTierName("Thành viên Bạc");
         mockTier.setDiscountPercent(new BigDecimal("5.00"));
-        mockTier.setPointValue(new BigDecimal("1000.00"));
+        mockTier.setPointValue(new BigDecimal("10.00"));
         mockTier.setSpendPerPoint(new BigDecimal("10000.00"));
         mockTier.setMinTotalSpent(new BigDecimal("5000000.00"));
 
@@ -712,15 +727,15 @@ public class FinanceWorkflowUnitTest {
         item.setPerformedId(206L);
         req.setItems(List.of(item));
 
-        // Preview chỉ được đổi 50 điểm (50 * 1000 = 50.000đ)
+        // Preview chỉ được đổi 50 điểm (50 * 10 = 500đ)
         InvoiceCalculationPreviewDTO preview = invoiceService.calculatePreview(req);
-        assertEquals(new BigDecimal("50000.00"), preview.getPointDiscountAmount());
-        assertEquals(new BigDecimal("450000.00"), preview.getTotalAmount());
+        assertEquals(new BigDecimal("500.00"), preview.getPointDiscountAmount());
+        assertEquals(new BigDecimal("499500.00"), preview.getTotalAmount());
 
         // Lưu: điểm chưa bị trừ tại thời điểm tạo hóa đơn (CONFIRMED) theo Requirement 1
         Invoice saved = invoiceService.createInvoice(req, 1L);
-        assertEquals(new BigDecimal("50000.00"), saved.getPointDiscount());
-        assertEquals(new BigDecimal("450000.00"), saved.getTotalAmount());
+        assertEquals(new BigDecimal("500.00"), saved.getPointDiscount());
+        assertEquals(new BigDecimal("499500.00"), saved.getTotalAmount());
         assertEquals(50, wallet.getCurrentPoints()); // Vẫn còn 50 điểm trong ví
 
         // Điểm chỉ được trừ khi chốt thanh toán (finalizeInvoiceBenefits)
@@ -894,4 +909,1231 @@ public class FinanceWorkflowUnitTest {
         assertTrue(sql.contains("PAYMENTS"));
         assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS INVOICE_AUDIT_LOGS") || sql.contains("CREATE TABLE IF NOT EXISTS `INVOICE_AUDIT_LOGS`"));
     }
+
+    // =========================================================================
+    // 15. Bệnh nhân tự mua ngoài: Không tạo hóa đơn thuốc, không trừ kho
+    // =========================================================================
+    @Test
+    @DisplayName("Test 15: Bệnh nhân tự mua ngoài: Cập nhật trạng thái EXTERNAL_PURCHASE, không sinh hóa đơn hay trừ kho")
+    void test15_externalPurchaseChoiceDoesNotCreateInvoiceOrDeductStock() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(10L);
+        presc.setPrescriptionCode("TOA10001");
+        presc.setBranch(mockBranch);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        when(prescriptionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(presc));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        invoiceService.recordPrescriptionChoice(10L, "EXTERNAL", "Mua tại nhà thuốc tư nhân", 1L);
+
+        assertEquals(PrescriptionStatus.EXTERNAL_PURCHASE, presc.getStatus());
+        assertEquals(PrescriptionPurchaseChoice.EXTERNAL, presc.getPurchaseChoice());
+        verify(prescriptionRepository).save(presc);
+        verifyNoInteractions(invoiceRepository);
+        verifyNoInteractions(branchInventoryRepository);
+    }
+
+   
+    // =========================================================================
+    // 16. Mua thuốc tại phòng khám tạo hóa đơn thuốc riêng độc lập
+    // =========================================================================
+    @Test
+    @DisplayName("Test 16: [Unit] Mua thuốc tại phòng khám tạo hóa đơn thuốc riêng với mã riêng, loại MEDICINE và tính bằng BigDecimal")
+    void test16_clinicMedicinePurchaseCreatesSeparateMedicineInvoice() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(20L);
+        presc.setPrescriptionCode("TOA20001");
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(50L);
+        mat.setMaterialName("Paracetamol 500mg");
+        mat.setUnit("Viên");
+
+        Medication med = new Medication();
+        med.setMedicationId(55L);
+        med.setDrugCode("TH001");
+        med.setDrugName("Paracetamol 500mg");
+        med.setMaterial(mat);
+        med.setUnit("Viên");
+        med.setSalePrice(new BigDecimal("5000.00"));
+
+        PrescriptionItem item1 = new PrescriptionItem();
+        item1.setItemId(101L);
+        item1.setPrescription(presc);
+        item1.setMedication(med);
+        item1.setDrugName("Paracetamol 500mg");
+        item1.setUnit("Viên");
+        item1.setQuantity(new BigDecimal("10.00"));
+        item1.setBoughtQuantity(BigDecimal.ZERO);
+        item1.setUnitPrice(new BigDecimal("5000.00"));
+
+        presc.setItems(new java.util.ArrayList<>(List.of(item1)));
+
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("100.00"));
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setBatchId(60L);
+        batch.setBatchNumber("LO202610A");
+        batch.setMaterial(mat);
+        batch.setBranch(mockBranch);
+        batch.setQuantityRemaining(new BigDecimal("50.00"));
+        batch.setExpiryDate(LocalDate.now().plusMonths(6));
+
+        when(prescriptionRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(item1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(50L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(50L), any(LocalDate.class)))
+                .thenReturn(List.of(batch));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
+            Invoice invObj = invocation.getArgument(0);
+            invObj.setInvoiceId(88L);
+            return invObj;
+        });
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(20L);
+        req.setNotes("Mua đợt 1");
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(101L, new BigDecimal("10.00"))));
+
+        Invoice result = invoiceService.createMedicineInvoice(req, 1L);
+
+        assertNotNull(result);
+        assertEquals(InvoiceType.MEDICINE, result.getInvoiceType());
+        assertTrue(result.getInvoiceCode().startsWith("HDT"));
+        assertEquals(new BigDecimal("50000.00"), result.getTotalAmount());
+        assertEquals(new BigDecimal("50000.00"), result.getRemainingDebt());
+        assertEquals(new BigDecimal("10.00"), item1.getBoughtQuantity());
+        assertEquals(PrescriptionStatus.CLINIC_PURCHASE_COMPLETED, presc.getStatus());
+        verify(stockIssueRepository, times(1)).save(any(StockIssue.class));
+    }
+
+    // =========================================================================
+    // 17. Chặn mua vượt quá số lượng còn lại của đơn thuốc
+    // =========================================================================
+    @Test
+    @DisplayName("Test 17: [Unit] Mua thuốc vượt quá số lượng còn lại của đơn bác sĩ kê bị ném ngoại lệ IllegalStateException")
+    void test17_buyingMoreThanRemainingQuantityThrowsException() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(30L);
+        presc.setPrescriptionCode("TOA30001");
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        PrescriptionItem item1 = new PrescriptionItem();
+        item1.setItemId(102L);
+        item1.setPrescription(presc);
+        item1.setDrugName("Augmentin 1g");
+        item1.setUnit("Viên");
+        item1.setQuantity(new BigDecimal("14.00"));
+        item1.setBoughtQuantity(new BigDecimal("10.00")); // Đã mua 10, chỉ còn 4
+        item1.setUnitPrice(new BigDecimal("22000.00"));
+
+        presc.setItems(new java.util.ArrayList<>(List.of(item1)));
+
+        when(prescriptionRepository.findByIdForUpdate(30L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(102L)).thenReturn(Optional.of(item1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(30L);
+        // Cố tình mua 5 (trong khi chỉ còn 4)
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(102L, new BigDecimal("5.00"))));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                invoiceService.createMedicineInvoice(req, 1L));
+
+        assertTrue(ex.getMessage().contains("vượt quá số lượng còn lại"));
+    }
+
+    // =========================================================================
+    // 18. Thiếu liên kết nguồn tồn kho: chặn bán và thông báo lỗi cấu hình
+    // =========================================================================
+    @Test
+    @DisplayName("Test 18: [Unit] Thuốc bán tại phòng khám thiếu liên kết danh mục dược hoặc vật tư kho bị chặn bán và thông báo cấu hình thiếu")
+    void test18_missingWarehouseLink_blocksSaleWithConfigurationError() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(40L);
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        // Trường hợp A: PrescriptionItem không có Medication
+        PrescriptionItem itemNoMed = new PrescriptionItem();
+        itemNoMed.setItemId(201L);
+        itemNoMed.setPrescription(presc);
+        itemNoMed.setDrugName("Thuốc chưa gán danh mục");
+        itemNoMed.setUnit("Viên");
+        itemNoMed.setQuantity(new BigDecimal("5.00"));
+        itemNoMed.setBoughtQuantity(BigDecimal.ZERO);
+        itemNoMed.setUnitPrice(new BigDecimal("10000.00"));
+        itemNoMed.setMedication(null);
+
+        presc.setItems(new java.util.ArrayList<>(List.of(itemNoMed)));
+
+        when(prescriptionRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(201L)).thenReturn(Optional.of(itemNoMed));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        MedicineInvoiceCreateRequestDTO reqA = new MedicineInvoiceCreateRequestDTO();
+        reqA.setPrescriptionId(40L);
+        reqA.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(201L, new BigDecimal("5.00"))));
+
+        IllegalStateException exA = assertThrows(IllegalStateException.class, () ->
+                invoiceService.createMedicineInvoice(reqA, 1L));
+        assertTrue(exA.getMessage().contains("chưa được liên kết với danh mục dược phẩm"));
+
+        // Trường hợp B: Medication không liên kết với Material kho
+        Medication medNoMat = new Medication();
+        medNoMat.setMedicationId(99L);
+        medNoMat.setDrugCode("DUOC_NO_KHO");
+        medNoMat.setDrugName("Thuốc không có kho");
+        medNoMat.setMaterial(null);
+        itemNoMed.setMedication(medNoMat);
+
+        IllegalStateException exB = assertThrows(IllegalStateException.class, () ->
+                invoiceService.createMedicineInvoice(reqA, 1L));
+        assertTrue(exB.getMessage().contains("chưa được liên kết với vật tư/kho (Material)"));
+    }
+
+    // =========================================================================
+    // 19. Đơn thuốc chưa bàn giao (ca khám đang trong tiến trình lâm sàng)
+    // =========================================================================
+    @Test
+    @DisplayName("Test 19: [Unit] Đơn thuốc thuộc ca khám chưa bàn giao (đang khám IN_EXAM hoặc WAITING) bị chặn tạo hóa đơn thuốc")
+    void test19_unhandedOverPrescription_inExamVisit_blocksSale() {
+        Visit inExamVisit = new Visit();
+        inExamVisit.setVisitId(500L);
+        inExamVisit.setStatus(VisitStatus.IN_EXAM); // Bác sĩ đang khám dở
+        inExamVisit.setBranch(mockBranch);
+        inExamVisit.setPatientProfile(mockPatient);
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(50L);
+        presc.setVisit(inExamVisit);
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        when(prescriptionRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(presc));
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(50L);
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(101L, BigDecimal.ONE)));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                invoiceService.createMedicineInvoice(req, 1L));
+        assertTrue(ex.getMessage().contains("chưa được bác sĩ xác nhận bàn giao"));
+    }
+
+    // =========================================================================
+    // 20. Backend kiểm tra dòng thuốc thuộc đúng đơn thuốc, bệnh nhân, chi nhánh
+    // =========================================================================
+    @Test
+    @DisplayName("Test 20: [Unit] Backend kiểm tra dòng thuốc không thuộc đơn thuốc hoặc sai chi nhánh bị từ chối")
+    void test20_wrongOwnershipAndBranch_blocksSale() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(60L);
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Prescription otherPresc = new Prescription();
+        otherPresc.setPrescriptionId(999L); // Đơn thuốc khác
+
+        PrescriptionItem alienItem = new PrescriptionItem();
+        alienItem.setItemId(301L);
+        alienItem.setPrescription(otherPresc);
+        alienItem.setDrugName("Thuốc lạ");
+        alienItem.setQuantity(BigDecimal.TEN);
+        alienItem.setBoughtQuantity(BigDecimal.ZERO);
+
+        when(prescriptionRepository.findByIdForUpdate(60L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(301L)).thenReturn(Optional.of(alienItem));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(60L);
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(301L, BigDecimal.ONE)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                invoiceService.createMedicineInvoice(req, 1L));
+        assertTrue(ex.getMessage().contains("không thuộc đơn thuốc này"));
+    }
+
+    // =========================================================================
+    // 21. Gửi lặp dòng thuốc trong yêu cầu bị ném ngoại lệ
+    // =========================================================================
+    @Test
+    @DisplayName("Test 21: [Unit] Gửi trùng lặp cùng một ID dòng thuốc trong yêu cầu bị chặn ngay từ backend")
+    void test21_duplicateItemInRequest_throwsIllegalArgumentException() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(70L);
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        when(prescriptionRepository.findByIdForUpdate(70L)).thenReturn(Optional.of(presc));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(70L);
+        // Gửi trùng lặp dòng ID 101L hai lần
+        req.setItems(List.of(
+                new MedicineInvoiceCreateRequestDTO.Item(101L, BigDecimal.ONE),
+                new MedicineInvoiceCreateRequestDTO.Item(101L, new BigDecimal("2.00"))
+        ));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                invoiceService.createMedicineInvoice(req, 1L));
+        assertTrue(ex.getMessage().contains("bị gửi trùng lặp trong yêu cầu"));
+    }
+
+    // =========================================================================
+    // 22. Lấy thuốc từ nhiều lô (Multi-batch FEFO): lưu đầy đủ từng lô và tạo StockIssue
+    // =========================================================================
+    @Test
+    @DisplayName("Test 22: [Unit] Một dòng thuốc lấy từ nhiều lô: lưu đầy đủ từng lô và số lượng xuất trên hóa đơn và chứng từ xuất kho StockIssue")
+    void test22_multiBatchFefoDraw_savesSeparateLinesForEachBatchAndCreatesStockIssue() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(80L);
+        presc.setPrescriptionCode("TOA80001");
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(88L);
+        mat.setMaterialName("Amoxicillin 500mg");
+        mat.setUnit("Viên");
+
+        Medication med = new Medication();
+        med.setMedicationId(89L);
+        med.setDrugCode("AMOX500");
+        med.setDrugName("Amoxicillin 500mg");
+        med.setMaterial(mat);
+        med.setUnit("Viên");
+        med.setSalePrice(new BigDecimal("3000.00"));
+
+        PrescriptionItem item1 = new PrescriptionItem();
+        item1.setItemId(401L);
+        item1.setPrescription(presc);
+        item1.setMedication(med);
+        item1.setDrugName("Amoxicillin 500mg");
+        item1.setUnit("Viên");
+        item1.setQuantity(new BigDecimal("10.00"));
+        item1.setBoughtQuantity(BigDecimal.ZERO);
+        item1.setUnitPrice(new BigDecimal("3000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(item1)));
+
+        // Tồn kho chi nhánh: 20 viên
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("20.00"));
+
+        // Lô 1 (hạn gần hơn): chỉ còn 4 viên
+        MaterialBatch batch1 = new MaterialBatch();
+        batch1.setBatchId(801L);
+        batch1.setBatchNumber("BATCH-EARLY");
+        batch1.setMaterial(mat);
+        batch1.setBranch(mockBranch);
+        batch1.setQuantityRemaining(new BigDecimal("4.00"));
+        batch1.setExpiryDate(LocalDate.now().plusMonths(1));
+
+        // Lô 2 (hạn xa hơn): còn 16 viên
+        MaterialBatch batch2 = new MaterialBatch();
+        batch2.setBatchId(802L);
+        batch2.setBatchNumber("BATCH-LATER");
+        batch2.setMaterial(mat);
+        batch2.setBranch(mockBranch);
+        batch2.setQuantityRemaining(new BigDecimal("16.00"));
+        batch2.setExpiryDate(LocalDate.now().plusMonths(6));
+
+        when(prescriptionRepository.findByIdForUpdate(80L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(401L)).thenReturn(Optional.of(item1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(88L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(88L), any(LocalDate.class)))
+                .thenReturn(List.of(batch1, batch2));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(80L);
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(401L, new BigDecimal("10.00"))));
+
+        Invoice result = invoiceService.createMedicineInvoice(req, 1L);
+
+        assertNotNull(result);
+        // Kiểm tra hóa đơn thuốc có 2 dòng hóa đơn riêng biệt cho 2 lô
+        assertEquals(2, result.getItems().size(), "Phải lưu đủ 2 dòng hóa đơn tương ứng với 2 lô thuốc");
+        InvoiceItem line1 = result.getItems().get(0);
+        assertEquals(new BigDecimal("4.00"), line1.getQuantity());
+        assertEquals("BATCH-EARLY", line1.getBatch().getBatchNumber());
+
+        InvoiceItem line2 = result.getItems().get(1);
+        assertEquals(new BigDecimal("6.00"), line2.getQuantity());
+        assertEquals("BATCH-LATER", line2.getBatch().getBatchNumber());
+
+        // Kiểm tra tồn kho của từng lô
+        assertEquals(0, BigDecimal.ZERO.compareTo(batch1.getQuantityRemaining()));
+        assertEquals(BatchStatus.OUT_OF_STOCK, batch1.getStatus());
+        assertEquals(new BigDecimal("10.00"), batch2.getQuantityRemaining()); // 16 - 6 = 10
+        assertEquals(new BigDecimal("10.00"), inv.getCurrentStock()); // 20 - 10 = 10
+
+        // Kiểm tra tạo phiếu xuất kho StockIssue
+        verify(stockIssueRepository, times(1)).save(argThat(issue -> {
+            assertNotNull(issue);
+            assertTrue(issue.getIssueCode().startsWith("PX"));
+            assertEquals(2, issue.getItems().size());
+            assertEquals(new BigDecimal("4.00"), issue.getItems().get(0).getQuantity());
+            assertEquals(new BigDecimal("6.00"), issue.getItems().get(1).getQuantity());
+            return true;
+        }));
+    }
+
+    // =========================================================================
+    // 23. Mua đồng thời từ hai đơn dùng chung lô (Concurrency Protection)
+    // =========================================================================
+    @Test
+    @DisplayName("Test 23: [Unit/Concurrency] Hai đơn thuốc khác nhau mua đồng thời từ một lô chung được bảo vệ, chặn bán âm khi hết tồn")
+    void test23_concurrentPurchaseFromSharedBatch_protectsStockAgainstOverselling() {
+        Material mat = new Material();
+        mat.setMaterialId(90L);
+        mat.setMaterialName("Ibuprofen 400mg");
+        mat.setUnit("Viên");
+
+        Medication med = new Medication();
+        med.setMedicationId(91L);
+        med.setDrugCode("IBU400");
+        med.setDrugName("Ibuprofen 400mg");
+        med.setMaterial(mat);
+        med.setUnit("Viên");
+        med.setSalePrice(new BigDecimal("3500.00"));
+
+        // Lô thuốc chỉ còn đúng 10 viên
+        final BigDecimal[] sharedStock = {new BigDecimal("10.00")};
+
+        // Đơn thuốc A cần mua 7 viên
+        Prescription prescA = new Prescription();
+        prescA.setPrescriptionId(1001L);
+        prescA.setBranch(mockBranch);
+        prescA.setPatientProfile(mockPatient);
+        prescA.setStatus(PrescriptionStatus.PENDING);
+        PrescriptionItem itemA = new PrescriptionItem();
+        itemA.setItemId(501L);
+        itemA.setPrescription(prescA);
+        itemA.setMedication(med);
+        itemA.setDrugName("Ibuprofen 400mg");
+        itemA.setUnit("Viên");
+        itemA.setQuantity(new BigDecimal("7.00"));
+        itemA.setBoughtQuantity(BigDecimal.ZERO);
+        itemA.setUnitPrice(new BigDecimal("3500.00"));
+        prescA.setItems(new java.util.ArrayList<>(List.of(itemA)));
+
+        // Đơn thuốc B cũng cần mua 7 viên (Tổng cầu = 14 > 10 tồn kho)
+        Prescription prescB = new Prescription();
+        prescB.setPrescriptionId(1002L);
+        prescB.setBranch(mockBranch);
+        prescB.setPatientProfile(mockPatient);
+        prescB.setStatus(PrescriptionStatus.PENDING);
+        PrescriptionItem itemB = new PrescriptionItem();
+        itemB.setItemId(502L);
+        itemB.setPrescription(prescB);
+        itemB.setMedication(med);
+        itemB.setDrugName("Ibuprofen 400mg");
+        itemB.setUnit("Viên");
+        itemB.setQuantity(new BigDecimal("7.00"));
+        itemB.setBoughtQuantity(BigDecimal.ZERO);
+        itemB.setUnitPrice(new BigDecimal("3500.00"));
+        prescB.setItems(new java.util.ArrayList<>(List.of(itemB)));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(prescriptionRepository.findByIdForUpdate(1001L)).thenReturn(Optional.of(prescA));
+        when(prescriptionRepository.findByIdForUpdate(1002L)).thenReturn(Optional.of(prescB));
+        when(prescriptionItemRepository.findByIdForUpdate(501L)).thenReturn(Optional.of(itemA));
+        when(prescriptionItemRepository.findByIdForUpdate(502L)).thenReturn(Optional.of(itemB));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Giả lập khóa bi quan: mỗi lần findForUpdate trả về tồn kho hiện thời của mảng chia sẻ
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(90L))).thenAnswer(inv -> {
+            BranchInventory bi = new BranchInventory();
+            bi.setBranch(mockBranch);
+            bi.setMaterial(mat);
+            bi.setCurrentStock(sharedStock[0]);
+            return Optional.of(bi);
+        });
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(90L), any(LocalDate.class))).thenAnswer(inv -> {
+            if (sharedStock[0].compareTo(BigDecimal.ZERO) <= 0) return List.of();
+            MaterialBatch mb = new MaterialBatch();
+            mb.setBatchId(999L);
+            mb.setBatchNumber("BATCH-SHARED");
+            mb.setMaterial(mat);
+            mb.setBranch(mockBranch);
+            mb.setQuantityRemaining(sharedStock[0]);
+            mb.setExpiryDate(LocalDate.now().plusMonths(3));
+            return List.of(mb);
+        });
+
+        // Ghi nhận cập nhật tồn kho an toàn
+        doAnswer(inv -> {
+            BranchInventory bi = inv.getArgument(0);
+            sharedStock[0] = bi.getCurrentStock();
+            return bi;
+        }).when(branchInventoryRepository).save(any(BranchInventory.class));
+
+        MedicineInvoiceCreateRequestDTO reqA = new MedicineInvoiceCreateRequestDTO();
+        reqA.setPrescriptionId(1001L);
+        reqA.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(501L, new BigDecimal("7.00"))));
+
+        MedicineInvoiceCreateRequestDTO reqB = new MedicineInvoiceCreateRequestDTO();
+        reqB.setPrescriptionId(1002L);
+        reqB.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(502L, new BigDecimal("7.00"))));
+
+        // Đơn thuốc A mua thành công 7 viên
+        Invoice invA = invoiceService.createMedicineInvoice(reqA, 1L);
+        assertNotNull(invA);
+        assertEquals(new BigDecimal("3.00"), sharedStock[0], "Tồn kho sau khi Đơn A mua 7 viên phải còn đúng 3 viên");
+
+        // Đơn thuốc B mua 7 viên ngay sau đó -> BỊ CHẶN do không đủ tồn kho (còn 3 < 7)
+        IllegalStateException exB = assertThrows(IllegalStateException.class, () ->
+                invoiceService.createMedicineInvoice(reqB, 1L));
+        assertTrue(exB.getMessage().contains("không đủ tồn kho"), "Đơn B phải bị chặn và báo không đủ tồn kho");
+        assertEquals(new BigDecimal("3.00"), sharedStock[0], "Tồn kho không bao giờ bị âm");
+    }
+
+    // =========================================================================
+    // 24. Hủy hóa đơn thuốc: KHÔNG tự ý khôi phục boughtQuantity và KHÔNG tự nhập lại kho
+    // =========================================================================
+    @Test
+    @DisplayName("Test 24: [Unit] Hủy hóa đơn thuốc sau khi xuất: KHÔNG tự ý khôi phục boughtQuantity của đơn và KHÔNG tự nhập lại kho")
+    void test24_cancelInvoiceAfterDispensing_doesNotRestoreBoughtQuantityOrRestock() {
+        Invoice invoice = new Invoice();
+        invoice.setInvoiceId(77L);
+        invoice.setInvoiceCode("HDT20261028-TEST");
+        invoice.setInvoiceType(InvoiceType.MEDICINE);
+        invoice.setStatus(InvoiceStatus.CONFIRMED);
+        invoice.setPaymentStatus(InvoicePaymentStatus.UNPAID);
+        invoice.setBranch(mockBranch);
+        invoice.setTotalAmount(new BigDecimal("50000.00"));
+        invoice.setPaidAmount(BigDecimal.ZERO);
+
+        PrescriptionItem prescItem = new PrescriptionItem();
+        prescItem.setItemId(701L);
+        prescItem.setDrugName("Paracetamol 500mg");
+        prescItem.setQuantity(new BigDecimal("10.00"));
+        prescItem.setBoughtQuantity(new BigDecimal("10.00")); // Đã xuất vật lý cho người bệnh
+
+        InvoiceItem invItem = new InvoiceItem();
+        invItem.setItemType(InvoiceItemType.MEDICINE);
+        invItem.setQuantity(new BigDecimal("10.00"));
+        invItem.setPrescriptionItem(prescItem);
+        invoice.setItems(List.of(invItem));
+
+        when(invoiceRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(invoice));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Thực hiện hủy hóa đơn tài chính
+        Invoice cancelled = invoiceService.cancelInvoice(77L, "Khách hàng sai thông tin xuất VAT", 1L);
+
+        assertEquals(InvoiceStatus.CANCELLED, cancelled.getStatus());
+        // BẢO VỆ: boughtQuantity trên đơn thuốc lâm sàng KHÔNG được tự ý giảm về 0
+        assertEquals(new BigDecimal("10.00"), prescItem.getBoughtQuantity(), "Số lượng đã mua không được giảm khi hủy hóa đơn tài chính");
+        // BẢO VỆ: Không gọi lưu/khôi phục prescriptionItemRepository
+        verify(prescriptionItemRepository, never()).save(any(PrescriptionItem.class));
+        // BẢO VỆ: Không tự ý nhập lại kho branchInventoryRepository
+        verify(branchInventoryRepository, never()).save(any(BranchInventory.class));
+    }
+
+    // =========================================================================
+    // 25. Tiếp nhận đơn thuốc sau khi hóa đơn dịch vụ đã thanh toán (ca khám COMPLETED)
+    // =========================================================================
+    @Test
+    @DisplayName("Test 25: [Unit] Sau khi hóa đơn dịch vụ đã thanh toán (ca khám COMPLETED), đơn thuốc vẫn truy cập và lập hóa đơn thuốc riêng bình thường")
+    void test25_accessPrescriptionAfterServiceInvoicePaid_allowsPurchaseWithoutDummyServiceInvoice() {
+        // Ca khám đã hoàn thành (Dịch vụ đã thanh toán xong)
+        Visit completedVisit = new Visit();
+        completedVisit.setVisitId(888L);
+        completedVisit.setStatus(VisitStatus.COMPLETED);
+        completedVisit.setBranch(mockBranch);
+        completedVisit.setPatientProfile(mockPatient);
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setPrescriptionCode("TOA90001");
+        presc.setVisit(completedVisit);
+        presc.setBranch(mockBranch);
+        presc.setPatientProfile(mockPatient);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(10L);
+        mat.setMaterialName("Thuốc súc miệng Kin");
+        mat.setUnit("Chai");
+
+        Medication med = new Medication();
+        med.setMedicationId(11L);
+        med.setDrugCode("KIN001");
+        med.setDrugName("Thuốc súc miệng Kin");
+        med.setMaterial(mat);
+        med.setUnit("Chai");
+        med.setSalePrice(new BigDecimal("130000.00"));
+
+        PrescriptionItem item = new PrescriptionItem();
+        item.setItemId(901L);
+        item.setPrescription(presc);
+        item.setMedication(med);
+        item.setDrugName("Thuốc súc miệng Kin");
+        item.setUnit("Chai");
+        item.setQuantity(new BigDecimal("1.00"));
+        item.setBoughtQuantity(BigDecimal.ZERO);
+        item.setUnitPrice(new BigDecimal("130000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(item)));
+
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("10.00"));
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setBatchId(12L);
+        batch.setBatchNumber("KIN-L1");
+        batch.setMaterial(mat);
+        batch.setBranch(mockBranch);
+        batch.setQuantityRemaining(new BigDecimal("10.00"));
+        batch.setExpiryDate(LocalDate.now().plusMonths(12));
+
+        // Kiểm tra getHandedOverPrescriptions cho phép truy cập đơn thuốc khi ca khám đã COMPLETED
+        when(prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(888L)).thenReturn(List.of(presc));
+        List<PrescriptionResponseDTO> dtos = invoiceService.getHandedOverPrescriptions(1L, 888L, null);
+        assertNotNull(dtos);
+        assertEquals(1, dtos.size(), "Đơn thuốc của ca khám COMPLETED phải xuất hiện trong danh sách bàn giao");
+
+        // Tiếp tục lập Hóa đơn thuốc riêng mà không cần lập thêm hóa đơn dịch vụ
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(item));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(10L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(10L), any(LocalDate.class)))
+                .thenReturn(List.of(batch));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        MedicineInvoiceCreateRequestDTO req = new MedicineInvoiceCreateRequestDTO();
+        req.setPrescriptionId(900L);
+        req.setItems(List.of(new MedicineInvoiceCreateRequestDTO.Item(901L, BigDecimal.ONE)));
+
+        Invoice medicineInv = invoiceService.createMedicineInvoice(req, 1L);
+        assertNotNull(medicineInv);
+        assertEquals(InvoiceType.MEDICINE, medicineInv.getInvoiceType());
+        assertEquals(new BigDecimal("130000.00"), medicineInv.getTotalAmount());
+    }
+
+    // =========================================================================
+    // 26. Cập nhật lựa chọn đơn thuốc: Mua một phần rồi chuyển Tự mua ngoài
+    // =========================================================================
+    @Test
+    @DisplayName("Test 26: [Unit] Cập nhật lựa chọn đơn thuốc: Sau khi mua 1 phần tại PK, chuyển sang Tự mua ngoài và quay lại an toàn")
+    void test26_recordPrescriptionChoice_partialPurchaseThenExternal() {
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(950L);
+        presc.setBranch(mockBranch);
+        presc.setStatus(PrescriptionStatus.CLINIC_PURCHASE_PARTIAL);
+
+        PrescriptionItem item1 = new PrescriptionItem();
+        item1.setItemId(951L);
+        item1.setQuantity(new BigDecimal("10.00"));
+        item1.setBoughtQuantity(new BigDecimal("4.00")); // Đã mua 4, còn 6
+
+        presc.setItems(new java.util.ArrayList<>(List.of(item1)));
+
+        when(prescriptionRepository.findByIdForUpdate(950L)).thenReturn(Optional.of(presc));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        // Chuyển sang EXTERNAL
+        invoiceService.recordPrescriptionChoice(950L, "EXTERNAL", null, 1L);
+        assertEquals(PrescriptionStatus.EXTERNAL_PURCHASE, presc.getStatus());
+        assertEquals(PrescriptionPurchaseChoice.EXTERNAL, presc.getPurchaseChoice());
+        assertTrue(presc.getChoiceNote().contains("Đã mua một phần tại phòng khám"));
+
+        // Chuyển lại CLINIC
+        invoiceService.recordPrescriptionChoice(950L, "CLINIC", "Bệnh nhân đổi ý muốn mua nốt tại PK", 1L);
+        assertEquals(PrescriptionStatus.CLINIC_PURCHASE_PARTIAL, presc.getStatus());
+        assertEquals(PrescriptionPurchaseChoice.CLINIC, presc.getPurchaseChoice());
+    }
+
+    // =========================================================================
+    // 27. Phát hành MỘT HÓA ĐƠN CHUNG gồm Dịch vụ và Thuốc (InvoiceType.MIXED)
+    // =========================================================================
+    @Test
+    @DisplayName("Test 27: [Unit] Dịch vụ 500.000đ + thuốc 50.000đ => MỘT hóa đơn MIXED 550.000đ")
+    void test27_createCommonInvoice_serviceAndMedicine_mixedType() {
+        mockCashierAuthSuccess();
+        mockPatient.setMembershipTier(null);
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        // Dịch vụ 500.000đ
+        mockPerformedService.setQuantity(BigDecimal.ONE);
+        mockPerformedService.setUnitPrice(new BigDecimal("500000.00"));
+        mockPerformedService.setFinalPrice(new BigDecimal("500000.00"));
+        when(performedServiceRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(mockPerformedService));
+
+        // Thuốc 50.000đ
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setVisit(mockVisit);
+        presc.setBranch(mockBranch);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(10L);
+        mat.setMaterialName("Paracetamol 500mg");
+
+        Medication med = new Medication();
+        med.setMedicationId(11L);
+        med.setMaterial(mat);
+        med.setDrugName("Paracetamol 500mg");
+        med.setSalePrice(new BigDecimal("5000.00"));
+
+        PrescriptionItem pItem = new PrescriptionItem();
+        pItem.setItemId(901L);
+        pItem.setPrescription(presc);
+        pItem.setMedication(med);
+        pItem.setDrugName("Paracetamol 500mg");
+        pItem.setQuantity(new BigDecimal("10.00"));
+        pItem.setBoughtQuantity(BigDecimal.ZERO);
+        pItem.setUnitPrice(new BigDecimal("5000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(pItem)));
+
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("100.00"));
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setBatchId(12L);
+        batch.setBatchNumber("PARA-01");
+        batch.setMaterial(mat);
+        batch.setBranch(mockBranch);
+        batch.setQuantityRemaining(new BigDecimal("100.00"));
+        batch.setExpiryDate(LocalDate.now().plusMonths(12));
+
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(pItem));
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(10L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(10L), any(LocalDate.class)))
+                .thenReturn(List.of(batch));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Request: 1 dịch vụ + 10 viên thuốc (5.000đ/viên = 50.000đ)
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+
+        InvoiceItemRequestDTO sItem = new InvoiceItemRequestDTO();
+        sItem.setPerformedId(200L);
+        sItem.setServiceId(100L);
+        sItem.setQuantity(BigDecimal.ONE);
+        sItem.setUnitPrice(new BigDecimal("500000.00"));
+        req.setItems(List.of(sItem));
+
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, new BigDecimal("10.00"))));
+
+        Invoice invoice = invoiceService.createInvoice(req, 1L);
+
+        assertNotNull(invoice);
+        assertEquals(InvoiceType.MIXED, invoice.getInvoiceType(), "Hóa đơn gồm cả dịch vụ và thuốc phải là loại MIXED");
+        assertEquals(new BigDecimal("500000.00"), invoice.getTotalServiceAmount());
+        assertEquals(new BigDecimal("50000.00"), invoice.getTotalMedicineAmount());
+        assertEquals(new BigDecimal("550000.00"), invoice.getTotalAmount(), "Tổng tiền phải bằng 500.000 + 50.000 = 550.000");
+        assertEquals(2, invoice.getItems().size(), "Hóa đơn phải có chính xác 2 items (1 dịch vụ, 1 thuốc)");
+        assertEquals(new BigDecimal("10.00"), pItem.getBoughtQuantity(), "Đơn thuốc phải được cập nhật boughtQuantity = 10");
+        assertEquals(PrescriptionStatus.CLINIC_PURCHASE_COMPLETED, presc.getStatus());
+        verify(stockIssueRepository).save(any(StockIssue.class));
+    }
+
+    // =========================================================================
+    // 28. Không mua thuốc => Hóa đơn dịch vụ (SERVICE) 500.000đ
+    // =========================================================================
+    @Test
+    @DisplayName("Test 28: [Unit] Không chọn mua thuốc => Hóa đơn SERVICE 500.000đ, totalMedicineAmount = 0")
+    void test28_createCommonInvoice_serviceOnly_whenMedicineNotSelected() {
+        mockCashierAuthSuccess();
+        mockPatient.setMembershipTier(null);
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        mockPerformedService.setQuantity(BigDecimal.ONE);
+        mockPerformedService.setUnitPrice(new BigDecimal("500000.00"));
+        mockPerformedService.setFinalPrice(new BigDecimal("500000.00"));
+        when(performedServiceRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(mockPerformedService));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+
+        InvoiceItemRequestDTO sItem = new InvoiceItemRequestDTO();
+        sItem.setPerformedId(200L);
+        sItem.setServiceId(100L);
+        sItem.setQuantity(BigDecimal.ONE);
+        sItem.setUnitPrice(new BigDecimal("500000.00"));
+        req.setItems(List.of(sItem));
+        req.setBuyMedicineAtClinic(false); // Không mua thuốc tại PK
+
+        Invoice invoice = invoiceService.createInvoice(req, 1L);
+
+        assertNotNull(invoice);
+        assertEquals(InvoiceType.SERVICE, invoice.getInvoiceType());
+        assertEquals(new BigDecimal("500000.00"), invoice.getTotalServiceAmount());
+        assertEquals(new BigDecimal("0.00"), invoice.getTotalMedicineAmount());
+        assertEquals(new BigDecimal("500000.00"), invoice.getTotalAmount());
+        verify(prescriptionRepository, never()).findByIdForUpdate(anyLong());
+        verify(stockIssueRepository, never()).save(any(StockIssue.class));
+    }
+
+    // =========================================================================
+    // 29. Chỉ mua thuốc hợp lệ khi dịch vụ rỗng => Hóa đơn MEDICINE 50.000đ
+    // =========================================================================
+    @Test
+    @DisplayName("Test 29: [Unit] Không có dịch vụ nhưng có thuốc hợp lệ => Hóa đơn MEDICINE 50.000đ")
+    void test29_createCommonInvoice_medicineOnly_whenNoServices() {
+        mockCashierAuthSuccess();
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setVisit(mockVisit);
+        presc.setBranch(mockBranch);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(10L);
+        mat.setMaterialName("Amoxicillin 500mg");
+
+        Medication med = new Medication();
+        med.setMedicationId(11L);
+        med.setMaterial(mat);
+        med.setDrugName("Amoxicillin 500mg");
+        med.setSalePrice(new BigDecimal("5000.00"));
+
+        PrescriptionItem pItem = new PrescriptionItem();
+        pItem.setItemId(901L);
+        pItem.setPrescription(presc);
+        pItem.setMedication(med);
+        pItem.setDrugName("Amoxicillin 500mg");
+        pItem.setQuantity(new BigDecimal("10.00"));
+        pItem.setBoughtQuantity(BigDecimal.ZERO);
+        pItem.setUnitPrice(new BigDecimal("5000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(pItem)));
+
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("100.00"));
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setBatchId(12L);
+        batch.setBatchNumber("AMOX-01");
+        batch.setMaterial(mat);
+        batch.setBranch(mockBranch);
+        batch.setQuantityRemaining(new BigDecimal("100.00"));
+        batch.setExpiryDate(LocalDate.now().plusMonths(12));
+
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(pItem));
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(10L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(10L), any(LocalDate.class)))
+                .thenReturn(List.of(batch));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        // items rỗng, chỉ chọn mua thuốc
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+        req.setItems(Collections.emptyList());
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, new BigDecimal("10.00"))));
+
+        Invoice invoice = invoiceService.createInvoice(req, 1L);
+
+        assertNotNull(invoice);
+        assertEquals(InvoiceType.MEDICINE, invoice.getInvoiceType(), "Hóa đơn chỉ có thuốc phải có loại MEDICINE");
+        assertEquals(new BigDecimal("0.00"), invoice.getTotalServiceAmount());
+        assertEquals(new BigDecimal("50000.00"), invoice.getTotalMedicineAmount());
+        assertEquals(new BigDecimal("50000.00"), invoice.getTotalAmount());
+    }
+
+    // =========================================================================
+    // 30. Mua một phần thuốc trong đơn
+    // =========================================================================
+    @Test
+    @DisplayName("Test 30: [Unit] Mua một phần thuốc (kê 10, mua 4) => tính đúng 20.000đ, còn lại 6")
+    void test30_createCommonInvoice_partialMedicinePurchase() {
+        mockCashierAuthSuccess();
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setVisit(mockVisit);
+        presc.setBranch(mockBranch);
+        presc.setStatus(PrescriptionStatus.PENDING);
+
+        Material mat = new Material();
+        mat.setMaterialId(10L);
+        mat.setMaterialName("Paracetamol 500mg");
+
+        Medication med = new Medication();
+        med.setMedicationId(11L);
+        med.setMaterial(mat);
+        med.setDrugName("Paracetamol 500mg");
+        med.setSalePrice(new BigDecimal("5000.00"));
+
+        PrescriptionItem pItem = new PrescriptionItem();
+        pItem.setItemId(901L);
+        pItem.setPrescription(presc);
+        pItem.setMedication(med);
+        pItem.setDrugName("Paracetamol 500mg");
+        pItem.setQuantity(new BigDecimal("10.00"));
+        pItem.setBoughtQuantity(BigDecimal.ZERO);
+        pItem.setUnitPrice(new BigDecimal("5000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(pItem)));
+
+        BranchInventory inv = new BranchInventory();
+        inv.setBranch(mockBranch);
+        inv.setMaterial(mat);
+        inv.setCurrentStock(new BigDecimal("100.00"));
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setBatchId(12L);
+        batch.setBatchNumber("PARA-01");
+        batch.setMaterial(mat);
+        batch.setBranch(mockBranch);
+        batch.setQuantityRemaining(new BigDecimal("100.00"));
+        batch.setExpiryDate(LocalDate.now().plusMonths(12));
+
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(pItem));
+        when(branchInventoryRepository.findForUpdate(eq(1L), eq(10L))).thenReturn(Optional.of(inv));
+        when(materialBatchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(10L), any(LocalDate.class)))
+                .thenReturn(List.of(batch));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+        req.setItems(Collections.emptyList());
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, new BigDecimal("4.00")))); // Mua 4 viên
+
+        Invoice invoice = invoiceService.createInvoice(req, 1L);
+
+        assertNotNull(invoice);
+        assertEquals(new BigDecimal("20000.00"), invoice.getTotalMedicineAmount());
+        assertEquals(new BigDecimal("4.00"), pItem.getBoughtQuantity());
+        assertEquals(PrescriptionStatus.CLINIC_PURCHASE_PARTIAL, presc.getStatus());
+    }
+
+    // =========================================================================
+    // 31. Preview khớp kết quả lưu và ưu đãi chỉ áp lên dịch vụ
+    // =========================================================================
+    @Test
+    @DisplayName("Test 31: [Unit] Preview khớp kết quả lưu và ưu đãi thành viên chỉ giảm trên dịch vụ, không giảm trên thuốc")
+    void test31_calculatePreview_matchesSavedInvoice_andDiscountsApplyToServiceOnly() {
+        mockPatient.setMembershipTier(mockTier); // Giảm 5%
+        when(patientProfileRepository.findById(mockPatient.getProfileId())).thenReturn(Optional.of(mockPatient));
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setVisit(mockVisit);
+        presc.setBranch(mockBranch);
+
+        Medication med = new Medication();
+        med.setMedicationId(11L);
+        med.setDrugName("Paracetamol");
+        med.setSalePrice(new BigDecimal("5000.00"));
+
+        PrescriptionItem pItem = new PrescriptionItem();
+        pItem.setItemId(901L);
+        pItem.setPrescription(presc);
+        pItem.setMedication(med);
+        pItem.setQuantity(new BigDecimal("10.00"));
+        pItem.setBoughtQuantity(BigDecimal.ZERO);
+        pItem.setUnitPrice(new BigDecimal("5000.00"));
+        presc.setItems(new java.util.ArrayList<>(List.of(pItem)));
+
+        when(prescriptionItemRepository.findById(901L)).thenReturn(Optional.of(pItem));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setProfileId(mockPatient.getProfileId());
+        req.setVisitId(mockVisit.getVisitId());
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+
+        InvoiceItemRequestDTO sItem = new InvoiceItemRequestDTO();
+        sItem.setPerformedId(200L);
+        sItem.setServiceId(100L);
+        sItem.setQuantity(BigDecimal.ONE);
+        sItem.setUnitPrice(new BigDecimal("500000.00"));
+        req.setItems(List.of(sItem));
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, new BigDecimal("10.00"))));
+
+        InvoiceCalculationPreviewDTO preview = invoiceService.calculatePreview(req);
+
+        assertNotNull(preview);
+        assertEquals(new BigDecimal("500000.00"), preview.getTotalServiceAmount());
+        assertEquals(new BigDecimal("50000.00"), preview.getTotalMedicineAmount());
+        // Giảm 5% của 500.000 = 25.000. KHÔNG giảm 5% trên 50.000 thuốc!
+        assertEquals(new BigDecimal("25000.00"), preview.getMemberDiscountAmount());
+        // Tổng phải thanh toán: 500.000 - 25.000 + 50.000 = 525.000
+        assertEquals(new BigDecimal("525000.00"), preview.getTotalAmount());
+    }
+
+    // =========================================================================
+    // 32. Cách ly ca khám: Không cho phép gom đơn thuốc của ca khám khác
+    // =========================================================================
+    @Test
+    @DisplayName("Test 32: [Unit] Bắt lỗi khi đơn thuốc không thuộc ca khám được chọn")
+    void test32_visitIsolation_cannotUsePrescriptionFromDifferentVisit() {
+        mockCashierAuthSuccess();
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        Visit anotherVisit = new Visit();
+        anotherVisit.setVisitId(999L);
+        anotherVisit.setVisitCode("VIS999");
+
+        Prescription prescOfAnotherVisit = new Prescription();
+        prescOfAnotherVisit.setPrescriptionId(900L);
+        prescOfAnotherVisit.setVisit(anotherVisit);
+        prescOfAnotherVisit.setBranch(mockBranch);
+
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(prescOfAnotherVisit));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, BigDecimal.ONE)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> invoiceService.createInvoice(req, 1L));
+        assertTrue(ex.getMessage().contains("không thuộc ca khám"));
+    }
+
+    // =========================================================================
+    // 33. Thuốc chưa có giá bán hợp lệ phải báo lỗi cấu hình (không đoán giá)
+    // =========================================================================
+    @Test
+    @DisplayName("Test 33: [Unit] Thuốc chưa có giá bán hợp lệ phải báo lỗi cấu hình, không đoán giá")
+    void test33_medicationWithoutPriceThrowsException() {
+        mockCashierAuthSuccess();
+        when(visitRepository.findById(mockVisit.getVisitId())).thenReturn(Optional.of(mockVisit));
+
+        Prescription presc = new Prescription();
+        presc.setPrescriptionId(900L);
+        presc.setVisit(mockVisit);
+        presc.setBranch(mockBranch);
+
+        Medication medWithoutPrice = new Medication();
+        medWithoutPrice.setMedicationId(11L);
+        medWithoutPrice.setDrugName("Thuốc Thử Nghiệm");
+        medWithoutPrice.setSalePrice(null); // Không có giá
+
+        PrescriptionItem pItem = new PrescriptionItem();
+        pItem.setItemId(901L);
+        pItem.setPrescription(presc);
+        pItem.setMedication(medWithoutPrice);
+        pItem.setUnitPrice(null); // Đơn thuốc cũng không có giá
+        pItem.setQuantity(BigDecimal.ONE);
+        pItem.setBoughtQuantity(BigDecimal.ZERO);
+        presc.setItems(new java.util.ArrayList<>(List.of(pItem)));
+
+        when(prescriptionRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(presc));
+        when(prescriptionItemRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(pItem));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(mockVisit.getVisitId());
+        req.setProfileId(mockPatient.getProfileId());
+        req.setBranchId(mockBranch.getBranchId());
+        req.setPrescriptionId(900L);
+        req.setBuyMedicineAtClinic(true);
+        req.setMedicineItems(List.of(new MedicineItemRequestDTO(901L, BigDecimal.ONE)));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> invoiceService.createInvoice(req, 1L));
+        assertTrue(ex.getMessage().contains("chưa có giá bán hợp lệ"));
+    }
+
+    // =========================================================================
+    // 34. Điều chỉnh hóa đơn bảo toàn số tiền thuốc
+    // =========================================================================
+    @Test
+    @DisplayName("Test 34: [Unit] adjustInvoice bảo toàn totalMedicineAmount khi cập nhật phụ thu")
+    void test34_adjustInvoice_preservesMedicineTotal() {
+        mockCashierAuthSuccess();
+
+        Invoice existingInvoice = new Invoice();
+        existingInvoice.setInvoiceId(101L);
+        existingInvoice.setInvoiceCode("HD101");
+        existingInvoice.setInvoiceType(InvoiceType.MIXED);
+        existingInvoice.setBranch(mockBranch);
+        existingInvoice.setPatientProfile(mockPatient);
+        existingInvoice.setTotalServiceAmount(new BigDecimal("500000.00"));
+        existingInvoice.setTotalMedicineAmount(new BigDecimal("50000.00"));
+        existingInvoice.setDiscountAmount(BigDecimal.ZERO);
+        existingInvoice.setPromotionDiscount(BigDecimal.ZERO);
+        existingInvoice.setPointDiscount(BigDecimal.ZERO);
+        existingInvoice.setTotalAmount(new BigDecimal("550000.00"));
+        existingInvoice.setPaidAmount(BigDecimal.ZERO);
+        existingInvoice.setRemainingDebt(new BigDecimal("550000.00"));
+        existingInvoice.setPaymentStatus(InvoicePaymentStatus.UNPAID);
+        existingInvoice.setStatus(InvoiceStatus.CONFIRMED);
+
+        when(invoiceRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(existingInvoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Điều chỉnh thêm phụ thu 10.000đ
+        InvoiceAdjustmentRequestDTO req = new InvoiceAdjustmentRequestDTO();
+        req.setNewDiscountAmount(BigDecimal.ZERO);
+        req.setNewSurchargeAmount(new BigDecimal("10000.00"));
+        req.setNewSurchargeDescription("Phụ thu ngoài giờ");
+        req.setReason("Áp dụng phụ thu");
+
+        Invoice adjusted = invoiceService.adjustInvoice(101L, req, 1L);
+
+        assertNotNull(adjusted);
+        assertEquals(new BigDecimal("50000.00"), adjusted.getTotalMedicineAmount(), "Tiền thuốc 50.000đ phải được giữ nguyên");
+        assertEquals(new BigDecimal("500000.00"), adjusted.getTotalServiceAmount(), "Tiền dịch vụ 500.000đ giữ nguyên");
+        // Tổng mới = 500.000 (dịch vụ) + 50.000 (thuốc) + 10.000 (phụ thu) = 560.000
+        assertEquals(new BigDecimal("560000.00"), adjusted.getTotalAmount());
+        assertEquals(new BigDecimal("560000.00"), adjusted.getRemainingDebt());
+    }
+
+    // =========================================================================
+    // 35. Kiểm tra tỷ lệ quy đổi điểm mới: 1 điểm = 10 VNĐ (100 điểm = 1.000 VNĐ)
+    //     Dịch vụ 700.000 VNĐ -> còn 699.000 VNĐ khi đổi 100 điểm
+    // =========================================================================
+    @Test
+    @DisplayName("Test 35: Tỷ lệ đổi điểm 10 VNĐ/điểm: 100 điểm -> giảm 1.000 VNĐ, dịch vụ 700.000 VNĐ còn 699.000 VNĐ")
+    void test35_pointConversionRate_100Points_1000Vnd_700kServiceRemaining699k() {
+        mockCashierAuthSuccess();
+
+        PerformedService ps700 = new PerformedService();
+        ps700.setPerformedId(270L);
+        ps700.setVisit(mockVisit);
+        ps700.setPatientProfile(mockPatient);
+        ps700.setBranch(mockBranch);
+        ps700.setService(mockService);
+        ps700.setQuantity(BigDecimal.ONE);
+        ps700.setUnitPrice(new BigDecimal("700000.00"));
+        ps700.setDiscountAmount(BigDecimal.ZERO);
+        ps700.setStatus(PerformedServiceStatus.COMPLETED);
+
+        when(performedServiceRepository.findById(270L)).thenReturn(Optional.of(ps700));
+        when(performedServiceRepository.findByIdForUpdate(270L)).thenReturn(Optional.of(ps700));
+        when(visitRepository.findById(10L)).thenReturn(Optional.of(mockVisit));
+        when(invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(270L)).thenReturn(false);
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Khách hàng có 200 điểm trong ví
+        PatientLoyaltyWallet wallet = new PatientLoyaltyWallet();
+        wallet.setWalletId(10L);
+        wallet.setPatientProfile(mockPatient);
+        wallet.setCurrentPoints(200);
+        wallet.setTotalSpentAmount(BigDecimal.ZERO);
+        when(patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(1L)).thenReturn(Optional.of(wallet));
+
+        // Bệnh nhân có hạng thành viên với pointValue = 10.00
+        MembershipTier tier10 = new MembershipTier();
+        tier10.setTierId(99L);
+        tier10.setTierName("Hạng chuẩn 10đ");
+        tier10.setDiscountPercent(BigDecimal.ZERO);
+        tier10.setPointValue(new BigDecimal("10.00"));
+        tier10.setSpendPerPoint(new BigDecimal("10000.00"));
+        mockPatient.setMembershipTier(tier10);
+
+        // Yêu cầu đổi 100 điểm
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(10L);
+        req.setProfileId(1L);
+        req.setBranchId(1L);
+        req.setPointsToRedeem(100);
+        InvoiceItemRequestDTO item = new InvoiceItemRequestDTO();
+        item.setPerformedId(270L);
+        req.setItems(List.of(item));
+
+        // 1. Preview: Giảm 100 * 10 = 1.000 VNĐ. Dịch vụ 700.000 VNĐ -> còn 699.000 VNĐ
+        InvoiceCalculationPreviewDTO preview = invoiceService.calculatePreview(req);
+        assertEquals(new BigDecimal("1000.00"), preview.getPointDiscountAmount());
+        assertEquals(new BigDecimal("699000.00"), preview.getTotalAmount());
+
+        // 2. Tạo hóa đơn: pointDiscount = 1.000 VNĐ, totalAmount = 699.000 VNĐ
+        Invoice saved = invoiceService.createInvoice(req, 1L);
+        saved.setInvoiceId(999L);
+        saved.setInvoiceCode("HD-TEST-100PT");
+        assertEquals(new BigDecimal("1000.00"), saved.getPointDiscount());
+        assertEquals(new BigDecimal("699000.00"), saved.getTotalAmount());
+        assertEquals(200, wallet.getCurrentPoints()); // Chưa thanh toán nên chưa trừ điểm
+
+        // 3. Thanh toán: trừ đúng 100 điểm
+        when(patientLoyaltyWalletRepository.findByProfileIdForUpdate(1L)).thenReturn(Optional.of(wallet));
+        invoiceService.finalizeInvoiceBenefits(saved);
+        assertEquals(100, wallet.getCurrentPoints()); // 200 - 100 = 100
+
+        // 4. Hủy hóa đơn hoàn lại đúng 100 điểm từ transaction REDEEM gốc
+        PointTransaction redeemTx = new PointTransaction();
+        redeemTx.setTransactionType(PointTransactionType.REDEEM);
+        redeemTx.setPoints(100);
+        when(pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionType(999L, PointTransactionType.REDEEM)).thenReturn(true);
+        when(pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionTypeAndPointsGreaterThan(999L, PointTransactionType.ADJUST, 0)).thenReturn(false);
+        when(pointTransactionRepository.findByInvoice_InvoiceId(999L)).thenReturn(List.of(redeemTx));
+        when(invoiceRepository.findByIdForUpdate(999L)).thenReturn(Optional.of(saved));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        invoiceService.cancelInvoice(999L, "Khách hủy ca", 1L);
+        assertEquals(200, wallet.getCurrentPoints()); // Đã hoàn lại đủ 100 điểm về 200
+    }
 }
+
