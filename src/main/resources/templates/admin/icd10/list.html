@@ -52,15 +52,15 @@
 
         <!-- BẢNG DANH SÁCH -->
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" id="tblIcd10">
+          <table class="table table-hover align-middle mb-0" id="tblIcd10" data-enhanced-table="admin-icd10">
             <thead class="table-light">
               <tr>
-                <th style="width:110px">Mã ICD-10</th>
-                <th>Tên bệnh (Tiếng Việt)</th>
-                <th>Tên bệnh (Tiếng Anh)</th>
-                <th style="width:130px" class="text-center">Thường gặp NHA</th>
-                <th style="width:120px" class="text-center">Trạng thái</th>
-                <th style="width:140px" class="text-center">Thao tác</th>
+                <th data-column-key="code" data-pinned="true" style="min-width:110px">Mã ICD-10</th>
+                <th data-column-key="diseaseVi" style="min-width:180px">Tên bệnh (Tiếng Việt)</th>
+                <th data-column-key="diseaseEn" style="min-width:160px">Tên bệnh (Tiếng Anh)</th>
+                <th data-column-key="dental" style="min-width:130px" class="text-center">Thường gặp NHA</th>
+                <th data-column-key="status" style="min-width:120px" class="text-center">Trạng thái</th>
+                <th data-column-key="actions" data-column-action="true" style="min-width:140px" class="text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -68,21 +68,21 @@
                 <td colspan="6" class="text-center text-muted py-4">Không có mã ICD-10 nào.</td>
               </tr>
               <tr th:each="d : ${diseases}">
-                <td><code th:text="${d.icd10Code}">K02.1</code></td>
-                <td th:text="${d.diseaseNameVi}">Sâu ngà răng</td>
-                <td th:text="${d.diseaseNameEn ?: '—'}">Dentine caries</td>
-                <td class="text-center">
+                <td data-column-key="code"><code th:text="${d.icd10Code}">K02.1</code></td>
+                <td data-column-key="diseaseVi" th:text="${d.diseaseNameVi}">Sâu ngà răng</td>
+                <td data-column-key="diseaseEn" th:text="${d.diseaseNameEn ?: '—'}">Dentine caries</td>
+                <td data-column-key="dental" class="text-center">
                   <span th:if="${d.isDentalCommon}" class="badge bg-info-subtle text-info border border-info">
                     <i class="bi bi-check-circle me-1"></i>Có
                   </span>
                   <span th:unless="${d.isDentalCommon}" class="text-muted">—</span>
                 </td>
-                <td class="text-center">
+                <td data-column-key="status" class="text-center">
                   <span class="badge"
                         th:classappend="${d.isActive == null or d.isActive} ? 'bg-success' : 'bg-secondary'"
                         th:text="${d.isActive == null or d.isActive} ? 'Đang dùng' : 'Ngừng dùng'">Đang dùng</span>
                 </td>
-                <td class="text-center">
+                <td data-column-key="actions" data-column-action="true" class="text-center">
                   <!-- Sửa -->
                   <button type="button" class="btn btn-sm btn-outline-primary me-1"
                           th:data-id="${d.icd10Id}"

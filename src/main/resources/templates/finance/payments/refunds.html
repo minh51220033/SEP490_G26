@@ -83,52 +83,60 @@
             <!-- Table Card -->
             <div class="fin-card p-0">
                 <div class="fin-table-wrapper">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft24-refunds">
                         <thead>
                         <tr>
-                            <th>Mã hoàn tiền</th>
-                            <th>Thời điểm</th>
-                            <th>Bệnh nhân</th>
-                            <th>Hóa đơn liên quan</th>
-                            <th>Cơ sở</th>
-                            <th>Phương thức</th>
-                            <th class="text-end">Số tiền hoàn</th>
-                            <th>Lý do hoàn tiền</th>
-                            <th>Người thực hiện</th>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 130px;">Mã hoàn tiền</th>
+                            <th data-column-key="date" style="min-width: 120px;">Thời điểm</th>
+                            <th data-column-key="patient" style="min-width: 170px;">Bệnh nhân</th>
+                            <th data-column-key="invoice" style="min-width: 130px;">Hóa đơn liên quan</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Cơ sở</th>
+                            <th data-column-key="method" style="min-width: 120px;">Phương thức</th>
+                            <th data-column-key="amount" class="text-end" style="min-width: 130px;">Số tiền hoàn</th>
+                            <th data-column-key="reason" style="min-width: 200px;">Lý do hoàn tiền</th>
+                            <th data-column-key="creator" style="min-width: 130px;">Người thực hiện</th>
+                            <th data-column-key="actions" class="text-end" style="min-width: 100px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(refunds)}">
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
                                 Chưa có giao dịch hoàn tiền nào.
                             </td>
                         </tr>
                         <tr th:each="rf : ${refunds}">
-                            <td>
+                            <td data-column-key="code">
                                 <strong class="text-danger" th:text="${rf.refundCode}">HT10001</strong>
                             </td>
-                            <td>
+                            <td data-column-key="date">
                                 <span th:text="${#temporals.format(rf.refundedAt, 'dd/MM/yyyy')}">24/10/2026</span>
                                 <small class="text-muted d-block" th:text="${#temporals.format(rf.refundedAt, 'HH:mm')}">14:30</small>
                             </td>
-                            <td>
+                            <td data-column-key="patient">
                                 <div class="fw-bold" th:text="${rf.patientProfile.fullName}">Nguyễn Văn An</div>
                                 <small class="text-muted" th:text="${rf.patientProfile.patientCode}">BN001</small>
                             </td>
-                            <td>
+                            <td data-column-key="invoice">
                                 <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
                                    class="text-primary fw-bold text-decoration-none" th:text="${rf.invoice.invoiceCode}">HD123456</a>
                                 <span th:if="${rf.invoice == null}" class="badge bg-warning text-dark"><i class="bi bi-wallet2"></i> Ví tạm ứng</span>
                             </td>
-                            <td th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
-                            <td>
+                            <td data-column-key="branch" th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
+                            <td data-column-key="method">
                                 <span class="badge bg-light text-dark border" th:text="${rf.refundMethod}">CASH</span>
                             </td>
-                            <td class="text-end fw-bold text-danger fs-6"
+                            <td data-column-key="amount" class="text-end fw-bold text-danger fs-6"
                                 th:text="${#numbers.formatDecimal(rf.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td th:text="${rf.reason}">Bệnh nhân hủy ca phẫu thuật</td>
-                            <td th:text="${rf.refundedBy.fullName}">Thu ngân A</td>
+                            <td data-column-key="reason" th:text="${rf.reason}">Bệnh nhân hủy ca phẫu thuật</td>
+                            <td data-column-key="creator" th:text="${rf.refundedBy.fullName}">Thu ngân A</td>
+                            <td data-column-key="actions" class="text-end">
+                                <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
+                                   class="fin-btn fin-btn-sm fin-btn-outline" title="Xem hóa đơn liên quan">
+                                    <i class="bi bi-receipt"></i> Xem HĐ
+                                </a>
+                                <span th:if="${rf.invoice == null}" class="text-muted small">Tạm ứng</span>
+                            </td>
                         </tr>
                         </tbody>
                     </table>

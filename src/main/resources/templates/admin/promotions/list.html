@@ -87,30 +87,30 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="fin-table table">
+                    <table class="fin-table table" data-enhanced-table="ft20-promotions">
                         <thead>
                         <tr>
-                            <th>Mã KM</th>
-                            <th>Tên chương trình</th>
-                            <th>Mức giảm</th>
-                            <th>Thời hạn áp dụng</th>
-                            <th>Điều kiện áp dụng</th>
-                            <th class="text-center">Lượt dùng</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-end" style="width: 160px;">Thao tác</th>
+                            <th data-column-key="promo_code" data-column-required="true" data-column-pinned="true">Mã KM</th>
+                            <th data-column-key="promo_name" data-column-pinned="true">Tên chương trình</th>
+                            <th data-column-key="discount_val">Mức giảm</th>
+                            <th data-column-key="date_range">Thời hạn áp dụng</th>
+                            <th data-column-key="conditions">Điều kiện áp dụng</th>
+                            <th class="text-center" data-column-key="used_count">Lượt dùng</th>
+                            <th class="text-center" data-column-key="status">Trạng thái</th>
+                            <th class="text-end" style="width: 160px;" data-column-key="actions" data-column-action="true">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="p : ${promotions}">
-                            <td>
+                            <td data-column-key="promo_code">
                                 <strong class="badge bg-light text-primary border fs-6" th:text="${p.promoCode}">KM10</strong>
                                 <div class="text-muted small mt-1" th:text="${p.branch != null ? p.branch.branchName : 'Toàn hệ thống'}">Toàn hệ thống</div>
                             </td>
-                            <td>
+                            <td data-column-key="promo_name">
                                 <strong class="text-dark" th:text="${p.promoName}">Tri ân khách hàng</strong>
                                 <div class="text-muted small text-truncate" style="max-width: 250px;" th:text="${p.description}">Mô tả</div>
                             </td>
-                            <td>
+                            <td data-column-key="discount_val">
                                 <span th:if="${p.promoType.name() == 'PERCENTAGE'}" class="fw-bold text-success">
                                     <i class="bi bi-percent me-1"></i>Giảm <span th:text="${p.discountValue}">10</span>%
                                 </span>
@@ -120,7 +120,7 @@
                                 <div th:if="${p.maxDiscountAmount != null and p.promoType.name() == 'PERCENTAGE'}" class="text-muted small"
                                      th:text="'Tối đa: ' + ${#numbers.formatDecimal(p.maxDiscountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></div>
                             </td>
-                            <td>
+                            <td data-column-key="date_range">
                                 <div class="small">
                                     <span>Từ: </span><strong th:text="${#temporals.format(p.startDate, 'dd/MM/yyyy')}">01/10/2026</strong>
                                 </div>
@@ -128,7 +128,7 @@
                                     <span>Đến: </span><strong th:text="${#temporals.format(p.endDate, 'dd/MM/yyyy')}">31/10/2026</strong>
                                 </div>
                             </td>
-                            <td>
+                            <td data-column-key="conditions">
                                 <div class="small text-muted" th:if="${p.minBillAmount > 0}">
                                     Đơn từ: <strong class="text-dark" th:text="${#numbers.formatDecimal(p.minBillAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</strong>
                                 </div>
@@ -142,11 +142,11 @@
                                     Không giới hạn
                                 </div>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="used_count" class="text-center">
                                 <span class="fw-bold" th:text="${p.usedCount}">5</span>
                                 <span class="text-muted" th:text="' / ' + (${p.usageLimit != null ? p.usageLimit : '∞'})"> / 100</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="status" class="text-center">
                                 <span th:if="${p.isActive and p.startDate.isBefore(#temporals.createNow()) and p.endDate.isAfter(#temporals.createNow())}" class="fin-badge fin-badge-paid">
                                     <i class="bi bi-check-circle me-1"></i>Đang chạy
                                 </span>
@@ -160,7 +160,7 @@
                                     <i class="bi bi-slash-circle me-1"></i>Tạm ngưng
                                 </span>
                             </td>
-                            <td class="text-end">
+                            <td data-column-key="actions" data-column-action="true" class="text-end">
                                 <div class="d-flex justify-content-end gap-1">
                                     <a th:href="@{/admin/promotions/{id}(id=${p.promotionId})}" class="fin-btn fin-btn-outline py-1 px-2 btn-sm" title="Xem chi tiết & Cấp voucher">
                                         <i class="bi bi-eye"></i>

@@ -52,16 +52,16 @@
 
         <!-- BẢNG DANH SÁCH -->
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" id="tblMedications">
+          <table class="table table-hover align-middle mb-0" id="tblMedications" data-enhanced-table="admin-medications">
             <thead class="table-light">
               <tr>
-                <th style="width:130px">Mã thuốc</th>
-                <th>Tên thuốc</th>
-                <th>Hoạt chất</th>
-                <th style="width:90px">Đơn vị</th>
-                <th>Hướng dẫn sử dụng</th>
-                <th style="width:120px" class="text-center">Trạng thái</th>
-                <th style="width:140px" class="text-center">Thao tác</th>
+                <th data-column-key="code" data-pinned="true" style="min-width:130px">Mã thuốc</th>
+                <th data-column-key="name" style="min-width:180px">Tên thuốc</th>
+                <th data-column-key="activeIngredient" style="min-width:160px">Hoạt chất</th>
+                <th data-column-key="unit" style="min-width:90px">Đơn vị</th>
+                <th data-column-key="usage" style="min-width:200px">Hướng dẫn sử dụng</th>
+                <th data-column-key="status" style="min-width:120px" class="text-center">Trạng thái</th>
+                <th data-column-key="actions" data-column-action="true" style="min-width:140px" class="text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -69,17 +69,17 @@
                 <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
               </tr>
               <tr th:each="med : ${medications}">
-                <td><code th:text="${med.drugCode}">TH001</code></td>
-                <td th:text="${med.drugName}">Amoxicillin</td>
-                <td th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
-                <td th:text="${med.unit}">Viên</td>
-                <td th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
-                <td class="text-center">
+                <td data-column-key="code"><code th:text="${med.drugCode}">TH001</code></td>
+                <td data-column-key="name" th:text="${med.drugName}">Amoxicillin</td>
+                <td data-column-key="activeIngredient" th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
+                <td data-column-key="unit" th:text="${med.unit}">Viên</td>
+                <td data-column-key="usage" th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
+                <td data-column-key="status" class="text-center">
                   <span class="badge"
                         th:classappend="${med.isActive} ? 'bg-success' : 'bg-secondary'"
                         th:text="${med.isActive} ? 'Đang dùng' : 'Ngừng dùng'">Đang dùng</span>
                 </td>
-                <td class="text-center">
+                <td data-column-key="actions" data-column-action="true" class="text-center">
                   <!-- Sửa -->
                   <button type="button" class="btn btn-sm btn-outline-primary me-1"
                           th:data-id="${med.medicationId}"
