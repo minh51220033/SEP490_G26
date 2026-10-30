@@ -154,11 +154,6 @@
                                 Username
                             </option>
 
-                            <option value="fullName"
-                                    th:selected="${sort == 'fullName'}">
-                                Họ tên
-                            </option>
-
                             <option value="email"
                                     th:selected="${sort == 'email'}">
                                 Email
@@ -535,5 +530,17 @@
 
 </div>
 
+<script>
+(function() {
+    const kwInput = document.querySelector('input[name="keyword"]');
+    const form = kwInput ? kwInput.closest('form') : null;
+    if (!form || !kwInput) return;
+    let debounceTimer = null;
+    kwInput.addEventListener('input', function() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { form.submit(); }, 350);
+    });
+})();
+</script>
 </body>
 </html>

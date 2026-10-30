@@ -9,6 +9,7 @@ import com.cvdcms.entity.enums.StockIssueType;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.BranchAccessService;
 import com.cvdcms.service.StockIssueService;
+import com.cvdcms.util.InventoryFileStorageUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,11 +34,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * - Chặn xuất sử dụng hoặc điều chuyển đối với lô đã hết hạn (chỉ cho phép xuất hủy DISCARD_EXPIRED).
  * - Sử dụng bộ nhớ đệm (cache) trong cùng transaction để cộng/trừ tồn kho chính xác khi phiếu có nhiều dòng trùng vật tư.
  * - Tự động trừ kho nguồn và cộng kho đích (kèm tạo/cập nhật lô tương ứng tại chi nhánh đích) khi điều chuyển.
+ * - Hỗ trợ ký điện tử bất biến (chống ký đè / chống giả mạo người ký).
  */
 @Service
 public class StockIssueServiceImpl implements StockIssueService {
 
-    // Bộ đếm tuần tự đảm bảo sinh mã phiếu xuất (PX...) và điều chuyển (DC...) không bị trùng lặp
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis());
 
     private final BranchRepository branchRepository;
@@ -126,7 +128,6 @@ public class StockIssueServiceImpl implements StockIssueService {
 
         List<StockIssueItem> issueItems = new ArrayList<>();
 
-        // Bộ nhớ đệm trong cùng transaction để xử lý chính xác khi nhiều dòng cùng vật tư hoặc cùng lô
         Map<Long, BranchInventory> sourceInventoryCache = new HashMap<>();
         Map<Long, MaterialBatch> sourceBatchCache = new HashMap<>();
         Map<Long, BranchInventory> destInventoryCache = new HashMap<>();
@@ -163,7 +164,6 @@ public class StockIssueServiceImpl implements StockIssueService {
             }
 
             if (input.getBatchId() != null && input.getBatchId() > 0) {
-                // Xuất đích danh từ 1 lô cụ thể
                 MaterialBatch batch = sourceBatchCache.get(input.getBatchId());
                 if (batch == null) {
                     batch = batchRepository.findByIdForUpdate(input.getBatchId())
@@ -203,7 +203,6 @@ public class StockIssueServiceImpl implements StockIssueService {
                     creditDestinationBranch(destinationBranch, material, batch, requestedQty, today, destBatchCache, destInventoryCache);
                 }
             } else {
-                // Tự động phân bổ lô theo chuẩn FEFO (Hạn sử dụng gần nhất xuất trước)
                 List<MaterialBatch> candidateBatches;
                 if (type == StockIssueType.DISCARD_EXPIRED) {
                     candidateBatches = batchRepository.findExpiredBatchesForUpdate(
@@ -213,7 +212,6 @@ public class StockIssueServiceImpl implements StockIssueService {
                             sourceBranch.getBranchId(), material.getMaterialId(), today);
                 }
 
-                // Đồng bộ với các lô đã được trừ trước đó trong cùng phiếu (nếu có)
                 List<MaterialBatch> syncedCandidates = new ArrayList<>();
                 for (MaterialBatch b : candidateBatches) {
                     MaterialBatch cached = sourceBatchCache.get(b.getBatchId());
@@ -264,7 +262,6 @@ public class StockIssueServiceImpl implements StockIssueService {
                 }
             }
 
-            // Trừ tồn tổng hợp tại chi nhánh nguồn
             sourceInv.setCurrentStock(sourceInv.getCurrentStock().subtract(requestedQty));
             if (sourceInv.getCurrentStock().compareTo(BigDecimal.ZERO) < 0) {
                 bad("Tồn kho tổng hợp của vật tư " + material.getMaterialCode() + " không được âm.");
@@ -276,7 +273,52 @@ public class StockIssueServiceImpl implements StockIssueService {
             sourceInventoryCache.put(material.getMaterialId(), sourceInv);
         }
 
+        // Xử lý chữ ký điện tử nếu người lập ký ngay khi tạo phiếu xuất (A4)
+        String rawSignature = trimToNull(dto.getSignatureData());
+        if (rawSignature != null) {
+            String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(rawSignature, "issue");
+            issue.setSignatureUrl(sigUrl);
+            issue.setSignedByUserId(userId);
+            issue.setSignedByName(issuer.getFullName());
+            issue.setSignedAt(LocalDateTime.now());
+        }
+
         issue.setItems(issueItems);
+        StockIssue saved = issueRepository.save(issue);
+        return toDetailDTO(saved != null ? saved : issue);
+    }
+
+    @Override
+    @Transactional
+    public StockIssueResponseDTO signIssue(Long issueId, String signatureData, Long userId) {
+        if (issueId == null || issueId <= 0) {
+            bad("Mã phiếu xuất không hợp lệ.");
+        }
+        StockIssue issue = issueRepository.findByIdWithDetails(issueId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu xuất/điều chuyển."));
+
+        boolean canAccessSource = accessService.canAccessBranch(userId, issue.getBranch().getBranchId());
+        boolean canAccessDest = issue.getDestinationBranch() != null
+                && accessService.canAccessBranch(userId, issue.getDestinationBranch().getBranchId());
+
+        if (!canAccessSource && !canAccessDest) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền ký phiếu xuất này.");
+        }
+
+        if (issue.getSignatureUrl() != null && !issue.getSignatureUrl().isBlank()) {
+            bad("Phiếu xuất " + issue.getIssueCode()
+                    + " đã được ký điện tử bởi " + (issue.getSignedByName() != null ? issue.getSignedByName() : "nhân viên")
+                    + " và không thể ký đè hoặc chỉnh sửa chữ ký.");
+        }
+
+        StaffProfile signer = resolveOrCreateStaffProfile(userId);
+        String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(signatureData, "issue_" + issueId);
+
+        issue.setSignatureUrl(sigUrl);
+        issue.setSignedByUserId(userId);
+        issue.setSignedByName(signer.getFullName());
+        issue.setSignedAt(LocalDateTime.now());
+
         StockIssue saved = issueRepository.save(issue);
         return toDetailDTO(saved != null ? saved : issue);
     }
@@ -508,6 +550,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         }
         dto.setIssuerName(si.getIssuer() != null ? si.getIssuer().getFullName() : null);
         dto.setNotes(si.getNotes());
+        dto.setSignatureUrl(si.getSignatureUrl());
+        dto.setSignedByUserId(si.getSignedByUserId());
+        dto.setSignedByName(si.getSignedByName());
+        dto.setSignedAt(si.getSignedAt());
 
         BigDecimal totalQty = BigDecimal.ZERO;
         BigDecimal totalVal = BigDecimal.ZERO;

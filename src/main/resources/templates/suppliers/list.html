@@ -7,9 +7,6 @@
 <!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
 <link rel="stylesheet" th:href="@{/css/suppliers.css}">
 
-<!-- Header công khai: logo, menu dịch vụ, tin tức -->
-<header th:replace="~{fragments/header :: siteHeader}"></header>
-
 <div class="app-shell">
 
     <!-- Sidebar và Backdrop -->
@@ -27,15 +24,15 @@
             <header class="page-header">
                 <div>
                     <p class="eyebrow">CV-DCMS · QUẢN LÝ KHO VẬT TƯ NHA KHOA</p>
-                    <h1>Quản lý Nhà cung cấp</h1>
+                    <h1>Quản lý Nhà cung cấp &amp; Công nợ</h1>
                     <p class="subtitle">
-                        Quản lý danh mục đối tác cung ứng vật tư, mã số thuế, thông tin liên hệ và trạng thái hợp tác.
+                        Quản lý danh mục đối tác cung ứng vật tư, mã số thuế, tổng tiền nhập hàng, đã thanh toán và công nợ còn lại.
                     </p>
                 </div>
 
                 <div class="header-actions">
                     <a th:href="@{/home}" class="btn btn-secondary">← Trang chủ</a>
-                    <a th:href="@{/inventory}" class="btn btn-secondary">📦 Quản lý kho</a>
+                    <a th:href="@{/inventory}" class="btn btn-secondary">Quản lý kho</a>
                     <button id="addBtn" type="button" class="btn btn-primary">
                         + Thêm nhà cung cấp
                     </button>
@@ -44,6 +41,10 @@
 
             <!-- Thanh tìm kiếm và lọc -->
             <section class="toolbar">
+                <select id="branchSelect" aria-label="Chi nhánh tính công nợ" style="min-width:190px;">
+                    <option value="">Đang tải chi nhánh...</option>
+                </select>
+
                 <input
                         id="keyword"
                         name="keyword"
@@ -72,7 +73,7 @@
             <!-- Bảng nhà cung cấp -->
             <section class="table-card">
                 <div class="table-heading">
-                    <h2>Danh sách nhà cung cấp vật tư</h2>
+                    <h2>Danh sách nhà cung cấp vật tư &amp; công nợ</h2>
                     <span id="totalCount">Đang tải...</span>
                 </div>
 
@@ -82,16 +83,17 @@
                         <tr>
                             <th scope="col">Mã NCC</th>
                             <th scope="col">Tên nhà cung cấp</th>
-                            <th scope="col">Mã số thuế</th>
-                            <th scope="col">Số điện thoại</th>
-                            <th scope="col">Địa chỉ</th>
+                            <th scope="col">MST / Điện thoại</th>
+                            <th scope="col">Tổng tiền nhập</th>
+                            <th scope="col">Đã thanh toán</th>
+                            <th scope="col">Còn nợ</th>
                             <th scope="col">Trạng thái</th>
                             <th scope="col">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody id="supplierTable">
                         <tr>
-                            <td colspan="7" class="empty">Đang tải dữ liệu...</td>
+                            <td colspan="8" class="empty">Đang tải dữ liệu...</td>
                         </tr>
                         </tbody>
                     </table>
@@ -111,8 +113,6 @@
 
         </main>
 
-        <!-- Footer -->
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
@@ -188,6 +188,53 @@
             <div class="form-actions">
                 <button type="button" id="cancelBtn" class="btn btn-secondary">Hủy</button>
                 <button type="submit" id="saveBtn" class="btn btn-primary">Lưu thông tin</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Thanh toán công nợ Nhà cung cấp -->
+<div id="supplierPayModal" class="modal" hidden>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="supplierPayTitle">
+        <div class="modal-heading">
+            <h2 id="supplierPayTitle">Thanh toán công nợ Nhà cung cấp</h2>
+            <button id="closePayModalBtn" type="button" class="close-btn" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="supplierPayForm" novalidate>
+            <input id="paySupplierId" type="hidden">
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
+                <div>Nhà cung cấp: <strong id="paySupplierNameDisplay">—</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                    <span>Tổng nhập: <strong id="payTotalImportDisplay">0 ₫</strong></span>
+                    <span>Đã trả: <strong id="payTotalPaidDisplay" style="color:#15803d;">0 ₫</strong></span>
+                    <span>Còn nợ: <strong id="payRemainingDebtDisplay" style="color:#b91c1c;">0 ₫</strong></span>
+                </div>
+            </div>
+
+            <label for="payReceiptSelect">Phiếu nhập đối ứng (Tùy chọn)</label>
+            <select id="payReceiptSelect" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;">
+                <option value="">-- Thanh toán công nợ chung --</option>
+            </select>
+
+            <label for="payAmountInput">Số tiền thanh toán (VNĐ) *</label>
+            <input id="payAmountInput" type="number" min="1" step="1" required placeholder="Nhập số tiền thanh toán...">
+
+            <label for="payMethodSelect">Hình thức thanh toán *</label>
+            <select id="payMethodSelect" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;">
+                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                <option value="CASH">Tiền mặt</option>
+            </select>
+
+            <label for="payRefInput">Số chứng từ / Mã giao dịch</label>
+            <input id="payRefInput" type="text" maxlength="100" placeholder="VD: UNC-2026-01">
+
+            <label for="payNotesInput">Ghi chú</label>
+            <textarea id="payNotesInput" rows="2" maxlength="255" placeholder="Nội dung thanh toán..."></textarea>
+
+            <div class="form-actions">
+                <button type="button" id="cancelPayModalBtn" class="btn btn-secondary">Hủy</button>
+                <button type="submit" id="confirmPayBtn" class="btn btn-primary">Xác nhận thanh toán</button>
             </div>
         </form>
     </div>

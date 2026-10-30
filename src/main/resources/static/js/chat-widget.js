@@ -42,6 +42,8 @@
         isOpen: false,
         isRecipientPickerOpen: false,
         recipientDebounceTimer: null,
+        recipientAbortController: null,
+        recipientRequestSeq: 0,
         isSending: false,
         stompClient: null,
         connected: false,
@@ -220,7 +222,7 @@
         if (recKeywordInput) {
             recKeywordInput.addEventListener('input', () => {
                 if (state.recipientDebounceTimer) clearTimeout(state.recipientDebounceTimer);
-                state.recipientDebounceTimer = setTimeout(loadWidgetRecipients, 250);
+                state.recipientDebounceTimer = setTimeout(loadWidgetRecipients, 350);
             });
         }
         if (recRoleSelect) {
@@ -248,6 +250,13 @@
         const listEl = document.getElementById('cvdcmsWidgetRecipientList');
         if (!listEl) return;
 
+        if (state.recipientAbortController) {
+            try { state.recipientAbortController.abort(); } catch (e) { /* ignore */ }
+        }
+        const abortController = new AbortController();
+        state.recipientAbortController = abortController;
+        const requestSeq = ++state.recipientRequestSeq;
+
         const kwInput = document.getElementById('cvdcmsWidgetRecipientKeyword');
         const roleSelect = document.getElementById('cvdcmsWidgetRecipientRole');
         const params = new URLSearchParams();
@@ -257,15 +266,20 @@
         if (roleSelect && roleSelect.value !== 'ALL') {
             params.set('role', roleSelect.value);
         }
+        params.set('page', '0');
+        params.set('size', '30');
 
         listEl.innerHTML = `<div class="p-2 text-center text-muted" style="font-size:11.5px;">Đang tìm tài khoản cùng cơ sở...</div>`;
 
         try {
             const resp = await fetch(`/api/chat/recipients?${params.toString()}`, {
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: abortController.signal
             });
+            if (requestSeq !== state.recipientRequestSeq) return;
             if (!resp.ok) throw new Error('Không thể tải danh sách người nhận');
             const users = await resp.json();
+            if (requestSeq !== state.recipientRequestSeq) return;
 
             if (!Array.isArray(users) || users.length === 0) {
                 listEl.innerHTML = `<div class="p-2 text-center text-muted" style="font-size:11.5px;">Không có tài khoản phù hợp trong cơ sở.</div>`;
@@ -277,6 +291,7 @@
                 const name = u.fullName || u.username || ('#' + u.userId);
                 const roleCode = u.roleCode || 'BENH_NHAN';
                 const roleLabel = u.roleLabel || 'Bệnh nhân';
+                const profileInfo = u.patientProfilesSummary ? ` • Hồ sơ: ${u.patientProfilesSummary}` : '';
                 html += `
                     <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded hover-bg-light"
                          style="cursor:pointer;border-bottom:1px solid #f1f5f9;"
@@ -287,8 +302,8 @@
                                 <span class="fw-semibold text-dark text-truncate" style="font-size:12px;">${escapeHtml(name)}</span>
                                 <span class="chat-role-badge chat-role-badge--${escapeHtml(roleCode)}" style="font-size:10px;padding:1px 6px;">${escapeHtml(roleLabel)}</span>
                             </div>
-                            <div class="text-muted text-truncate" style="font-size:10.5px;">
-                                ${escapeHtml(u.username ? '@' + u.username : '')} ${escapeHtml(u.phoneNumber ? '• ' + u.phoneNumber : '')}
+                            <div class="text-muted text-truncate" style="font-size:10.5px;" title="${escapeHtml(u.patientProfilesSummary || '')}">
+                                ${escapeHtml(u.username ? '@' + u.username : '')} ${escapeHtml(u.phoneNumber ? '• ' + u.phoneNumber : '')}${escapeHtml(profileInfo)}
                             </div>
                         </div>
                         <span class="badge bg-primary text-white" style="font-size:10px;">Chọn</span>
@@ -308,6 +323,8 @@
                 });
             });
         } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            if (requestSeq !== state.recipientRequestSeq) return;
             listEl.innerHTML = `<div class="p-2 text-center text-danger" style="font-size:11.5px;">Lỗi tải danh sách tài khoản.</div>`;
         }
     }

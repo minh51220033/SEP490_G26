@@ -130,12 +130,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
             FROM User u
             LEFT JOIN u.roles r
             LEFT JOIN u.patientProfiles p
+            LEFT JOIN StaffProfile sp ON sp.user = u
             WHERE
                 (
                     :keyword = ''
                     OR LOWER(u.username)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(p.fullName, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(p.patientCode, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(sp.fullName, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(sp.staffCode, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(u.email)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -150,12 +157,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
             FROM User u
             LEFT JOIN u.roles r
             LEFT JOIN u.patientProfiles p
+            LEFT JOIN StaffProfile sp ON sp.user = u
             WHERE
                 (
                     :keyword = ''
                     OR LOWER(u.username)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(p.fullName, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(p.patientCode, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(sp.fullName, ''))
+                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(COALESCE(sp.staffCode, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(u.email)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))

@@ -10,7 +10,7 @@
         SUPPLIER_CODE: /^[A-Za-z0-9_-]{2,20}$/,
         TAX_CODE: /^[0-9]{10}(-[0-9]{3})?$/,
         PHONE: /^(0|\+84)[0-9]{9,10}$/,
-        REFERENCE_NO: /^[A-Za-z0-9._/-]{1,80}$/
+        REFERENCE_NO: /^[A-Za-z0-9._/-]{1,100}$/
     };
 
     const state = {
@@ -20,6 +20,7 @@
         activeMaterials: [],
         activeSuppliers: [],
         availableBatches: [],
+        supplierDebtsMap: new Map(),
 
         activeTab: "inventory",
         pageSize: 10,
@@ -43,8 +44,32 @@
         materialsTotalPages: 0,
 
         paymentsPage: 0,
-        paymentsTotalPages: 0
+        paymentsTotalPages: 0,
+
+        // Quản lý ngữ cảnh bảng ký điện tử (receipt-draft, issue-draft, transfer-draft, receipt-existing, issue-existing)
+        signContext: null,
+        signTargetId: null,
+        hasSignatureStrokes: false
     };
+
+    // Quản lý AbortController theo từng nhóm truy vấn để tránh kết quả cũ ghi đè kết quả mới
+    const abortControllers = new Map();
+    function getAbortSignal(key) {
+        if (abortControllers.has(key)) {
+            try { abortControllers.get(key).abort(); } catch { /* ignore */ }
+        }
+        const ctrl = new AbortController();
+        abortControllers.set(key, ctrl);
+        return ctrl.signal;
+    }
+
+    function debounce(fn, delayMs = 350) {
+        let timer = null;
+        return (...args) => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => fn(...args), delayMs);
+        };
+    }
 
     const money = (value) => new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -80,10 +105,15 @@
     }
 
     async function request(url, options = {}) {
+        const isFormData = options.body instanceof FormData;
+        const headers = isFormData
+            ? { ...(options.headers || {}) }
+            : { "Content-Type": "application/json", ...(options.headers || {}) };
+
         const response = await fetch(url, {
             credentials: "same-origin",
-            headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-            ...options
+            ...options,
+            headers
         });
         const raw = await response.text();
         let body = null;
@@ -104,6 +134,18 @@
             return false;
         }
         return true;
+    }
+
+    function openImageLightbox(url, title = "Chứng từ / Hóa đơn đính kèm") {
+        if (!url) return;
+        if (url.toLowerCase().endsWith(".pdf")) {
+            window.open(url, "_blank", "noopener");
+            return;
+        }
+        if ($("lightboxTitle")) $("lightboxTitle").textContent = title;
+        if ($("lightboxImage")) $("lightboxImage").src = url;
+        if ($("lightboxDownloadLink")) $("lightboxDownloadLink").href = url;
+        if ($("imageLightboxModal")) $("imageLightboxModal").hidden = false;
     }
 
     // =========================================================================
@@ -201,73 +243,7 @@
                     : "Không có công nợ tồn đọng tại chi nhánh";
             }
         } catch {
-            // Fallback: truy vấn từng nguồn độc lập bằng Promise.allSettled (với size <= 100 hợp lệ)
-            const [invRes, lowRes, availBatchesRes, debtsRes] = await Promise.allSettled([
-                request(`/api/inventory?branchId=${state.branchId}&page=0&size=1`),
-                request(`/api/inventory?branchId=${state.branchId}&lowStock=true&page=0&size=1`),
-                request(`/api/inventory/batches/available?branchId=${state.branchId}`),
-                request(`/api/inventory/supplier-payments/debts?branchId=${state.branchId}`)
-            ]);
-
-            const updateCardState = (cardId, ok) => {
-                const el = $(cardId);
-                if (!el) return;
-                el.classList.remove("is-loading");
-                el.classList.toggle("is-error", !ok);
-            };
-
-            if (invRes.status === "fulfilled") {
-                updateCardState("kpiCardTotalItems", true);
-                const total = Number(invRes.value?.totalElements ?? 0);
-                $("statTotalItems").textContent = total.toLocaleString("vi-VN");
-                $("statTotalItemsSub").textContent = "Tổng danh mục vật tư tại chi nhánh";
-            } else {
-                updateCardState("kpiCardTotalItems", false);
-                $("statTotalItems").textContent = "—";
-                $("statTotalItemsSub").textContent = "Không tải được s��� liệu tồn kho";
-            }
-
-            if (lowRes.status === "fulfilled") {
-                updateCardState("kpiCardLowStock", true);
-                const low = Number(lowRes.value?.totalElements ?? 0);
-                $("statLowStock").textContent = low.toLocaleString("vi-VN");
-                $("statLowStockSub").textContent = low > 0 ? "Chạm hoặc dưới ngưỡng tối thiểu" : "Tất cả mặt hàng đều đủ định mức";
-            } else {
-                updateCardState("kpiCardLowStock", false);
-                $("statLowStock").textContent = "—";
-                $("statLowStockSub").textContent = "Không tải được cảnh báo tồn";
-            }
-
-            if (availBatchesRes.status === "fulfilled") {
-                updateCardState("kpiCardExpiring", true);
-                const batchRows = Array.isArray(availBatchesRes.value) ? availBatchesRes.value : [];
-                const expired = batchRows.filter(b => Number(b.quantityRemaining || 0) > 0 && b.expiryWarning === "EXPIRED").length;
-                const soon = batchRows.filter(b => Number(b.quantityRemaining || 0) > 0 && b.expiryWarning === "EXPIRING_SOON").length;
-                const expCount = expired + soon;
-                $("statExpiringBatches").textContent = expCount.toLocaleString("vi-VN");
-                $("statExpiringBatchesSub").textContent = expCount > 0
-                    ? `${expired} lô quá hạn · ${soon} lô ≤ 30 ngày`
-                    : "Không có lô hàng tồn sắp/đã hết hạn";
-            } else {
-                updateCardState("kpiCardExpiring", false);
-                $("statExpiringBatches").textContent = "—";
-                $("statExpiringBatchesSub").textContent = "Không tải được dữ liệu lô hàng";
-            }
-
-            if (debtsRes.status === "fulfilled") {
-                updateCardState("kpiCardDebt", true);
-                const debtRows = Array.isArray(debtsRes.value) ? debtsRes.value : [];
-                const totalDebt = debtRows.reduce((acc, d) => acc + Number(d.remainingDebt || 0), 0);
-                const suppliersWithDebt = debtRows.filter(d => Number(d.remainingDebt || 0) > 0).length;
-                $("statTotalDebt").textContent = money(totalDebt);
-                $("statTotalDebtSub").textContent = totalDebt > 0
-                    ? `Đang nợ ${suppliersWithDebt} nhà cung cấp`
-                    : "Không có công nợ tồn đọng";
-            } else {
-                updateCardState("kpiCardDebt", false);
-                $("statTotalDebt").textContent = "—";
-                $("statTotalDebtSub").textContent = "Không tải được công nợ NCC";
-            }
+            setKpiError("Không tải được số liệu tổng hợp");
         }
     }
 
@@ -420,7 +396,7 @@
         if ($("lowStock").checked) params.set("lowStock", "true");
 
         try {
-            const data = await request(`/api/inventory?${params}`);
+            const data = await request(`/api/inventory?${params}`, { signal: getAbortSignal("inventory") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.inventoryTotalPages = Number(data?.totalPages || 0);
             $("inventoryTable").innerHTML = rows.length ? rows.map(item => {
@@ -445,6 +421,7 @@
             $("inventoryPrev").disabled = page <= 0;
             $("inventoryNext").disabled = page + 1 >= state.inventoryTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("inventoryTable").innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
             showMessage(error.message, "error");
         }
@@ -471,7 +448,7 @@
         if ($("expiryTo").value) params.set("expiryTo", $("expiryTo").value);
 
         try {
-            const data = await request(`/api/inventory/batches?${params}`);
+            const data = await request(`/api/inventory/batches?${params}`, { signal: getAbortSignal("batches") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.batchesTotalPages = Number(data?.totalPages || 0);
             $("batchesTable").innerHTML = rows.length ? rows.map(item => {
@@ -499,24 +476,61 @@
             $("batchesPrev").disabled = page <= 0;
             $("batchesNext").disabled = page + 1 >= state.batchesTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("batchesTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
             showMessage(error.message, "error");
         }
     }
 
     // =========================================================================
-    // 3. TAB PHIẾU NHẬP KHO (FORM + LỊCH SỬ + CHI TIẾT)
+    // 3. TAB PHIẾU NHẬP KHO (UPLOAD HÓA ĐƠN, THANH TOÁN, KÝ ĐIỆN TỬ, LỊCH SỬ, PDF)
     // =========================================================================
 
-    function buildMaterialOptionsHtml(selectedId = "") {
-        if (!state.activeMaterials.length) {
-            return '<option value="">-- Chưa có vật tư (Hãy thêm ở Tab 6) --</option>';
+    function buildMaterialOptionsHtml(selectedId = "", customList = null) {
+        const sourceList = Array.isArray(customList) ? customList : state.activeMaterials;
+        if (!sourceList.length && !selectedId) {
+            return '<option value="">-- Không tìm thấy vật tư phù hợp --</option>';
+        }
+        // Luôn bảo toàn vật tư đang được chọn ở dòng hiện tại ngay cả khi từ khóa tìm kiếm mới không chứa nó
+        const merged = [...sourceList];
+        if (selectedId && !merged.some(m => String(m.materialId) === String(selectedId))) {
+            const existing = state.activeMaterials.find(m => String(m.materialId) === String(selectedId));
+            if (existing) merged.unshift(existing);
         }
         return '<option value="">-- Chọn vật tư --</option>' +
-            state.activeMaterials.map(m => {
+            merged.map(m => {
                 const sel = String(m.materialId) === String(selectedId) ? "selected" : "";
                 return `<option value="${escapeHtml(m.materialId)}" data-unit="${escapeHtml(m.unit)}" ${sel}>${escapeHtml(m.materialCode)} - ${escapeHtml(m.materialName)} (${escapeHtml(m.unit)})</option>`;
             }).join("");
+    }
+
+    function bindSearchableMaterialSelect(searchInput, selectEl) {
+        if (!searchInput || !selectEl) return;
+        const performSearch = debounce(async () => {
+            const kw = searchInput.value.trim();
+            const currentVal = selectEl.value;
+            if (!kw) {
+                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, state.activeMaterials);
+                return;
+            }
+            try {
+                const res = await request(`/api/materials?keyword=${encodeURIComponent(kw)}&active=true&page=0&size=30`);
+                const items = Array.isArray(res?.content) ? res.content : [];
+                items.forEach(item => {
+                    if (!state.activeMaterials.some(m => m.materialId === item.materialId)) {
+                        state.activeMaterials.push(item);
+                    }
+                });
+                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, items);
+            } catch {
+                const filtered = state.activeMaterials.filter(m =>
+                    `${m.materialCode} ${m.materialName}`.toLowerCase().includes(kw.toLowerCase())
+                );
+                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, filtered);
+            }
+        }, 300);
+
+        searchInput.addEventListener("input", performSearch);
     }
 
     function refreshMaterialSelectsInForms() {
@@ -530,14 +544,84 @@
         });
     }
 
+    async function handleInvoiceFileUpload(file) {
+        if (!file) return;
+        const maxBytes = 5 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            showMessage("File hóa đơn vượt quá dung lượng tối đa 5MB. Vui lòng chọn file nhỏ hơn.", "warning");
+            if ($("invoiceFileInput")) $("invoiceFileInput").value = "";
+            return;
+        }
+        const ext = (file.name.split(".").pop() || "").toLowerCase();
+        if (!["png", "jpg", "jpeg", "webp", "pdf"].includes(ext)) {
+            showMessage("Định dạng file không hỗ trợ. Chỉ chấp nhận .png, .jpg, .jpeg, .webp, .pdf.", "warning");
+            if ($("invoiceFileInput")) $("invoiceFileInput").value = "";
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        if ($("invoicePreviewCard")) $("invoicePreviewCard").hidden = false;
+        if ($("invoicePreviewName")) $("invoicePreviewName").textContent = file.name;
+        if ($("invoicePreviewStatus")) {
+            $("invoicePreviewStatus").textContent = "Đang tải file hóa đơn lên hệ thống...";
+            $("invoicePreviewStatus").style.color = "#0284c7";
+        }
+
+        try {
+            const res = await request("/api/inventory/receipts/upload-invoice", {
+                method: "POST",
+                body: formData
+            });
+            const uploadedUrl = res?.attachmentUrl || "";
+            $("attachmentUrl").value = uploadedUrl;
+            if ($("invoicePreviewStatus")) {
+                $("invoicePreviewStatus").textContent = "✓ Đã tải lên hợp lệ";
+                $("invoicePreviewStatus").style.color = "#15803d";
+            }
+            const isPdf = uploadedUrl.toLowerCase().endsWith(".pdf");
+            if ($("invoicePreviewImg")) {
+                if (!isPdf && uploadedUrl) {
+                    $("invoicePreviewImg").src = uploadedUrl;
+                    $("invoicePreviewImg").hidden = false;
+                } else {
+                    $("invoicePreviewImg").hidden = true;
+                }
+            }
+            if ($("zoomUploadedInvoiceBtn")) {
+                $("zoomUploadedInvoiceBtn").hidden = !uploadedUrl;
+                $("zoomUploadedInvoiceBtn").textContent = isPdf ? "Xem PDF" : "Phóng to";
+            }
+        } catch (err) {
+            $("attachmentUrl").value = "";
+            if ($("invoiceFileInput")) $("invoiceFileInput").value = "";
+            if ($("invoicePreviewCard")) $("invoicePreviewCard").hidden = true;
+            showMessage(err.message || "Tải file hóa đơn thất bại.", "error");
+        }
+    }
+
+    function clearUploadedInvoice() {
+        if ($("invoiceFileInput")) $("invoiceFileInput").value = "";
+        if ($("attachmentUrl")) $("attachmentUrl").value = "";
+        if ($("invoicePreviewCard")) $("invoicePreviewCard").hidden = true;
+        if ($("invoicePreviewImg")) {
+            $("invoicePreviewImg").src = "";
+            $("invoicePreviewImg").hidden = true;
+        }
+    }
+
     function addReceiptRow() {
         const tr = document.createElement("tr");
         tr.className = "receipt-item-row";
         tr.innerHTML = `
             <td>
-                <select class="material-id" required aria-label="Chọn vật tư">
-                    ${buildMaterialOptionsHtml()}
-                </select>
+                <div class="mat-picker-wrap">
+                    <input type="search" class="mat-search-input" placeholder="Gõ mã / tên để lọc nhanh vật tư..." aria-label="Tìm vật tư">
+                    <select class="material-id" required aria-label="Chọn vật tư">
+                        ${buildMaterialOptionsHtml()}
+                    </select>
+                </div>
             </td>
             <td class="mat-unit-cell">—</td>
             <td><input class="batch-number" maxlength="50" pattern="^[A-Za-z0-9._/-]{2,50}$" title="Số lô từ 2-50 ký tự (chữ, số, -, _, ., /)" required placeholder="VD: LO-2026-01" aria-label="Số lô"></td>
@@ -548,18 +632,23 @@
             <td><button class="remove-row" type="button" title="Xóa dòng" aria-label="Xóa dòng">×</button></td>`;
         $("receiptItems").appendChild(tr);
 
+        const searchInput = tr.querySelector(".mat-search-input");
         const matSelect = tr.querySelector(".material-id");
+        bindSearchableMaterialSelect(searchInput, matSelect);
+
         matSelect.addEventListener("change", () => {
             const opt = matSelect.options[matSelect.selectedIndex];
             tr.querySelector(".mat-unit-cell").textContent = opt?.dataset?.unit || "—";
         });
 
-        tr.querySelectorAll("input").forEach(input => input.addEventListener("input", calculateReceiptTotal));
+        tr.querySelectorAll(".quantity, .unit-price").forEach(input => input.addEventListener("input", calculateReceiptTotal));
         tr.querySelector(".remove-row").addEventListener("click", () => {
             const allRows = document.querySelectorAll(".receipt-item-row");
             if (allRows.length > 1) {
                 tr.remove();
             } else {
+                searchInput.value = "";
+                matSelect.innerHTML = buildMaterialOptionsHtml("");
                 matSelect.value = "";
                 tr.querySelector(".mat-unit-cell").textContent = "—";
                 tr.querySelector(".batch-number").value = "";
@@ -577,12 +666,17 @@
         $("receiptForm").reset();
         $("receiptDate").value = new Date().toISOString().slice(0, 10);
         $("receiptItems").innerHTML = "";
+        clearUploadedInvoice();
+        clearDraftSignature("receipt");
+        if ($("receiptPaidAmount")) $("receiptPaidAmount").value = "0";
+        if ($("receiptPaymentMethod")) $("receiptPaymentMethod").value = "BANK_TRANSFER";
+        if ($("receiptPaymentRefNo")) $("receiptPaymentRefNo").value = "";
         if ($("receiptResult")) $("receiptResult").hidden = true;
         addReceiptRow();
         calculateReceiptTotal();
     }
 
-    function calculateReceiptTotal() {
+    function computeCurrentReceiptTotalNumber() {
         let total = 0;
         document.querySelectorAll(".receipt-item-row").forEach(row => {
             const quantity = Number(row.querySelector(".quantity").value || 0);
@@ -591,7 +685,20 @@
             total += line;
             row.querySelector(".line-total").textContent = money(line);
         });
-        $("receiptTotal").textContent = money(total);
+        return total;
+    }
+
+    function calculateReceiptTotal() {
+        const total = computeCurrentReceiptTotalNumber();
+        const paid = Math.max(0, Number($("receiptPaidAmount")?.value || 0));
+        const remaining = Math.max(0, total - paid);
+
+        if ($("receiptTotal")) $("receiptTotal").textContent = money(total);
+        if ($("receiptPaidDisplay")) $("receiptPaidDisplay").textContent = money(paid);
+        if ($("receiptRemainingDebtDisplay")) {
+            $("receiptRemainingDebtDisplay").textContent = money(remaining);
+            $("receiptRemainingDebtDisplay").className = remaining > 0 ? "stock-low" : "stock-good";
+        }
     }
 
     async function submitReceipt(event) {
@@ -604,6 +711,19 @@
         if (invoiceNo && !REGEX.INVOICE_NO.test(invoiceNo)) {
             showMessage("Số hóa đơn NCC không hợp lệ (chỉ gồm chữ, số, dấu -, _, ., / và tối đa 50 ký tự).", "warning");
             $("supplierInvoiceNo").focus();
+            return;
+        }
+
+        // Nếu người dùng đã chọn file trong input nhưng chưa kịp chờ upload xong
+        const fileEl = $("invoiceFileInput");
+        if (!$("attachmentUrl").value.trim() && fileEl?.files?.length) {
+            await handleInvoiceFileUpload(fileEl.files[0]);
+        }
+
+        const attachmentUrl = $("attachmentUrl").value.trim();
+        if (!attachmentUrl) {
+            showMessage("Bắt buộc phải tải lên file ảnh hoặc chứng từ hóa đơn hợp lệ trước khi hoàn tất phiếu nhập kho.", "warning");
+            if (fileEl) fileEl.focus();
             return;
         }
 
@@ -620,6 +740,18 @@
             showMessage("Vui lòng chọn vật tư cho tất cả các dòng nhập.", "warning");
             return;
         }
+
+        // Kiểm tra trùng vật tư + cùng số lô trong cùng phiếu nhập
+        const seenBatchKeys = new Set();
+        for (const item of items) {
+            const key = `${item.materialId}::${item.batchNumber}`;
+            if (seenBatchKeys.has(key)) {
+                showMessage(`Số lô ${item.batchNumber} bị lặp lại trên cùng một vật tư trong phiếu nhập. Vui lòng gộp số lượng vào 1 dòng.`, "warning");
+                return;
+            }
+            seenBatchKeys.add(key);
+        }
+
         const invalidBatch = items.find(i => !REGEX.BATCH_NUMBER.test(i.batchNumber));
         if (invalidBatch) {
             showMessage("Số lô phải từ 2-50 ký tự, chỉ gồm chữ, số và các ký tự -, _, ., / (không chứa khoảng trắng).", "warning");
@@ -638,13 +770,37 @@
             return;
         }
 
+        const totalAmount = computeCurrentReceiptTotalNumber();
+        const paidAmount = Number($("receiptPaidAmount")?.value || 0);
+        if (!Number.isFinite(paidAmount) || paidAmount < 0) {
+            showMessage("Số tiền đã thanh toán không được nhỏ hơn 0.", "warning");
+            $("receiptPaidAmount")?.focus();
+            return;
+        }
+        if (paidAmount > totalAmount) {
+            showMessage(`Số tiền đã thanh toán (${money(paidAmount)}) không được vượt quá tổng tiền phiếu nhập (${money(totalAmount)}).`, "warning");
+            $("receiptPaidAmount")?.focus();
+            return;
+        }
+
+        const paymentRefNo = $("receiptPaymentRefNo")?.value?.trim() || "";
+        if (paymentRefNo && !REGEX.REFERENCE_NO.test(paymentRefNo)) {
+            showMessage("Số chứng từ thanh toán chỉ gồm chữ, số, dấu ., _, /, - và tối đa 100 ký tự.", "warning");
+            $("receiptPaymentRefNo")?.focus();
+            return;
+        }
+
         const payload = {
             branchId: Number(state.branchId),
             supplierId: Number($("supplierId").value),
             supplierInvoiceNo: invoiceNo || null,
             receiptDate: $("receiptDate").value,
             notes: $("receiptNotes").value.trim() || null,
-            attachmentUrl: $("attachmentUrl").value.trim() || null,
+            attachmentUrl,
+            paidAmount,
+            paymentMethod: $("receiptPaymentMethod")?.value || "BANK_TRANSFER",
+            paymentReferenceNo: paymentRefNo || null,
+            signatureData: $("receiptSignatureData")?.value || null,
             items
         };
         if (!payload.supplierId) {
@@ -661,16 +817,55 @@
                 body: JSON.stringify(payload)
             });
             resetReceiptForm();
-            result.innerHTML = `<strong>✓ Nhập kho thành công</strong> — Mã phiếu: <strong>${escapeHtml(saved.receiptCode)}</strong> · Tổng tiền: <strong>${money(saved.totalAmount)}</strong>`;
+            result.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <strong>✓ Nhập kho thành công</strong> — Mã phiếu: <strong>${escapeHtml(saved.receiptCode)}</strong>
+                        · Tổng tiền: <strong>${money(saved.totalAmount)}</strong>
+                        · Đã thanh toán: <strong class="stock-good">${money(saved.paidAmount)}</strong>
+                        · Còn nợ: <strong class="stock-low">${money(saved.remainingDebt)}</strong>
+                    </div>
+                    <div class="row-actions">
+                        <a href="/inventory/receipts/${saved.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In phiếu A4</a>
+                        <a href="/api/inventory/receipts/${saved.receiptId}/pdf?download=true" class="button button-primary button-sm">Xuất PDF</a>
+                    </div>
+                </div>`;
             result.hidden = false;
-            showMessage(`Đã tạo phiếu nhập ${saved.receiptCode}. Tồn kho và lô đã được cập nhật.`, "success");
+            showMessage(`Đã tạo phiếu nhập ${saved.receiptCode}. Tồn kho, thanh toán và công nợ đã được cập nhật.`, "success");
             await Promise.all([refreshBranchData(), loadReceiptHistory(0)]);
         } catch (error) {
             showMessage(error.message || "Không thể tạo phiếu nhập.", "error");
         } finally {
             button.disabled = false;
-            button.textContent = "✓ Xác nhận & Lưu phiếu nhập";
+            button.textContent = "Xác nhận & Lưu phiếu nhập";
         }
+    }
+
+    function renderInvoiceCell(attachmentUrl, receiptCode) {
+        if (!attachmentUrl) {
+            return '<span class="status status-warning">Chưa có</span>';
+        }
+        const isPdf = attachmentUrl.toLowerCase().endsWith(".pdf");
+        if (isPdf) {
+            return `<a href="${escapeHtml(attachmentUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">Xem PDF</a>`;
+        }
+        return `
+            <div style="display:flex; align-items:center; gap:6px;">
+                <img src="${escapeHtml(attachmentUrl)}" alt="Hóa đơn ${escapeHtml(receiptCode)}"
+                     class="invoice-thumb-small" data-zoom-image="${escapeHtml(attachmentUrl)}"
+                     data-zoom-title="Hóa đơn phiếu nhập ${escapeHtml(receiptCode)}">
+                <button type="button" class="button button-secondary button-sm"
+                        data-zoom-image="${escapeHtml(attachmentUrl)}"
+                        data-zoom-title="Hóa đơn phiếu nhập ${escapeHtml(receiptCode)}">Phóng to</button>
+            </div>`;
+    }
+
+    function renderSignatureCell(signatureUrl, signedByName, recordId, type) {
+        if (signatureUrl) {
+            return `<span class="status status-good" title="Người ký: ${escapeHtml(signedByName || "")}">Đã ký (${escapeHtml(signedByName || "NV")})</span>`;
+        }
+        const attr = type === "receipt" ? `data-sign-receipt="${recordId}"` : `data-sign-issue="${recordId}"`;
+        return `<button type="button" class="button button-secondary button-sm" ${attr}>Ký điện tử</button>`;
     }
 
     async function loadReceiptHistory(page = state.receiptsPage) {
@@ -692,7 +887,7 @@
         if ($("receiptToDate").value) params.set("toDate", $("receiptToDate").value);
 
         try {
-            const data = await request(`/api/inventory/receipts?${params}`);
+            const data = await request(`/api/inventory/receipts?${params}`, { signal: getAbortSignal("receipts") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.receiptsTotalPages = Number(data?.totalPages || 0);
 
@@ -701,15 +896,20 @@
                 return `<tr>
                     <td class="code">${escapeHtml(r.receiptCode)}</td>
                     <td>${escapeHtml(r.receiptDate)}</td>
-                    <td><strong>${escapeHtml(r.supplierName || "—")}</strong></td>
-                    <td>${escapeHtml(r.supplierInvoiceNo || "—")}</td>
-                    <td>${escapeHtml(r.receiverName || "—")}</td>
+                    <td>
+                        <strong>${escapeHtml(r.supplierName || "—")}</strong>
+                        ${r.supplierInvoiceNo ? `<div style="font-size:11.5px; color:#64748b;">HĐ: ${escapeHtml(r.supplierInvoiceNo)}</div>` : ""}
+                    </td>
+                    <td>${renderInvoiceCell(r.attachmentUrl, r.receiptCode)}</td>
                     <td><strong>${money(r.totalAmount)}</strong></td>
                     <td class="stock-good">${money(r.paidAmount)}</td>
-                    <td class="${debt > 0 ? "stock-low" : ""}">${money(debt)}</td>
+                    <td class="${debt > 0 ? "stock-low" : "stock-good"}">${money(debt)}</td>
+                    <td>${renderSignatureCell(r.signatureUrl, r.signedByName, r.receiptId, "receipt")}</td>
                     <td>
                         <div class="row-actions">
-                            <button type="button" class="button button-secondary button-sm" data-view-receipt="${r.receiptId}">Xem chi tiết</button>
+                            <button type="button" class="button button-secondary button-sm" data-view-receipt="${r.receiptId}">Chi tiết</button>
+                            <a href="/api/inventory/receipts/${r.receiptId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
+                            <a href="/inventory/receipts/${r.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
                         </div>
                     </td>
                 </tr>`;
@@ -719,6 +919,7 @@
             $("receiptHistoryPrev").disabled = page <= 0;
             $("receiptHistoryNext").disabled = page + 1 >= state.receiptsTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("receiptHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -741,6 +942,33 @@
                 </tr>
             `).join("");
 
+            const invoiceBlock = r.attachmentUrl
+                ? (r.attachmentUrl.toLowerCase().endsWith(".pdf")
+                    ? `<a href="${escapeHtml(r.attachmentUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">Mở chứng từ PDF</a>`
+                    : `<div style="display:flex; align-items:center; gap:12px;">
+                           <img src="${escapeHtml(r.attachmentUrl)}" alt="Ảnh hóa đơn" class="detail-invoice-img"
+                                data-zoom-image="${escapeHtml(r.attachmentUrl)}"
+                                data-zoom-title="Hóa đơn phiếu nhập ${escapeHtml(r.receiptCode)}">
+                           <button type="button" class="button button-secondary button-sm"
+                                   data-zoom-image="${escapeHtml(r.attachmentUrl)}"
+                                   data-zoom-title="Hóa đơn phiếu nhập ${escapeHtml(r.receiptCode)}">Phóng to ảnh hóa đơn</button>
+                       </div>`)
+                : `<span style="color:#94a3b8;">Không có ảnh hóa đơn</span>`;
+
+            const signatureBlock = r.signatureUrl
+                ? `<div style="display:flex; align-items:center; gap:14px;">
+                       <img src="${escapeHtml(r.signatureUrl)}" alt="Chữ ký điện tử" class="detail-signature-img">
+                       <div>
+                           <div>Người ký: <strong>${escapeHtml(r.signedByName || r.receiverName || "—")}</strong></div>
+                           <div style="font-size:12px; color:#64748b;">Thời gian ký: ${escapeHtml(formatDateTime(r.signedAt))}</div>
+                           <span class="status status-good" style="margin-top:4px; display:inline-block;">Chữ ký hợp lệ (Đã khóa)</span>
+                       </div>
+                   </div>`
+                : `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                       <span style="color:#64748b;">Phiếu nhập này chưa được ký điện tử.</span>
+                       <button type="button" class="button button-primary button-sm" data-sign-receipt="${r.receiptId}">Ký điện tử ngay</button>
+                   </div>`;
+
             $("detailModalBody").innerHTML = `
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu nhập</span><strong>${escapeHtml(r.receiptCode)}</strong></div>
@@ -748,12 +976,22 @@
                     <div class="detail-meta-item"><span>Kho chi nhánh</span><strong>${escapeHtml(r.branchName)}</strong></div>
                     <div class="detail-meta-item"><span>Nhà cung cấp</span><strong>${escapeHtml(r.supplierCode)} - ${escapeHtml(r.supplierName)}</strong></div>
                     <div class="detail-meta-item"><span>Số hóa đơn NCC</span><strong>${escapeHtml(r.supplierInvoiceNo || "—")}</strong></div>
-                    <div class="detail-meta-item"><span>Người nhận kho</span><strong>${escapeHtml(r.receiverName || "—")}</strong></div>
+                    <div class="detail-meta-item"><span>Người lập phiếu</span><strong>${escapeHtml(r.receiverName || "—")}</strong></div>
                     <div class="detail-meta-item"><span>Tổng tiền phiếu</span><strong>${money(r.totalAmount)}</strong></div>
                     <div class="detail-meta-item"><span>Đã thanh toán</span><strong class="stock-good">${money(r.paidAmount)}</strong></div>
-                    <div class="detail-meta-item"><span>Còn nợ</span><strong class="stock-low">${money(r.remainingDebt)}</strong></div>
+                    <div class="detail-meta-item"><span>Công nợ còn lại</span><strong class="${Number(r.remainingDebt || 0) > 0 ? "stock-low" : "stock-good"}">${money(r.remainingDebt)}</strong></div>
                 </div>
-                ${r.notes ? `<p><strong>Ghi chú:</strong> ${escapeHtml(r.notes)}</p>` : ""}
+                ${r.notes ? `<p style="margin-bottom:10px;"><strong>Ghi chú:</strong> ${escapeHtml(r.notes)}</p>` : ""}
+                <div class="detail-attachments-grid">
+                    <div class="detail-attachment-card">
+                        <h4>Ảnh / Chứng từ hóa đơn</h4>
+                        ${invoiceBlock}
+                    </div>
+                    <div class="detail-attachment-card">
+                        <h4>Chữ ký điện tử người lập</h4>
+                        ${signatureBlock}
+                    </div>
+                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -763,6 +1001,16 @@
                     </table>
                 </div>
             `;
+
+            if ($("detailModalActions")) {
+                $("detailModalActions").innerHTML = `
+                    <a href="/api/inventory/receipts/${r.receiptId}/pdf?download=true" class="button button-primary">Tải PDF phiếu nhập</a>
+                    <a href="/inventory/receipts/${r.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary">Xem bản in A4</a>
+                    <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
+                `;
+                $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
+            }
+
             $("detailModal").hidden = false;
         } catch (error) {
             showMessage(error.message, "error");
@@ -808,9 +1056,12 @@
 
         tr.innerHTML = `
             <td>
-                <select class="${matClass}" required aria-label="Chọn vật tư">
-                    ${buildMaterialOptionsHtml()}
-                </select>
+                <div class="mat-picker-wrap">
+                    <input type="search" class="mat-search-input" placeholder="Gõ mã / tên để lọc nhanh vật tư..." aria-label="Tìm vật tư">
+                    <select class="${matClass}" required aria-label="Chọn vật tư">
+                        ${buildMaterialOptionsHtml()}
+                    </select>
+                </div>
             </td>
             <td>
                 <select class="batch-id" aria-label="Chọn lô xuất">
@@ -824,9 +1075,12 @@
         `;
         tbody.appendChild(tr);
 
+        const searchInput = tr.querySelector(".mat-search-input");
         const matSelect = tr.querySelector(`.${matClass}`);
         const batchSelect = tr.querySelector(".batch-id");
         const availCell = tr.querySelector(".avail-stock");
+
+        bindSearchableMaterialSelect(searchInput, matSelect);
 
         const updateRowAvailability = () => {
             const matId = Number(matSelect.value) || null;
@@ -851,6 +1105,8 @@
             if (tbody.querySelectorAll("tr").length > 1) {
                 tr.remove();
             } else {
+                searchInput.value = "";
+                matSelect.innerHTML = buildMaterialOptionsHtml("");
                 matSelect.value = "";
                 batchSelect.innerHTML = '<option value="">-- Tự động theo FEFO (Hạn gần nhất trước) --</option>';
                 availCell.textContent = "0";
@@ -866,6 +1122,7 @@
         $("issueForm").reset();
         $("issueDate").value = new Date().toISOString().slice(0, 10);
         $("issueItems").innerHTML = "";
+        clearDraftSignature("issue");
         addIssueOrTransferRow("issueItems", false);
     }
 
@@ -874,6 +1131,7 @@
         $("transferDate").value = new Date().toISOString().slice(0, 10);
         populateDestinationBranches();
         $("transferItems").innerHTML = "";
+        clearDraftSignature("transfer");
         addIssueOrTransferRow("transferItems", true);
     }
 
@@ -905,11 +1163,34 @@
             return;
         }
 
+        // Kiểm tra tổng số lượng xuất theo vật tư không vượt tồn khả dụng
+        const allowExpired = $("issueType").value === "DISCARD_EXPIRED";
+        const requestedByMat = new Map();
+        for (const item of items) {
+            requestedByMat.set(item.materialId, (requestedByMat.get(item.materialId) || 0) + item.quantity);
+            if (item.batchId) {
+                const batchAvail = computeAvailableForMaterial(item.materialId, item.batchId, allowExpired);
+                if (item.quantity > batchAvail) {
+                    showMessage(`Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng của lô đã chọn (${batchAvail}).`, "warning");
+                    return;
+                }
+            }
+        }
+        for (const [matId, totalReq] of requestedByMat.entries()) {
+            const totalAvail = computeAvailableForMaterial(matId, null, allowExpired);
+            if (totalReq > totalAvail) {
+                const matObj = state.activeMaterials.find(m => Number(m.materialId) === Number(matId));
+                showMessage(`Vật tư ${matObj ? matObj.materialName : matId} không đủ tồn khả dụng (Yêu cầu: ${totalReq}, Khả dụng: ${totalAvail}).`, "warning");
+                return;
+            }
+        }
+
         const payload = {
             branchId: Number(state.branchId),
             issueType: $("issueType").value,
             issueDate: $("issueDate").value,
             notes: $("issueNotes").value.trim() || null,
+            signatureData: $("issueSignatureData")?.value || null,
             items
         };
 
@@ -927,7 +1208,7 @@
             showMessage(error.message || "Không thể tạo phiếu xuất kho.", "error");
         } finally {
             button.disabled = false;
-            button.textContent = "✓ Xác nhận xuất kho";
+            button.textContent = "Xác nhận xuất kho";
         }
     }
 
@@ -967,6 +1248,7 @@
             destinationBranchId: destBranchId,
             issueDate: $("transferDate").value,
             notes: $("transferNotes").value.trim() || null,
+            signatureData: $("transferSignatureData")?.value || null,
             items
         };
 
@@ -984,7 +1266,7 @@
             showMessage(error.message || "Không thể điều chuyển vật tư.", "error");
         } finally {
             button.disabled = false;
-            button.textContent = "⇄ Xác nhận điều chuyển";
+            button.textContent = "Xác nhận điều chuyển";
         }
     }
 
@@ -1008,7 +1290,7 @@
         if ($("issueToDate").value) params.set("toDate", $("issueToDate").value);
 
         try {
-            const data = await request(`/api/inventory/issues?${params}`);
+            const data = await request(`/api/inventory/issues?${params}`, { signal: getAbortSignal("issues") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.issuesTotalPages = Number(data?.totalPages || 0);
 
@@ -1021,11 +1303,17 @@
                     <td>${escapeHtml(si.issueDate)}</td>
                     <td><span class="status ${typeCls}">${escapeHtml(typeLabel)}</span></td>
                     <td>${escapeHtml(si.issuerName || "—")}</td>
-                    <td>${escapeHtml(si.itemCount)} dòng</td>
-                    <td><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong></td>
+                    <td><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong> (${escapeHtml(si.itemCount)} dòng)</td>
                     <td>${money(si.totalEstimatedValue)}</td>
+                    <td>${renderSignatureCell(si.signatureUrl, si.signedByName, si.issueId, "issue")}</td>
                     <td>${escapeHtml(si.notes || "—")}</td>
-                    <td><button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Xem chi tiết</button></td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Chi tiết</button>
+                            <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
+                            <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
+                        </div>
+                    </td>
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Chưa có phiếu xuất kho phù hợp.</td></tr>';
 
@@ -1033,6 +1321,7 @@
             $("issueHistoryPrev").disabled = page <= 0;
             $("issueHistoryNext").disabled = page + 1 >= state.issuesTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("issueHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -1055,7 +1344,7 @@
         if ($("transferToDate").value) params.set("toDate", $("transferToDate").value);
 
         try {
-            const data = await request(`/api/inventory/transfers?${params}`);
+            const data = await request(`/api/inventory/transfers?${params}`, { signal: getAbortSignal("transfers") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.transfersTotalPages = Number(data?.totalPages || 0);
 
@@ -1072,7 +1361,13 @@
                     <td>${escapeHtml(si.issuerName || "—")}</td>
                     <td><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong></td>
                     <td>${money(si.totalEstimatedValue)}</td>
-                    <td><button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Xem chi tiết</button></td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Chi tiết</button>
+                            <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
+                            <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
+                        </div>
+                    </td>
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Chưa có giao dịch điều chuyển kho.</td></tr>';
 
@@ -1080,6 +1375,7 @@
             $("transferHistoryPrev").disabled = page <= 0;
             $("transferHistoryNext").disabled = page + 1 >= state.transfersTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("transferHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -1107,16 +1403,36 @@
                 </tr>
             `).join("");
 
+            const signatureBlock = si.signatureUrl
+                ? `<div style="display:flex; align-items:center; gap:14px;">
+                       <img src="${escapeHtml(si.signatureUrl)}" alt="Chữ ký điện tử" class="detail-signature-img">
+                       <div>
+                           <div>Người ký: <strong>${escapeHtml(si.signedByName || si.issuerName || "—")}</strong></div>
+                           <div style="font-size:12px; color:#64748b;">Thời gian ký: ${escapeHtml(formatDateTime(si.signedAt))}</div>
+                           <span class="status status-good" style="margin-top:4px; display:inline-block;">Chữ ký hợp lệ (Đã khóa)</span>
+                       </div>
+                   </div>`
+                : `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                       <span style="color:#64748b;">Phiếu xuất này chưa được ký điện tử.</span>
+                       <button type="button" class="button button-primary button-sm" data-sign-issue="${si.issueId}">Ký điện tử ngay</button>
+                   </div>`;
+
             $("detailModalBody").innerHTML = `
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu</span><strong>${escapeHtml(si.issueCode)}</strong></div>
                     <div class="detail-meta-item"><span>Ngày lập</span><strong>${escapeHtml(si.issueDate)}</strong></div>
                     <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType)}</strong></div>
-                    <div class="detail-meta-item"><span>Chi nhánh nguồn</span><strong>${escapeHtml(si.branchName)}</strong></div>
-                    <div class="detail-meta-item"><span>Chi nhánh đích</span><strong>${escapeHtml(si.destinationBranchName || "Nội bộ chi nhánh")}</strong></div>
-                    <div class="detail-meta-item"><span>Người thực hiện</span><strong>${escapeHtml(si.issuerName || "—")}</strong></div>
+                    <div class="detail-meta-item"><span>Chi nhánh xuất</span><strong>${escapeHtml(si.branchName)}</strong></div>
+                    ${isTransfer ? `<div class="detail-meta-item"><span>Chi nhánh nhận</span><strong>${escapeHtml(si.destinationBranchName || "—")}</strong></div>` : ""}
+                    <div class="detail-meta-item"><span>Người lập phiếu</span><strong>${escapeHtml(si.issuerName || "—")}</strong></div>
+                    <div class="detail-meta-item"><span>Tổng SL xuất</span><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong></div>
+                    <div class="detail-meta-item"><span>Tổng giá trị vốn</span><strong>${money(si.totalEstimatedValue)}</strong></div>
                 </div>
-                ${si.notes ? `<p><strong>Ghi chú:</strong> ${escapeHtml(si.notes)}</p>` : ""}
+                ${si.notes ? `<p style="margin-bottom:10px;"><strong>Ghi chú:</strong> ${escapeHtml(si.notes)}</p>` : ""}
+                <div class="detail-attachment-card" style="margin-bottom:14px;">
+                    <h4>Chữ ký điện tử người lập phiếu xuất</h4>
+                    ${signatureBlock}
+                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -1126,9 +1442,194 @@
                     </table>
                 </div>
             `;
+
+            if ($("detailModalActions")) {
+                $("detailModalActions").innerHTML = `
+                    <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-primary">Tải PDF phiếu xuất</a>
+                    <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary">Xem bản in A4</a>
+                    <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
+                `;
+                $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
+            }
+
             $("detailModal").hidden = false;
         } catch (error) {
             showMessage(error.message, "error");
+        }
+    }
+
+    // =========================================================================
+    // A4. BẢNG KÝ ĐIỆN TỬ (HTML5 CANVAS - MOUSE, TOUCH, STYLUS)
+    // =========================================================================
+
+    function initSignatureCanvas() {
+        const canvas = $("signatureCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+
+        const resetCtxStyle = () => {
+            ctx.strokeStyle = "#0f172a";
+            ctx.lineWidth = 2.4;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+        };
+        resetCtxStyle();
+
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const getPoint = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / (rect.width || canvas.width);
+            const scaleY = canvas.height / (rect.height || canvas.height);
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        };
+
+        const startDraw = (e) => {
+            if (e.cancelable) e.preventDefault();
+            drawing = true;
+            state.hasSignatureStrokes = true;
+            const pt = getPoint(e);
+            lastX = pt.x;
+            lastY = pt.y;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(lastX + 0.1, lastY + 0.1);
+            ctx.stroke();
+        };
+
+        const moveDraw = (e) => {
+            if (!drawing) return;
+            if (e.cancelable) e.preventDefault();
+            const pt = getPoint(e);
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
+            lastX = pt.x;
+            lastY = pt.y;
+        };
+
+        const endDraw = () => {
+            drawing = false;
+        };
+
+        canvas.addEventListener("mousedown", startDraw);
+        canvas.addEventListener("mousemove", moveDraw);
+        window.addEventListener("mouseup", endDraw);
+
+        canvas.addEventListener("touchstart", startDraw, { passive: false });
+        canvas.addEventListener("touchmove", moveDraw, { passive: false });
+        window.addEventListener("touchend", endDraw);
+    }
+
+    function clearSignatureCanvas() {
+        const canvas = $("signatureCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        state.hasSignatureStrokes = false;
+    }
+
+    function openSignatureModal(context, targetId = null) {
+        state.signContext = context;
+        state.signTargetId = targetId;
+        clearSignatureCanvas();
+        if ($("signatureModal")) $("signatureModal").hidden = false;
+    }
+
+    function clearDraftSignature(formKind) {
+        if (formKind === "receipt") {
+            if ($("receiptSignatureData")) $("receiptSignatureData").value = "";
+            if ($("receiptSignPreview")) { $("receiptSignPreview").src = ""; $("receiptSignPreview").hidden = true; }
+            if ($("receiptSignStatus")) $("receiptSignStatus").textContent = "Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)";
+            if ($("clearReceiptSignBtn")) $("clearReceiptSignBtn").hidden = true;
+        } else if (formKind === "issue") {
+            if ($("issueSignatureData")) $("issueSignatureData").value = "";
+            if ($("issueSignPreview")) { $("issueSignPreview").src = ""; $("issueSignPreview").hidden = true; }
+            if ($("issueSignStatus")) $("issueSignStatus").textContent = "Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)";
+            if ($("clearIssueSignBtn")) $("clearIssueSignBtn").hidden = true;
+        } else if (formKind === "transfer") {
+            if ($("transferSignatureData")) $("transferSignatureData").value = "";
+            if ($("transferSignPreview")) { $("transferSignPreview").src = ""; $("transferSignPreview").hidden = true; }
+            if ($("transferSignStatus")) $("transferSignStatus").textContent = "Chưa ký";
+            if ($("clearTransferSignBtn")) $("clearTransferSignBtn").hidden = true;
+        }
+    }
+
+    async function confirmSignature() {
+        const canvas = $("signatureCanvas");
+        if (!canvas || !state.hasSignatureStrokes) {
+            showMessage("Vui lòng vẽ chữ ký rõ ràng lên vùng ký trước khi bấm Xác nhận.", "warning");
+            return;
+        }
+        const dataUrl = canvas.toDataURL("image/png");
+        const btn = $("confirmSignatureBtn");
+
+        if (state.signContext === "receipt-draft") {
+            $("receiptSignatureData").value = dataUrl;
+            $("receiptSignPreview").src = dataUrl;
+            $("receiptSignPreview").hidden = false;
+            $("receiptSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu nhập)";
+            $("clearReceiptSignBtn").hidden = false;
+            $("signatureModal").hidden = true;
+            return;
+        }
+        if (state.signContext === "issue-draft") {
+            $("issueSignatureData").value = dataUrl;
+            $("issueSignPreview").src = dataUrl;
+            $("issueSignPreview").hidden = false;
+            $("issueSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu xuất)";
+            $("clearIssueSignBtn").hidden = false;
+            $("signatureModal").hidden = true;
+            return;
+        }
+        if (state.signContext === "transfer-draft") {
+            $("transferSignatureData").value = dataUrl;
+            $("transferSignPreview").src = dataUrl;
+            $("transferSignPreview").hidden = false;
+            $("transferSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu điều chuyển)";
+            $("clearTransferSignBtn").hidden = false;
+            $("signatureModal").hidden = true;
+            return;
+        }
+
+        btn.disabled = true;
+        try {
+            if (state.signContext === "receipt-existing" && state.signTargetId) {
+                const updated = await request(`/api/inventory/receipts/${state.signTargetId}/sign`, {
+                    method: "POST",
+                    body: JSON.stringify({ signatureData: dataUrl })
+                });
+                $("signatureModal").hidden = true;
+                showMessage(`Đã ký điện tử phiếu nhập ${updated.receiptCode} bởi ${updated.signedByName}.`, "success");
+                await loadReceiptHistory(state.receiptsPage);
+                if (!$("detailModal").hidden) await viewReceiptDetail(state.signTargetId);
+            } else if (state.signContext === "issue-existing" && state.signTargetId) {
+                const updated = await request(`/api/inventory/issues/${state.signTargetId}/sign`, {
+                    method: "POST",
+                    body: JSON.stringify({ signatureData: dataUrl })
+                });
+                $("signatureModal").hidden = true;
+                showMessage(`Đã ký điện tử phiếu xuất ${updated.issueCode} bởi ${updated.signedByName}.`, "success");
+                await loadIssueHistory(state.issuesPage);
+                await loadTransferHistory(state.transfersPage);
+                if (!$("detailModal").hidden) await viewIssueDetail(state.signTargetId);
+            }
+        } catch (err) {
+            showMessage(err.message || "Không thể lưu chữ ký điện tử.", "error");
+        } finally {
+            btn.disabled = false;
         }
     }
 
@@ -1153,7 +1654,7 @@
 
         try {
             const [data, categories] = await Promise.all([
-                request(`/api/materials?${params}`),
+                request(`/api/materials?${params}`, { signal: getAbortSignal("materials") }),
                 request("/api/materials/categories").catch(() => [])
             ]);
 
@@ -1190,6 +1691,7 @@
             $("materialsPrev").disabled = page <= 0;
             $("materialsNext").disabled = page + 1 >= state.materialsTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("materialsTable").innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -1280,7 +1782,7 @@
     }
 
     // =========================================================================
-    // 8. TAB NHÀ CUNG CẤP & THANH TOÁN CÔNG NỢ NCC
+    // 8. TAB NHÀ CUNG CẤP & THANH TOÁN CÔNG NỢ NCC (A3)
     // =========================================================================
 
     async function loadSupplierDebts() {
@@ -1291,7 +1793,10 @@
         if (keyword) params.set("keyword", keyword);
 
         try {
-            const list = await request(`/api/inventory/supplier-payments/debts?${params}`);
+            const list = await request(`/api/inventory/supplier-payments/debts?${params}`, { signal: getAbortSignal("debts") });
+            state.supplierDebtsMap.clear();
+            (list || []).forEach(s => state.supplierDebtsMap.set(Number(s.supplierId), s));
+
             $("supplierDebtTable").innerHTML = list.length ? list.map(s => {
                 const debt = Number(s.remainingDebt || 0);
                 return `<tr>
@@ -1324,6 +1829,7 @@
                 </tr>`;
             }).join("") : '<tr><td colspan="10" class="empty">Không có nhà cung cấp phù hợp.</td></tr>';
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("supplierDebtTable").innerHTML = `<tr><td colspan="10" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -1347,7 +1853,7 @@
         if ($("paymentToDate").value) params.set("toDate", $("paymentToDate").value);
 
         try {
-            const data = await request(`/api/inventory/supplier-payments?${params}`);
+            const data = await request(`/api/inventory/supplier-payments?${params}`, { signal: getAbortSignal("payments") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.paymentsTotalPages = Number(data?.totalPages || 0);
 
@@ -1369,18 +1875,42 @@
             $("paymentHistoryPrev").disabled = page <= 0;
             $("paymentHistoryNext").disabled = page + 1 >= state.paymentsTotalPages;
         } catch (error) {
+            if (error.name === "AbortError") return;
             $("supplierPaymentHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
+    }
+
+    function updatePaymentDebtBanner(supplierId, selectedReceiptDebt = null) {
+        const banner = $("paymentDebtBanner");
+        if (!banner) return;
+        const summary = state.supplierDebtsMap.get(Number(supplierId));
+        if (!summary) {
+            banner.hidden = true;
+            return;
+        }
+        banner.hidden = false;
+        const maxAllowed = selectedReceiptDebt != null
+            ? Math.min(Number(selectedReceiptDebt), Number(summary.remainingDebt || 0))
+            : Number(summary.remainingDebt || 0);
+        if ($("payBannerTotalImport")) $("payBannerTotalImport").textContent = money(summary.totalImportAmount);
+        if ($("payBannerTotalPaid")) $("payBannerTotalPaid").textContent = money(summary.totalPaidAmount);
+        if ($("payBannerRemainingDebt")) $("payBannerRemainingDebt").textContent = money(maxAllowed);
+        if ($("payAmount")) $("payAmount").max = String(Math.max(0, maxAllowed));
     }
 
     async function openPaymentModal(preselectedSupplierId = "", suggestedAmount = "") {
         $("paymentForm").reset();
         $("payDate").value = new Date().toISOString().slice(0, 10);
+        if (!state.supplierDebtsMap.size && state.branchId) {
+            await loadSupplierDebts();
+        }
         if (preselectedSupplierId) {
             $("paySupplierId").value = String(preselectedSupplierId);
             await loadUnpaidReceiptsForPaymentModal(preselectedSupplierId);
+            updatePaymentDebtBanner(preselectedSupplierId, null);
         } else {
             $("payReceiptId").innerHTML = '<option value="">-- Thanh toán công nợ chung --</option>';
+            if ($("paymentDebtBanner")) $("paymentDebtBanner").hidden = true;
         }
         if (suggestedAmount && Number(suggestedAmount) > 0) {
             $("payAmount").value = Number(suggestedAmount);
@@ -1391,7 +1921,11 @@
     async function loadUnpaidReceiptsForPaymentModal(supplierId) {
         const receiptSelect = $("payReceiptId");
         receiptSelect.innerHTML = '<option value="">-- Thanh toán công nợ chung --</option>';
-        if (!supplierId || !state.branchId) return;
+        if (!supplierId || !state.branchId) {
+            updatePaymentDebtBanner(null, null);
+            return;
+        }
+        updatePaymentDebtBanner(supplierId, null);
         try {
             const data = await request(`/api/inventory/receipts?branchId=${state.branchId}&supplierId=${supplierId}&page=0&size=100`);
             const receipts = (data?.content || []).filter(r => Number(r.remainingDebt || 0) > 0);
@@ -1407,6 +1941,13 @@
         event.preventDefault();
         if (!requireBranch()) return;
         const btn = $("savePaymentBtn");
+        if (btn.disabled) return;
+
+        const supplierId = Number($("paySupplierId").value);
+        if (!supplierId) {
+            showMessage("Vui lòng chọn nhà cung cấp cần thanh toán.", "warning");
+            return;
+        }
         const refNo = $("payRefNo").value.trim();
         if (refNo && !REGEX.REFERENCE_NO.test(refNo)) {
             showMessage("Số chứng từ / Mã giao dịch không hợp lệ (chỉ gồm chữ, số, dấu -, _, ., /).", "warning");
@@ -1418,17 +1959,36 @@
             showMessage("Số tiền thanh toán phải lớn hơn 0.", "warning");
             return;
         }
+
+        const summary = state.supplierDebtsMap.get(supplierId);
+        const receiptOpt = $("payReceiptId").options[$("payReceiptId").selectedIndex];
+        const receiptDebt = receiptOpt?.dataset?.debt ? Number(receiptOpt.dataset.debt) : null;
+        if (receiptDebt != null && amount > receiptDebt) {
+            showMessage(`Số tiền thanh toán (${money(amount)}) vượt quá công nợ còn lại của phiếu nhập đã chọn (${money(receiptDebt)}).`, "warning");
+            return;
+        }
+        if (summary && amount > Number(summary.remainingDebt || 0)) {
+            showMessage(`Số tiền thanh toán (${money(amount)}) vượt quá tổng công nợ còn lại của nhà cung cấp (${money(summary.remainingDebt)}).`, "warning");
+            return;
+        }
+
+        const clientRequestId = (typeof crypto !== "undefined" && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
         const payload = {
             branchId: Number(state.branchId),
-            supplierId: Number($("paySupplierId").value),
+            supplierId,
             receiptId: $("payReceiptId").value ? Number($("payReceiptId").value) : null,
             paymentDate: $("payDate").value,
             paymentMethod: $("payMethod").value,
             amount,
             referenceNo: refNo || null,
-            notes: $("payNotes").value.trim() || null
+            notes: $("payNotes").value.trim() || null,
+            clientRequestId
         };
         btn.disabled = true;
+        btn.textContent = "Đang xử lý...";
         try {
             const saved = await request("/api/inventory/supplier-payments", {
                 method: "POST",
@@ -1442,14 +2002,15 @@
             showMessage(error.message, "error");
         } finally {
             btn.disabled = false;
+            btn.textContent = "Xác nhận thanh toán";
         }
     }
 
     function openQuickSupplierModal(supplier = null) {
         $("quickSupplierForm").reset();
         if ($("qsEditSupplierId")) $("qsEditSupplierId").value = supplier?.supplierId || "";
-        if ($("quickSupplierModalTitle")) {
-            $("quickSupplierModalTitle").textContent = supplier ? "Chỉnh sửa nhà cung cấp" : "Thêm nhanh nhà cung cấp";
+        if ($("quickSupplierTitle")) {
+            $("quickSupplierTitle").textContent = supplier ? "Chỉnh sửa nhà cung cấp" : "Thêm mới Nhà cung cấp";
         }
         $("qsCode").value = supplier?.supplierCode || "";
         $("qsName").value = supplier?.supplierName || "";
@@ -1474,12 +2035,12 @@
             $("qsCode").focus();
             return;
         }
-        if (!REGEX.TAX_CODE.test(payload.taxCode)) {
+        if (payload.taxCode && !REGEX.TAX_CODE.test(payload.taxCode)) {
             showMessage("Mã số thuế phải gồm 10 chữ số hoặc định dạng 10 số - 3 số (VD: 0101234567 hoặc 0101234567-001).", "warning");
             $("qsTaxCode").focus();
             return;
         }
-        if (!REGEX.PHONE.test(payload.phoneNumber)) {
+        if (payload.phoneNumber && !REGEX.PHONE.test(payload.phoneNumber)) {
             showMessage("Số điện thoại không hợp lệ (bắt đầu bằng 0 hoặc +84, theo sau 9-10 chữ số).", "warning");
             $("qsPhone").focus();
             return;
@@ -1559,6 +2120,19 @@
         }
     }
 
+    function triggerGlobalKeywordSearch() {
+        loadInventory(0);
+        loadBatches(0);
+        if (state.activeTab === "receipt") loadReceiptHistory(0);
+        if (state.activeTab === "issue") loadIssueHistory(0);
+        if (state.activeTab === "transfer") loadTransferHistory(0);
+        if (state.activeTab === "materials") loadMaterialsTable(0);
+        if (state.activeTab === "supplier-payments") {
+            loadSupplierDebts();
+            loadPaymentHistory(0);
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         const todayStr = new Date().toISOString().slice(0, 10);
         if ($("receiptDate")) $("receiptDate").value = todayStr;
@@ -1566,6 +2140,7 @@
         if ($("transferDate")) $("transferDate").value = todayStr;
         if ($("payDate")) $("payDate").value = todayStr;
 
+        initSignatureCanvas();
         addReceiptRow();
         addIssueOrTransferRow("issueItems", false);
         addIssueOrTransferRow("transferItems", true);
@@ -1574,7 +2149,6 @@
             button.addEventListener("click", () => switchTab(button.dataset.tab))
         );
 
-        // KPI Cards click & keyboard navigation
         document.querySelectorAll("[data-kpi-target]").forEach(card => {
             card.addEventListener("click", () => handleKpiCardActivate(card.dataset.kpiTarget));
             card.addEventListener("keydown", (e) => {
@@ -1591,30 +2165,72 @@
             await refreshBranchData();
         });
 
-        $("searchBtn").addEventListener("click", () => {
-            loadInventory(0);
-            loadBatches(0);
-            if (state.activeTab === "receipt") loadReceiptHistory(0);
-            if (state.activeTab === "issue") loadIssueHistory(0);
-            if (state.activeTab === "transfer") loadTransferHistory(0);
-            if (state.activeTab === "materials") loadMaterialsTable(0);
-            if (state.activeTab === "supplier-payments") {
-                loadSupplierDebts();
-                loadPaymentHistory(0);
-            }
-        });
+        $("searchBtn").addEventListener("click", triggerGlobalKeywordSearch);
 
         if ($("clearSearchBtn")) {
             $("clearSearchBtn").addEventListener("click", () => {
                 $("keyword").value = "";
                 $("lowStock").checked = false;
-                $("searchBtn").click();
+                triggerGlobalKeywordSearch();
             });
         }
 
+        const debouncedGlobalSearch = debounce(triggerGlobalKeywordSearch, 350);
+        $("keyword").addEventListener("input", debouncedGlobalSearch);
         $("keyword").addEventListener("keydown", e => {
-            if (e.key === "Enter") { e.preventDefault(); $("searchBtn").click(); }
+            if (e.key === "Enter") { e.preventDefault(); triggerGlobalKeywordSearch(); }
         });
+
+        // A1: Invoice file upload & preview bindings
+        if ($("invoiceFileInput")) {
+            $("invoiceFileInput").addEventListener("change", (e) => {
+                const file = e.target.files?.[0];
+                if (file) handleInvoiceFileUpload(file);
+            });
+        }
+        if ($("clearUploadedInvoiceBtn")) {
+            $("clearUploadedInvoiceBtn").addEventListener("click", clearUploadedInvoice);
+        }
+        if ($("zoomUploadedInvoiceBtn")) {
+            $("zoomUploadedInvoiceBtn").addEventListener("click", () => {
+                openImageLightbox($("attachmentUrl").value, "Hóa đơn đính kèm phiếu nhập");
+            });
+        }
+        if ($("invoicePreviewImg")) {
+            $("invoicePreviewImg").addEventListener("click", () => {
+                openImageLightbox($("attachmentUrl").value, "Hóa đơn đính kèm phiếu nhập");
+            });
+        }
+
+        // A2: Initial payment bindings
+        if ($("receiptPaidAmount")) {
+            $("receiptPaidAmount").addEventListener("input", calculateReceiptTotal);
+        }
+        if ($("payFullReceiptBtn")) {
+            $("payFullReceiptBtn").addEventListener("click", () => {
+                const total = computeCurrentReceiptTotalNumber();
+                if ($("receiptPaidAmount")) {
+                    $("receiptPaidAmount").value = String(total);
+                    calculateReceiptTotal();
+                }
+            });
+        }
+
+        // A4: Digital signature modal bindings
+        if ($("openReceiptSignBtn")) $("openReceiptSignBtn").addEventListener("click", () => openSignatureModal("receipt-draft"));
+        if ($("clearReceiptSignBtn")) $("clearReceiptSignBtn").addEventListener("click", () => clearDraftSignature("receipt"));
+        if ($("openIssueSignBtn")) $("openIssueSignBtn").addEventListener("click", () => openSignatureModal("issue-draft"));
+        if ($("clearIssueSignBtn")) $("clearIssueSignBtn").addEventListener("click", () => clearDraftSignature("issue"));
+        if ($("openTransferSignBtn")) $("openTransferSignBtn").addEventListener("click", () => openSignatureModal("transfer-draft"));
+        if ($("clearTransferSignBtn")) $("clearTransferSignBtn").addEventListener("click", () => clearDraftSignature("transfer"));
+
+        if ($("clearSignatureCanvasBtn")) $("clearSignatureCanvasBtn").addEventListener("click", clearSignatureCanvas);
+        if ($("closeSignatureModalBtn")) $("closeSignatureModalBtn").addEventListener("click", () => { $("signatureModal").hidden = true; });
+        if ($("cancelSignatureModalBtn")) $("cancelSignatureModalBtn").addEventListener("click", () => { $("signatureModal").hidden = true; });
+        if ($("confirmSignatureBtn")) $("confirmSignatureBtn").addEventListener("click", confirmSignature);
+
+        if ($("closeLightboxBtn")) $("closeLightboxBtn").addEventListener("click", () => { $("imageLightboxModal").hidden = true; });
+        if ($("closeLightboxFooterBtn")) $("closeLightboxFooterBtn").addEventListener("click", () => { $("imageLightboxModal").hidden = true; });
 
         $("lowStock").addEventListener("change", () => loadInventory(0));
         $("filterBatchesBtn").addEventListener("click", () => loadBatches(0));
@@ -1680,8 +2296,10 @@
         $("paySupplierId").addEventListener("change", (e) => loadUnpaidReceiptsForPaymentModal(e.target.value));
         $("payReceiptId").addEventListener("change", (e) => {
             const opt = e.target.options[e.target.selectedIndex];
-            if (opt?.dataset?.debt) {
-                $("payAmount").value = Number(opt.dataset.debt);
+            const receiptDebt = opt?.dataset?.debt ? Number(opt.dataset.debt) : null;
+            updatePaymentDebtBanner($("paySupplierId").value, receiptDebt);
+            if (receiptDebt != null) {
+                $("payAmount").value = receiptDebt;
             }
         });
 
@@ -1690,10 +2308,9 @@
         $("cancelQuickSupplierBtn").addEventListener("click", () => { $("quickSupplierModal").hidden = true; });
 
         $("closeDetailModalBtn").addEventListener("click", () => { $("detailModal").hidden = true; });
-        $("closeDetailModalFooterBtn").addEventListener("click", () => { $("detailModal").hidden = true; });
+        $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
 
-        // Close modals on backdrop click or Escape key
-        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal"].forEach(modalId => {
+        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal"].forEach(modalId => {
             const modalEl = $(modalId);
             if (modalEl) {
                 modalEl.addEventListener("click", (e) => {
@@ -1704,7 +2321,7 @@
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
-                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal"].forEach(modalId => {
+                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal"].forEach(modalId => {
                     const modalEl = $(modalId);
                     if (modalEl && !modalEl.hidden) modalEl.hidden = true;
                 });
@@ -1713,6 +2330,24 @@
 
         // Delegated table actions
         document.body.addEventListener("click", async (e) => {
+            const zoomBtn = e.target.closest("[data-zoom-image]");
+            if (zoomBtn) {
+                openImageLightbox(zoomBtn.dataset.zoomImage, zoomBtn.dataset.zoomTitle || "Chứng từ hóa đơn");
+                return;
+            }
+
+            const signReceiptBtn = e.target.closest("[data-sign-receipt]");
+            if (signReceiptBtn) {
+                openSignatureModal("receipt-existing", Number(signReceiptBtn.dataset.signReceipt));
+                return;
+            }
+
+            const signIssueBtn = e.target.closest("[data-sign-issue]");
+            if (signIssueBtn) {
+                openSignatureModal("issue-existing", Number(signIssueBtn.dataset.signIssue));
+                return;
+            }
+
             const viewReceiptBtn = e.target.closest("[data-view-receipt]");
             if (viewReceiptBtn) {
                 await viewReceiptDetail(viewReceiptBtn.dataset.viewReceipt);

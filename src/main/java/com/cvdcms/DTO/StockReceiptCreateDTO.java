@@ -11,6 +11,10 @@ public class StockReceiptCreateDTO {
     private LocalDate receiptDate;
     private String notes;
     private String attachmentUrl;
+    private BigDecimal paidAmount;
+    private String paymentMethod;
+    private String paymentReferenceNo;
+    private String signatureData;
     private List<Item> items;
 
     public static class Item {
@@ -42,6 +46,14 @@ public class StockReceiptCreateDTO {
     public void setNotes(String v){notes=v;}
     public String getAttachmentUrl(){return attachmentUrl;}
     public void setAttachmentUrl(String v){attachmentUrl=v;}
+    public BigDecimal getPaidAmount(){return paidAmount;}
+    public void setPaidAmount(BigDecimal v){paidAmount=v;}
+    public String getPaymentMethod(){return paymentMethod;}
+    public void setPaymentMethod(String v){paymentMethod=v;}
+    public String getPaymentReferenceNo(){return paymentReferenceNo;}
+    public void setPaymentReferenceNo(String v){paymentReferenceNo=v;}
+    public String getSignatureData(){return signatureData;}
+    public void setSignatureData(String v){signatureData=v;}
     public List<Item> getItems(){return items;}
     public void setItems(List<Item> v){items=v;}
 }
