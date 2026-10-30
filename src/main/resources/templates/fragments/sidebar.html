@@ -71,7 +71,7 @@
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}"
-             th:classappend="${#lists.contains({'accounts','staffs','service-catalog','medications','icd10','admin-news','bans','branches','schedules','attendance','membership-tiers','admin-promotions','reports','audit'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',accounts,staffs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgAdmin">
                 <i class="bi bi-shield-lock" aria-hidden="true"></i>
                 <span class="side-group__label">Quản trị hệ thống</span>
@@ -150,7 +150,7 @@
         <!-- KHO & VẬT TƯ -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO'))}"
-             th:classappend="${#lists.contains({'inventory','suppliers'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'inventory' or activeMenu == 'suppliers'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgInventory">
                 <i class="bi bi-box-seam" aria-hidden="true"></i>
                 <span class="side-group__label">Kho &amp; Vật tư</span>
@@ -173,7 +173,7 @@
         <!-- TÀI CHÍNH & KẾ TOÁN (FT21 & FT22) -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))}"
-             th:classappend="${#lists.contains({'dashboard_finance','invoices','payments','debts','refunds'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgFinance">
                 <i class="bi bi-wallet2" aria-hidden="true"></i>
                 <span class="side-group__label">Tài chính &amp; Kế toán</span>
@@ -216,7 +216,7 @@
         <!-- LỄ TÂN -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}"
-             th:classappend="${#lists.contains({'patients','reception-memberships','appointments','checkin','queue','accounts','dispatch'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',patients,reception-memberships,appointments,checkin,queue,accounts,dispatch,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgReception">
                 <i class="bi bi-person-workspace" aria-hidden="true"></i>
                 <span class="side-group__label">Lễ tân</span>
@@ -261,7 +261,7 @@
 
         <!-- BÁC SĨ & ĐIỀU PHỐI -->
         <div class="side-group" data-accordion
-             th:classappend="${#lists.contains({'daily-visits','examination','doctor-dashboard','workflows','doctor-dispatch','prescriptions','treatment-plans','clinical-photos'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',daily-visits,examination,doctor-dashboard,workflows,doctor-dispatch,prescriptions,treatment-plans,clinical-photos,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgDoctor">
                 <i class="bi bi-heart-pulse" aria-hidden="true"></i>
                 <span class="side-group__label">Bác sĩ &amp; Điều phối</span>
@@ -310,7 +310,7 @@
 
         <!-- CẬN LÂM SÀNG & LABO -->
         <div class="side-group" data-accordion
-             th:classappend="${#lists.contains({'xray','labo'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'xray' or activeMenu == 'labo'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgLab">
                 <i class="bi bi-bounding-box" aria-hidden="true"></i>
                 <span class="side-group__label">Cận lâm sàng &amp; Labo</span>
@@ -336,7 +336,7 @@
 
         <!-- HỒ SƠ & TÁI KHÁM -->
         <div class="side-group" data-accordion
-             th:classappend="${#lists.contains({'doctor-records','customer-care'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'customer-care'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgRecords">
                 <i class="bi bi-folder2-open" aria-hidden="true"></i>
                 <span class="side-group__label">Hồ sơ &amp; Tái khám</span>
@@ -369,7 +369,7 @@
         <!-- CÁ NHÂN -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'QUAN_LY_kHO') or #lists.contains(roleNames, 'ADMIN'))}"
-             th:classappend="${#lists.contains({'my-schedule','my-attendance','leave-requests'}, activeMenu)} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'my-schedule' or activeMenu == 'my-attendance' or activeMenu == 'leave-requests'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgPersonal">
                 <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="side-group__label">Cá nhân</span>
@@ -415,7 +415,7 @@
                               ? displayName : session.loggedInUser.username}">admin</span>
                 <span class="user-card__role"
                       th:text="${roleNames != null and !#lists.isEmpty(roleNames)
-                          ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
+                              ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
             </span>
 
             <!-- Nút Thông tin cá nhân -->
@@ -440,6 +440,6 @@
 
 <!-- Lớp phủ làm mờ nền khi mở sidebar trên mobile (click để đóng) -->
 <div th:fragment="sidebarBackdrop" class="app-sidebar__backdrop" data-sidebar-close aria-hidden="true"></div>
-<!--merge -->
+
 </body>
 </html>
