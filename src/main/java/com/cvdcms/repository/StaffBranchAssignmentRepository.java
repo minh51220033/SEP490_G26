@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StaffBranchAssignmentRepository extends JpaRepository<StaffBranchAssignment, Long> {
@@ -98,4 +100,8 @@ public interface StaffBranchAssignmentRepository extends JpaRepository<StaffBran
     // Đã có phân công đang hiệu lực cùng chi nhánh + vai trò cho nhân viên này chưa.
     boolean existsByStaffStaffIdAndBranchBranchIdAndRoleRoleIdAndStatus(
             Long staffId, Long branchId, Long roleId, AssignmentStatus status);
+
+    // Tìm phân công theo đúng bộ khóa duy nhất uk_sba (staff_id, branch_id, role_id, start_date).
+    Optional<StaffBranchAssignment> findByStaffStaffIdAndBranchBranchIdAndRoleRoleIdAndStartDate(
+            Long staffId, Long branchId, Long roleId, LocalDate startDate);
 }

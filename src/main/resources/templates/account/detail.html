@@ -1,365 +1,348 @@
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head>
+<head th:replace="~{fragments/head :: head('Chi tiết tài khoản')}"></head>
 
-    <meta charset="UTF-8">
+<body class="app-body">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
+<div class="app-shell">
 
-    <title>Chi tiết tài khoản</title>
+    <aside th:replace="~{fragments/sidebar :: sidebar('accounts')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-    <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-            rel="stylesheet">
+    <div class="app-main">
 
-</head>
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết tài khoản')}"></header>
 
-<body>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/account.css}">
 
-<div class="container py-5">
+            <!-- THÔNG BÁO THÀNH CÔNG -->
+            <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div>
+                    <span th:if="${param.success[0] == 'updated'}">Cập nhật thông tin và phân quyền tài khoản thành công!</span>
+                    <span th:if="${param.success[0] == 'status'}">Cập nhật trạng thái tài khoản thành công!</span>
+                    <span th:unless="${param.success[0] == 'updated' or param.success[0] == 'status'}">Thao tác thành công!</span>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-    <!-- HEADER -->
+            <!-- THÔNG BÁO LỖI NGHIỆP VỤ -->
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <span th:text="${errorMessage}">Có lỗi</span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- TIÊU ĐỀ CHI TIẾT (SCR-01.2) -->
+            <section class="panel mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="account-avatar account-avatar--lg"
+                              th:classappend="${account.roles != null and account.roles.?[roleName == 'ADMIN'].size() > 0 ? 'account-avatar--admin' : (account.userType != null and account.userType.name() == 'STAFF' ? 'account-avatar--staff' : 'account-avatar--patient')}"
+                              th:text="${#strings.toUpperCase(#strings.substring(account.username, 0, 1))}">U</span>
+                        <div>
+                            <a th:href="@{/accounts}" class="text-decoration-none small text-muted">
+                                <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách tài khoản
+                            </a>
+                            <h2 class="panel__title fs-4 mt-1">
+                                <span class="text-brand" th:text="${account.username}">username</span>
+                                <span th:if="${account.isActive}" class="status-pill status-pill--active ms-2">Hoạt động</span>
+                                <span th:unless="${account.isActive}" class="status-pill status-pill--locked ms-2">Đã khóa</span>
+                            </h2>
+                            <p class="panel__subtitle mb-0">
+                                Họ tên: <strong class="text-dark" th:text="${displayName}">Nguyễn Văn A</strong> ·
+                                <span th:text="${account.email}">email@example.com</span>
+                            </p>
+                        </div>
+                    </div>
 
-        <div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/accounts}" class="btn btn-outline-secondary">
+                            <i class="bi bi-list-ul me-1"></i> Danh sách
+                        </a>
+                        <a th:href="@{/accounts/{id}/edit(id=${account.userId})}" class="btn btn-primary">
+                            <i class="bi bi-pencil-square me-1"></i> Sửa thông tin &amp; Phân quyền
+                        </a>
+                    </div>
+                </div>
+            </section>
 
-            <h2>
-                Chi tiết tài khoản
-            </h2>
+            <!-- NỘI DUNG CHI TIẾT -->
+            <div class="row g-4">
 
-            <p class="text-muted mb-0">
-                Thông tin và quản lý tài khoản
-            </p>
+                <!-- CỘT TRÁI: THÔNG TIN TÀI KHOẢN -->
+                <div class="col-lg-7">
+                    <section class="panel h-100">
+                        <div class="panel__head">
+                            <h4 class="panel__title">
+                                <i class="bi bi-person-vcard text-primary me-2"></i>Thông tin tài khoản
+                            </h4>
+                        </div>
 
-        </div>
-
-
-        <div>
-
-            <a
-                    th:href="@{/accounts}"
-                    class="btn btn-secondary">
-                Danh sách
-            </a>
-
-            <a
-                    th:href="@{/accounts/{id}/edit(id=${account.userId})}"
-                    class="btn btn-warning">
-                Sửa
-            </a>
-
-        </div>
-
-    </div>
-
-
-    <!-- SUCCESS -->
-
-    <div
-            th:if="${param.success}"
-            class="alert alert-success">
-
-        Thao tác đã được thực hiện thành công.
-
-    </div>
-
-
-    <div class="row g-4">
-
-        <!-- ACCOUNT INFORMATION -->
-
-        <div class="col-md-7">
-
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-
-                    <h5 class="mb-0">
-                        Thông tin tài khoản
-                    </h5>
-
+                        <div class="table-responsive">
+                            <table class="table detail-table mb-0">
+                                <tbody>
+                                <tr>
+                                    <th>Mã tài khoản (ID)</th>
+                                    <td><strong th:text="${account.userId}">1</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Tên đăng nhập</th>
+                                    <td><span class="fw-semibold text-primary" th:text="${account.username}">username</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Họ và tên</th>
+                                    <td><strong th:text="${displayName}">Nguyễn Văn A</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Email</th>
+                                    <td>
+                                        <i class="bi bi-envelope text-muted me-1"></i>
+                                        <span th:text="${account.email}">email@example.com</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Số điện thoại</th>
+                                    <td>
+                                        <i class="bi bi-telephone text-muted me-1"></i>
+                                        <span th:text="${account.phoneNumber}">0900000000</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Vai trò hệ thống</th>
+                                    <td>
+                                        <div th:if="${#sets.isEmpty(account.roles)}">
+                                            <span class="badge bg-secondary">Chưa có vai trò</span>
+                                        </div>
+                                        <div th:unless="${#sets.isEmpty(account.roles)}">
+                                            <span th:each="r : ${account.roles}"
+                                                  class="account-chip account-chip--role me-1"
+                                                  th:classappend="${r.roleName == 'ADMIN' or r.roleName == 'ROLE_ADMIN'} ? 'account-chip--admin' : ''"
+                                                  th:text="${r.displayName != null ? r.displayName : r.roleName}">ROLE</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr th:if="${!isTargetPatient}">
+                                    <th>Quyền hạn nghiệp vụ</th>
+                                    <td>
+                                        <div class="mb-1">
+                                            <span th:if="${isTargetAdmin}" class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                <i class="bi bi-shield-fill-check me-1"></i>Toàn quyền quản trị hệ thống (ADMIN)
+                                            </span>
+                                            <span th:if="${!isTargetAdmin and customPermissionsEnabled}"
+                                                  class="badge bg-warning-subtle text-dark border border-warning-subtle">
+                                                <i class="bi bi-sliders2-vertical me-1"></i>Đã tùy chỉnh riêng cho tài khoản (<span th:text="${#lists.size(effectivePermissions)}">0</span> / <span th:text="${#lists.size(rolePermissions)}">0</span> quyền của vai trò)
+                                            </span>
+                                            <span th:if="${!isTargetAdmin and !customPermissionsEnabled}"
+                                                  class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                <i class="bi bi-check2-all me-1"></i>Kế thừa mặc định theo vai trò (<span th:text="${#lists.size(effectivePermissions)}">0</span> quyền)
+                                            </span>
+                                        </div>
+                                        <div th:if="${effectivePermissions != null and !#lists.isEmpty(effectivePermissions)}" class="d-flex flex-wrap gap-1 mt-1">
+                                            <span th:each="p : ${effectivePermissions}"
+                                                  class="badge bg-light text-dark border fw-normal"
+                                                  th:title="${p.permissionCode}"
+                                                  th:text="${p.description != null ? p.description : p.permissionCode}">Quyền</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Loại tài khoản</th>
+                                    <td>
+                                        <span th:if="${account.userType != null and account.userType.name() == 'STAFF'}"
+                                              class="account-chip account-chip--staff">
+                                            <i class="bi bi-person-badge me-1"></i> Nhân viên (STAFF)
+                                        </span>
+                                        <span th:if="${account.userType != null and account.userType.name() == 'PATIENT'}"
+                                              class="account-chip account-chip--patient">
+                                            <i class="bi bi-person me-1"></i> Bệnh nhân (PATIENT)
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Chi nhánh cơ sở</th>
+                                    <td>
+                                        <span th:if="${account.branch != null}" class="account-chip account-chip--branch">
+                                            <i class="bi bi-buildings me-1"></i> <span th:text="${account.branch.branchName}">Chi nhánh</span>
+                                        </span>
+                                        <span th:unless="${account.branch != null}" class="text-muted">— Chưa gán chi nhánh —</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Trạng thái truy cập</th>
+                                    <td>
+                                        <span th:if="${account.isActive}" class="status-pill status-pill--active">Đang hoạt động</span>
+                                        <span th:unless="${account.isActive}" class="status-pill status-pill--locked">Bị khóa truy cập</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày tạo</th>
+                                    <td class="text-muted" th:text="${account.createdDate != null ? #temporals.format(account.createdDate, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026</td>
+                                </tr>
+                                <tr>
+                                    <th>Đăng nhập gần nhất</th>
+                                    <td class="text-muted" th:text="${account.lastLoginAt != null ? #temporals.format(account.lastLoginAt, 'dd/MM/yyyy HH:mm:ss') : 'Chưa từng đăng nhập'}">Chưa đăng nhập</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
 
+                <!-- CỘT PHẢI: THAO TÁC QUẢN TRỊ & TRẠNG THÁI -->
+                <div class="col-lg-5">
+                    <div class="d-flex flex-column gap-4">
 
-                <div class="card-body">
+                        <!-- THAO TÁC QUẢN TRỊ (CHỈNH SỬA & PHÂN QUYỀN) -->
+                        <section class="panel">
+                            <div class="panel__head">
+                                <div>
+                                    <h4 class="panel__title">
+                                        <i class="bi bi-gear-fill text-primary me-2"></i>Thao tác tài khoản
+                                    </h4>
+                                    <p class="panel__subtitle">Quản trị thông tin và quyền hạn</p>
+                                </div>
+                                <a th:href="@{/accounts/roles}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-sliders me-1"></i>Cấu hình Role
+                                </a>
+                            </div>
 
-                    <table class="table">
+                            <div class="p-3">
+                                <a th:href="@{/accounts/{id}/edit(id=${account.userId})}" class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-pencil-square fs-6"></i>
+                                    <span class="fw-semibold">Sửa thông tin &amp; Phân quyền</span>
+                                </a>
+                                <div class="form-text small text-muted text-center mt-2">
+                                    Chỉnh sửa email, số điện thoại, chi nhánh, thay đổi vai trò và tùy chỉnh quyền hạn chi tiết.
+                                </div>
+                            </div>
+                        </section>
 
+                        <!-- KHÓA / MỞ KHÓA TÀI KHOẢN -->
+                        <section class="panel">
+                            <div class="panel__head">
+                                <div>
+                                    <h4 class="panel__title">
+                                        <i class="bi bi-power text-danger me-2"></i>Trạng thái hoạt động
+                                    </h4>
+                                    <p class="panel__subtitle">Kiểm soát quyền đăng nhập của tài khoản</p>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-3 mb-3"
+                                 th:classappend="${account.isActive} ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi fs-4" th:classappend="${account.isActive} ? 'bi-check-circle-fill text-success' : 'bi-slash-circle-fill text-danger'"></i>
+                                    <div>
+                                        <strong th:if="${account.isActive}" class="text-success">Tài khoản đang hoạt động</strong>
+                                        <strong th:unless="${account.isActive}" class="text-danger">Tài khoản đã bị khóa</strong>
+                                        <div class="small text-muted" th:if="${account.isActive}">Người dùng có thể đăng nhập vào hệ thống bình thường.</div>
+                                        <div class="small text-muted" th:unless="${account.isActive}">Người dùng bị chặn hoàn toàn quyền đăng nhập.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form th:action="@{/accounts/{id}/toggle-status(id=${account.userId})}" method="post"
+                                  onsubmit="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái hoạt động của tài khoản này?');">
+                                <button type="submit" class="btn w-100"
+                                        th:disabled="${statusLocked}"
+                                        th:classappend="${account.isActive} ? 'btn-danger' : 'btn-success'">
+                                    <i class="bi me-1" th:classappend="${account.isActive} ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
+                                    <span th:text="${account.isActive} ? 'Khóa tài khoản này' : 'Mở khóa tài khoản này'">Khóa</span>
+                                </button>
+                                <div class="form-text small text-warning mt-2" th:if="${statusLocked}">
+                                    Không thể khóa tài khoản Quản trị viên hệ thống.
+                                </div>
+                            </form>
+                        </section>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- LỊCH SỬ CHUYỂN ĐỔI VAI TRÒ & PHÂN CÔNG CÔNG TÁC (HIỂN THỊ KHI TÀI KHOẢN ĐÃ GẮN HỒ SƠ NHÂN SỰ) -->
+            <section class="panel mt-4" th:if="${linkedStaff != null}">
+                <div class="panel__head">
+                    <div>
+                        <h4 class="panel__title">
+                            <i class="bi bi-clock-history text-primary me-2"></i>Hồ sơ nhân sự &amp; Lịch sử chuyển đổi vai trò
+                        </h4>
+                        <p class="panel__subtitle">
+                            Gắn với hồ sơ nhân viên:
+                            <strong th:text="${linkedStaff.staffCode + ' — ' + linkedStaff.fullName}">NV0001</strong>
+                            <span th:if="${linkedStaff.idCardNumber != null}" th:text="' (CCCD: ' + ${linkedStaff.idCardNumber} + ')'"></span>
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/admin/staffs/{id}(id=${linkedStaff.staffId})}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-person-badge me-1"></i> Xem hồ sơ nhân sự
+                        </a>
+                        <a th:href="@{/admin/staffs/{id}/edit(id=${linkedStaff.staffId})}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil me-1"></i> Cập nhật chuyên môn / CCHN
+                        </a>
+                    </div>
+                </div>
+
+                <div th:if="${account.roles != null and account.roles.?[roleName == 'BAC_SI'].size() > 0 and linkedStaff.practiceLicenseNo == null}"
+                     class="alert alert-warning d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                    <div>
+                        Nhân viên vừa được chuyển sang vai trò <strong>Bác sĩ</strong> nhưng chưa cập nhật <strong>Số chứng chỉ hành nghề (CCHN)</strong>.
+                        <a th:href="@{/admin/staffs/{id}/edit(id=${linkedStaff.staffId})}" class="alert-link ms-1">Bổ sung ngay tại Hồ sơ nhân sự &rarr;</a>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 account-table">
+                        <thead>
                         <tr>
-
-                            <th width="35%">
-                                ID
-                            </th>
-
-                            <td th:text="${account.userId}">
-                                1
-                            </td>
-
+                            <th>Chi nhánh công tác</th>
+                            <th>Vai trò khi thực hiện nghiệp vụ</th>
+                            <th>Vai trò hiện tại của tài khoản</th>
+                            <th>Thời gian hiệu lực</th>
+                            <th>Trạng thái lịch sử</th>
                         </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Username
-                            </th>
-
+                        </thead>
+                        <tbody>
+                        <tr th:each="a : ${staffAssignments}">
                             <td>
-
-                                <strong
-                                        th:text="${account.username}">
-                                    username
-                                </strong>
-
+                                <strong th:text="${a.branch.branchName}">Chi nhánh</strong>
+                                <span th:if="${a.isPrimary}" class="badge bg-primary-subtle text-primary ms-1">Chính</span>
                             </td>
-
-                        </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Họ và tên
-                            </th>
-
                             <td>
-    <span th:if="${#sets.isEmpty(account.patientProfiles)}">
-        Chưa có hồ sơ bệnh nhân
-    </span>
-
-                                <span th:unless="${#sets.isEmpty(account.patientProfiles)}"
-                                      th:each="profile, iter : ${account.patientProfiles}">
-        <span th:if="${!iter.first}">, </span>
-        <span th:text="${profile.fullName}">Nguyễn Văn A</span>
-    </span>
+                                <span class="account-chip account-chip--role"
+                                      th:text="${a.role.displayName != null ? a.role.displayName : a.role.roleName}">Lễ tân</span>
                             </td>
-                        </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Email
-                            </th>
-
-                            <td
-                                    th:text="${account.email}">
-                                email@gmail.com
-                            </td>
-
-                        </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Số điện thoại
-                            </th>
-
-                            <td
-                                    th:text="${account.phoneNumber}">
-                                0900000000
-                            </td>
-
-                        </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Role
-                            </th>
-
                             <td>
-    <span th:if="${#sets.isEmpty(account.roles)}"
-          class="badge bg-secondary">
-        Chưa có vai trò
-    </span>
-
-                                <span th:each="role : ${account.roles}"
-                                      class="badge bg-primary me-1"
-                                      th:text="${role.roleName}">
-        BENH_NHAN
-    </span>
+                                <span th:each="curRole : ${account.roles}"
+                                      class="account-chip account-chip--staff me-1"
+                                      th:text="${curRole.displayName != null ? curRole.displayName : curRole.roleName}">Kế toán</span>
                             </td>
-
-                        </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Trạng thái
-                            </th>
-
+                            <td class="small text-muted">
+                                <span>Từ: <strong th:text="${a.startDate}">2026-01-01</strong></span>
+                                <span class="ms-2">Đến: <strong th:text="${a.endDate != null ? a.endDate : 'Nay'}">Nay</strong></span>
+                            </td>
                             <td>
-
-                                <span
-                                        th:if="${account.isActive}"
-                                        class="badge bg-success">
-                                    Hoạt động
-                                </span>
-
-                                <span
-                                        th:unless="${account.isActive}"
-                                        class="badge bg-danger">
-                                    Đã khóa
-                                </span>
-
+                                <span th:if="${a.status.name() == 'ACTIVE'}" class="status-pill status-pill--active">Đang đảm nhiệm</span>
+                                <span th:unless="${a.status.name() == 'ACTIVE'}" class="status-pill status-pill--locked">Vai trò cũ (Đã chuyển)</span>
                             </td>
-
                         </tr>
-
-
-                        <tr>
-
-                            <th>
-                                Ngày tạo
-                            </th>
-
-                            <td
-                                    th:text="${account.createdDate}">
-                                -
-                            </td>
-
+                        <tr th:if="${#lists.isEmpty(staffAssignments)}">
+                            <td colspan="5" class="text-center py-3 text-muted">Chưa có lịch sử phân công chi nhánh.</td>
                         </tr>
-
+                        </tbody>
                     </table>
-
                 </div>
+            </section>
+        </main>
 
-            </div>
-
-        </div>
-
-
-        <!-- MANAGEMENT -->
-
-        <div class="col-md-5">
-
-            <!-- CHANGE ROLE -->
-
-            <div class="card shadow-sm mb-4">
-
-                <div class="card-header">
-
-                    <h5 class="mb-0">
-                        Thay đổi Role
-                    </h5>
-
-                </div>
-
-
-                <div class="card-body">
-
-                    <form
-                            th:action="@{/accounts/{id}/role(id=${account.userId})}"
-                            method="post">
-
-
-                        <label class="form-label">
-                            Role mới
-                        </label>
-
-
-                        <select
-                                name="roleId"
-                                class="form-select mb-3"
-                                required>
-
-                            <option
-                                    th:each="role : ${roles}"
-                                    th:value="${role.roleId}"
-                                    th:text="${role.roleName}"
-                                    th:selected="${account.roles.contains(role)}">
-                            </option>
-
-                        </select>
-
-
-                        <button
-                                type="submit"
-                                class="btn btn-primary w-100">
-
-                            Cập nhật Role
-
-                        </button>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-
-            <!-- STATUS -->
-
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-
-                    <h5 class="mb-0">
-                        Trạng thái tài khoản
-                    </h5>
-
-                </div>
-
-
-                <div class="card-body">
-
-                    <p>
-
-                        Trạng thái hiện tại:
-
-                        <strong
-                                th:if="${account.isActive}"
-                                class="text-success">
-                            Hoạt động
-                        </strong>
-
-                        <strong
-                                th:unless="${account.isActive}"
-                                class="text-danger">
-                            Đã khóa
-                        </strong>
-
-                    </p>
-
-
-                    <form
-                            th:action="@{/accounts/{id}/toggle-status(id=${account.userId})}"
-                            method="post">
-
-                        <button
-                                type="submit"
-                                class="btn w-100"
-                                th:classappend="${account.isActive}
-                                ? ' btn-danger'
-                                : ' btn-success'"
-                                th:text="${account.isActive}
-                                ? 'Khóa tài khoản'
-                                : 'Mở khóa tài khoản'">
-
-                            Khóa tài khoản
-
-                        </button>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-        </div>
-
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
-
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

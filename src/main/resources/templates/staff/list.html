@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý nhân sự')}"></head>
 
-<body class="app-body">
+<body class="app-body staff-page-body">
 
 <div class="app-shell">
 
@@ -17,170 +17,948 @@
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/staff.css}">
 
-            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
-            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <!-- Thông báo thành công / lỗi -->
+            <div class="alert alert-success alert-dismissible fade show" th:if="${successMessage}">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-danger alert-dismissible fade show" th:if="${errorMessage}">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-            <!-- DANH SÁCH NHÂN VIÊN (SCR-41.1) -->
-            <section class="panel">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Danh sách nhân viên</h3>
-                        <p class="panel__subtitle">
-                            Hồ sơ nhân sự, chứng chỉ hành nghề và phân công chi nhánh ·
-                            <strong th:text="${totalItems}">0</strong> nhân viên
-                        </p>
-                    </div>
-                    <a th:href="@{/admin/staffs/create}" class="btn btn-primary">
-                        <i class="bi bi-person-plus" aria-hidden="true"></i> Thêm nhân viên
-                    </a>
+            <!-- TIÊU ĐỀ TRANG -->
+            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h1 class="staff-page-title">Nhân sự</h1>
+                    <p class="staff-page-subtitle">Quản lý danh sách hồ sơ nhân viên, chứng chỉ và phân công cơ sở</p>
                 </div>
+            </div>
 
-                <!-- Bộ lọc -->
-                <form th:action="@{/admin/staffs}" method="get" class="filter-bar">
-                    <div>
-                        <label for="keyword" class="form-label small mb-1">Tìm kiếm</label>
-                        <input type="text" id="keyword" name="keyword" th:value="${keyword}" class="form-control"
-                               placeholder="Mã NV, họ tên, CCCD, SĐT, email">
-                    </div>
-                    <div>
-                        <label for="specialty" class="form-label small mb-1">Chuyên khoa</label>
-                        <select id="specialty" name="specialty" class="form-select">
-                            <option value="">Tất cả</option>
-                            <option th:each="sp : ${specialties}" th:value="${sp}" th:text="${sp}"
-                                    th:selected="${sp == selectedSpecialty}">Chuyên khoa
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="status" class="form-label small mb-1">Trạng thái</label>
-                        <select id="status" name="status" class="form-select">
-                            <option value="">Tất cả</option>
-                            <option th:each="s : ${statuses}" th:value="${s.name()}"
-                                    th:selected="${selectedStatus != null and selectedStatus.name() == s.name()}"
-                                    th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : (s.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
-                                Trạng thái
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="branchId" class="form-label small mb-1">Chi nhánh</label>
-                        <select id="branchId" name="branchId" class="form-select">
-                            <option value="">Tất cả</option>
-                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
-                                Chi nhánh
-                            </option>
-                        </select>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search" aria-hidden="true"></i> Lọc
+            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Ảnh 2) -->
+            <section class="staff-toolbar-card">
+                <form th:action="@{/admin/staffs}" method="get" id="staffFilterForm" class="staff-toolbar-form">
+                    <!-- Bên trái: Tìm kiếm gọn + Dropdowns nhanh -->
+                    <div class="staff-toolbar-left">
+                        <!-- Ô tìm kiếm làm ngắn lại (y chang Ảnh 2) -->
+                        <div class="staff-search-box-compact">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                                   class="form-control" placeholder="Tìm kiếm nhân viên...">
+                        </div>
+
+                        <!-- Dropdown Trạng thái -->
+                        <div>
+                            <select id="status" name="status" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
+                                <option value="">Trạng thái: Tất cả</option>
+                                <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                        th:selected="${selectedStatus != null and selectedStatus.name() == s.name()}"
+                                        th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Dropdown Chi nhánh -->
+                        <div>
+                            <select id="branchId" name="branchId" class="form-select staff-select-compact" aria-label="Chi nhánh" onchange="this.form.submit()">
+                                <option value="">Chi nhánh: Tất cả</option>
+                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                        th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Ẩn chuyên khoa & page size cho form -->
+                        <input type="hidden" id="specialty" name="specialty" th:value="${selectedSpecialty}">
+                        <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                        <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+
+                        <!-- Nút Lọc nâng cao -->
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                            <i class="bi bi-funnel"></i> Lọc nâng cao
+                            <span th:if="${selectedSpecialty != null and selectedSpecialty != ''}" class="filter-badge-count">1</span>
                         </button>
-                        <a th:href="@{/admin/staffs}" class="btn btn-light">Đặt lại</a>
+                    </div>
+
+                    <!-- Bên phải: Nút Thêm mới + Icon bánh răng Tùy chỉnh cột (y chang Ảnh 2) -->
+                    <div class="staff-toolbar-right">
+                        <a th:href="@{/admin/staffs/create}" class="btn btn-primary btn-vua">
+                            <i class="bi bi-plus-lg"></i> Thêm mới
+                        </a>
+                        <button type="button" class="btn-icon-square" data-bs-toggle="offcanvas" data-bs-target="#customColumnDrawer" title="Tùy chỉnh cột">
+                            <i class="bi bi-gear"></i>
+                        </button>
                     </div>
                 </form>
+            </section>
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 staff-table">
-                        <thead class="table-light">
+            <!-- BẢNG DỮ LIỆU NHÂN VIÊN MISA (Hỗ trợ kéo chỉnh kích cỡ cột) -->
+            <section class="staff-table-card">
+                <div class="staff-table-wrapper">
+                    <table class="table staff-modern-table align-middle" id="staffTable">
+                        <colgroup>
+                            <col data-col="code" style="width: 130px;">
+                            <col data-col="name" style="width: 220px;">
+                            <col data-col="specialty" style="width: 160px;">
+                            <col data-col="position" style="width: 170px;">
+                            <col data-col="cchn" style="width: 140px;">
+                            <col data-col="branch" style="width: 260px;">
+                            <col data-col="status" style="width: 180px;">
+                        </colgroup>
+                        <thead>
                         <tr>
-                            <th>Nhân viên</th>
-                            <th>Chuyên khoa / Chức danh</th>
-                            <th>CCHN</th>
-                            <th>Chi nhánh &amp; vai trò</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <!-- 1. Mã nhân viên -->
+                            <th data-col="code" style="width: 130px; min-width: 120px;">
+                                <span>Mã nhân viên</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 2. Họ và tên -->
+                            <th data-col="name" style="width: 220px; min-width: 200px;">
+                                <span>Họ và tên</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 3. Chuyên khoa -->
+                            <th data-col="specialty" style="width: 160px; min-width: 140px;">
+                                <span>Chuyên khoa</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 4. Vị trí / Chức danh -->
+                            <th data-col="position" style="width: 170px; min-width: 150px;">
+                                <span>Vị trí công việc</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 5. CCHN -->
+                            <th data-col="cchn" style="width: 140px; min-width: 130px;">
+                                <span>CCHN</span>
+                                <i class="bi bi-info-circle text-muted ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="Chứng chỉ hành nghề khám bệnh, chữa bệnh"></i>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 6. Chi nhánh -->
+                            <th data-col="branch" style="width: 200px; min-width: 170px;">
+                                <span>Chi nhánh</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 7. Trạng thái làm việc -->
+                            <th data-col="status" style="width: 180px; min-width: 160px;">
+                                <span>Trạng thái làm việc</span>
+                                <div class="col-resizer"></div>
+                            </th>
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="staff : ${staffs}">
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
+                        <tr th:each="staff : ${staffs}"
+                            th:data-staff-id="${staff.staffId}"
+                            th:data-staff-code="${staff.staffCode}"
+                            th:data-full-name="${staff.fullName}"
+                            th:data-phone="${staff.phoneNumber}"
+                            th:data-email="${staff.email}"
+                            th:data-identity="${staff.idCardNumber}"
+                            th:data-specialty="${staff.specialty}"
+                            th:data-position="${staff.positionTitle}"
+                            th:data-cchn="${staff.practiceLicenseNo}"
+                            th:data-status="${staff.status.name()}"
+                            th:data-status-label="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
+
+                            <!-- Mã nhân viên -->
+                            <td data-col="code">
+                                <span class="fw-semibold text-dark" th:text="${staff.staffCode}">NV0001</span>
+                            </td>
+
+                            <!-- Họ và tên + Avatar + SĐT -->
+                            <td data-col="name">
+                                <div class="d-flex align-items-center gap-2">
                                     <span class="staff-avatar"
                                           th:text="${#strings.toUpperCase(#strings.substring(staff.fullName, 0, 1))}">A</span>
-                                    <div>
-                                        <div class="staff-name" th:text="${staff.fullName}">Họ tên</div>
-                                        <div class="staff-sub">
-                                            <strong th:text="${staff.staffCode}">NV0001</strong>
-                                            <span th:if="${staff.phoneNumber != null}"
-                                                  th:text="' · ' + ${staff.phoneNumber}"></span>
+                                    <div class="text-truncate">
+                                        <div class="staff-name text-truncate" th:text="${staff.fullName}">Nguyễn Văn A</div>
+                                        <div class="staff-sub" th:if="${staff.phoneNumber != null}">
+                                            <span th:text="${staff.phoneNumber}">0900000000</span>
                                         </div>
                                     </div>
                                 </div>
                             </td>
-                            <td>
-                                <div th:text="${staff.specialty != null ? staff.specialty : '-'}">-</div>
-                                <div class="staff-sub" th:text="${staff.positionTitle != null ? staff.positionTitle : ''}"></div>
+
+                            <!-- Chuyên khoa -->
+                            <td data-col="specialty">
+                                <span th:if="${staff.specialty != null and staff.specialty != ''}" th:text="${staff.specialty}">Răng hàm mặt</span>
+                                <span th:unless="${staff.specialty != null and staff.specialty != ''}" class="text-muted">-</span>
                             </td>
-                            <td>
-                                <span th:if="${staff.practiceLicenseNo != null}" th:text="${staff.practiceLicenseNo}">CCHN</span>
-                                <span th:unless="${staff.practiceLicenseNo != null}" class="text-muted">-</span>
+
+                            <!-- Vị trí / Chức danh -->
+                            <td data-col="position">
+                                <span th:if="${staff.positionTitle != null and staff.positionTitle != ''}" th:text="${staff.positionTitle}">Bác sĩ</span>
+                                <span th:unless="${staff.positionTitle != null and staff.positionTitle != ''}" class="text-muted">-</span>
                             </td>
-                            <td>
-                                <div th:each="a : ${assignmentsByStaff[staff.staffId]}">
-                                    <span class="chip" th:classappend="${a.isPrimary} ? 'chip--primary' : ''">
-                                        <i class="bi bi-buildings" aria-hidden="true"></i>
-                                        <span th:text="${a.branch.branchName}">Chi nhánh</span>
-                                        <i th:if="${a.isPrimary}" class="bi bi-star-fill" title="Chi nhánh chính"
-                                           aria-hidden="true"></i>
-                                    </span>
-                                    <span class="chip chip--role"
-                                          th:text="${a.role.displayName != null ? a.role.displayName : a.role.roleName}">Vai trò</span>
-                                </div>
-                                <span th:if="${assignmentsByStaff[staff.staffId] == null}"
-                                      class="text-muted small">Chưa phân công</span>
+
+                            <!-- CCHN gọn kèm tooltip -->
+                            <td data-col="cchn">
+                                <span th:if="${staff.practiceLicenseNo != null and staff.practiceLicenseNo != ''}"
+                                      class="cchn-badge"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-placement="top"
+                                      title="Chứng chỉ hành nghề khám bệnh, chữa bệnh"
+                                      th:text="${staff.practiceLicenseNo}">CCHN-12345</span>
+                                <span th:unless="${staff.practiceLicenseNo != null and staff.practiceLicenseNo != ''}" class="text-muted">-</span>
                             </td>
-                            <td>
-                                <span class="status-badge"
-                                      th:classappend="${'status-badge--' + #strings.toLowerCase(staff.status.name())}"
-                                      th:text="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : (staff.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
-                                    Trạng thái
+
+                            <!-- Chi nhánh (Chuẩn MISA: Chi nhánh chính + badge +N kiêm nhiệm) -->
+                            <td data-col="branch">
+                                <th:block th:with="assignList=${assignmentsByStaff[staff.staffId]}">
+                                    <div th:if="${assignList != null and !#lists.isEmpty(assignList)}" class="d-inline-flex align-items-center gap-1 text-nowrap">
+                                        <span class="chip chip--primary" th:title="${assignList[0].branch.branchName}">
+                                            <i class="bi bi-buildings me-1"></i>
+                                            <span th:text="${assignList[0].branch.branchName}">Chi nhánh chính</span>
+                                        </span>
+                                        <span th:if="${#lists.size(assignList) > 1}"
+                                              class="staff-branch-more-badge"
+                                              data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              th:title="${'Kiêm nhiệm: ' + #strings.listJoin(assignList.subList(1, #lists.size(assignList)).![branch.branchName], ', ')}"
+                                              th:text="'+' + (${#lists.size(assignList)} - 1)">
+                                            +1
+                                        </span>
+                                    </div>
+                                    <span th:if="${assignList == null or #lists.isEmpty(assignList)}" class="text-muted small">-</span>
+                                </th:block>
+                            </td>
+
+                            <!-- Trạng thái + Thao tác Floating khi Hover (Theo đúng ảnh MISA) -->
+                            <td data-col="status">
+                                <span class="misa-status-badge"
+                                      th:classappend="${'misa-status-badge--' + #strings.toLowerCase(staff.status.name())}"
+                                      th:text="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
+                                    Đang làm việc
                                 </span>
-                            </td>
-                            <td class="text-center text-nowrap">
-                                <a th:href="@{/admin/staffs/{id}(id=${staff.staffId})}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-person-lines-fill" aria-hidden="true"></i> Chi tiết
-                                </a>
-                                <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}"
-                                   class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
-                                </a>
+
+                                <!-- Các icon thao tác xuất hiện khi di chuột đến dòng -->
+                                <div class="staff-row-floating-actions">
+                                    <a th:href="@{/admin/staffs/{id}(id=${staff.staffId})}"
+                                       class="staff-action-icon-btn btn-view"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"
+                                       title="Xem chi tiết">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}"
+                                       class="staff-action-icon-btn btn-edit"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"
+                                       title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
+
+                        <!-- Empty State khi không có dữ liệu -->
                         <tr th:if="${#lists.isEmpty(staffs)}">
-                            <td colspan="6" class="text-center py-4 text-muted">Không tìm thấy nhân viên nào.</td>
+                            <td colspan="7" class="p-0">
+                                <div class="staff-empty-state">
+                                    <div class="staff-empty-icon">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <h5 class="staff-empty-title">Không tìm thấy nhân viên nào</h5>
+                                    <p class="staff-empty-desc">
+                                        Không có dữ liệu nhân sự nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                    </p>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <a th:href="@{/admin/staffs}" class="btn btn-secondary-custom btn-be">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                        </a>
+                                        <a th:href="@{/admin/staffs/create}" class="btn btn-primary btn-be">
+                                            <i class="bi bi-plus-lg"></i> Thêm mới
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Phân trang -->
-                <nav th:if="${totalPages > 1}" class="mt-3" aria-label="Phân trang nhân viên">
-                    <ul class="pagination pagination-sm justify-content-end mb-0">
-                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                            <a class="page-link"
-                               th:href="@{/admin/staffs(page=${currentPage - 1}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}">&laquo;</a>
-                        </li>
-                        <li class="page-item" th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
-                            th:classappend="${p == currentPage} ? 'active' : ''">
-                            <a class="page-link"
-                               th:href="@{/admin/staffs(page=${p}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
-                               th:text="${p + 1}">1</a>
-                        </li>
-                        <li class="page-item" th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''">
-                            <a class="page-link"
-                               th:href="@{/admin/staffs(page=${currentPage + 1}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}">&raquo;</a>
-                        </li>
-                    </ul>
-                </nav>
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA (Ảnh 2 bottom) -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalItems}">24</strong>
+                    </div>
+
+                    <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                    <div class="misa-pagination-right">
+                        <!-- Chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="25" th:selected="${pageSize == 25}">25</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
+
+                        <!-- Khoảng hiển thị (1 - 24) -->
+                        <div class="misa-page-range">
+                            <span th:text="${fromItem}">1</span> - <span th:text="${toItem}">24</span>
+                        </div>
+
+                        <!-- Nút phân trang (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- Về trang đầu -->
+                            <a th:href="@{/admin/staffs(page=0, size=${pageSize}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+
+                            <!-- Trang trước -->
+                            <a th:href="@{/admin/staffs(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+
+                            <!-- Trang kế tiếp -->
+                            <a th:href="@{/admin/staffs(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                               title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+
+                            <!-- Đến trang cuối -->
+                            <a th:href="@{/admin/staffs(page=${totalPages - 1}, size=${pageSize}, keyword=${keyword}, specialty=${selectedSpecialty}, status=${selectedStatus}, branchId=${selectedBranchId})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
+    </div>
+</div>
 
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+<!-- ==================== POPUP 1: DRAWER TÙY CHỈNH CỘT (MISA AMIS STYLE) ==================== -->
+<div class="offcanvas offcanvas-end custom-column-offcanvas" tabindex="-1" id="customColumnDrawer" aria-labelledby="customColumnDrawerLabel">
+    <div class="custom-column-header">
+        <h5 class="custom-column-title" id="customColumnDrawerLabel">Tùy chỉnh cột</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+    </div>
+
+    <!-- Ô tìm kiếm tên trường -->
+    <div class="custom-column-search">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+        </div>
+    </div>
+
+    <!-- Tiêu đề danh sách cột -->
+    <div class="custom-column-table-head">
+        <div class="flex-grow-1">Tên trường</div>
+    </div>
+
+    <!-- Danh sách các cột cho phép ẩn/hiện -->
+    <div class="offcanvas-body p-0" id="customColList">
+        <!-- 1. Mã nhân viên -->
+        <div class="custom-col-item" data-col-target="code">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-code" checked>
+            <label for="chk-col-code" class="custom-col-name">Mã nhân viên</label>
+        </div>
+
+        <!-- 2. Họ và tên -->
+        <div class="custom-col-item" data-col-target="name">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-name" checked>
+            <label for="chk-col-name" class="custom-col-name">Họ và tên</label>
+        </div>
+
+        <!-- 3. Chuyên khoa -->
+        <div class="custom-col-item" data-col-target="specialty">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-specialty" checked>
+            <label for="chk-col-specialty" class="custom-col-name">Chuyên khoa</label>
+        </div>
+
+        <!-- 4. Vị trí công việc -->
+        <div class="custom-col-item" data-col-target="position">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-position" checked>
+            <label for="chk-col-position" class="custom-col-name">Vị trí công việc</label>
+        </div>
+
+        <!-- 5. CCHN -->
+        <div class="custom-col-item" data-col-target="cchn">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-cchn" checked>
+            <label for="chk-col-cchn" class="custom-col-name">Chứng chỉ hành nghề (CCHN)</label>
+        </div>
+
+        <!-- 6. Chi nhánh -->
+        <div class="custom-col-item" data-col-target="branch">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+            <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
+        </div>
+
+        <!-- 7. Trạng thái làm việc -->
+        <div class="custom-col-item" data-col-target="status">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+            <label for="chk-col-status" class="custom-col-name">Trạng thái làm việc</label>
+        </div>
+    </div>
+
+    <!-- Nút Thao tác Footer Drawer -->
+    <div class="custom-column-footer">
+        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+            Lấy lại mặc định
+        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="offcanvas">Hủy</button>
+            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO ==================== -->
+<div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" id="advancedFilterModalLabel">
+                    <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="advSpecialty" class="form-label small fw-bold">Chuyên khoa</label>
+                    <select id="advSpecialty" class="form-select">
+                        <option value="">Tất cả chuyên khoa</option>
+                        <option th:each="sp : ${specialties}" th:value="${sp}" th:text="${sp}"
+                                th:selected="${sp == selectedSpecialty}">Chuyên khoa</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Khoảng thời gian (Toán tử linh hoạt)</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary date-preset-btn active" data-range="all">Tất cả</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary date-preset-btn" data-range="today">Hôm nay</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary date-preset-btn" data-range="week">Tuần này</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary date-preset-btn" data-range="month">Tháng này</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnResetAdvFilter" class="btn btn-secondary-custom btn-vua me-auto">
+                    Đặt lại
+                </button>
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" id="btnApplyAdvFilter" class="btn btn-primary btn-vua">
+                    Áp dụng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== POPUP 3: QUICK VIEW CHI TIẾT NHÂN VIÊN ==================== -->
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-labelledby="quickViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title font-weight-bold" id="quickViewModalLabel">Thông tin nhân viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                    <span class="staff-avatar" id="qvAvatar" style="width: 44px; height: 44px; font-size: 1.1rem;">A</span>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 fw-bold" id="qvFullName">Họ và tên</h5>
+                            <span class="misa-status-badge" id="qvStatus">Trạng thái</span>
+                        </div>
+                        <div class="text-muted small mt-1">
+                            <span id="qvStaffCode" class="fw-semibold">NV0001</span> &middot;
+                            <span id="qvPosition">Chức danh</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="text-muted small">Số điện thoại</div>
+                        <div class="fw-semibold" id="qvPhone">-</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Email</div>
+                        <div class="fw-semibold text-truncate" id="qvEmail">-</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Số CCCD / CMND</div>
+                        <div class="fw-semibold" id="qvIdentity">-</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Chuyên khoa</div>
+                        <div class="fw-semibold" id="qvSpecialty">-</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Chứng chỉ hành nghề (CCHN)</div>
+                        <div class="fw-semibold text-primary" id="qvCchn">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                <a href="#" id="qvDetailLink" class="btn btn-outline-primary btn-vua">
+                    <i class="bi bi-box-arrow-up-right"></i> Xem đầy đủ
+                </a>
+                <a href="#" id="qvEditLink" class="btn btn-primary btn-vua">
+                    <i class="bi bi-pencil"></i> Chỉnh sửa
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Khởi tạo Bootstrap Tooltip
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // 2. Select All Checkbox logic
+        const checkAll = document.getElementById('checkAllRows');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                rowCheckboxes.forEach(cb => cb.checked = checkAll.checked);
+            });
+        }
+
+        // 3. Page Size change logic
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+        const filterForm = document.getElementById('staffFilterForm');
+
+        if (pageSizeSelect && filterForm) {
+            pageSizeSelect.addEventListener('change', function () {
+                if (pageSizeInput) pageSizeInput.value = this.value;
+                if (pageIndexInput) pageIndexInput.value = 0; // Về trang đầu tiên
+                filterForm.submit();
+            });
+        }
+
+        // 4. KÉO CHỈNH ĐỘ DÀI / KÍCH CỠ VÀ THỨ TỰ CÁC CỘT (CHUẨN 100% MISA AMIS)
+        const defaultColOrder = ['code', 'name', 'specialty', 'position', 'cchn', 'branch', 'status'];
+        const defaultColWidths = {
+            code: 130,
+            name: 220,
+            specialty: 160,
+            position: 170,
+            cchn: 140,
+            branch: 200,
+            status: 180
+        };
+        const STORAGE_WIDTH_KEY = 'cv_staff_table_widths_v16';
+        const STORAGE_CONFIG_KEY = 'cv_staff_table_columns_v16';
+        const table = document.getElementById('staffTable');
+        let currentWidths = loadColWidths();
+
+        function loadColWidths() {
+            try {
+                const raw = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return raw ? Object.assign({}, defaultColWidths, JSON.parse(raw)) : Object.assign({}, defaultColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultColWidths);
+            }
+        }
+
+        function saveColWidths(widths) {
+            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+        }
+
+        // 5. Tùy biến cột (Ẩn/Hiện và Sắp xếp thứ tự cột)
+        function getColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                defaultColOrder.forEach(col => {
+                    if (!order.includes(col)) order.push(col);
+                });
+                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                return { order, hidden };
+            } catch (e) {
+                return { order: defaultColOrder.slice(), hidden: [] };
+            }
+        }
+
+        function saveColConfig(config) {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        // Sắp xếp lại thứ tự DOM của bảng theo mảng order
+        function applyColOrder(order) {
+            if (!order || !Array.isArray(order)) return;
+
+            // 1. Thứ tự trong Drawer Tùy chỉnh cột
+            const customColList = document.getElementById('customColList');
+            if (customColList) {
+                order.forEach(colKey => {
+                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                    if (item) customColList.appendChild(item);
+                });
+            }
+
+            // 2. Thứ tự thẻ col trong colgroup
+            const colgroup = table ? table.querySelector('colgroup') : null;
+            if (colgroup) {
+                order.forEach(colKey => {
+                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                    if (col) colgroup.appendChild(col);
+                });
+            }
+
+            // 3. Thứ tự thẻ th trong thead tr
+            const theadTr = table ? table.querySelector('thead tr') : null;
+            if (theadTr) {
+                order.forEach(colKey => {
+                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                    if (th) theadTr.appendChild(th);
+                });
+            }
+
+            // 4. Thứ tự thẻ td trong từng dòng tbody tr
+            if (table) {
+                const tbodyRows = table.querySelectorAll('tbody tr');
+                tbodyRows.forEach(tr => {
+                    order.forEach(colKey => {
+                        const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                        if (td) tr.appendChild(td);
+                    });
+                });
+            }
+        }
+
+        function applyColWidths() {
+            currentWidths = loadColWidths();
+            let totalColsWidth = 0;
+
+            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+            order.forEach(col => {
+                const w = currentWidths[col] || defaultColWidths[col] || 160;
+                currentWidths[col] = w;
+
+                // Cập nhật thẻ col trong colgroup
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+
+                // Cập nhật th
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    if (!th.classList.contains('d-none')) {
+                        totalColsWidth += w;
+                    }
+                }
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            if (totalColsWidth > containerW) {
+                table.style.width = totalColsWidth + 'px';
+            } else {
+                table.style.width = '100%';
+            }
+        }
+
+        function applyColConfig(config) {
+            if (!table) return;
+
+            const order = (config && config.order) ? config.order : defaultColOrder;
+            let visibleTotalW = 0;
+
+            order.forEach(col => {
+                const isHidden = config.hidden.includes(col);
+                const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                cells.forEach(cell => {
+                    if (isHidden) {
+                        cell.classList.add('d-none');
+                    } else {
+                        cell.classList.remove('d-none');
+                    }
+                });
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) {
+                    colEl.style.display = isHidden ? 'none' : '';
+                }
+
+                if (!isHidden) {
+                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 160);
+                }
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            if (visibleTotalW > containerW) {
+                table.style.width = visibleTotalW + 'px';
+            } else {
+                table.style.width = '100%';
+            }
+        }
+
+        // Kéo thả sắp xếp vị trí các cột trong Drawer Tùy chỉnh cột
+        function initDrawerDragAndDrop() {
+            const colList = document.getElementById('customColList');
+            if (!colList) return;
+
+            let draggedItem = null;
+
+            colList.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function (e) {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-col-target'));
+                });
+
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (!draggedItem || draggedItem === this) return;
+
+                    const rect = this.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    if (e.clientY < midY) {
+                        colList.insertBefore(draggedItem, this);
+                    } else {
+                        colList.insertBefore(draggedItem, this.nextSibling);
+                    }
+                });
+            });
+        }
+
+        let currentConfig = getColConfig();
+        applyColOrder(currentConfig.order);
+        applyColConfig(currentConfig);
+        applyColWidths();
+        initDrawerDragAndDrop();
+
+        // Kéo thả resizer độ rộng cột
+        const resizers = table.querySelectorAll('.col-resizer');
+        resizers.forEach(resizer => {
+            resizer.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const th = this.parentElement;
+                const col = th.getAttribute('data-col');
+                const startX = e.pageX;
+                const startColWidth = th.offsetWidth;
+                const startTableWidth = table.offsetWidth;
+                resizer.classList.add('is-resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                function onMouseMove(e) {
+                    const diff = e.pageX - startX;
+                    const newWidth = Math.min(400, Math.max(70, startColWidth + diff));
+                    currentWidths[col] = newWidth;
+
+                    const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                    if (colEl) colEl.style.width = newWidth + 'px';
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+
+                    const delta = newWidth - startColWidth;
+                    const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                    if (startTableWidth + delta > containerW) {
+                        table.style.width = (startTableWidth + delta) + 'px';
+                    } else {
+                        table.style.width = '100%';
+                    }
+                }
+
+                function onMouseUp() {
+                    resizer.classList.remove('is-resizing');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+                    order.forEach(c => {
+                        const thCell = table.querySelector(`thead th[data-col="${c}"]`);
+                        if (thCell && !thCell.classList.contains('d-none')) {
+                            currentWidths[c] = thCell.offsetWidth;
+                        }
+                    });
+
+                    saveColWidths(currentWidths);
+                    applyColWidths();
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
+
+        window.addEventListener('resize', function () {
+            applyColConfig(currentConfig);
+        });
+
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const order = [];
+                const hidden = [];
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    order.push(colKey);
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+
+                currentConfig = { order, hidden };
+                saveColConfig(currentConfig);
+                applyColOrder(order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+
+                const offcanvasEl = document.getElementById('customColumnDrawer');
+                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (offcanvas) offcanvas.hide();
+            });
+        }
+
+        const btnResetCols = document.getElementById('btnResetCols');
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                currentConfig = {
+                    order: defaultColOrder.slice(),
+                    hidden: []
+                };
+                saveColConfig(currentConfig);
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                localStorage.removeItem(STORAGE_CONFIG_KEY);
+                currentWidths = Object.assign({}, defaultColWidths);
+                applyColOrder(currentConfig.order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+            });
+        }
+
+        const colSearchInput = document.getElementById('colSearchInput');
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const val = this.value.toLowerCase().trim();
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const name = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = name.includes(val) ? 'flex' : 'none';
+                });
+            });
+        }
+
+        // 6. Lọc nâng cao
+        const advSpecialty = document.getElementById('advSpecialty');
+        const hiddenSpecialty = document.getElementById('specialty');
+        const btnApplyAdvFilter = document.getElementById('btnApplyAdvFilter');
+        if (btnApplyAdvFilter) {
+            btnApplyAdvFilter.addEventListener('click', function () {
+                if (hiddenSpecialty && advSpecialty) {
+                    hiddenSpecialty.value = advSpecialty.value;
+                }
+                if (filterForm) filterForm.submit();
+            });
+        }
+
+        const btnResetAdvFilter = document.getElementById('btnResetAdvFilter');
+        if (btnResetAdvFilter) {
+            btnResetAdvFilter.addEventListener('click', function () {
+                if (advSpecialty) advSpecialty.value = '';
+                if (hiddenSpecialty) hiddenSpecialty.value = '';
+            });
+        }
+
+        // 7. Quick View Popup Modal
+        const quickViewModalEl = document.getElementById('quickViewModal');
+        const quickViewModal = quickViewModalEl ? new bootstrap.Modal(quickViewModalEl) : null;
+
+        document.querySelectorAll('.btn-quick-view').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const tr = this.closest('tr');
+                if (!tr || !quickViewModal) return;
+
+                const id = tr.getAttribute('data-staff-id');
+                const code = tr.getAttribute('data-staff-code') || '-';
+                const name = tr.getAttribute('data-full-name') || '-';
+                const phone = tr.getAttribute('data-phone') || '-';
+                const email = tr.getAttribute('data-email') || '-';
+                const identity = tr.getAttribute('data-identity') || '-';
+                const specialty = tr.getAttribute('data-specialty') || '-';
+                const position = tr.getAttribute('data-position') || '-';
+                const cchn = tr.getAttribute('data-cchn') || 'Chưa cập nhật';
+                const statusLabel = tr.getAttribute('data-status-label') || '';
+                const statusName = tr.getAttribute('data-status') || 'ACTIVE';
+
+                document.getElementById('qvAvatar').textContent = name.charAt(0).toUpperCase();
+                document.getElementById('qvFullName').textContent = name;
+                document.getElementById('qvStaffCode').textContent = code;
+                document.getElementById('qvPosition').textContent = position;
+                document.getElementById('qvPhone').textContent = phone;
+                document.getElementById('qvEmail').textContent = email;
+                document.getElementById('qvIdentity').textContent = identity;
+                document.getElementById('qvSpecialty').textContent = specialty;
+                document.getElementById('qvCchn').textContent = cchn;
+
+                const statusEl = document.getElementById('qvStatus');
+                statusEl.textContent = statusLabel;
+                statusEl.className = 'misa-status-badge misa-status-badge--' + statusName.toLowerCase();
+
+                document.getElementById('qvDetailLink').href = '/admin/staffs/' + id;
+                document.getElementById('qvEditLink').href = '/admin/staffs/' + id + '/edit';
+
+                quickViewModal.show();
+            });
+        });
+    });
+</script>
+
 </body>
 </html>

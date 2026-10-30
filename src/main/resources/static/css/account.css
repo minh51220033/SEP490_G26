@@ -1,0 +1,567 @@
+/* FT01 - Quản lý tài khoản, xác thực & thông tin cá nhân.
+   Kế thừa hệ màu và bo góc của layout.css để đồng bộ 100% với toàn bộ hệ thống. */
+
+.account-table td,
+.account-table th {
+    vertical-align: middle;
+}
+
+/* Avatar chữ cái đầu */
+.account-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--brand-50, #eff6ff);
+    color: var(--brand-700, #1d4ed8);
+    font-weight: 700;
+    font-size: .95rem;
+}
+
+.account-avatar--lg {
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+}
+
+.account-avatar--admin {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.account-avatar--staff {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.account-avatar--patient {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* Tên và username */
+.account-username {
+    font-weight: 700;
+    color: var(--ink, #0f172a);
+    line-height: 1.25;
+}
+
+.account-fullname {
+    font-size: .88rem;
+    color: var(--ink, #1e293b);
+}
+
+.account-sub {
+    font-size: .78rem;
+    color: var(--muted, #64748b);
+}
+
+/* Chip vai trò & loại tài khoản */
+.account-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.account-chip--role {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.account-chip--admin {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.account-chip--staff {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.account-chip--patient {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.account-chip--branch {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+/* Badge trạng thái */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.status-pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.status-pill--active {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.status-pill--active::before {
+    background: #10b981;
+}
+
+.status-pill--locked {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.status-pill--locked::before {
+    background: #ef4444;
+}
+
+/* Detail view styling */
+.detail-table th {
+    width: 32%;
+    color: var(--muted, #64748b);
+    font-weight: 600;
+    font-size: .88rem;
+    padding: 11px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-table td {
+    padding: 11px 16px;
+    font-size: .92rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Form section styling */
+.form-section-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--brand-900, #1e3a8a);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Nút thao tác tinh gọn, hiện đại */
+.action-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 0.92rem;
+    transition: all 0.18s ease-in-out;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* Nút Xem chi tiết */
+.action-btn--view {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #dbeafe;
+}
+.action-btn--view:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+/* Nút Sửa thông tin */
+.action-btn--edit {
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fef3c7;
+}
+.action-btn--edit:hover {
+    background: #d97706;
+    color: #ffffff;
+    border-color: #d97706;
+}
+
+/* Nút Khóa tài khoản */
+.action-btn--lock {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fee2e2;
+}
+.action-btn--lock:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+/* Nút Mở khóa tài khoản */
+.action-btn--unlock {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-color: #dcfce7;
+}
+.action-btn--unlock:hover {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #16a34a;
+}
+
+.action-btn:disabled,
+.action-btn.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==========================================================================
+   GIAO DIỆN PHÂN QUYỀN PHONG CÁCH MISA AMIS (Hierarchical Dropdown RBAC)
+   ========================================================================== */
+
+.misa-module-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.misa-module-tab {
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.misa-module-tab:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: #0f172a;
+}
+
+.misa-module-tab.is-active {
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.misa-module-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    overflow: visible;
+    transition: box-shadow 0.18s ease;
+}
+
+.misa-module-section:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.misa-module-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.misa-module-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.misa-feature-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px 12px 28px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease;
+}
+
+.misa-feature-row:last-child {
+    border-bottom: none;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.misa-feature-row:hover {
+    background-color: #f8fafc;
+}
+
+.misa-feature-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.misa-feature-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.misa-feature-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+}
+
+.misa-sidebar-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    padding-left: 32px;
+}
+
+.misa-sidebar-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 1px 7px;
+}
+
+/* MISA Sidebar Menu Feature Toggle */
+.misa-feature-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.misa-menu-switch {
+    width: 2.75rem !important;
+    height: 1.45rem !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.misa-menu-switch:checked {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.misa-switch-badge {
+    min-width: 82px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-align: center;
+    display: inline-block;
+    transition: all 0.15s ease;
+}
+
+.misa-switch-badge.state-granted {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.misa-switch-badge.state-denied {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.misa-feature-row.is-granted {
+    background-color: rgba(239, 246, 255, 0.45);
+}
+
+/* MISA Right-hand Dropdown Control */
+.misa-perm-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.misa-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 165px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+}
+
+.misa-dropdown-trigger:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.misa-dropdown-trigger.state-full {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.misa-dropdown-trigger.state-partial {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.misa-dropdown-trigger.is-open {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Popover xổ xuống giống MISA Ảnh 3 */
+.misa-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 340px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+    padding: 8px;
+    z-index: 1055;
+    display: none;
+}
+
+.misa-popover.is-open {
+    display: block;
+    animation: misaPopoverFadeIn 0.14s ease-out;
+}
+
+@keyframes misaPopoverFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.misa-popover-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+    margin: 0;
+}
+
+.misa-popover-item:hover {
+    background-color: #f1f5f9;
+}
+
+.misa-popover-item--all {
+    align-items: center;
+    background-color: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 4px;
+    padding-bottom: 10px;
+}
+
+.misa-action-badge {
+    display: inline-block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.misa-code-tag {
+    font-size: 0.68rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.misa-action-desc {
+    font-size: 0.75rem;
+    color: #475569;
+    line-height: 1.35;
+    margin-top: 2px;
+}
+
+

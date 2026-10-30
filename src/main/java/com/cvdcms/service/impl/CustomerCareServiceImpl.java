@@ -102,6 +102,18 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             return "ADMIN";
         }
 
+        if (userRepository.hasActivePermission(userId, "CUSTOMER_CARE_MANAGE")) {
+            List<String> userRoles = taskRepository.findActiveRoleNamesByUserId(userId);
+            if (userRoles != null) {
+                for (String r : userRoles) {
+                    if ("BAC_SI".equalsIgnoreCase(r) || "ROLE_BAC_SI".equalsIgnoreCase(r) || "DOCTOR".equalsIgnoreCase(r)) {
+                        return "BAC_SI";
+                    }
+                }
+            }
+            return "LE_TAN";
+        }
+
         List<String> activeRoles = taskRepository.findActiveRoleNamesByUserId(userId);
         if (activeRoles != null && !activeRoles.isEmpty()) {
             for (String role : activeRoles) {
