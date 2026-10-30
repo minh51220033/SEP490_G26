@@ -130,22 +130,22 @@
             <!-- Table Card -->
             <div class="fin-card p-0">
                 <div class="fin-table-wrapper">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft21-invoices">
                         <thead>
                         <tr>
-                            <th>Mã HĐ</th>
-                            <th class="text-center" style="width: 100px;">Loại HĐ</th>
-                            <th>Ngày lập</th>
-                            <th>Bệnh nhân</th>
-                            <th>Cơ sở</th>
-                            <th>Thu ngân</th>
-                            <th class="text-end">Tiền phát sinh</th>
-                            <th class="text-end">Giảm trừ</th>
-                            <th class="text-end">Thực thu</th>
-                            <th class="text-end">Đã thanh toán</th>
-                            <th class="text-end">Còn nợ</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="invoice_code" data-column-required="true" data-column-pinned="true">Mã HĐ</th>
+                            <th class="text-center" style="width: 100px;" data-column-key="invoice_type">Loại HĐ</th>
+                            <th data-column-key="issued_date">Ngày lập</th>
+                            <th data-column-key="patient" data-column-pinned="true">Bệnh nhân</th>
+                            <th data-column-key="branch">Cơ sở</th>
+                            <th data-column-key="cashier">Thu ngân</th>
+                            <th class="text-end" data-column-key="service_amount">Tiền phát sinh</th>
+                            <th class="text-end" data-column-key="discount">Giảm trừ</th>
+                            <th class="text-end" data-column-key="total_amount">Thực thu</th>
+                            <th class="text-end" data-column-key="paid_amount">Đã thanh toán</th>
+                            <th class="text-end" data-column-key="remaining_debt">Còn nợ</th>
+                            <th class="text-center" data-column-key="payment_status">Trạng thái</th>
+                            <th class="text-center" data-column-key="actions" data-column-action="true">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -156,12 +156,12 @@
                             </td>
                         </tr>
                         <tr th:each="inv : ${invoices}" th:id="'row-' + ${inv.invoiceId}">
-                            <td>
+                            <td data-column-key="invoice_code">
                                 <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fw-bold text-primary text-decoration-none"
                                    th:text="${inv.invoiceCode}">HD123456</a>
                                 <div th:if="${inv.status.name() == 'CANCELLED'}" class="badge bg-danger text-white mt-1" style="font-size: 10px;">Đã hủy</div>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="invoice_type" class="text-center">
                                 <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MIXED'}" class="badge text-white" style="background-color: #6f42c1;">
                                     <i class="bi bi-receipt"></i> DV &amp; Thuốc
                                 </span>
@@ -172,31 +172,31 @@
                                     <i class="bi bi-tools"></i> Dịch vụ
                                 </span>
                             </td>
-                            <td>
+                            <td data-column-key="issued_date">
                                 <span th:text="${#temporals.format(inv.issuedAt, 'dd/MM/yyyy')}">24/10/2026</span>
                                 <small class="text-muted d-block" th:text="${#temporals.format(inv.issuedAt, 'HH:mm')}">14:30</small>
                             </td>
-                            <td>
+                            <td data-column-key="patient">
                                 <div class="fw-bold" th:text="${inv.patientProfile.fullName}">Nguyễn Văn A</div>
                                 <small class="text-muted" th:text="${inv.patientProfile.patientCode} + ' - ' + ${inv.patientProfile.phoneNumber}">BN001 - 098...</small>
                             </td>
-                            <td th:text="${inv.branch.branchName}">Cơ sở Quận 1</td>
-                            <td th:text="${inv.cashier != null ? inv.cashier.fullName : 'N/A'}">Nguyễn Thu Ngân</td>
-                            <td class="text-end" th:text="${#numbers.formatDecimal(inv.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
-                            <td class="text-end text-success">
+                            <td data-column-key="branch" th:text="${inv.branch.branchName}">Cơ sở Quận 1</td>
+                            <td data-column-key="cashier" th:text="${inv.cashier != null ? inv.cashier.fullName : 'N/A'}">Nguyễn Thu Ngân</td>
+                            <td data-column-key="service_amount" class="text-end" th:text="${#numbers.formatDecimal(inv.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                            <td data-column-key="discount" class="text-end text-success">
                                 <span th:text="'-' + ${#numbers.formatDecimal(inv.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
                             </td>
-                            <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(inv.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
-                            <td class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(inv.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td class="text-end fw-bold" th:classappend="${inv.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'text-danger' : 'text-muted'}"
+                            <td data-column-key="total_amount" class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(inv.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                            <td data-column-key="paid_amount" class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(inv.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td data-column-key="remaining_debt" class="text-end fw-bold" th:classappend="${inv.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'text-danger' : 'text-muted'}"
                                 th:text="${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td class="text-center">
+                            <td data-column-key="payment_status" class="text-center">
                                 <span th:if="${inv.paymentStatus.name() == 'PAID'}" class="fin-badge fin-badge-paid"><i class="bi bi-check2-circle"></i> Đã thanh toán</span>
                                 <span th:if="${inv.paymentStatus.name() == 'PARTIAL'}" class="fin-badge fin-badge-partial"><i class="bi bi-clock-history"></i> Trả 1 phần</span>
                                 <span th:if="${inv.paymentStatus.name() == 'UNPAID'}" class="fin-badge fin-badge-unpaid"><i class="bi bi-exclamation-triangle"></i> Chưa trả</span>
                                 <span th:if="${inv.paymentStatus.name() == 'CANCELLED'}" class="fin-badge fin-badge-cancelled"><i class="bi bi-x-circle"></i> Đã hủy</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" data-column-action="true" class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="btn btn-outline-primary" title="Xem chi tiết (SCR-21.1)">
                                         <i class="bi bi-eye"></i>

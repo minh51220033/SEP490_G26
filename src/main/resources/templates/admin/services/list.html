@@ -91,17 +91,17 @@
         </form>
 
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
 
             <thead class="table-light">
             <tr>
-              <th scope="col">Dịch vụ</th>
-              <th scope="col">Nhóm</th>
-              <th scope="col">Loại</th>
-              <th scope="col" class="text-end">Đơn giá</th>
-              <th scope="col" class="text-end">Phụ phí</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col" class="text-end">Thao tác</th>
+              <th scope="col" data-column-key="service" data-column-required="true" data-column-pinned="true">Dịch vụ</th>
+              <th scope="col" data-column-key="category">Nhóm</th>
+              <th scope="col" data-column-key="type">Loại</th>
+              <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
+              <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
+              <th scope="col" data-column-key="status">Trạng thái</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
             </tr>
             </thead>
 
@@ -109,7 +109,7 @@
 
             <tr th:each="service : ${services}">
 
-              <td>
+              <td data-column-key="service">
                 <div class="fw-semibold"
                      th:text="${service.serviceName}">
                 </div>
@@ -121,7 +121,7 @@
                 </small>
               </td>
 
-              <td>
+              <td data-column-key="category">
                 <div th:text="${service.category.categoryName}"></div>
 
                 <small class="text-danger"
@@ -130,7 +130,7 @@
                 </small>
               </td>
 
-              <td th:switch="${service.serviceType.name()}">
+              <td data-column-key="type" th:switch="${service.serviceType.name()}">
                 <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
                 <span th:case="'LAB'">Xét nghiệm</span>
                 <span th:case="'XRAY'">X-Ray</span>
@@ -138,21 +138,21 @@
                 <span th:case="*" th:text="${service.serviceType}"></span>
               </td>
 
-              <td class="text-end text-nowrap">
+              <td data-column-key="base_price" class="text-end text-nowrap">
                                 <span th:text="${#numbers.formatDecimal(
                                     service.basePrice, 1, 'POINT', 2, 'COMMA')}">
                                 </span>
                 ₫
               </td>
 
-              <td class="text-end text-nowrap">
+              <td data-column-key="surcharge" class="text-end text-nowrap">
                                 <span th:text="${#numbers.formatDecimal(
                                     service.surchargeAmount, 1, 'POINT', 2, 'COMMA')}">
                                 </span>
                 ₫
               </td>
 
-              <td>
+              <td data-column-key="status">
                                 <span th:if="${service.status.name() == 'ACTIVE'}"
                                       class="badge bg-success">
                                     Đang sử dụng
@@ -164,7 +164,7 @@
                                 </span>
               </td>
 
-              <td class="text-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end">
                 <div class="d-flex flex-wrap gap-2 justify-content-end">
 
                   <a th:href="@{/admin/services/{id}/edit(
@@ -243,29 +243,29 @@
         </div>
 
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
 
             <thead class="table-light">
             <tr>
-              <th scope="col">Mã nhóm</th>
-              <th scope="col">Tên nhóm</th>
-              <th scope="col">Loại</th>
-              <th scope="col">Thứ tự</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col" class="text-end">Thao tác</th>
+              <th scope="col" data-column-key="cat_code" data-column-required="true" data-column-pinned="true">Mã nhóm</th>
+              <th scope="col" data-column-key="cat_name" data-column-pinned="true">Tên nhóm</th>
+              <th scope="col" data-column-key="cat_type">Loại</th>
+              <th scope="col" data-column-key="display_order">Thứ tự</th>
+              <th scope="col" data-column-key="status">Trạng thái</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
             </tr>
             </thead>
 
             <tbody>
 
             <tr th:each="category : ${categories}">
-              <td class="fw-semibold"
+              <td data-column-key="cat_code" class="fw-semibold"
                   th:text="${category.categoryCode}">
               </td>
 
-              <td th:text="${category.categoryName}"></td>
+              <td data-column-key="cat_name" th:text="${category.categoryName}"></td>
 
-              <td th:switch="${category.categoryType.name()}">
+              <td data-column-key="cat_type" th:switch="${category.categoryType.name()}">
                 <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
                 <span th:case="'LAB'">Xét nghiệm</span>
                 <span th:case="'XRAY'">X-Ray</span>
@@ -273,9 +273,9 @@
                 <span th:case="*" th:text="${category.categoryType}"></span>
               </td>
 
-              <td th:text="${category.displayOrder}"></td>
+              <td data-column-key="display_order" th:text="${category.displayOrder}"></td>
 
-              <td>
+              <td data-column-key="status">
                                 <span th:if="${category.isActive == true}"
                                       class="badge bg-success">
                                     Đang sử dụng
@@ -287,7 +287,7 @@
                                 </span>
               </td>
 
-              <td class="text-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end">
                 <div class="d-flex gap-2 justify-content-end">
 
                   <a th:href="@{/admin/services/categories/{id}/edit(

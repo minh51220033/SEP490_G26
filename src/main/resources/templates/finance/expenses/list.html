@@ -128,19 +128,19 @@
             <!-- Table of Expenses -->
             <div class="fin-card">
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft25-expenses">
                         <thead>
                         <tr>
-                            <th>Mã phiếu</th>
-                            <th>Ngày chi</th>
-                            <th>Chi nhánh</th>
-                            <th>Danh mục</th>
-                            <th>Người nhận</th>
-                            <th class="text-end">Số tiền chi</th>
-                            <th>Phương thức</th>
-                            <th>Nguồn chi</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 130px;">Mã phiếu</th>
+                            <th data-column-key="date" style="min-width: 110px;">Ngày chi</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Chi nhánh</th>
+                            <th data-column-key="category" style="min-width: 130px;">Danh mục</th>
+                            <th data-column-key="recipient" style="min-width: 150px;">Người nhận</th>
+                            <th data-column-key="amount" class="text-end" style="min-width: 130px;">Số tiền chi</th>
+                            <th data-column-key="method" style="min-width: 120px;">Phương thức</th>
+                            <th data-column-key="source" style="min-width: 120px;">Nguồn chi</th>
+                            <th data-column-key="status" style="min-width: 110px;">Trạng thái</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 160px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -151,28 +151,28 @@
                             </td>
                         </tr>
                         <tr th:each="exp : ${expenses.content}">
-                            <td class="fw-semibold text-primary" th:text="${exp.expenseCode}"></td>
-                            <td th:text="${#temporals.format(exp.expenseDate, 'dd/MM/yyyy')}"></td>
-                            <td th:text="${exp.branch.branchName}"></td>
-                            <td><span class="badge bg-light text-dark border" th:text="${exp.category}"></span></td>
-                            <td th:text="${exp.recipientName != null ? exp.recipientName : '-'}"></td>
-                            <td class="text-end fw-bold text-danger"
+                            <td data-column-key="code" class="fw-semibold text-primary" th:text="${exp.expenseCode}"></td>
+                            <td data-column-key="date" th:text="${#temporals.format(exp.expenseDate, 'dd/MM/yyyy')}"></td>
+                            <td data-column-key="branch" th:text="${exp.branch.branchName}"></td>
+                            <td data-column-key="category"><span class="badge bg-light text-dark border" th:text="${exp.category}"></span></td>
+                            <td data-column-key="recipient" th:text="${exp.recipientName != null ? exp.recipientName : '-'}"></td>
+                            <td data-column-key="amount" class="text-end fw-bold text-danger"
                                 th:text="${#numbers.formatDecimal(exp.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td>
+                            <td data-column-key="method">
                                 <span class="badge bg-secondary-subtle text-secondary"
                                       th:text="${exp.paymentMethod != null ? (exp.paymentMethod.name() == 'CASH' ? 'Tiền mặt' : (exp.paymentMethod.name() == 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Thẻ')) : '-'}"></span>
                             </td>
-                            <td>
+                            <td data-column-key="source">
                                 <span th:if="${exp.sourceType.name() == 'MANUAL'}" class="badge bg-primary-subtle text-primary">Thủ công</span>
                                 <span th:if="${exp.sourceType.name() == 'PAYROLL'}" class="badge bg-info-subtle text-info">Bảng lương</span>
                                 <span th:if="${exp.sourceType.name() == 'SALARY_ADVANCE'}" class="badge bg-warning-subtle text-warning">Tạm ứng lương</span>
                             </td>
-                            <td>
+                            <td data-column-key="status">
                                 <span th:if="${!exp.isCancelled}" class="badge bg-success-subtle text-success">Hiệu lực</span>
                                 <span th:if="${exp.isCancelled}" class="badge bg-danger-subtle text-danger"
                                       th:title="${exp.cancelledReason}">Đã hủy</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-info"
                                         th:data-expense-id="${exp.expenseId}"
                                         th:data-expense-code="${exp.expenseCode}"
