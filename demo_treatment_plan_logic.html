@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kế hoạch & Lộ trình điều trị - DentalFlow</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Font Inter chuẩn dự án -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --df-primary: #0284c7;
+            --df-primary-dark: #0369a1;
+            --df-border: #e2e8f0;
+            --df-border-dark: #cbd5e1;
+            --df-bg-page: #f8fafc;
+            --df-bar-bg: #f1f5f9;
+            --df-text-dark: #1e293b;
+            --df-text-secondary: #475569;
+            --df-text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--df-bg-page);
+            color: var(--df-text-dark);
+            margin: 0;
+            padding: 0;
+            font-size: 13.5px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 1. HEADER BỆNH NHÂN ĐỒNG BỘ */
+        .df-unified-header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+        }
+
+        .df-unified-top-bar {
+            padding: 10px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            font-size: 13px;
+        }
+
+        .df-avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .df-subnav {
+            display: flex;
+            gap: 20px;
+            padding: 0 24px;
+            background: #ffffff;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--df-border);
+        }
+
+        .df-subnav-item {
+            padding: 11px 4px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--df-text-muted);
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .df-subnav-item.active {
+            color: var(--df-primary);
+            border-bottom-color: var(--df-primary);
+            font-weight: 700;
+        }
+
+        /* 2. CARD CHÍNH */
+        .df-main-card {
+            background: #ffffff;
+            border: 1px solid var(--df-border);
+            border-radius: 12px;
+            margin: 20px 24px 40px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+        }
+
+        .df-main-card-header {
+            padding: 14px 22px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* 3. THANH GẬP MÀU XÁM TỪNG MỤC (ACCORDION BAR TỐI GIẢN DỊU MẮT) */
+        .df-foldable-bar {
+            background: var(--df-bar-bg);
+            border-bottom: 1px solid var(--df-border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        .df-foldable-bar:hover {
+            background: #e2e8f0;
+        }
+
+        .df-foldable-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .df-chevron {
+            font-size: 13px;
+            color: #64748b;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .df-foldable-bar.is-expanded .df-chevron {
+            transform: rotate(90deg);
+            color: var(--df-primary);
+        }
+
+        .df-foldable-bar.is-expanded .df-foldable-title {
+            color: #0f172a;
+        }
+
+        .df-foldable-content {
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            padding: 16px 20px;
+        }
+
+        /* 4. BẢNG DỮ LIỆU DỊU MẮT (KHÔNG DÙNG MÀU SẶC SỠ) */
+        .df-clean-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .df-clean-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            font-size: 12.5px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--df-border);
+            border-bottom: 1.5px solid var(--df-border);
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .df-clean-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--df-border);
+            vertical-align: middle;
+            color: var(--df-text-dark);
+        }
+
+        .df-clean-table tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* 5. CÁC THÀNH PHẦN TINH GỌN */
+        .chip-tooth {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12.5px;
+            color: #1e293b;
+        }
+
+        .chip-surface {
+            background: #e2e8f0;
+            color: #334155;
+            padding: 0 4px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* COMBOBOX GỘP 1 Ô DUY NHẤT CÓ NÚT MŨI TÊN NHỎ */
+        .combobox-box {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+            width: 100%;
+        }
+
+        .combobox-input {
+            flex: 1;
+            height: 35px;
+            border: 1px solid var(--df-border-dark);
+            border-right: none;
+            border-radius: 6px 0 0 6px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--df-text-dark);
+            background: #ffffff;
+        }
+
+        .combobox-input:focus {
+            outline: none;
+            border-color: var(--df-primary);
+        }
+
+        .combobox-btn {
+            width: 32px;
+            background: #f8fafc;
+            border: 1px solid var(--df-border-dark);
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .combobox-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .combobox-menu {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid var(--df-border-dark);
+            border-radius: 6px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+            z-index: 1050;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .combobox-menu.show {
+            display: block;
+        }
+
+        .combobox-item {
+            padding: 7px 12px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .combobox-item:hover {
+            background: #f1f5f9;
+            color: var(--df-primary);
+        }
+
+        /* KHỐI LỘ TRÌNH THEO CHẨN ĐOÁN (TONE XÁM NHẸ) */
+        .roadmap-diag-box {
+            border: 1px solid var(--df-border);
+            border-radius: 8px;
+            background: #f8fafc;
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+
+        .roadmap-diag-header {
+            padding: 10px 16px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--df-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* 6. THANH TỔNG TIỀN DỊU MẮT Ở ĐÁY */
+        .df-footer-summary {
+            background: #ffffff;
+            border-top: 2px solid #e2e8f0;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 1. BREADCRUMB & PATIENT BAR -->
+    <header class="df-unified-header">
+        <div class="df-unified-top-bar d-flex justify-content-between align-items-center">
+            <div>
+                <a href="javascript:void(0)" class="text-primary text-decoration-none fw-semibold">DS Khám Trong
+                    Ngày</a>
+                <span class="mx-1 text-muted">&gt;</span>
+                <span class="text-dark fw-bold">BN-0008</span>
+                <span class="mx-1 text-muted">&gt;</span>
+                <span class="text-secondary">Khám &amp; Điều trị</span>
+            </div>
+            <span class="text-muted small">Hồ sơ bệnh án điện tử</span>
+        </div>
+
+        <div class="p-3 px-4 d-flex align-items-center gap-3">
+            <div class="df-avatar-circle">NA</div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <strong class="fs-6 text-dark">Nguyễn Văn An</strong>
+                    <span class="badge bg-light text-dark border">Mã: BN-0008</span>
+                    <span class="badge bg-light text-secondary border">31 tuổi • Nam</span>
+                    <span class="badge bg-light text-primary border">BS. Nguyễn Văn An</span>
+                </div>
+                <div class="text-muted small mt-0.5">
+                    SĐT: 0901 234 567 • Ca khám: 30/10/2026 • Nha khoa SmileCare
+                </div>
+            </div>
+        </div>
+
+        <nav class="df-subnav">
+            <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-person"></i> Thông tin bệnh nhân</a>
+            <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-heart-pulse"></i> Khám lâm sàng</a>
+            <a href="javascript:void(0)" class="df-subnav-item active"><i class="bi bi-diagram-3"></i> Kế hoạch &amp; Lộ
+                trình điều trị</a>
+            <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-capsule"></i> Đơn thuốc</a>
+            <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-calendar2"></i> Lịch hẹn</a>
+        </nav>
+    </header>
+
+    <!-- 2. CARD CHÍNH: KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ -->
+    <main class="df-main-card">
+
+        <!-- TIÊU ĐỀ PHÂN HỆ -->
+        <div class="df-main-card-header">
+            <div>
+                <h5 class="mb-0 fw-bold text-dark">Lập Kế hoạch &amp; Lộ trình điều trị</h5>
+                <span class="text-muted small">Phân chia theo từng chẩn đoán bệnh lý của bệnh nhân</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" onclick="toggleAllSections(true)">
+                    Mở tất cả mục
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" onclick="toggleAllSections(false)">
+                    Gập tất cả mục
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MỤC 1: LIÊN KẾT CHẨN ĐOÁN CA KHÁM (THANH GẬP MÀU XÁM)                    -->
+        <!-- ========================================================================= -->
+        <div class="df-foldable-bar is-expanded" id="barSection1" onclick="toggleSection('1')">
+            <div class="df-foldable-title">
+                <i class="bi bi-chevron-right df-chevron" id="chevron1"></i>
+                <span>1. LIÊN KẾT CHẨN ĐOÁN CA KHÁM</span>
+                <span class="text-muted fw-normal text-lowercase small">(đặt ở đầu)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                <span class="badge bg-light text-dark border" id="diagSelectedSummary">3 đã chọn</span>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded"
+                    style="font-size: 12px;" onclick="selectAllDiagnoses()">
+                    Chọn tất cả
+                </button>
+            </div>
+        </div>
+
+        <div class="df-foldable-content" id="contentSection1">
+            <div class="table-responsive">
+                <table class="df-clean-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 45px;" class="text-center">Chọn</th>
+                            <th style="width: 110px;">Chẩn đoán</th>
+                            <th style="width: 260px;">Vị trí răng &amp; Mặt răng</th>
+                            <th style="width: 100px;">Mã ICD</th>
+                            <th>Tên bệnh lý</th>
+                            <th style="width: 120px;" class="text-center">Phân loại</th>
+                        </tr>
+                    </thead>
+                    <tbody id="diagTableBody">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MỤC 2: MẪU PHÁC ĐỒ CHUẨN & DỊCH VỤ TÍNH GIÁ (THANH GẬP MÀU XÁM)          -->
+        <!-- ========================================================================= -->
+        <div class="df-foldable-bar is-expanded" id="barSection2" onclick="toggleSection('2')">
+            <div class="df-foldable-title">
+                <i class="bi bi-chevron-right df-chevron" id="chevron2"></i>
+                <span>2. MẪU PHÁC ĐỒ CHUẨN &amp; DỊCH VỤ ĐIỀU TRỊ (ÁP DỤNG THEO TỪNG BỆNH)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-primary border" id="servicesCountBadge">2 dịch vụ liên kết</span>
+            </div>
+        </div>
+
+        <div class="df-foldable-content" id="contentSection2">
+            <div class="table-responsive">
+                <table class="df-clean-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 24%;">Chẩn đoán gốc</th>
+                            <th style="width: 28%;">Mẫu phác đồ chuẩn (áp dụng từng bệnh)</th>
+                            <th style="width: 26%;">Dịch vụ điều trị (lấy từ Bảng giá)</th>
+                            <th style="width: 22%;">Dự toán chi phí</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mappingTableBody">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MỤC 3: THÔNG TIN CHUNG KẾ HOẠCH (THANH GẬP MÀU XÁM)                      -->
+        <!-- ========================================================================= -->
+        <div class="df-foldable-bar" id="barSection3" onclick="toggleSection('3')">
+            <div class="df-foldable-title">
+                <i class="bi bi-chevron-right df-chevron" id="chevron3"></i>
+                <span>3. THÔNG TIN CHUNG KẾ HOẠCH</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-secondary border" id="planDoctorSummary">BS. Nguyễn Văn An</span>
+            </div>
+        </div>
+
+        <div class="df-foldable-content" id="contentSection3" style="display: none;">
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label fw-semibold small text-muted mb-1">Tên phác đồ / Kế hoạch điều trị
+                        *</label>
+                    <input type="text" class="form-control form-control-sm fw-bold text-dark" id="planNameInput"
+                        style="height: 36px;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-muted mb-1">Bác sĩ phụ trách *</label>
+                    <select class="form-select form-select-sm" style="height: 36px;">
+                        <option selected>BS. Nguyễn Văn An</option>
+                        <option>BS. Trần Minh Hoàng</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small text-muted mb-1">Thời gian thực hiện</label>
+                    <div class="input-group input-group-sm">
+                        <input type="date" class="form-control" id="planStartDate" value="2026-10-30"
+                            style="height: 36px;" onchange="renderAll()">
+                        <span class="input-group-text bg-light text-muted">&rarr;</span>
+                        <input type="date" class="form-control" id="planEndDate" value="2026-11-06"
+                            style="height: 36px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MỤC 4: LỘ TRÌNH CÁC GIAI ĐOẠN & THỦ THUẬT (THANH GẬP MÀU XÁM)            -->
+        <!-- ========================================================================= -->
+        <div class="df-foldable-bar is-expanded" id="barSection4" onclick="toggleSection('4')">
+            <div class="df-foldable-title">
+                <i class="bi bi-chevron-right df-chevron" id="chevron4"></i>
+                <span>4. LỘ TRÌNH CÁC GIAI ĐOẠN (STAGES) &amp; CÁC BƯỚC THỦ THUẬT</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-secondary border" id="stagesTotalBadge">3 giai đoạn</span>
+            </div>
+        </div>
+
+        <div class="df-foldable-content" id="contentSection4">
+            <div id="roadmapsContainer">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- THANH CUỐI: TỔNG GIÁ TIỀN DỰ KIẾN TOÀN PHÁC ĐỒ                          -->
+        <!-- ========================================================================= -->
+        <div class="df-footer-summary">
+            <div>
+                <div class="fw-bold text-dark" style="font-size: 14px;">
+                    TỔNG GIÁ TIỀN DỰ KIẾN TOÀN PHÁC ĐỒ:
+                </div>
+                <div id="footerBreakdownBadges" class="d-flex flex-wrap align-items-center gap-2 mt-1.5">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="fw-bold text-primary" style="font-size: 22px; letter-spacing: -0.3px;"
+                    id="footerGrandTotalDisplay">0 đ</div>
+                <div class="text-muted small" id="footerStatsSummary">0 chẩn đoán liên kết • 0 giai đoạn</div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // DỮ LIỆU CHẨN ĐOÁN
+        const DIAGNOSES = [
+            {
+                id: 'CD1',
+                order: 1,
+                type: 'Kèm theo',
+                icd: 'K02.0',
+                name: 'Sâu men răng',
+                teeth: [
+                    { num: '41', surf: 'Mặt O', disp: 'R-41 (Mặt O)' },
+                    { num: '42', surf: 'Mặt O', disp: 'R-42 (Mặt O)' }
+                ],
+                selected: true,
+                autoReason: 'K02.0 + Mặt O (Xoang I)',
+                presetKey: 'PRESET_FILLING_O',
+                serviceId: 'SRV_FILLING_O',
+                qty: 2,
+                stages: []
+            },
+            {
+                id: 'CD2',
+                order: 2,
+                type: 'Kèm theo',
+                icd: 'K04.0',
+                name: 'Viêm tủy răng',
+                teeth: [
+                    { num: '36', surf: 'Mặt O', disp: 'R-36 (Mặt O)' }
+                ],
+                selected: true,
+                autoReason: 'K04.0 + Răng cối R-36',
+                presetKey: 'PRESET_ENDO_MOLAR',
+                serviceId: 'SRV_ENDO_MOLAR',
+                qty: 1,
+                stages: []
+            },
+            {
+                id: 'CD3',
+                order: 3,
+                type: 'Chính',
+                icd: 'K01.1',
+                name: 'Răng mọc lệch / ngầm',
+                teeth: [
+                    { num: '38', surf: '', disp: 'R-38' }
+                ],
+                selected: true,
+                autoReason: 'K01.1 + Răng khôn R-38',
+                presetKey: 'PRESET_WISDOM',
+                serviceId: 'SRV_WISDOM',
+                qty: 1,
+                stages: []
+            }
+        ];
+
+        // BẢNG GIÁ DỊCH VỤ
+        const SERVICES_DICT = {
+            'SRV_FILLING_O': { id: 'SRV_FILLING_O', name: 'Trám răng Composite thẩm mỹ (Mặt O)', price: 300000 },
+            'SRV_ENDO_MOLAR': { id: 'SRV_ENDO_MOLAR', name: 'Điều trị tủy răng hàm & Phục hồi', price: 2050000 },
+            'SRV_WISDOM': { id: 'SRV_WISDOM', name: 'Nhổ răng khôn mọc lệch máy Piezotome', price: 2500000 }
+        };
+
+        // MẪU PHÁC ĐỒ CHUẨN
+        const PRESETS_DICT = {
+            'PRESET_FILLING_O': {
+                key: 'PRESET_FILLING_O',
+                title: 'Mẫu Trám răng sâu Xoang I (Mặt O)',
+                short: 'Trám răng sâu Mặt O',
+                serviceId: 'SRV_FILLING_O',
+                stepsPool: [
+                    'Làm sạch lỗ sâu Mặt O, soi mòn Acid & Trám Composite',
+                    'Đặt lớp lót đáy bảo vệ tủy răng (Mặt O)',
+                    'Chỉnh khớp cắn giấy cắn & Đánh bóng hoàn tất'
+                ],
+                stages: [
+                    {
+                        name: 'Sửa soạn xoang sâu Mặt O & Trám phục hồi Composite',
+                        days: 0,
+                        steps: [{ name: 'Làm sạch lỗ sâu Mặt O, soi mòn Acid & Trám Composite', notes: 'Chiếu đèn quang trùng hợp' }]
+                    }
+                ]
+            },
+            'PRESET_ENDO_MOLAR': {
+                key: 'PRESET_ENDO_MOLAR',
+                title: 'Mẫu Điều trị tủy nội nha răng hàm',
+                short: 'Điều trị tủy nội nha',
+                serviceId: 'SRV_ENDO_MOLAR',
+                stepsPool: [
+                    'Gây tê, đặt đê cao su, mở tủy Mặt O & lấy tủy buồng',
+                    'Đo chiều dài làm việc & Tạo hình ống tủy trâm NiTi',
+                    'Hàn kín ống tủy bằng Gutta-Percha & Trám thân răng'
+                ],
+                stages: [
+                    {
+                        name: 'Mở tủy, tạo hình ống tủy & Đặt thuốc sát khuẩn',
+                        days: 0,
+                        steps: [{ name: 'Gây tê, đặt đê cao su, mở tủy Mặt O & lấy tủy buồng', notes: 'Bơm rửa NaOCl' }]
+                    },
+                    {
+                        name: 'Hàn kín ống tủy vĩnh viễn & Trám phục hồi',
+                        days: 4,
+                        steps: [{ name: 'Hàn kín ống tủy bằng Gutta-Percha & Trám thân răng', notes: 'Chụp phim kiểm tra' }]
+                    }
+                ]
+            },
+            'PRESET_WISDOM': {
+                key: 'PRESET_WISDOM',
+                title: 'Mẫu Phẫu thuật nhổ răng khôn Piezotome',
+                short: 'Nhổ răng khôn Piezotome',
+                serviceId: 'SRV_WISDOM',
+                stepsPool: [
+                    'Chụp Panorama kiểm tra chân răng 38 và dây thần kinh',
+                    'Gây tê gai Spix & Phẫu thuật chia cắt răng máy Piezotome',
+                    'Tái khám bơm rửa huyệt ổ răng & Cắt chỉ khâu'
+                ],
+                stages: [
+                    {
+                        name: 'Chụp phim & Phẫu thuật nhổ răng khôn máy Piezotome',
+                        days: 0,
+                        steps: [{ name: 'Gây tê gai Spix & Phẫu thuật chia cắt răng máy Piezotome', notes: 'Hạn chế sang chấn' }]
+                    },
+                    {
+                        name: 'Tái khám kiểm tra lành thương & Cắt chỉ',
+                        days: 7,
+                        steps: [{ name: 'Tái khám bơm rửa huyệt ổ răng & Cắt chỉ khâu', notes: 'Lành thương tốt' }]
+                    }
+                ]
+            }
+        };
+
+        function formatMoney(amount) {
+            return Math.round(amount || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' đ';
+        }
+
+        function calculateDateStr(baseStr, days) {
+            const d = new Date(baseStr || '2026-10-30');
+            d.setDate(d.getDate() + (parseInt(days, 10) || 0));
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yy = d.getFullYear();
+            return `${dd}/${mm}/${yy}`;
+        }
+
+        function initDiagStages(d) {
+            const p = PRESETS_DICT[d.presetKey];
+            if (!p) return;
+            d.serviceId = p.serviceId;
+            d.qty = d.teeth.length;
+            d.stages = p.stages.map(st => ({
+                name: st.name,
+                days: st.days,
+                steps: st.steps.map(sp => ({
+                    name: sp.name,
+                    activeTeeth: d.teeth.map(t => t.num),
+                    qty: d.teeth.length,
+                    notes: sp.notes
+                }))
+            }));
+        }
+
+        DIAGNOSES.forEach(initDiagStages);
+
+        // =========================================================================
+        // TOGGLE SECTION ACCORDION (THANH GẬP MÀU XÁM)
+        // =========================================================================
+        function toggleSection(secId) {
+            const bar = document.getElementById(`barSection${secId}`);
+            const content = document.getElementById(`contentSection${secId}`);
+            if (!bar || !content) return;
+
+            const isExpanded = bar.classList.contains('is-expanded');
+            if (isExpanded) {
+                bar.classList.remove('is-expanded');
+                content.style.display = 'none';
+            } else {
+                bar.classList.add('is-expanded');
+                content.style.display = 'block';
+            }
+        }
+
+        function toggleAllSections(expand) {
+            ['1', '2', '3', '4'].forEach(id => {
+                const bar = document.getElementById(`barSection${id}`);
+                const content = document.getElementById(`contentSection${id}`);
+                if (!bar || !content) return;
+                if (expand) {
+                    bar.classList.add('is-expanded');
+                    content.style.display = 'block';
+                } else {
+                    bar.classList.remove('is-expanded');
+                    content.style.display = 'none';
+                }
+            });
+        }
+
+        // =========================================================================
+        // 1. RENDER MỤC 1: LIÊN KẾT CHẨN ĐOÁN
+        // =========================================================================
+        function renderDiagnosisTable() {
+            const tbody = document.getElementById('diagTableBody');
+            let html = '';
+
+            DIAGNOSES.forEach(d => {
+                const teethTokens = d.teeth.map(t => {
+                    const surf = t.surf ? ` <span class="chip-surface">${t.surf}</span>` : '';
+                    return `<span class="chip-tooth">R-${t.num}${surf}</span>`;
+                }).join(' , ');
+
+                html += `
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input m-0" style="cursor: pointer;"
+                                   ${d.selected ? 'checked' : ''} onchange="toggleDiag('${d.id}')">
+                        </td>
+                        <td>
+                            <strong class="text-dark">Chẩn đoán #${d.order}</strong>
+                        </td>
+                        <td>
+                            ${teethTokens}
+                            <span class="text-muted small ms-1">(${d.teeth.length} răng)</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">${d.icd}</span>
+                        </td>
+                        <td>
+                            <strong class="text-dark">${d.name}</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-secondary border">${d.type}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            const activeCount = DIAGNOSES.filter(d => d.selected).length;
+            document.getElementById('diagSelectedSummary').innerText = `${activeCount} / ${DIAGNOSES.length} đã chọn`;
+        }
+
+        function toggleDiag(id) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (d) {
+                d.selected = !d.selected;
+                renderAll();
+            }
+        }
+
+        function selectAllDiagnoses() {
+            DIAGNOSES.forEach(d => d.selected = true);
+            renderAll();
+        }
+
+        // =========================================================================
+        // 2. RENDER MỤC 2: MẪU PHÁC ĐỒ & DỊCH VỤ TÍNH GIÁ
+        // =========================================================================
+        function renderMappingTable() {
+            const tbody = document.getElementById('mappingTableBody');
+            const active = DIAGNOSES.filter(d => d.selected);
+
+            if (active.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Vui lòng chọn chẩn đoán ở Mục 1.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            active.forEach(d => {
+                const maxT = d.teeth.length;
+                const teethText = d.teeth.map(t => t.disp).join(', ');
+                const srv = SERVICES_DICT[d.serviceId];
+                const unitP = srv ? srv.price : 0;
+                const total = unitP * d.qty;
+
+                let presetOpts = '';
+                Object.values(PRESETS_DICT).forEach(p => {
+                    presetOpts += `<option value="${p.key}" ${d.presetKey === p.key ? 'selected' : ''}>${p.title}</option>`;
+                });
+
+                let srvOpts = '';
+                Object.values(SERVICES_DICT).forEach(s => {
+                    srvOpts += `<option value="${s.id}" ${d.serviceId === s.id ? 'selected' : ''}>${s.name} (${formatMoney(s.price)})</option>`;
+                });
+
+                html += `
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">CĐ #${d.order}: ${d.name}</div>
+                            <div class="text-muted small mt-0.5">${teethText} &bull; ${maxT} răng</div>
+                        </td>
+                        <td>
+                            <div class="text-muted small mb-1">Gợi ý tự động: ${d.autoReason}</div>
+                            <select class="form-select form-select-sm" style="height: 34px;"
+                                    onchange="changePreset('${d.id}', this.value)">
+                                ${presetOpts}
+                            </select>
+                        </td>
+                        <td>
+                            <div class="text-muted small mb-1">Dịch vụ Bảng giá:</div>
+                            <select class="form-select form-select-sm" style="height: 34px;"
+                                    onchange="changeService('${d.id}', this.value)">
+                                ${srvOpts}
+                            </select>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>${formatMoney(unitP)} &times; <strong>${d.qty} răng</strong></div>
+                                <div class="fw-bold text-primary fs-7 mt-0.5">= ${formatMoney(total)}</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('servicesCountBadge').innerText = `${active.length} dịch vụ liên kết`;
+        }
+
+        function changePreset(id, key) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            d.presetKey = key;
+            initDiagStages(d);
+            renderAll();
+        }
+
+        function changeService(id, srvId) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            d.serviceId = srvId;
+            renderAll();
+        }
+
+        // =========================================================================
+        // 3. TỰ ĐỘNG ĐỒNG BỘ TÊN PHÁC ĐỒ
+        // =========================================================================
+        function syncPlanTitle() {
+            const active = DIAGNOSES.filter(d => d.selected);
+            const input = document.getElementById('planNameInput');
+            if (!input) return;
+
+            if (active.length === 0) {
+                input.value = '';
+                return;
+            }
+
+            const titles = active.map(d => {
+                const p = PRESETS_DICT[d.presetKey];
+                const tStr = d.teeth.map(t => t.disp).join(', ');
+                return `[CĐ #${d.order}] ${p ? p.short : d.name} (${tStr})`;
+            });
+
+            input.value = 'Kế hoạch điều trị: ' + titles.join(' & ');
+        }
+
+        // =========================================================================
+        // 4. RENDER MỤC 4: LỘ TRÌNH CÁC GIAI ĐOẠN & THỦ THUẬT
+        // =========================================================================
+        function renderRoadmaps() {
+            const container = document.getElementById('roadmapsContainer');
+            const active = DIAGNOSES.filter(d => d.selected);
+            const baseDate = document.getElementById('planStartDate')?.value || '2026-10-30';
+
+            if (active.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted py-3">Chưa có chẩn đoán nào được chọn.</div>`;
+                return;
+            }
+
+            let html = '';
+            let totalStages = 0;
+
+            active.forEach(d => {
+                const maxT = d.teeth.length;
+                const teethStr = d.teeth.map(t => t.disp).join(', ');
+                const preset = PRESETS_DICT[d.presetKey];
+
+                let stagesHtml = '';
+                d.stages.forEach((st, sIdx) => {
+                    totalStages++;
+                    const dateVn = calculateDateStr(baseDate, st.days);
+
+                    let stepsHtml = '';
+                    st.steps.forEach((sp, spIdx) => {
+                        const comboId = `combo-${d.id}-${sIdx}-${spIdx}`;
+                        const poolOptions = (preset?.stepsPool || []).map(opt => `
+                            <div class="combobox-item" onclick="chooseStepItem('${d.id}', ${sIdx}, ${spIdx}, '${opt.replace(/'/g, "\\'")}')">
+                                <span>${opt}</span>
+                            </div>
+                        `).join('');
+
+                        const toothButtons = d.teeth.map(t => {
+                            const isChecked = sp.activeTeeth.includes(t.num);
+                            return `
+                                <button type="button" class="btn btn-sm ${isChecked ? 'btn-outline-primary active' : 'btn-outline-secondary'} py-0 px-1.5" style="font-size: 11px;"
+                                        onclick="toggleStepTooth('${d.id}', ${sIdx}, ${spIdx}, '${t.num}')">
+                                    ${isChecked ? '✓' : '✗'} ${t.disp}
+                                </button>
+                            `;
+                        }).join(' ');
+
+                        stepsHtml += `
+                            <tr>
+                                <td style="width: 50%;">
+                                    <div class="combobox-box">
+                                        <input type="text" class="combobox-input" value="${sp.name}"
+                                               placeholder="Gõ hoặc chọn bước chuẩn từ nút [▾]..."
+                                               oninput="editStepName('${d.id}', ${sIdx}, ${spIdx}, this.value)">
+                                        <button type="button" class="combobox-btn" onclick="toggleComboboxMenu(event, '${comboId}')">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <div class="combobox-menu" id="${comboId}">
+                                            <div class="px-2 py-1 bg-light border-bottom text-muted small fw-bold">Bước quy trình chuẩn:</div>
+                                            ${poolOptions}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="width: 24%;" class="text-center">
+                                    <div class="d-flex flex-wrap justify-content-center gap-1">${toothButtons}</div>
+                                </td>
+                                <td style="width: 10%;" class="text-center">
+                                    <input type="number" class="form-control form-control-sm text-center fw-bold mx-auto"
+                                           style="width: 50px; height: 32px;"
+                                           min="1" max="${maxT}" step="1" value="${sp.qty}"
+                                           onchange="changeStepQty('${d.id}', ${sIdx}, ${spIdx}, this.value)">
+                                </td>
+                                <td style="width: 12%;">
+                                    <input type="text" class="form-control form-control-sm" style="height: 32px;"
+                                           value="${sp.notes || ''}" placeholder="Ghi chú...">
+                                </td>
+                                <td style="width: 4%;" class="text-center">
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                                            onclick="deleteStep('${d.id}', ${sIdx}, ${spIdx})" title="Xóa bước này">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    stagesHtml += `
+                        <div class="card mb-2.5 border">
+                            <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1 fw-bold">Giai đoạn ${sIdx + 1}</span>
+                                    <input type="text" class="form-control form-control-sm fw-bold text-dark border-0 bg-light" style="max-width: 400px;"
+                                           value="${st.name}">
+                                </div>
+                                <div class="d-flex align-items-center gap-2 small">
+                                    <span class="text-muted">Thời điểm: Sau</span>
+                                    <input type="number" class="form-control form-control-sm text-center fw-bold" style="width: 50px;"
+                                           min="0" step="1" value="${st.days}"
+                                           oninput="changeStageDays('${d.id}', ${sIdx}, this.value)">
+                                    <span class="text-muted">ngày (${dateVn})</span>
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                            onclick="deleteStage('${d.id}', ${sIdx})" title="Xóa giai đoạn này">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2.5">
+                                <table class="table table-sm table-bordered align-middle mb-2" style="font-size: 13px;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tên bước thực hiện / Thủ thuật chuyên môn (Gộp 1 ô + nút [▾])</th>
+                                            <th class="text-center">Vị trí răng</th>
+                                            <th class="text-center">Số lượng</th>
+                                            <th>Ghi chú</th>
+                                            <th class="text-center">Xóa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${stepsHtml}</tbody>
+                                </table>
+                                <div class="d-flex justify-content-between align-items-center pt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2.5" onclick="addNewStep('${d.id}', ${sIdx})">
+                                        + Thêm bước / thủ thuật
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2.5" onclick="addNewStage('${d.id}')">
+                                        + Thêm giai đoạn mới
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div class="roadmap-diag-box">
+                        <div class="roadmap-diag-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <strong class="text-dark">Lộ trình Chẩn đoán #${d.order}:</strong>
+                                <span class="text-secondary">${d.name} (${teethStr} • ${maxT} răng)</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2.5" onclick="addNewStage('${d.id}')">
+                                + Thêm giai đoạn mới
+                            </button>
+                        </div>
+                        <div class="p-2.5">
+                            ${stagesHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('stagesTotalBadge').innerText = `${totalStages} giai đoạn`;
+        }
+
+        // TƯƠNG TÁC COMBOBOX & RÀNG BUỘC SỐ LƯỢNG NGUYÊN
+        function toggleComboboxMenu(event, id) {
+            event.stopPropagation();
+            document.querySelectorAll('.combobox-menu').forEach(m => {
+                if (m.id !== id) m.classList.remove('show');
+            });
+            document.getElementById(id)?.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function () {
+            document.querySelectorAll('.combobox-menu').forEach(m => m.classList.remove('show'));
+        });
+
+        function chooseStepItem(id, sIdx, spIdx, val) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (d) {
+                d.stages[sIdx].steps[spIdx].name = val;
+                renderRoadmaps();
+            }
+        }
+
+        function editStepName(id, sIdx, spIdx, val) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (d) d.stages[sIdx].steps[spIdx].name = val;
+        }
+
+        function toggleStepTooth(id, sIdx, spIdx, num) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            const sp = d.stages[sIdx].steps[spIdx];
+            const i = sp.activeTeeth.indexOf(num);
+            if (i >= 0) {
+                if (sp.activeTeeth.length === 1) {
+                    alert('Mỗi bước phải áp dụng cho ít nhất 1 răng trong chẩn đoán này.');
+                    return;
+                }
+                sp.activeTeeth.splice(i, 1);
+            } else {
+                sp.activeTeeth.push(num);
+            }
+            sp.qty = sp.activeTeeth.length;
+            renderRoadmaps();
+        }
+
+        function changeStepQty(id, sIdx, spIdx, val) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            const maxT = d.teeth.length;
+
+            if (String(val).includes('.') || String(val).includes(',')) {
+                alert('Số lượng răng phải là số nguyên (1, 2...), không được nhập số lẻ như 1.5.');
+            }
+
+            let num = Math.round(parseFloat(val));
+            if (isNaN(num) || num < 1) num = 1;
+            if (num > maxT) {
+                alert(`Số lượng không được vượt quá ${maxT} răng của Chẩn đoán #${d.order}.`);
+                num = maxT;
+            }
+            d.stages[sIdx].steps[spIdx].qty = num;
+            renderRoadmaps();
+        }
+
+        function changeStageDays(id, sIdx, val) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (d) {
+                d.stages[sIdx].days = Math.max(0, parseInt(val, 10) || 0);
+                renderRoadmaps();
+            }
+        }
+
+        function addNewStep(id, sIdx) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            const preset = PRESETS_DICT[d.presetKey];
+            d.stages[sIdx].steps.push({
+                name: preset?.stepsPool[0] || '',
+                activeTeeth: d.teeth.map(t => t.num),
+                qty: d.teeth.length,
+                notes: ''
+            });
+            renderRoadmaps();
+            renderFooter();
+        }
+
+        function deleteStep(id, sIdx, spIdx) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            d.stages[sIdx].steps.splice(spIdx, 1);
+            renderRoadmaps();
+            renderFooter();
+        }
+
+        function addNewStage(id) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            d.stages.push({
+                name: `Giai đoạn ${d.stages.length + 1}`,
+                days: 7,
+                steps: [
+                    {
+                        name: '',
+                        activeTeeth: d.teeth.map(t => t.num),
+                        qty: d.teeth.length,
+                        notes: ''
+                    }
+                ]
+            });
+            renderRoadmaps();
+            renderFooter();
+        }
+
+        function deleteStage(id, sIdx) {
+            const d = DIAGNOSES.find(x => x.id === id);
+            if (!d) return;
+            if (d.stages.length <= 1) {
+                alert('Mỗi chẩn đoán cần ít nhất 1 giai đoạn điều trị.');
+                return;
+            }
+            d.stages.splice(sIdx, 1);
+            renderRoadmaps();
+            renderFooter();
+        }
+
+        // =========================================================================
+        // 5. RENDER THANH TỔNG TIỀN Ở ĐÁY
+        // =========================================================================
+        function renderFooter() {
+            const active = DIAGNOSES.filter(d => d.selected);
+            let total = 0;
+            let stagesCount = 0;
+            let badges = [];
+
+            active.forEach(d => {
+                const srv = SERVICES_DICT[d.serviceId];
+                const price = srv ? srv.price : 0;
+                const sub = price * d.qty;
+                total += sub;
+                stagesCount += d.stages.length;
+
+                badges.push(`
+                    <span class="badge bg-light text-dark border">
+                        CĐ #${d.order} (${d.icd}): ${formatMoney(price)} &times; ${d.qty} răng = <strong>${formatMoney(sub)}</strong>
+                    </span>
+                `);
+            });
+
+            document.getElementById('footerBreakdownBadges').innerHTML = badges.join(' <span class="text-muted fw-bold">+</span> ');
+            document.getElementById('footerGrandTotalDisplay').innerText = formatMoney(total);
+            document.getElementById('footerStatsSummary').innerText = `${active.length} chẩn đoán liên kết • ${stagesCount} giai đoạn`;
+        }
+
+        function renderAll() {
+            renderDiagnosisTable();
+            renderMappingTable();
+            syncPlanTitle();
+            renderRoadmaps();
+            renderFooter();
+        }
+
+        document.addEventListener('DOMContentLoaded', renderAll);
+    </script>
+</body>
+
+</html>

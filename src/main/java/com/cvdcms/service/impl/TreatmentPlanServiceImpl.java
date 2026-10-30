@@ -87,8 +87,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setPatientProfile(patient);
         plan.setBranch(branch);
         plan.setDoctor(doctor);
-        plan.setPlanName(request.getPlanName() != null && !request.getPlanName().trim().isEmpty() 
-                ? request.getPlanName().trim() : "Kế hoạch điều trị nha khoa");
+        String rawPlanName = request.getPlanName() != null && !request.getPlanName().trim().isEmpty() 
+                ? request.getPlanName().trim() : "Kế hoạch điều trị nha khoa";
+        // Cho phep luu ten phac do dai day du vao cot TEXT
+        plan.setPlanName(rawPlanName);
 
         TreatmentPlanStatus planStatus = TreatmentPlanStatus.PROPOSED;
         if (request.getStatus() != null) {
@@ -537,3 +539,4 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 }
+
