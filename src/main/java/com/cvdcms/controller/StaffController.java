@@ -10,6 +10,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
+import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.BranchService;
 import com.cvdcms.service.StaffProfileService;
 import jakarta.servlet.http.HttpSession;
@@ -26,7 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 
 // FT41 - Quản lý Hồ sơ nhân viên & Phân công chi nhánh (SCR-41.1, 41.2, 41.3, 41.4).
-// Chỉ ADMIN được truy cập (UC-03).
+// Chỉ ADMIN hoặc tài khoản có quyền STAFF_MANAGE được truy cập (UC-03).
 @Controller
 @RequestMapping("/admin/staffs")
 public class StaffController {
@@ -35,10 +36,12 @@ public class StaffController {
 
     private final StaffProfileService staffService;
     private final BranchService branchService;
+    private final UserRepository userRepository;
 
-    public StaffController(StaffProfileService staffService, BranchService branchService) {
+    public StaffController(StaffProfileService staffService, BranchService branchService, UserRepository userRepository) {
         this.staffService = staffService;
         this.branchService = branchService;
+        this.userRepository = userRepository;
     }
 
     // Đưa thông tin người dùng từ session vào model để layout chung (sidebar, topbar) hiển thị đúng.
@@ -51,16 +54,13 @@ public class StaffController {
         }
     }
 
-    // Chưa đăng nhập -> về trang đăng nhập; không phải ADMIN -> 403. Trả null nếu hợp lệ.
+    // Chưa đăng nhập -> về trang đăng nhập; không phải ADMIN hoặc không có quyền STAFF_MANAGE -> 403. Trả null nếu hợp lệ.
     private String checkAdmin(HttpSession session) {
-        if (!(session.getAttribute("loggedInUser") instanceof User)) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User sessionUser)) {
             return "redirect:/login";
         }
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAdmin = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
-                || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
-        if (!isAdmin) {
+        boolean isAdmin = userRepository.hasActiveAdminRole(sessionUser.getUserId());
+        if (!isAdmin && !userRepository.hasActivePermission(sessionUser.getUserId(), "STAFF_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền quản lý nhân sự.");
         }
         return null;
@@ -79,6 +79,7 @@ public class StaffController {
             @RequestParam(required = false) StaffStatus status,
             @RequestParam(required = false) Long branchId,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model,
             HttpSession session) {
 
@@ -90,15 +91,20 @@ public class StaffController {
 
         List<StaffProfile> all = staffService.searchStaff(keyword, specialty, status, branchId);
 
-        int totalPages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+        int pageSize = (size == 25 || size == 50 || size == 100) ? size : 10;
+        int totalPages = Math.max(1, (int) Math.ceil(all.size() / (double) pageSize));
         int currentPage = Math.min(Math.max(page, 0), totalPages - 1);
-        int from = currentPage * PAGE_SIZE;
-        List<StaffProfile> pageItems = all.subList(from, Math.min(from + PAGE_SIZE, all.size()));
+        int from = currentPage * pageSize;
+        int to = Math.min(from + pageSize, all.size());
+        List<StaffProfile> pageItems = all.subList(from, to);
 
         model.addAttribute("staffs", pageItems);
         model.addAttribute("totalItems", all.size());
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("fromItem", all.isEmpty() ? 0 : (from + 1));
+        model.addAttribute("toItem", to);
 
         model.addAttribute("assignmentsByStaff", staffService.getActiveAssignmentsByStaff());
         model.addAttribute("keyword", keyword);
@@ -236,22 +242,27 @@ public class StaffController {
         addLayoutAttributes(session, model);
 
         List<StaffBranchAssignment> assignments = staffService.getAssignments(id);
-        long activeCount = assignments.stream()
-                .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE).count();
-        StaffBranchAssignment primary = assignments.stream()
+        List<StaffBranchAssignment> activeAssignments = assignments.stream()
+                .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE)
+                .toList();
+        long activeCount = activeAssignments.size();
+        StaffBranchAssignment primary = activeAssignments.stream()
                 .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
                 .findFirst().orElse(null);
 
+        Role primaryRole = staffService.resolveCurrentStaffRole(staff, activeAssignments);
         StaffAssignmentDTO formDto = new StaffAssignmentDTO();
-        if (primary != null && primary.getRole() != null) {
-            formDto.setRoleId(primary.getRole().getRoleId());
+        if (primaryRole != null) {
+            formDto.setRoleId(primaryRole.getRoleId());
         }
+        boolean isDoctorStaff = primaryRole != null && "BAC_SI".equalsIgnoreCase(primaryRole.getRoleName());
 
         model.addAttribute("staff", staff);
         model.addAttribute("assignments", assignments);
         model.addAttribute("activeAssignmentCount", activeCount);
         model.addAttribute("primaryAssignment", primary);
-        model.addAttribute("primaryRole", primary != null ? primary.getRole() : null);
+        model.addAttribute("primaryRole", primaryRole);
+        model.addAttribute("isDoctorStaff", isDoctorStaff);
         model.addAttribute("assignmentForm", formDto);
         model.addAttribute("branches", activeBranches());
         model.addAttribute("roles", staffService.getAssignableRoles());
@@ -345,25 +356,21 @@ public class StaffController {
     // Dữ liệu dùng chung cho form thêm/sửa. staff = null khi thêm mới.
     private void fillFormModel(Model model, StaffFormDTO form, StaffProfile staff) {
         Long currentUserId = staff != null && staff.getUser() != null ? staff.getUser().getUserId() : null;
-        Long staffRoleId = null;
+        Role staffRole = null;
         if (staff != null) {
-            List<StaffBranchAssignment> assignments = staffService.getAssignments(staff.getStaffId());
-            staffRoleId = assignments.stream()
-                    .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()) && a.getRole() != null)
-                    .map(a -> a.getRole().getRoleId())
-                    .findFirst()
-                    .orElseGet(() -> assignments.stream()
-                            .map(StaffBranchAssignment::getRole)
-                            .filter(Objects::nonNull)
-                            .map(Role::getRoleId)
-                            .findFirst()
-                            .orElse(null));
+            List<StaffBranchAssignment> activeAssignments = staffService.getAssignments(staff.getStaffId()).stream()
+                    .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE)
+                    .toList();
+            staffRole = staffService.resolveCurrentStaffRole(staff, activeAssignments);
         }
+        Long staffRoleId = staffRole != null ? staffRole.getRoleId() : null;
+        boolean isDoctorStaff = staffRole != null && "BAC_SI".equalsIgnoreCase(staffRole.getRoleName());
 
         model.addAttribute("staffForm", form);
         model.addAttribute("staff", staff);
         model.addAttribute("editMode", staff != null);
         model.addAttribute("staffRoleId", staffRoleId);
+        model.addAttribute("isDoctorStaff", isDoctorStaff);
         model.addAttribute("branches", activeBranches());
         model.addAttribute("roles", staffService.getAssignableRoles());
         model.addAttribute("users", staffService.getLinkableUsers(currentUserId));

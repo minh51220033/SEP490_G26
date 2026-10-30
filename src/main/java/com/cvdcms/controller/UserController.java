@@ -121,14 +121,17 @@ public class UserController {
         session.setAttribute("loggedInUser", user);
         session.setAttribute("username", user.getUsername());
 
-        // 3. Lấy danh sách vai trò của tài khoản
+        // 3. Lấy danh sách vai trò và tập quyền tĩnh của tài khoản
         List<String> roleNames = user.getRoles()
                 .stream()
                 .map(Role::getRoleName)
                 .toList();
+        List<String> permissionCodes = userRepository.findActivePermissionCodesByUserId(user.getUserId());
 
         session.setAttribute("roleNames", roleNames);
+        session.setAttribute("permissionCodes", permissionCodes);
         model.addAttribute("roleNames", roleNames);
+        model.addAttribute("permissionCodes", permissionCodes);
 
         // 4. Tên hiển thị mặc định là username
         model.addAttribute("displayName", user.getUsername());
@@ -314,16 +317,24 @@ public class UserController {
         // ĐĂNG NHẬP THÀNH CÔNG
         // =============================================
 
+        // Ghi nhận thời điểm đăng nhập gần nhất.
+        user.setLastLoginAt(LocalDateTime.now());
+        user = userRepository.save(user);
+
         session.setAttribute("loggedInUser", user);
         session.setAttribute("username", user.getUsername());
 
-        // Lưu tên các vai trò vào session.
+        // Lưu tên các vai trò và tập quyền tĩnh vào session.
         session.setAttribute(
                 "roleNames",
                 user.getRoles()
                         .stream()
                         .map(Role::getRoleName)
                         .toList()
+        );
+        session.setAttribute(
+                "permissionCodes",
+                userRepository.findActivePermissionCodesByUserId(user.getUserId())
         );
 
         // Hồ sơ bệnh nhân chỉ là điều kiện vào portal của tài khoản bệnh nhân.

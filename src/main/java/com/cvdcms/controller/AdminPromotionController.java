@@ -7,6 +7,7 @@ import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.MembershipTierRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.ServiceRepository;
+import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.PromotionService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -31,19 +32,22 @@ public class AdminPromotionController {
     private final MembershipTierRepository membershipTierRepository;
     private final ServiceRepository serviceRepository;
     private final PatientProfileRepository patientProfileRepository;
+    private final UserRepository userRepository;
 
     public AdminPromotionController(
             PromotionService promotionService,
             BranchRepository branchRepository,
             MembershipTierRepository membershipTierRepository,
             ServiceRepository serviceRepository,
-            PatientProfileRepository patientProfileRepository
+            PatientProfileRepository patientProfileRepository,
+            UserRepository userRepository
     ) {
         this.promotionService = promotionService;
         this.branchRepository = branchRepository;
         this.membershipTierRepository = membershipTierRepository;
         this.serviceRepository = serviceRepository;
         this.patientProfileRepository = patientProfileRepository;
+        this.userRepository = userRepository;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -56,14 +60,11 @@ public class AdminPromotionController {
     }
 
     private String checkAdmin(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
         }
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAdmin = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
-                || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
-        if (!isAdmin) {
+        boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền quản lý chương trình khuyến mãi và voucher.");
         }
         return null;

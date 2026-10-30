@@ -68,4 +68,46 @@ class CvDcmsApplicationTests {
                     .andExpect(view().name("finance/invoices/create"));
         }
     }
+
+    @Test
+    @DisplayName("GET /accounts/roles renders account/roles without Thymeleaf error")
+    void testGetRolesPage() throws Exception {
+        User adminUser = userRepository.findByUsername("admin").orElseGet(() -> {
+            User u = new User();
+            u.setUserId(1L);
+            u.setUsername("admin");
+            return u;
+        });
+
+        mockMvc.perform(get("/accounts/roles")
+                        .param("editRoleId", "3")
+                        .sessionAttr("loggedInUser", adminUser)
+                        .sessionAttr("displayName", "Admin User"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/roles"));
+
+        mockMvc.perform(get("/accounts/roles")
+                        .param("editRoleId", "6")
+                        .sessionAttr("loggedInUser", adminUser)
+                        .sessionAttr("displayName", "Admin User"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/roles"));
+    }
+
+    @Test
+    @DisplayName("GET /admin/staffs renders staff/list without Thymeleaf error")
+    void testGetStaffsPage() throws Exception {
+        User adminUser = userRepository.findByUsername("admin").orElseGet(() -> {
+            User u = new User();
+            u.setUserId(1L);
+            u.setUsername("admin");
+            return u;
+        });
+
+        mockMvc.perform(get("/admin/staffs")
+                        .sessionAttr("loggedInUser", adminUser)
+                        .sessionAttr("displayName", "Admin User"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("staff/list"));
+    }
 }

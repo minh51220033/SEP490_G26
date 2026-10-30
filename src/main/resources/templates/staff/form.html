@@ -64,7 +64,7 @@
                                 <label for="status" class="form-label">Trạng thái làm việc</label>
                                 <select id="status" th:field="*{status}" class="form-select">
                                     <option th:each="s : ${statuses}" th:value="${s.name()}"
-                                            th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : (s.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
+                                            th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
                                         Trạng thái
                                     </option>
                                 </select>
@@ -208,7 +208,7 @@
                             </div>
                             <div class="col-md-8">
                                 <label for="userId" class="form-label">Tài khoản đăng nhập liên kết</label>
-                                <input type="hidden" id="editStaffRoleId" th:value="${staffRoleId}" th:if="${editMode}">
+                                <input type="hidden" id="editStaffRoleId" th:value="${staffRoleId}" th:data-is-doctor="${isDoctorStaff}" th:if="${editMode}">
                                 <select id="userId" th:field="*{userId}" class="form-select">
                                     <option value="">-- Chưa liên kết --</option>
                                     <option th:each="u : ${users}" th:value="${u.userId}"
@@ -223,8 +223,7 @@
                             <div class="col-12" th:if="${editMode}">
                                 <div class="form-hint text-primary">
                                     <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-                                    Chi nhánh công tác &amp; vai trò được quản lý chuyên sâu tại tab <strong>Chi nhánh &amp; vai trò</strong>
-                                    trong trang chi tiết nhân viên.
+                                    Chi nhánh công tác được quản lý tại tab <strong>Phân công chi nhánh</strong> trong trang chi tiết nhân sự. Việc thay đổi Vai trò &amp; Phân quyền hệ thống được thực hiện duy nhất tại <a th:if="${staff.user != null}" th:href="@{/accounts/{id}(id=${staff.user.userId})}" class="fw-semibold text-decoration-underline">Quản lý tài khoản &rarr;</a><span th:unless="${staff.user != null}"><strong>Quản lý tài khoản</strong>.</span>
                                 </div>
                             </div>
                         </div>
@@ -293,10 +292,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function applySpecialtyVisibility(isDoctor) {
+        if (isDoctor) {
+            // Vai trò BÁC SĨ: Mở khối chuyên môn, bật bắt buộc CCHN
+            if (sectionSpecialty) sectionSpecialty.classList.remove('d-none');
+            if (nonDoctorNotice) nonDoctorNotice.classList.add('d-none');
+            if (cchnInput) {
+                cchnInput.setAttribute('required', 'required');
+                cchnInput.classList.add('border-primary');
+            }
+            if (cchnStar) cchnStar.classList.remove('d-none');
+        } else {
+            // Các vai trò KHÁC (Lễ tân, Kế toán, Thủ kho): Ẩn khối chuyên môn, hiện thông báo tinh gọn
+            if (sectionSpecialty) sectionSpecialty.classList.add('d-none');
+            if (nonDoctorNotice) nonDoctorNotice.classList.remove('d-none');
+            if (cchnInput) {
+                cchnInput.removeAttribute('required');
+                cchnInput.classList.remove('border-primary');
+            }
+            if (cchnStar) cchnStar.classList.add('d-none');
+        }
+    }
+
     function updateRoleView() {
         filterLinkableUsers();
 
-        if (!roleSelect) return;
+        if (!roleSelect) {
+            const isEditDoctor = editStaffRoleIdInput && editStaffRoleIdInput.getAttribute('data-is-doctor') === 'true';
+            applySpecialtyVisibility(isEditDoctor);
+            return;
+        }
 
         const selectedOption = roleSelect.options[roleSelect.selectedIndex];
         if (!selectedOption || !selectedOption.value) {
@@ -308,35 +333,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const isDoctor = isDoctorRole(selectedOption);
-
-        if (isDoctor) {
-            // Vai trò BÁC SĨ: Mở khối chuyên môn, bật bắt buộc CCHN
-            if (sectionSpecialty) sectionSpecialty.classList.remove('d-none');
-            if (nonDoctorNotice) nonDoctorNotice.classList.add('d-none');
-            if (cchnInput) {
-                cchnInput.setAttribute('required', 'required');
-                cchnInput.classList.add('border-primary');
-            }
-            if (cchnStar) cchnStar.classList.remove('d-none');
-        } else {
-            // Các vai trò KHÁC (Lễ tân, Kế toán, Thủ kho, Admin): Ẩn khối chuyên môn, hiện thông báo tinh gọn
-            if (sectionSpecialty) sectionSpecialty.classList.add('d-none');
-            if (nonDoctorNotice) nonDoctorNotice.classList.remove('d-none');
-            if (cchnInput) {
-                cchnInput.removeAttribute('required');
-                cchnInput.classList.remove('border-primary');
-            }
-            if (cchnStar) cchnStar.classList.add('d-none');
-        }
+        applySpecialtyVisibility(isDoctorRole(selectedOption));
     }
 
     if (roleSelect) {
         roleSelect.addEventListener('change', updateRoleView);
-        updateRoleView(); // Kích hoạt ngay khi load form
-    } else {
-        filterLinkableUsers(); // Khi ở màn hình sửa (không có roleSelect)
     }
+    updateRoleView(); // Kích hoạt ngay khi load form (cả thêm mới lẫn chỉnh sửa)
 });
 </script>
 </body>

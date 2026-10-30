@@ -27,10 +27,12 @@ public class StaffScheduleController {
 
     private final StaffScheduleService scheduleService;
     private final BranchService branchService;
+    private final com.cvdcms.repository.UserRepository userRepository;
 
-    public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService) {
+    public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
         this.scheduleService = scheduleService;
         this.branchService = branchService;
+        this.userRepository = userRepository;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -45,11 +47,12 @@ public class StaffScheduleController {
     }
 
     private void requireAdmin(HttpSession session) {
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAdmin = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
-                || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
-        if (!isAdmin) {
+        if (!isLoggedIn(session)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        User user = (User) session.getAttribute("loggedInUser");
+        boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xếp lịch làm việc.");
         }
     }
@@ -169,6 +172,9 @@ public class StaffScheduleController {
                         || "QUAN_LY_kHO".equalsIgnoreCase(String.valueOf(r)));
         if (isAdmin && !isStaffRole) {
             return "redirect:/admin/schedules";
+        }
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem lịch trực cá nhân.");
         }
         addLayoutAttributes(session, model);
 

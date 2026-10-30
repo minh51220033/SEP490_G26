@@ -86,7 +86,8 @@
                                         <span class="mega-item__desc">Danh mục dịch vụ nha khoa, giá và chương trình khuyến mãi.</span>
                                     </span>
                                 </a>
-                                <a th:href="@{/accounts}" href="#" class="mega-item" role="menuitem">
+                                <a th:if="${session.roleNames != null and #lists.contains(session.roleNames, 'ADMIN')}"
+                                   th:href="@{/accounts}" href="#" class="mega-item" role="menuitem">
                                     <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
                                     <span>
                                         <span class="mega-item__title">Tài khoản</span>
