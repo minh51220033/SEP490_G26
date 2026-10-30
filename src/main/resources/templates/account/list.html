@@ -54,6 +54,7 @@
                             <i class="bi bi-search"></i>
                             <input type="text" id="keyword" name="keyword" th:value="${keyword}"
                                    class="form-control" placeholder="Tìm kiếm tài khoản...">
+                        </div>
 
                         <!-- Dropdown Trạng thái -->
                         <div>
@@ -100,7 +101,6 @@
                             <span th:if="${selectedUserType != null and selectedUserType != ''}" class="filter-badge-count">1</span>
                         </button>
                     </div>
-                    </form>
 
                     <!-- Bên phải: Nút Vai trò & Phân quyền + Nút Thêm mới + Bánh răng Tùy chỉnh cột -->
                     <div class="staff-toolbar-right">
@@ -113,22 +113,8 @@
                         <button type="button" class="btn-icon-square" data-bs-toggle="offcanvas" data-bs-target="#customColumnDrawer" title="Tùy chỉnh cột">
                             <i class="bi bi-gear"></i>
                         </button>
-                    <!-- BẢNG DANH SÁCH -->
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 account-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px;">#</th>
-                                    <th>Tài khoản</th>
-                                    <th>Họ và tên</th>
-                                    <th>Thông tin liên hệ</th>
-                                    <th>Vai trò</th>
-                                    <th>Loại</th>
-                                    <th>Chi nhánh</th>
-                                    <th>Trạng thái</th>
-                                    <th class="text-center" style="width: 150px;">Thao tác</th>
-                                </tr>
-                            </thead>
+                    </div>
+                </form>
             </section>
 
             <!-- BẢNG DỮ LIỆU TÀI KHOẢN MISA (Hỗ trợ kéo giãn độ rộng cột & cuộn nội bộ) -->
@@ -220,7 +206,9 @@
                                         <div class="staff-sub" th:if="${account.createdDate != null}">
                                             <span>Tạo: </span><span th:text="${#temporals.format(account.createdDate, 'dd/MM/yyyy')}">01/01/2026</span>
                                         </div>
-                                    </td>
+                                    </div>
+                                </div>
+                            </td>
 
                             <!-- 3. Họ và tên -->
                             <td data-col="fullname">
@@ -492,6 +480,7 @@
             <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
         </div>
     </div>
+</div>
 
 <!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO ==================== -->
 <div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
