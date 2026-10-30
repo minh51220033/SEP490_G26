@@ -1,0 +1,192 @@
+<div th:fragment="treatmentPlanModal">
+    <div class="modal fade" id="addTreatmentPlanModal" tabindex="-1" aria-labelledby="addTreatmentPlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 14px 20px;">
+                    <div>
+                        <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0" id="addTreatmentPlanModalLabel">
+                            <i class="bi bi-diagram-3-fill text-info"></i>
+                            <span>Lập Kế hoạch &amp; Lộ trình điều trị (SCR-15.2)</span>
+                        </h5>
+                        <small class="text-white-50" style="font-size: 11.5px;">Phác đồ nhiều giai đoạn &bull; Tích hợp AI Gemini Flash bóc tách quy trình y khoa &bull; Chuẩn Bộ Y Tế</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="treatmentPlanForm" onsubmit="submitTreatmentPlan(event)">
+                    <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
+                        <input type="hidden" id="planPatientId" th:value="${patient != null ? patient.profileId : null}">
+                        <input type="hidden" id="planBranchId" th:value="${visit.branch != null ? visit.branch.branchId : 1}">
+
+                        <!-- 1. HỘP TRỢ LÝ AI BÓC TÁCH PHÁC ĐỒ (GEMINI 3.5 FLASH) -->
+                        <div class="df-ai-assistant-card">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="df-ai-badge">
+                                        <i class="bi bi-stars"></i> Trợ lý AI Bóc Tách Phác Đồ
+                                    </span>
+                                    <span class="badge bg-white text-primary border fw-semibold small">Gemini 3.5 Flash</span>
+                                </div>
+                                <small class="text-secondary fw-semibold">
+                                    <i class="bi bi-book me-1"></i>Hỗ trợ đọc tài liệu "Kỹ thuật Răng-Hàm-Mặt - Bộ Y Tế"
+                                </small>
+                            </div>
+                            <p class="text-muted small mb-2">
+                                Bác sĩ có thể <strong>dán văn bản kỹ thuật</strong> hoặc <strong>tải ảnh chụp tài liệu / bệnh án</strong>. AI sẽ tự động phân tích cấu trúc, chia các giai đoạn (Stages) và điền các bước thủ thuật tương ứng vào kế hoạch!
+                            </p>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-7">
+                                    <label class="form-label small fw-bold text-dark mb-1">
+                                        <i class="bi bi-file-text me-1"></i>Nội dung kỹ thuật y khoa / Ghi chú phác đồ
+                                    </label>
+                                    <textarea class="form-control form-control-sm" id="aiMedicalTextInput" rows="2"
+                                              placeholder="Dán đoạn văn bản kỹ thuật từ tài liệu (VD: Các bước cấy ghép Implant đơn lẻ, niềng răng, cầu răng sứ...)"></textarea>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-dark mb-1">
+                                        <i class="bi bi-image me-1"></i>Hoặc chọn ảnh tài liệu
+                                    </label>
+                                    <input type="file" class="form-control form-control-sm" id="aiDocumentImageInput" accept="image/*">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-1"
+                                            id="btnTriggerAi" onclick="triggerAiParse()" style="height: 31px; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                                        <i class="bi bi-magic"></i>
+                                        <span>Bóc tách AI</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Vùng hiển thị trạng thái AI đang xử lý -->
+                            <div id="aiLoadingIndicator" class="mt-2 py-2 px-3 bg-white border border-info rounded-3 text-info small d-none align-items-center gap-2">
+                                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                                <span class="fw-semibold">AI Gemini 3.5 Flash đang đọc và bóc tách phác đồ nhiều giai đoạn... (vui lòng chờ 2-3 giây)</span>
+                            </div>
+                        </div>
+
+                        <!-- 2. PHÁC ĐỒ CHUẨN CỦA PHÒNG KHÁM (1 CHẠM ÁP DỤNG NGAY) -->
+                        <div class="mb-3 pb-2 border-bottom">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>HOẶC CHỌN MẪU PHÁC ĐỒ CHUẨN (ÁP DỤNG 1 CHẠM):
+                            </label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold" onclick="applyPlanPreset('IMPLANT')">
+                                    <i class="bi bi-plus-circle me-1"></i>Cấy ghép Implant đơn lẻ (Trọn gói: 20tr)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill fw-semibold" onclick="applyPlanPreset('ORTHODONTIC')">
+                                    <i class="bi bi-plus-circle me-1"></i>Niềng răng mắc cài kim loại (Trọn gói: 35tr)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-semibold" onclick="applyPlanPreset('ZIRCONIA_CROWN')">
+                                    <i class="bi bi-plus-circle me-1"></i>Cầu răng sứ Zirconia 3 răng (Trọn gói: 12.5tr)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill fw-semibold" onclick="applyPlanPreset('ENDODONTIC')">
+                                    <i class="bi bi-plus-circle me-1"></i>Điều trị tủy &amp; Trám răng (Trọn gói: 2.05tr)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold" onclick="applyPlanPreset('WISDOM_TOOTH')">
+                                    <i class="bi bi-plus-circle me-1"></i>Nhổ răng khôn mọc lệch (Trọn gói: 2.5tr)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill fw-semibold" onclick="applyPlanPreset('PERIODONTITIS')">
+                                    <i class="bi bi-plus-circle me-1"></i>Điều trị viêm nha chu toàn diện (Trọn gói: 3.2tr)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 3. THÔNG TIN CHUNG KẾ HOẠCH & DỰ TOÁN TỔNG THỂ -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">Tên phác đồ / Kế hoạch điều trị <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm fw-bold" id="planNameInput" required
+                                       placeholder="VD: Phác đồ cấy ghép Implant răng 16 &amp; phục hình sứ">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark">Bác sĩ phụ trách <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="planDoctorSelect" required>
+                                    <option th:each="doc : ${doctors}"
+                                            th:value="${doc.staffId}"
+                                            th:text="${doc.fullName}"
+                                            th:selected="${visit.primaryDoctor != null and visit.primaryDoctor.staffId == doc.staffId}">
+                                        BS. Nguyễn Văn A
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark">Trạng thái ban đầu</label>
+                                <select class="form-select form-select-sm" id="planStatusSelect">
+                                    <option value="ACCEPTED" selected>Bệnh nhân đã đồng ý (ACCEPTED)</option>
+                                    <option value="IN_PROGRESS">Đang tiến hành điều trị (IN_PROGRESS)</option>
+                                    <option value="PROPOSED">Đã tư vấn / Chờ BN đồng ý (PROPOSED)</option>
+                                    <option value="DRAFT">Bản nháp chuyên môn (DRAFT)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark">Ngày bắt đầu</label>
+                                <input type="date" class="form-control form-control-sm" id="planStartDateInput"
+                                       th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark">Dự kiến kết thúc</label>
+                                <input type="date" class="form-control form-control-sm" id="planEndDateInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-primary">
+                                    <i class="bi bi-cash-stack me-1"></i>Dự toán chi phí theo dịch vụ tổng thể (VNĐ) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control form-control-sm fw-bold text-primary fs-6" id="planOverallCostInput"
+                                       placeholder="VD: 20000000" min="0" step="50000" oninput="onPlanOverallCostChange()">
+                                <small class="text-muted" style="font-size: 11px;">* Chi phí tính theo toàn bộ gói dịch vụ phác đồ, không tính lẻ từng bước.</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">Chẩn đoán liên quan (ICD-10)</label>
+                                <input type="text" class="form-control form-control-sm" id="planDiagnosisInput"
+                                       placeholder="Gõ chẩn đoán hoặc mã ICD-10">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">Dặn dò &amp; Ghi chú tổng thể</label>
+                                <input type="text" class="form-control form-control-sm" id="planNotesInput"
+                                       placeholder="Lưu ý vệ sinh, đơn thuốc hoặc chống chỉ định cho bệnh nhân">
+                            </div>
+                        </div>
+
+                        <!-- 4. LẬP CÁC GIAI ĐOẠN ĐIỀU TRỊ & BƯỚC LÂM SÀNG -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5" style="font-size: 13.5px;">
+                                    <i class="bi bi-list-task text-primary"></i>
+                                    <span>Lộ trình các giai đoạn (Stages) &amp; Các bước lâm sàng</span>
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="addPlanStage()">
+                                    <i class="bi bi-plus-circle-fill me-1"></i>+ Thêm giai đoạn mới
+                                </button>
+                            </div>
+
+                            <!-- Container chứa các Giai đoạn -->
+                            <div id="planStagesContainer">
+                                <!-- Dynamic Stage Cards injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- 5. TỔNG CHI PHÍ DỰ TOÁN (THEO DỊCH VỤ TỔNG THỂ) -->
+                        <div class="df-plan-total-summary">
+                            <div>
+                                <span class="text-muted small d-block">CHI PHÍ DỰ TOÁN THEO DỊCH VỤ TỔNG THỂ:</span>
+                                <span class="small text-secondary fw-semibold" id="planStageSummaryText">0 giai đoạn &bull; 0 bước thực hiện</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fs-4 fw-bold text-primary" id="planTotalEstimatedCostDisplay">0 đ</span>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light px-4 py-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="submitPlanBtn"
+                                style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+                            <i class="bi bi-check-circle-fill me-1"></i> Lưu kế hoạch điều trị
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

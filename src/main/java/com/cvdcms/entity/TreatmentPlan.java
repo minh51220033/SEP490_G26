@@ -45,7 +45,7 @@ public class TreatmentPlan {
     @JoinColumn(name = "doctor_id", nullable = false)
     private StaffProfile doctor;
 
-    @Column(name = "plan_name", nullable = false, length = 200)
+    @Column(name = "plan_name", nullable = false, columnDefinition = "TEXT")
     private String planName;
 
     @Column(name = "total_estimated_cost", nullable = false, precision = 15, scale = 2)
@@ -81,3 +81,4 @@ public class TreatmentPlan {
         }
     }
 }
+
