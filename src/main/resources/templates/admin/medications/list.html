@@ -32,14 +32,31 @@
           </button>
         </div>
 
-        <!-- TÌM KIẾM -->
-        <form th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
+        <!-- TÌM KIẾM & BỘ LỌC -->
+        <form id="medicationFilterForm" th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
           <div class="row g-2 align-items-end">
             <div class="col-md-5 col-lg-4">
               <label for="searchKeyword" class="form-label">Tìm kiếm</label>
               <input id="searchKeyword" type="text" name="q" class="form-control"
                      placeholder="Tên thuốc, mã thuốc, hoạt chất..."
                      th:value="${keyword}">
+            </div>
+            <div class="col-md-3 col-lg-2">
+              <label for="filterActive" class="form-label">Trạng thái</label>
+              <select id="filterActive" name="active" class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Đang dùng</option>
+                <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Ngừng dùng</option>
+              </select>
+            </div>
+            <div class="col-md-2 col-lg-2">
+              <label for="filterSize" class="form-label">Số dòng / trang</label>
+              <select id="filterSize" name="size" class="form-select">
+                <option value="10" th:selected="${size == 10}">10 dòng</option>
+                <option value="15" th:selected="${size == null or size == 15}">15 dòng</option>
+                <option value="30" th:selected="${size == 30}">30 dòng</option>
+                <option value="50" th:selected="${size == 50}">50 dòng</option>
+              </select>
             </div>
             <div class="col-md-auto">
               <button type="submit" class="btn btn-primary">
@@ -116,6 +133,28 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- PHÂN TRANG SERVER-SIDE -->
+        <div th:if="${totalPages != null and totalPages > 1}" class="p-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="text-muted small">
+            Hiển thị <strong th:text="${medications.size()}">0</strong> / <strong th:text="${totalItems}">0</strong> thuốc
+            (Trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages}">1</strong>)
+          </div>
+          <nav aria-label="Phân trang danh mục thuốc">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/medications(page=${currentPage - 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Trước</a>
+              </li>
+              <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                  th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link" th:href="@{/admin/medications(page=${i}, size=${size}, q=${keyword}, active=${selectedActive})}" th:text="${i + 1}">1</a>
+              </li>
+              <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/medications(page=${currentPage + 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Sau</a>
+              </li>
+            </ul>
+          </nav>
         </div>
 
       </section><!-- /panel -->
@@ -286,6 +325,28 @@ function openEditModal(btn) {
   const modal = new bootstrap.Modal(document.getElementById('modalEdit'));
   modal.show();
 }
+
+// Debounce 350ms cho tìm kiếm & tự động lọc khi đổi trạng thái/số dòng
+(function() {
+  const form = document.getElementById('medicationFilterForm');
+  const kw = document.getElementById('searchKeyword');
+  const activeSel = document.getElementById('filterActive');
+  const sizeSel = document.getElementById('filterSize');
+  if (!form) return;
+  let timer = null;
+  if (kw) {
+    kw.addEventListener('input', function() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function() { form.submit(); }, 350);
+    });
+  }
+  if (activeSel) {
+    activeSel.addEventListener('change', function() { form.submit(); });
+  }
+  if (sizeSel) {
+    sizeSel.addEventListener('change', function() { form.submit(); });
+  }
+})();
 </script>
 
 </body>

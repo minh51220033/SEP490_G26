@@ -1,6 +1,8 @@
 package com.cvdcms.service;
 
 import com.cvdcms.DTO.MedicationDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -26,4 +28,7 @@ public interface MedicationService {
 
     /** Tìm kiếm theo tên hoặc mã */
     List<MedicationDTO> searchMedications(String keyword);
+
+    /** Tìm kiếm, lọc trạng thái và phân trang server-side cho danh mục thuốc */
+    Page<MedicationDTO> searchMedicationsPage(String keyword, Boolean active, Pageable pageable);
 }

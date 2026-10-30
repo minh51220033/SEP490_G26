@@ -8,6 +8,10 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,13 +38,26 @@ public class AdminMedicationController {
     // ── 1. DANH SÁCH ─────────────────────────────────────────────────────────
     @GetMapping
     public String list(@RequestParam(value = "q", required = false, defaultValue = "") String keyword,
+                       @RequestParam(value = "active", required = false) Boolean active,
+                       @RequestParam(value = "page", defaultValue = "0") int page,
+                       @RequestParam(value = "size", defaultValue = "15") int size,
                        Model model, HttpSession session) {
-        List<MedicationDTO> medications = keyword.isBlank()
-                ? medicationService.getAllMedications()
-                : medicationService.searchMedications(keyword);
+        int safePage = Math.max(page, 0);
+        int safeSize = (size == 10 || size == 15 || size == 30 || size == 50) ? size : 15;
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "drugName"));
+        Page<MedicationDTO> medPage = medicationService.searchMedicationsPage(keyword, active, pageable);
+        List<MedicationDTO> medications = medPage != null
+                ? medPage.getContent()
+                : (keyword.isBlank() ? medicationService.getAllMedications() : medicationService.searchMedications(keyword));
+
         addLayoutAttributes(session, model);
         generateDeleteToken(session, model);
         model.addAttribute("medications", medications);
+        model.addAttribute("currentPage", medPage != null ? medPage.getNumber() : 0);
+        model.addAttribute("totalPages", medPage != null ? medPage.getTotalPages() : 1);
+        model.addAttribute("totalItems", medPage != null ? medPage.getTotalElements() : medications.size());
+        model.addAttribute("size", safeSize);
+        model.addAttribute("selectedActive", active);
         model.addAttribute("keyword", keyword);
         model.addAttribute("pageTitle", "Quản lý danh mục thuốc");
         model.addAttribute("activeMenu", "medications");

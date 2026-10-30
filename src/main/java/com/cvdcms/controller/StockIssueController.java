@@ -4,17 +4,22 @@ import com.cvdcms.DTO.StockIssueCreateDTO;
 import com.cvdcms.DTO.StockIssueResponseDTO;
 import com.cvdcms.entity.User;
 import com.cvdcms.service.StockIssueService;
+import com.cvdcms.util.InventoryPdfGenerator;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +28,7 @@ import java.util.Set;
  * REST Controller quản lý Phiếu xuất kho (Stock Issue) và Điều chuyển vật tư giữa các chi nhánh (Transfer):
  * - Danh sách lịch sử phiếu xuất nội bộ / hủy hết hạn (/api/inventory/issues).
  * - Danh sách lịch sử điều chuyển kho liên chi nhánh (/api/inventory/transfers).
- * - Xem chi tiết phiếu xuất / điều chuyển và tạo mới giao dịch.
+ * - Xem chi tiết phiếu xuất / điều chuyển, tạo mới giao dịch, ký điện tử và xuất file PDF chuẩn A4.
  */
 @RestController
 @RequestMapping("/api/inventory")
@@ -105,6 +110,43 @@ public class StockIssueController {
             dto.setIssueType("TRANSFER");
         }
         return service.create(dto, user.getUserId());
+    }
+
+    /**
+     * Ký điện tử vào phiếu xuất kho / điều chuyển kho (không cho phép ký đè nếu đã có chữ ký).
+     */
+    @PostMapping("/issues/{issueId}/sign")
+    public StockIssueResponseDTO signIssue(
+            @PathVariable Long issueId,
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+        User user = requireUser(session);
+        String signatureData = body != null ? body.get("signatureData") : null;
+        return service.signIssue(issueId, signatureData, user.getUserId());
+    }
+
+    /**
+     * Xuất phiếu xuất kho / điều chuyển kho ra file PDF chuẩn A4 (nhúng chữ ký điện tử & họ tên người ký).
+     */
+    @GetMapping(value = "/issues/{issueId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf(
+            @PathVariable Long issueId,
+            @RequestParam(defaultValue = "false") boolean download,
+            HttpSession session) {
+        User user = requireUser(session);
+        StockIssueResponseDTO issue = service.getById(issueId, user.getUserId());
+        byte[] pdfBytes = InventoryPdfGenerator.generateIssuePdf(issue);
+
+        String prefix = "TRANSFER".equalsIgnoreCase(issue.getIssueType()) ? "PhieuDieuChuyen_" : "PhieuXuatKho_";
+        String filename = prefix + (issue.getIssueCode() != null ? issue.getIssueCode() : issueId) + ".pdf";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(
+                ContentDisposition.builder(download ? "attachment" : "inline")
+                        .filename(filename, StandardCharsets.UTF_8)
+                        .build()
+        );
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
     private Pageable buildPageable(int page, int size, String sortBy, String direction) {

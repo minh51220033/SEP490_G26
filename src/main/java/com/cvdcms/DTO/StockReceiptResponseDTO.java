@@ -2,6 +2,7 @@ package com.cvdcms.DTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +22,10 @@ public class StockReceiptResponseDTO {
     private String receiverName;
     private String notes;
     private String attachmentUrl;
+    private String signatureUrl;
+    private Long signedByUserId;
+    private String signedByName;
+    private LocalDateTime signedAt;
     private int itemCount;
     private List<ItemDetail> items = new ArrayList<>();
 
@@ -118,6 +123,14 @@ public class StockReceiptResponseDTO {
     public void setNotes(String notes) { this.notes = notes; }
     public String getAttachmentUrl() { return attachmentUrl; }
     public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
+    public String getSignatureUrl() { return signatureUrl; }
+    public void setSignatureUrl(String signatureUrl) { this.signatureUrl = signatureUrl; }
+    public Long getSignedByUserId() { return signedByUserId; }
+    public void setSignedByUserId(Long signedByUserId) { this.signedByUserId = signedByUserId; }
+    public String getSignedByName() { return signedByName; }
+    public void setSignedByName(String signedByName) { this.signedByName = signedByName; }
+    public LocalDateTime getSignedAt() { return signedAt; }
+    public void setSignedAt(LocalDateTime signedAt) { this.signedAt = signedAt; }
     public int getItemCount() { return itemCount; }
     public void setItemCount(int itemCount) { this.itemCount = itemCount; }
     public List<ItemDetail> getItems() { return items; }

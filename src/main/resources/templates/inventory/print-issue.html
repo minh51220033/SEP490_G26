@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Phiếu xuất kho ' + ${issue.issueCode}">In Phiếu Xuất Kho</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            color: #0f172a;
+            background: #f1f5f9;
+            padding: 24px 12px;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+        .toolbar {
+            max-width: 210mm;
+            margin: 0 auto 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background: #0284c7; color: #fff; }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-outline { background: #fff; color: #334155; border-color: #cbd5e1; }
+        .btn-outline:hover { background: #f8fafc; }
+
+        .sheet {
+            width: 210mm;
+            min-height: 285mm;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 16mm 16mm 18mm;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+        }
+        .clinic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0284c7;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+        .clinic-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #0369a1;
+            text-transform: uppercase;
+        }
+        .clinic-sub {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 2px;
+        }
+        .doc-title-wrap {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .doc-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            color: #0f172a;
+        }
+        .doc-meta {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 4px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+        }
+        .info-item {
+            display: flex;
+            gap: 6px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            min-width: 125px;
+        }
+        .info-value {
+            color: #0f172a;
+            font-weight: 500;
+        }
+        table.items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+        }
+        table.items-table th, table.items-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 10px;
+            font-size: 12.5px;
+        }
+        table.items-table th {
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #1e293b;
+            text-align: left;
+        }
+        .text-end { text-align: right !important; }
+        .text-center { text-align: center !important; }
+
+        .summary-wrap {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 26px;
+        }
+        .summary-box {
+            width: 340px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 10px 14px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 13.5px;
+        }
+        .summary-row.total {
+            border-top: 1px dashed #cbd5e1;
+            margin-top: 4px;
+            padding-top: 8px;
+            font-weight: 700;
+            font-size: 14.5px;
+        }
+        .sig-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 24px;
+            text-align: center;
+        }
+        .sig-title {
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        .sig-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+        .sig-box {
+            height: 105px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        .sig-box img {
+            max-height: 98px;
+            max-width: 220px;
+            object-fit: contain;
+        }
+        .sig-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .sig-time {
+            font-size: 11.5px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .toolbar { display: none !important; }
+            .sheet { box-shadow: none; width: 100%; padding: 8mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div>
+            <strong th:text="'Phiếu xuất kho: ' + ${issue.issueCode}">Phiếu xuất kho</strong>
+            <span style="color:#64748b; margin-left: 8px;" th:text="${issue.branchName}"></span>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a class="btn btn-outline" th:href="@{'/api/inventory/issues/' + ${issue.issueId} + '/pdf?download=true'}">Tải file PDF</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">In phiếu (A4)</button>
+        </div>
+    </div>
+
+    <div class="sheet">
+        <div class="clinic-header">
+            <div>
+                <div class="clinic-title">PHÒNG KHÁM NHA KHOA CƯỜNG VIỆT (CV-DCMS)</div>
+                <div class="clinic-sub" th:text="'Cơ sở: ' + (${issue.branchName} ?: '—')"></div>
+            </div>
+            <div style="text-align:right; font-size:12px; color:#475569;">
+                <div>Mẫu chứng từ: <strong>PXK-A4</strong></div>
+                <div th:text="'Ngày in: ' + ${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}"></div>
+            </div>
+        </div>
+
+        <div class="doc-title-wrap">
+            <div class="doc-title" th:text="${issue.issueType == 'TRANSFER' ? 'PHIẾU ĐIỀU CHUYỂN KHO LIÊN CHI NHÁNH' : 'PHIẾU XUẤT KHO VẬT TƯ'}">PHIẾU XUẤT KHO VẬT TƯ</div>
+            <div class="doc-meta">
+                <span>Mã phiếu: <strong th:text="${issue.issueCode}"></strong></span>
+                <span style="margin: 0 10px;">|</span>
+                <span>Ngày xuất: <strong th:text="${issue.issueDate != null ? #temporals.format(issue.issueDate, 'dd/MM/yyyy') : '—'}"></strong></span>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Chi nhánh xuất:</span>
+                <span class="info-value" th:text="${issue.branchName ?: '—'}"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Loại phiếu xuất:</span>
+                <span class="info-value"
+                      th:text="${issue.issueType == 'TRANSFER' ? 'Điều chuyển liên chi nhánh' : (issue.issueType == 'DISCARD_EXPIRED' ? 'Xuất hủy hàng hết hạn' : 'Xuất sử dụng nội bộ')}"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Người lập phiếu:</span>
+                <span class="info-value" th:text="${issue.issuerName ?: '—'}"></span>
+            </div>
+            <div class="info-item" th:if="${issue.issueType == 'TRANSFER'}">
+                <span class="info-label">Chi nhánh nhận:</span>
+                <span class="info-value" th:text="${issue.destinationBranchName ?: '—'}"></span>
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <span class="info-label">Ghi chú:</span>
+                <span class="info-value" th:text="${issue.notes ?: '—'}"></span>
+            </div>
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width:42px;">STT</th>
+                    <th style="width:95px;">Mã VT</th>
+                    <th>Tên vật tư / hàng hóa</th>
+                    <th class="text-center" style="width:65px;">ĐVT</th>
+                    <th style="width:95px;">Số lô</th>
+                    <th class="text-center" style="width:88px;">Hạn dùng</th>
+                    <th class="text-end" style="width:75px;">SL xuất</th>
+                    <th class="text-end" style="width:105px;">Giá vốn</th>
+                    <th class="text-end" style="width:115px;">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="it, stat : ${issue.items}">
+                    <td class="text-center" th:text="${stat.count}">1</td>
+                    <td th:text="${it.materialCode}"></td>
+                    <td th:text="${it.materialName}"></td>
+                    <td class="text-center" th:text="${it.unit}"></td>
+                    <td th:text="${it.batchNumber}"></td>
+                    <td class="text-center" th:text="${it.expiryDate != null ? #temporals.format(it.expiryDate, 'dd/MM/yyyy') : '—'}"></td>
+                    <td class="text-end" th:text="${#numbers.formatDecimal(it.quantity, 1, 'POINT', 0, 'COMMA')}"></td>
+                    <td class="text-end" th:text="${#numbers.formatDecimal(it.importPrice, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
+                    <td class="text-end"><strong th:text="${#numbers.formatDecimal(it.lineValue, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="summary-wrap">
+            <div class="summary-box">
+                <div class="summary-row">
+                    <span>Tổng số lượng xuất:</span>
+                    <strong th:text="${#numbers.formatDecimal(issue.totalQuantity, 1, 'POINT', 0, 'COMMA')}"></strong>
+                </div>
+                <div class="summary-row total">
+                    <span>Tổng giá trị xuất:</span>
+                    <span th:text="${#numbers.formatDecimal(issue.totalEstimatedValue, 1, 'POINT', 0, 'COMMA')} + ' đ'"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sig-grid">
+            <div>
+                <div class="sig-title" th:text="${issue.issueType == 'TRANSFER' ? 'NGƯỜI NHẬN ĐIỀU CHUYỂN' : 'NGƯỜI NHẬN VẬT TƯ'}">NGƯỜI NHẬN VẬT TƯ</div>
+                <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
+                <div class="sig-box"></div>
+            </div>
+            <div>
+                <div class="sig-title">NGƯỜI LẬP PHIẾU XUẤT</div>
+                <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                <div class="sig-box">
+                    <img th:if="${issue.signatureUrl != null and !#strings.isEmpty(issue.signatureUrl)}"
+                         th:src="${issue.signatureUrl}"
+                         alt="Chữ ký điện tử"/>
+                    <span th:if="${issue.signatureUrl == null or #strings.isEmpty(issue.signatureUrl)}"
+                          style="color:#94a3b8; font-size:12px;">(Chưa ký điện tử)</span>
+                </div>
+                <div class="sig-name" th:text="${issue.signedByName != null ? issue.signedByName : issue.issuerName}"></div>
+                <div class="sig-time" th:if="${issue.signedAt != null}"
+                     th:text="'Đã ký: ' + ${#temporals.format(issue.signedAt, 'dd/MM/yyyy HH:mm')}"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

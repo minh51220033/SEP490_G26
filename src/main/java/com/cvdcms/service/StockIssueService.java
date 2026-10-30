@@ -33,4 +33,6 @@ public interface StockIssueService {
     );
 
     StockIssueResponseDTO getById(Long issueId, Long userId);
+
+    StockIssueResponseDTO signIssue(Long issueId, String signatureData, Long userId);
 }
