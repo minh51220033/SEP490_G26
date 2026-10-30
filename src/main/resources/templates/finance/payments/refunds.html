@@ -119,7 +119,7 @@
                             <td>
                                 <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
                                    class="text-primary fw-bold text-decoration-none" th:text="${rf.invoice.invoiceCode}">HD123456</a>
-                                <span th:if="${rf.invoice == null}" class="text-muted small">-</span>
+                                <span th:if="${rf.invoice == null}" class="badge bg-warning text-dark"><i class="bi bi-wallet2"></i> Ví tạm ứng</span>
                             </td>
                             <td th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
                             <td>
@@ -157,14 +157,15 @@
     </div>
 </div>
 
-<!-- Modal Lập Phiếu Hoàn Tiền -->
+<!-- Modal Lập Phiếu Hoàn Tiền (SCR-24.3) -->
 <div id="refundModal" class="fin-modal-backdrop" style="display: none;">
     <div class="fin-modal-card">
         <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền</h5>
+            <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền (SCR-24.3)</h5>
             <button type="button" class="btn-close" onclick="toggleRefundModal()"></button>
         </div>
-        <form th:action="@{/payments/refunds}" method="post" class="p-4">
+        <form th:action="@{/payments/refunds}" method="post" class="p-4" onsubmit="generateRefundKey()">
+            <input type="hidden" id="refundIdempotencyKey" name="idempotencyKey">
             <div class="mb-3">
                 <label for="refundPatientSearch" class="form-label fw-bold">Tìm Bệnh nhân nhận tiền hoàn <span class="text-danger">*</span></label>
                 <input type="text"
@@ -175,6 +176,23 @@
                 <input type="hidden" name="profileId" id="refundProfileId" required>
                 <div id="selectedRefundPatientName" class="mt-2 fw-bold text-primary" style="display: none;"></div>
                 <div id="refundPatientList" class="list-group mt-2" style="max-height: 160px; overflow-y: auto; display: none;"></div>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundInvoiceIdInput" class="form-label fw-bold">Mã ID Hóa đơn hoàn (Để trống nếu hoàn từ Ví tạm ứng)</label>
+                <input type="number" id="refundInvoiceIdInput" name="invoiceId" class="form-control"
+                       placeholder="Nhập Invoice ID nếu hoàn cho hóa đơn cụ thể..." oninput="toggleReduceInvoiceTotal(this.value)">
+                <small class="text-muted d-block mt-1">Để trống trường này nếu hoàn trả từ số dư Ví tạm ứng của bệnh nhân.</small>
+            </div>
+
+            <div class="mb-3 form-check" id="modalReduceInvoiceTotalGroup" style="display: none;">
+                <input type="checkbox" class="form-check-input" id="modalReduceInvoiceTotal" name="reduceInvoiceTotal" value="true">
+                <label class="form-check-label fw-bold text-dark" for="modalReduceInvoiceTotal">
+                    Kèm giảm giá trị hóa đơn (hủy / giảm nghĩa vụ thanh toán)
+                </label>
+                <div class="form-text small text-muted">
+                    Nếu tích chọn: Tổng tiền hóa đơn sẽ giảm tương ứng số tiền hoàn. Nếu không chọn: Hóa đơn giữ nguyên tổng tiền và tăng lại số nợ (hoàn tiền đã thu đơn thuần).
+                </div>
             </div>
 
             <div class="mb-3">
@@ -214,9 +232,27 @@
 </div>
 
 <script th:inline="javascript">
+    function ensureRefundKey() {
+        const keyInput = document.getElementById('refundIdempotencyKey');
+        if (keyInput && !keyInput.value) {
+            keyInput.value = 'REF-KEY-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
+    }
+
+    function generateRefundKey() {
+        ensureRefundKey();
+    }
+
     function toggleRefundModal() {
         const m = document.getElementById('refundModal');
-        m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+        const isOpening = (m.style.display === 'none' || m.style.display === '');
+        m.style.display = isOpening ? 'flex' : 'none';
+        if (isOpening) {
+            ensureRefundKey();
+        } else {
+            const keyInput = document.getElementById('refundIdempotencyKey');
+            if (keyInput) keyInput.value = '';
+        }
     }
 
     let searchTimer = null;
