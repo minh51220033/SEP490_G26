@@ -2,6 +2,9 @@ package com.cvdcms.emr;
 
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +13,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.nio.charset.StandardCharsets;
 
 @Controller
 @RequestMapping("/emr/records")
@@ -102,6 +107,32 @@ public class EmrPageController {
             @RequestParam String reason, RedirectAttributes redirect) {
         return run(recordId, redirect, "Đã tạo phiên bản sửa đổi mới.",
                 () -> service.createAmendment(session, recordId, reason));
+    }
+
+    @PostMapping("/{recordId}/documents/{documentCode}")
+    public String updateDocument(HttpSession session, @PathVariable Long recordId,
+            @PathVariable String documentCode, @RequestParam Map<String, String> fields,
+            RedirectAttributes redirect) {
+        try {
+            service.updateDocument(session, recordId, documentCode, fields);
+            redirect.addFlashAttribute("success", "Đã lưu nội dung bổ sung của biểu mẫu.");
+        } catch (RuntimeException ex) {
+            redirect.addFlashAttribute("error", message(ex));
+        }
+        return "redirect:/emr/records/" + recordId + "?document=" + documentCode + "&mode=edit";
+    }
+
+    @GetMapping("/{recordId}/export.json")
+    @ResponseBody
+    public ResponseEntity<byte[]> exportJson(HttpSession session, @PathVariable Long recordId) {
+        String json = service.exportJson(session, recordId);
+        byte[] body = json.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=emr-" + recordId + "-vietnamese.json")
+                .contentLength(body.length)
+                .body(body);
     }
 
     private String run(Long recordId, RedirectAttributes redirect, String success, Runnable action) {

@@ -46,6 +46,8 @@ FROM (
     SELECT 'COVER' code, 'Bìa hồ sơ bệnh án' title, 'COVER' doc_type, 10 sort_order
     UNION ALL SELECT 'OUTPATIENT_DENTAL', 'Bệnh án ngoại trú Răng Hàm Mặt', 'MEDICAL_RECORD', 20
     UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết quá trình khám và điều trị', 'SUMMARY', 30
+    UNION ALL SELECT 'ATTACHMENT_INDEX', 'Danh mục tài liệu đính kèm', 'ATTACHMENT_INDEX', 40
+    UNION ALL SELECT 'VERIFICATION', 'Thông tin xác thực hồ sơ', 'VERIFICATION', 50
 ) d
 WHERE @draft_version_id IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM emr_documents e WHERE e.version_id = @draft_version_id AND e.document_code = d.code);
@@ -104,6 +106,8 @@ FROM (
     SELECT 'COVER' code, 'Bìa hồ sơ bệnh án' title, 'COVER' doc_type, 10 sort_order
     UNION ALL SELECT 'OUTPATIENT_DENTAL', 'Bệnh án ngoại trú Răng Hàm Mặt', 'MEDICAL_RECORD', 20
     UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết quá trình khám và điều trị', 'SUMMARY', 30
+    UNION ALL SELECT 'ATTACHMENT_INDEX', 'Danh mục tài liệu đính kèm', 'ATTACHMENT_INDEX', 40
+    UNION ALL SELECT 'VERIFICATION', 'Thông tin xác thực hồ sơ', 'VERIFICATION', 50
 ) d
 WHERE @signed_version_id IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM emr_documents e WHERE e.version_id = @signed_version_id AND e.document_code = d.code);

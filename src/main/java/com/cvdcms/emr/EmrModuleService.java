@@ -20,6 +20,15 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class EmrModuleService {
     private static final DateTimeFormatter RECORD_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final Map<String, Set<String>> EDITABLE_DOCUMENT_FIELDS = Map.of(
+            "COVER", Set.of("archiveNo", "department", "roomBed", "admissionAt", "dischargeAt"),
+            "OUTPATIENT_DENTAL", Set.of("referralDiagnosis", "diseaseProgress", "personalHistory",
+                    "familyHistory", "lowerLevelTreatment", "treatmentPlan", "treatmentNotes"),
+            "TREATMENT_SUMMARY", Set.of("clinicalProgressSummary", "paraclinicalSummary",
+                    "mainClinicalSigns", "dischargeDiagnosis", "treatmentMethod",
+                    "dischargeCondition", "followupInstructions"),
+            "ATTACHMENT_INDEX", Set.of(),
+            "VERIFICATION", Set.of());
 
     private final EmrAccess access;
     private final EmrRecordRepository records;
@@ -104,14 +113,16 @@ public class EmrModuleService {
                         s.getStatus(), s.getSignedAt(), s.getExternalTransactionId())).toList();
         List<DocumentRow> documentRows = current.getDocuments().stream()
                 .map(d -> new DocumentRow(d.getDocumentCode(), d.getTitle(), d.getDocumentType(),
-                        d.getSortOrder(), d.getDocumentHash())).toList();
+                        d.getSortOrder(), d.getDocumentHash(), documentManualFields(d))).toList();
+        Map<String, Map<String, String>> documentFields = new LinkedHashMap<>();
+        documentRows.forEach(document -> documentFields.put(document.code(), document.fields()));
         List<AuditRow> auditRows = audits.findByRecord_RecordIdOrderByCreatedAtDesc(recordId).stream()
                 .map(a -> new AuditRow(a.getAction(), a.getDetails(),
                         a.getActorUser() == null ? "Hệ thống" : a.getActorUser().getUsername(), a.getCreatedAt()))
                 .toList();
-        return new RecordDetail(row(record), current.getVersionNumber(), current.getStatus(),
+        return new RecordDetail(row(record), current.getVersionNumber(), current.getStatus(), current.getContentHash(),
                 parseJson(current.getSnapshot().getSourceJson()), stale, missing,
-                documentRows, signatureRows, versionRows, auditRows,
+                documentRows, documentFields, signatureRows, versionRows, auditRows,
                 EmrStatePolicy.canRefresh(record.getStatus()), EmrStatePolicy.canValidate(record.getStatus()),
                 EmrStatePolicy.canLock(record.getStatus()), EmrStatePolicy.canPatientSign(record.getStatus()),
                 EmrStatePolicy.canDoctorSign(record.getStatus()), EmrStatePolicy.canAmend(record.getStatus()));
@@ -261,6 +272,76 @@ public class EmrModuleService {
         audit(record, version, scope.user(), "CREATE_AMENDMENT", reason.trim());
     }
 
+    @Transactional
+    public void updateDocument(HttpSession session, Long recordId, String documentCode,
+            Map<String, String> submittedFields) {
+        EmrAccess.Scope scope = access.require(session);
+        EmrRecord record = requireRecord(recordId, scope);
+        if (!EmrStatePolicy.canRefresh(record.getStatus())) {
+            conflict("Chỉ có thể chỉnh sửa biểu mẫu khi bệnh án còn ở trạng thái nháp/chờ khóa.");
+        }
+        String normalizedCode = documentCode == null ? "" : documentCode.trim().toUpperCase(Locale.ROOT);
+        Set<String> allowedFields = EDITABLE_DOCUMENT_FIELDS.get(normalizedCode);
+        if (allowedFields == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy thành phần hồ sơ.");
+        }
+        if (allowedFields.isEmpty()) {
+            conflict("Thành phần này được hệ thống sinh tự động và không có trường chỉnh sửa.");
+        }
+
+        EmrRecordVersion version = currentVersion(record);
+        EmrDocument document = version.getDocuments().stream()
+                .filter(item -> normalizedCode.equals(item.getDocumentCode()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy biểu mẫu trong phiên bản hiện tại."));
+
+        Map<String, Object> payload = documentPayload(document);
+        Map<String, String> manual = new LinkedHashMap<>();
+        for (String field : allowedFields) {
+            String value = submittedFields == null ? null : submittedFields.get(field);
+            if (value == null) continue;
+            String normalized = value.trim();
+            if (normalized.length() > 4000) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Nội dung trường " + field + " vượt quá 4.000 ký tự.");
+            }
+            manual.put(field, normalized);
+        }
+        payload.put("manual", manual);
+        document.setContentJson(toJson(payload));
+        document.setDocumentHash(EmrHashing.sha256(normalizedCode + "|" + document.getContentJson()));
+        version.setContentHash(null);
+        version.setStatus(EmrVersionStatus.DRAFT);
+        if (record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
+            record.setStatus(EmrRecordStatus.DRAFT);
+        }
+        audit(record, version, scope.user(), "UPDATE_DOCUMENT",
+                "Cập nhật biểu mẫu " + normalizedCode + ".");
+    }
+
+    public String exportJson(HttpSession session, Long recordId) {
+        EmrAccess.Scope scope = access.require(session);
+        EmrRecord record = requireRecord(recordId, scope);
+        EmrRecordVersion version = currentVersion(record);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("recordCode", record.getRecordCode());
+        result.put("status", record.getStatus());
+        result.put("version", version.getVersionNumber());
+        result.put("versionStatus", version.getStatus());
+        result.put("contentHash", version.getContentHash());
+        result.put("source", parseJson(version.getSnapshot().getSourceJson()));
+        result.put("documents", version.getDocuments().stream().map(document -> mapOf(
+                "code", document.getDocumentCode(), "title", document.getTitle(),
+                "type", document.getDocumentType(), "hash", document.getDocumentHash(),
+                "manualFields", documentManualFields(document))).toList());
+        result.put("signatures", version.getSignatures().stream().map(signature -> mapOf(
+                "signerType", signature.getSignerType(), "signerName", signature.getSignerName(),
+                "provider", signature.getProvider(), "status", signature.getStatus(),
+                "signedAt", text(signature.getSignedAt()), "signatureHash", signature.getSignatureHash())).toList());
+        return prettyJson(result);
+    }
+
     private void capture(EmrRecordVersion version, Visit visit) {
         String json = toJson(buildSource(visit));
         EmrSourceSnapshot snapshot = version.getSnapshot();
@@ -276,6 +357,10 @@ public class EmrModuleService {
                 "Bệnh án ngoại trú Răng Hàm Mặt", "MEDICAL_RECORD", 20, json);
         upsertDocument(version, "TREATMENT_SUMMARY",
                 "Tổng kết quá trình khám và điều trị", "SUMMARY", 30, json);
+        upsertDocument(version, "ATTACHMENT_INDEX",
+                "Danh mục tài liệu đính kèm", "ATTACHMENT_INDEX", 40, json);
+        upsertDocument(version, "VERIFICATION",
+                "Thông tin xác thực hồ sơ", "VERIFICATION", 50, json);
         versions.save(version);
     }
 
@@ -293,8 +378,35 @@ public class EmrModuleService {
         document.setTitle(title);
         document.setDocumentType(type);
         document.setSortOrder(sortOrder);
-        document.setContentJson(content);
-        document.setDocumentHash(EmrHashing.sha256(code + "|" + content));
+        Map<String, Object> payload = documentPayload(document);
+        payload.put("source", parseJson(content));
+        payload.putIfAbsent("manual", new LinkedHashMap<String, String>());
+        document.setContentJson(toJson(payload));
+        document.setDocumentHash(EmrHashing.sha256(code + "|" + document.getContentJson()));
+    }
+
+    private Map<String, Object> documentPayload(EmrDocument document) {
+        if (document.getContentJson() == null || document.getContentJson().isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        Map<String, Object> parsed = parseJson(document.getContentJson());
+        if (parsed.containsKey("source") || parsed.containsKey("manual")) {
+            return new LinkedHashMap<>(parsed);
+        }
+        Map<String, Object> legacy = new LinkedHashMap<>();
+        legacy.put("source", parsed);
+        legacy.put("manual", new LinkedHashMap<String, String>());
+        return legacy;
+    }
+
+    private Map<String, String> documentManualFields(EmrDocument document) {
+        Object value = documentPayload(document).get("manual");
+        if (!(value instanceof Map<?, ?> values)) return Map.of();
+        Map<String, String> result = new LinkedHashMap<>();
+        values.forEach((key, item) -> {
+            if (key != null && item != null) result.put(key.toString(), item.toString());
+        });
+        return Collections.unmodifiableMap(result);
     }
 
     private void createTestSignature(EmrRecordVersion version, EmrSignerType type,
@@ -430,6 +542,11 @@ public class EmrModuleService {
         catch (JsonProcessingException ex) { throw new IllegalStateException("Không thể tạo snapshot bệnh án.", ex); }
     }
 
+    private String prettyJson(Object value) {
+        try { return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(value); }
+        catch (JsonProcessingException ex) { throw new IllegalStateException("Không thể xuất bệnh án.", ex); }
+    }
+
     private Map<String, Object> parseJson(String json) {
         try { return mapper.readValue(json, new TypeReference<>() {}); }
         catch (JsonProcessingException ex) { throw new IllegalStateException("Snapshot bệnh án không hợp lệ.", ex); }
@@ -457,12 +574,15 @@ public class EmrModuleService {
                                    LocalDateTime checkInAt, String branchName, String doctorName,
                                    boolean ready, List<String> missing) {}
     public record RecordDetail(RecordRow record, Integer currentVersion, EmrVersionStatus versionStatus,
+                               String contentHash,
                                Map<String, Object> snapshot, boolean stale, List<String> missing,
-                               List<DocumentRow> documents, List<SignatureRow> signatures,
+                               List<DocumentRow> documents, Map<String, Map<String, String>> documentFields,
+                               List<SignatureRow> signatures,
                                List<VersionRow> versions, List<AuditRow> audits,
                                boolean canRefresh, boolean canValidate, boolean canLock,
                                boolean canPatientSign, boolean canDoctorSign, boolean canAmend) {}
-    public record DocumentRow(String code, String title, String type, Integer sortOrder, String hash) {}
+    public record DocumentRow(String code, String title, String type, Integer sortOrder, String hash,
+                              Map<String, String> fields) {}
     public record SignatureRow(EmrSignerType type, String signerName, String provider,
                                EmrSignatureStatus status, LocalDateTime signedAt, String transactionId) {}
     public record VersionRow(Integer number, EmrVersionStatus status, LocalDateTime createdAt,

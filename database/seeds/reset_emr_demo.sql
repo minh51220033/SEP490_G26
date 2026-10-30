@@ -76,9 +76,33 @@ DELETE FROM treatment_plans WHERE plan_code LIKE 'KH-EMR%';
 
 DELETE v FROM visits v JOIN patient_profiles p ON p.profile_id = v.profile_id
 WHERE p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';
-DELETE FROM appointments WHERE appointment_code = 'APPTEMR1001';
-DELETE app FROM account_patient_profiles app JOIN patient_profiles p ON p.profile_id = app.profile_id
-WHERE p.patient_code = 'BNFLOW1001';
-DELETE FROM patient_profiles WHERE patient_code LIKE 'BNEMR%' OR patient_code = 'BNFLOW1001';
+
+-- Tác vụ nhắc hẹn có thể được scheduler tự tạo sau khi nạp seed. Xóa đúng các
+-- phụ thuộc của lịch demo trước khi khôi phục APPTEMR1001.
+DELETE interaction
+FROM customer_care_interactions interaction
+JOIN patient_profiles profile ON profile.profile_id = interaction.profile_id
+WHERE profile.patient_code LIKE 'BNEMR%' OR profile.patient_code = 'BNFLOW1001';
+DELETE task
+FROM customer_care_tasks task
+JOIN patient_profiles profile ON profile.profile_id = task.profile_id
+WHERE profile.patient_code LIKE 'BNEMR%' OR profile.patient_code = 'BNFLOW1001';
+DELETE history
+FROM appointment_histories history
+JOIN appointments appointment ON appointment.appointment_id = history.appointment_id
+JOIN patient_profiles profile ON profile.profile_id = appointment.profile_id
+WHERE profile.patient_code LIKE 'BNEMR%' OR profile.patient_code = 'BNFLOW1001';
+DELETE request
+FROM portal_booking_requests request
+JOIN appointments appointment ON appointment.appointment_id = request.appointment_id
+JOIN patient_profiles profile ON profile.profile_id = appointment.profile_id
+WHERE profile.patient_code LIKE 'BNEMR%' OR profile.patient_code = 'BNFLOW1001';
+DELETE appointment
+FROM appointments appointment
+JOIN patient_profiles profile ON profile.profile_id = appointment.profile_id
+WHERE profile.patient_code LIKE 'BNEMR%' OR profile.patient_code = 'BNFLOW1001';
+
+-- Giữ lại hồ sơ bệnh nhân và liên kết tài khoản: seed dùng mã nghiệp vụ cố định,
+-- cập nhật/tái sử dụng các bản ghi này và không làm ảnh hưởng các FK liên quan.
 
 COMMIT;
