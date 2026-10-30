@@ -35,8 +35,41 @@ class CvDcmsApplicationTests {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
     }
 
+    @Autowired
+    private com.cvdcms.repository.InvoiceRepository invoiceRepository;
+
+    @Autowired
+    private com.cvdcms.repository.StockIssueRepository stockIssueRepository;
+
+    @Autowired
+    private com.cvdcms.repository.MaterialBatchRepository materialBatchRepository;
+
+    @Autowired
+    private com.cvdcms.repository.PrescriptionRepository prescriptionRepository;
+
     @Test
     void contextLoads() {
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    @DisplayName("Database Integration: Verify InvoiceType, InvoiceItemType, StockIssue and FEFO locking query against real MySQL DB")
+    void testDatabaseSchemaAndRepositoryIntegration() {
+        // 1. Verify MaterialBatchRepository FEFO query executes against real MySQL without SQL syntax error
+        var availableBatches = materialBatchRepository.findAvailableBatchesFefoForUpdate(1L, 1L, java.time.LocalDate.now());
+        org.junit.jupiter.api.Assertions.assertNotNull(availableBatches);
+
+        // 2. Verify InvoiceRepository queries execute against real MySQL without schema error
+        var invoices = invoiceRepository.findByVisit_VisitId(1L);
+        org.junit.jupiter.api.Assertions.assertNotNull(invoices);
+
+        // 3. Verify StockIssueRepository queries execute against real MySQL
+        var stockIssues = stockIssueRepository.searchIssues(1L, null, false, null, null, null, org.springframework.data.domain.PageRequest.of(0, 5));
+        org.junit.jupiter.api.Assertions.assertNotNull(stockIssues);
+
+        // 4. Verify PrescriptionRepository queries execute against real MySQL
+        var prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(1L);
+        org.junit.jupiter.api.Assertions.assertNotNull(prescriptions);
     }
 
     @Test

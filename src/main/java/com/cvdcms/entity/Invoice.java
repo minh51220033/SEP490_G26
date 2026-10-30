@@ -37,9 +37,17 @@ public class Invoice {
     @Column(name = "invoice_code", nullable = false, length = 20, unique = true)
     private String invoiceCode;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "visit_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invoice_type", nullable = false, length = 20)
+    private com.cvdcms.entity.enums.InvoiceType invoiceType = com.cvdcms.entity.enums.InvoiceType.SERVICE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "visit_id")
     private Visit visit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prescription_id")
+    private Prescription prescription;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "profile_id", nullable = false)
@@ -63,6 +71,10 @@ public class Invoice {
 
     @Column(name = "total_service_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalServiceAmount = BigDecimal.ZERO;
+
+    @Column(name = "total_medicine_amount", nullable = false, precision = 15, scale = 2)
+    @org.hibernate.annotations.ColumnDefault("0")
+    private BigDecimal totalMedicineAmount = BigDecimal.ZERO;
 
     @Column(name = "surcharge_amount", nullable = false, precision = 15, scale = 2)
     @org.hibernate.annotations.ColumnDefault("0")

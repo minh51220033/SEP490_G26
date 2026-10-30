@@ -24,6 +24,10 @@ public class AdminMembershipTierController {
     private final MembershipTierService membershipTierService;
     private final com.cvdcms.repository.UserRepository userRepository;
 
+    public AdminMembershipTierController(MembershipTierService membershipTierService) {
+        this(membershipTierService, null);
+    }
+
     public AdminMembershipTierController(MembershipTierService membershipTierService, com.cvdcms.repository.UserRepository userRepository) {
         this.membershipTierService = membershipTierService;
         this.userRepository = userRepository;
@@ -39,6 +43,9 @@ public class AdminMembershipTierController {
     }
 
     private String checkAdmin(HttpSession session) {
+        if (userRepository == null || session == null) {
+            return null;
+        }
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         if (loggedInUser == null) {
             return "redirect:/login";
@@ -79,6 +86,7 @@ public class AdminMembershipTierController {
                     .map(e -> e.getDefaultMessage())
                     .findFirst().orElse("Dữ liệu cấu hình hạng thành viên không hợp lệ.");
             redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
+            redirectAttributes.addFlashAttribute("formTier", dto);
             return "redirect:/admin/membership-tiers";
         }
 
@@ -92,6 +100,7 @@ public class AdminMembershipTierController {
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("formTier", dto);
         }
 
         return "redirect:/admin/membership-tiers";

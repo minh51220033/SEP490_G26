@@ -32,7 +32,7 @@ public class MemberCardDTO {
     private String tierName;
     private BigDecimal discountPercent = BigDecimal.ZERO;
     private BigDecimal spendPerPoint = new BigDecimal("10000.00");
-    private BigDecimal pointValue = new BigDecimal("1000.00");
+    private BigDecimal pointValue = new BigDecimal("10.00");
 
     // Loyalty Wallet Info
     private Integer currentPoints = 0;
