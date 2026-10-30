@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết bệnh án điện tử')}"></head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('emr')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết bệnh án điện tử')}"></header>
+        <main class="app-content emr-page" th:with="patient=${detail.snapshot['patient']},visit=${detail.snapshot['visit']},clinical=${detail.snapshot['clinical']}">
+            <link rel="stylesheet" th:href="@{/css/emr.css}">
+
+            <a class="emr-back" th:href="@{/emr/records}"><i class="bi bi-arrow-left"></i> Danh sách bệnh án</a>
+            <div class="emr-record-head">
+                <div>
+                    <span class="emr-eyebrow" th:text="${detail.record.code}">EMR</span>
+                    <h1 th:text="${patient['fullName']}">Bệnh nhân</h1>
+                    <p th:text="|${patient['patientCode']} · Lượt khám ${visit['visitCode']} · Phiên bản v${detail.currentVersion}|">Thông tin</p>
+                </div>
+                <div class="emr-record-state">
+                    <span class="emr-status emr-status--large" th:classappend="| status-${detail.record.status}|" th:text="${detail.record.status}">DRAFT</span>
+                    <span class="emr-test-badge"><i class="bi bi-shield-exclamation"></i> LOCAL_TEST_ONLY</span>
+                </div>
+            </div>
+
+            <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+            <div class="alert alert-warning" th:if="${detail.stale and detail.canRefresh}">
+                <strong>Snapshot đã cũ.</strong> Dữ liệu khám nguồn đã thay đổi; hãy làm mới trước khi kiểm tra và khóa.
+            </div>
+
+            <section class="emr-action-bar">
+                <form th:if="${detail.canRefresh}" method="post" th:action="@{/emr/records/{id}/refresh(id=${detail.record.id})}">
+                    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-arrow-repeat"></i> Làm mới dữ liệu</button>
+                </form>
+                <form th:if="${detail.canValidate}" method="post" th:action="@{/emr/records/{id}/validate(id=${detail.record.id})}">
+                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-clipboard-check"></i> Kiểm tra hồ sơ</button>
+                </form>
+                <form th:if="${detail.canLock}" method="post" th:action="@{/emr/records/{id}/lock(id=${detail.record.id})}">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-lock"></i> Khóa phiên bản</button>
+                </form>
+                <form class="emr-inline-sign" th:if="${detail.canPatientSign}" method="post" th:action="@{/emr/records/{id}/patient-sign-test(id=${detail.record.id})}">
+                    <input class="form-control" name="signerName" th:value="${patient['fullName']}" aria-label="Người bệnh ký">
+                    <button class="btn btn-warning" type="submit"><i class="bi bi-pen"></i> Người bệnh ký thử</button>
+                </form>
+                <form th:if="${detail.canDoctorSign}" method="post" th:action="@{/emr/records/{id}/doctor-sign-test(id=${detail.record.id})}">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-patch-check"></i> Bác sĩ ký thử</button>
+                </form>
+            </section>
+
+            <div class="emr-workspace">
+                <aside class="emr-document-nav">
+                    <h2>Thành phần hồ sơ</h2>
+                    <div class="emr-doc-item" th:each="doc : ${detail.documents}">
+                        <i class="bi bi-file-earmark-medical"></i>
+                        <div><strong th:text="${doc.title}">Tài liệu</strong><small th:text="${doc.type}">TYPE</small></div>
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                    </div>
+                    <div class="emr-validation">
+                        <h3>Điều kiện khóa</h3>
+                        <p th:if="${#lists.isEmpty(detail.missing)}" class="text-success"><i class="bi bi-check-circle"></i> Đã đủ dữ liệu bắt buộc.</p>
+                        <ul th:unless="${#lists.isEmpty(detail.missing)}"><li th:each="item : ${detail.missing}" th:text="${item}"></li></ul>
+                    </div>
+                </aside>
+
+                <section class="emr-paper">
+                    <div class="emr-paper__facility">
+                        <div><strong th:text="${visit['branchName']}">Cơ sở</strong><span th:text="${visit['branchCode']}">CN01</span></div>
+                        <div class="text-end"><span>Mã hồ sơ</span><strong th:text="${detail.record.code}">EMR</strong></div>
+                    </div>
+                    <h2>BỆNH ÁN NGOẠI TRÚ<br><small>RĂNG HÀM MẶT</small></h2>
+
+                    <h3>I. Hành chính</h3>
+                    <div class="emr-grid">
+                        <label>Họ và tên<strong th:text="${patient['fullName'] ?: '—'}">—</strong></label>
+                        <label>Ngày sinh<strong th:text="${patient['dob'] ?: '—'}">—</strong></label>
+                        <label>Giới tính<strong th:text="${patient['gender'] ?: '—'}">—</strong></label>
+                        <label>Số điện thoại<strong th:text="${patient['phoneNumber'] ?: '—'}">—</strong></label>
+                        <label class="span-2">Địa chỉ<strong th:text="${patient['address'] ?: '—'}">—</strong></label>
+                    </div>
+
+                    <h3>II. Thông tin khám bệnh</h3>
+                    <div class="emr-grid">
+                        <label>Ngày khám<strong th:text="${visit['checkInAt'] ?: '—'}">—</strong></label>
+                        <label>Bác sĩ khám<strong th:text="${visit['doctorName'] ?: '—'}">—</strong></label>
+                        <label class="span-2">Lý do khám<strong th:text="${clinical['chiefComplaint'] ?: visit['initialSymptoms'] ?: '—'}">—</strong></label>
+                        <label class="span-2">Bệnh sử<strong th:text="${clinical['historyIllness'] ?: '—'}">—</strong></label>
+                        <label>Khám ngoài miệng<strong th:text="${clinical['extraoralExam'] ?: '—'}">—</strong></label>
+                        <label>Khám trong miệng<strong th:text="${clinical['intraoralExam'] ?: '—'}">—</strong></label>
+                        <label class="span-2">Đánh giá tổng quát<strong th:text="${clinical['summaryAssessment'] ?: '—'}">—</strong></label>
+                    </div>
+
+                    <h3>III. Chẩn đoán</h3>
+                    <table class="table table-sm emr-paper-table"><thead><tr><th>Loại</th><th>ICD-10</th><th>Chẩn đoán</th><th>Răng</th></tr></thead>
+                        <tbody><tr th:each="item : ${detail.snapshot['diagnoses']}"><td th:text="${item['type']}"></td><td th:text="${item['icd10Code'] ?: '—'}"></td><td th:text="${item['diagnosisText']}"></td><td th:text="${item['toothNumbers'] ?: '—'}"></td></tr>
+                        <tr th:if="${#lists.isEmpty(detail.snapshot['diagnoses'])}"><td colspan="4" class="text-muted">Chưa có chẩn đoán.</td></tr></tbody></table>
+
+                    <h3>IV. Quá trình điều trị</h3>
+                    <table class="table table-sm emr-paper-table"><thead><tr><th>Dịch vụ/thủ thuật</th><th>Răng</th><th>Bác sĩ</th><th>Ghi chú</th></tr></thead>
+                        <tbody><tr th:each="item : ${detail.snapshot['performedServices']}"><td th:text="${item['serviceName']}"></td><td th:text="${item['toothNumbers'] ?: '—'}"></td><td th:text="${item['doctorName']}"></td><td th:text="${item['clinicalNotes'] ?: '—'}"></td></tr>
+                        <tr th:if="${#lists.isEmpty(detail.snapshot['performedServices'])}"><td colspan="4" class="text-muted">Chưa có thủ thuật.</td></tr></tbody></table>
+
+                    <h3>V. Đơn thuốc và dặn dò</h3>
+                    <div class="emr-prescription" th:each="rx : ${detail.snapshot['prescriptions']}">
+                        <strong th:text="${rx['prescriptionCode']}">TOA</strong>
+                        <span th:text="${rx['diagnosisText']}"></span>
+                        <p th:text="${rx['adviceNotes'] ?: 'Không có dặn dò.'}"></p>
+                    </div>
+                    <p th:if="${#lists.isEmpty(detail.snapshot['prescriptions'])}" class="text-muted">Chưa có đơn thuốc.</p>
+                </section>
+
+                <aside class="emr-history">
+                    <h2>Chữ ký</h2>
+                    <div class="emr-signature" th:each="signature : ${detail.signatures}">
+                        <i class="bi bi-patch-check-fill"></i><div><strong th:text="${signature.signerName}">Người ký</strong><span th:text="|${signature.type} · ${signature.provider}|">Loại</span><small th:text="${signature.signedAt != null ? #temporals.format(signature.signedAt, 'dd/MM/yyyy HH:mm') : '—'}"></small></div>
+                    </div>
+                    <p class="text-muted" th:if="${#lists.isEmpty(detail.signatures)}">Chưa có chữ ký.</p>
+
+                    <h2>Phiên bản</h2>
+                    <div class="emr-version-row" th:each="version : ${detail.versions}">
+                        <span th:text="|v${version.number}|">v1</span><div><strong th:text="${version.status}">DRAFT</strong><small th:text="${#temporals.format(version.createdAt, 'dd/MM/yyyy HH:mm')}"></small></div>
+                    </div>
+
+                    <h2>Nhật ký</h2>
+                    <div class="emr-audit" th:each="audit : ${detail.audits}">
+                        <span></span><div><strong th:text="${audit.action}">ACTION</strong><p th:text="${audit.details}">Chi tiết</p><small th:text="|${audit.actor} · ${#temporals.format(audit.createdAt, 'dd/MM/yyyy HH:mm')}|"></small></div>
+                    </div>
+
+                    <form class="emr-amendment" th:if="${detail.canAmend}" method="post" th:action="@{/emr/records/{id}/amendments(id=${detail.record.id})}">
+                        <label for="reason">Lý do sửa đổi</label>
+                        <textarea id="reason" class="form-control" name="reason" required maxlength="500"></textarea>
+                        <button class="btn btn-outline-danger w-100" type="submit"><i class="bi bi-files"></i> Tạo phiên bản sửa đổi</button>
+                    </form>
+                </aside>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+</body>
+</html>

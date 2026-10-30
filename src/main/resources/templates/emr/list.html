@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Bệnh án điện tử')}"></head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('emr')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Bệnh án điện tử')}"></header>
+        <main class="app-content emr-page">
+            <link rel="stylesheet" th:href="@{/css/emr.css}">
+
+            <div class="emr-heading">
+                <div>
+                    <span class="emr-eyebrow">MODULE ĐỘC LẬP</span>
+                    <h1>Bệnh án điện tử</h1>
+                    <p>Tạo snapshot từ dữ liệu khám, kiểm tra, khóa và quản lý phiên bản ký.</p>
+                </div>
+                <span class="emr-test-badge"><i class="bi bi-shield-exclamation"></i> Ký thử nghiệm</span>
+            </div>
+
+            <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+            <section class="emr-metrics">
+                <article><span>Tổng bệnh án</span><strong th:text="${dashboard.total}">0</strong></article>
+                <article><span>Đã ký</span><strong class="text-success" th:text="${dashboard.signed}">0</strong></article>
+                <article><span>Chờ ký</span><strong class="text-warning" th:text="${dashboard.waitingSignature}">0</strong></article>
+                <article><span>Lượt khám chưa tạo</span><strong class="text-primary" th:text="${#lists.size(dashboard.eligibleVisits)}">0</strong></article>
+            </section>
+
+            <section class="emr-panel">
+                <div class="emr-panel__head">
+                    <div><h2>Tạo bệnh án từ lượt khám</h2><p>Chỉ đọc dữ liệu FT11; không thay đổi dữ liệu khám nguồn.</p></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Lượt khám</th><th>Bệnh nhân</th><th>Bác sĩ / cơ sở</th><th>Kiểm tra nguồn</th><th></th></tr></thead>
+                        <tbody>
+                        <tr th:each="visit : ${dashboard.eligibleVisits}">
+                            <td><strong th:text="${visit.visitCode}">VIS001</strong><small th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">--</small></td>
+                            <td><strong th:text="${visit.patientName}">Tên</strong><small th:text="${visit.patientCode}">BN001</small></td>
+                            <td><span th:text="${visit.doctorName ?: 'Chưa gán bác sĩ'}">Bác sĩ</span><small th:text="${visit.branchName}">Cơ sở</small></td>
+                            <td>
+                                <span th:if="${visit.ready}" class="emr-pill is-ready"><i class="bi bi-check-circle"></i> Đủ dữ liệu</span>
+                                <div th:unless="${visit.ready}" class="emr-missing">
+                                    <span><i class="bi bi-exclamation-triangle"></i> Còn thiếu</span>
+                                    <small th:text="${#strings.listJoin(visit.missing, ' ')}"></small>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <form method="post" th:action="@{/emr/records}">
+                                    <input type="hidden" name="visitId" th:value="${visit.visitId}">
+                                    <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-file-earmark-plus"></i> Tạo bản nháp</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(dashboard.eligibleVisits)}"><td colspan="5" class="emr-empty">Không có lượt khám phù hợp để tạo bệnh án.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="emr-panel">
+                <div class="emr-panel__head emr-panel__head--filter">
+                    <div><h2>Danh sách bệnh án</h2><p>Tìm theo mã bệnh án, mã lượt khám hoặc bệnh nhân.</p></div>
+                    <form class="emr-filter" method="get" th:action="@{/emr/records}">
+                        <input class="form-control" name="query" th:value="${query}" placeholder="Tìm kiếm...">
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả trạng thái</option>
+                            <option th:each="item : ${statuses}" th:value="${item}" th:text="${item}" th:selected="${item == selectedStatus}"></option>
+                        </select>
+                        <button class="btn btn-outline-primary" type="submit">Lọc</button>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead><tr><th>Mã bệnh án</th><th>Bệnh nhân</th><th>Lượt khám</th><th>Bác sĩ / cơ sở</th><th>Phiên bản</th><th>Trạng thái</th><th></th></tr></thead>
+                        <tbody>
+                        <tr th:each="record : ${dashboard.records}">
+                            <td><strong th:text="${record.code}">EMR-001</strong><small th:text="${record.updatedAt != null ? 'Cập nhật ' + #temporals.format(record.updatedAt, 'dd/MM/yyyy HH:mm') : ''}"></small></td>
+                            <td><strong th:text="${record.patientName}">Tên</strong><small th:text="${record.patientCode}">BN001</small></td>
+                            <td><span th:text="${record.visitCode}">VIS001</span><small th:text="${#temporals.format(record.checkInAt, 'dd/MM/yyyy HH:mm')}"></small></td>
+                            <td><span th:text="${record.doctorName ?: '—'}">Bác sĩ</span><small th:text="${record.branchName}">Cơ sở</small></td>
+                            <td><span class="emr-version" th:text="|v${record.versionNumber}|">v1</span></td>
+                            <td><span class="emr-status" th:classappend="| status-${record.status}|" th:text="${record.status}">DRAFT</span></td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/emr/records/{id}(id=${record.id})}">Mở hồ sơ</a></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(dashboard.records)}"><td colspan="7" class="emr-empty">Chưa có bệnh án điện tử.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+</body>
+</html>
