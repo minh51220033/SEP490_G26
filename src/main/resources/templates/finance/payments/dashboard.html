@@ -560,7 +560,83 @@
                                     </ul>
                                 </nav>
                             </div>
-                        </div>
+                <!-- Kế hoạch điều trị liên quan (FT15 / SCR-24.2) -->
+                <div th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}" class="fin-card mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold m-0 text-dark">
+                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan (FT15)
+                        </h4>
+                        <span class="badge bg-secondary" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i> Lưu ý: Chi phí dự kiến của kế hoạch điều trị chưa lập hóa đơn KHÔNG được tính vào công nợ hiện tại.
+                    </div>
+                    <div class="fin-table-wrapper">
+                        <table class="fin-table">
+                            <thead>
+                            <tr>
+                                <th>Mã kế hoạch</th>
+                                <th>Tên lộ trình điều trị</th>
+                                <th>Bác sĩ phụ trách</th>
+                                <th class="text-end">Dự kiến chi phí</th>
+                                <th class="text-center">Trạng thái</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="tp : ${treatmentPlans}">
+                                <td>
+                                    <strong class="text-primary" th:text="${tp.planCode}">KH001</strong>
+                                </td>
+                                <td th:text="${tp.planName}">Chỉnh nha mắc cài kim loại</td>
+                                <td th:text="${tp.doctor != null ? tp.doctor.fullName : 'Chưa phân công'}">BS. Nguyễn Văn B</td>
+                                <td class="text-end fw-bold text-muted" th:text="${#numbers.formatDecimal(tp.finalEstimatedCost, 0, 'COMMA', 0, 'POINT')} + ' đ'">15.000.000 đ</td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border" th:text="${tp.status}">ACTIVE</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Lịch sử Hoàn tiền của bệnh nhân (SCR-24.4) -->
+                <div th:if="${refunds != null and !#lists.isEmpty(refunds)}" class="fin-card mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold m-0 text-danger">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i> Lịch sử Hoàn tiền (SCR-24.4)
+                        </h4>
+                        <span class="badge bg-danger" th:text="${refunds.size()} + ' phiếu hoàn'">0</span>
+                    </div>
+                    <div class="fin-table-wrapper">
+                        <table class="fin-table">
+                            <thead>
+                            <tr>
+                                <th>Mã hoàn</th>
+                                <th>Thời gian</th>
+                                <th>Nguồn hoàn</th>
+                                <th>Phương thức</th>
+                                <th class="text-end">Số tiền hoàn</th>
+                                <th>Lý do</th>
+                                <th>Người thực hiện</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="rf : ${refunds}">
+                                <td><strong class="text-danger" th:text="${rf.refundCode}">HT001</strong></td>
+                                <td th:text="${#temporals.format(rf.refundedAt, 'dd/MM/yyyy HH:mm')}">24/10/2026</td>
+                                <td>
+                                    <span th:if="${rf.invoice != null}">
+                                        <a th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}" class="text-primary fw-bold text-decoration-none" th:text="'HĐ: ' + ${rf.invoice.invoiceCode}">HĐ01</a>
+                                    </span>
+                                    <span th:if="${rf.invoice == null}" class="badge bg-warning text-dark">Ví tạm ứng</span>
+                                </td>
+                                <td th:text="${rf.refundMethod}">CASH</td>
+                                <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(rf.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">200.000 đ</td>
+                                <td th:text="${rf.reason}">Lý do</td>
+                                <td th:text="${rf.refundedBy != null ? rf.refundedBy.fullName : '-'}">Thu ngân</td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -719,13 +795,16 @@
                  aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form th:action="@{/payments/refunds}" method="post">
+                        <form th:action="@{/payments/refunds}" method="post" onsubmit="ensureDashboardRefundKey()">
                             <input type="hidden"
                                    name="profileId"
                                    th:value="${patient.profileId}">
                             <input type="hidden"
                                    name="returnToDashboard"
                                    value="true">
+                            <input type="hidden"
+                                   id="dashboardRefundIdempotencyKey"
+                                   name="idempotencyKey">
                             <div class="modal-header bg-danger text-white">
                                 <h5 class="modal-title" id="dashboardRefundModalLabel">
                                     Hoàn tiền cho bệnh nhân
@@ -747,7 +826,7 @@
                                     <label for="dashboardRefundInvoice" class="form-label">
                                         Nguồn tiền hoàn
                                     </label>
-                                    <select id="dashboardRefundInvoice" name="invoiceId" class="form-select">
+                                    <select id="dashboardRefundInvoice" name="invoiceId" class="form-select" onchange="onRefundSourceChange(this)">
                                         <option value=""
                                                 th:text="${'Hoàn từ ví tạm ứng — Số dư: '
                                               + #numbers.formatDecimal(
@@ -769,6 +848,19 @@
                                     <small class="text-muted">
                                         Chọn ví tạm ứng hoặc hóa đơn đã có thanh toán.
                                     </small>
+                                </div>
+                                <div class="mb-3 form-check" id="reduceInvoiceTotalGroup" style="display: none;">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           id="reduceInvoiceTotal"
+                                           name="reduceInvoiceTotal"
+                                           value="true">
+                                    <label class="form-check-label fw-bold text-dark" for="reduceInvoiceTotal">
+                                        Kèm giảm giá trị hóa đơn (hủy / giảm nghĩa vụ thanh toán)
+                                    </label>
+                                    <div class="form-text small text-muted">
+                                        Nếu chọn: Tổng tiền hóa đơn sẽ giảm tương ứng số tiền hoàn. Nếu không chọn: Hóa đơn giữ nguyên tổng tiền và tăng lại số nợ (hoàn tiền đã thu đơn thuần).
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="dashboardRefundBranch" class="form-label">
@@ -857,6 +949,16 @@
         document.getElementById('modalDebtDisplay').value = formatMoney(debt);
         document.getElementById('modalPayAmount').value = debt;
         document.getElementById('modalPayAmount').max = debt;
+    }
+    function onRefundSourceChange(select) {
+        const group = document.getElementById('reduceInvoiceTotalGroup');
+        const check = document.getElementById('reduceInvoiceTotal');
+        if (select && select.value) {
+            if (group) group.style.display = 'block';
+        } else {
+            if (group) group.style.display = 'none';
+            if (check) check.checked = false;
+        }
     }
     function openInvoicePayModal(btn) {
         const invoiceId = btn.getAttribute('data-invoice-id');
@@ -955,6 +1057,24 @@
                 results.textContent = 'Tìm kiếm thất bại. Vui lòng thử lại.';
             }
         });
+
+    function ensureDashboardRefundKey() {
+        const el = document.getElementById('dashboardRefundIdempotencyKey');
+        if (el && !el.value) {
+            el.value = typeof generateUUID === 'function' ? generateUUID() : ('REF-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9).toUpperCase());
+        }
+    }
+
+    const dRefundModal = document.getElementById('dashboardRefundModal');
+    if (dRefundModal) {
+        dRefundModal.addEventListener('show.bs.modal', function () {
+            ensureDashboardRefundKey();
+        });
+        dRefundModal.addEventListener('hidden.bs.modal', function () {
+            const el = document.getElementById('dashboardRefundIdempotencyKey');
+            if (el) el.value = '';
+        });
+    }
 </script>
 </body>
 </html>

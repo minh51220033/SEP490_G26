@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Tạm Ứng Lương - FT32')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('payroll_advances')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Tạm Ứng Lương')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Header -->
+            <div class="fin-header">
+                <div>
+                    <h1>Quản lý Tạm Ứng Lương Nhân Viên</h1>
+                    <p>Theo dõi yêu cầu tạm ứng, phê duyệt, giải ngân (tự động tạo phiếu chi vận hành) và quản lý khấu trừ khi chạy bảng lương.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#createAdvanceModal">
+                        <i class="bi bi-plus-circle"></i> Tạo yêu cầu tạm ứng
+                    </button>
+                    <a th:href="@{/payroll}" class="fin-btn fin-btn-outline"><i class="bi bi-calculator"></i> Bảng lương</a>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="fin-card mb-4">
+                <form th:action="@{/payroll/advances}" method="get" class="fin-filter-bar">
+                    <div class="fin-form-group">
+                        <label for="branchSelect">Chi nhánh</label>
+                        <select id="branchSelect" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả chi nhánh --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${b.branchId == selectedBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="statusSelect">Trạng thái tạm ứng</label>
+                        <select id="statusSelect" name="status" class="fin-select">
+                            <option value="">-- Tất cả trạng thái --</option>
+                            <option th:each="st : ${statuses}" th:value="${st}"
+                                    th:text="${st.name() == 'PENDING' ? 'Chờ duyệt (PENDING)' : (st.name() == 'APPROVED' ? 'Đã duyệt (APPROVED)' : (st.name() == 'PAID' ? 'Đã chi tiền (PAID)' : (st.name() == 'SETTLED' ? 'Đã tất toán (SETTLED)' : 'Từ chối (REJECTED)')))}"
+                                    th:selected="${st == selectedStatus}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="staffSelect">Nhân viên</label>
+                        <select id="staffSelect" name="staffId" class="fin-select">
+                            <option value="">-- Tất cả nhân viên --</option>
+                            <option th:each="s : ${activeStaff}" th:value="${s.staffId}" th:text="${s.fullName} + ' (' + ${s.staffCode} + ')'"
+                                    th:selected="${s.staffId == selectedStaffId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
+                        <label for="keyword">Từ khóa tìm kiếm</label>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Mã phiếu, lý do tạm ứng..." th:value="${keyword}">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc</button>
+                        <a th:href="@{/payroll/advances}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table of Advances -->
+            <div class="fin-card">
+                <div class="table-responsive">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã tạm ứng</th>
+                            <th>Ngày tạo</th>
+                            <th>Nhân viên</th>
+                            <th>Chi nhánh</th>
+                            <th>Lý do</th>
+                            <th class="text-end">Số tiền ứng</th>
+                            <th class="text-end">Đã cấn trừ</th>
+                            <th class="text-end">Còn lại</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${advances.content.isEmpty()}">
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                Không tìm thấy phiếu tạm ứng nào phù hợp điều kiện lọc.
+                            </td>
+                        </tr>
+                        <tr th:each="a : ${advances.content}">
+                            <td class="fw-semibold text-primary" th:text="${a.advanceCode}"></td>
+                            <td th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td>
+                                <strong th:text="${a.staff.fullName}"></strong>
+                                <span class="d-block small text-muted" th:text="${a.staff.staffCode}"></span>
+                            </td>
+                            <td th:text="${a.branch.branchName}"></td>
+                            <td class="small" th:text="${a.reason}"></td>
+                            <td class="text-end fw-bold text-danger"
+                                th:text="${#numbers.formatDecimal(a.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td class="text-end text-success fw-semibold"
+                                th:text="${#numbers.formatDecimal(a.allocatedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td class="text-end fw-bold text-warning"
+                                th:text="${#numbers.formatDecimal(a.remainingAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td>
+                                <span th:if="${a.status.name() == 'PENDING'}" class="badge bg-warning text-dark">Chờ duyệt</span>
+                                <span th:if="${a.status.name() == 'APPROVED'}" class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
+                                <span th:if="${a.status.name() == 'PAID'}" class="badge bg-primary">Đang nợ cấn trừ</span>
+                                <span th:if="${a.status.name() == 'SETTLED'}" class="badge bg-success">Đã tất toán</span>
+                                <span th:if="${a.status.name() == 'REJECTED'}" class="badge bg-danger">Bị từ chối</span>
+                            </td>
+                            <td class="text-center">
+                                <!-- Approve / Reject if PENDING (Chỉ Admin) -->
+                                <th:block th:if="${a.status.name() == 'PENDING'}">
+                                    <th:block th:if="${isAdmin}">
+                                        <form th:action="@{/payroll/advances/{id}/approve(id=${a.advanceId})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Duyệt đơn tạm ứng">
+                                                <i class="bi bi-check-lg"></i> Duyệt
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                                                th:data-advance-id="${a.advanceId}"
+                                                th:data-advance-code="${a.advanceCode}"
+                                                onclick="openRejectModalFromButton(this)" title="Từ chối">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </th:block>
+                                    <span th:if="${!isAdmin}" class="badge bg-secondary-subtle text-secondary small">
+                                        <i class="bi bi-hourglass-split"></i> Chờ Admin duyệt
+                                    </span>
+                                </th:block>
+
+                                <!-- Pay if APPROVED -->
+                                <th:block th:if="${a.status.name() == 'APPROVED'}">
+                                    <button type="button" class="btn btn-sm btn-primary"
+                                            th:data-advance-id="${a.advanceId}"
+                                            th:data-advance-code="${a.advanceCode}"
+                                            th:data-staff-name="${a.staff.fullName}"
+                                            th:data-amount="${#numbers.formatDecimal(a.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"
+                                            onclick="openPayModalFromButton(this)">
+                                        <i class="bi bi-cash-stack"></i> Chi tiền
+                                    </button>
+                                </th:block>
+
+                                <span th:if="${a.status.name() == 'PAID' or a.status.name() == 'SETTLED' or a.status.name() == 'REJECTED'}"
+                                      class="text-muted small">
+                                    <i class="bi bi-check2-all"></i> Đã xử lý
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${advances.totalPages > 1}" class="fin-pagination mt-4 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        Hiển thị trang <b th:text="${advances.number + 1}"></b> / <span th:text="${advances.totalPages}"></span>
+                    </span>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" th:classappend="${advances.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number - 1})}">&laquo;</a>
+                        </li>
+                        <li class="page-item" th:each="p : ${#numbers.sequence(0, advances.totalPages - 1)}"
+                            th:classappend="${p == advances.number} ? 'active'">
+                            <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${p})}"
+                               th:text="${p + 1}"></a>
+                        </li>
+                        <li class="page-item" th:classappend="${advances.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number + 1})}">&raquo;</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Tạo Đơn Tạm Ứng -->
+<div class="modal fade" id="createAdvanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form th:action="@{/payroll/advances/request}" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-cash-coin text-primary me-2"></i>Tạo yêu cầu tạm ứng lương</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="advStaffId" class="form-label fw-bold">Nhân viên đề xuất <span class="text-danger">*</span></label>
+                        <select id="advStaffId" name="staffId" class="form-select" required>
+                            <option value="">-- Chọn nhân viên --</option>
+                            <option th:each="s : ${activeStaff}" th:value="${s.staffId}" th:text="${s.fullName} + ' (' + ${s.staffCode} + ')'"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="advBranchId" class="form-label fw-bold">Chi nhánh chi tạm ứng <span class="text-danger">*</span></label>
+                        <select id="advBranchId" name="branchId" class="form-select" required>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="advAmount" class="form-label fw-bold">Số tiền tạm ứng (VNĐ) <span class="text-danger">*</span></label>
+                        <input type="number" id="advAmount" name="amount" class="form-control" min="50000" step="50000" required placeholder="Nhập số tiền...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="advMethod" class="form-label fw-bold">Phương thức chi <span class="text-danger">*</span></label>
+                        <select id="advMethod" name="paymentMethod" class="form-select" required>
+                            <option th:each="m : ${paymentMethods}" th:value="${m}"
+                                    th:text="${m.name() == 'CASH' ? 'Tiền mặt' : (m.name() == 'BANK_TRANSFER' ? 'Chuyển khoản ngân hàng' : 'Thẻ')}"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="advReason" class="form-label fw-bold">Lý do tạm ứng <span class="text-danger">*</span></label>
+                        <textarea id="advReason" name="reason" class="form-control" rows="3" required placeholder="Nêu rõ lý do cần tạm ứng lương..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="advNotes" class="form-label">Ghi chú thêm</label>
+                        <input type="text" id="advNotes" name="notes" class="form-control" placeholder="Ghi chú kế toán...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Gửi yêu cầu</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Chi Tiền Tạm Ứng -->
+<div class="modal fade" id="payAdvanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="payAdvanceForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-cash-stack me-2"></i>Chi tiền tạm ứng lương</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-light border py-2 mb-3">
+                        <div>Mã phiếu: <strong id="payAdvCode" class="text-primary"></strong></div>
+                        <div>Nhân viên: <strong id="payAdvStaff"></strong></div>
+                        <div>Số tiền chi: <strong id="payAdvAmount" class="text-danger"></strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="payAdvMethod" class="form-label fw-bold">Hình thức chi trả <span class="text-danger">*</span></label>
+                        <select id="payAdvMethod" name="paymentMethod" class="form-select" required>
+                            <option th:each="m : ${paymentMethods}" th:value="${m}"
+                                    th:text="${m.name() == 'CASH' ? 'Tiền mặt' : (m.name() == 'BANK_TRANSFER' ? 'Chuyển khoản ngân hàng' : 'Thẻ')}"></option>
+                        </select>
+                    </div>
+                    <div class="alert alert-warning py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i> Khi chi tiền, hệ thống sẽ tự động tạo một phiếu chi vào Chi phí vận hành (FT25). Số tiền này sẽ được cấn trừ dần trong các kỳ tính lương tiếp theo.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-1"></i> Xác nhận giải ngân</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Từ Chối Tạm Ứng -->
+<div class="modal fade" id="rejectAdvanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="rejectAdvanceForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối đơn tạm ứng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Từ chối đơn tạm ứng <strong id="rejectAdvCode" class="text-danger"></strong>?</p>
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label fw-bold">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea id="rejectReason" name="reason" class="form-control" rows="3" required placeholder="Lý do không duyệt đơn tạm ứng..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i> Xác nhận</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function openPayModalFromButton(btn) {
+        const id = btn.getAttribute('data-advance-id');
+        const code = btn.getAttribute('data-advance-code');
+        const staff = btn.getAttribute('data-staff-name');
+        const amount = btn.getAttribute('data-amount');
+        openPayModal(id, code, staff, amount);
+    }
+
+    function openRejectModalFromButton(btn) {
+        const id = btn.getAttribute('data-advance-id');
+        const code = btn.getAttribute('data-advance-code');
+        openRejectModal(id, code);
+    }
+
+    function openPayModal(id, code, staff, amount) {
+        document.getElementById('payAdvCode').textContent = code || '';
+        document.getElementById('payAdvStaff').textContent = staff || '';
+        document.getElementById('payAdvAmount').textContent = amount || '';
+        document.getElementById('payAdvanceForm').action = '/payroll/advances/' + id + '/pay';
+        new bootstrap.Modal(document.getElementById('payAdvanceModal')).show();
+    }
+
+    function openRejectModal(id, code) {
+        document.getElementById('rejectAdvCode').textContent = code || '';
+        document.getElementById('rejectAdvanceForm').action = '/payroll/advances/' + id + '/reject';
+        new bootstrap.Modal(document.getElementById('rejectAdvanceModal')).show();
+    }
+</script>
+</body>
+</html>

@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "refunds",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_ref_code", columnNames = "refund_code")
+                @UniqueConstraint(name = "uk_ref_code", columnNames = "refund_code"),
+                @UniqueConstraint(name = "uk_ref_idempotency", columnNames = "idempotency_key")
         }
 )
 @Getter
@@ -27,8 +28,11 @@ public class Refund {
     @Column(name = "refund_id")
     private Long refundId;
 
-    @Column(name = "refund_code", nullable = false, length = 20, unique = true)
+    @Column(name = "refund_code", nullable = false, length = 30, unique = true)
     private String refundCode;
+
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invoice_id")
@@ -51,6 +55,9 @@ public class Refund {
 
     @Column(name = "reason", nullable = false, length = 500)
     private String reason;
+
+    @Column(name = "reduce_invoice_total", nullable = false)
+    private Boolean reduceInvoiceTotal = false;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "refunded_by", nullable = false)

@@ -24,5 +24,9 @@ public interface RefundService {
 
     List<Refund> getRefundsByInvoiceId(Long invoiceId);
 
+    List<Refund> getRefundsByProfileId(Long profileId);
+
+    List<Refund> getRefundsByProfileId(Long profileId, List<Long> allowedBranchIds);
+
     Refund getRefundById(Long refundId);
 }
