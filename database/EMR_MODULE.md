@@ -6,6 +6,20 @@ Module này chỉ đọc dữ liệu nguồn của `visits`, `clinical_examinati
 
 ## Cài đặt database
 
+### Nạp bộ demo đầy đủ (khuyến nghị)
+
+Sau khi khởi động ứng dụng một lần để tạo schema nền, chạy:
+
+```powershell
+.\database\seeds\run_full_demo.ps1 -ResetEmrDemo
+```
+
+Script nạp dữ liệu bằng kết nối `utf8mb4` để không lỗi dấu tiếng Việt, đồng thời
+chuẩn bị cả tiếp đón, điều phối ghế, hàng chờ, khám/chẩn đoán và EMR. Xem
+[EMR_DEMO_SCRIPT.md](EMR_DEMO_SCRIPT.md) để thực hiện hành trình từ đặt lịch đến ký bệnh án.
+
+### Nạp seed EMR cũ, tối giản
+
 Thứ tự dành cho môi trường test hiện tại:
 
 1. Tạo/nạp schema gốc của dự án.
