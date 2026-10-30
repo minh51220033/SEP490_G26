@@ -45,18 +45,18 @@
             <!-- Distributions Table -->
             <div class="fin-card">
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft32-owner-distributions">
                         <thead>
                         <tr>
-                            <th>Mã đợt</th>
-                            <th>Kỳ phân chia</th>
-                            <th>Cơ sở</th>
-                            <th class="text-end">Lợi nhuận chia</th>
-                            <th class="text-end">Giữ lại tái đầu tư</th>
-                            <th class="text-end">Tổng tiền phân bổ</th>
-                            <th>Trạng thái</th>
-                            <th>Người đề xuất / duyệt</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 120px;">Mã đợt</th>
+                            <th data-column-key="period" style="min-width: 120px;">Kỳ phân chia</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Cơ sở</th>
+                            <th data-column-key="distributable" class="text-end" style="min-width: 130px;">Lợi nhuận chia</th>
+                            <th data-column-key="retained" class="text-end" style="min-width: 140px;">Giữ lại tái đầu tư</th>
+                            <th data-column-key="distributed" class="text-end" style="min-width: 140px;">Tổng tiền phân bổ</th>
+                            <th data-column-key="status" style="min-width: 130px;">Trạng thái</th>
+                            <th data-column-key="approver" style="min-width: 150px;">Người đề xuất / duyệt</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 140px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -66,23 +66,23 @@
                             </td>
                         </tr>
                         <tr th:each="d : ${distributions.content}">
-                            <td class="fw-semibold text-primary" th:text="${d.distributionCode}"></td>
-                            <td class="fw-bold" th:text="'Tháng ' + ${d.month} + '/' + ${d.year}"></td>
-                            <td th:text="${d.branch != null ? d.branch.branchName : 'Toàn hệ thống'}"></td>
-                            <td class="text-end" th:text="${#numbers.formatDecimal(d.distributableAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-muted" th:text="${#numbers.formatDecimal(d.retainedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(d.totalDistributedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td>
+                            <td data-column-key="code" class="fw-semibold text-primary" th:text="${d.distributionCode}"></td>
+                            <td data-column-key="period" class="fw-bold" th:text="'Tháng ' + ${d.month} + '/' + ${d.year}"></td>
+                            <td data-column-key="branch" th:text="${d.branch != null ? d.branch.branchName : 'Toàn hệ thống'}"></td>
+                            <td data-column-key="distributable" class="text-end" th:text="${#numbers.formatDecimal(d.distributableAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="retained" class="text-end text-muted" th:text="${#numbers.formatDecimal(d.retainedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="distributed" class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(d.totalDistributedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="status">
                                 <span th:if="${d.status.name() == 'SUBMITTED'}" class="badge bg-warning text-dark">Chờ Admin duyệt</span>
                                 <span th:if="${d.status.name() == 'APPROVED'}" class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
                                 <span th:if="${d.status.name() == 'PAID'}" class="badge bg-success">Đã hoàn tất chi trả</span>
                                 <span th:if="${d.status.name() == 'REJECTED'}" class="badge bg-danger">Bị từ chối</span>
                             </td>
-                            <td class="small text-muted">
+                            <td data-column-key="approver" class="small text-muted">
                                 <span th:if="${d.approvedBy != null}" th:text="'Duyệt: ' + ${d.approvedBy.fullName}"></span>
                                 <span th:if="${d.approvedBy == null and d.submittedBy != null}" th:text="'Đề xuất: ' + ${d.submittedBy.fullName}"></span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" class="text-center">
                                 <!-- Approve / Reject if SUBMITTED and Admin -->
                                 <th:block th:if="${d.status.name() == 'SUBMITTED' and isAdmin}">
                                     <form th:action="@{/payroll/owner-distributions/{id}/approve(id=${d.distributionId})}" method="post" class="d-inline">

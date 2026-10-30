@@ -154,53 +154,53 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft32-payroll-items">
                         <thead>
                         <tr>
-                            <th>Nhân viên</th>
-                            <th>Vị trí / Chuyên khoa</th>
-                            <th class="text-center">Công tham khảo</th>
-                            <th class="text-end">Lương cơ bản</th>
-                            <th class="text-end">Phụ cấp</th>
-                            <th class="text-end">Thưởng</th>
-                            <th class="text-end">Hoa hồng</th>
-                            <th class="text-end">Giảm trừ</th>
-                            <th class="text-end">Lương Net</th>
-                            <th class="text-end">Khấu trừ tạm ứng</th>
-                            <th class="text-end">Thực trả</th>
-                            <th>Ghi chú</th>
-                            <th class="text-center" th:if="${period.status.name() == 'DRAFT'}">Sửa</th>
+                            <th data-column-key="staff" data-pinned="true" style="min-width: 180px;">Nhân viên</th>
+                            <th data-column-key="position" style="min-width: 140px;">Vị trí / Chuyên khoa</th>
+                            <th data-column-key="workDays" class="text-center" style="min-width: 120px;">Công tham khảo</th>
+                            <th data-column-key="baseSalary" class="text-end" style="min-width: 120px;">Lương cơ bản</th>
+                            <th data-column-key="allowance" class="text-end" style="min-width: 110px;">Phụ cấp</th>
+                            <th data-column-key="bonus" class="text-end" style="min-width: 110px;">Thưởng</th>
+                            <th data-column-key="commission" class="text-end" style="min-width: 110px;">Hoa hồng</th>
+                            <th data-column-key="deduction" class="text-end" style="min-width: 110px;">Giảm trừ</th>
+                            <th data-column-key="netSalary" class="text-end" style="min-width: 130px;">Lương Net</th>
+                            <th data-column-key="advance" class="text-end" style="min-width: 140px;">Khấu trừ tạm ứng</th>
+                            <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Thực trả</th>
+                            <th data-column-key="note" style="min-width: 150px;">Ghi chú</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 80px;" th:if="${period.status.name() == 'DRAFT'}">Sửa</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:if="${items.isEmpty()}">
-                            <td colspan="13" class="text-center py-4 text-muted">
+                            <td th:colspan="${period.status.name() == 'DRAFT' ? 13 : 12}" class="text-center py-4 text-muted">
                                 Chưa có nhân viên nào trong bảng lương. (Chi nhánh này chưa có nhân sự hợp lệ được phân công chi nhánh chính).
                             </td>
                         </tr>
                         <tr th:each="it : ${items}">
-                            <td>
+                            <td data-column-key="staff">
                                 <strong th:text="${it.staff.fullName}"></strong>
                                 <span class="d-block text-muted small" th:text="${it.staff.staffCode}"></span>
                             </td>
-                            <td>
+                            <td data-column-key="position">
                                 <span class="badge bg-light text-dark border"
                                       th:text="${it.staff.positionTitle != null ? it.staff.positionTitle : (it.staff.specialty != null ? it.staff.specialty : 'Nhân sự')}"></span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="workDays" class="text-center">
                                 <span th:if="${it.actualWorkDays != null}" class="fw-semibold" th:text="${it.actualWorkDays} + ' ngày'"></span>
                                 <span th:if="${it.actualWorkDays == null}" class="badge bg-secondary-subtle text-secondary small">Chưa có dữ liệu</span>
                             </td>
-                            <td class="text-end" th:text="${#numbers.formatDecimal(it.actualBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end" th:text="${#numbers.formatDecimal(it.totalAllowance, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-primary" th:text="${#numbers.formatDecimal(it.bonusAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-info" th:text="${#numbers.formatDecimal(it.totalCommission, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-danger" th:text="${#numbers.formatDecimal(it.deductionAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(it.netSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-warning fw-semibold" th:text="${#numbers.formatDecimal(it.advanceAllocatedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(it.remainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="small text-muted" th:text="${it.note != null ? it.note : '-'}"></td>
-                            <td class="text-center" th:if="${period.status.name() == 'DRAFT'}">
+                            <td data-column-key="baseSalary" class="text-end" th:text="${#numbers.formatDecimal(it.actualBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="allowance" class="text-end" th:text="${#numbers.formatDecimal(it.totalAllowance, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="bonus" class="text-end text-primary" th:text="${#numbers.formatDecimal(it.bonusAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="commission" class="text-end text-info" th:text="${#numbers.formatDecimal(it.totalCommission, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="deduction" class="text-end text-danger" th:text="${#numbers.formatDecimal(it.deductionAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="netSalary" class="text-end fw-semibold" th:text="${#numbers.formatDecimal(it.netSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="advance" class="text-end text-warning fw-semibold" th:text="${#numbers.formatDecimal(it.advanceAllocatedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="remaining" class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(it.remainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="note" class="small text-muted" th:text="${it.note != null ? it.note : '-'}"></td>
+                            <td data-column-key="actions" class="text-center" th:if="${period.status.name() == 'DRAFT'}">
                                 <button type="button" class="btn btn-sm btn-outline-primary"
                                         th:data-item-id="${it.itemId}"
                                         th:data-staff-name="${it.staff.fullName}"

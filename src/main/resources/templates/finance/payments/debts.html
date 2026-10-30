@@ -67,19 +67,19 @@
             <!-- Table Card -->
             <div class="fin-card p-0">
                 <div class="fin-table-wrapper">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft24-debts">
                         <thead>
                         <tr>
-                            <th>Mã BN</th>
-                            <th>Họ và tên</th>
-                            <th>Số điện thoại</th>
-                            <th class="text-center">Số HĐ còn nợ</th>
-                            <th class="text-end" title="Tổng giá trị các hóa đơn chưa tất toán">Tổng tiền HĐ còn nợ</th>
-                            <th class="text-end" title="Số tiền đã thu của các hóa đơn còn nợ">Đã trả (HĐ nợ)</th>
-                            <th class="text-end" title="Tổng công nợ còn lại phải thu">Tổng công nợ còn lại</th>
-                            <th class="text-end" title="Ví tạm ứng hiển thị riêng, không tự trừ vào nợ khi chưa cấn trừ">Số dư ví tạm ứng</th>
-                            <th>HĐ nợ gần nhất</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="patient_code" data-column-required="true" data-column-pinned="true">Mã BN</th>
+                            <th data-column-key="patient_name" data-column-pinned="true">Họ và tên</th>
+                            <th data-column-key="phone">Số điện thoại</th>
+                            <th class="text-center" data-column-key="unpaid_count">Số HĐ còn nợ</th>
+                            <th class="text-end" data-column-key="total_billed" title="Tổng giá trị các hóa đơn chưa tất toán">Tổng tiền HĐ còn nợ</th>
+                            <th class="text-end" data-column-key="total_paid" title="Số tiền đã thu của các hóa đơn còn nợ">Đã trả (HĐ nợ)</th>
+                            <th class="text-end" data-column-key="total_debt" title="Tổng công nợ còn lại phải thu">Tổng công nợ còn lại</th>
+                            <th class="text-end" data-column-key="deposit_balance" title="Ví tạm ứng hiển thị riêng, không tự trừ vào nợ khi chưa cấn trừ">Số dư ví tạm ứng</th>
+                            <th data-column-key="last_invoice_date">HĐ nợ gần nhất</th>
+                            <th class="text-center" data-column-key="actions" data-column-action="true">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -90,27 +90,27 @@
                             </td>
                         </tr>
                         <tr th:each="d : ${patientDebts}">
-                            <td>
+                            <td data-column-key="patient_code">
                                 <strong class="text-primary" th:text="${d.patientCode}">BN000101</strong>
                             </td>
-                            <td>
+                            <td data-column-key="patient_name">
                                 <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="fw-bold text-primary" th:text="${d.fullName}" title="Xem Chi tiết công nợ &amp; Dashboard tài chính (SCR-24.2)">Nguyễn Văn An</a>
                             </td>
-                            <td th:text="${d.phoneNumber}">0987654321</td>
-                            <td class="text-center">
+                            <td data-column-key="phone" th:text="${d.phoneNumber}">0987654321</td>
+                            <td data-column-key="unpaid_count" class="text-center">
                                 <span class="badge bg-danger rounded-pill" th:text="${d.unpaidInvoicesCount} + ' hóa đơn'">1 đơn</span>
                             </td>
-                            <td class="text-end" th:text="${#numbers.formatDecimal(d.totalBilled, 0, 'COMMA', 0, 'POINT')} + ' đ'">2.000.000 đ</td>
-                            <td class="text-end text-success" th:text="${#numbers.formatDecimal(d.totalPaid, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td class="text-end fw-bold text-danger fs-6"
+                            <td data-column-key="total_billed" class="text-end" th:text="${#numbers.formatDecimal(d.totalBilled, 0, 'COMMA', 0, 'POINT')} + ' đ'">2.000.000 đ</td>
+                            <td data-column-key="total_paid" class="text-end text-success" th:text="${#numbers.formatDecimal(d.totalPaid, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td data-column-key="total_debt" class="text-end fw-bold text-danger fs-6"
                                 th:text="${#numbers.formatDecimal(d.totalDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.500.000 đ</td>
-                            <td class="text-end fw-bold text-success"
+                            <td data-column-key="deposit_balance" class="text-end fw-bold text-success"
                                 th:text="${#numbers.formatDecimal(d.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
-                            <td>
+                            <td data-column-key="last_invoice_date">
                                 <span th:if="${d.lastInvoiceDate != null}" th:text="${#temporals.format(d.lastInvoiceDate, 'dd/MM/yyyy')}">24/10/2026</span>
                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" data-column-action="true" class="text-center">
                                 <a th:href="@{/payments/create(profileId=${d.profileId})}" class="btn btn-sm btn-success" title="Thu nợ">
                                     <i class="bi bi-cash"></i> Thu nợ
                                 </a>
