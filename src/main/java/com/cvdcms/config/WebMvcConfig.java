@@ -20,17 +20,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminServiceCatalogInterceptor adminServiceCatalogInterceptor;
     //FT21-22 taichinh
     private final FinanceAccessInterceptor financeAccessInterceptor;
+    private final FeaturePermissionInterceptor featurePermissionInterceptor;
 
     public WebMvcConfig(
             AdminBranchInterceptor adminBranchInterceptor,
             AccountManagementInterceptor accountManagementInterceptor,
             AdminServiceCatalogInterceptor adminServiceCatalogInterceptor, //FT02
-            FinanceAccessInterceptor financeAccessInterceptor //FT21-22
+            FinanceAccessInterceptor financeAccessInterceptor, //FT21-22
+            FeaturePermissionInterceptor featurePermissionInterceptor
     ) {
         this.adminBranchInterceptor = adminBranchInterceptor;
         this.accountManagementInterceptor = accountManagementInterceptor;
         this.adminServiceCatalogInterceptor = adminServiceCatalogInterceptor; //FT02
         this.financeAccessInterceptor = financeAccessInterceptor;
+        this.featurePermissionInterceptor = featurePermissionInterceptor;
     }
 
     @Override
@@ -57,6 +60,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 "/uploads/**",
                 "/favicon.ico"
         };
+
+        // Đồng bộ danh sách quyền hiệu lực (permissionCodes) và kiểm tra quyền chi tiết theo từng tính năng.
+        registry.addInterceptor(featurePermissionInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(staticFilesExclusions);
 
         // Chỉ tài khoản Admin hợp lệ mới được quản lý chi nhánh.
         registry.addInterceptor(adminBranchInterceptor)

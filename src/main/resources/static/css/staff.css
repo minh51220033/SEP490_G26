@@ -1,113 +1,986 @@
-/* FT41 - Quản lý hồ sơ nhân viên & phân công chi nhánh.
-   Dùng lại biến màu/bo góc của layout.css để đồng bộ giao diện toàn nhóm. */
+/* =====================================================================
+   FT41 - Quản lý hồ sơ nhân sự (Thiết kế chuẩn MISA AMIS theo Ảnh 2)
+   Tông màu chủ đạo: Xanh dương (#2563eb) & Đen/Slate (#0f172a).
+   Font chữ: Thống nhất "Be Vietnam Pro", system-ui, sans-serif.
+   Bảng: Kéo chỉnh độ rộng cột (Resizable), Checkbox, Ghim cột, Hover Icons.
+   Footer: Chuẩn phân trang MISA (Tổng số, Số dòng/trang, Navigation).
+   ===================================================================== */
 
-.staff-table td, .staff-table th { vertical-align: middle; }
+:root {
+    --staff-primary: #2563eb;
+    --staff-primary-hover: #1d4ed8;
+    --staff-primary-light: #eff6ff;
+    --staff-ink: #0f172a;
+    --staff-muted: #64748b;
+    --staff-border: #e2e8f0;
+    --staff-surface: #ffffff;
+    --staff-surface-subtle: #f8fafc;
+    --staff-table-header-bg: #f8fafc;
+}
 
-/* ---------- Avatar chữ cái đầu ---------- */
+/* ---------- Toàn màn hình & Khóa Scroll trình duyệt bên phải ---------- */
+body.staff-page-body {
+    height: 100vh;
+    overflow: hidden !important;
+}
+
+/* ---------- Topbar Màu Xanh Navy Thương Hiệu (Đồng bộ với Sidebar) ---------- */
+.app-topbar__bar {
+    background: linear-gradient(90deg, #1a2f6e 0%, #24408e 100%) !important;
+    border-bottom: 1px solid #14234b !important;
+    box-shadow: 0 3px 12px rgba(26, 47, 110, 0.18) !important;
+}
+
+.app-topbar__title {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+}
+
+.app-topbar__date {
+    color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.app-topbar [data-sidebar-toggle],
+.app-topbar .icon-button {
+    color: #ffffff !important;
+}
+.app-topbar [data-sidebar-toggle]:hover,
+.app-topbar .icon-button:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.app-topbar .chip {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    font-weight: 600 !important;
+}
+
+.app-topbar .icon-button--bordered {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+}
+.app-topbar .icon-button--bordered:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.app-topbar .icon-button__dot {
+    background: #ef4444 !important;
+    border: 1.5px solid #24408e !important;
+}
+
+.app-topbar .avatar-button {
+    border: 2px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.app-topbar .avatar-letter {
+    background: #ffffff !important;
+    color: #24408e !important;
+    font-weight: 800 !important;
+}
+
+body.staff-page-body .app-shell {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body.staff-page-body .app-main {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body.staff-page-body .app-content {
+    flex: 1;
+    overflow: hidden !important;
+    padding: 16px 24px;
+    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 64px); /* Trừ đi chiều cao topbar */
+}
+
+/* Bộ điều khiển kéo giãn cột (Column Resizer) */
+.col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    cursor: col-resize;
+    user-select: none;
+    height: 100%;
+    z-index: 20;
+    touch-action: none;
+}
+.col-resizer:hover,
+.col-resizer.is-resizing {
+    background-color: var(--staff-primary);
+    width: 3px;
+}
+.staff-page-header {
+    margin-bottom: 2px;
+}
+
+.staff-page-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--staff-ink);
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+}
+
+.staff-page-subtitle {
+    font-size: 0.85rem;
+    color: var(--staff-muted);
+    margin-bottom: 0;
+}
+
+/* ---------- Buttons (Chuẩn kích thước) ---------- */
+.btn-vua,
+.btn-md {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-be,
+.btn-sm {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s ease-in-out;
+}
+
+/* Nút icon vuông (settings / tools) */
+.btn-icon-square {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 1rem;
+    color: #475569;
+    border: 1px solid var(--staff-border);
+    background: #ffffff;
+    transition: all 0.15s;
+}
+.btn-icon-square:hover {
+    background: #f1f5f9;
+    color: var(--staff-primary);
+    border-color: #cbd5e1;
+}
+
+.btn-primary {
+    background-color: var(--staff-primary) !important;
+    border-color: var(--staff-primary) !important;
+    color: #ffffff !important;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--staff-primary-hover) !important;
+    border-color: var(--staff-primary-hover) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+.btn-secondary-custom {
+    background-color: #ffffff;
+    border: 1px solid var(--staff-border);
+    color: #334155;
+}
+.btn-secondary-custom:hover {
+    background-color: #f8fafc;
+    color: var(--staff-ink);
+}
+
+/* ---------- Toolbar / Bộ lọc MISA AMIS (Ảnh 2) ---------- */
+.staff-toolbar-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border);
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.staff-toolbar-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.staff-toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.staff-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Làm ngắn ô nhập tìm kiếm (y chang Ảnh 2) */
+.staff-search-box-compact {
+    position: relative;
+    width: 240px;
+    min-width: 200px;
+}
+
+.staff-search-box-compact .bi-search {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--staff-muted);
+    font-size: 0.85rem;
+}
+
+.staff-search-box-compact input {
+    height: 36px;
+    padding-left: 32px;
+    padding-right: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--staff-border);
+    font-size: 0.85rem;
+    color: var(--staff-ink);
+}
+.staff-search-box-compact input:focus {
+    border-color: var(--staff-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.staff-select-compact {
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--staff-border);
+    font-size: 0.85rem;
+    min-width: 135px;
+    max-width: 170px;
+    color: var(--staff-ink);
+    padding-left: 10px;
+}
+.staff-select-compact:focus {
+    border-color: var(--staff-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.filter-badge-count {
+    background-color: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 999px;
+    margin-left: 4px;
+}
+
+/* ---------- Bảng dữ liệu MISA (Table) - Chiếm trọn chiều cao màn hình ---------- */
+.staff-table-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border);
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto; /* Tự động giãn đầy chiều cao của app-content */
+    min-height: 0;   /* Quan trọng: Cho phép flex-child co lại để không gây tràn màn hình */
+}
+
+.staff-table-wrapper {
+    position: relative;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    flex: 1 1 auto; /* Tự động giãn đầy khoảng trống còn lại */
+    min-height: 0;   /* Quan trọng: Bắt buộc để thanh scroll dọc chỉ cuộn bên trong bảng */
+    width: 100%;
+    background-color: #ffffff;
+}
+
+/* Thanh scrollbar rõ nét, luôn hiển thị theo chuẩn desktop table */
+.staff-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.staff-table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+.staff-table-wrapper::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 5px;
+    border: 2px solid #f1f5f9;
+}
+.staff-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+.staff-modern-table {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 100%;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.staff-modern-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--staff-table-header-bg);
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--staff-border);
+    border-right: 1px solid #edf2f7;
+    white-space: nowrap;
+    vertical-align: middle;
+    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+.staff-modern-table th:last-child {
+    border-right: none;
+}
+
+.staff-modern-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #edf2f7;
+    color: var(--staff-ink);
+    font-size: 0.85rem;
+    vertical-align: middle;
+    background-color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+.staff-modern-table td:last-child {
+    border-right: none;
+}
+
+.staff-modern-table tbody tr {
+    position: relative;
+    transition: background-color 0.1s ease;
+}
+
+.staff-modern-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Thao tác dòng: Nổi bật ở góc phải của dòng khi Hover (Chuẩn MISA AMIS theo ảnh mới) */
+.staff-row-floating-actions {
+    position: sticky;
+    right: 12px;
+    float: right;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 25;
+    background: #ffffff;
+    padding: 2px 6px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--staff-border);
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.staff-modern-table tbody tr:hover .staff-row-floating-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
+.staff-action-icon-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    transition: all 0.12s ease;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+}
+
+.staff-action-icon-btn.btn-view {
+    color: #2563eb;
+}
+.staff-action-icon-btn.btn-view:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.staff-action-icon-btn.btn-edit {
+    color: #475569;
+}
+.staff-action-icon-btn.btn-edit:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+
+/* ---------- Avatar, Chips & Status Pills (Ảnh 2) ---------- */
 .staff-avatar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: var(--brand-50);
-    color: var(--brand-700);
-    font-weight: 800;
-    font-size: .95rem;
+    background: #0284c7;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.8rem;
 }
-.staff-avatar--lg { width: 68px; height: 68px; font-size: 1.6rem; }
 
-.staff-name { font-weight: 700; color: var(--ink); line-height: 1.25; }
-.staff-sub { color: var(--muted); font-size: .8rem; }
+.staff-name {
+    font-weight: 600;
+    color: var(--staff-ink);
+    line-height: 1.25;
+    font-size: 0.85rem;
+}
 
-/* ---------- Chip chi nhánh / vai trò ---------- */
+.staff-sub {
+    color: var(--staff-muted);
+    font-size: 0.75rem;
+}
+
+.branch-assignment-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+    max-width: 100%;
+    overflow: hidden;
+}
+.branch-assignment-item:last-child {
+    margin-bottom: 0;
+}
+
 .chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    margin: 2px 4px 2px 0;
-    border-radius: 999px;
-    background: var(--brand-50);
-    color: var(--brand-700);
-    font-size: .76rem;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    border: 1px solid #dbeafe;
+    flex-shrink: 0;
 }
-.chip--primary { background: #e3f6ed; color: #14744b; }
-.chip--role { background: #fff3d6; color: #8a5a00; }
+.chip--primary {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+.chip--role {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #e2e8f0;
+}
 
-/* ---------- Badge trạng thái ---------- */
-.status-badge {
-    display: inline-block;
+.staff-branch-more-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 1px solid #bae6fd;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    flex-shrink: 0;
+}
+.staff-branch-more-badge:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+}
+
+/* Trạng thái chuẩn MISA pill badge (Ảnh 2) */
+.misa-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 3px 10px;
     border-radius: 999px;
-    font-size: .72rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.misa-status-badge--active {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.misa-status-badge--on_leave {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.misa-status-badge--ended,
+.misa-status-badge--inactive {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* Tooltip CCHN */
+.cchn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: #f8fafc;
+    border: 1px solid var(--staff-border);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.76rem;
+    color: var(--staff-ink);
+    cursor: help;
+}
+
+/* ---------- Footer Phân Trang Chuẩn MISA (Ảnh 2) ---------- */
+.misa-pagination-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-top: 1px solid var(--staff-border);
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.misa-pagination-left {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.misa-pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.misa-page-size-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.misa-page-size-select {
+    height: 30px;
+    width: 68px !important;
+    display: inline-block !important;
+    padding: 2px 20px 2px 8px;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    border: 1px solid var(--staff-border);
+    background-color: #ffffff;
+    cursor: pointer;
+}
+
+.misa-page-range {
+    font-size: 0.85rem;
+    color: #334155;
+    font-weight: 500;
+}
+
+.misa-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.12s;
+    text-decoration: none;
+}
+.misa-nav-btn:hover:not(.disabled) {
+    background: #f1f5f9;
+    color: var(--staff-ink);
+    border-color: #cbd5e1;
+}
+.misa-nav-btn.disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ---------- Drawer Tùy Chỉnh Cột (MISA AMIS Style) ---------- */
+.custom-column-offcanvas {
+    width: 440px !important;
+    border-left: 1px solid var(--staff-border);
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.08);
+}
+
+.custom-column-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--staff-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.custom-column-title {
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: .02em;
+    color: var(--staff-ink);
+    margin: 0;
 }
-.status-badge--active   { background: #e3f6ed; color: #14744b; }
-.status-badge--on_leave { background: #fff3d6; color: #8a5a00; }
-.status-badge--inactive { background: #eceff4; color: #5b6578; }
-.status-badge--ended    { background: #eceff4; color: #5b6578; }
 
-/* ---------- Lưới thông tin (tab chi tiết) ---------- */
-.info-grid {
+.custom-column-search {
+    padding: 12px 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-column-table-head {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--staff-surface-subtle);
+    border-bottom: 1px solid var(--staff-border);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+/* Ẩn widget chat nổi trên màn hình Quản lý nhân sự theo yêu cầu */
+#cvdcmsChatWidgetFab,
+.cvdcms-chat-fab,
+.cvdcms-chat-drawer {
+    display: none !important;
+}
+
+.custom-col-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+    cursor: grab;
+}
+.custom-col-item:hover {
+    background: #f8fafc;
+}
+.custom-col-item.is-dragging {
+    opacity: 0.45;
+    background: #eff6ff;
+    border: 1px dashed var(--staff-primary);
+}
+
+.custom-col-drag {
+    color: #94a3b8;
+    cursor: grab;
+    margin-right: 12px;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+}
+.custom-col-item:active .custom-col-drag {
+    cursor: grabbing;
+}
+
+.custom-col-check {
+    margin-right: 12px;
+}
+
+.custom-col-name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--staff-ink);
+}
+
+
+.custom-column-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--staff-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+}
+
+/* ---------- Empty State Thân Thiện ---------- */
+.staff-empty-state {
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.staff-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: var(--staff-primary);
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px 24px;
+    place-items: center;
+    font-size: 1.8rem;
 }
-.info-item__label { color: var(--muted); font-size: .78rem; font-weight: 600; margin-bottom: 2px; }
-.info-item__value { color: var(--ink); font-weight: 600; word-break: break-word; }
-.info-item__value--empty { color: #a0a9b8; font-weight: 400; }
 
-.info-section-title {
-    margin: 22px 0 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line);
-    font-size: .95rem;
+.staff-empty-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--staff-ink);
+    margin-bottom: 4px;
+}
+
+.staff-empty-desc {
+    font-size: 0.82rem;
+    color: var(--staff-muted);
+    max-width: 400px;
+    margin: 0 auto 14px;
+}
+
+@media (max-width: 768px) {
+    .staff-row-actions {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    .staff-search-box-compact {
+        width: 100%;
+    }
+}
+
+/* =====================================================================
+   CHI TIẾT NHÂN VIÊN (STAFF DETAIL VIEW CHUẨN MISA / ENTERPRISE)
+   ===================================================================== */
+.staff-breadcrumb-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: transparent;
+}
+.staff-breadcrumb-back:hover {
+    color: var(--staff-primary);
+    background: #f1f5f9;
+    text-decoration: none;
+}
+
+.staff-detail-hero {
+    background: #ffffff;
+    border: 1px solid var(--staff-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.staff-detail-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1d4ed8, #0284c7);
+    color: #ffffff;
+    font-size: 1.6rem;
     font-weight: 800;
-    color: var(--brand-900);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    flex-shrink: 0;
 }
-.info-section-title:first-child { margin-top: 0; }
 
-/* ---------- Form ---------- */
-.form-section { margin-bottom: 8px; }
-.form-section__title {
+.staff-detail-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--staff-ink);
+    margin: 0 0 6px 0;
+}
+
+.staff-detail-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Tabs chi tiết */
+.staff-detail-nav-tabs {
+    border-bottom: 2px solid #e2e8f0;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.staff-detail-nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #64748b;
+    background: transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.staff-detail-nav-tabs .nav-link:hover {
+    color: var(--staff-primary);
+    border-color: #cbd5e1;
+}
+
+.staff-detail-nav-tabs .nav-link.active {
+    color: var(--staff-primary);
+    border-color: var(--staff-primary);
+    background: transparent;
+}
+
+/* Thẻ card khối thông tin */
+.staff-info-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.staff-info-card__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--staff-ink);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0 0 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line);
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--brand-900);
 }
-.form-section__title i { color: var(--brand-600); }
-.form-hint { color: var(--muted); font-size: .78rem; margin-top: 4px; }
+.staff-info-card__title i {
+    color: var(--staff-primary);
+}
 
-/* ---------- Bộ lọc ---------- */
-.filter-bar {
+.staff-info-grid {
     display: grid;
-    grid-template-columns: 2fr 1.2fr 1fr 1.2fr auto;
-    gap: 12px;
-    align-items: end;
-    margin-bottom: 18px;
-}
-@media (max-width: 992px) {
-    .filter-bar { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 576px) {
-    .filter-bar { grid-template-columns: 1fr; }
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
 }
 
-.empty-hint {
-    padding: 22px;
-    text-align: center;
-    color: var(--muted);
-    border: 1px dashed var(--line);
-    border-radius: var(--radius);
+.staff-info-tile {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.15s;
+}
+.staff-info-tile:hover {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+.staff-info-tile__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.staff-info-tile__value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--staff-ink);
+    word-break: break-word;
+}
+.staff-info-tile__value--empty {
+    color: #94a3b8;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* Thẻ chỉ số tài chính (Lương) */
+.salary-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.salary-stat-card__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+.salary-stat-card__amount {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #16a34a;
+}
+.salary-stat-card__amount--sub {
+    color: #0284c7;
+}
+.salary-stat-card__amount--muted {
+    color: #475569;
 }
