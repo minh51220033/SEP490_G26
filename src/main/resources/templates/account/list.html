@@ -3,21 +3,22 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý tài khoản')}"></head>
 
-<body class="app-body">
+<body class="app-body account-page-body staff-page-body">
 
-<div class="app-shell">
+    <div class="app-shell">
 
-    <aside th:replace="~{fragments/sidebar :: sidebar('accounts')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+        <aside th:replace="~{fragments/sidebar :: sidebar('accounts')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-    <div class="app-main">
+        <div class="app-main">
 
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý tài khoản')}"></header>
+            <header th:replace="~{fragments/header :: appTopbar('Quản lý tài khoản')}"></header>
 
         <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/account.css}">
 
-            <!-- THÔNG BÁO THÀNH CÔNG -->
+            <!-- THÔNG BÁO THÀNH CÔNG / THẤT BẠI -->
             <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
                 <i class="bi bi-check-circle-fill me-2 fs-5"></i>
                 <div>
@@ -29,254 +30,911 @@
                 </div>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <div th:text="${param.error}">Có lỗi xảy ra trong quá trình xử lý.</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-            <!-- DANH SÁCH TÀI KHOẢN (SCR-01.1) -->
-            <section class="panel">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Danh sách tài khoản hệ thống</h3>
-                        <p class="panel__subtitle">
-                            Quản lý tài khoản người dùng, phân quyền vai trò và trạng thái truy cập ·
-                            Tổng cộng <strong th:text="${totalItems}">0</strong> tài khoản
-                        </p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a th:href="@{/accounts/roles}" class="btn btn-outline-primary">
-                            <i class="bi bi-shield-lock me-1" aria-hidden="true"></i> Vai trò &amp; Phân quyền
-                        </a>
-                        <a th:href="@{/accounts/create}" class="btn btn-primary">
-                            <i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i> Tạo tài khoản
-                        </a>
-                    </div>
+            <!-- TIÊU ĐỀ TRANG CHUẨN MISA -->
+            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h1 class="staff-page-title">Quản lý tài khoản</h1>
+                    <p class="staff-page-subtitle">Quản lý danh sách tài khoản người dùng, phân quyền vai trò và trạng thái truy cập</p>
                 </div>
+            </div>
 
-                <!-- BỘ LỌC TÌM KIẾM (SCR-01.1) -->
-                <form th:action="@{/accounts}" method="get" class="card card-body bg-light border-0 mb-4 p-3 rounded-3">
-                    <div class="row g-2 align-items-end">
+            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ theo Quản lý nhân sự) -->
+            <section class="staff-toolbar-card">
+                <form th:action="@{/accounts}" method="get" id="accountFilterForm" class="staff-toolbar-form">
+                    <!-- Bên trái: Tìm kiếm gọn + Dropdowns nhanh -->
+                    <div class="staff-toolbar-left">
+                        <!-- Ô tìm kiếm làm ngắn gọn -->
+                        <div class="staff-search-box-compact">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                                   class="form-control" placeholder="Tìm kiếm tài khoản...">
 
-                        <!-- TỪ KHÓA -->
-                        <div class="col-lg-3 col-md-6">
-                            <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control border-start-0" name="keyword" th:value="${keyword}"
-                                       placeholder="Username, họ tên, email, SĐT...">
+                        <!-- Dropdown Trạng thái -->
+                        <div>
+                            <select id="active" name="active" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
+                                <option value="">Trạng thái: Tất cả</option>
+                                <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Hoạt động</option>
+                                <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Đã khóa</option>
+                                </select>
                             </div>
+
+                        <!-- Dropdown Chi nhánh -->
+                        <div>
+                            <select id="branchId" name="branchId" class="form-select staff-select-compact" aria-label="Chi nhánh" onchange="this.form.submit()">
+                                <option value="">Chi nhánh: Tất cả</option>
+                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                        th:selected="${selectedBranch != null and selectedBranch == b.branchId}">
+                                </option>
+                            </select>
                         </div>
 
-                        <!-- VAI TRÒ -->
-                        <div class="col-lg-2 col-md-3">
-                            <label class="form-label small fw-semibold text-muted mb-1">Vai trò</label>
-                            <select class="form-select form-select-sm" name="roleId">
-                                <option value="">Tất cả vai trò</option>
+                        <!-- Dropdown Vai trò -->
+                        <div>
+                            <select id="roleId" name="roleId" class="form-select staff-select-compact" aria-label="Vai trò" onchange="this.form.submit()">
+                                <option value="">Vai trò: Tất cả</option>
                                 <option th:each="r : ${roles}"
                                         th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN'}"
                                         th:value="${r.roleId}"
                                         th:text="${r.displayName != null ? r.displayName : r.roleName}"
-                                        th:selected="${selectedRole != null and selectedRole == r.roleId}"></option>
+                                        th:selected="${selectedRole != null and selectedRole == r.roleId}">
+                                </option>
                             </select>
                         </div>
 
-                        <!-- CHI NHÁNH -->
-                        <div class="col-lg-2 col-md-3">
-                            <label class="form-label small fw-semibold text-muted mb-1">Chi nhánh</label>
-                            <select class="form-select form-select-sm" name="branchId">
-                                <option value="">Tất cả chi nhánh</option>
-                                <option th:each="b : ${branches}" th:value="${b.branchId}"
-                                        th:text="${b.branchName}"
-                                        th:selected="${selectedBranch != null and selectedBranch == b.branchId}"></option>
-                            </select>
-                        </div>
+                        <!-- Ẩn các trường lọc nâng cao & phân trang -->
+                        <input type="hidden" id="userType" name="userType" th:value="${selectedUserType}">
+                        <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                        <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+                        <input type="hidden" id="sortInput" name="sort" th:value="${sort}">
+                        <input type="hidden" id="directionInput" name="direction" th:value="${direction}">
 
-                        <!-- LOẠI TÀI KHOẢN -->
-                        <div class="col-lg-2 col-md-3">
-                            <label class="form-label small fw-semibold text-muted mb-1">Loại tài khoản</label>
-                            <select class="form-select form-select-sm" name="userType">
-                                <option value="">Tất cả loại</option>
-                                <option value="STAFF" th:selected="${selectedUserType == 'STAFF'}">Nhân viên (STAFF)</option>
-                                <option value="PATIENT" th:selected="${selectedUserType == 'PATIENT'}">Bệnh nhân (PATIENT)</option>
-                            </select>
-                        </div>
-
-                        <!-- TRẠNG THÁI -->
-                        <div class="col-lg-1 col-md-3">
-                            <label class="form-label small fw-semibold text-muted mb-1">Trạng thái</label>
-                            <select class="form-select form-select-sm" name="active">
-                                <option value="">Tất cả</option>
-                                <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Hoạt động</option>
-                                <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Đã khóa</option>
-                            </select>
-                        </div>
-
-                        <!-- NÚT THAO TÁC LỌC -->
-                        <div class="col-lg-2 col-md-6 d-flex gap-2">
-                            <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                                <i class="bi bi-funnel me-1"></i> Lọc
-                            </button>
-                            <a th:href="@{/accounts}" class="btn btn-sm btn-outline-secondary" title="Xóa bộ lọc">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </a>
-                        </div>
-
+                        <!-- Nút Lọc nâng cao -->
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                            <i class="bi bi-funnel"></i> Lọc nâng cao
+                            <span th:if="${selectedUserType != null and selectedUserType != ''}" class="filter-badge-count">1</span>
+                        </button>
                     </div>
-                </form>
+                    </form>
 
-                <!-- BẢNG DANH SÁCH -->
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 account-table">
-                        <thead class="table-light">
+                    <!-- Bên phải: Nút Vai trò & Phân quyền + Nút Thêm mới + Bánh răng Tùy chỉnh cột -->
+                    <div class="staff-toolbar-right">
+                        <a th:href="@{/accounts/roles}" class="btn btn-secondary-custom btn-vua text-primary">
+                            <i class="bi bi-shield-lock me-1"></i> Vai trò &amp; Phân quyền
+                        </a>
+                        <a th:href="@{/accounts/create}" class="btn btn-primary btn-vua">
+                            <i class="bi bi-plus-lg"></i> Thêm mới
+                        </a>
+                        <button type="button" class="btn-icon-square" data-bs-toggle="offcanvas" data-bs-target="#customColumnDrawer" title="Tùy chỉnh cột">
+                            <i class="bi bi-gear"></i>
+                        </button>
+                    <!-- BẢNG DANH SÁCH -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 account-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Tài khoản</th>
+                                    <th>Họ và tên</th>
+                                    <th>Thông tin liên hệ</th>
+                                    <th>Vai trò</th>
+                                    <th>Loại</th>
+                                    <th>Chi nhánh</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-center" style="width: 150px;">Thao tác</th>
+                                </tr>
+                            </thead>
+            </section>
+
+            <!-- BẢNG DỮ LIỆU TÀI KHOẢN MISA (Hỗ trợ kéo giãn độ rộng cột & cuộn nội bộ) -->
+            <section class="staff-table-card">
+                <div class="staff-table-wrapper">
+                    <table class="table staff-modern-table align-middle" id="accountTable">
+                        <colgroup>
+                            <col data-col="stt" style="width: 60px;">
+                            <col data-col="username" style="width: 220px;">
+                            <col data-col="fullname" style="width: 190px;">
+                            <col data-col="contact" style="width: 230px;">
+                            <col data-col="role" style="width: 170px;">
+                            <col data-col="type" style="width: 140px;">
+                            <col data-col="branch" style="width: 200px;">
+                            <col data-col="status" style="width: 180px;">
+                        </colgroup>
+                        <thead>
                         <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Tài khoản</th>
-                            <th>Họ và tên</th>
-                            <th>Thông tin liên hệ</th>
-                            <th>Vai trò</th>
-                            <th>Loại</th>
-                            <th>Chi nhánh</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center" style="width: 150px;">Thao tác</th>
+                            <!-- 1. STT -->
+                            <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                <span>#</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 2. Tài khoản -->
+                            <th data-col="username" style="width: 220px; min-width: 190px;">
+                                <span>Tài khoản</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 3. Họ và tên -->
+                            <th data-col="fullname" style="width: 190px; min-width: 160px;">
+                                <span>Họ và tên</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 4. Thông tin liên hệ -->
+                            <th data-col="contact" style="width: 230px; min-width: 190px;">
+                                <span>Thông tin liên hệ</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 5. Vai trò -->
+                            <th data-col="role" style="width: 170px; min-width: 150px;">
+                                <span>Vai trò</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 6. Loại tài khoản -->
+                            <th data-col="type" style="width: 140px; min-width: 120px;">
+                                <span>Loại tài khoản</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 7. Chi nhánh -->
+                            <th data-col="branch" style="width: 200px; min-width: 160px;">
+                                <span>Chi nhánh</span>
+                                <div class="col-resizer"></div>
+                            </th>
+
+                            <!-- 8. Trạng thái -->
+                            <th data-col="status" style="width: 180px; min-width: 160px;">
+                                <span>Trạng thái</span>
+                                <div class="col-resizer"></div>
+                            </th>
                         </tr>
                         </thead>
-
                         <tbody>
-                        <tr th:each="account, iter : ${accounts}">
-                            <td class="text-muted small" th:text="${currentPage * size + iter.count}">1</td>
+                        <tr th:each="account, iter : ${accounts}"
+                            th:data-account-id="${account.userId}"
+                            th:data-username="${account.username}"
+                            th:data-status="${account.isActive ? 'ACTIVE' : 'LOCKED'}">
 
-                            <!-- TÀI KHOẢN -->
-                            <td>
+                            <!-- 1. STT -->
+                            <td data-col="stt" class="text-muted fw-semibold">
+                                <span th:text="${currentPage * pageSize + iter.count}">1</span>
+                            </td>
+
+                            <!-- 2. Tài khoản + Avatar + Ngày tạo -->
+                            <td data-col="username">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="account-avatar"
-                                          th:classappend="${account.roles != null and account.roles.?[roleName == 'ADMIN'].size() > 0 ? 'account-avatar--admin' : (account.userType != null and account.userType.name() == 'STAFF' ? 'account-avatar--staff' : 'account-avatar--patient')}"
+                                    <span class="staff-avatar"
+                                          th:classappend="${account.roles != null and account.roles.?[roleName == 'ADMIN'].size() > 0 ? 'bg-warning text-dark' : (account.userType != null and account.userType.name() == 'STAFF' ? 'bg-primary text-white' : 'bg-secondary text-white')}"
                                           th:text="${#strings.toUpperCase(#strings.substring(account.username, 0, 1))}">U</span>
-                                    <div>
-                                        <a th:href="@{/accounts/{id}(id=${account.userId})}" class="account-username text-decoration-none">
-                                            <span th:text="${account.username}">username</span>
-                                        </a>
-                                        <div class="account-sub" th:if="${account.createdDate != null}">
-                                            Tạo: <span th:text="${#temporals.format(account.createdDate, 'dd/MM/yyyy')}">01/01/2026</span>
+                                    <div class="text-truncate">
+                                        <div class="staff-name text-truncate">
+                                            <a th:href="@{/accounts/{id}(id=${account.userId})}" class="text-dark text-decoration-none fw-semibold" th:text="${account.username}">username</a>
                                         </div>
+                                        <div class="staff-sub" th:if="${account.createdDate != null}">
+                                            <span>Tạo: </span><span th:text="${#temporals.format(account.createdDate, 'dd/MM/yyyy')}">01/01/2026</span>
+                                        </div>
+                                    </td>
+
+                            <!-- 3. Họ và tên -->
+                            <td data-col="fullname">
+                                <span class="fw-semibold text-dark text-truncate d-inline-block" style="max-width: 180px;"
+                                      th:text="${displayNames != null and displayNames.containsKey(account.userId) ? displayNames.get(account.userId) : '—'}">Nguyễn Văn A</span>
+                            </td>
+
+                            <!-- 4. Thông tin liên hệ -->
+                            <td data-col="contact">
+                                <div class="text-truncate" style="max-width: 220px;">
+                                    <div class="text-truncate" th:if="${account.email != null and account.email != ''}">
+                                        <i class="bi bi-envelope text-muted me-1"></i><span class="small" th:text="${account.email}">email@example.com</span>
+                                    </div>
+                                    <div class="text-truncate" th:if="${account.phoneNumber != null and account.phoneNumber != ''}">
+                                        <i class="bi bi-telephone text-muted me-1"></i><span class="small text-muted" th:text="${account.phoneNumber}">0900000000</span>
                                     </div>
                                 </div>
                             </td>
 
-                            <!-- HỌ TÊN -->
-                            <td>
-                                <span class="fw-semibold text-dark" th:text="${displayNames != null and displayNames.containsKey(account.userId) ? displayNames.get(account.userId) : '—'}">Nguyễn Văn A</span>
-                            </td>
-
-                            <!-- LIÊN HỆ -->
-                            <td>
-                                <div><i class="bi bi-envelope text-muted me-1"></i><span class="small" th:text="${account.email}">email@example.com</span></div>
-                                <div><i class="bi bi-telephone text-muted me-1"></i><span class="small text-muted" th:text="${account.phoneNumber}">0900000000</span></div>
-                            </td>
-
-                            <!-- VAI TRÒ -->
-                            <td>
+                            <!-- 5. Vai trò -->
+                            <td data-col="role">
                                 <div th:if="${#sets.isEmpty(account.roles)}">
-                                    <span class="badge bg-secondary">Chưa có vai trò</span>
+                                    <span class="text-muted small">Chưa có vai trò</span>
                                 </div>
-                                <div th:unless="${#sets.isEmpty(account.roles)}">
+                                <div th:unless="${#sets.isEmpty(account.roles)}" class="d-flex flex-wrap gap-1">
                                     <span th:each="r : ${account.roles}"
-                                          class="account-chip account-chip--role me-1 mb-1"
-                                          th:classappend="${r.roleName == 'ADMIN' or r.roleName == 'ROLE_ADMIN'} ? 'account-chip--admin' : ''"
+                                          class="chip"
+                                          th:classappend="${r.roleName == 'ADMIN' or r.roleName == 'ROLE_ADMIN'} ? 'chip--primary' : 'chip--role'"
                                           th:text="${r.displayName != null ? r.displayName : r.roleName}">ROLE</span>
                                 </div>
                             </td>
 
-                            <!-- LOẠI TÀI KHOẢN -->
-                            <td>
-                                <span th:if="${account.userType != null and account.userType.name() == 'STAFF'}"
-                                      class="account-chip account-chip--staff">
-                                    <i class="bi bi-person-badge"></i> Nhân viên
+                            <!-- 6. Loại tài khoản -->
+                            <td data-col="type">
+                                <span th:if="${account.userType != null and account.userType.name() == 'STAFF'}" class="chip">
+                                    <i class="bi bi-person-badge me-1"></i>Nhân viên
                                 </span>
-                                <span th:if="${account.userType != null and account.userType.name() == 'PATIENT'}"
-                                      class="account-chip account-chip--patient">
-                                    <i class="bi bi-person"></i> Bệnh nhân
+                                <span th:if="${account.userType != null and account.userType.name() == 'PATIENT'}" class="chip chip--role">
+                                    <i class="bi bi-person me-1"></i>Bệnh nhân
                                 </span>
                             </td>
 
-                            <!-- CHI NHÁNH -->
-                            <td>
-                                <span th:if="${account.branch != null}" class="account-chip account-chip--branch">
-                                    <i class="bi bi-buildings"></i> <span th:text="${account.branch.branchName}">Chi nhánh</span>
+                            <!-- 7. Chi nhánh -->
+                            <td data-col="branch">
+                                <span th:if="${account.branch != null}" class="chip chip--primary" th:title="${account.branch.branchName}">
+                                    <i class="bi bi-buildings me-1"></i>
+                                    <span th:text="${account.branch.branchName}">Chi nhánh</span>
                                 </span>
                                 <span th:unless="${account.branch != null}" class="text-muted small">—</span>
                             </td>
 
-                            <!-- TRẠNG THÁI -->
-                            <td>
-                                <span th:if="${account.isActive}" class="status-pill status-pill--active">Hoạt động</span>
-                                <span th:unless="${account.isActive}" class="status-pill status-pill--locked">Đã khóa</span>
-                            </td>
+                            <!-- 8. Trạng thái + Floating Actions on Hover (Chuẩn MISA) -->
+                            <td data-col="status">
+                                <span class="misa-status-badge"
+                                      th:classappend="${account.isActive} ? 'misa-status-badge--active' : 'misa-status-badge--inactive'"
+                                      th:text="${account.isActive} ? 'Hoạt động' : 'Đã khóa'">
+                                    Hoạt động
+                                </span>
 
-                            <!-- THAO TÁC -->
-                            <td class="text-center text-nowrap">
-                                <div class="action-buttons justify-content-center">
-                                    <a th:href="@{/accounts/{id}(id=${account.userId})}" class="action-btn action-btn--view" title="Xem chi tiết">
+                                <!-- Các icon thao tác xuất hiện khi di chuột đến dòng -->
+                                <div class="staff-row-floating-actions">
+                                    <a th:href="@{/accounts/{id}(id=${account.userId})}"
+                                       class="staff-action-icon-btn btn-view"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"
+                                       title="Xem chi tiết">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a th:href="@{/accounts/{id}/edit(id=${account.userId})}" class="action-btn action-btn--edit" title="Sửa thông tin">
-                                        <i class="bi bi-pencil-square"></i>
+                                    <a th:href="@{/accounts/{id}/edit(id=${account.userId})}"
+                                       class="staff-action-icon-btn btn-edit"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"
+                                       title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
                                     </a>
                                     <form th:action="@{/accounts/{id}/toggle-status(id=${account.userId})}" method="post" class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản này?');">
-                                        <button type="submit" class="action-btn"
+                                        <button type="submit" class="staff-action-icon-btn"
                                                 th:disabled="${session.loggedInUser != null and session.loggedInUser.userId == account.userId}"
-                                                th:classappend="${account.isActive} ? 'action-btn--lock' : 'action-btn--unlock'"
+                                                th:classappend="${account.isActive} ? 'text-danger' : 'text-success'"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
                                                 th:title="${account.isActive} ? 'Khóa tài khoản' : 'Mở khóa tài khoản'">
-                                            <i class="bi" th:classappend="${account.isActive} ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
+                                            <i class="bi" th:classappend="${account.isActive} ? 'bi-lock' : 'bi-unlock'"></i>
                                         </button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
 
-                        <!-- KHÔNG CÓ DỮ LIỆU -->
+                        <!-- Empty State khi không có dữ liệu -->
                         <tr th:if="${#lists.isEmpty(accounts)}">
-                            <td colspan="9" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                Không tìm thấy tài khoản nào phù hợp với bộ lọc.
+                            <td colspan="8" class="p-0">
+                                <div class="account-empty-state">
+                                    <div class="account-empty-icon">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <h5 class="account-empty-title">Không tìm thấy tài khoản nào</h5>
+                                    <p class="account-empty-desc">
+                                        Không có dữ liệu tài khoản nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                    </p>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <a th:href="@{/accounts}" class="btn btn-secondary-custom btn-be">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                        </a>
+                                        <a th:href="@{/accounts/create}" class="btn btn-primary btn-be">
+                                            <i class="bi bi-plus-lg"></i> Thêm mới
+                                        </a>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- PHÂN TRANG -->
-                <div th:if="${totalPages > 1}" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                    <div class="small text-muted">
-                        Trang <strong th:text="${currentPage + 1}">1</strong> / <strong th:text="${totalPages}">1</strong>
-                        (Hiển thị <span th:text="${accounts.size()}">0</span> trong <span th:text="${totalItems}">0</span> tài khoản)
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA (Đồng bộ Quản lý nhân sự) -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalItems}">0</strong>
                     </div>
 
-                    <nav aria-label="Phân trang danh sách tài khoản">
-                        <ul class="pagination pagination-sm mb-0">
-                            <!-- TRƯỚC -->
-                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/accounts(page=${currentPage - 1}, size=${size}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}">&laquo;</a>
-                            </li>
+                    <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                    <div class="misa-pagination-right">
+                        <!-- Chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="25" th:selected="${pageSize == 25}">25</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
 
-                            <!-- SỐ TRANG -->
-                            <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
-                                th:classappend="${i == currentPage} ? 'active' : ''">
-                                <a class="page-link" th:href="@{/accounts(page=${i}, size=${size}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}"
-                                   th:text="${i + 1}">1</a>
-                            </li>
+                        <!-- Khoảng hiển thị (1 - 10) -->
+                        <div class="misa-page-range">
+                            <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                        </div>
 
-                            <!-- SAU -->
-                            <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/accounts(page=${currentPage + 1}, size=${size}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}">&raquo;</a>
-                            </li>
-                        </ul>
-                    </nav>
+                        <!-- Nút phân trang (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- Về trang đầu -->
+                            <a th:href="@{/accounts(page=0, size=${pageSize}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+
+                            <!-- Trang trước -->
+                            <a th:href="@{/accounts(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+
+                            <!-- Trang kế tiếp -->
+                            <a th:href="@{/accounts(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                               title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+
+                            <!-- Đến trang cuối -->
+                            <a th:href="@{/accounts(page=${totalPages - 1}, size=${pageSize}, keyword=${keyword}, roleId=${selectedRole}, branchId=${selectedBranch}, userType=${selectedUserType}, active=${selectedActive}, sort=${sort}, direction=${direction})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
-
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ==================== POPUP 1: DRAWER TÙY CHỈNH CỘT (MISA AMIS STYLE) ==================== -->
+<div class="offcanvas offcanvas-end custom-column-offcanvas" tabindex="-1" id="customColumnDrawer" aria-labelledby="customColumnDrawerLabel">
+    <div class="custom-column-header">
+        <h5 class="custom-column-title" id="customColumnDrawerLabel">Tùy chỉnh cột</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+    </div>
+
+    <!-- Ô tìm kiếm tên trường -->
+    <div class="custom-column-search">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+        </div>
+    </div>
+
+    <!-- Tiêu đề danh sách cột -->
+    <div class="custom-column-table-head">
+        <div class="flex-grow-1">Tên trường</div>
+    </div>
+
+    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
+    <div class="offcanvas-body p-0" id="customColList">
+        <!-- 1. STT -->
+        <div class="custom-col-item" data-col-target="stt">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+        </div>
+
+        <!-- 2. Tài khoản -->
+        <div class="custom-col-item" data-col-target="username">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-username" checked>
+            <label for="chk-col-username" class="custom-col-name">Tài khoản</label>
+        </div>
+
+        <!-- 3. Họ và tên -->
+        <div class="custom-col-item" data-col-target="fullname">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-fullname" checked>
+            <label for="chk-col-fullname" class="custom-col-name">Họ và tên</label>
+        </div>
+
+        <!-- 4. Thông tin liên hệ -->
+        <div class="custom-col-item" data-col-target="contact">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-contact" checked>
+            <label for="chk-col-contact" class="custom-col-name">Thông tin liên hệ</label>
+        </div>
+
+        <!-- 5. Vai trò -->
+        <div class="custom-col-item" data-col-target="role">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-role" checked>
+            <label for="chk-col-role" class="custom-col-name">Vai trò</label>
+        </div>
+
+        <!-- 6. Loại tài khoản -->
+        <div class="custom-col-item" data-col-target="type">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-type" checked>
+            <label for="chk-col-type" class="custom-col-name">Loại tài khoản</label>
+        </div>
+
+        <!-- 7. Chi nhánh -->
+        <div class="custom-col-item" data-col-target="branch">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+            <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
+        </div>
+
+        <!-- 8. Trạng thái -->
+        <div class="custom-col-item" data-col-target="status">
+            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+        </div>
+    </div>
+
+    <!-- Nút Thao tác Footer Drawer -->
+    <div class="custom-column-footer">
+        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+            Lấy lại mặc định
+        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="offcanvas">Hủy</button>
+            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+        </div>
+    </div>
+
+<!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO ==================== -->
+<div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="advancedFilterModalLabel">
+                    <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="advUserType" class="form-label small fw-semibold text-muted">Loại tài khoản</label>
+                    <select id="advUserType" class="form-select">
+                        <option value="">Tất cả loại tài khoản</option>
+                        <option value="STAFF" th:selected="${selectedUserType == 'STAFF'}">Nhân viên (STAFF)</option>
+                        <option value="PATIENT" th:selected="${selectedUserType == 'PATIENT'}">Bệnh nhân (PATIENT)</option>
+                    </select>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="advSort" class="form-label small fw-semibold text-muted">Sắp xếp theo</label>
+                        <select id="advSort" class="form-select">
+                            <option value="createdDate" th:selected="${sort == 'createdDate'}">Ngày tạo</option>
+                            <option value="username" th:selected="${sort == 'username'}">Tên đăng nhập</option>
+                            <option value="email" th:selected="${sort == 'email'}">Email</option>
+                            <option value="isActive" th:selected="${sort == 'isActive'}">Trạng thái</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="advDirection" class="form-label small fw-semibold text-muted">Thứ tự</label>
+                        <select id="advDirection" class="form-select">
+                            <option value="desc" th:selected="${direction == 'desc'}">Giảm dần (Mới nhất)</option>
+                            <option value="asc" th:selected="${direction == 'asc'}">Tăng dần (Cũ nhất)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                    Đặt lại
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnApplyAdvancedFilter" class="btn btn-primary btn-vua">Áp dụng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Khởi tạo Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (el) {
+            return new bootstrap.Tooltip(el);
+        });
+
+        // 2. Xử lý đổi số dòng / trang (PageSize)
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('accountFilterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0'; // reset về trang 1
+                }
+                filterForm.submit();
+            });
+        }
+
+        // 3. Xử lý Bộ lọc nâng cao (Modal)
+        const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
+        const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+        const advUserType = document.getElementById('advUserType');
+        const advSort = document.getElementById('advSort');
+        const advDirection = document.getElementById('advDirection');
+        const userTypeInput = document.getElementById('userType');
+        const sortInput = document.getElementById('sortInput');
+        const directionInput = document.getElementById('directionInput');
+
+        if (btnApplyAdv) {
+            btnApplyAdv.addEventListener('click', function () {
+                if (userTypeInput && advUserType) userTypeInput.value = advUserType.value;
+                if (sortInput && advSort) sortInput.value = advSort.value;
+                if (directionInput && advDirection) directionInput.value = advDirection.value;
+                if (pageIndexInput) pageIndexInput.value = '0';
+                filterForm.submit();
+            });
+        }
+
+        if (btnResetAdv) {
+            btnResetAdv.addEventListener('click', function () {
+                if (advUserType) advUserType.value = '';
+                if (advSort) advSort.value = 'createdDate';
+                if (advDirection) advDirection.value = 'desc';
+                if (userTypeInput) userTypeInput.value = '';
+                if (sortInput) sortInput.value = 'createdDate';
+                if (directionInput) directionInput.value = 'desc';
+                if (pageIndexInput) pageIndexInput.value = '0';
+                filterForm.submit();
+            });
+        }
+
+        // 4. Kéo dãn kích thước cột (Column Resizer chuẩn MISA)
+        const table = document.getElementById('accountTable');
+        const STORAGE_WIDTH_KEY = 'cv_account_table_widths_v1';
+        const STORAGE_CONFIG_KEY = 'cv_account_cols_v1';
+
+        const defaultColOrder = ['stt', 'username', 'fullname', 'contact', 'role', 'type', 'branch', 'status'];
+        const defaultColWidths = {
+            stt: 60,
+            username: 220,
+            fullname: 190,
+            contact: 230,
+            role: 170,
+            type: 140,
+            branch: 200,
+            status: 180
+        };
+
+        let currentWidths = loadColWidths();
+        let currentConfig = getColConfig();
+
+        function loadColWidths() {
+            try {
+                const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultColWidths);
+            }
+        }
+
+        function saveColWidths(widths) {
+            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+        }
+
+        function getColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                defaultColOrder.forEach(col => {
+                    if (!order.includes(col)) order.push(col);
+                });
+                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                return { order, hidden };
+            } catch (e) {
+                return { order: defaultColOrder.slice(), hidden: [] };
+            }
+        }
+
+        function saveColConfig(config) {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function applyColOrder(order) {
+            if (!order || !Array.isArray(order) || !table) return;
+
+            const customColList = document.getElementById('customColList');
+            if (customColList) {
+                order.forEach(colKey => {
+                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                    if (item) customColList.appendChild(item);
+                });
+            }
+
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+                order.forEach(colKey => {
+                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                    if (col) colgroup.appendChild(col);
+                });
+            }
+
+            const theadTr = table.querySelector('thead tr');
+            if (theadTr) {
+                order.forEach(colKey => {
+                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                    if (th) theadTr.appendChild(th);
+                });
+            }
+
+            const tbodyRows = table.querySelectorAll('tbody tr');
+            tbodyRows.forEach(tr => {
+                order.forEach(colKey => {
+                    const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                    if (td) tr.appendChild(td);
+                });
+            });
+        }
+
+        function applyColWidths() {
+            if (!table) return;
+            currentWidths = loadColWidths();
+            let totalColsWidth = 0;
+
+            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+            order.forEach(col => {
+                const w = currentWidths[col] || defaultColWidths[col] || 160;
+                currentWidths[col] = w;
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    if (!th.classList.contains('d-none')) {
+                        totalColsWidth += w;
+                    }
+                }
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            if (totalColsWidth > containerW) {
+                table.style.width = totalColsWidth + 'px';
+            } else {
+                table.style.width = '100%';
+            }
+        }
+
+        function applyColConfig(config) {
+            if (!table) return;
+
+            const order = (config && config.order) ? config.order : defaultColOrder;
+            let visibleTotalW = 0;
+
+            order.forEach(col => {
+                const isHidden = config.hidden.includes(col);
+                const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                cells.forEach(cell => {
+                    if (isHidden) {
+                        cell.classList.add('d-none');
+                    } else {
+                        cell.classList.remove('d-none');
+                    }
+                });
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) {
+                    colEl.style.display = isHidden ? 'none' : '';
+                }
+
+                if (!isHidden) {
+                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 160);
+                }
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            if (visibleTotalW > containerW) {
+                table.style.width = visibleTotalW + 'px';
+            } else {
+                table.style.width = '100%';
+            }
+        }
+
+        function initDrawerDragAndDrop() {
+            const colList = document.getElementById('customColList');
+            if (!colList) return;
+
+            let draggedItem = null;
+
+            colList.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function () {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                });
+
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem !== this) {
+                        const rect = this.getBoundingClientRect();
+                        const mid = rect.top + rect.height / 2;
+                        if (e.clientY < mid) {
+                            colList.insertBefore(draggedItem, this);
+                        } else {
+                            colList.insertBefore(draggedItem, this.nextSibling);
+                        }
+                    }
+                });
+            });
+        }
+
+        function initColumnResizers() {
+            if (!table) return;
+            const resizers = table.querySelectorAll('.col-resizer');
+
+            resizers.forEach(resizer => {
+                let startX, startW, colKey, colEl, thEl;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    thEl = resizer.parentElement;
+                    colKey = thEl.getAttribute('data-col');
+                    colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
+
+                    startX = e.pageX;
+                    startW = thEl.offsetWidth;
+
+                    resizer.classList.add('is-resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const newW = Math.max(startW + diff, 50);
+
+                        if (thEl) {
+                            thEl.style.width = newW + 'px';
+                            thEl.style.minWidth = newW + 'px';
+                        }
+                        if (colEl) {
+                            colEl.style.width = newW + 'px';
+                        }
+                        currentWidths[colKey] = newW;
+
+                        let totalW = 0;
+                        table.querySelectorAll('thead th').forEach(th => {
+                            if (!th.classList.contains('d-none')) {
+                                totalW += th.offsetWidth;
+                            }
+                        });
+                        const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                        if (totalW > containerW) {
+                            table.style.width = totalW + 'px';
+                        } else {
+                            table.style.width = '100%';
+                        }
+                    }
+
+                    function onMouseUp() {
+                        resizer.classList.remove('is-resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+
+                        saveColWidths(currentWidths);
+
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Tìm kiếm tên trường trong Drawer
+        const colSearchInput = document.getElementById('colSearchInput');
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const term = this.value.toLowerCase().trim();
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(item => {
+                    const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = label.includes(term) ? '' : 'none';
+                });
+            });
+        }
+
+        // Lưu cấu hình tùy chỉnh cột
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                const order = [];
+                const hidden = [];
+
+                items.forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    order.push(colKey);
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+
+                currentConfig = { order, hidden };
+                saveColConfig(currentConfig);
+
+                applyColOrder(order);
+                applyColConfig(currentConfig);
+
+                const offcanvasEl = document.getElementById('customColumnDrawer');
+                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (offcanvas) offcanvas.hide();
+            });
+        }
+
+        // Lấy lại mặc định
+        const btnResetCols = document.getElementById('btnResetCols');
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                localStorage.removeItem(STORAGE_CONFIG_KEY);
+
+                currentWidths = Object.assign({}, defaultColWidths);
+                currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+
+                applyColOrder(currentConfig.order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+
+                const offcanvasEl = document.getElementById('customColumnDrawer');
+                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (offcanvas) offcanvas.hide();
+            });
+        }
+
+        // Áp dụng cấu hình và khởi tạo các sự kiện
+        if (table) {
+            applyColOrder(currentConfig.order);
+            applyColWidths();
+            applyColConfig(currentConfig);
+            initColumnResizers();
+            initDrawerDragAndDrop();
+        }
+    });
+</script>
+
 </body>
+
 </html>
