@@ -17,6 +17,8 @@ public interface PatientProfileRepository
     //Bổ sung phương thức lấy hồ sơ mặc định của tài khoản:
     Optional<PatientProfile> findFirstByUser_UserIdAndIsDefaultTrue(Long userId);
 
+    Optional<PatientProfile> findByPatientCode(String patientCode);
+
     //Lấy danh sách tất cả hồ sơ thuộc tài khoản đang đăng nhập.
     //Chỉ tìm được hồ sơ nếu hồ sơ đó thuộc đúng tài khoản.
     //Kiểm tra tài khoản đã có hồ sơ nào chưa.

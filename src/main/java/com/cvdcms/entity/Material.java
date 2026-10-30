@@ -1,5 +1,7 @@
 package com.cvdcms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +13,9 @@ import java.math.BigDecimal;
 @Table(
         name = "materials",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_mat_code", columnNames = "material_code")
+                @UniqueConstraint(name = "uk_mat_code", columnNames = "material_code"),
+                // Một thuốc chỉ được liên kết với tối đa một mặt hàng kho (MySQL cho phép nhiều giá trị NULL).
+                @UniqueConstraint(name = "uk_materials_medication", columnNames = "medication_id")
         }
 )
 @Getter
@@ -41,4 +45,24 @@ public class Material {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    /**
+     * Liên kết tùy chọn tới danh mục thuốc (bảng medications).
+     * - NULL: vật tư thông thường, không phải thuốc.
+     * - Khác NULL: mặt hàng kho được đồng bộ tự động khi Admin tạo thuốc.
+     * Không serialize trực tiếp (tránh lazy-loading khi trả JSON); giao diện dùng getMedicationId().
+     */
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "medication_id",
+            foreignKey = @ForeignKey(name = "fk_materials_medication")
+    )
+    private Medication medication;
+
+    /** ID thuốc liên kết (null nếu là vật tư thông thường) — phục vụ JSON/giao diện kho. */
+    @JsonProperty("medicationId")
+    public Long getMedicationId() {
+        return medication == null ? null : medication.getMedicationId();
+    }
 }
