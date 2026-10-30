@@ -1,0 +1,92 @@
+.patient-section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.5rem 0 1rem;
+}
+
+.patient-section-heading h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 .2rem;
+}
+
+.patient-section-heading p {
+    color: #64748b;
+    margin: 0;
+}
+
+.patient-emr-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .85rem;
+}
+
+.patient-emr-list article {
+    border: 1px solid #dbe4f0;
+    border-radius: .8rem;
+    padding: 1rem;
+    background: #f8fafc;
+}
+
+.patient-emr-list article > div,
+.patient-emr-visit__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.patient-emr-list p,
+.patient-emr-visit p {
+    color: #64748b;
+    margin: .55rem 0;
+}
+
+.patient-emr-list a {
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.patient-emr-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: .25rem .55rem;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.patient-emr-status.status-SIGNED {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.patient-emr-status.status-PATIENT_SIGNATURE_PENDING,
+.patient-emr-status.status-DOCTOR_SIGNATURE_PENDING {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.patient-emr-status.status-READY_TO_LOCK {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.patient-emr-visit {
+    border-top: 3px solid #2563eb;
+}
+
+@media (max-width: 760px) {
+    .patient-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .patient-emr-list {
+        grid-template-columns: 1fr;
+    }
+}

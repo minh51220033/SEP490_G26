@@ -1,5 +1,8 @@
 package com.cvdcms.patient;
 
+import com.cvdcms.emr.EmrRecord;
+import com.cvdcms.emr.EmrRecordRepository;
+import com.cvdcms.emr.EmrRecordStatus;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.repository.*;
@@ -16,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 @Transactional(readOnly = true)
@@ -32,18 +36,21 @@ public class DoctorRecordService {
     private final PrescriptionRepository prescriptions;
     private final BranchRepository branchRepository;
     private final PatientDocumentStorageService documentStorage;
+    private final EmrRecordRepository emrRecords;
 
     public DoctorRecordService(UserRepository users, StaffBranchAssignmentRepository assignments,
             DoctorRecordRepository profiles, PatientVisitReadRepository visits,
             ClinicalPhotoRepository photos, TreatmentPlanRepository plans,
             ClinicalExaminationRepository examinations, ExaminationDiagnosisRepository diagnoses,
             PerformedServiceRepository performed, PrescriptionRepository prescriptions,
-            BranchRepository branchRepository, PatientDocumentStorageService documentStorage) {
+            BranchRepository branchRepository, PatientDocumentStorageService documentStorage,
+            EmrRecordRepository emrRecords) {
         this.users = users; this.assignments = assignments; this.profiles = profiles;
         this.visits = visits; this.photos = photos; this.plans = plans;
         this.examinations = examinations; this.diagnoses = diagnoses;
         this.performed = performed; this.prescriptions = prescriptions;
         this.branchRepository = branchRepository; this.documentStorage = documentStorage;
+        this.emrRecords = emrRecords;
     }
 
     private Set<Long> branches(HttpSession session) {
@@ -106,7 +113,24 @@ public class DoctorRecordService {
                 performed.findByVisitIdWithDetails(visitId).stream()
                         .map(item -> item.getService().getServiceName()).toList(),
                 prescriptions.findByVisit_VisitIdOrderByCreatedAtDesc(visitId).stream()
-                        .map(Prescription::getPrescriptionCode).toList());
+                        .map(Prescription::getPrescriptionCode).toList(),
+                emrRecords.findByVisit_VisitId(visitId).map(this::toEmrView).orElse(null));
+    }
+
+    public List<EmrView> emrRecords(HttpSession session, Long patientId) {
+        get(session, patientId);
+        Set<Long> allowed = branches(session);
+        return emrRecords.findAllByPatientProfileId(patientId).stream()
+                .filter(record -> allowed.contains(record.getBranch().getBranchId()))
+                .map(this::toEmrView)
+                .toList();
+    }
+
+    private EmrView toEmrView(EmrRecord record) {
+        Visit visit = record.getVisit();
+        return new EmrView(record.getRecordId(), record.getRecordCode(),
+                visit.getVisitId(), visit.getVisitCode(), visit.getCheckInAt(),
+                record.getStatus(), record.getCurrentVersionNumber(), record.getUpdatedAt());
     }
 
     public List<PhotoView> photos(HttpSession session, Long id) {
@@ -134,7 +158,10 @@ public class DoctorRecordService {
     }
 
     public record VisitDetails(VisitView visit, String assessment, List<String> diagnoses,
-                               List<String> services, List<String> prescriptions) {}
+                               List<String> services, List<String> prescriptions, EmrView emr) {}
+    public record EmrView(Long id, String code, Long visitId, String visitCode,
+                          LocalDateTime checkInAt, EmrRecordStatus status,
+                          Integer versionNumber, LocalDateTime updatedAt) {}
     public record PhotoView(String url, String caption) {}
     public record PlanView(String name, String status) {}
 }
