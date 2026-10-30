@@ -1,210 +1,321 @@
 <!DOCTYPE html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head>
+<head th:replace="~{fragments/head :: head('Tạo tài khoản')}"></head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
+<body class="app-body">
 
-    <title>Tạo tài khoản</title>
+    <div class="app-shell">
 
-    <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-            rel="stylesheet">
+        <aside th:replace="~{fragments/sidebar :: sidebar('accounts')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-</head>
+        <div class="app-main">
 
-<body>
+            <header th:replace="~{fragments/header :: appTopbar('Tạo tài khoản')}"></header>
 
-<div class="container py-5">
+            <main class="app-content">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
 
-    <div class="row justify-content-center">
-
-        <div class="col-md-7">
-
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-
-                    <h4 class="mb-0">
-                        Tạo tài khoản
-                    </h4>
-
+                <!-- THÔNG BÁO LỖI NẾU CÓ -->
+                <div th:if="${error}"
+                    class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <span th:text="${error}">Đã xảy ra lỗi</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-
-                <div class="card-body">
-
-                    <!-- ERROR -->
-                    <div
-                            th:if="${error}"
-                            class="alert alert-danger"
-                            th:text="${error}">
-                        Có lỗi xảy ra
+                <!-- FORM TẠO TÀI KHOẢN (SCR-01.2) -->
+                <section class="panel" style="max-width: 860px; margin: 0 auto;">
+                    <div class="panel__head">
+                        <div>
+                            <a th:href="@{/accounts}" class="text-decoration-none small text-muted">
+                                <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách tài khoản
+                            </a>
+                            <h3 class="panel__title mt-1">Tạo tài khoản người dùng mới</h3>
+                            <p class="panel__subtitle">Điền đầy đủ các thông tin bắt buộc có dấu <span
+                                    class="text-danger">*</span></p>
+                        </div>
                     </div>
 
+                    <form th:action="@{/accounts/create}" th:object="${accountCreateDTO}" method="post">
 
-                    <form
-                            th:action="@{/accounts/create}"
-                            th:object="${accountCreateDTO}"
-                            method="post">
-
-
-                        <!-- USERNAME -->
-                        <div class="mb-3">
-
-                            <label class="form-label">
-                                Username
-                                <span class="text-danger">*</span>
-                            </label>
-
-                            <input
-                                    type="text"
-                                    class="form-control"
-                                    th:field="*{username}"
-                                    required
-                                    minlength="3"
-                                    maxlength="50"
-                                    placeholder="Nhập username">
-
+                        <!-- 1. THÔNG TIN XÁC THỰC -->
+                        <div class="form-section-title">
+                            <i class="bi bi-key-fill text-primary"></i> 1. Thông tin đăng nhập
                         </div>
 
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <label for="username" class="form-label small fw-semibold">Tên đăng nhập <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" id="username" class="form-control" th:field="*{username}" required
+                                    minlength="3" maxlength="50" placeholder="Ví dụ: bsamnh, letan01...">
+                                <div class="form-text small text-muted">Tên đăng nhập viết liền, không dấu, từ 3 đến 50
+                                    ký tự.</div>
+                            </div>
 
+                            <div class="col-md-6">
+                                <label for="password" class="form-label small fw-semibold">Mật khẩu <span
+                                        class="text-danger">*</span></label>
+                                <input type="password" id="password" class="form-control" th:field="*{password}"
+                                    required minlength="6" placeholder="Tối thiểu 6 ký tự">
+                            </div>
 
-
-
-                        <!-- EMAIL -->
-                        <div class="mb-3">
-
-                            <label class="form-label">
-                                Email
-                            </label>
-
-                            <input
-                                    type="email"
-                                    class="form-control"
-                                    th:field="*{email}"
-                                    placeholder="example@gmail.com">
-
-                        </div>
-
-
-                        <!-- PHONE -->
-                        <div class="mb-3">
-
-                            <label class="form-label">
-                                Số điện thoại
-                            </label>
-
-                            <input
-                                    type="text"
-                                    class="form-control"
-                                    th:field="*{phoneNumber}"
-                                    placeholder="0901234567">
-
-                        </div>
-
-
-                        <!-- PASSWORD -->
-                        <div class="mb-3">
-
-                            <label class="form-label">
-                                Mật khẩu
-                                <span class="text-danger">*</span>
-                            </label>
-
-                            <input
-                                    type="password"
-                                    class="form-control"
-                                    th:field="*{password}"
-                                    required
-                                    minlength="6"
-                                    placeholder="Nhập mật khẩu">
-
-                        </div>
-
-
-                        <!-- CONFIRM PASSWORD -->
-                        <div class="mb-3">
-
-                            <label class="form-label">
-                                Xác nhận mật khẩu
-                                <span class="text-danger">*</span>
-                            </label>
-
-                            <input
-                                    type="password"
-                                    class="form-control"
-                                    th:field="*{confirmPassword}"
-                                    required
-                                    minlength="6"
+                            <div class="col-md-6">
+                                <label for="confirmPassword" class="form-label small fw-semibold">Xác nhận mật khẩu
+                                    <span class="text-danger">*</span></label>
+                                <input type="password" id="confirmPassword" class="form-control"
+                                    th:field="*{confirmPassword}" required minlength="6"
                                     placeholder="Nhập lại mật khẩu">
-
+                            </div>
                         </div>
 
-
-                        <!-- ROLE -->
-                        <div class="mb-4">
-
-                            <label class="form-label">
-                                Role
-                                <span class="text-danger">*</span>
-                            </label>
-
-                            <select
-                                    class="form-select"
-                                    th:field="*{roleId}"
-                                    required>
-
-                                <option value="">
-                                    -- Chọn role --
-                                </option>
-
-                                <option
-                                        th:each="role : ${roles}"
-                                        th:if="${isAdmin
-        or (role.roleName != 'ADMIN'
-        and role.roleName != 'ROLE_ADMIN')}"
-                                        th:value="${role.roleId}"
-                                        th:text="${role.roleName}">
-                                </option>
-
-                            </select>
-
+                        <!-- 2. THÔNG TIN LIÊN HỆ -->
+                        <div class="form-section-title">
+                            <i class="bi bi-person-lines-fill text-primary"></i> 2. Thông tin liên hệ
                         </div>
 
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label small fw-semibold">Địa chỉ Email <span
+                                        class="text-danger">*</span></label>
+                                <input type="email" id="email" class="form-control" th:field="*{email}" required
+                                    placeholder="example@cuongvietdental.vn">
+                            </div>
 
-                        <!-- BUTTON -->
-                        <div
-                                class="d-flex justify-content-between">
+                            <div class="col-md-6">
+                                <label for="phoneNumber" class="form-label small fw-semibold">Số điện thoại <span
+                                        class="text-danger">*</span></label>
+                                <input type="tel" id="phoneNumber" class="form-control" th:field="*{phoneNumber}"
+                                    required placeholder="Ví dụ: 0912345678">
+                            </div>
+                        </div>
 
-                            <a
-                                    th:href="@{/accounts}"
-                                    class="btn btn-secondary">
-                                Quay lại
+                        <!-- 3. PHÂN QUYỀN & CHI NHÁNH -->
+                        <div class="form-section-title">
+                            <i class="bi bi-shield-check text-primary"></i> 3. Phân quyền vai trò &amp; Cơ sở
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="roleId" class="form-label small fw-semibold">Vai trò hệ thống <span
+                                        class="text-danger">*</span></label>
+                                <select id="roleId" class="form-select" th:field="*{roleId}" required>
+                                    <option value="">-- Chọn vai trò --</option>
+                                    <option th:each="r : ${roles}"
+                                        th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN'}"
+                                        th:data-role-name="${r.roleName}" th:value="${r.roleId}"
+                                        th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
+                                </select>
+                                <div class="form-text small text-muted">Hệ thống sẽ tự động gán loại tài khoản
+                                    (STAFF/PATIENT) tương ứng.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="branchId" class="form-label small fw-semibold">Chi nhánh trực thuộc</label>
+                                <select id="branchId" class="form-select" th:field="*{branchId}">
+                                    <option value="">-- Không gán chi nhánh (Toàn hệ thống) --</option>
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}"
+                                        th:text="${b.branchName}">Chi nhánh</option>
+                                </select>
+                                <div class="form-text small text-muted" id="branchHint">Có thể gán chi nhánh làm việc
+                                    chính hoặc bỏ trống.</div>
+                            </div>
+                        </div>
+
+                        <!-- 3B. TÙY CHỈNH QUYỀN HẠN CHI TIẾT CHO TÀI KHOẢN TRONG PHẠM VI VAI TRÒ -->
+                        <input type="hidden" name="customPermissionsSubmitted" value="true">
+                        <div id="customPermissionContainer" class="mb-4" style="display: none;">
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div
+                                    class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                                    <div>
+                                        <div class="fw-semibold text-dark small">
+                                            <i class="bi bi-sliders2-vertical text-primary me-1"></i>
+                                            Quyền hạn chi tiết của tài khoản (Trong tập quyền của vai trò đã chọn)
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.78rem;">
+                                            Mặc định tài khoản được tích sẵn toàn bộ quyền chuẩn của vai trò. Bạn có thể
+                                            bỏ tích bớt quyền nếu muốn giới hạn phạm vi thao tác của nhân sự này.
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span id="permCounterBadge"
+                                            class="badge bg-primary-subtle text-primary border border-primary-subtle">0
+                                            / 0 quyền</span>
+                                        <button type="button" id="btnCheckAllRolePerms"
+                                            class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            style="font-size: 0.78rem;">
+                                            <i class="bi bi-check2-all me-1"></i>Chọn đủ mặc định
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div th:each="r : ${roles}"
+                                    th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and r.roleName != 'BENH_NHAN' and r.roleName != 'ROLE_BENH_NHAN'}"
+                                    class="role-permission-panel" th:attr="data-role-id=${r.roleId}"
+                                    style="display: none;">
+                                    <div th:if="${r.permissions == null or #lists.isEmpty(r.permissions)}"
+                                        class="text-muted small fst-italic py-2">
+                                        Vai trò này hiện chưa được cấu hình danh sách quyền chi tiết.
+                                    </div>
+                                    <div th:if="${r.permissions != null and !#lists.isEmpty(r.permissions)}"
+                                        class="row g-2 mt-1">
+                                        <div class="col-md-6" th:each="perm : ${r.permissions}">
+                                            <label
+                                                class="d-flex align-items-start gap-2 p-2 rounded border bg-white h-100"
+                                                style="cursor: pointer;">
+                                                <input type="checkbox" class="form-check-input mt-1 role-perm-checkbox"
+                                                    name="permissionIds" th:value="${perm.permissionId}"
+                                                    th:attr="data-code=${perm.permissionCode}"
+                                                    th:checked="${accountCreateDTO.permissionIds == null or #lists.isEmpty(accountCreateDTO.permissionIds) or #lists.contains(accountCreateDTO.permissionIds, perm.permissionId)}"
+                                                    disabled>
+                                                <span class="small">
+                                                    <span class="fw-semibold d-block text-dark"
+                                                        th:text="${perm.description != null ? perm.description : perm.permissionCode}">Tên quyền</span>
+                                                    <code class="text-muted" style="font-size: 0.72rem;"
+                                                        th:text="${perm.permissionCode}">CODE</code>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NÚT LƯU & QUAY LẠI -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a th:href="@{/accounts}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Hủy bỏ
                             </a>
-
-                            <button
-                                    type="submit"
-                                    class="btn btn-primary">
-                                Tạo tài khoản
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-lg me-1"></i> Tạo tài khoản
                             </button>
-
                         </div>
 
                     </form>
+                </section>
+            </main>
 
-                </div>
-
-            </div>
-
+            <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
         </div>
-
     </div>
 
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Quản trị viên là cấp toàn hệ thống: không gán chi nhánh + Hiển thị tập quyền chi tiết theo vai trò đã chọn.
+        (function () {
+            var role = document.getElementById('roleId');
+            var branch = document.getElementById('branchId');
+            var hint = document.getElementById('branchHint');
+            var permContainer = document.getElementById('customPermissionContainer');
+            var permCounter = document.getElementById('permCounterBadge');
+            var btnCheckAll = document.getElementById('btnCheckAllRolePerms');
+            var panels = document.querySelectorAll('.role-permission-panel');
+            if (!role || !branch) return;
 
+            function updateCounter(activePanel) {
+                if (!permCounter) return;
+                if (!activePanel) {
+                    permCounter.textContent = '0 / 0 quyền';
+                    return;
+                }
+                var boxes = activePanel.querySelectorAll('.role-perm-checkbox');
+                var checkedCount = 0;
+                boxes.forEach(function (cb) {
+                    if (cb.checked) checkedCount++;
+                });
+                permCounter.textContent = checkedCount + ' / ' + boxes.length + ' quyền được cấp';
+            }
+
+            function sync(resetToAllChecked) {
+                var opt = role.options[role.selectedIndex];
+                var selectedRoleId = role.value;
+                var name = opt ? (opt.getAttribute('data-role-name') || '').toUpperCase() : '';
+                var isAdminRole = name === 'ADMIN' || name === 'ROLE_ADMIN';
+                var isPatientRole = name === 'BENH_NHAN' || name === 'ROLE_BENH_NHAN' || name === 'PATIENT' || name === 'ROLE_PATIENT';
+
+                branch.disabled = isAdminRole;
+                if (isAdminRole) {
+                    branch.value = '';
+                    if (hint) hint.textContent = 'Quản trị viên là cấp toàn hệ thống nên không gán chi nhánh.';
+                } else if (hint) {
+                    hint.textContent = 'Có thể gán chi nhánh làm việc chính hoặc bỏ trống.';
+                }
+
+                var activePanel = null;
+                panels.forEach(function (panel) {
+                    var panelRoleId = panel.getAttribute('data-role-id');
+                    var isMatch = selectedRoleId && panelRoleId === selectedRoleId && !isAdminRole && !isPatientRole;
+                    panel.style.display = isMatch ? 'block' : 'none';
+                    var boxes = panel.querySelectorAll('.role-perm-checkbox');
+                    boxes.forEach(function (cb) {
+                        cb.disabled = !isMatch;
+                        if (isMatch && resetToAllChecked) {
+                            cb.checked = true;
+                        }
+                    });
+                    if (isMatch) {
+                        activePanel = panel;
+                    }
+                });
+
+                if (permContainer) {
+                    permContainer.style.display = activePanel ? 'block' : 'none';
+                }
+                updateCounter(activePanel);
+            }
+
+            role.addEventListener('change', function () {
+                sync(true);
+            });
+
+            var impliedMap = {
+                'APPOINTMENT_MANAGE': 'APPOINTMENT_VIEW',
+                'CLINICAL_EXAM_WRITE': 'MEDICAL_RECORD_VIEW',
+                'INVOICE_CREATE': 'INVOICE_VIEW',
+                'PAYMENT_COLLECT': 'INVOICE_VIEW',
+                'INVENTORY_MANAGE': 'INVENTORY_VIEW'
+            };
+
+            panels.forEach(function (panel) {
+                panel.addEventListener('change', function (e) {
+                    var target = e.target;
+                    if (target && target.classList.contains('role-perm-checkbox')) {
+                        var code = (target.getAttribute('data-code') || '').toUpperCase();
+                        if (target.checked && impliedMap[code]) {
+                            var viewCb = panel.querySelector('.role-perm-checkbox[data-code="' + impliedMap[code] + '"]');
+                            if (viewCb) viewCb.checked = true;
+                        } else if (!target.checked && code) {
+                            Object.keys(impliedMap).forEach(function (manageKey) {
+                                if (impliedMap[manageKey] === code) {
+                                    var manageCb = panel.querySelector('.role-perm-checkbox[data-code="' + manageKey + '"]');
+                                    if (manageCb) manageCb.checked = false;
+                                }
+                            });
+                        }
+                    }
+                    updateCounter(panel);
+                });
+            });
+
+            if (btnCheckAll) {
+                btnCheckAll.addEventListener('click', function () {
+                    panels.forEach(function (panel) {
+                        if (panel.style.display !== 'none') {
+                            panel.querySelectorAll('.role-perm-checkbox').forEach(function (cb) {
+                                cb.checked = true;
+                            });
+                            updateCounter(panel);
+                        }
+                    });
+                });
+            }
+
+            sync(false);
+        })();
+    </script>
 </body>
+
 </html>

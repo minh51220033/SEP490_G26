@@ -234,10 +234,10 @@
             </div>
         </section>
 
-        <hr>
+        <hr th:if="${isPatient}">
 
-        <!-- PHẦN 2: DANH SÁCH HỒ SƠ BỆNH NHÂN -->
-        <section>
+        <!-- PHẦN 2: DANH SÁCH HỒ SƠ BỆNH NHÂN (chỉ dành cho BENH_NHAN) -->
+        <section th:if="${isPatient}">
             <h2>Danh sách hồ sơ bệnh nhân</h2>
 
             <div th:if="${patientProfiles != null

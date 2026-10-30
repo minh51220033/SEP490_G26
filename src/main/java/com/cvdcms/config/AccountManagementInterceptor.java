@@ -12,13 +12,6 @@ import java.io.IOException;
 
 /**
  * Bảo vệ các đường dẫn quản lý tài khoản /accounts/**.
- *
- * Chỉ cho phép tài khoản:
- * - Đã đăng nhập.
- * - Đang hoạt động trong database.
- * - Có vai trò ADMIN hoặc LE_TAN đang hoạt động.
- *
- * Quyền chi tiết của từng thao tác sẽ được kiểm tra riêng.
  */
 @Component
 public class AccountManagementInterceptor implements HandlerInterceptor {
@@ -36,10 +29,8 @@ public class AccountManagementInterceptor implements HandlerInterceptor {
             Object handler
     ) throws IOException {
 
-        // Bước 1: Lấy session hiện tại, không tự tạo session mới.
         HttpSession session = request.getSession(false);
 
-        // Chưa đăng nhập hoặc session không chứa User hợp lệ.
         if (session == null
                 || !(session.getAttribute("loggedInUser") instanceof User)) {
 
@@ -49,7 +40,6 @@ public class AccountManagementInterceptor implements HandlerInterceptor {
 
         User sessionUser = (User) session.getAttribute("loggedInUser");
 
-        // Bước 2: Kiểm tra ID tài khoản trong session.
         if (sessionUser.getUserId() == null) {
             response.sendError(
                     HttpServletResponse.SC_FORBIDDEN,
@@ -58,12 +48,11 @@ public class AccountManagementInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // Bước 3: Kiểm tra quyền từ database ở mỗi request.
-        // Việc này giúp phát hiện khi tài khoản bị khóa hoặc bị thu hồi vai trò.
-        boolean hasPermission =
-                userRepository.hasActiveAccountManagementRole(
-                        sessionUser.getUserId()
-                );
+        String uri = request.getRequestURI();
+        boolean hasPermission = userRepository.hasActiveAdminRole(sessionUser.getUserId())
+                || (uri != null && uri.contains("/accounts/roles")
+                ? userRepository.hasActivePermission(sessionUser.getUserId(), "ROLE_MANAGE")
+                : userRepository.hasActivePermission(sessionUser.getUserId(), "ACCOUNT_MANAGE"));
 
         if (!hasPermission) {
             response.sendError(
@@ -73,7 +62,6 @@ public class AccountManagementInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // Đủ điều kiện đi tiếp đến Controller.
         return true;
     }
 }
