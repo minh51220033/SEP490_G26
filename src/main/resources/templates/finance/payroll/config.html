@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Cấu Hình Hoa Hồng Bác Sĩ - SCR-32.3')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('payroll_config')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Cấu Hình Hoa Hồng Bác Sĩ')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1>Cấu Hình Chính Sách Hoa Hồng Bác Sĩ (SCR-32.3)</h1>
+                    <p>Mặc định tính năng tính hoa hồng ở trạng thái <strong>TẮT (OFF)</strong>. Chỉ kích hoạt khi phòng khám có chính sách chia thưởng theo ca khám/thực hiện dịch vụ.</p>
+                </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <button th:if="${isAdmin}" type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#createPolicyModal">
+                        <i class="bi bi-plus-circle"></i> Thêm chính sách hoa hồng
+                    </button>
+                    <span th:if="${!isAdmin}" class="badge bg-secondary-subtle text-secondary py-2 px-3 border">
+                        <i class="bi bi-shield-lock me-1"></i> Chế độ xem (Chỉ Admin mới có quyền cấu hình)
+                    </span>
+                    <a th:href="@{/payroll}" class="fin-btn fin-btn-outline"><i class="bi bi-calculator"></i> Bảng lương</a>
+                </div>
+            </div>
+
+            <!-- Notice Alert -->
+            <div class="alert alert-warning py-2 mb-4 border-warning">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Trạng thái tính năng:</strong> Cơ chế hoa hồng bác sĩ hiện đang ở trạng thái cấu hình chuẩn bị (DRAFT - Mặc định TẮT hoàn toàn). Quy tắc tự động tính toán hoa hồng theo dịch vụ hoàn thành sẽ được kích hoạt khi phòng khám chốt chính sách tỷ lệ và quy trình phân bổ. Trong kỳ lương, các dòng lương mặc định giữ hoa hồng 0 đ.
+            </div>
+
+            <!-- Policies Table -->
+            <div class="fin-card">
+                <div class="table-responsive">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Tên chính sách</th>
+                            <th>Dịch vụ áp dụng</th>
+                            <th>Vai trò áp dụng</th>
+                            <th>Bác sĩ chỉ định</th>
+                            <th>Loại hoa hồng</th>
+                            <th class="text-end">Mức hoa hồng</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${policies.isEmpty()}">
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                Chưa có chính sách hoa hồng nào được thiết lập. (Tính năng hoa hồng đang TẮT hoàn toàn).
+                            </td>
+                        </tr>
+                        <tr th:each="pol : ${policies}">
+                            <td class="fw-semibold text-primary" th:text="${pol.policyName}"></td>
+                            <td th:text="${pol.service != null ? pol.service.serviceName : 'Tất cả dịch vụ'}"></td>
+                            <td th:text="${pol.role != null ? pol.role.displayName : 'Tất cả vai trò'}"></td>
+                            <td th:text="${pol.staff != null ? pol.staff.fullName : 'Tất cả nhân sự'}"></td>
+                            <td>
+                                <span th:if="${pol.commissionType.name() == 'PERCENTAGE'}" class="badge bg-primary-subtle text-primary">Phần trăm (%)</span>
+                                <span th:if="${pol.commissionType.name() == 'FIXED_AMOUNT'}" class="badge bg-secondary-subtle text-secondary">Số tiền cố định</span>
+                            </td>
+                            <td class="text-end fw-bold">
+                                <span th:if="${pol.commissionType.name() == 'PERCENTAGE'}" th:text="${pol.commissionValue} + ' %'"></span>
+                                <span th:if="${pol.commissionType.name() == 'FIXED_AMOUNT'}"
+                                      th:text="${#numbers.formatDecimal(pol.commissionValue, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                            </td>
+                            <td>
+                                <span th:if="${pol.isActive}" class="badge bg-success">Đang BẬT</span>
+                                <span th:if="${!pol.isActive}" class="badge bg-secondary">Đang TẮT (Nháp)</span>
+                            </td>
+                            <td class="text-center">
+                                <th:block th:if="${isAdmin}">
+                                    <form th:action="@{/payroll/commission-config/{id}/toggle(id=${pol.policyId})}" method="post" class="d-inline">
+                                        <input type="hidden" name="isActive" th:value="${!pol.isActive}">
+                                        <button type="submit" class="btn btn-sm" th:classappend="${pol.isActive} ? 'btn-outline-warning' : 'btn-outline-success'">
+                                            <i class="bi" th:classappend="${pol.isActive} ? 'bi-toggle-on' : 'bi-toggle-off'"></i>
+                                            <span th:text="${pol.isActive} ? 'Tắt' : 'Bật'"></span>
+                                        </button>
+                                    </form>
+                                    <form th:action="@{/payroll/commission-config/{id}/delete(id=${pol.policyId})}" method="post" class="d-inline ms-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa chính sách này?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </th:block>
+                                <span th:if="${!isAdmin}" class="text-muted small"><i class="bi bi-lock"></i> Chỉ đọc</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Thêm Chính Sách Hoa Hồng -->
+<div class="modal fade" id="createPolicyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form th:action="@{/payroll/commission-config/save}" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-sliders text-primary me-2"></i>Thêm chính sách hoa hồng mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="pName" class="form-label fw-bold">Tên chính sách <span class="text-danger">*</span></label>
+                        <input type="text" id="pName" name="policyName" class="form-control" required placeholder="Ví dụ: Hoa hồng cấy ghép Implant 5%">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="pService" class="form-label">Dịch vụ áp dụng (để trống nếu áp dụng tất cả)</label>
+                        <select id="pService" name="serviceId" class="form-select">
+                            <option value="">-- Tất cả dịch vụ --</option>
+                            <option th:each="svc : ${services}" th:value="${svc.serviceId}" th:text="${svc.serviceName}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="pRole" class="form-label">Vai trò áp dụng (để trống nếu áp dụng tất cả)</label>
+                        <select id="pRole" name="roleId" class="form-select">
+                            <option value="">-- Tất cả vai trò --</option>
+                            <option th:each="r : ${roles}" th:value="${r.roleId}" th:text="${r.displayName != null ? r.displayName : r.roleName}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="pStaff" class="form-label">Bác sĩ / Nhân sự chỉ định riêng (nếu có)</label>
+                        <select id="pStaff" name="staffId" class="form-select">
+                            <option value="">-- Áp dụng chung theo vai trò --</option>
+                            <option th:each="st : ${staffList}" th:value="${st.staffId}" th:text="${st.fullName} + ' (' + ${st.staffCode} + ')'"></option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="pType" class="form-label fw-bold">Cách tính hoa hồng <span class="text-danger">*</span></label>
+                            <select id="pType" name="commissionType" class="form-select" required>
+                                <option value="PERCENTAGE">Theo tỷ lệ %</option>
+                                <option value="FIXED_AMOUNT">Số tiền cố định (VNĐ)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="pValue" class="form-label fw-bold">Mức hoa hồng <span class="text-danger">*</span></label>
+                            <input type="number" id="pValue" name="commissionValue" class="form-control" min="0" step="0.5" required placeholder="Nhập % hoặc số tiền">
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="pActive" name="isActive" value="true">
+                        <label class="form-check-label fw-semibold" for="pActive">Kích hoạt chính sách ngay sau khi lưu</label>
+                        <div class="text-muted small">Mặc định tắt nếu không chọn.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Lưu chính sách</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
