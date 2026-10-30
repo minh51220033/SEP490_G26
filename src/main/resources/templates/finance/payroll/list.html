@@ -88,18 +88,18 @@
             <!-- Periods Table -->
             <div class="fin-card">
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft32-payroll-periods">
                         <thead>
                         <tr>
-                            <th>Kỳ lương</th>
-                            <th>Tên bảng lương</th>
-                            <th>Chi nhánh</th>
-                            <th class="text-end">Tổng lương Net</th>
-                            <th class="text-end">Đã khấu trừ tạm ứng</th>
-                            <th class="text-end">Tổng thực trả</th>
-                            <th>Trạng thái</th>
-                            <th>Người tạo/duyệt</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="period" data-pinned="true" style="min-width: 100px;">Kỳ lương</th>
+                            <th data-column-key="name" style="min-width: 180px;">Tên bảng lương</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Chi nhánh</th>
+                            <th data-column-key="totalSalary" class="text-end" style="min-width: 130px;">Tổng lương Net</th>
+                            <th data-column-key="advance" class="text-end" style="min-width: 140px;">Đã khấu trừ tạm ứng</th>
+                            <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Tổng thực trả</th>
+                            <th data-column-key="status" style="min-width: 130px;">Trạng thái</th>
+                            <th data-column-key="approver" style="min-width: 140px;">Người tạo/duyệt</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 120px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -110,30 +110,30 @@
                             </td>
                         </tr>
                         <tr th:each="p : ${periods.content}">
-                            <td class="fw-bold" th:text="${p.month} + '/' + ${p.year}"></td>
-                            <td>
+                            <td data-column-key="period" class="fw-bold" th:text="${p.month} + '/' + ${p.year}"></td>
+                            <td data-column-key="name">
                                 <a th:href="@{/payroll/{id}(id=${p.periodId})}" class="fw-semibold text-primary text-decoration-none"
                                    th:text="${p.periodName}"></a>
                             </td>
-                            <td th:text="${p.branch.branchName}"></td>
-                            <td class="text-end fw-semibold"
+                            <td data-column-key="branch" th:text="${p.branch.branchName}"></td>
+                            <td data-column-key="totalSalary" class="text-end fw-semibold"
                                 th:text="${#numbers.formatDecimal(p.totalSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-warning fw-semibold"
+                            <td data-column-key="advance" class="text-end text-warning fw-semibold"
                                 th:text="${#numbers.formatDecimal(p.totalAdvanceAllocated, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end fw-bold text-success"
+                            <td data-column-key="remaining" class="text-end fw-bold text-success"
                                 th:text="${#numbers.formatDecimal(p.totalRemainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td>
+                            <td data-column-key="status">
                                 <span th:if="${p.status.name() == 'DRAFT'}" class="badge bg-secondary">Nháp</span>
                                 <span th:if="${p.status.name() == 'SUBMITTED'}" class="badge bg-warning text-dark">Chờ Admin duyệt</span>
                                 <span th:if="${p.status.name() == 'APPROVED'}" class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
                                 <span th:if="${p.status.name() == 'PAID'}" class="badge bg-success">Đã chi trả</span>
                             </td>
-                            <td class="small text-muted">
+                            <td data-column-key="approver" class="small text-muted">
                                 <span th:if="${p.approvedBy != null}" th:text="'Duyệt: ' + ${p.approvedBy.fullName}"></span>
                                 <span th:if="${p.approvedBy == null and p.submittedBy != null}" th:text="'Trình: ' + ${p.submittedBy.fullName}"></span>
                                 <span th:if="${p.approvedBy == null and p.submittedBy == null}">-</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" class="text-center">
                                 <a th:href="@{/payroll/{id}(id=${p.periodId})}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-file-earmark-text"></i> Xem chi tiết
                                 </a>

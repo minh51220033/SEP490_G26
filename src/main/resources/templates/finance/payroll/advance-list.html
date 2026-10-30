@@ -83,19 +83,19 @@
             <!-- Table of Advances -->
             <div class="fin-card">
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft32-payroll-advances">
                         <thead>
                         <tr>
-                            <th>Mã tạm ứng</th>
-                            <th>Ngày tạo</th>
-                            <th>Nhân viên</th>
-                            <th>Chi nhánh</th>
-                            <th>Lý do</th>
-                            <th class="text-end">Số tiền ứng</th>
-                            <th class="text-end">Đã cấn trừ</th>
-                            <th class="text-end">Còn lại</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 120px;">Mã tạm ứng</th>
+                            <th data-column-key="date" style="min-width: 130px;">Ngày tạo</th>
+                            <th data-column-key="staff" style="min-width: 170px;">Nhân viên</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Chi nhánh</th>
+                            <th data-column-key="reason" style="min-width: 160px;">Lý do</th>
+                            <th data-column-key="amount" class="text-end" style="min-width: 130px;">Số tiền ứng</th>
+                            <th data-column-key="allocated" class="text-end" style="min-width: 130px;">Đã cấn trừ</th>
+                            <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Còn lại</th>
+                            <th data-column-key="status" style="min-width: 120px;">Trạng thái</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 150px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -105,28 +105,28 @@
                             </td>
                         </tr>
                         <tr th:each="a : ${advances.content}">
-                            <td class="fw-semibold text-primary" th:text="${a.advanceCode}"></td>
-                            <td th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td>
+                            <td data-column-key="code" class="fw-semibold text-primary" th:text="${a.advanceCode}"></td>
+                            <td data-column-key="date" th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td data-column-key="staff">
                                 <strong th:text="${a.staff.fullName}"></strong>
                                 <span class="d-block small text-muted" th:text="${a.staff.staffCode}"></span>
                             </td>
-                            <td th:text="${a.branch.branchName}"></td>
-                            <td class="small" th:text="${a.reason}"></td>
-                            <td class="text-end fw-bold text-danger"
+                            <td data-column-key="branch" th:text="${a.branch.branchName}"></td>
+                            <td data-column-key="reason" class="small" th:text="${a.reason}"></td>
+                            <td data-column-key="amount" class="text-end fw-bold text-danger"
                                 th:text="${#numbers.formatDecimal(a.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end text-success fw-semibold"
+                            <td data-column-key="allocated" class="text-end text-success fw-semibold"
                                 th:text="${#numbers.formatDecimal(a.allocatedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td class="text-end fw-bold text-warning"
+                            <td data-column-key="remaining" class="text-end fw-bold text-warning"
                                 th:text="${#numbers.formatDecimal(a.remainingAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td>
+                            <td data-column-key="status">
                                 <span th:if="${a.status.name() == 'PENDING'}" class="badge bg-warning text-dark">Chờ duyệt</span>
                                 <span th:if="${a.status.name() == 'APPROVED'}" class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
                                 <span th:if="${a.status.name() == 'PAID'}" class="badge bg-primary">Đang nợ cấn trừ</span>
                                 <span th:if="${a.status.name() == 'SETTLED'}" class="badge bg-success">Đã tất toán</span>
                                 <span th:if="${a.status.name() == 'REJECTED'}" class="badge bg-danger">Bị từ chối</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" class="text-center">
                                 <!-- Approve / Reject if PENDING (Chỉ Admin) -->
                                 <th:block th:if="${a.status.name() == 'PENDING'}">
                                     <th:block th:if="${isAdmin}">

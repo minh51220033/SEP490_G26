@@ -49,17 +49,17 @@
             <!-- Policies Table -->
             <div class="fin-card">
                 <div class="table-responsive">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft32-commission-policies">
                         <thead>
                         <tr>
-                            <th>Tên chính sách</th>
-                            <th>Dịch vụ áp dụng</th>
-                            <th>Vai trò áp dụng</th>
-                            <th>Bác sĩ chỉ định</th>
-                            <th>Loại hoa hồng</th>
-                            <th class="text-end">Mức hoa hồng</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="name" data-pinned="true" style="min-width: 180px;">Tên chính sách</th>
+                            <th data-column-key="service" style="min-width: 150px;">Dịch vụ áp dụng</th>
+                            <th data-column-key="role" style="min-width: 130px;">Vai trò áp dụng</th>
+                            <th data-column-key="staff" style="min-width: 140px;">Bác sĩ chỉ định</th>
+                            <th data-column-key="type" style="min-width: 130px;">Loại hoa hồng</th>
+                            <th data-column-key="value" class="text-end" style="min-width: 120px;">Mức hoa hồng</th>
+                            <th data-column-key="status" style="min-width: 120px;">Trạng thái</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 130px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -69,24 +69,24 @@
                             </td>
                         </tr>
                         <tr th:each="pol : ${policies}">
-                            <td class="fw-semibold text-primary" th:text="${pol.policyName}"></td>
-                            <td th:text="${pol.service != null ? pol.service.serviceName : 'Tất cả dịch vụ'}"></td>
-                            <td th:text="${pol.role != null ? pol.role.displayName : 'Tất cả vai trò'}"></td>
-                            <td th:text="${pol.staff != null ? pol.staff.fullName : 'Tất cả nhân sự'}"></td>
-                            <td>
+                            <td data-column-key="name" class="fw-semibold text-primary" th:text="${pol.policyName}"></td>
+                            <td data-column-key="service" th:text="${pol.service != null ? pol.service.serviceName : 'Tất cả dịch vụ'}"></td>
+                            <td data-column-key="role" th:text="${pol.role != null ? pol.role.displayName : 'Tất cả vai trò'}"></td>
+                            <td data-column-key="staff" th:text="${pol.staff != null ? pol.staff.fullName : 'Tất cả nhân sự'}"></td>
+                            <td data-column-key="type">
                                 <span th:if="${pol.commissionType.name() == 'PERCENTAGE'}" class="badge bg-primary-subtle text-primary">Phần trăm (%)</span>
                                 <span th:if="${pol.commissionType.name() == 'FIXED_AMOUNT'}" class="badge bg-secondary-subtle text-secondary">Số tiền cố định</span>
                             </td>
-                            <td class="text-end fw-bold">
+                            <td data-column-key="value" class="text-end fw-bold">
                                 <span th:if="${pol.commissionType.name() == 'PERCENTAGE'}" th:text="${pol.commissionValue} + ' %'"></span>
                                 <span th:if="${pol.commissionType.name() == 'FIXED_AMOUNT'}"
                                       th:text="${#numbers.formatDecimal(pol.commissionValue, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
                             </td>
-                            <td>
+                            <td data-column-key="status">
                                 <span th:if="${pol.isActive}" class="badge bg-success">Đang BẬT</span>
                                 <span th:if="${!pol.isActive}" class="badge bg-secondary">Đang TẮT (Nháp)</span>
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="actions" class="text-center">
                                 <th:block th:if="${isAdmin}">
                                     <form th:action="@{/payroll/commission-config/{id}/toggle(id=${pol.policyId})}" method="post" class="d-inline">
                                         <input type="hidden" name="isActive" th:value="${!pol.isActive}">
