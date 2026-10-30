@@ -1,14 +1,17 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.entity.User;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.util.Collections;
+import java.util.List;
 
 /**
- * ControllerAdvice toàn cục đảm bảo roleNames và displayName luôn hiện diện trong Model
- * cho mọi request render giao diện, giúp Sidebar và Topbar luôn hiển thị đúng phân quyền.
+ * ControllerAdvice toàn cục đảm bảo roleNames, displayName, currentBranchName và systemNotice
+ * luôn hiện diện trong Model cho mọi request render giao diện Thymeleaf,
+ * giúp Sidebar, Topbar và Phân quyền luôn hiển thị đúng và không bị lỗi SpEL.
  */
 @ControllerAdvice
 public class GlobalModelAttributesAdvice {
@@ -17,7 +20,9 @@ public class GlobalModelAttributesAdvice {
     public Object populateRoleNames(HttpSession session) {
         if (session != null) {
             Object roles = session.getAttribute("roleNames");
-            if (roles != null) {
+            if (roles instanceof List<?> list) {
+                return list.stream().map(Object::toString).toList();
+            } else if (roles != null) {
                 return roles;
             }
         }
@@ -27,8 +32,12 @@ public class GlobalModelAttributesAdvice {
     @ModelAttribute("displayName")
     public String populateDisplayName(HttpSession session) {
         if (session != null) {
+            Object displayName = session.getAttribute("displayName");
+            if (displayName != null && !displayName.toString().isBlank()) {
+                return displayName.toString();
+            }
             Object userObj = session.getAttribute("loggedInUser");
-            if (userObj instanceof com.cvdcms.entity.User user) {
+            if (userObj instanceof User user) {
                 return user.getUsername();
             }
             Object username = session.getAttribute("username");
@@ -38,5 +47,26 @@ public class GlobalModelAttributesAdvice {
         }
         return "";
     }
-}
 
+    @ModelAttribute("currentBranchName")
+    public String populateCurrentBranchName(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object branchName = session.getAttribute("currentBranchName");
+        return branchName != null ? branchName.toString() : null;
+    }
+
+    @ModelAttribute("systemNotice")
+    public String populateSystemNotice(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object flash = session.getAttribute("flashPermissionNotice");
+        if (flash != null) {
+            session.removeAttribute("flashPermissionNotice");
+            return flash.toString();
+        }
+        return null;
+    }
+}

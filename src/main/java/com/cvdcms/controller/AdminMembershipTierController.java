@@ -28,6 +28,7 @@ public class AdminMembershipTierController {
         this(membershipTierService, null);
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public AdminMembershipTierController(MembershipTierService membershipTierService, com.cvdcms.repository.UserRepository userRepository) {
         this.membershipTierService = membershipTierService;
         this.userRepository = userRepository;
