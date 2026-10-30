@@ -83,7 +83,7 @@
                             <td><span th:text="${record.visitCode}">VIS001</span><small th:text="${#temporals.format(record.checkInAt, 'dd/MM/yyyy HH:mm')}"></small></td>
                             <td><span th:text="${record.doctorName ?: '—'}">Bác sĩ</span><small th:text="${record.branchName}">Cơ sở</small></td>
                             <td><span class="emr-version" th:text="|v${record.versionNumber}|">v1</span></td>
-                            <td><span class="emr-status" th:classappend="| status-${record.status}|" th:text="${record.status}">DRAFT</span></td>
+                            <td><span class="emr-status" th:classappend="| status-${record.status}|" th:text="${record.status.displayName}">Bản nháp</span></td>
                             <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/emr/records/{id}(id=${record.id})}">Mở hồ sơ</a></td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(dashboard.records)}"><td colspan="7" class="emr-empty">Chưa có bệnh án điện tử.</td></tr>

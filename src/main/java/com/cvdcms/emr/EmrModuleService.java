@@ -408,7 +408,8 @@ public class EmrModuleService {
 
     private RecordRow row(EmrRecord r) {
         return new RecordRow(r.getRecordId(), r.getRecordCode(), r.getVisit().getVisitId(),
-                r.getVisit().getVisitCode(), r.getPatientProfile().getPatientCode(),
+                r.getVisit().getVisitCode(), r.getPatientProfile().getProfileId(),
+                r.getPatientProfile().getPatientCode(),
                 r.getPatientProfile().getFullName(), r.getBranch().getBranchName(),
                 r.getVisit().getPrimaryDoctor() == null ? null : r.getVisit().getPrimaryDoctor().getFullName(),
                 r.getVisit().getCheckInAt(), r.getStatus(), r.getCurrentVersionNumber(), r.getUpdatedAt());
@@ -448,7 +449,8 @@ public class EmrModuleService {
 
     public record Dashboard(List<RecordRow> records, List<EligibleVisitRow> eligibleVisits,
                             long total, long signed, long waitingSignature) {}
-    public record RecordRow(Long id, String code, Long visitId, String visitCode, String patientCode,
+    public record RecordRow(Long id, String code, Long visitId, String visitCode, Long patientId,
+                            String patientCode,
                             String patientName, String branchName, String doctorName, LocalDateTime checkInAt,
                             EmrRecordStatus status, Integer versionNumber, LocalDateTime updatedAt) {}
     public record EligibleVisitRow(Long visitId, String visitCode, String patientCode, String patientName,

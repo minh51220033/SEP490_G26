@@ -10,7 +10,10 @@
         <main class="app-content emr-page" th:with="patient=${detail.snapshot['patient']},visit=${detail.snapshot['visit']},clinical=${detail.snapshot['clinical']}">
             <link rel="stylesheet" th:href="@{/css/emr.css}">
 
-            <a class="emr-back" th:href="@{/emr/records}"><i class="bi bi-arrow-left"></i> Danh sách bệnh án</a>
+            <div class="d-flex flex-wrap gap-3 align-items-center">
+                <a class="emr-back" th:href="@{/emr/records}"><i class="bi bi-arrow-left"></i> Danh sách bệnh án</a>
+                <a class="emr-back" th:href="@{/doctor/patient-records/{id}(id=${detail.record.patientId})}"><i class="bi bi-person-vcard"></i> Hồ sơ bệnh nhân</a>
+            </div>
             <div class="emr-record-head">
                 <div>
                     <span class="emr-eyebrow" th:text="${detail.record.code}">EMR</span>
@@ -18,7 +21,7 @@
                     <p th:text="|${patient['patientCode']} · Lượt khám ${visit['visitCode']} · Phiên bản v${detail.currentVersion}|">Thông tin</p>
                 </div>
                 <div class="emr-record-state">
-                    <span class="emr-status emr-status--large" th:classappend="| status-${detail.record.status}|" th:text="${detail.record.status}">DRAFT</span>
+                    <span class="emr-status emr-status--large" th:classappend="| status-${detail.record.status}|" th:text="${detail.record.status.displayName}">Bản nháp</span>
                     <span class="emr-test-badge"><i class="bi bi-shield-exclamation"></i> LOCAL_TEST_ONLY</span>
                 </div>
             </div>

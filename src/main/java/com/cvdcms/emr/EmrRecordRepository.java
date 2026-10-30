@@ -13,6 +13,17 @@ public interface EmrRecordRepository extends JpaRepository<EmrRecord, Long> {
     Optional<EmrRecord> findByVisit_VisitId(Long visitId);
 
     @Query("""
+        select r from EmrRecord r
+        join fetch r.visit v
+        join fetch r.patientProfile p
+        join fetch r.branch b
+        left join fetch v.primaryDoctor
+        where p.profileId = :profileId
+        order by r.updatedAt desc, r.recordId desc
+        """)
+    List<EmrRecord> findAllByPatientProfileId(@Param("profileId") Long profileId);
+
+    @Query("""
         select distinct r from EmrRecord r
         join fetch r.visit v
         join fetch r.patientProfile p

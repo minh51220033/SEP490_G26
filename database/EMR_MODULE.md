@@ -10,7 +10,7 @@ Thứ tự dành cho môi trường test hiện tại:
 
 1. Tạo/nạp schema gốc của dự án.
 2. Chạy `test_data.sql` để có các lượt khám chuẩn `VIS10001` và `VIS10002`.
-3. Chạy `database/migrations/V6__emr_module.sql`.
+3. Chạy `database/migrations/V11__emr_module.sql`.
 4. Chạy `database/seeds/seed_emr_module.sql`.
 5. Kiểm tra câu `SELECT` cuối file seed trả về:
    - `EMR-DEMO-DRAFT`: 3 documents, 0 signatures.
