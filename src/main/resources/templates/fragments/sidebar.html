@@ -174,10 +174,10 @@
             </div>
         </div>
 
-        <!-- TÀI CHÍNH & KẾ TOÁN (FT21 & FT22) -->
+        <!-- TÀI CHÍNH & KẾ TOÁN (FT21, FT22, FT24, FT25, FT32) -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))}"
-             th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,expenses,payroll,payroll_advances,payroll_config,owner_distributions,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgFinance">
                 <i class="bi bi-wallet2" aria-hidden="true"></i>
                 <span class="side-group__label">Tài chính &amp; Kế toán</span>
@@ -212,6 +212,33 @@
                        th:classappend="${activeMenu == 'refunds'} ? 'is-active' : ''"
                        title="Hoàn tiền dịch vụ &amp; Hủy điều trị">
                         <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span class="side-link__label">Quản lý hoàn tiền</span>
+                    </a>
+                    <a th:href="@{/expenses}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'expenses'} ? 'is-active' : ''"
+                       title="Quản lý chi phí vận hành phòng khám (FT25)">
+                        <i class="bi bi-journal-arrow-down text-warning" aria-hidden="true"></i><span class="side-link__label">Chi phí vận hành</span>
+                        <span class="side-badge side-badge--warning">FT25</span>
+                    </a>
+                    <a th:href="@{/payroll}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'payroll'} ? 'is-active' : ''"
+                       title="Quản lý bảng lương &amp; hoa hồng (FT32)">
+                        <i class="bi bi-calculator text-primary" aria-hidden="true"></i><span class="side-link__label">Bảng lương &amp; Hoa hồng</span>
+                        <span class="side-badge side-badge--info">FT32</span>
+                    </a>
+                    <a th:href="@{/payroll/advances}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'payroll_advances'} ? 'is-active' : ''"
+                       title="Quản lý tạm ứng lương nhân viên">
+                        <i class="bi bi-cash-coin" aria-hidden="true"></i><span class="side-link__label">Tạm ứng lương</span>
+                    </a>
+                    <a th:href="@{/payroll/commission-config}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'payroll_config'} ? 'is-active' : ''"
+                       title="Cấu hình chính sách hoa hồng bác sĩ (SCR-32.3)">
+                        <i class="bi bi-sliders" aria-hidden="true"></i><span class="side-link__label">Cấu hình hoa hồng</span>
+                    </a>
+                    <a th:href="@{/payroll/owner-distributions}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'owner_distributions'} ? 'is-active' : ''"
+                       title="Phân chia lợi nhuận chủ phòng khám">
+                        <i class="bi bi-diagram-2" aria-hidden="true"></i><span class="side-link__label">Phân chia lợi nhuận</span>
                     </a>
                 </div>
             </div>

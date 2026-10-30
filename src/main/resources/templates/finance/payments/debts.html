@@ -42,6 +42,15 @@
                         </select>
                     </div>
 
+                    <div class="fin-form-group">
+                        <label for="statusSelect">Trạng thái nợ</label>
+                        <select id="statusSelect" name="paymentStatus" class="fin-select">
+                            <option value="">-- Tất cả còn nợ (Chưa trả / 1 phần) --</option>
+                            <option value="UNPAID" th:selected="${selectedPaymentStatus != null and selectedPaymentStatus.name() == 'UNPAID'}">Chưa thanh toán (UNPAID)</option>
+                            <option value="PARTIAL" th:selected="${selectedPaymentStatus != null and selectedPaymentStatus.name() == 'PARTIAL'}">Trả một phần (PARTIAL)</option>
+                        </select>
+                    </div>
+
                     <div class="fin-form-group" style="flex: 3; min-width: 250px;">
                         <label for="keyword">Tìm kiếm Bệnh nhân nợ</label>
                         <input type="text" id="keyword" name="keyword" class="fin-input"
@@ -65,11 +74,11 @@
                             <th>Họ và tên</th>
                             <th>Số điện thoại</th>
                             <th class="text-center">Số HĐ còn nợ</th>
-                            <th class="text-end">Tổng tiền viện phí</th>
-                            <th class="text-end">Đã thanh toán</th>
-                            <th class="text-end">Tổng công nợ còn lại</th>
-                            <th class="text-end">Số dư ví cọc</th>
-                            <th>Ngày phát sinh nợ</th>
+                            <th class="text-end" title="Tổng giá trị các hóa đơn chưa tất toán">Tổng tiền HĐ còn nợ</th>
+                            <th class="text-end" title="Số tiền đã thu của các hóa đơn còn nợ">Đã trả (HĐ nợ)</th>
+                            <th class="text-end" title="Tổng công nợ còn lại phải thu">Tổng công nợ còn lại</th>
+                            <th class="text-end" title="Ví tạm ứng hiển thị riêng, không tự trừ vào nợ khi chưa cấn trừ">Số dư ví tạm ứng</th>
+                            <th>HĐ nợ gần nhất</th>
                             <th class="text-center">Thao tác</th>
                         </tr>
                         </thead>
@@ -77,7 +86,7 @@
                         <tr th:if="${#lists.isEmpty(patientDebts)}">
                             <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="bi bi-shield-check fs-2 text-success d-block mb-2"></i>
-                                Tuyệt vời! Hiện không có bệnh nhân nào có công nợ tồn đọng.
+                                Tuyệt vời! Hiện không có bệnh nhân nào có công nợ tồn đọng trong phạm vi lọc.
                             </td>
                         </tr>
                         <tr th:each="d : ${patientDebts}">
@@ -85,7 +94,7 @@
                                 <strong class="text-primary" th:text="${d.patientCode}">BN000101</strong>
                             </td>
                             <td>
-                                <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="fw-bold text-primary" th:text="${d.fullName}" title="Xem Dashboard tài chính (SCR-22.1)">Nguyễn Văn An</a>
+                                <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="fw-bold text-primary" th:text="${d.fullName}" title="Xem Chi tiết công nợ &amp; Dashboard tài chính (SCR-24.2)">Nguyễn Văn An</a>
                             </td>
                             <td th:text="${d.phoneNumber}">0987654321</td>
                             <td class="text-center">
@@ -117,14 +126,14 @@
                     <nav aria-label="Phân trang">
                         <ul class="pagination pagination-sm m-0">
                             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, keyword=${keyword})}">Trước</a>
+                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Trước</a>
                             </li>
                             <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                                 class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${i}, branchId=${selectedBranchId}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+                                <a class="page-link" th:href="@{/payments/debts(page=${i}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" th:text="${i + 1}">1</a>
                             </li>
                             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, keyword=${keyword})}">Sau</a>
+                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Sau</a>
                             </li>
                         </ul>
                     </nav>

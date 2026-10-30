@@ -47,6 +47,10 @@ public class ServiceCommission {
     @Column(name = "status", nullable = false, length = 20)
     private CommissionStatus status = CommissionStatus.PENDING;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payroll_item_id")
+    private PayrollItem payrollItem;
+
     @CreationTimestamp
     @Column(name = "calculated_at", nullable = false, updatable = false)
     private LocalDateTime calculatedAt;
