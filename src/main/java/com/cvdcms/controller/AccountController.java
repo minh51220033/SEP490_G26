@@ -128,12 +128,7 @@ public class AccountController {
                 }
 
                 // Giới hạn size
-                if (size != 10 &&
-                                size != 20 &&
-                                size != 50) {
-
-                        size = 10;
-                }
+                if (size != 10 && size != 25 && size != 50 && size != 100) { size = 10; }
 
                 // =====================================================
                 // WHITELIST SORT
@@ -186,6 +181,12 @@ public class AccountController {
                 // =====================================================
                 // DATA CHO THYMELEAF
                 // =====================================================
+
+                int from = accountPage.isEmpty() ? 0 : (accountPage.getNumber() * size + 1);
+                int to = accountPage.isEmpty() ? 0 : (int) Math.min((long) (accountPage.getNumber() + 1) * size, accountPage.getTotalElements());
+                model.addAttribute("fromItem", from);
+                model.addAttribute("toItem", to);
+                model.addAttribute("pageSize", size);
 
                 model.addAttribute(
                                 "accounts",
