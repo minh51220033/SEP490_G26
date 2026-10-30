@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Hoàn tiền dịch vụ (SCR-22.3) - FT22')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('refunds')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Hoàn tiền Dịch vụ')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1> Quản lý Hoàn tiền Viện phí (SCR-22.3)</h1>
+                    <p>Lập phiếu hoàn trả tiền cho bệnh nhân khi hủy dịch vụ, hoàn số tiền nộp thừa hoặc đổi lộ trình điều trị.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-danger" onclick="toggleRefundModal()">
+                        <i class="bi bi-plus-lg"></i> Lập phiếu hoàn tiền
+                    </button>
+                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="fin-card">
+                <form th:action="@{/payments/refunds}" method="get" class="fin-filter-bar">
+                    <div class="fin-form-group">
+                        <label for="branchSelect">Cơ sở</label>
+                        <select id="branchSelect" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${b.branchId == selectedBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="refundMethod">Phương thức hoàn</label>
+                        <select id="refundMethod" name="refundMethod" class="fin-select">
+                            <option value="">-- Tất cả --</option>
+                            <option value="CASH" th:selected="${selectedRefundMethod?.name() == 'CASH'}">💵 Tiền mặt</option>
+                            <option value="BANK_TRANSFER" th:selected="${selectedRefundMethod?.name() == 'BANK_TRANSFER'}">🏦 Chuyển khoản</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}">
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}">
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
+                        <label for="keyword">Tìm kiếm</label>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Mã hoàn tiền, Mã HĐ, Mã BN, Tên BN, SĐT..." th:value="${keyword}">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Tìm kiếm</button>
+                        <a th:href="@{/payments/refunds}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table Card -->
+            <div class="fin-card p-0">
+                <div class="fin-table-wrapper">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã hoàn tiền</th>
+                            <th>Thời điểm</th>
+                            <th>Bệnh nhân</th>
+                            <th>Hóa đơn liên quan</th>
+                            <th>Cơ sở</th>
+                            <th>Phương thức</th>
+                            <th class="text-end">Số tiền hoàn</th>
+                            <th>Lý do hoàn tiền</th>
+                            <th>Người thực hiện</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(refunds)}">
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                Chưa có giao dịch hoàn tiền nào.
+                            </td>
+                        </tr>
+                        <tr th:each="rf : ${refunds}">
+                            <td>
+                                <strong class="text-danger" th:text="${rf.refundCode}">HT10001</strong>
+                            </td>
+                            <td>
+                                <span th:text="${#temporals.format(rf.refundedAt, 'dd/MM/yyyy')}">24/10/2026</span>
+                                <small class="text-muted d-block" th:text="${#temporals.format(rf.refundedAt, 'HH:mm')}">14:30</small>
+                            </td>
+                            <td>
+                                <div class="fw-bold" th:text="${rf.patientProfile.fullName}">Nguyễn Văn An</div>
+                                <small class="text-muted" th:text="${rf.patientProfile.patientCode}">BN001</small>
+                            </td>
+                            <td>
+                                <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
+                                   class="text-primary fw-bold text-decoration-none" th:text="${rf.invoice.invoiceCode}">HD123456</a>
+                                <span th:if="${rf.invoice == null}" class="text-muted small">-</span>
+                            </td>
+                            <td th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
+                            <td>
+                                <span class="badge bg-light text-dark border" th:text="${rf.refundMethod}">CASH</span>
+                            </td>
+                            <td class="text-end fw-bold text-danger fs-6"
+                                th:text="${#numbers.formatDecimal(rf.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td th:text="${rf.reason}">Bệnh nhân hủy ca phẫu thuật</td>
+                            <td th:text="${rf.refundedBy.fullName}">Thu ngân A</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="p-3 d-flex justify-content-between align-items-center border-top">
+                    <span class="text-muted small" th:text="'Hiển thị ' + ${refunds.size()} + ' / ' + ${totalElements} + ' phiếu hoàn tiền'"></span>
+                    <nav aria-label="Phân trang">
+                        <ul class="pagination pagination-sm m-0">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/payments/refunds(page=${currentPage - 1}, branchId=${selectedBranchId}, refundMethod=${selectedRefundMethod}, keyword=${keyword})}">Trước</a>
+                            </li>
+                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                                class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
+                                <a class="page-link" th:href="@{/payments/refunds(page=${i}, branchId=${selectedBranchId}, refundMethod=${selectedRefundMethod}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/payments/refunds(page=${currentPage + 1}, branchId=${selectedBranchId}, refundMethod=${selectedRefundMethod}, keyword=${keyword})}">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Lập Phiếu Hoàn Tiền -->
+<div id="refundModal" class="fin-modal-backdrop" style="display: none;">
+    <div class="fin-modal-card">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+            <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền</h5>
+            <button type="button" class="btn-close" onclick="toggleRefundModal()"></button>
+        </div>
+        <form th:action="@{/payments/refunds}" method="post" class="p-4">
+            <div class="mb-3">
+                <label for="refundPatientSearch" class="form-label fw-bold">Tìm Bệnh nhân nhận tiền hoàn <span class="text-danger">*</span></label>
+                <input type="text"
+                       id="refundPatientSearch"
+                       class="form-control"
+                       placeholder="Nhập tên, ID hồ sơ, mã bệnh nhân hoặc SĐT..."
+                       oninput="searchPatientForRefund(this.value)">
+                <input type="hidden" name="profileId" id="refundProfileId" required>
+                <div id="selectedRefundPatientName" class="mt-2 fw-bold text-primary" style="display: none;"></div>
+                <div id="refundPatientList" class="list-group mt-2" style="max-height: 160px; overflow-y: auto; display: none;"></div>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundBranchId" class="form-label fw-bold">Cơ sở hoàn tiền <span class="text-danger">*</span></label>
+                <select id="refundBranchId" name="branchId" class="fin-select w-100" required>
+                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundAmount" class="form-label fw-bold">Số tiền hoàn trả (VNĐ) <span class="text-danger">*</span></label>
+                <input type="number" id="refundAmount" name="amount" class="form-control form-control-lg fw-bold text-danger" step="1000" min="1000" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundMethodSelect" class="form-label fw-bold">Phương thức hoàn tiền <span class="text-danger">*</span></label>
+                <select id="refundMethodSelect" name="refundMethod" class="form-select" required>
+                    <option value="CASH">💵 Tiền mặt tại quầy</option>
+                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundReasonInput" class="form-label fw-bold text-danger">Lý do hoàn tiền <span class="text-danger">*</span></label>
+                <textarea id="refundReasonInput" name="reason" class="form-control" rows="2"
+                          placeholder="VD: Khách hàng hủy điều trị trám răng, hoàn trả số tiền tạm ứng thừa..." required></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                <button type="button" class="fin-btn fin-btn-outline" onclick="toggleRefundModal()">Đóng</button>
+                <button type="submit" class="fin-btn fin-btn-danger">
+                    <i class="bi bi-check2-circle"></i> Xác nhận hoàn tiền
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    function toggleRefundModal() {
+        const m = document.getElementById('refundModal');
+        m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    let searchTimer = null;
+    function searchPatientForRefund(query) {
+        clearTimeout(searchTimer);
+        const listEl = document.getElementById('refundPatientList');
+        if (!query || !query.trim()) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        searchTimer = setTimeout(async () => {
+            try {
+                const resp = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query.trim())}`);
+                const data = await resp.json();
+                if (data && data.length > 0) {
+                    listEl.innerHTML = data.map(p => `
+                        <button type="button" class="list-group-item list-group-item-action" onclick="selectPatientForRefund('${p.profileId}', '${p.fullName}', '${p.patientCode}')">
+                            <strong>${p.fullName}</strong> (${p.patientCode}) - SĐT: ${p.phoneNumber || 'N/A'}
+                        </button>
+                    `).join('');
+                    listEl.style.display = 'block';
+                } else {
+                    listEl.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy bệnh nhân.</div>';
+                    listEl.style.display = 'block';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }, 300);
+    }
+
+    function selectPatientForRefund(id, name, code) {
+        document.getElementById('refundProfileId').value = id;
+        document.getElementById('selectedRefundPatientName').textContent = `Đã chọn: ${name} (${code})`;
+        document.getElementById('selectedRefundPatientName').style.display = 'block';
+        document.getElementById('refundPatientList').style.display = 'none';
+    }
+</script>
+</body>
+</html>

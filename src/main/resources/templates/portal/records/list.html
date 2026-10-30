@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Hồ sơ của tôi')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ của tôi')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="alert alert-success" th:if="${param.transferred != null}">Đã tách hồ sơ. Tài khoản nhận có thể xem hồ sơ và toàn bộ lịch sử cũ.</div>
+            <div class="patient-page-heading"><div><h1>Hồ sơ của tôi</h1><p>Các hồ sơ bạn đang quản lý.</p></div>
+                <a class="btn btn-primary" th:href="@{/portal/records/new}">Thêm người phụ thuộc</a></div>
+            <section class="panel">
+                <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Mã hồ sơ</th><th>Họ tên</th><th>Ngày sinh</th><th>Số điện thoại</th><th>Loại hồ sơ</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="record : ${records}"><td th:text="${record.code}">BN</td>
+                        <td th:text="${record.fullName}">Tên</td>
+                        <td th:text="${record.dob != null ? #temporals.format(record.dob, 'dd/MM/yyyy') : '—'}">—</td>
+                        <td th:text="${record.phoneNumber}">—</td>
+                        <td th:text="${record.self ? 'Bản thân' : 'Người phụ thuộc'}">—</td>
+                        <td class="text-end"><span class="badge bg-primary me-2" th:if="${record.defaultProfile}">Mặc định</span><button type="button" class="btn btn-sm btn-outline-secondary me-2" th:unless="${record.defaultProfile}" th:attr="data-default-id=${record.id}">Đặt mặc định</button><a class="btn btn-sm btn-outline-primary" th:href="@{/portal/records/{id}(id=${record.id})}">Xem hồ sơ</a></td></tr>
+                    <tr th:if="${#lists.isEmpty(records)}"><td colspan="6" class="text-center text-muted py-5">Chưa có hồ sơ. Bạn có thể hoàn thiện hồ sơ bản thân tại trang tài khoản.</td></tr>
+                    </tbody>
+                </table></div>
+            </section>
+            <p class="mt-3"><a th:href="@{/profile}">Thông tin tài khoản</a></p>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/portal-record-list.js}" defer></script></body></html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Chi tiết nhân viên')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('staffs')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Chi tiết nhân viên')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+            <!-- TIÊU ĐỀ HỒ SƠ (SCR-41.4) -->
+            <section class="welcome-card">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="staff-avatar staff-avatar--lg"
+                          th:text="${#strings.toUpperCase(#strings.substring(staff.fullName, 0, 1))}">A</span>
+                    <div>
+                        <a th:href="@{/admin/staffs}" class="text-decoration-none small">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách nhân viên
+                        </a>
+                        <h2 class="welcome-card__title mt-1">
+                            <span class="text-brand" th:text="${staff.fullName}">Họ tên</span>
+                        </h2>
+                        <p class="welcome-card__desc">
+                            <strong th:text="${staff.staffCode}">NV0001</strong>
+                            <span th:if="${staff.positionTitle != null}" th:text="' · ' + ${staff.positionTitle}"></span>
+                            <span th:if="${staff.specialty != null}" th:text="' · ' + ${staff.specialty}"></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <span class="status-badge"
+                          th:classappend="${'status-badge--' + #strings.toLowerCase(staff.status.name())}"
+                          th:text="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : (staff.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
+                        Trạng thái
+                    </span>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <form th:action="@{/admin/staffs/{id}/status(id=${staff.staffId})}" method="post"
+                              class="d-flex gap-2">
+                            <select name="status" class="form-select form-select-sm" aria-label="Đổi trạng thái làm việc">
+                                <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                        th:selected="${s == staff.status}"
+                                        th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : (s.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã nghỉ việc')}">
+                                    Trạng thái
+                                </option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Đổi</button>
+                        </form>
+                        <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-pencil" aria-hidden="true"></i> Sửa hồ sơ
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB -->
+            <section class="panel">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-profile" data-bs-toggle="tab" data-bs-target="#pane-profile"
+                                type="button" role="tab" aria-controls="pane-profile" aria-selected="true">
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i> Lý lịch &amp; chuyên môn
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-salary" data-bs-toggle="tab" data-bs-target="#pane-salary"
+                                type="button" role="tab" aria-controls="pane-salary" aria-selected="false">
+                            <i class="bi bi-cash-coin" aria-hidden="true"></i> Lương &amp; ngân hàng
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-assign" data-bs-toggle="tab" data-bs-target="#pane-assign"
+                                type="button" role="tab" aria-controls="pane-assign" aria-selected="false">
+                            <i class="bi bi-diagram-3" aria-hidden="true"></i> Chi nhánh &amp; vai trò
+                            <span class="badge bg-secondary ms-1" th:text="${activeAssignmentCount}">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ============ TAB 1: LÝ LỊCH & CHUYÊN MÔN ============ -->
+                    <div class="tab-pane fade show active" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile">
+
+                        <h4 class="info-section-title">Thông tin hành chính</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-item__label">Giới tính</div>
+                                <div class="info-item__value" th:if="${staff.gender != null}"
+                                     th:text="${staff.gender.name() == 'MALE' ? 'Nam' : (staff.gender.name() == 'FEMALE' ? 'Nữ' : 'Khác')}">Nam</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.gender != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Ngày sinh</div>
+                                <div class="info-item__value" th:if="${staff.dob != null}" th:text="${staff.dob}">2000-01-01</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.dob != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">CCCD / CMND</div>
+                                <div class="info-item__value" th:if="${staff.idCardNumber != null}" th:text="${staff.idCardNumber}">0123</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.idCardNumber != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Số điện thoại</div>
+                                <div class="info-item__value" th:if="${staff.phoneNumber != null}" th:text="${staff.phoneNumber}">090</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.phoneNumber != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Email</div>
+                                <div class="info-item__value" th:if="${staff.email != null}" th:text="${staff.email}">a@b.c</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.email != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Ngày vào làm</div>
+                                <div class="info-item__value" th:if="${staff.hireDate != null}" th:text="${staff.hireDate}">2024-01-01</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.hireDate != null}">Chưa cập nhật</div>
+                            </div>
+                        </div>
+
+                        <h4 class="info-section-title">Chuyên môn &amp; chứng chỉ hành nghề</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-item__label">Phòng ban</div>
+                                <div class="info-item__value" th:if="${staff.department != null}" th:text="${staff.department}">Khối lâm sàng</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.department != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Chức danh</div>
+                                <div class="info-item__value" th:if="${staff.positionTitle != null}" th:text="${staff.positionTitle}">Bác sĩ</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.positionTitle != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Chuyên khoa</div>
+                                <div class="info-item__value" th:if="${staff.specialty != null}" th:text="${staff.specialty}">Implant</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.specialty != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Số chứng chỉ hành nghề (CCHN)</div>
+                                <div class="info-item__value" th:if="${staff.practiceLicenseNo != null}" th:text="${staff.practiceLicenseNo}">CCHN</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.practiceLicenseNo != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Mã định danh y tế (Bộ Y tế)</div>
+                                <div class="info-item__value" th:if="${staff.mohDoctorCode != null}" th:text="${staff.mohDoctorCode}">MOH</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.mohDoctorCode != null}">Chưa cập nhật</div>
+                            </div>
+                        </div>
+
+                        <h4 class="info-section-title">Tài khoản đăng nhập</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-item__label">Tài khoản liên kết</div>
+                                <div class="info-item__value" th:if="${staff.user != null}"
+                                     th:text="${staff.user.username + ' (' + staff.user.email + ')'}">username</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.user != null}">
+                                    Chưa liên kết - nhân viên chưa thể đăng nhập
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ TAB 2: LƯƠNG & NGÂN HÀNG ============ -->
+                    <div class="tab-pane fade" id="pane-salary" role="tabpanel" aria-labelledby="tab-salary">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-item__label">Lương cơ bản</div>
+                                <div class="info-item__value"
+                                     th:text="${#numbers.formatDecimal(staff.baseSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Phụ cấp</div>
+                                <div class="info-item__value"
+                                     th:text="${#numbers.formatDecimal(staff.allowanceAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Lương đóng BHXH</div>
+                                <div class="info-item__value"
+                                     th:text="${#numbers.formatDecimal(staff.insuranceSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Số tài khoản ngân hàng</div>
+                                <div class="info-item__value" th:if="${staff.bankAccountNumber != null}" th:text="${staff.bankAccountNumber}">000</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.bankAccountNumber != null}">Chưa cập nhật</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-item__label">Ngân hàng</div>
+                                <div class="info-item__value" th:if="${staff.bankName != null}" th:text="${staff.bankName}">Vietcombank</div>
+                                <div class="info-item__value info-item__value--empty" th:unless="${staff.bankName != null}">Chưa cập nhật</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ TAB 3: CHI NHÁNH & VAI TRÒ (SCR-41.3) ============ -->
+                    <div class="tab-pane fade" id="pane-assign" role="tabpanel" aria-labelledby="tab-assign">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="mb-0 text-muted small">
+                                Một nhân viên có thể làm việc tại nhiều chi nhánh; chỉ có một chi nhánh chính đang hiệu lực.
+                            </p>
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#assignmentModal">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm phân công
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 staff-table">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Chi nhánh</th>
+                                    <th>Vai trò</th>
+                                    <th>Loại</th>
+                                    <th>Từ ngày</th>
+                                    <th>Đến ngày</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-center">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="a : ${assignments}">
+                                    <td>
+                                        <strong th:text="${a.branch.branchName}">Chi nhánh</strong>
+                                        <div class="staff-sub" th:text="${a.branch.branchCode}">CN01</div>
+                                    </td>
+                                    <td>
+                                        <span class="chip chip--role"
+                                              th:text="${a.role.displayName != null ? a.role.displayName : a.role.roleName}">Vai trò</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${a.isPrimary}" class="chip chip--primary">
+                                            <i class="bi bi-star-fill" aria-hidden="true"></i> Chi nhánh chính
+                                        </span>
+                                        <span th:unless="${a.isPrimary}" class="chip">Kiêm nhiệm</span>
+                                    </td>
+                                    <td th:text="${a.startDate}">2024-01-01</td>
+                                    <td th:text="${a.endDate != null ? a.endDate : '-'}">-</td>
+                                    <td>
+                                        <span class="status-badge"
+                                              th:classappend="${a.status.name() == 'ACTIVE'} ? 'status-badge--active' : 'status-badge--ended'"
+                                              th:text="${a.status.name() == 'ACTIVE' ? 'Đang hiệu lực' : 'Đã kết thúc'}">Trạng thái</span>
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-assignment me-1"
+                                                th:data-id="${a.assignmentId}"
+                                                th:data-branch-name="${a.branch.branchName}"
+                                                th:data-start-date="${a.startDate}"
+                                                th:data-end-date="${a.endDate}"
+                                                th:data-is-primary="${a.isPrimary}">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
+                                        </button>
+                                        <form th:if="${a.status.name() == 'ACTIVE' and !a.isPrimary}"
+                                              th:action="@{/admin/staffs/{id}/assignments/{aid}/primary(id=${staff.staffId}, aid=${a.assignmentId})}"
+                                              method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Đặt làm chính</button>
+                                        </form>
+                                        <form th:if="${a.status.name() == 'ACTIVE'}"
+                                              th:action="@{/admin/staffs/{id}/assignments/{aid}/end(id=${staff.staffId}, aid=${a.assignmentId})}"
+                                              method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Kết thúc phân công này? Lịch sử điều động vẫn được lưu lại.')">
+                                                Kết thúc
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(assignments)}">
+                                    <td colspan="7" class="text-center py-4 text-muted">Nhân viên chưa được phân công chi nhánh nào.</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div>
+
+<!-- MODAL: THÊM PHÂN CÔNG CHI NHÁNH -->
+<div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" th:action="@{/admin/staffs/{id}/assignments(id=${staff.staffId})}"
+              th:object="${assignmentForm}" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignmentModalTitle">Thêm phân công chi nhánh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="assignBranch" class="form-label">Chi nhánh <span class="text-danger">*</span></label>
+                    <select id="assignBranch" th:field="*{branchId}" class="form-select" required>
+                        <option value="">-- Chọn chi nhánh --</option>
+                        <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}">Chi nhánh</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vai trò chuyên môn</label>
+                    <div class="form-control-plaintext p-0 d-flex align-items-center gap-2">
+                        <span class="chip chip--role" th:if="${primaryRole != null}"
+                              th:text="${primaryRole.displayName != null ? primaryRole.displayName : primaryRole.roleName}">Vai trò</span>
+                        <span class="text-muted small">(Cố định theo chức danh của nhân sự trên toàn hệ thống)</span>
+                    </div>
+                    <input type="hidden" th:field="*{roleId}" id="assignRole" />
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="assignStart" class="form-label">Ngày bắt đầu</label>
+                        <input type="date" id="assignStart" th:field="*{startDate}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="assignEnd" class="form-label">Ngày kết thúc</label>
+                        <input type="date" id="assignEnd" th:field="*{endDate}" class="form-control">
+                    </div>
+                </div>
+                <div class="form-check mt-3">
+                    <input type="checkbox" id="assignPrimary" name="isPrimary" value="true" class="form-check-input">
+                    <label for="assignPrimary" class="form-check-label">Đặt làm chi nhánh chính</label>
+                </div>
+                <div class="form-hint mt-2">Để trống ngày bắt đầu sẽ lấy ngày hôm nay; để trống ngày kết thúc nếu không giới hạn thời hạn.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">Thêm phân công</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: SỬA PHÂN CÔNG CHI NHÁNH -->
+<div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-labelledby="editAssignmentModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="editAssignmentForm" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAssignmentModalTitle">Sửa phân công chi nhánh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Chi nhánh</label>
+                    <input type="text" id="editAssignBranchName" class="form-control" readonly disabled>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="editAssignStart" class="form-label">Ngày bắt đầu</label>
+                        <input type="date" id="editAssignStart" name="startDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="editAssignEnd" class="form-label">Ngày kết thúc</label>
+                        <input type="date" id="editAssignEnd" name="endDate" class="form-control">
+                    </div>
+                </div>
+                <div class="form-check mt-3">
+                    <input type="checkbox" id="editAssignPrimary" name="isPrimary" value="true" class="form-check-input">
+                    <label for="editAssignPrimary" class="form-check-label">Đặt làm chi nhánh chính</label>
+                </div>
+                <div class="form-hint mt-2">Bỏ trống ngày kết thúc nếu nhân viên làm việc không giới hạn thời gian.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Kiểm tra tab cần kích hoạt (từ controller flash attribute hoặc từ URL hash)
+    const flashTab = /*[[${activeTab}]]*/ null;
+    let targetTabId = flashTab;
+
+    if (!targetTabId && window.location.hash) {
+        targetTabId = window.location.hash.replace('#', '');
+    }
+
+    if (targetTabId) {
+        let tabBtn = document.getElementById(targetTabId);
+        if (!tabBtn) {
+            tabBtn = document.querySelector(`button[data-bs-target="#${targetTabId}"]`);
+        }
+        if (tabBtn) {
+            const tabInstance = bootstrap.Tab.getOrCreateInstance(tabBtn);
+            tabInstance.show();
+        }
+    }
+
+    // 2. Tự động lưu tab hiện tại vào URL hash khi người dùng bấm chuyển tab
+    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function (e) {
+            if (e.target && e.target.id) {
+                history.replaceState(null, null, '#' + e.target.id);
+            }
+        });
+    });
+
+    // 3. Xử lý mở modal sửa phân công
+    const staffId = /*[[${staff.staffId}]]*/ 0;
+    const editModalEl = document.getElementById('editAssignmentModal');
+    const editModal = editModalEl ? bootstrap.Modal.getOrCreateInstance(editModalEl) : null;
+
+    document.querySelectorAll('.btn-edit-assignment').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const aid = this.getAttribute('data-id');
+            const branchName = this.getAttribute('data-branch-name');
+            const startDate = this.getAttribute('data-start-date') || '';
+            const endDate = this.getAttribute('data-end-date') || '';
+            const isPrimary = this.getAttribute('data-is-primary') === 'true';
+
+            document.getElementById('editAssignBranchName').value = branchName;
+            document.getElementById('editAssignStart').value = startDate;
+            document.getElementById('editAssignEnd').value = endDate;
+            document.getElementById('editAssignPrimary').checked = isPrimary;
+
+            const form = document.getElementById('editAssignmentForm');
+            form.action = `/admin/staffs/${staffId}/assignments/${aid}/edit`;
+
+            if (editModal) {
+                editModal.show();
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

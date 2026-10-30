@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: LỊCH HẸN & HẸN TÁI KHÁM (SCR-18.1 / FT18)                        -->
+<!-- Frontend Fragment: doctor/fragments/appointments-tab.html             -->
+<!-- ===================================================================== -->
+<div th:fragment="appointmentsTab">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-calendar2-check-fill fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Lịch hẹn &amp; Kế hoạch tái khám (SCR-18.1)</h4>
+                    <span class="text-secondary small">Quản lý lịch hẹn tái khám của bệnh nhân theo lộ trình điều trị</span>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary ms-2"
+                      th:text="${reExaminations != null ? #lists.size(reExaminations) : 0} + ' lịch hẹn'">
+                    0 lịch hẹn
+                </span>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+                    onclick="openReExamModal()">
+                <i class="bi bi-calendar2-plus-fill"></i>
+                <span>+ Đặt hẹn tái khám mới</span>
+            </button>
+        </div>
+
+        <div class="table-responsive p-3 bg-white">
+            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 110px;">Mã hẹn</th>
+                    <th style="width: 140px;">Ngày hẹn</th>
+                    <th style="width: 120px;" class="text-center">Buổi hẹn</th>
+                    <th style="width: 180px;">Bác sĩ phụ trách</th>
+                    <th>Dịch vụ / Thủ thuật dự kiến</th>
+                    <th>Lý do &amp; Ghi chú dặn dò</th>
+                    <th style="width: 130px;" class="text-center">Trạng thái</th>
+                    <th style="width: 100px;" class="text-center">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="reExaminationsTableBody">
+                <tr th:if="${reExaminations == null or reExaminations.isEmpty()}" id="emptyReExamRow">
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Bệnh nhân chưa có lịch hẹn tái khám nào. Bấm <strong>"+ Đặt hẹn tái khám mới"</strong> để hẹn lịch cho bệnh nhân.</span>
+                    </td>
+                </tr>
+                <tr th:each="re : ${reExaminations}">
+                    <td><span class="badge bg-light text-dark border fw-bold" th:text="${re.appointmentCode != null ? re.appointmentCode : 'HEN1001'}">HEN1001</span></td>
+                    <td>
+                        <strong class="text-dark" th:text="${re.appointmentDate != null ? #temporals.format(re.appointmentDate, 'dd/MM/yyyy') : '-'}">28/10/2026</strong>
+                        <div class="small text-muted" th:if="${re.expectedTime != null}" th:text="${#temporals.format(re.expectedTime, 'HH:mm')}">09:00</div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-primary-subtle text-primary border" th:text="${re.preferredSession != null ? (re.preferredSession.name() == 'MORNING' ? 'Sáng' : (re.preferredSession.name() == 'AFTERNOON' ? 'Chiều' : 'Cả ngày')) : 'Sáng'}">Sáng</span>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-dark" th:text="${re.doctorName != null ? re.doctorName : 'BS. Lê Hoàng Nam'}">BS. Lê Hoàng Nam</div>
+                    </td>
+                    <td>
+                        <strong class="text-dark" th:text="${re.serviceName != null ? re.serviceName : 'Kiểm tra &amp; Cắt chỉ'}">Kiểm tra &amp; Cắt chỉ</strong>
+                    </td>
+                    <td>
+                        <span class="small text-secondary" th:text="${re.initialSymptoms != null and !re.initialSymptoms.isEmpty() ? re.initialSymptoms : 'Tái khám định kỳ sau điều trị'}">Tái khám định kỳ</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-warning-subtle text-dark border border-warning"
+                              th:text="${re.status != null ? re.status.name() : 'Chờ khám'}">
+                            Chờ khám
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn" onclick="openReExamModal()">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

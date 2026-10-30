@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +39,14 @@ public class PrescriptionResponseDTO {
     private String adviceNotes;
     private String followupDate;
     private String createdAt;
+    private BigDecimal totalAmount;
+
+    private String status;
+    private String statusDisplay;
+    private String purchaseChoice;
+    private String choiceNote;
+    private String handledByName;
+    private String handledAt;
 
     @Builder.Default
     private List<PrescriptionItemResponseDTO> items = new ArrayList<>();

@@ -1,0 +1,28 @@
+.appointment-panel { padding: 1.5rem; }
+.appointment-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
+.appointment-nav a { color: #25446d; text-decoration: none; padding: .55rem .85rem; border-radius: .55rem; background: #edf3fb; }
+.appointment-nav a.is-current { color: #fff; background: #245b9f; }
+.appointment-filter { display: flex; flex-wrap: wrap; gap: .8rem; align-items: end; margin-bottom: 1.2rem; }
+.appointment-filter > div { flex: 1 1 12rem; }
+.appointment-filter label, .appointment-form label, .appointment-action-box label { display: block; font-weight: 600; margin: .35rem 0; }
+.appointment-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: .7rem; margin: 1rem 0; }
+.appointment-kpi { padding: .85rem 1rem; border: 1px solid #d9e3ef; border-radius: .65rem; background: #f7faff; }
+.appointment-kpi span { display: block; font-size: .85rem; color: #5b6b7c; }
+.appointment-kpi strong { font-size: 1.45rem; }
+.appointment-calendar-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1.1rem 0; }
+.appointment-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: .35rem; }
+.appointment-calendar-header { text-align: center; font-weight: 700; padding: .5rem; color: #526981; }
+.appointment-day { display: block; min-height: 7rem; padding: .55rem; border: 1px solid #d9e3ef; border-radius: .5rem; text-decoration: none; color: #173a63; background: #fff; }
+.appointment-day:hover { background: #eef6ff; }
+.appointment-day.is-outside { opacity: .55; }
+.appointment-day.is-today { border-color: #245b9f; box-shadow: inset 0 0 0 1px #245b9f; }
+.appointment-day strong, .appointment-day span { display: block; }
+.appointment-day span { margin-top: .4rem; font-size: .82rem; }
+.appointment-availability { margin: 1.2rem 0; padding: .8rem 1rem; border-radius: .6rem; background: #eef5ff; color: #173a73; }
+.appointment-availability.is-error { background: #fff1f0; color: #a12222; }
+.appointment-availability.is-success { background: #eaf8f0; color: #17633b; }
+.appointment-form small { display: block; margin-top: .3rem; color: #64748b; }
+.appointment-action-box { margin-top: 1rem; padding: 1rem; border: 1px solid #d9e3ef; border-radius: .6rem; }
+.appointment-history { margin: 1rem 0 0; padding-left: 1.3rem; }
+.appointment-history li { padding: .3rem 0; }
+@media (max-width: 760px) { .appointment-calendar { gap: .15rem; } .appointment-day { min-height: 5.5rem; padding: .35rem; font-size: .8rem; } .appointment-day span { font-size: .72rem; } }

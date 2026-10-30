@@ -1,0 +1,96 @@
+/* FT33 - Phân ca làm việc (SCR-33.1, SCR-33.3).
+   Dùng lại biến màu của layout.css để đồng bộ giao diện toàn nhóm. */
+
+/* ---------- Ma trận tuần (SCR-33.1) ---------- */
+.schedule-table { table-layout: fixed; min-width: 900px; }
+.schedule-table thead th {
+    background: var(--brand-50);
+    color: var(--brand-700);
+    text-align: center;
+    border-bottom: 0;
+}
+.schedule-table__corner { width: 130px; text-align: left !important; }
+.schedule-day { display: flex; flex-direction: column; line-height: 1.2; }
+.schedule-day span { font-size: .75rem; font-weight: 600; text-transform: uppercase; }
+.schedule-day strong { font-size: .95rem; }
+
+.schedule-shift { background: #fafbfd; vertical-align: top !important; }
+.schedule-shift__name { font-weight: 700; color: var(--ink); }
+
+.schedule-cell { vertical-align: top !important; min-height: 90px; padding: 8px !important; }
+.schedule-table .is-today { background: #f3f8ff; }
+
+.schedule-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-size: .8rem;
+    font-weight: 600;
+}
+.schedule-chip--leave { background: #fff3d6; color: #8a5a00; }
+.schedule-chip__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schedule-chip__remove {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: .55;
+    padding: 0 2px;
+    line-height: 1;
+}
+.schedule-chip__remove:hover { opacity: 1; color: #c0392b; }
+
+.schedule-add {
+    width: 100%;
+    border: 1px dashed #c9d2e0;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 3px 0;
+    font-size: .76rem;
+    transition: all .15s ease;
+}
+.schedule-add:hover { border-color: var(--brand-700); color: var(--brand-700); background: var(--brand-50); }
+
+.schedule-empty { padding: 28px; text-align: center; color: var(--muted); }
+
+/* ---------- Lịch cá nhân (SCR-33.3) ---------- */
+.my-week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(130px, 1fr));
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.my-day {
+    border: 1px solid #e6eaf1;
+    border-radius: 12px;
+    padding: 10px;
+    background: #fff;
+    min-height: 150px;
+}
+.my-day.is-today { border-color: var(--brand-700); background: #f3f8ff; }
+.my-day__head { display: flex; flex-direction: column; margin-bottom: 8px; line-height: 1.2; }
+.my-day__head span { font-size: .75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.my-day__empty { color: #aab3c2; font-size: .85rem; text-align: center; margin-top: 24px; }
+
+.my-shift {
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background: var(--brand-50);
+}
+.my-shift--leave { background: #fff3d6; }
+.my-shift--cancel { background: #eceff4; opacity: .75; }
+.my-shift__name { font-weight: 700; color: var(--brand-700); }
+.my-shift__time { font-size: .85rem; font-weight: 600; color: var(--ink); }
+.my-shift .status-badge { margin-top: 4px; }
+
+@media (max-width: 992px) {
+    .my-week { grid-template-columns: repeat(7, 150px); }
+}

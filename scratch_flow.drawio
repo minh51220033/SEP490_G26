@@ -1,0 +1,1924 @@
+<mxfile host="Electron">
+  <diagram id="Role_2_BacSi_Detailed" name="2. Role Bác Sĩ (Doctor)">
+    <mxGraphModel dx="715" dy="435" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="5200" pageHeight="1575" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n_2000" parent="1" style="text;html=1;align=left;fontSize=20;fontStyle=3;fontColor=#2f5597;fontFamily=Times New Roman;" value="3.1.1.2 Screens Flow for Doctor (Bác sĩ Nha khoa - Đầy đủ màn hình chính &amp; màn hình con)" vertex="1">
+          <mxGeometry height="35" width="1400" x="60" y="15" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2001" parent="1" style="text;html=1;align=left;fontSize=16;fontStyle=3;fontColor=#1a1a1a;fontFamily=Times New Roman;" value="Web" vertex="1">
+          <mxGeometry height="30" width="100" x="60" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2002" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=10;fontStyle=1;" value="SCR-01.4: Trang chủ (Home)&#xa;&amp; Đăng nhập hệ thống" vertex="1">
+          <mxGeometry height="38" width="190" x="2405" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2003" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=11;fontStyle=1;" value="Doctor Dashboard&#xa;(Bảng điều khiển Bác sĩ &amp; Ca khám trong ngày)" vertex="1">
+          <mxGeometry height="50" width="270" x="2365" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2004" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Xác thực &amp; Khôi phục (FT01)" vertex="1">
+          <mxGeometry height="38" width="190" x="1945" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2005" edge="1" parent="1" source="n_2002" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2004">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2500" y="85" />
+              <mxPoint x="2040" y="85" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2006" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xác thực OTP Email / SĐT&#xa;(Bảng token: OTP)" vertex="1">
+          <mxGeometry height="44" width="148" x="1886" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2007" edge="1" parent="1" source="n_2004" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2006">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2040" y="152" />
+              <mxPoint x="1960" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2008" edge="1" parent="1" source="n_2006" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1960" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2009" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đặt lại mật khẩu tài khoản&#xa;(token: RESET_PASSWORD)" vertex="1">
+          <mxGeometry height="44" width="148" x="2046" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2010" edge="1" parent="1" source="n_2004" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2009">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2040" y="152" />
+              <mxPoint x="2120" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2011" edge="1" parent="1" source="n_2009" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2120" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2012" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-01.5: Thông tin TK &amp; Mật khẩu" vertex="1">
+          <mxGeometry height="38" width="190" x="2405" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2013" edge="1" parent="1" source="n_2002" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2012">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2500" y="85" />
+              <mxPoint x="2500" y="85" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2014" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-01.5: Xem &amp; Cập nhật&#xa;hồ sơ cá nhân" vertex="1">
+          <mxGeometry height="44" width="148" x="2346" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2015" edge="1" parent="1" source="n_2012" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2014">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2500" y="152" />
+              <mxPoint x="2420" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2016" edge="1" parent="1" source="n_2014" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2420" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2017" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-01.5: Đổi mật khẩu&#xa;bảo mật (BCrypt)" vertex="1">
+          <mxGeometry height="44" width="148" x="2506" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2018" edge="1" parent="1" source="n_2012" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2017">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2500" y="152" />
+              <mxPoint x="2580" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2019" edge="1" parent="1" source="n_2017" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2580" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2020" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Thông báo &amp; Tương tác Tin tức (FT38)" vertex="1">
+          <mxGeometry height="38" width="190" x="2895" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2021" edge="1" parent="1" source="n_2002" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2020">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2500" y="85" />
+              <mxPoint x="2990" y="85" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2022" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Trung tâm Thông báo&#xa;(system_notifications)" vertex="1">
+          <mxGeometry height="44" width="148" x="2756" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2023" edge="1" parent="1" source="n_2020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2022">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2990" y="152" />
+              <mxPoint x="2830" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2024" edge="1" parent="1" source="n_2022" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2830" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2025" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-38.1: Chi tiết bài viết&#xa;&amp; DS bình luận" vertex="1">
+          <mxGeometry height="44" width="148" x="2916" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2026" edge="1" parent="1" source="n_2020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2025">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2990" y="152" />
+              <mxPoint x="2990" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2027" edge="1" parent="1" source="n_2025" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2990" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2028" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-38.2 &amp; 38.3: Bình luận,&#xa;Reply &amp; Nút Like bài viết" vertex="1">
+          <mxGeometry height="44" width="148" x="3076" y="168" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2029" edge="1" parent="1" source="n_2020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2028">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2990" y="152" />
+              <mxPoint x="3150" y="152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2030" edge="1" parent="1" source="n_2028" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2003">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3150" y="230" />
+              <mxPoint x="2500" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2031" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-07.2: Danh sách lượt khám&#xa;trong ngày (FT07)" vertex="1">
+          <mxGeometry height="44" width="185" x="2180" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2032" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2031">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2385" y="300" />
+              <mxPoint x="2385" y="362" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2033" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lọc ca khám theo Bác sĩ&#xa;&amp; Trạng thái lượt khám" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2034" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2033">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="393" />
+              <mxPoint x="2192" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2035" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhận thông báo bệnh nhân&#xa;mới Check-in vào ghế" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2036" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2035">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="393" />
+              <mxPoint x="2316" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2037" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-07.1: Check-in &amp;&#xa;Ghi nhận sơ bộ (FT07)" vertex="1">
+          <mxGeometry height="44" width="165" x="1904" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2038" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2037">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="362" />
+              <mxPoint x="2178" y="328" />
+              <mxPoint x="1986" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2039" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xác nhận khách hẹn trước&#xa;/ Tiếp nhận vãng lai" vertex="1">
+          <mxGeometry height="42" width="120" x="1863" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2040" edge="1" parent="1" source="n_2037" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2039">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1986" y="393" />
+              <mxPoint x="1923" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2041" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra &amp; bổ sung triệu chứng&#xa;ban đầu (initial_symptoms)" vertex="1">
+          <mxGeometry height="42" width="120" x="1989" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2042" edge="1" parent="1" source="n_2037" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2041">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1986" y="393" />
+              <mxPoint x="2049" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2043" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-08.1: Kanban Board&#xa;Điều phối (FT08)" vertex="1">
+          <mxGeometry height="44" width="165" x="1636" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2044" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2043">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="362" />
+              <mxPoint x="2178" y="328" />
+              <mxPoint x="1718" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2045" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Cột hàng chờ riêng theo&#xa;từng Bác sĩ phụ trách" vertex="1">
+          <mxGeometry height="42" width="120" x="1595" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2046" edge="1" parent="1" source="n_2043" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2045">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1718" y="393" />
+              <mxPoint x="1655" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2047" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi trạng thái Phòng&#xa;&amp; Ghế nha (dental_chairs)" vertex="1">
+          <mxGeometry height="42" width="120" x="1721" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2048" edge="1" parent="1" source="n_2043" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2047">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1718" y="393" />
+              <mxPoint x="1781" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2049" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-08.2: Popup Phân công/&#xa;Đổi BS &amp; Ghế khám (FT08)" vertex="1">
+          <mxGeometry height="44" width="165" x="1368" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2050" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2049">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="362" />
+              <mxPoint x="2178" y="328" />
+              <mxPoint x="1450" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2051" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhận ca / Đổi Bác sĩ &amp;&#xa;Phụ tá hỗ trợ (assistant_id)" vertex="1">
+          <mxGeometry height="42" width="120" x="1327" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2052" edge="1" parent="1" source="n_2049" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2051">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="393" />
+              <mxPoint x="1387" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2053" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chỉ định Phòng khám (rooms)&#xa;&amp; Ghế nha khả dụng" vertex="1">
+          <mxGeometry height="42" width="120" x="1453" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2054" edge="1" parent="1" source="n_2049" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2053">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="393" />
+              <mxPoint x="1513" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2055" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-10.4: Tạm dừng/Tiếp tục&#xa;chờ trên Kanban (FT10)" vertex="1">
+          <mxGeometry height="44" width="165" x="1100" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2056" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2055">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="362" />
+              <mxPoint x="2178" y="328" />
+              <mxPoint x="1182" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2057" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Gọi bệnh nhân vào khám&#xa;(CALLED -&gt; IN_SERVICE)" vertex="1">
+          <mxGeometry height="42" width="120" x="1059" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2058" edge="1" parent="1" source="n_2055" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2057">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1182" y="393" />
+              <mxPoint x="1119" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2059" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tạm dừng chờ đi chụp phim/&#xa;Xét nghiệm &amp; Tiếp tục khám" vertex="1">
+          <mxGeometry height="42" width="120" x="1185" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2060" edge="1" parent="1" source="n_2055" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2059">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1182" y="393" />
+              <mxPoint x="1245" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2061" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-10.1 &amp; SCR-10.2: Hàng chờ&#xa;TV &amp; Kích hoạt Cấp cứu (FT10)" vertex="1">
+          <mxGeometry height="44" width="165" x="832" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2062" edge="1" parent="1" source="n_2031" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2061">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="362" />
+              <mxPoint x="2178" y="328" />
+              <mxPoint x="914" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2063" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-10.2: Kích hoạt Cấp cứu&#xa;(is_emergency = 1)" vertex="1">
+          <mxGeometry height="42" width="120" x="791" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2064" edge="1" parent="1" source="n_2061" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2063">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="914" y="393" />
+              <mxPoint x="851" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2065" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-10.1: Đồng bộ số đang&#xa;phục vụ lên màn hình Tivi" vertex="1">
+          <mxGeometry height="42" width="120" x="917" y="404" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2066" edge="1" parent="1" source="n_2061" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2065">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="914" y="393" />
+              <mxPoint x="977" y="393" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2067" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-03.1: Danh sách&#xa;Hồ sơ Bệnh nhân (FT03)" vertex="1">
+          <mxGeometry height="44" width="185" x="2190" y="492" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2068" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2067">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2393" y="300" />
+              <mxPoint x="2393" y="514" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2069" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu nhanh theo Mã BN,&#xa;Họ tên, SĐT, CCCD" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2070" edge="1" parent="1" source="n_2067" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2069">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="545" />
+              <mxPoint x="2192" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2071" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra phân quyền truy cập&#xa;bệnh án theo chi nhánh" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2072" edge="1" parent="1" source="n_2067" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2071">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="545" />
+              <mxPoint x="2316" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2073" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-03.2: Chi tiết Hồ sơ&#xa;Bệnh nhân (4 Tab - FT03)" vertex="1">
+          <mxGeometry height="44" width="165" x="1715" y="492" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2074" edge="1" parent="1" source="n_2067" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2073">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="514" />
+              <mxPoint x="2178" y="480" />
+              <mxPoint x="1797" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2075" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tab 1: TT Cá nhân, BHYT&#xa;&amp; Người giám hộ" vertex="1">
+          <mxGeometry height="42" width="120" x="1485" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2076" edge="1" parent="1" source="n_2073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2075">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1797" y="545" />
+              <mxPoint x="1545" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2077" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Cảnh báo Tiền sử: Dị ứng,&#xa;Tim mạch, Bệnh nền" vertex="1">
+          <mxGeometry height="42" width="120" x="1611" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2078" edge="1" parent="1" source="n_2073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2077">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1797" y="545" />
+              <mxPoint x="1671" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2079" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tab 2: Kho Ảnh tổng hợp &amp;&#xa;File cam kết (patient_documents)" vertex="1">
+          <mxGeometry height="42" width="120" x="1737" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2080" edge="1" parent="1" source="n_2073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2079">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1797" y="545" />
+              <mxPoint x="1797" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2081" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tab 3: Hồ sơ Bệnh án điện tử&#xa;(EMR) &amp; Chẩn đoán ICD-10" vertex="1">
+          <mxGeometry height="42" width="120" x="1863" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2082" edge="1" parent="1" source="n_2073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2081">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1797" y="545" />
+              <mxPoint x="1923" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2083" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tab 4: Tổng quan Lộ trình &amp;&#xa;Quá trình điều trị" vertex="1">
+          <mxGeometry height="42" width="120" x="1989" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2084" edge="1" parent="1" source="n_2073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2083">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1797" y="545" />
+              <mxPoint x="2049" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2085" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-03.4: Chi tiết Lượt khám&#xa;&amp; Lịch sử Điều trị (FT03)" vertex="1">
+          <mxGeometry height="44" width="165" x="1195" y="492" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2086" edge="1" parent="1" source="n_2067" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2085">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="514" />
+              <mxPoint x="2178" y="480" />
+              <mxPoint x="1277" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2087" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Timeline toàn bộ các lượt khám&#xa;(visits) qua các chi nhánh" vertex="1">
+          <mxGeometry height="42" width="120" x="1091" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2088" edge="1" parent="1" source="n_2085" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2087">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1277" y="545" />
+              <mxPoint x="1151" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2089" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chi tiết Phiếu khám lâm sàng&#xa;&amp; Sơ đồ răng các lần trước" vertex="1">
+          <mxGeometry height="42" width="120" x="1217" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2090" edge="1" parent="1" source="n_2085" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2089">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1277" y="545" />
+              <mxPoint x="1277" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2091" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu lịch sử Đơn thuốc,&#xa;Phim X-quang &amp; Thủ thuật đã làm" vertex="1">
+          <mxGeometry height="42" width="120" x="1343" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2092" edge="1" parent="1" source="n_2085" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2091">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1277" y="545" />
+              <mxPoint x="1403" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2093" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-43.1: Tiến độ Quy trình&#xa;của Lượt khám (FT43)" vertex="1">
+          <mxGeometry height="44" width="185" x="2190" y="644" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2094" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2093">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2401" y="300" />
+              <mxPoint x="2401" y="666" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2095" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Khởi tạo quy trình theo mẫu&#xa;(workflow_executions)" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2096" edge="1" parent="1" source="n_2093" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2095">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="697" />
+              <mxPoint x="2192" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2097" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị bước hiện tại &amp;&#xa;Vai trò phụ trách" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2098" edge="1" parent="1" source="n_2093" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2097">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="697" />
+              <mxPoint x="2316" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2099" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-43.2: Chi tiết &amp; Cập nhật&#xa;bước thực hiện (FT43)" vertex="1">
+          <mxGeometry height="44" width="165" x="1841" y="644" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2100" edge="1" parent="1" source="n_2093" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2099">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="666" />
+              <mxPoint x="2178" y="632" />
+              <mxPoint x="1923" y="632" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2101" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra điều kiện hoàn tất&#xa;bước (completion_criteria)" vertex="1">
+          <mxGeometry height="42" width="120" x="1737" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2102" edge="1" parent="1" source="n_2099" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2101">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1923" y="697" />
+              <mxPoint x="1797" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2103" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ghi nhận kết quả bước khám&#xa;(result_note / result_data)" vertex="1">
+          <mxGeometry height="42" width="120" x="1863" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2104" edge="1" parent="1" source="n_2099" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2103">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1923" y="697" />
+              <mxPoint x="1923" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2105" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tự động điều phối sang Phòng&#xa;/ Hàng chờ bước kế tiếp" vertex="1">
+          <mxGeometry height="42" width="120" x="1989" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2106" edge="1" parent="1" source="n_2099" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2105">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1923" y="697" />
+              <mxPoint x="2049" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2107" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-43.3: Tạm dừng / Tiếp tục&#xa;/ Bỏ qua bước tùy chọn (FT43)" vertex="1">
+          <mxGeometry height="44" width="165" x="1447" y="644" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2108" edge="1" parent="1" source="n_2093" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2107">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="666" />
+              <mxPoint x="2178" y="632" />
+              <mxPoint x="1529" y="632" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2109" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tạm dừng phiên khám ở luồng&#xa;ngắt quãng (INTERRUPTIBLE)" vertex="1">
+          <mxGeometry height="42" width="120" x="1343" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2110" edge="1" parent="1" source="n_2107" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2109">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1529" y="697" />
+              <mxPoint x="1403" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2111" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tiếp tục quy trình khi có&#xa;kết quả cận lâm sàng" vertex="1">
+          <mxGeometry height="42" width="120" x="1469" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2112" edge="1" parent="1" source="n_2107" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2111">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1529" y="697" />
+              <mxPoint x="1529" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2113" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Bỏ qua bước không bắt buộc&#xa;(is_optional = 1 -&gt; SKIPPED)" vertex="1">
+          <mxGeometry height="42" width="120" x="1595" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2114" edge="1" parent="1" source="n_2107" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2113">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1529" y="697" />
+              <mxPoint x="1655" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2115" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-43.4: Lịch sử thực hiện&#xa;quy trình (FT43)" vertex="1">
+          <mxGeometry height="44" width="165" x="1116" y="644" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2116" edge="1" parent="1" source="n_2093" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2115">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="666" />
+              <mxPoint x="2178" y="632" />
+              <mxPoint x="1198" y="632" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2117" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhật ký thực thi từng bước&#xa;(workflow_step_executions)" vertex="1">
+          <mxGeometry height="42" width="120" x="1075" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2118" edge="1" parent="1" source="n_2115" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2117">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1198" y="697" />
+              <mxPoint x="1135" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2119" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu nhân sự thực hiện,&#xa;thời điểm &amp; người phê duyệt" vertex="1">
+          <mxGeometry height="42" width="120" x="1201" y="708" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2120" edge="1" parent="1" source="n_2115" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2119">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1198" y="697" />
+              <mxPoint x="1261" y="697" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2121" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-11.1: Tab Khám bệnh&#xa;Lâm sàng (FT11)" vertex="1">
+          <mxGeometry height="44" width="185" x="2190" y="796" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2122" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2121">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2385" y="300" />
+              <mxPoint x="2385" y="818" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2123" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lý do đến khám (chief_complaint)&#xa;&amp; Bệnh sử (history_illness)" vertex="1">
+          <mxGeometry height="42" width="118" x="1885" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2124" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2123">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="849" />
+              <mxPoint x="1944" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2125" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chỉ số sinh hiệu JSON&#xa;(Huyết áp, Mạch, Nhịp tim)" vertex="1">
+          <mxGeometry height="42" width="118" x="2009" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2126" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2125">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="849" />
+              <mxPoint x="2068" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2127" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Khám ngoài mặt, Trong miệng&#xa;&amp; Tình trạng Nha chu" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2128" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2127">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="849" />
+              <mxPoint x="2192" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2129" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Sơ đồ 32 răng tương tác FDI&#xa;(odontogram_chart_json)" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2130" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2129">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="849" />
+              <mxPoint x="2316" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2131" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-14.1: Form Chẩn đoán&#xa;bệnh lý vào Bệnh án (FT14)" vertex="1">
+          <mxGeometry height="44" width="165" x="1593" y="796" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2132" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2131">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="818" />
+              <mxPoint x="2178" y="784" />
+              <mxPoint x="1675" y="784" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2133" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu &amp; chọn mã bệnh lý&#xa;nha khoa chuẩn ICD-10" vertex="1">
+          <mxGeometry height="42" width="120" x="1489" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2134" edge="1" parent="1" source="n_2131" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2133">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1675" y="849" />
+              <mxPoint x="1549" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2135" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Phân loại: Chẩn đoán Chính /&#xa;Bệnh kèm theo / Phân biệt" vertex="1">
+          <mxGeometry height="42" width="120" x="1615" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2136" edge="1" parent="1" source="n_2131" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2135">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1675" y="849" />
+              <mxPoint x="1675" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2137" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Gắn vị trí răng FDI (tooth_numbers)&#xa;&amp; Lưu kết luận bệnh án" vertex="1">
+          <mxGeometry height="42" width="120" x="1741" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2138" edge="1" parent="1" source="n_2131" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2137">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1675" y="849" />
+              <mxPoint x="1801" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2139" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-11.2: Form Tạo chỉ định&#xa;Cận lâm sàng (FT11)" vertex="1">
+          <mxGeometry height="44" width="165" x="1199" y="796" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2140" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2139">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="818" />
+              <mxPoint x="2178" y="784" />
+              <mxPoint x="1281" y="784" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2141" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn dịch vụ Chụp X-quang /&#xa;Xét nghiệm (paraclinical_orders)" vertex="1">
+          <mxGeometry height="42" width="120" x="1095" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2142" edge="1" parent="1" source="n_2139" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2141">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1281" y="849" />
+              <mxPoint x="1155" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2143" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chỉ định vị trí răng cần chụp&#xa;&amp; Ghi chú yêu cầu kỹ thuật" vertex="1">
+          <mxGeometry height="42" width="120" x="1221" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2144" edge="1" parent="1" source="n_2139" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2143">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1281" y="849" />
+              <mxPoint x="1281" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2145" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chuyển bệnh nhân sang hàng chờ&#xa;Cận lâm sàng (PARACLINICAL)" vertex="1">
+          <mxGeometry height="42" width="120" x="1347" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2146" edge="1" parent="1" source="n_2139" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2145">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1281" y="849" />
+              <mxPoint x="1407" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2147" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-11.3: Danh sách chỉ định&#xa;trong lượt khám (FT11)" vertex="1">
+          <mxGeometry height="44" width="165" x="868" y="796" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2148" edge="1" parent="1" source="n_2121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2147">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="818" />
+              <mxPoint x="2178" y="784" />
+              <mxPoint x="950" y="784" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2149" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi trạng thái thực hiện&#xa;(WAITING -&gt; IN_PROGRESS -&gt; COMPLETED)" vertex="1">
+          <mxGeometry height="42" width="120" x="827" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2150" edge="1" parent="1" source="n_2147" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2149">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="849" />
+              <mxPoint x="887" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2151" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhận thông báo khi có kết quả&#xa;&amp; Mở nhanh phim/xét nghiệm" vertex="1">
+          <mxGeometry height="42" width="120" x="953" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2152" edge="1" parent="1" source="n_2147" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2151">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="849" />
+              <mxPoint x="1013" y="849" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2153" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-12.1: Danh sách &amp; Trình xem&#xa;Ảnh X-quang NanoPix (FT12)" vertex="1">
+          <mxGeometry height="44" width="185" x="2190" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2154" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2153">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2390" y="970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2155" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Trình xem ảnh X-quang / DICOM&#xa;độ phân giải cao tại ghế" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2156" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2155">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="1001" />
+              <mxPoint x="2192" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2157" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Phóng to, đo đạc &amp; đối chiếu&#xa;theo vị trí răng chỉ định" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2158" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2157">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="1001" />
+              <mxPoint x="2316" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2159" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-12.2: Danh sách kết quả&#xa;chưa khớp hồ sơ (FT12)" vertex="1">
+          <mxGeometry height="44" width="165" x="1904" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2160" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2159">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="970" />
+              <mxPoint x="2178" y="936" />
+              <mxPoint x="1986" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2161" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="DS ảnh chụp từ NanoPix trạng thái&#xa;UNMATCHED (nanopix_xray_sync_logs)" vertex="1">
+          <mxGeometry height="42" width="120" x="1863" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2162" edge="1" parent="1" source="n_2159" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2161">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1986" y="1001" />
+              <mxPoint x="1923" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2163" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lọc theo thời gian chụp &amp; Mã&#xa;định danh máy chụp (Study UID)" vertex="1">
+          <mxGeometry height="42" width="120" x="1989" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2164" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1986" y="1002" />
+              <mxPoint x="2049" y="1002" />
+            </Array>
+            <mxPoint x="1986.5" y="992.9999999999998" as="sourcePoint" />
+            <mxPoint x="2049" y="1012.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2165" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-12.3: Form Đối chiếu &amp;&#xa;Liên kết kết quả (FT12)" vertex="1">
+          <mxGeometry height="44" width="165" x="1636" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2166" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2165">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="970" />
+              <mxPoint x="2178" y="936" />
+              <mxPoint x="1718" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2167" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra và gắn thủ công ảnh&#xa;vào đúng Hồ sơ &amp; Lượt khám" vertex="1">
+          <mxGeometry height="42" width="120" x="1595" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2168" edge="1" parent="1" source="n_2165" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2167">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1718" y="1001" />
+              <mxPoint x="1655" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2169" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lưu lịch sử người liên kết&#xa;(is_manual_linked, linked_by)" vertex="1">
+          <mxGeometry height="42" width="120" x="1721" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2170" edge="1" parent="1" source="n_2165" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2169">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1718" y="1001" />
+              <mxPoint x="1781" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2171" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-12.4: Trạng thái đồng bộ&#xa;&amp; Báo lỗi kết nối (FT12)" vertex="1">
+          <mxGeometry height="44" width="165" x="1368" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2172" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2171">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="970" />
+              <mxPoint x="2178" y="936" />
+              <mxPoint x="1450" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2173" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi trạng thái kết nối API&#xa;NanoPix &amp; Cảnh báo lỗi đồng bộ" vertex="1">
+          <mxGeometry height="42" width="120" x="1327" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2174" edge="1" parent="1" source="n_2171" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2173">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="1001" />
+              <mxPoint x="1387" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2175" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Thao tác gọi đồng bộ lại&#xa;khi mạng nội bộ gián đoạn" vertex="1">
+          <mxGeometry height="42" width="120" x="1453" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2176" edge="1" parent="1" source="n_2171" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2175">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="1001" />
+              <mxPoint x="1513" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2177" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-13.1: Bảng theo dõi chỉ định&#xa;&amp; Mẫu gửi ngoài (FT13)" vertex="1">
+          <mxGeometry height="44" width="165" x="1100" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2178" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2177">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="970" />
+              <mxPoint x="2178" y="936" />
+              <mxPoint x="1182" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2179" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi tiến độ mẫu xét nghiệm&#xa;gửi Labo ngoài (lab_external_orders)" vertex="1">
+          <mxGeometry height="42" width="120" x="1059" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2180" edge="1" parent="1" source="n_2177" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2179">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1182" y="1001" />
+              <mxPoint x="1119" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2181" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra trạng thái SENT /&#xa;PROCESSING / RESULT_RECEIVED" vertex="1">
+          <mxGeometry height="42" width="120" x="1185" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2182" edge="1" parent="1" source="n_2177" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2181">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1182" y="1001" />
+              <mxPoint x="1245" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2183" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-13.3: Chi tiết chỉ định &amp;&#xa;Kết quả xét nghiệm (FT13)" vertex="1">
+          <mxGeometry height="44" width="165" x="832" y="948" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2184" edge="1" parent="1" source="n_2153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2183">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="970" />
+              <mxPoint x="2178" y="936" />
+              <mxPoint x="914" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2185" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xem chi tiết các chỉ số kết quả&#xa;xét nghiệm (results_json)" vertex="1">
+          <mxGeometry height="42" width="120" x="791" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2186" edge="1" parent="1" source="n_2183" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2185">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="914" y="1001" />
+              <mxPoint x="851" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2187" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#b0e3e6;strokeColor=#0e8088;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Mở file PDF / Ảnh kết quả đính kèm&#xa;(paraclinical_result_attachments)" vertex="1">
+          <mxGeometry height="42" width="120" x="917" y="1012" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2188" edge="1" parent="1" source="n_2183" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#0e8088;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2187">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="914" y="1001" />
+              <mxPoint x="977" y="1001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2189" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-15.1: Tab Lộ trình &amp;&#xa;Kế hoạch Điều trị (FT15)" vertex="1">
+          <mxGeometry height="44" width="185" x="2190" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2190" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2189">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2401" y="300" />
+              <mxPoint x="2401" y="1122" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2191" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tổng quan kế hoạch điều trị&#xa;nhiều giai đoạn (Niềng răng, Implant)" vertex="1">
+          <mxGeometry height="42" width="118" x="2133" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2192" edge="1" parent="1" source="n_2189" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2191">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="1153" />
+              <mxPoint x="2192" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2193" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi tổng chi phí dự kiến&#xa;&amp; Trạng thái bệnh nhân đồng ý" vertex="1">
+          <mxGeometry height="42" width="118" x="2257" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2194" edge="1" parent="1" source="n_2189" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2193">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2283" y="1153" />
+              <mxPoint x="2316" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2195" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-15.2: Form Tạo / Sửa&#xa;Kế hoạch điều trị (FT15)" vertex="1">
+          <mxGeometry height="44" width="165" x="1778" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2196" edge="1" parent="1" source="n_2189" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2195">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="1122" />
+              <mxPoint x="2178" y="1088" />
+              <mxPoint x="1860" y="1088" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2197" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chia các giai đoạn điều trị tuần tự&#xa;(treatment_plan_stages)" vertex="1">
+          <mxGeometry height="42" width="120" x="1611" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2198" edge="1" parent="1" source="n_2195" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2197">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1860" y="1153" />
+              <mxPoint x="1671" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2199" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Thêm thủ thuật, vị trí răng FDI,&#xa;số lượng &amp; đơn giá dự kiến" vertex="1">
+          <mxGeometry height="42" width="120" x="1737" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2200" edge="1" parent="1" source="n_2195" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2199">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1860" y="1153" />
+              <mxPoint x="1797" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2201" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Thiết lập ngày bắt đầu, ngày dự kiến&#xa;hoàn tất &amp; lịch hẹn từng mốc" vertex="1">
+          <mxGeometry height="42" width="120" x="1863" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2202" edge="1" parent="1" source="n_2195" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2201">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1860" y="1153" />
+              <mxPoint x="1923" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2203" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Cập nhật trạng thái kế hoạch&#xa;(DRAFT -&gt; PROPOSED -&gt; ACCEPTED)" vertex="1">
+          <mxGeometry height="42" width="120" x="1989" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2204" edge="1" parent="1" source="n_2195" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2203">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1860" y="1153" />
+              <mxPoint x="2049" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2205" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-15.3: Chi tiết giai đoạn &amp;&#xa;Tiến độ điều trị (FT15)" vertex="1">
+          <mxGeometry height="44" width="165" x="1321" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2206" edge="1" parent="1" source="n_2189" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2205">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2178" y="1122" />
+              <mxPoint x="2178" y="1088" />
+              <mxPoint x="1403" y="1088" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2207" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Cập nhật hoàn thành từng hạng mục&#xa;trong giai đoạn (plan_items)" vertex="1">
+          <mxGeometry height="42" width="120" x="1217" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2208" edge="1" parent="1" source="n_2205" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2207">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1403" y="1153" />
+              <mxPoint x="1277" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2209" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Liên kết trực tiếp với Lượt khám,&#xa;Thủ thuật thực tế &amp; Ảnh trước/sau" vertex="1">
+          <mxGeometry height="42" width="120" x="1343" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2210" edge="1" parent="1" source="n_2205" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2209">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1403" y="1153" />
+              <mxPoint x="1403" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2211" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Quản lý đơn đặt xưởng răng sứ&#xa;Labo (labo_orders: Màu răng, Ngày thử)" vertex="1">
+          <mxGeometry height="42" width="120" x="1469" y="1164" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2212" edge="1" parent="1" source="n_2205" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2211">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1403" y="1153" />
+              <mxPoint x="1529" y="1153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2213" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Ghi nhận Dịch vụ Thực tế &amp;&#xa;Ảnh Lâm sàng Trước/Sau (FT16, FT17)" vertex="1">
+          <mxGeometry height="44" width="215" x="2640" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2214" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2213">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2595" y="300" />
+              <mxPoint x="2595" y="362" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2215" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-16.1: Khối chọn &amp; Xác nhận&#xa;dịch vụ hoàn thành (FT16)" vertex="1">
+          <mxGeometry height="44" width="162" x="2890" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2216" edge="1" parent="1" source="n_2213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2215">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="362" />
+              <mxPoint x="2869" y="328" />
+              <mxPoint x="2971" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2217" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn thủ thuật thực tế từ Kế hoạch&#xa;hoặc Danh mục dịch vụ (FT02)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2218" edge="1" parent="1" source="n_2215" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2217">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2219" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhập vị trí răng FDI thực làm,&#xa;số lượng, đơn giá &amp; giảm giá" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2220" edge="1" parent="1" source="n_2217" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2219">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2221" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xác nhận Bác sĩ chính &amp; Phụ tá&#xa;(performed_services = COMPLETED)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2222" edge="1" parent="1" source="n_2219" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2221">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2223" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-16.2: Danh sách dịch vụ&#xa;đã thực hiện theo lượt khám (FT16)" vertex="1">
+          <mxGeometry height="44" width="162" x="3066" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2224" edge="1" parent="1" source="n_2213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2223">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="362" />
+              <mxPoint x="2869" y="328" />
+              <mxPoint x="3147" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2225" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị danh sách thủ thuật&#xa;đã hoàn tất trong lượt khám" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2226" edge="1" parent="1" source="n_2223" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2225">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2227" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tự động đẩy dữ liệu sang phân hệ&#xa;Kế toán lập hóa đơn (FT21)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2228" edge="1" parent="1" source="n_2225" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2227">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2229" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Làm căn cứ ghi nhận Hoa hồng&#xa;kỹ thuật cho Bác sĩ (FT32)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2230" edge="1" parent="1" source="n_2227" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2229">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2231" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-17.1: Thư mục Kho Ảnh&#xa;lâm sàng bệnh nhân (FT17)" vertex="1">
+          <mxGeometry height="44" width="162" x="3242" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2232" edge="1" parent="1" source="n_2213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2231">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="362" />
+              <mxPoint x="2869" y="328" />
+              <mxPoint x="3323" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2233" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Quản lý ảnh theo Ngày khám &amp;&#xa;Giai đoạn điều trị (clinical_photos)" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2234" edge="1" parent="1" source="n_2231" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2233">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2235" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Phân nhóm góc chụp: Ngoài mặt,&#xa;Trong miệng, Nụ cười, Khớp cắn" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2236" edge="1" parent="1" source="n_2233" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2235">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2237" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xem chi tiết ảnh chất lượng cao&#xa;&amp; Ghi chú lâm sàng (caption)" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2238" edge="1" parent="1" source="n_2235" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2237">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2239" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-17.2: Form Upload &amp;&#xa;Phân loại ảnh lâm sàng (FT17)" vertex="1">
+          <mxGeometry height="44" width="162" x="3418" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2240" edge="1" parent="1" source="n_2213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2239">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="362" />
+              <mxPoint x="2869" y="328" />
+              <mxPoint x="3499" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2241" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tải ảnh chụp từ Máy tính /&#xa;Điện thoại lên hồ sơ bệnh nhân" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2242" edge="1" parent="1" source="n_2239" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2241">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2243" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Phân loại nhãn thời điểm:&#xa;BEFORE / DURING / AFTER" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2244" edge="1" parent="1" source="n_2241" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2243">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2245" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Gắn ảnh vào Lượt khám (visit_id)&#xa;&amp; Thủ thuật thực tế (performed_id)" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2246" edge="1" parent="1" source="n_2243" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2245">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2247" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-17.3: Giao diện Xem / Đối chiếu&#xa;ảnh Trước &amp; Sau điều trị (FT17)" vertex="1">
+          <mxGeometry height="44" width="162" x="3594" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2248" edge="1" parent="1" source="n_2213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2247">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="362" />
+              <mxPoint x="2869" y="328" />
+              <mxPoint x="3675" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2249" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị song song (Side-by-Side)&#xa;ảnh Trước và Sau điều trị" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2250" edge="1" parent="1" source="n_2247" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2249">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2251" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="So sánh trực quan mức độ cải thiện&#xa;qua các mốc chỉnh nha / phục hình" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2252" edge="1" parent="1" source="n_2249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2251">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2253" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Trình chiếu tư vấn kết quả&#xa;trực tiếp cho Bệnh nhân tại ghế" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2254" edge="1" parent="1" source="n_2251" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2253">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2255" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Kê Đơn thuốc, Dặn dò &amp;&#xa;Hẹn Tái khám (FT18)" vertex="1">
+          <mxGeometry height="44" width="215" x="2640" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2256" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2255">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2603" y="300" />
+              <mxPoint x="2603" y="593" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2257" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-18.3: Form Kê đơn thuốc&#xa;điều trị (FT18)" vertex="1">
+          <mxGeometry height="44" width="162" x="2890" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2258" edge="1" parent="1" source="n_2255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2257">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="593" />
+              <mxPoint x="2869" y="559" />
+              <mxPoint x="2971" y="559" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2259" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tìm &amp; chọn thuốc từ danh mục&#xa;Dược phẩm (medications)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2260" edge="1" parent="1" source="n_2257" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2259">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2261" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhập liều dùng (dosage), số ngày&#xa;uống (duration_days) &amp; số lượng" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="683" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2262" edge="1" parent="1" source="n_2259" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2261">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2263" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ghi hướng dẫn sử dụng chi tiết&#xa;từng thuốc (prescription_items)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2264" edge="1" parent="1" source="n_2261" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2263">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2265" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-18.4: Form Dặn dò &amp;&#xa;Hướng dẫn chăm sóc (FT18)" vertex="1">
+          <mxGeometry height="44" width="162" x="3066" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2266" edge="1" parent="1" source="n_2255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2265">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="593" />
+              <mxPoint x="2869" y="559" />
+              <mxPoint x="3147" y="559" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2267" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ghi lời dặn chăm sóc vết thương&#xa;sau nhổ răng / tiểu phẫu / cấy ghép" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2268" edge="1" parent="1" source="n_2265" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2267">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2269" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hướng dẫn chế độ ăn uống &amp;&#xa;vệ sinh răng miệng tại nhà" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="683" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2270" edge="1" parent="1" source="n_2267" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2269">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2271" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lưu vào trường advice_notes&#xa;trên phiếu đơn thuốc (prescriptions)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2272" edge="1" parent="1" source="n_2269" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2271">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2273" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-18.5: Chi tiết / Xem &amp;&#xa;In đơn thuốc (FT18)" vertex="1">
+          <mxGeometry height="44" width="162" x="3242" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2274" edge="1" parent="1" source="n_2255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2273">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="593" />
+              <mxPoint x="2869" y="559" />
+              <mxPoint x="3323" y="559" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2275" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị chi tiết nội dung đơn thuốc,&#xa;chẩn đoán &amp; lời dặn của Bác sĩ" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2276" edge="1" parent="1" source="n_2273" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2275">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2277" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xem trước bản in &amp; Xuất in&#xa;đơn thuốc giao bệnh nhân" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="683" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2278" edge="1" parent="1" source="n_2275" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2277">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2279" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đồng bộ đơn thuốc lên Portal&#xa;&quot;Hồ sơ của tôi&quot; cho Bệnh nhân" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2280" edge="1" parent="1" source="n_2277" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2279">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2281" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-18.1: Modal Hẹn tái khám&#xa;sau điều trị (FT18)" vertex="1">
+          <mxGeometry height="44" width="162" x="3418" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2282" edge="1" parent="1" source="n_2255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2281">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="593" />
+              <mxPoint x="2869" y="559" />
+              <mxPoint x="3499" y="559" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2283" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn ngày hẹn tái khám dự kiến&#xa;(followup_date) &amp; Ca khám" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2284" edge="1" parent="1" source="n_2281" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2283">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2285" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ghi chú nội dung cần thực hiện&#xa;ở lần tái khám tiếp theo" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="683" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2286" edge="1" parent="1" source="n_2283" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2285">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2287" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Liên kết tạo lịch hẹn sang&#xa;phân hệ Quản lý lịch hẹn (FT05)" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2288" edge="1" parent="1" source="n_2285" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2287">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2289" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-18.2: Danh sách Bệnh nhân&#xa;cần nhắc tái khám (FT18)" vertex="1">
+          <mxGeometry height="44" width="162" x="3594" y="571" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2290" edge="1" parent="1" source="n_2255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2289">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="593" />
+              <mxPoint x="2869" y="559" />
+              <mxPoint x="3675" y="559" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2291" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị DS bệnh nhân đến lịch&#xa;tái khám hoặc cần nhắc uống thuốc" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2292" edge="1" parent="1" source="n_2289" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2291">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2293" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tự động đẩy sang danh sách công việc&#xa;Chăm sóc khách hàng (FT44)" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="683" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2294" edge="1" parent="1" source="n_2291" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2293">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2295" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi kết quả Lễ tân liên hệ&#xa;&amp; xác nhận lịch hẹn tái khám" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2296" edge="1" parent="1" source="n_2293" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2295">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2297" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Ghi nhận Tiêu hao Vật tư &amp;&#xa;Trừ Kho sau Điều trị (FT28)" vertex="1">
+          <mxGeometry height="44" width="215" x="2640" y="802" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2298" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2297">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2611" y="300" />
+              <mxPoint x="2611" y="824" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2299" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-28.1: Form Ghi nhận tiêu hao /&#xa;Trừ kho thủ công (FT28)" vertex="1">
+          <mxGeometry height="44" width="162" x="2890" y="802" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2300" edge="1" parent="1" source="n_2297" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2299">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="824" />
+              <mxPoint x="2869" y="790" />
+              <mxPoint x="2971" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2301" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn vật tư nha khoa đã sử dụng&#xa;(Thuốc tê, kim tiêm, mắc cài, sứ...)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="862" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2302" edge="1" parent="1" source="n_2299" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2301">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2303" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn lô vật tư còn hạn sử dụng&#xa;theo nguyên tắc FEFO (batch_id)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="914" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2304" edge="1" parent="1" source="n_2301" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2303">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2305" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhập số lượng thực tế tiêu hao &amp;&#xa;Xác nhận người thực hiện (consumed_by)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="966" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2306" edge="1" parent="1" source="n_2303" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2305">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2307" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-28.2: Danh sách tiêu hao&#xa;theo lượt khám / ca điều trị (FT28)" vertex="1">
+          <mxGeometry height="44" width="162" x="3066" y="802" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2308" edge="1" parent="1" source="n_2297" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2307">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="824" />
+              <mxPoint x="2869" y="790" />
+              <mxPoint x="3147" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2309" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị danh sách vật tư &amp; thuốc&#xa;đã gắn với lượt khám (visit_id)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="862" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2310" edge="1" parent="1" source="n_2307" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2309">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2311" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra ràng buộc chống trừ kho&#xa;lặp 2 lần (uk_mc_dedup)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="914" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2312" edge="1" parent="1" source="n_2309" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2311">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2313" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tự động trừ tồn kho tức thời tại&#xa;chi nhánh (branch_inventory)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="966" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2314" edge="1" parent="1" source="n_2311" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2313">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2315" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Hỗ trợ Chuyên môn CSKH &amp;&#xa;Tư vấn Trực tuyến AI/Live Chat (FT44, FT45)" vertex="1">
+          <mxGeometry height="44" width="215" x="2640" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2316" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2315">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2595" y="300" />
+              <mxPoint x="2595" y="1055" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2317" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-44.5: Danh sách trường hợp&#xa;CSKH chuyển Bác sĩ (FT44)" vertex="1">
+          <mxGeometry height="44" width="162" x="2890" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2318" edge="1" parent="1" source="n_2315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2317">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1055" />
+              <mxPoint x="2869" y="1021" />
+              <mxPoint x="2971" y="1021" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2319" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tiếp nhận các ca chăm sóc sau ĐT&#xa;cần hỗ trợ chuyên môn (ESCALATED)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1093" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2320" edge="1" parent="1" source="n_2317" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2319">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2321" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra phản hồi triệu chứng của&#xa;bệnh nhân &amp; Hồ sơ bệnh án liên quan" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1145" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2322" edge="1" parent="1" source="n_2319" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2321">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2323" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhập hướng xử lý / phản hồi chuyên môn&#xa;(doctor_response) để Lễ tân báo khách" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1197" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2324" edge="1" parent="1" source="n_2321" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2323">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2325" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-44.6: Lịch sử chăm sóc&#xa;bệnh nhân (FT44)" vertex="1">
+          <mxGeometry height="44" width="162" x="3066" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2326" edge="1" parent="1" source="n_2315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2325">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1055" />
+              <mxPoint x="2869" y="1021" />
+              <mxPoint x="3147" y="1021" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2327" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu toàn bộ lịch sử liên hệ&#xa;hỏi thăm &amp; nhắc thuốc của bệnh nhân" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1093" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2328" edge="1" parent="1" source="n_2325" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2327">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2329" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xem ghi chú kết quả cuộc gọi&#xa;(customer_care_interactions)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1145" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2330" edge="1" parent="1" source="n_2327" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2329">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2331" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đánh giá tình trạng hồi phục&#xa;trước khi bệnh nhân quay lại tái khám" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1197" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2332" edge="1" parent="1" source="n_2329" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2331">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2333" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-45.2: Hộp thư &amp; Danh sách&#xa;hội thoại tư vấn (FT45)" vertex="1">
+          <mxGeometry height="44" width="162" x="3242" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2334" edge="1" parent="1" source="n_2315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2333">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1055" />
+              <mxPoint x="2869" y="1021" />
+              <mxPoint x="3323" y="1021" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2335" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hiển thị danh sách hội thoại bệnh nhân&#xa;được phân công cho Bác sĩ" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1093" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2336" edge="1" parent="1" source="n_2333" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2335">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2337" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Lọc phiên chat theo trạng thái&#xa;STAFF_HANDLING &amp; mức độ ưu tiên" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1145" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2338" edge="1" parent="1" source="n_2335" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2337">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2339" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Nhận thông báo realtime khi có&#xa;yêu cầu tư vấn chuyên môn mới" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1197" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2340" edge="1" parent="1" source="n_2337" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2339">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2341" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-45.3: Chi tiết hội thoại&#xa;tư vấn chuyên môn (FT45)" vertex="1">
+          <mxGeometry height="44" width="162" x="3418" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2342" edge="1" parent="1" source="n_2315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2341">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1055" />
+              <mxPoint x="2869" y="1021" />
+              <mxPoint x="3499" y="1021" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2343" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đọc lại lịch sử bệnh nhân đã hỏi&#xa;trợ lý AI Chatbot trước đó" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1093" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2344" edge="1" parent="1" source="n_2341" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2343">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2345" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Trực tiếp giải đáp thắc mắc chuyên môn,&#xa;phác đồ &amp; chỉ định nha khoa" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1145" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2346" edge="1" parent="1" source="n_2343" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2345">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2347" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hướng dẫn bệnh nhân đặt lịch khám&#xa;qua chức năng Lịch hẹn (FT05/FT06)" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1197" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2348" edge="1" parent="1" source="n_2345" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2347">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2349" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-45.4 &amp; SCR-45.5: Chuyển người&#xa;hỗ trợ &amp; Lịch sử chuyển giao (FT45)" vertex="1">
+          <mxGeometry height="44" width="162" x="3594" y="1033" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2350" edge="1" parent="1" source="n_2315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2349">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1055" />
+              <mxPoint x="2869" y="1021" />
+              <mxPoint x="3675" y="1021" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2351" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-45.4: Nhận hội thoại từ AI/Lễ tân&#xa;hoặc chuyển lại Lễ tân chốt lịch hẹn" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1093" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2352" edge="1" parent="1" source="n_2349" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2351">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2353" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="SCR-45.5: Xem toàn bộ nhật ký chuyển giao&#xa;(chat_handover_logs) &amp; lý do chuyển" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1145" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2354" edge="1" parent="1" source="n_2351" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2353">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2355" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đánh dấu hoàn tất tư vấn &amp;&#xa;Đóng phiên hội thoại (CLOSED)" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1197" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2356" edge="1" parent="1" source="n_2353" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2355">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2357" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="Lịch trực Cá nhân, Chấm công &amp;&#xa;Yêu cầu Nghỉ phép / Khóa lịch (FT33, FT42)" vertex="1">
+          <mxGeometry height="44" width="215" x="2640" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2358" edge="1" parent="1" source="n_2003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2357">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2600" y="1286" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2359" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-33.3: Lịch làm việc cá nhân&#xa;của Bác sĩ (FT33)" vertex="1">
+          <mxGeometry height="44" width="162" x="2890" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2360" edge="1" parent="1" source="n_2357" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2359">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1286" />
+              <mxPoint x="2869" y="1252" />
+              <mxPoint x="2971" y="1252" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2361" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Xem lịch phân ca Sáng / Chiều / Tối&#xa;hàng tuần theo từng chi nhánh" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1324" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2362" edge="1" parent="1" source="n_2359" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2361">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2363" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra trạng thái ca trực&#xa;(SCHEDULED / ON_LEAVE / CANCELLED)" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1376" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2364" edge="1" parent="1" source="n_2361" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2363">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2365" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Làm cơ sở hiển thị khung giờ khả dụng&#xa;cho bệnh nhân &amp; lễ tân đặt hẹn" vertex="1">
+          <mxGeometry height="40" width="156" x="2893" y="1428" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2366" edge="1" parent="1" source="n_2363" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2365">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2367" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-33.2: Chức năng Check-in /&#xa;Check-out chấm công (FT33)" vertex="1">
+          <mxGeometry height="44" width="162" x="3066" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2368" edge="1" parent="1" source="n_2357" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2367">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1286" />
+              <mxPoint x="2869" y="1252" />
+              <mxPoint x="3147" y="1252" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2369" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Hệ thống kiểm tra dải IP / Wifi&#xa;nội bộ chi nhánh (allowed_ip_range)" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1324" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2370" edge="1" parent="1" source="n_2367" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2369">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2371" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ghi nhận thời điểm Check-in đầu ca&#xa;&amp; Check-out kết thúc ca làm việc" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1376" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2372" edge="1" parent="1" source="n_2369" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2371">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2373" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tự động tính số phút làm việc&#xa;(worked_minutes) &amp; trạng thái đi làm" vertex="1">
+          <mxGeometry height="40" width="156" x="3069" y="1428" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2374" edge="1" parent="1" source="n_2371" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2373">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2375" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-33.4: Lịch sử chấm công&#xa;cá nhân (FT33)" vertex="1">
+          <mxGeometry height="44" width="162" x="3242" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2376" edge="1" parent="1" source="n_2357" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2375">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1286" />
+              <mxPoint x="2869" y="1252" />
+              <mxPoint x="3323" y="1252" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2377" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Tra cứu bảng lịch sử thời gian&#xa;Check-in/Check-out qua các ca" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1324" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2378" edge="1" parent="1" source="n_2375" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2377">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2379" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi thống kê Đúng giờ (ON_TIME),&#xa;Đi muộn (LATE), Nghỉ phép (ON_LEAVE)" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1376" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2380" edge="1" parent="1" source="n_2377" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2379">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2381" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Đối chiếu ngày công thực tế phục vụ&#xa;tính lương cứng &amp; phụ cấp (FT32)" vertex="1">
+          <mxGeometry height="40" width="156" x="3245" y="1428" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2382" edge="1" parent="1" source="n_2379" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2381">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2383" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-42.1: Form Gửi yêu cầu nghỉ /&#xa;Khóa lịch Bác sĩ (FT42)" vertex="1">
+          <mxGeometry height="44" width="162" x="3418" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2384" edge="1" parent="1" source="n_2357" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2383">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1286" />
+              <mxPoint x="2869" y="1252" />
+              <mxPoint x="3499" y="1252" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2385" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn xin nghỉ cả ngày hoặc Khóa lịch&#xa;theo ca cụ thể (shift_id)" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1324" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2386" edge="1" parent="1" source="n_2383" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2385">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2387" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Ràng buộc gửi trước ít nhất 3 ngày (R8)&#xa;hoặc chọn Nghỉ đột xuất (is_emergency)" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1376" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2388" edge="1" parent="1" source="n_2385" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2387">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2389" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Chọn loại nghỉ (ANNUAL/SICK/PERSONAL),&#xa;nhập lý do &amp; Gửi Admin phê duyệt" vertex="1">
+          <mxGeometry height="40" width="156" x="3421" y="1428" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2390" edge="1" parent="1" source="n_2387" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2389">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2391" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=9;fontStyle=1;" value="SCR-42.2: Danh sách &amp; Trạng thái&#xa;yêu cầu nghỉ của Bác sĩ (FT42)" vertex="1">
+          <mxGeometry height="44" width="162" x="3594" y="1264" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2392" edge="1" parent="1" source="n_2357" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2391">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2869" y="1286" />
+              <mxPoint x="2869" y="1252" />
+              <mxPoint x="3675" y="1252" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n_2393" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Theo dõi danh sách các đơn xin nghỉ /&#xa;khóa lịch đã gửi (leave_requests)" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1324" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2394" edge="1" parent="1" source="n_2391" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2393">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2395" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Kiểm tra trạng thái xét duyệt:&#xa;PENDING / APPROVED / REJECTED" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1376" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2396" edge="1" parent="1" source="n_2393" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2395">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n_2397" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=8;fontStyle=0;" value="Khi APPROVED: Hệ thống tự động khóa lịch&#xa;&amp; chặn đặt hẹn mới vào thời gian nghỉ" vertex="1">
+          <mxGeometry height="40" width="156" x="3597" y="1428" as="geometry" />
+        </mxCell>
+        <mxCell id="e_2398" edge="1" parent="1" source="n_2395" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d79b00;strokeWidth=1.2;endArrow=block;endFill=1;endSize=5;" target="n_2397">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

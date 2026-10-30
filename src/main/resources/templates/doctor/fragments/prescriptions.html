@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: ĐƠN THUỐC & DẶN DÒ (FT18 / SCR-18.3, 18.4, 18.5)                 -->
+<!-- Frontend Fragment: doctor/fragments/prescriptions.html                -->
+<!-- ===================================================================== -->
+<div th:fragment="prescriptionsSection">
+    <div class="df-presc-card" id="prescriptionsSection">
+        <div class="df-presc-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
+            <div class="df-presc-title-box d-flex flex-wrap align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-capsule fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Đơn thuốc &amp; Dặn dò dùng thuốc sau điều trị (FT18)</h4>
+                    <span class="text-secondary small">Đã đồng bộ sang Kế toán (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự mua ngoài)</span>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="prescCountBadge"
+                      th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn thuốc'">
+                    0 đơn thuốc
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success ms-1" id="prescTotalAmountBadge">
+                    Giá thuốc dự kiến (Tạm tính): <strong id="prescTotalAmountText" th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                </span>
+                <span class="badge bg-info-subtle text-primary border border-primary-subtle ms-1"
+                      title="Thông tin giá thuốc dự kiến được đồng bộ sang Kế toán — Bệnh nhân có quyền chọn mua tại phòng khám hoặc tự mua ngoài">
+                    <i class="bi bi-send-check-fill me-1"></i>Đã đồng bộ sang Kế toán (BN tự chọn mua tại PK / mua ngoài)
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1 shadow-xs" onclick="openReExamModal()">
+                    <i class="bi bi-calendar2-plus-fill"></i>
+                    <span>+ Hẹn tái khám</span>
+                </button>
+                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>+ Kê đơn thuốc mới</span>
+                </button>
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                    <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
+                </span>
+            </div>
+        </div>
+
+        <!-- Ghi chú nghiệp vụ kê đơn (Tách biệt chuyên môn & tài chính) -->
+        <div class="px-3 pt-3">
+            <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
+                <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
+                <div>
+                    <strong>Lưu ý:</strong> Giá thuốc hiển thị là <em>Giá thuốc dự kiến / Tạm tính</em>.
+                    <strong class="text-primary">Thanh toán tiền thuốc nếu bệnh nhân chọn mua tại phòng khám.</strong>
+                    Kê đơn không tự tạo hóa đơn, công nợ, giao dịch thanh toán hoặc xuất kho.
+                </div>
+            </div>
+        </div>
+
+        <!-- BẢNG DANH SÁCH ĐƠN THUỐC ĐÃ KÊ THEO CA KHÁM -->
+        <div class="table-responsive p-3 bg-white">
+            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 110px;">Mã đơn</th>
+                    <th style="width: 130px;">Thời gian kê</th>
+                    <th style="width: 180px;">Bác sĩ kê đơn</th>
+                    <th>Chẩn đoán &amp; Thuốc kê chi tiết</th>
+                    <th style="width: 185px;" class="text-end">Giá thuốc dự kiến (Tạm tính)</th>
+                    <th style="width: 120px;">Hẹn tái khám</th>
+                    <th style="width: 120px;" class="text-center">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="prescriptionsTableBody">
+                <tr th:if="${prescriptions == null or prescriptions.isEmpty()}" id="emptyPrescRow">
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <i class="bi bi-prescription2 fs-3 d-block mb-1 text-secondary"></i>
+                        <span>Chưa có đơn thuốc nào được kê cho ca khám này. Nhấn <button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-underline" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">+ Kê đơn thuốc mới</button> để chọn từ mẫu nhanh hoặc nhập thuốc.</span>
+                    </td>
+                </tr>
+                <tr th:each="pr : ${prescriptions}" th:id="'pr-row-' + ${pr.prescriptionId}">
+                    <td>
+                        <span class="badge bg-light text-dark border fw-bold" th:text="${pr.prescriptionCode}">TOA10001</span>
+                    </td>
+                    <td>
+                        <span class="small text-muted" th:text="${pr.createdAt}">21/10/2026 10:30</span>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark" th:text="${pr.doctorName}">BS. CK1 Lê Hoàng Nam</div>
+                        <small class="text-muted" th:text="${pr.doctorTitle}">Bác sĩ điều trị</small>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-primary mb-1">
+                            <i class="bi bi-clipboard2-pulse"></i>
+                            <span th:text="${pr.diagnosisText}">Sâu ngà răng</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span th:each="it : ${pr.items}" class="badge bg-light text-dark border small"
+                                  th:text="${it.drugName + ' (' + it.quantity + ' ' + it.unit + (it.finalPrice != null ? ' • ' + #numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '') + ')'}">
+                                Paracetamol 500mg (6 Viên • 15.000đ)
+                            </span>
+                        </div>
+                        <div class="small text-muted fst-italic mt-1" th:if="${pr.adviceNotes != null and !pr.adviceNotes.isEmpty()}">
+                            <i class="bi bi-chat-left-dots"></i> <span th:text="${pr.adviceNotes}"></span>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-bold text-success fs-6 presc-row-amount"
+                             th:data-amount="${pr.totalAmount != null ? pr.totalAmount : 0}"
+                             th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                        <small class="text-muted d-block" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
+                        <span class="badge bg-light text-secondary border mt-0.5" style="font-size: 10px;">
+                            <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán (Tự chọn mua)
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-warning-subtle text-dark border border-warning"
+                              th:if="${pr.followupDate != null}"
+                              th:text="${pr.followupDate}">
+                            28/10/2026
+                        </span>
+                        <span class="text-muted small" th:unless="${pr.followupDate != null}">Không hẹn</span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    title="Xem &amp; In đơn thuốc"
+                                    th:data-id="${pr.prescriptionId}"
+                                    onclick="openPrintPrescriptionModal(this.getAttribute('data-id'))">
+                                <i class="bi bi-printer-fill"></i> In
+                            </button>
+                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                    title="Xóa đơn thuốc này"
+                                    th:data-id="${pr.prescriptionId}"
+                                    onclick="deletePrescription(this.getAttribute('data-id'))">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                            <span th:if="${isClinicalLocked}" class="text-muted ms-1" title="Bệnh án đã khóa (BR-EMR-02)">
+                                <i class="bi bi-lock-fill text-secondary"></i>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

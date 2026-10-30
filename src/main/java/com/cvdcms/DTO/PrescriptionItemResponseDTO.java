@@ -18,6 +18,14 @@ public class PrescriptionItemResponseDTO {
     private String dosage;
     private Integer durationDays;
     private BigDecimal quantity;
+    private BigDecimal boughtQuantity;
+    private BigDecimal remainingQuantity;
     private String unit;
     private String usageInstruction;
+    private BigDecimal unitPrice;
+    private BigDecimal finalPrice;
+
+    public Long getPrescriptionItemId() {
+        return itemId;
+    }
 }

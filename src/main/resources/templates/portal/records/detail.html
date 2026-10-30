@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết hồ sơ')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ của tôi')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ.</div>
+            <div class="patient-page-heading"><div><a th:href="@{/portal/records}">← Hồ sơ của tôi</a>
+                <h1 th:text="${record.fullName}">Họ tên</h1><p><span th:text="${record.code}">BN</span> · <span th:text="${record.gender}">Giới tính</span></p></div>
+                <div><a class="btn btn-outline-primary me-2" th:href="@{/portal/records/{id}/edit(id=${record.id})}">Chỉnh sửa</a>
+                    <a th:unless="${record.self}" class="btn btn-outline-secondary" th:href="@{/portal/records/{id}/transfer(id=${record.id})}">Tách tài khoản</a></div></div>
+            <section class="panel patient-detail">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#personal" type="button">Thông tin cá nhân</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#photos" type="button">Ảnh tổng hợp</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medical" type="button">Bệnh án</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" type="button">Lịch sử điều trị</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="personal"><div class="patient-facts">
+                        <div th:if="${record.avatarUrl != null}"><span>Ảnh đại diện</span><img th:src="${record.avatarUrl}" th:alt="${record.fullName}" class="rounded" style="width:96px;height:96px;object-fit:cover"></div>
+                        <div><span>Mã hồ sơ</span><strong th:text="${record.code}">—</strong></div>
+                        <div><span>Ngày sinh</span><strong th:text="${record.dob != null ? #temporals.format(record.dob, 'dd/MM/yyyy') : '—'}">—</strong></div>
+                        <div><span>Số điện thoại</span><strong th:text="${record.phoneNumber}">—</strong></div>
+                        <div><span>Địa chỉ</span><strong th:text="${record.address}">—</strong></div>
+                        <div><span>Chi nhánh</span><strong th:text="${record.branchName}">—</strong></div>
+                        <div><span>Người giám hộ</span><strong th:text="${record.guardianName != null ? record.guardianName : '—'}">—</strong></div>
+                        <div><span>Quan hệ giám hộ</span><strong th:text="${record.guardianRelationship != null ? record.guardianRelationship : '—'}">—</strong></div>
+                        <div><span>CCCD</span><strong th:text="${record.idCardNumber != null ? record.idCardNumber : '—'}">—</strong></div>
+                        <div><span>BHYT</span><strong th:text="${record.healthInsuranceNumber != null ? record.healthInsuranceNumber : '—'}">—</strong></div>
+                    </div></div>
+                    <div class="tab-pane fade" id="photos"><p th:if="${#lists.isEmpty(photos)}" class="text-muted mt-3">Chưa có ảnh lâm sàng.</p><div class="patient-visit-grid mt-3" th:unless="${#lists.isEmpty(photos)}"><figure th:each="photo : ${photos}" class="panel p-2"><img th:src="${photo.imageUrl}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}" class="img-fluid rounded"><figcaption><span th:text="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">Ảnh</span><span th:if="${photo.visitCode != null}" th:text="' · ' + ${photo.visitCode}">Lượt khám</span></figcaption></figure></div></div>
+                    <div class="tab-pane fade" id="medical"><div class="patient-facts">
+                        <div><span>Dị ứng</span><strong th:text="${record.allergyDetails != null ? record.allergyDetails : 'Chưa ghi nhận'}">—</strong></div>
+                        <div><span>Bệnh nền</span><strong th:text="${record.underlyingDiseaseDetails != null ? record.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div>
+                    </div><h3 class="h6 mt-3">Kế hoạch điều trị</h3><p th:if="${#lists.isEmpty(plans)}" class="text-muted">Chưa có kế hoạch được chia sẻ.</p><ul th:unless="${#lists.isEmpty(plans)}"><li th:each="plan : ${plans}"><span th:text="${plan.name}">Kế hoạch</span> · <span th:text="${plan.status}">Trạng thái</span></li></ul><p class="text-muted mt-3">Chẩn đoán, dịch vụ và đơn thuốc được xem trong từng lượt khám. Nội dung chuyên môn chỉ đọc.</p></div>
+                    <div class="tab-pane fade" id="history"><div th:if="${#lists.isEmpty(visits)}" class="patient-empty">Chưa có lượt khám.</div>
+                        <div class="patient-timeline" th:unless="${#lists.isEmpty(visits)}"><article th:each="visit : ${visits}">
+                            <div><strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</strong><span th:text="${visit.status}">—</span></div>
+                            <p><span th:text="${visit.branchName}">Chi nhánh</span> · <span th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span></p>
+                            <a th:href="@{/portal/records/{id}/visits/{visitId}(id=${record.id},visitId=${visit.id})}">Xem lượt khám →</a>
+                        </article></div></div>
+                </div>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>

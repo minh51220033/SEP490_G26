@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tiếp đón và Check-in · FT07</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/css/layout.css}" rel="stylesheet">
+    <script th:src="@{/js/layout.js}" defer></script>
+    <style>
+        :root { font-family: system-ui, sans-serif; color: #173044; background: #f4f8fb; } body { margin: 0; } main { max-width: 1200px; margin: auto; padding: 28px 18px 60px; }
+        header { background: #10354f; color: white; padding: 18px 24px; } header a { color: #d8ecff; margin-right: 18px; } h1 { margin: 0 0 6px; font-size: 1.8rem; } h2 { margin: 0 0 16px; font-size: 1.3rem; }
+        p { line-height: 1.5; } .muted { color: #617689; font-size: .92rem; } .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(390px, 1fr)); gap: 20px; }
+        .card { background: white; border: 1px solid #d8e4ed; border-radius: 12px; padding: 20px; margin: 18px 0; box-shadow: 0 3px 12px #1233; } .notice,.error { padding: 12px 16px; border-radius: 8px; margin-top: 14px; } .notice { background: #dcf7e8; } .error { background: #ffe2dd; }
+        label { display: block; font-weight: 600; margin: 10px 0 5px; } input,select,textarea,button { font: inherit; } input:not([type=checkbox]),select,textarea { box-sizing: border-box; width: 100%; padding: 9px 11px; border: 1px solid #a9bac7; border-radius: 7px; background: white; }
+        textarea { min-height: 75px; resize: vertical; } button { padding: 9px 15px; border: 0; border-radius: 7px; background: #176b96; color: white; font-weight: 600; cursor: pointer; } .inline { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; } .inline > div { flex: 1; min-width: 160px; }
+        .table-wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; } th,td { padding: 11px; text-align: left; border-bottom: 1px solid #e2e9ef; vertical-align: top; } th { background: #eef5f9; } .badge { display: inline-block; padding: 3px 8px; background: #e5eff7; border-radius: 16px; font-size: .8rem; }
+        .warning { color: #9c3b12; font-weight: 600; } .patient-choice { border-top: 1px solid #e2e9ef; padding: 12px 0; } .patient-choice:first-child { border-top: 0; } .compact { margin: 4px 0; }
+    </style>
+</head>
+<body class="app-body"><div class="app-shell">
+<aside th:replace="~{fragments/sidebar :: sidebar('checkin')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+<div class="app-main">
+<header th:replace="~{fragments/header :: appTopbar('Tiếp đón và Check-in')}"></header>
+<main class="app-content">
+    <h1>Tiếp đón và Check-in</h1>
+    <nav><a th:href="@{/reception/appointments}">Lịch hẹn</a> · <a th:href="@{/reception/patients}">Hồ sơ bệnh nhân</a> · <a th:href="@{/reception/dispatch}">Điều phối &amp; cấp số</a></nav>
+    <p class="muted">Xác nhận bệnh nhân đã đến, ghi nhận triệu chứng ban đầu và tạo lượt khám chờ điều phối. F08 sẽ phân bác sĩ, phòng và ghế sau bước này.</p>
+    <div class="notice" th:if="${notice}" th:text="${notice}"></div><div class="error" th:if="${error}" th:text="${error}"></div>
+    <section class="card">
+        <form method="get" th:action="@{/reception/check-in}" class="inline">
+            <div><label for="branchId">Chi nhánh</label><select id="branchId" name="branchId"><option th:each="b : ${dashboard.branches}" th:value="${b.branchId}" th:text="${b.branchName}" th:selected="${b.branchId == dashboard.branchId}"></option></select></div>
+            <div><label for="query">Tìm hồ sơ vãng lai</label><input id="query" name="query" th:value="${dashboard.query}" placeholder="Mã BN, tên, SĐT hoặc CCCD" minlength="2"></div><button type="submit">Xem ngày và tìm hồ sơ</button>
+        </form>
+        <p class="muted" th:text="|'${dashboard.branchName}' · ${dashboard.day}|"></p>
+    </section>
+    <div class="grid">
+        <section class="card">
+            <h2>Lịch hẹn hôm nay</h2><p class="muted" th:if="${#lists.isEmpty(dashboard.appointments)}">Không có lịch hẹn trong ngày.</p>
+            <div th:each="a : ${dashboard.appointments}" class="patient-choice">
+                <strong th:text="|${a.patient.name} · ${a.patient.code}|"></strong><span class="badge" th:text="${a.status}"></span>
+                <p class="compact muted" th:text="|${a.code} · ${a.expectedTime != null ? a.expectedTime : 'Chưa xác định giờ'} · ${a.doctorName} · ${a.patient.dob} · ${a.patient.phone}|"></p>
+                <p class="compact warning" th:if="${a.patient.allergies}" th:text="|Dị ứng: ${a.patient.allergyDetails}|"></p><p class="compact warning" th:if="${a.patient.underlyingDisease}" th:text="|Bệnh nền: ${a.patient.underlyingDiseaseDetails}|"></p>
+                <form th:if="${a.status.name() != 'CHECKED_IN'}" method="post" th:action="@{/reception/check-in/appointments/{id}(id=${a.id})}">
+                    <input type="hidden" name="branchId" th:value="${dashboard.branchId}"><input type="hidden" name="requestKey" th:value="${a.requestKey}"><label th:for="|symptoms-${a.id}|">Triệu chứng / ghi chú khi đến</label><textarea name="symptoms" th:id="|symptoms-${a.id}|" maxlength="500" th:text="${a.symptoms}" required></textarea><button type="submit">Xác nhận đã đến</button>
+                </form>
+            </div>
+        </section>
+        <section class="card">
+            <h2>Khách vãng lai / cấp cứu</h2><p class="muted">Tìm hồ sơ ở ô phía trên rồi chọn đúng bệnh nhân. Nếu chưa có hồ sơ, <a th:href="@{/reception/patients/new}">tạo hồ sơ tại FT03</a> trước.</p>
+            <p class="muted" th:if="${dashboard.query.length() >= 2 and #lists.isEmpty(dashboard.matches)}">Không tìm thấy hồ sơ hoạt động phù hợp.</p>
+            <form th:if="${!#lists.isEmpty(dashboard.matches)}" method="post" th:action="@{/reception/check-in/walk-ins}">
+                <input type="hidden" name="branchId" th:value="${dashboard.branchId}"><input type="hidden" name="requestKey" th:value="${dashboard.walkInKey}"><label for="profileId">Hồ sơ bệnh nhân</label>
+                <select id="profileId" name="profileId" required><option value="">-- Chọn đúng hồ sơ --</option><option th:each="p : ${dashboard.matches}" th:value="${p.id}" th:text="|${p.code} · ${p.name} · ${p.dob} · ${p.phone}|"></option></select>
+                <p class="warning" th:each="p : ${dashboard.matches}" th:if="${p.allergies or p.underlyingDisease}" th:text="|${p.code}: ${p.allergies ? 'Dị ứng ' + p.allergyDetails : ''} ${p.underlyingDisease ? 'Bệnh nền ' + p.underlyingDiseaseDetails : ''}|"></p>
+                <label for="walkInSymptoms">Triệu chứng / lý do đến khám</label><textarea id="walkInSymptoms" name="symptoms" maxlength="500" required></textarea><label><input type="checkbox" name="emergency" value="true"> Ca cấp cứu (ghi rõ lý do ưu tiên, tối thiểu 10 ký tự)</label><button type="submit">Tạo lượt khám</button>
+            </form>
+        </section>
+    </div>
+    <section class="card"><h2>Danh sách lượt khám trong ngày</h2><div class="table-wrap"><table><thead><tr><th>Mã lượt</th><th>Bệnh nhân</th><th>Đến lúc</th><th>Loại</th><th>Trạng thái</th><th>Ghi nhận ban đầu</th></tr></thead><tbody>
+        <tr th:each="v : ${dashboard.visits}"><td th:text="${v.code}"></td><td th:text="|${v.patient.name} · ${v.patient.code}|"></td><td th:text="${#temporals.format(v.checkedInAt, 'HH:mm')}"></td><td th:text="${v.type}"></td><td><span class="badge" th:text="${v.status}"></span></td><td th:text="${v.symptoms}"></td></tr>
+        <tr th:if="${#lists.isEmpty(dashboard.visits)}"><td colspan="6" class="muted">Chưa có lượt khám nào hôm nay.</td></tr>
+    </tbody></table></div></section>
+</main></div></div>
+</body>
+</html>

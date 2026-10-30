@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn mới - FT21')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lập Hóa đơn Viện phí')}"></header>
+
+        <main class="app-content finance-page invoice-create-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-receipt-cutoff text-primary"></i> Lập Hóa đơn mới</h1>
+                    <p>Phát hành hóa đơn chung gồm dịch vụ điều trị và thuốc mua tại phòng khám từ ca khám được bàn giao.</p>
+                </div>
+                <div>
+                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại danh sách hóa đơn</a>
+                </div>
+            </div>
+
+            <!-- Card Chọn ca khám chờ thanh toán -->
+            <div class="fin-card mb-4 border-primary">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label for="selectWaitingVisit" class="fw-bold text-primary m-0 fs-6">
+                        <i class="bi bi-clock-history me-1"></i> Chọn Lượt khám đang Chờ thanh toán (WAITING_PAYMENT):
+                    </label>
+                    <span class="badge bg-primary"
+                          th:text="${waitingVisits != null ? waitingVisits.size() : 0} + ' ca khám chờ thu tiền'">0 ca</span>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-9">
+                        <select id="selectWaitingVisit" class="form-select" onchange="onSelectWaitingVisit(this.value)">
+                            <option value="">-- Chọn ca khám đã được bác sĩ hoàn tất và bàn giao sang thu ngân --</option>
+                            <option th:each="wv : ${waitingVisits}" th:value="${wv.visitId}"
+                                    th:selected="${selectedVisit != null and selectedVisit.visitId == wv.visitId}"
+                                    th:text="${wv.visitCode + ' - ' + wv.patientProfile.fullName + ' (' + wv.patientProfile.patientCode + ') - BS: ' + (wv.primaryDoctor != null ? wv.primaryDoctor.fullName : 'BS trực')}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới danh sách chờ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Lập Hóa Đơn Chung -->
+            <form th:action="@{/invoices/create}" method="post" id="invoiceForm">
+                <!-- Hidden inputs -->
+                <input type="hidden" name="visitId" th:value="${selectedVisit != null ? selectedVisit.visitId : ''}" id="hiddenVisitId">
+                <input type="hidden" name="profileId" th:value="${selectedPatient != null ? selectedPatient.profileId : ''}" id="hiddenProfileId">
+                <input type="hidden" name="branchId" th:value="${selectedBranch != null ? selectedBranch.branchId : (selectedVisit != null ? selectedVisit.branch.branchId : selectedBranchId)}" id="hiddenBranchId">
+                <input type="hidden" name="prescriptionId" id="hiddenPrescriptionId"
+                       th:value="${handedOverPrescriptions != null and !handedOverPrescriptions.isEmpty() ? handedOverPrescriptions[0].prescriptionId : ''}">
+
+                <div class="fin-grid-2col">
+                    <!-- Cột trái: Thông tin ca khám, Dịch vụ thực hiện, Đơn thuốc bàn giao, Ghi chú -->
+                    <div>
+                        <!-- 1. Bệnh nhân & Lượt khám Card -->
+                        <div class="fin-card">
+                            <h4 class="fw-bold mb-3 text-primary d-flex align-items-center">
+                                <i class="bi bi-person-vcard me-2"></i> Thông tin Bệnh nhân &amp; Ca khám
+                            </h4>
+
+                            <div th:if="${selectedVisit == null}" class="alert alert-warning">
+                                <i class="bi bi-exclamation-circle me-1"></i> Chưa chọn lượt khám. Vui lòng chọn một ca khám đang chờ thanh toán ở menu phía trên để lập hóa đơn.
+                            </div>
+
+                            <div th:if="${selectedPatient != null}" class="row g-3">
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">MÃ &amp; HỌ TÊN BỆNH NHÂN</span>
+                                    <strong class="fs-6 text-dark" th:text="${selectedPatient.fullName}">Nguyễn Văn An</strong>
+                                    <span class="badge bg-secondary d-inline-block ms-1" th:text="${selectedPatient.patientCode}">BN000101</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">SỐ ĐIỆN THOẠI &amp; GIỚI TÍNH</span>
+                                    <span th:text="${selectedPatient.phoneNumber}">0987654321</span>
+                                    <span class="text-muted" th:text="'(' + ${selectedPatient.gender} + ')'"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small d-block">HẠNG THẺ THÀNH VIÊN</span>
+                                    <span th:if="${selectedPatient.membershipTier != null}"
+                                          class="badge bg-warning text-dark fw-bold"
+                                          th:text="${selectedPatient.membershipTier.tierName} + ' (Giảm ' + ${selectedPatient.membershipTier.discountPercent} + '%)'">Thành viên</span>
+                                    <span th:if="${selectedPatient.membershipTier == null}"
+                                          class="badge bg-light text-muted border">Chưa xếp hạng</span>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">MÃ CA KHÁM</span>
+                                    <strong class="text-primary" th:text="${selectedVisit.visitCode}">VIS10001</strong>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">BÁC SĨ ĐIỀU TRỊ CHÍNH</span>
+                                    <span th:text="${selectedVisit.primaryDoctor != null ? selectedVisit.primaryDoctor.fullName : 'Bác sĩ điều trị'}">BS Nam</span>
+                                </div>
+                                <div class="col-md-4" th:if="${selectedVisit != null}">
+                                    <span class="text-muted small d-block">CƠ SỞ ĐIỀU TRỊ</span>
+                                    <span class="badge bg-primary text-white" th:text="${selectedVisit.branch.branchName}">Cơ sở Quận 1</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Danh sách dịch vụ thực hiện lâm sàng Card -->
+                        <div class="fin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Dịch vụ thực hiện được bàn giao
+                                </h4>
+                                <span class="badge bg-info text-dark" id="selectedCountBadge"
+                                      th:text="${unbilledServices != null ? unbilledServices.size() : 0} + ' dịch vụ'">0 dịch vụ</span>
+                            </div>
+
+                            <div class="fin-table-wrapper">
+                                <table class="fin-table" id="itemsTable">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 40px;">
+                                            <input type="checkbox" id="checkAllItems" checked onchange="toggleAllItems(this)">
+                                        </th>
+                                        <th>Tên dịch vụ / Thủ thuật</th>
+                                        <th>Răng</th>
+                                        <th class="text-center" style="width: 90px;">Số lượng</th>
+                                        <th class="text-end" style="width: 120px;">Đơn giá</th>
+                                        <th class="text-end" style="width: 100px;">Giảm BS</th>
+                                        <th class="text-end" style="width: 130px;">Thành tiền</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                    <tr th:if="${#lists.isEmpty(unbilledServices)}">
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="ps, iterStat : ${unbilledServices}" class="item-row"
+                                        th:data-performed-id="${ps.performedId}">
+                                        <td>
+                                            <input type="checkbox" class="item-checkbox" checked onchange="onItemCheckboxChange()">
+                                            <input type="hidden" class="prop-performed-id"
+                                                   th:name="'items[' + ${iterStat.index} + '].performedId'"
+                                                   th:value="${ps.performedId}">
+                                            <input type="hidden" class="prop-service-id"
+                                                   th:name="'items[' + ${iterStat.index} + '].serviceId'"
+                                                   th:value="${ps.service.serviceId}">
+                                            <input type="hidden" class="prop-item-name"
+                                                   th:name="'items[' + ${iterStat.index} + '].itemName'"
+                                                   th:value="${ps.service.serviceName}">
+                                        </td>
+                                        <td>
+                                            <strong th:text="${ps.service.serviceName}">Trám răng thẩm mỹ</strong>
+                                            <small class="d-block text-muted" th:if="${ps.doctor != null}"
+                                                   th:text="'BS: ' + ${ps.doctor.fullName}"></small>
+                                        </td>
+                                        <td>
+                                            <span th:if="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty()}"
+                                                  class="badge bg-light text-dark border" th:text="${ps.toothNumbers}">R16</span>
+                                            <span th:if="${ps.toothNumbers == null or ps.toothNumbers.isEmpty()}"
+                                                  class="text-muted small">-</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="number" th:name="'items[' + ${iterStat.index} + '].quantity'"
+                                                   th:value="${ps.quantity}"
+                                                   class="form-control form-control-sm text-center item-qty prop-qty"
+                                                   step="1" min="1" onchange="onItemQtyChange(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" th:name="'items[' + ${iterStat.index} + '].unitPrice'"
+                                                   th:value="${ps.unitPrice}"
+                                                   class="form-control form-control-sm text-end item-price prop-price"
+                                                   step="1000" onchange="onItemPriceChange(this)">
+                                        </td>
+                                        <td class="text-end text-muted small item-clinical-discount"
+                                            th:data-discount="${ps.discountAmount}"
+                                            th:text="${#numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            0 đ
+                                        </td>
+                                        <td class="text-end fw-bold text-dark item-line-total"
+                                            th:data-val="${ps.finalPrice}"
+                                            th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            500.000 đ
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3. Đơn thuốc bác sĩ bàn giao (NGAY DƯỚI BẢNG DỊCH VỤ) -->
+                        <div class="fin-card" th:if="${handedOverPrescriptions != null and !handedOverPrescriptions.isEmpty()}">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
+                                    <i class="bi bi-capsule me-2"></i> Đơn thuốc bác sĩ bàn giao
+                                </h4>
+                                <span class="badge bg-info text-dark"
+                                      th:text="${handedOverPrescriptions.size()} + ' đơn thuốc'">0 đơn thuốc</span>
+                            </div>
+
+                            <div th:each="pr : ${handedOverPrescriptions}" class="prescription-container mb-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-2 border-bottom gap-2">
+                                    <div>
+                                        <span class="badge bg-primary text-white me-2 fs-6" th:text="${pr.prescriptionCode}">TOA10001</span>
+                                        <span class="text-dark fw-bold" th:if="${pr.patientName != null}"
+                                              th:text="'BN: ' + ${pr.patientName}">BN: Nguyễn Văn An</span>
+                                        <span class="text-muted small ms-2">• BS kê: <strong th:text="${pr.doctorName}">BS Nam</strong></span>
+                                        <span class="text-muted small ms-2">• Ngày: <span th:text="${pr.createdAt}">28/10/2026</span></span>
+                                        <span class="badge ms-2"
+                                              th:classappend="${pr.status == 'EXTERNAL_PURCHASE'} ? 'bg-secondary' : (${pr.status == 'CLINIC_PURCHASE_COMPLETED'} ? 'bg-success' : 'bg-warning text-dark')"
+                                              th:text="${pr.statusDisplay}">Chờ tiếp nhận</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <!-- Nút ghi nhận tự mua ngoài (mở modal) -->
+                                        <button th:if="${pr.status != 'EXTERNAL_PURCHASE' and pr.status != 'CLINIC_PURCHASE_COMPLETED'}"
+                                                type="button" class="fin-btn fin-btn-sm fin-btn-outline"
+                                                th:data-presc-id="${pr.prescriptionId}"
+                                                th:data-presc-code="${pr.prescriptionCode}"
+                                                onclick="openChoiceExternalModal(this)">
+                                            <i class="bi bi-shop"></i> Bệnh nhân tự mua ngoài
+                                        </button>
+
+                                        <!-- Nút đổi lại sang mua tại PK (dùng form an toàn ngoài invoiceForm) -->
+                                        <button th:if="${pr.status == 'EXTERNAL_PURCHASE'}"
+                                                type="button" class="fin-btn fin-btn-sm fin-btn-outline text-primary border-primary"
+                                                th:data-presc-id="${pr.prescriptionId}"
+                                                onclick="submitSwitchToClinic(this.getAttribute('data-presc-id'))"
+                                                title="Chuyển sang mua tại phòng khám">
+                                            <i class="bi bi-arrow-repeat"></i> Đổi sang mua tại PK
+                                        </button>
+
+                                        <span th:if="${pr.status == 'CLINIC_PURCHASE_COMPLETED'}" class="badge bg-success p-2">
+                                            <i class="bi bi-check2-all me-1"></i> Đã mua đủ tại PK
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Tùy chọn Bệnh nhân mua thuốc tại phòng khám -->
+                                <div th:if="${pr.status != 'EXTERNAL_PURCHASE' and pr.status != 'CLINIC_PURCHASE_COMPLETED'}"
+                                     class="p-2 px-3 mb-3 bg-light rounded border d-flex align-items-center">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center">
+                                        <input class="form-check-input me-2" type="checkbox" id="chkBuyMedicineAtClinic" name="buyMedicineAtClinic" value="true"
+                                               onchange="onToggleBuyMedicine(this)" style="cursor: pointer; width: 2.2em; height: 1.2em;">
+                                        <label class="form-check-label fw-bold text-primary m-0" for="chkBuyMedicineAtClinic" style="cursor: pointer;">
+                                            <i class="bi bi-capsule-pill me-1"></i> Bệnh nhân mua thuốc tại phòng khám
+                                        </label>
+                                    </div>
+                                    <span class="text-muted small ms-3 d-none d-md-inline">(Tích chọn để cộng tiền thuốc vào hóa đơn chung và xuất kho)</span>
+                                </div>
+
+                                <div th:if="${pr.status == 'EXTERNAL_PURCHASE'}" class="alert alert-secondary py-2 px-3 small mb-2">
+                                    <i class="bi bi-info-circle me-1"></i> Đơn thuốc này đã được xác nhận <strong>Bệnh nhân tự mua ngoài</strong>. Tiền thuốc không được cộng vào hóa đơn chung. Nhấn "Đổi sang mua tại PK" nếu bệnh nhân muốn mua tại phòng khám.
+                                </div>
+
+                                <!-- Bảng danh sách các thuốc trong đơn: Đồng bộ phong cách với bảng dịch vụ -->
+                                <div class="fin-table-wrapper" id="medTableWrapper"
+                                     th:style="${pr.status == 'EXTERNAL_PURCHASE' or pr.status == 'CLINIC_PURCHASE_COMPLETED'} ? 'opacity: 0.6;' : ''">
+                                    <table class="fin-table" id="medicineItemsTable">
+                                        <thead>
+                                        <tr>
+                                            <th style="width: 40px;">
+                                                <input type="checkbox" id="checkAllMedItems" disabled onchange="toggleAllMedItems(this)">
+                                            </th>
+                                            <th>Tên thuốc &amp; Hướng dẫn dùng</th>
+                                            <th class="text-center" style="width: 60px;">ĐVT</th>
+                                            <th class="text-center" style="width: 70px;">Kê đơn</th>
+                                            <th class="text-center" style="width: 70px;">Đã mua</th>
+                                            <th class="text-center" style="width: 70px;">Còn lại</th>
+                                            <th class="text-center" style="width: 90px;">SL mua</th>
+                                            <th class="text-end" style="width: 110px;">Đơn giá</th>
+                                            <th class="text-end" style="width: 120px;">Thành tiền</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="medicineItemsBody">
+                                        <tr th:each="it, medStat : ${pr.items}" class="med-item-row"
+                                            th:data-remaining="${it.remainingQuantity}"
+                                            th:data-unit-price="${it.unitPrice}">
+                                            <td class="text-center">
+                                                <input type="checkbox" class="med-item-checkbox" disabled
+                                                       th:disabled="${it.remainingQuantity <= 0}"
+                                                       onchange="onMedCheckboxChange()">
+                                                <input type="hidden" class="prop-med-prescription-item-id"
+                                                       th:name="'medicineItems[' + ${medStat.index} + '].prescriptionItemId'"
+                                                       th:value="${it.itemId}">
+                                            </td>
+                                            <td>
+                                                <strong th:text="${it.drugName}">Paracetamol 500mg</strong>
+                                                <small class="text-muted d-block"
+                                                       th:if="${it.usageInstruction != null and !it.usageInstruction.isEmpty()}"
+                                                       th:text="${it.usageInstruction}"></small>
+                                            </td>
+                                            <td class="text-center text-muted" th:text="${it.unit}">Viên</td>
+                                            <td class="text-center" th:text="${it.quantity}">10</td>
+                                            <td class="text-center text-secondary"
+                                                th:text="${it.boughtQuantity != null ? it.boughtQuantity : 0}">0</td>
+                                            <td class="text-center fw-bold text-primary" th:text="${it.remainingQuantity}">10</td>
+                                            <td class="text-center">
+                                                <input type="number" class="form-control form-control-sm text-center med-item-qty"
+                                                       th:name="'medicineItems[' + ${medStat.index} + '].quantity'"
+                                                       min="1" th:max="${it.remainingQuantity}"
+                                                       th:value="${it.remainingQuantity > 0 ? it.remainingQuantity : 1}"
+                                                       th:disabled="${it.remainingQuantity <= 0}"
+                                                       disabled
+                                                       onchange="onMedQtyChange(this)">
+                                            </td>
+                                            <td class="text-end text-muted"
+                                                th:text="${#numbers.formatDecimal(it.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000 đ</td>
+                                            <td class="text-end fw-bold text-dark med-line-total"
+                                                th:data-val="${it.finalPrice}"
+                                                th:text="${#numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-muted small mt-2" th:if="${pr.choiceNote != null and !pr.choiceNote.isEmpty()}">
+                                    <i class="bi bi-sticky me-1 text-warning"></i>Ghi chú tiếp nhận: <span th:text="${pr.choiceNote}"></span>
+                                    <span th:if="${pr.handledByName != null}" class="ms-2">• Người tiếp nhận: <strong th:text="${pr.handledByName}"></strong> (<span th:text="${pr.handledAt}"></span>)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Ghi chú hóa đơn Card -->
+                        <div class="fin-card">
+                            <label for="notes" class="form-label fw-bold"><i class="bi bi-chat-left-text me-1"></i> Ghi chú hóa đơn / Lý do điều chỉnh</label>
+                            <textarea id="notes" name="notes" class="form-control" rows="3"
+                                      placeholder="Nhập ghi chú thêm cho hóa đơn (hoặc lý do nếu có điều chỉnh đơn giá/số lượng)..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Tính tiền & Giảm trừ ưu đãi & Xác nhận phát hành hóa đơn chung -->
+                    <div>
+                        <div class="fin-calculation-box mb-4">
+                            <h4 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                                <i class="bi bi-calculator me-2 text-primary"></i> Tổng tiền &amp; Ưu đãi
+                            </h4>
+
+                            <!-- Ưu đãi khuyến mãi -->
+                            <div class="mb-3">
+                                <label for="promotionId" class="form-label small fw-bold text-muted">CHƯƠNG TRÌNH KHUYẾN MÃI</label>
+                                <select id="promotionId" name="promotionId" class="fin-select w-100" onchange="triggerRecalculate()">
+                                    <option value="">-- Không áp dụng khuyến mãi --</option>
+                                    <option th:each="p : ${availablePromotions}" th:value="${p.promotionId}" th:text="${p.displayLabel}"></option>
+                                </select>
+                            </div>
+
+                            <!-- Mã Voucher Bệnh nhân -->
+                            <div class="mb-3">
+                                <label for="voucherId" class="form-label small fw-bold text-muted">VOUCHER CỦA BỆNH NHÂN</label>
+                                <select id="voucherId" name="voucherId" class="fin-select w-100" onchange="triggerRecalculate()">
+                                    <option value="">-- Không dùng voucher --</option>
+                                    <option th:each="v : ${availableVouchers}" th:value="${v.voucherId}" th:text="${v.displayLabel}"></option>
+                                </select>
+                            </div>
+
+                            <!-- Điểm tích lũy Loyalty -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="pointsToRedeem" class="form-label small fw-bold text-muted m-0">ĐỔI ĐIỂM TÍCH LŨY</label>
+                                    <span class="badge bg-info text-dark" th:if="${loyaltyWallet != null}"
+                                          th:text="'Đang có: ' + ${loyaltyWallet.currentPoints} + ' điểm'">Đang có: 0 điểm</span>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" id="pointsToRedeem" name="pointsToRedeem" class="form-control"
+                                           value="0" min="0" th:max="${loyaltyWallet != null ? loyaltyWallet.currentPoints : 0}"
+                                           onchange="triggerRecalculate()">
+                                    <span class="input-group-text small">điểm</span>
+                                </div>
+                            </div>
+
+                            <!-- Giảm giá trực tiếp khác -->
+                            <div class="mb-4">
+                                <label for="manualDiscount" class="form-label small fw-bold text-muted">GIẢM GIÁ KHÁC (VNĐ)</label>
+                                <input type="number" id="manualDiscount" name="discountAmount" class="form-control"
+                                       value="0" min="0" step="1000" onchange="triggerRecalculate()">
+                            </div>
+
+                            <!-- Bảng tóm tắt thanh toán -->
+                            <div class="fin-calc-row">
+                                <span class="text-muted">Tổng tiền dịch vụ:</span>
+                                <strong id="lblTotalService">0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row">
+                                <span class="text-muted">Tổng tiền thuốc mua tại PK:</span>
+                                <strong id="lblTotalMedicine" class="text-primary">0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Giảm thẻ thành viên:</span>
+                                <strong id="lblMemberDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Giảm khuyến mãi/Voucher:</span>
+                                <strong id="lblPromoDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row text-success">
+                                <span>Trừ điểm tích lũy:</span>
+                                <strong id="lblPointDiscount">-0 đ</strong>
+                            </div>
+                            <div class="fin-calc-row fin-calc-total">
+                                <span>THỰC THU (PHẢI TRẢ):</span>
+                                <span id="lblFinalPay" class="fs-4 text-primary">0 đ</span>
+                            </div>
+
+                            <div class="mt-2 text-end text-muted small">
+                                Điểm tích lũy dự kiến nhận: <strong id="lblPointsEarnable" class="text-success">+0 điểm</strong>
+                            </div>
+
+                            <!-- Nút Xác nhận Phát hành Hóa đơn Chung -->
+                            <div class="mt-4 d-grid gap-2">
+                                <button type="submit" id="btnSubmitInvoice" class="fin-btn fin-btn-primary py-3 fs-6"
+                                        th:disabled="${selectedVisit == null or (#lists.isEmpty(unbilledServices) and (handedOverPrescriptions == null or #lists.isEmpty(handedOverPrescriptions)))}">
+                                    <i class="bi bi-check2-circle fs-5"></i> XÁC NHẬN PHÁT HÀNH HÓA ĐƠN CHUNG
+                                </button>
+                                <a th:href="@{/invoices}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Card Kế hoạch điều trị tham khảo (Dự kiến - Không tính vào hóa đơn) -->
+            <div class="fin-card mt-4 border-secondary"
+                 th:if="${referenceTreatmentPlans != null and !referenceTreatmentPlans.isEmpty()}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="fw-bold m-0 text-secondary d-flex align-items-center">
+                        <i class="bi bi-diagram-3 me-2"></i> Kế hoạch điều trị (Tham khảo dự kiến - Không tính vào hóa đơn)
+                    </h4>
+                    <span class="badge bg-light text-muted border"
+                          th:text="${referenceTreatmentPlans.size()} + ' kế hoạch'">0</span>
+                </div>
+                <div class="alert alert-secondary py-2 px-3 mb-3 small d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span>Kế hoạch điều trị chỉ là chi phí dự kiến cho toàn bộ phác đồ. <strong>Hóa đơn chỉ tính các dịch vụ bác sĩ đã xác nhận hoàn thành thực tế và thuốc thực tế mua trong ca khám.</strong></span>
+                </div>
+                <div class="fin-table-wrapper">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã KHDT</th>
+                            <th>Tên phác đồ / Kế hoạch</th>
+                            <th>Bác sĩ lập</th>
+                            <th>Ngày lập</th>
+                            <th class="text-end">Chi phí dự kiến</th>
+                            <th class="text-center">Trạng thái</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="plan : ${referenceTreatmentPlans}">
+                            <td class="fw-bold text-dark" th:text="${plan.planCode}">KH001</td>
+                            <td th:text="${plan.planName}">Chỉnh nha niềng răng</td>
+                            <td th:text="${plan.doctor != null ? plan.doctor.fullName : 'Bác sĩ'}">BS Nam</td>
+                            <td th:text="${#temporals.format(plan.createdAt, 'dd/MM/yyyy')}">20/10/2026</td>
+                            <td class="text-end fw-bold text-secondary"
+                                th:text="${#numbers.formatDecimal(plan.estimatedCost, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                15.000.000 đ
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border" th:text="${plan.status}">ACTIVE</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Form ẩn để đổi sang mua tại PK (Hoàn toàn nằm NGOÀI invoiceForm, ngăn chặn nested form) -->
+            <form id="formSwitchToClinic" method="post" action="" style="display: none;">
+                <input type="hidden" name="choice" value="CLINIC">
+                <input type="hidden" name="visitId" th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
+                <input type="hidden" name="profileId" th:value="${selectedPatient != null ? selectedPatient.profileId : ''}">
+            </form>
+
+            <!-- Modal Xác nhận Bệnh nhân tự mua ngoài (Nằm NGOÀI invoiceForm, ngăn chặn nested form) -->
+            <div class="modal fade" id="modalChoiceExternal" tabindex="-1" aria-labelledby="modalChoiceExternalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form id="formChoiceExternal" method="post" action="">
+                        <input type="hidden" name="choice" value="EXTERNAL">
+                        <input type="hidden" name="visitId" th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
+                        <input type="hidden" name="profileId" th:value="${selectedPatient != null ? selectedPatient.profileId : ''}">
+                        <div class="modal-content">
+                            <div class="modal-header bg-secondary text-white">
+                                <h5 class="modal-title" id="modalChoiceExternalLabel">
+                                    <i class="bi bi-shop me-2"></i> Xác nhận Bệnh nhân tự mua thuốc ngoài
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-2">Bạn đang ghi nhận lựa chọn: <strong>Bệnh nhân tự mua thuốc ngoài tại nhà thuốc tư nhân</strong> cho đơn thuốc <strong id="modalPrescCode" class="text-primary"></strong>.</p>
+                                <div class="alert alert-warning py-2 px-3 small mb-3">
+                                    <i class="bi bi-info-circle me-1"></i> Hệ thống <strong>không tạo dòng thuốc trên hóa đơn</strong>, <strong>không phát sinh công nợ</strong>, và <strong>không trừ kho thuốc</strong>.
+                                </div>
+                                <div class="mb-3">
+                                    <label for="modalChoiceNote" class="form-label small fw-bold">Ghi chú tiếp nhận (tùy chọn):</label>
+                                    <textarea id="modalChoiceNote" name="note" class="form-control" rows="2"
+                                              placeholder="Ví dụ: Bệnh nhân tự mua tại nhà thuốc gần nhà..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Xác nhận lưu lựa chọn</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    function formatMoney(num) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(num || 0)) + ' đ';
+    }
+
+    function onSelectWaitingVisit(visitId) {
+        if (visitId) {
+            window.location.href = '/invoices/create?visitId=' + visitId;
+        }
+    }
+
+    function openChoiceExternalModal(button) {
+        const prescId = button.getAttribute('data-presc-id');
+        const prescCode = button.getAttribute('data-presc-code');
+        document.getElementById('modalPrescCode').textContent = prescCode;
+        document.getElementById('formChoiceExternal').action = '/invoices/prescriptions/' + prescId + '/choice';
+        const modal = new bootstrap.Modal(document.getElementById('modalChoiceExternal'));
+        modal.show();
+    }
+
+    function submitSwitchToClinic(prescId) {
+        if (!prescId) return;
+        const form = document.getElementById('formSwitchToClinic');
+        form.action = '/invoices/prescriptions/' + prescId + '/choice';
+        form.submit();
+    }
+
+    // Quản lý Dịch vụ
+    function toggleAllItems(masterCheckbox) {
+        document.querySelectorAll('.item-checkbox').forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+        onItemCheckboxChange();
+    }
+
+    function onItemCheckboxChange() {
+        const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+        const totalCount = document.querySelectorAll('.item-checkbox').length;
+        const badge = document.getElementById('selectedCountBadge');
+        if (badge) {
+            badge.textContent = checkedCount + ' / ' + totalCount + ' dịch vụ được chọn';
+        }
+        updateSubmitButtonState();
+        triggerRecalculate();
+    }
+
+    function onItemQtyChange(input) {
+        const row = input.closest('tr');
+        recalculateServiceRowTotal(row);
+        triggerRecalculate();
+    }
+
+    function onItemPriceChange(input) {
+        const row = input.closest('tr');
+        recalculateServiceRowTotal(row);
+        triggerRecalculate();
+    }
+
+    function recalculateServiceRowTotal(row) {
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+        const discountEl = row.querySelector('.item-clinical-discount');
+        const discount = discountEl ? (parseFloat(discountEl.getAttribute('data-discount')) || 0) : 0;
+        let lineTotal = (price * qty) - discount;
+        if (lineTotal < 0) lineTotal = 0;
+        row.querySelector('.item-line-total').textContent = formatMoney(lineTotal);
+        row.querySelector('.item-line-total').setAttribute('data-val', lineTotal);
+    }
+
+    // Quản lý Thuốc
+    function onToggleBuyMedicine(checkbox) {
+        const isBuying = checkbox.checked;
+        const masterMedCheck = document.getElementById('checkAllMedItems');
+        if (masterMedCheck) {
+            masterMedCheck.disabled = !isBuying;
+            masterMedCheck.checked = isBuying;
+        }
+
+        document.querySelectorAll('.med-item-row').forEach(row => {
+            const cb = row.querySelector('.med-item-checkbox');
+            const qtyInput = row.querySelector('.med-item-qty');
+            const remaining = parseFloat(row.getAttribute('data-remaining')) || 0;
+
+            if (isBuying && remaining > 0) {
+                cb.disabled = false;
+                cb.checked = true;
+                qtyInput.disabled = false;
+            } else {
+                cb.disabled = true;
+                cb.checked = false;
+                qtyInput.disabled = true;
+            }
+            recalculateMedicineRowTotal(row);
+        });
+
+        updateSubmitButtonState();
+        triggerRecalculate();
+    }
+
+    function toggleAllMedItems(masterCheckbox) {
+        const isChecked = masterCheckbox.checked;
+        document.querySelectorAll('.med-item-row').forEach(row => {
+            const cb = row.querySelector('.med-item-checkbox');
+            const qtyInput = row.querySelector('.med-item-qty');
+            const remaining = parseFloat(row.getAttribute('data-remaining')) || 0;
+            if (remaining > 0) {
+                cb.checked = isChecked;
+                qtyInput.disabled = !isChecked;
+            }
+        });
+        updateSubmitButtonState();
+        triggerRecalculate();
+    }
+
+    function onMedCheckboxChange() {
+        document.querySelectorAll('.med-item-row').forEach(row => {
+            const cb = row.querySelector('.med-item-checkbox');
+            const qtyInput = row.querySelector('.med-item-qty');
+            qtyInput.disabled = !cb.checked;
+        });
+        updateSubmitButtonState();
+        triggerRecalculate();
+    }
+
+    function onMedQtyChange(input) {
+        const row = input.closest('tr');
+        const remaining = parseFloat(row.getAttribute('data-remaining')) || 0;
+        let val = parseFloat(input.value) || 1;
+        if (val < 1) val = 1;
+        if (val > remaining) {
+            alert('Số lượng mua không được vượt quá số lượng còn lại theo đơn bác sĩ (' + remaining + ')');
+            val = remaining;
+        }
+        input.value = val;
+        recalculateMedicineRowTotal(row);
+        triggerRecalculate();
+    }
+
+    function recalculateMedicineRowTotal(row) {
+        const price = parseFloat(row.getAttribute('data-unit-price')) || 0;
+        const qtyInput = row.querySelector('.med-item-qty');
+        const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
+        const lineTotal = price * qty;
+        const lineEl = row.querySelector('.med-line-total');
+        if (lineEl) {
+            lineEl.textContent = formatMoney(lineTotal);
+            lineEl.setAttribute('data-val', lineTotal);
+        }
+    }
+
+    function updateSubmitButtonState() {
+        const checkedServices = document.querySelectorAll('.item-checkbox:checked').length;
+        const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
+        const isBuyingMed = chkBuyMed && chkBuyMed.checked;
+        const checkedMeds = isBuyingMed ? document.querySelectorAll('.med-item-checkbox:checked').length : 0;
+        const visitId = document.getElementById('hiddenVisitId').value;
+
+        const btnSubmit = document.getElementById('btnSubmitInvoice');
+        if (btnSubmit) {
+            btnSubmit.disabled = !visitId || (checkedServices === 0 && checkedMeds === 0);
+        }
+    }
+
+    // Tính toán xem trước bằng backend Preview API
+    async function triggerRecalculate() {
+        const profileId = document.getElementById('hiddenProfileId').value;
+        const visitId = document.getElementById('hiddenVisitId').value;
+        const promoId = document.getElementById('promotionId').value;
+        const voucherId = document.getElementById('voucherId').value;
+        const points = parseInt(document.getElementById('pointsToRedeem').value) || 0;
+        const manualDiscount = parseFloat(document.getElementById('manualDiscount').value) || 0;
+
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cb = row.querySelector('.item-checkbox');
+            if (cb && cb.checked) {
+                const serviceId = row.querySelector('.prop-service-id').value;
+                const performedId = row.querySelector('.prop-performed-id').value;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                items.push({
+                    performedId: performedId ? parseInt(performedId) : null,
+                    serviceId: serviceId ? parseInt(serviceId) : null,
+                    quantity: qty,
+                    unitPrice: price
+                });
+            }
+        });
+
+        const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
+        const buyMedicine = chkBuyMed && chkBuyMed.checked;
+        const medicineItems = [];
+        const prescriptionId = document.getElementById('hiddenPrescriptionId').value;
+
+        if (buyMedicine) {
+            document.querySelectorAll('.med-item-row').forEach(row => {
+                const cb = row.querySelector('.med-item-checkbox');
+                if (cb && cb.checked) {
+                    const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
+                    const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
+                    medicineItems.push({
+                        prescriptionItemId: parseInt(prescItemId),
+                        quantity: qty
+                    });
+                }
+            });
+        }
+
+        if (items.length === 0 && medicineItems.length === 0) {
+            document.getElementById('lblTotalService').textContent = '0 đ';
+            document.getElementById('lblTotalMedicine').textContent = '0 đ';
+            document.getElementById('lblMemberDiscount').textContent = '-0 đ';
+            document.getElementById('lblPromoDiscount').textContent = '-0 đ';
+            document.getElementById('lblPointDiscount').textContent = '-0 đ';
+            document.getElementById('lblFinalPay').textContent = '0 đ';
+            document.getElementById('lblPointsEarnable').textContent = '+0 điểm';
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/invoices/preview', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    profileId: profileId ? parseInt(profileId) : null,
+                    visitId: visitId ? parseInt(visitId) : null,
+                    promotionId: promoId ? parseInt(promoId) : null,
+                    voucherId: voucherId ? parseInt(voucherId) : null,
+                    pointsToRedeem: points,
+                    discountAmount: manualDiscount,
+                    prescriptionId: prescriptionId ? parseInt(prescriptionId) : null,
+                    buyMedicineAtClinic: buyMedicine,
+                    items: items,
+                    medicineItems: medicineItems
+                })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                document.getElementById('lblTotalService').textContent = formatMoney(data.totalServiceAmount);
+                document.getElementById('lblTotalMedicine').textContent = formatMoney(data.totalMedicineAmount);
+                document.getElementById('lblMemberDiscount').textContent = '-' + formatMoney(data.memberDiscountAmount);
+                document.getElementById('lblPromoDiscount').textContent = '-' + formatMoney(data.promotionDiscountAmount);
+                document.getElementById('lblPointDiscount').textContent = '-' + formatMoney(data.pointDiscountAmount);
+                document.getElementById('lblFinalPay').textContent = formatMoney(data.totalAmount);
+                document.getElementById('lblPointsEarnable').textContent = '+' + (data.pointsEarnable || 0) + ' điểm';
+            }
+        } catch (e) {
+            console.error('Calculation preview error:', e);
+        }
+    }
+
+    // Xử lý gửi form: Chỉ gửi và đánh chỉ số tuần tự cho các dòng ĐƯỢC CHỌN, vô hiệu hóa các dòng bỏ chọn
+    document.getElementById('invoiceForm').addEventListener('submit', function (e) {
+        const checkedServices = document.querySelectorAll('.item-checkbox:checked');
+        const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
+        const isBuyingMed = chkBuyMed && chkBuyMed.checked;
+        const checkedMeds = isBuyingMed ? document.querySelectorAll('.med-item-checkbox:checked') : [];
+
+        if (checkedServices.length === 0 && checkedMeds.length === 0) {
+            e.preventDefault();
+            alert('Vui lòng chọn ít nhất 01 dịch vụ hoặc 01 dòng thuốc mua tại phòng khám để phát hành hóa đơn.');
+            return false;
+        }
+
+        // Xử lý index dòng dịch vụ
+        let serviceIndex = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cb = row.querySelector('.item-checkbox');
+            const rowInputs = row.querySelectorAll('input:not(.item-checkbox)');
+            if (cb && cb.checked) {
+                rowInputs.forEach(input => {
+                    input.disabled = false;
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/items\[\d+\]/, 'items[' + serviceIndex + ']'));
+                    }
+                });
+                serviceIndex++;
+            } else {
+                rowInputs.forEach(input => {
+                    input.disabled = true;
+                });
+            }
+        });
+
+        // Xử lý index dòng thuốc
+        let medIndex = 0;
+        document.querySelectorAll('.med-item-row').forEach(row => {
+            const cb = row.querySelector('.med-item-checkbox');
+            const idInput = row.querySelector('.prop-med-prescription-item-id');
+            const qtyInput = row.querySelector('.med-item-qty');
+            if (isBuyingMed && cb && cb.checked) {
+                idInput.disabled = false;
+                idInput.setAttribute('name', 'medicineItems[' + medIndex + '].prescriptionItemId');
+                qtyInput.disabled = false;
+                qtyInput.setAttribute('name', 'medicineItems[' + medIndex + '].quantity');
+                medIndex++;
+            } else {
+                if (idInput) idInput.disabled = true;
+                if (qtyInput) qtyInput.disabled = true;
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        onItemCheckboxChange();
+    });
+</script>
+</body>
+</html>

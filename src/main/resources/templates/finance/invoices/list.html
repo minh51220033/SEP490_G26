@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Hóa đơn & Thu phí dịch vụ (FT21)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Hóa đơn & Viện phí')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1> Danh sách Hóa đơn (SCR-21.2)</h1>
+                    <p>Theo dõi phát hành hóa đơn, áp dụng ưu đãi hội viên/khuyến mãi, trạng thái thanh toán và công nợ.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/invoices/create}" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
+                    </a>
+                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-credit-card"></i> Danh sách phiếu thu
+                    </a>
+                </div>
+            </div>
+
+            <!-- 4 KPI Summary Cards -->
+            <div class="fin-kpi-grid">
+                <div class="fin-kpi-card fin-kpi-blue">
+                    <div class="fin-kpi-icon"><i class="bi bi-currency-dollar"></i></div>
+                    <div class="fin-kpi-info">
+                        <h4>Doanh số hôm nay</h4>
+                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalBilled, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    </div>
+                </div>
+                <div class="fin-kpi-card fin-kpi-green">
+                    <div class="fin-kpi-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="fin-kpi-info">
+                        <h4>Thực thu hôm nay</h4>
+                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalCollected, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    </div>
+                </div>
+                <div class="fin-kpi-card fin-kpi-amber">
+                    <div class="fin-kpi-icon"><i class="bi bi-exclamation-circle"></i></div>
+                    <div class="fin-kpi-info">
+                        <h4>Công nợ phát sinh</h4>
+                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    </div>
+                </div>
+                <div class="fin-kpi-card fin-kpi-purple">
+                    <div class="fin-kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                    <div class="fin-kpi-info">
+                        <h4>Tổng số hóa đơn</h4>
+                        <p class="fin-kpi-val" th:text="${metrics.todayTotalInvoices} + ' đơn'">0 đơn</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Card -->
+            <div class="fin-card">
+                <form th:action="@{/invoices}" method="get" class="fin-filter-bar">
+                    <div class="fin-form-group">
+                        <label for="branchSelect">Cơ sở nha khoa</label>
+                        <select id="branchSelect" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${b.branchId == selectedBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="paymentStatus">Thanh toán</label>
+                        <select id="paymentStatus" name="paymentStatus" class="fin-select">
+                            <option value="">-- Tất cả trạng thái --</option>
+                            <option value="UNPAID" th:selected="${selectedPaymentStatus?.name() == 'UNPAID'}">Chưa thanh toán</option>
+                            <option value="PARTIAL" th:selected="${selectedPaymentStatus?.name() == 'PARTIAL'}">Thanh toán 1 phần</option>
+                            <option value="PAID" th:selected="${selectedPaymentStatus?.name() == 'PAID'}">Đã thanh toán đủ</option>
+                            <option value="CANCELLED" th:selected="${selectedPaymentStatus?.name() == 'CANCELLED'}">Đã hủy</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="invoiceStatus">Trạng thái HĐ</label>
+                        <select id="invoiceStatus" name="status" class="fin-select">
+                            <option value="">-- Tất cả --</option>
+                            <option value="CONFIRMED" th:selected="${selectedStatus?.name() == 'CONFIRMED'}">Đã phát hành</option>
+                            <option value="DRAFT" th:selected="${selectedStatus?.name() == 'DRAFT'}">Bản nháp</option>
+                            <option value="CANCELLED" th:selected="${selectedStatus?.name() == 'CANCELLED'}">Đã hủy</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}">
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}">
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
+                        <label for="keyword">Tìm kiếm (Mã HĐ, Mã BN, Tên BN, SĐT)</label>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="VD: HD10001, BN000101, Nguyễn Văn A, 0987..." th:value="${keyword}">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc dữ liệu</button>
+                        <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table Card -->
+            <div class="fin-card p-0">
+                <div class="fin-table-wrapper">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã HĐ</th>
+                            <th class="text-center" style="width: 100px;">Loại HĐ</th>
+                            <th>Ngày lập</th>
+                            <th>Bệnh nhân</th>
+                            <th>Cơ sở</th>
+                            <th>Thu ngân</th>
+                            <th class="text-end">Tiền phát sinh</th>
+                            <th class="text-end">Giảm trừ</th>
+                            <th class="text-end">Thực thu</th>
+                            <th class="text-end">Đã thanh toán</th>
+                            <th class="text-end">Còn nợ</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(invoices)}">
+                            <td colspan="13" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                Chưa có hóa đơn nào phù hợp với điều kiện tìm kiếm.
+                            </td>
+                        </tr>
+                        <tr th:each="inv : ${invoices}" th:id="'row-' + ${inv.invoiceId}">
+                            <td>
+                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fw-bold text-primary text-decoration-none"
+                                   th:text="${inv.invoiceCode}">HD123456</a>
+                                <div th:if="${inv.status.name() == 'CANCELLED'}" class="badge bg-danger text-white mt-1" style="font-size: 10px;">Đã hủy</div>
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MIXED'}" class="badge text-white" style="background-color: #6f42c1;">
+                                    <i class="bi bi-receipt"></i> DV &amp; Thuốc
+                                </span>
+                                <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MEDICINE'}" class="badge bg-info text-dark border border-info">
+                                    <i class="bi bi-capsule"></i> Thuốc
+                                </span>
+                                <span th:if="${inv.invoiceType == null or inv.invoiceType.name() == 'SERVICE'}" class="badge bg-primary text-white">
+                                    <i class="bi bi-tools"></i> Dịch vụ
+                                </span>
+                            </td>
+                            <td>
+                                <span th:text="${#temporals.format(inv.issuedAt, 'dd/MM/yyyy')}">24/10/2026</span>
+                                <small class="text-muted d-block" th:text="${#temporals.format(inv.issuedAt, 'HH:mm')}">14:30</small>
+                            </td>
+                            <td>
+                                <div class="fw-bold" th:text="${inv.patientProfile.fullName}">Nguyễn Văn A</div>
+                                <small class="text-muted" th:text="${inv.patientProfile.patientCode} + ' - ' + ${inv.patientProfile.phoneNumber}">BN001 - 098...</small>
+                            </td>
+                            <td th:text="${inv.branch.branchName}">Cơ sở Quận 1</td>
+                            <td th:text="${inv.cashier != null ? inv.cashier.fullName : 'N/A'}">Nguyễn Thu Ngân</td>
+                            <td class="text-end" th:text="${#numbers.formatDecimal(inv.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                            <td class="text-end text-success">
+                                <span th:text="'-' + ${#numbers.formatDecimal(inv.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
+                            </td>
+                            <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(inv.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                            <td class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(inv.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td class="text-end fw-bold" th:classappend="${inv.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'text-danger' : 'text-muted'}"
+                                th:text="${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                            <td class="text-center">
+                                <span th:if="${inv.paymentStatus.name() == 'PAID'}" class="fin-badge fin-badge-paid"><i class="bi bi-check2-circle"></i> Đã thanh toán</span>
+                                <span th:if="${inv.paymentStatus.name() == 'PARTIAL'}" class="fin-badge fin-badge-partial"><i class="bi bi-clock-history"></i> Trả 1 phần</span>
+                                <span th:if="${inv.paymentStatus.name() == 'UNPAID'}" class="fin-badge fin-badge-unpaid"><i class="bi bi-exclamation-triangle"></i> Chưa trả</span>
+                                <span th:if="${inv.paymentStatus.name() == 'CANCELLED'}" class="fin-badge fin-badge-cancelled"><i class="bi bi-x-circle"></i> Đã hủy</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="btn btn-outline-primary" title="Xem chi tiết (SCR-21.1)">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="btn btn-outline-secondary" title="In hóa đơn (SCR-21.3)">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    <button th:if="${inv.status.name() != 'CANCELLED' and inv.paymentStatus.name() != 'PAID'}"
+                                            type="button" class="btn btn-success"
+                                            th:data-invoice-id="${inv.invoiceId}"
+                                            th:data-code="${inv.invoiceCode}"
+                                            th:data-debt="${inv.remainingDebt}"
+                                            th:data-patient="${inv.patientProfile.fullName}"
+                                            onclick="openQuickPayModal(this)"
+                                            title="Ghi nhận thanh toán (SCR-22.2)">
+                                        <i class="bi bi-cash"></i> Thu tiền
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="p-3 d-flex justify-content-between align-items-center border-top">
+                    <span class="text-muted small" th:text="'Hiển thị ' + ${invoices.size()} + ' / ' + ${totalElements} + ' hóa đơn'"></span>
+                    <nav aria-label="Phân trang">
+                        <ul class="pagination pagination-sm m-0">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/invoices(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Trước</a>
+                            </li>
+                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                                class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
+                                <a class="page-link" th:href="@{/invoices(page=${i}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/invoices(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Quick Pay Modal (AJAX) -->
+<div id="quickPayModal" class="fin-modal-backdrop" style="display: none;">
+    <div class="fin-modal-card">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+            <h5 class="m-0 fw-bold text-primary"><i class="bi bi-cash-coin me-2"></i>Thu tiền hóa đơn nhanh</h5>
+            <button type="button" class="btn-close" onclick="closeQuickPayModal()"></button>
+        </div>
+        <div class="p-4">
+            <input type="hidden" id="qpInvoiceId">
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">HÓA ĐƠN &amp; BỆNH NHÂN</label>
+                <div class="p-2 border rounded bg-light">
+                    <span id="qpInvoiceCode" class="fw-bold text-dark"></span> - <span id="qpPatientName"></span>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">SỐ TIỀN CÒN NỢ</label>
+                <div class="fs-4 fw-bold text-danger" id="qpRemainingDebt">0 đ</div>
+            </div>
+            <div class="mb-3">
+                <label for="qpAmount" class="form-label fw-bold">Số tiền khách thanh toán (VNĐ) <span class="text-danger">*</span></label>
+                <input type="number" id="qpAmount" class="form-control form-control-lg fw-bold text-primary" required min="1000">
+            </div>
+            <div class="mb-3">
+                <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
+                <select id="qpMethod" class="form-select">
+                    <option value="CASH">💵 Tiền mặt</option>
+                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (QR)</option>
+                    <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
+                    <option value="DEPOSIT_WALLET">👛 Trừ vào ví tiền cọc / tạm ứng</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="qpRef" class="form-label small text-muted">Mã giao dịch / Mã chuẩn chi ngân hàng (nếu có)</label>
+                <input type="text" id="qpRef" class="form-control" placeholder="VD: VCB12345678, POS-9988">
+            </div>
+            <div class="mb-3">
+                <label for="qpNotes" class="form-label small text-muted">Ghi chú</label>
+                <input type="text" id="qpNotes" class="form-control" placeholder="Ghi chú thêm...">
+            </div>
+            <div id="qpError" class="alert alert-danger py-2 small" style="display: none;"></div>
+        </div>
+        <div class="p-3 border-top d-flex justify-content-end gap-2 bg-light">
+            <button type="button" class="fin-btn fin-btn-outline" onclick="closeQuickPayModal()">Hủy bỏ</button>
+            <button type="button" class="fin-btn fin-btn-success" id="btnSubmitQp" onclick="submitQuickPay()">
+                <i class="bi bi-check2-circle"></i> Xác nhận thu tiền
+            </button>
+        </div>
+    </div>
+</div>
+<div id="paymentSuccessToast"
+     class="payment-success-toast"
+     role="status"
+     aria-live="polite"
+     aria-atomic="true"
+     hidden>
+    <div class="payment-success-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <div class="payment-success-content">
+        <strong>Thanh toán thành công</strong>
+        <span>Giao dịch đã được ghi nhận.</span>
+        <small>
+            Mã phiếu thu:
+            <b id="paymentSuccessCode"></b>
+        </small>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    function openQuickPayModal(btn) {
+        const invId = btn.getAttribute('data-invoice-id');
+        const code = btn.getAttribute('data-code');
+        const debt = parseFloat(btn.getAttribute('data-debt'));
+        const patient = btn.getAttribute('data-patient');
+
+        document.getElementById('qpInvoiceId').value = invId;
+        document.getElementById('qpInvoiceCode').textContent = code;
+        document.getElementById('qpPatientName').textContent = patient;
+        document.getElementById('qpRemainingDebt').textContent = new Intl.NumberFormat('vi-VN').format(debt) + ' đ';
+        document.getElementById('qpAmount').value = debt;
+        document.getElementById('qpError').style.display = 'none';
+
+        document.getElementById('quickPayModal').style.display = 'flex';
+    }
+
+    function closeQuickPayModal() {
+        document.getElementById('quickPayModal').style.display = 'none';
+    }
+
+    async function submitQuickPay() {
+        const invId = document.getElementById('qpInvoiceId').value;
+        const amount = parseFloat(document.getElementById('qpAmount').value);
+        const method = document.getElementById('qpMethod').value;
+        const ref = document.getElementById('qpRef').value;
+        const notes = document.getElementById('qpNotes').value;
+        const errorEl = document.getElementById('qpError');
+        const btnSubmit = document.getElementById('btnSubmitQp');
+
+        if (!amount || amount <= 0) {
+            errorEl.textContent = 'Vui lòng nhập số tiền thanh toán hợp lệ.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+
+        try {
+            const resp = await fetch(`/api/invoices/${invId}/quick-pay`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: amount,
+                    paymentMethod: method,
+                    transactionRef: ref,
+                    notes: notes
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                closeQuickPayModal();
+                document.getElementById('paymentSuccessCode').textContent =
+                    data.paymentCode || '';
+                document.getElementById('paymentSuccessToast').hidden = false;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2400);
+            } else {
+                errorEl.textContent = data.error || 'Có lỗi xảy ra khi xử lý thanh toán.';
+                errorEl.style.display = 'block';
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="bi bi-check2-circle"></i> Xác nhận thu tiền';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Lỗi kết nối máy chủ: ' + e.message;
+            errorEl.style.display = 'block';
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-check2-circle"></i> Xác nhận thu tiền';
+        }
+    }
+</script>
+</body>
+</html>

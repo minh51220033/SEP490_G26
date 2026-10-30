@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Tra cứu Thẻ thành viên & Điểm tích lũy (SCR-19.2)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        .vip-card-box {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .vip-card-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        .vip-card-header {
+            padding: 16px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-tier-diamond {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+        .card-tier-gold {
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+            color: #2b2b2b !important;
+        }
+        .card-tier-silver {
+            background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+        }
+        .card-tier-standard {
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        }
+    </style>
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('reception-memberships')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Tra cứu Thẻ thành viên & Tích điểm')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header mb-4">
+                <div>
+                    <h1><i class="bi bi-credit-card-2-front text-primary"></i> Tra cứu Thẻ thành viên Bệnh nhân (SCR-19.2)</h1>
+                    <p class="text-muted">Tra cứu thẻ hội viên theo mã bệnh nhân, họ tên hoặc số điện thoại; kiểm tra điểm tích lũy và quyền lợi ưu đãi.</p>
+                </div>
+            </div>
+
+            <!-- Bộ lọc & Tìm kiếm Bệnh nhân -->
+            <div class="fin-card mb-4">
+                <form th:action="@{/reception/memberships}" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label for="keyword" class="form-label small fw-bold text-muted">TÌM KIẾM BỆNH NHÂN</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="keyword" name="keyword" class="form-control"
+                                   th:value="${keyword}" placeholder="Nhập mã bệnh nhân, họ tên hoặc số điện thoại...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="branchId" class="form-label small fw-bold text-muted">CƠ SỞ / CHI NHÁNH</label>
+                        <select id="branchId" name="branchId" class="fin-select w-100">
+                            <option th:if="${isAdmin}" value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId == b.branchId}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="fin-btn fin-btn-primary flex-grow-1">
+                            <i class="bi bi-funnel me-1"></i> Tra cứu
+                        </button>
+                        <a th:href="@{/reception/memberships}" class="fin-btn fin-btn-outline">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Grid Thẻ thành viên Bệnh nhân -->
+            <div class="row g-4" th:if="${not #lists.isEmpty(memberCards)}">
+                <div class="col-lg-4 col-md-6" th:each="card : ${memberCards}">
+                    <div class="vip-card-box h-100">
+                        <!-- Header thẻ VIP với gradient tương ứng hạng -->
+                        <div class="vip-card-header"
+                             th:classappend="${card.tierCode == 'DIAMOND' ? 'card-tier-diamond' : (card.tierCode == 'GOLD' ? 'card-tier-gold' : (card.tierCode == 'SILVER' ? 'card-tier-silver' : 'card-tier-standard'))}">
+                            <div>
+                                <span class="badge bg-dark bg-opacity-50 text-white me-1" th:text="${card.patientCode}">BN0001</span>
+                                <h6 class="fw-bold m-0 mt-1" th:text="${card.fullName}">Nguyễn Văn A</h6>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-white text-dark fw-bold px-2 py-1" th:text="${card.tierName}">Vàng</span>
+                                <div class="mt-1 small" style="font-size: 11px;" th:text="'Giảm ' + ${card.discountPercent} + '%'">Giảm 10%</div>
+                            </div>
+                        </div>
+
+                        <!-- Thân thẻ -->
+                        <div class="p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small"><i class="bi bi-telephone me-1"></i>Số điện thoại:</span>
+                                <strong th:text="${card.phoneNumber}">0987654321</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>Cơ sở đăng ký:</span>
+                                <span class="text-truncate text-end" style="max-width: 180px;" th:text="${card.preferredBranchName ?: 'Chưa chọn'}">Cơ sở 1</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small"><i class="bi bi-cash-stack me-1"></i>Tổng chi tiêu tích lũy:</span>
+                                <strong class="text-primary" th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted small"><i class="bi bi-coin me-1"></i>Điểm tích lũy hiện có:</span>
+                                <span class="badge bg-info text-dark fs-6" th:text="${card.currentPoints} + ' điểm'">0 điểm</span>
+                            </div>
+
+                            <!-- Tiến trình thăng hạng -->
+                            <div class="mb-1 d-flex justify-content-between small text-muted">
+                                <span>Tiến độ lên <strong th:text="${card.nextTierName}">Bạch Kim</strong>:</span>
+                                <span th:text="${card.progressPercent} + '%'">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                                     role="progressbar" th:style="'width: ' + ${card.progressPercent} + '%'"
+                                     th:aria-valuenow="${card.progressPercent}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="mt-1 text-end text-muted" style="font-size: 11px;" th:if="${card.amountNeededForNextTier > 0}">
+                                Còn thiếu <strong class="text-danger" th:text="${#numbers.formatDecimal(card.amountNeededForNextTier, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            </div>
+                        </div>
+
+                        <!-- Nút chi tiết thẻ -->
+                        <div class="p-3 pt-0 border-top mt-2">
+                            <a th:href="@{/reception/memberships/{id}(id=${card.profileId})}" class="fin-btn fin-btn-primary w-100 text-center mt-2">
+                                <i class="bi bi-clock-history me-1"></i> Xem lịch sử điểm &amp; Quyền lợi (SCR-19.3)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trạng thái trống -->
+            <div th:if="${#lists.isEmpty(memberCards)}" class="fin-card text-center py-5">
+                <i class="bi bi-search fs-1 text-muted d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Không tìm thấy thông tin thẻ thành viên nào</h5>
+                <p class="text-muted mb-3">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo cơ sở khác.</p>
+                <a th:href="@{/reception/memberships}" class="fin-btn fin-btn-outline">Làm mới danh sách</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

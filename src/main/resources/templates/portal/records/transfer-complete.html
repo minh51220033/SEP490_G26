@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Tách tài khoản hoàn tất')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Tách tài khoản')}"></header>
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="patient-page-heading"><div><h1>Tách tài khoản · Bước 3/3</h1><p>Đã chuyển quyền quản lý hồ sơ.</p></div></div>
+            <section class="panel patient-detail"><div class="alert alert-success">Tách tài khoản hoàn tất.</div>
+                <div class="patient-facts">
+                    <div><span>Mã hồ sơ</span><strong th:text="${transferredCode}">—</strong></div>
+                    <div><span>Họ và tên</span><strong th:text="${transferredName}">—</strong></div>
+                    <div><span>Email tài khoản nhận</span><strong th:text="${targetEmail}">—</strong></div>
+                </div>
+                <p class="mt-3">Tài khoản cũ đã bị thu hồi quyền xem hồ sơ. Người nhận đăng nhập để xem hồ sơ và lịch sử khám cũ.</p>
+                <a class="btn btn-primary" th:href="@{/portal/records}">Về hồ sơ của tôi</a>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer></div></div></body></html>

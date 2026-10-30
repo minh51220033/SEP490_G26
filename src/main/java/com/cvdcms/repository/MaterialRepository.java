@@ -57,4 +57,31 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     List<Object[]> countMaterialsByCategory();
 
     long countByCategoryIgnoreCase(String category);
+
+    // ─── Đồng bộ danh mục thuốc ↔ kho vật tư ──────────────────────────────────
+
+    /** Mặt hàng kho đang liên kết với thuốc (tối đa 1 bản ghi nhờ UNIQUE medication_id). */
+    Optional<Material> findByMedication_MedicationId(Long medicationId);
+
+    boolean existsByMedication_MedicationId(Long medicationId);
+
+    /** Số dòng phiếu nhập đã dùng mặt hàng này (lịch sử nhập kho). */
+    @Query("SELECT COUNT(i) FROM StockReceiptItem i WHERE i.material.materialId = :materialId")
+    long countReceiptItems(@Param("materialId") Long materialId);
+
+    /** Số dòng phiếu xuất đã dùng mặt hàng này. */
+    @Query("SELECT COUNT(i) FROM StockIssueItem i WHERE i.material.materialId = :materialId")
+    long countIssueItems(@Param("materialId") Long materialId);
+
+    /** Số bản ghi tồn kho chi nhánh của mặt hàng này. */
+    @Query("SELECT COUNT(b) FROM BranchInventory b WHERE b.material.materialId = :materialId")
+    long countInventoryRows(@Param("materialId") Long materialId);
+
+    /** Số lô hàng của mặt hàng này. */
+    @Query("SELECT COUNT(b) FROM MaterialBatch b WHERE b.material.materialId = :materialId")
+    long countBatches(@Param("materialId") Long materialId);
+
+    /** Số bản ghi tiêu hao vật tư lâm sàng của mặt hàng này. */
+    @Query("SELECT COUNT(c) FROM MaterialConsumption c WHERE c.material.materialId = :materialId")
+    long countConsumptions(@Param("materialId") Long materialId);
 }
