@@ -45,4 +45,12 @@ public class PatientVoucher {
 
     @Column(name = "used_at")
     private LocalDateTime usedAt;
+
+    @Transient
+    public String getDisplayLabel() {
+        if (promotion != null) {
+            return voucherCode + " - " + promotion.getPromoName() + " (" + promotion.getFormattedDiscount() + ")";
+        }
+        return voucherCode;
+    }
 }

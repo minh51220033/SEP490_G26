@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Lịch làm việc của tôi')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('my-schedule')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Lịch làm việc của tôi')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/schedule.css}">
+
+            <!-- LỊCH LÀM VIỆC CÁ NHÂN (SCR-33.3) -->
+            <section class="panel">
+                <div class="panel__head">
+                    <div>
+                        <h3 class="panel__title">Lịch làm việc hàng tuần</h3>
+                        <p class="panel__subtitle">
+                            Tuần
+                            <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">01/01/2026</strong>
+                            -
+                            <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">07/01/2026</strong>
+                            <span th:if="${staff != null}" th:text="' · ' + ${staff.fullName} + ' (' + ${staff.staffCode} + ')'"></span>
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/schedules/my(week=${prevWeek})}" class="btn btn-light">
+                            <i class="bi bi-chevron-left" aria-hidden="true"></i> Tuần trước</a>
+                        <a th:href="@{/schedules/my}" class="btn btn-light">Tuần này</a>
+                        <a th:href="@{/schedules/my(week=${nextWeek})}" class="btn btn-light">
+                            Tuần sau <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+                        <a th:href="@{/attendance/my}" class="btn btn-primary">
+                            <i class="bi bi-fingerprint" aria-hidden="true"></i> Chấm công</a>
+                    </div>
+                </div>
+
+                <div th:if="${staff == null}" class="schedule-empty">
+                    Tài khoản của bạn chưa liên kết hồ sơ nhân viên nên chưa có lịch làm việc.
+                </div>
+
+                <div th:if="${myWeek != null}" class="my-week">
+                    <div th:each="entry : ${myWeek}" class="my-day"
+                         th:classappend="${entry.key == today} ? 'is-today' : ''">
+                        <div class="my-day__head">
+                            <span th:text="${#temporals.dayOfWeekName(entry.key)}">Thứ hai</span>
+                            <strong th:text="${#temporals.format(entry.key, 'dd/MM')}">01/01</strong>
+                        </div>
+                        <div th:if="${#lists.isEmpty(entry.value)}" class="my-day__empty">Nghỉ</div>
+                        <div th:each="s : ${entry.value}" class="my-shift"
+                             th:classappend="${s.status.name() == 'ON_LEAVE'} ? 'my-shift--leave' : (${s.status.name() == 'CANCELLED'} ? 'my-shift--cancel' : '')">
+                            <div class="my-shift__name" th:text="${s.shift.shiftName}">Ca sáng</div>
+                            <div class="my-shift__time"
+                                 th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">
+                                08:00 - 12:00
+                            </div>
+                            <div class="staff-sub" th:text="${s.branch.branchName}">Chi nhánh</div>
+                            <div class="staff-sub" th:if="${s.note != null}" th:text="${s.note}"></div>
+                            <span class="status-badge"
+                                  th:classappend="${s.status.name() == 'SCHEDULED'} ? 'status-badge--active' : 'status-badge--on_leave'"
+                                  th:text="${s.status.name() == 'SCHEDULED' ? 'Đã xếp ca' : (s.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã hủy')}">Đã xếp ca</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

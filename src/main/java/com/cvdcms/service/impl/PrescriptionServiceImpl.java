@@ -155,6 +155,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                                 : "Uống sau khi ăn"
                 );
 
+                BigDecimal unitPrice = itemDTO.getUnitPrice();
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    unitPrice = getEstimatedPriceForDrug(item.getDrugName());
+                }
+                item.setUnitPrice(unitPrice);
+
                 prescription.getItems().add(item);
             }
         }
@@ -205,8 +211,21 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
 
         List<PrescriptionItemResponseDTO> itemDTOs = new ArrayList<>();
+        BigDecimal totalPrescAmount = BigDecimal.ZERO;
         if (p.getItems() != null) {
             for (PrescriptionItem it : p.getItems()) {
+                BigDecimal uPrice = (it.getUnitPrice() != null && it.getUnitPrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? it.getUnitPrice()
+                        : getEstimatedPriceForDrug(it.getDrugName());
+                BigDecimal qty = (it.getQuantity() != null && it.getQuantity().compareTo(BigDecimal.ZERO) > 0)
+                        ? it.getQuantity()
+                        : BigDecimal.ONE;
+                BigDecimal fPrice = uPrice.multiply(qty);
+                totalPrescAmount = totalPrescAmount.add(fPrice);
+
+                BigDecimal bought = it.getBoughtQuantity() != null ? it.getBoughtQuantity() : BigDecimal.ZERO;
+                BigDecimal rem = it.getRemainingQuantity();
+
                 itemDTOs.add(PrescriptionItemResponseDTO.builder()
                         .itemId(it.getItemId())
                         .medicationId(it.getMedication() != null ? it.getMedication().getMedicationId() : null)
@@ -214,11 +233,24 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                         .dosage(it.getDosage())
                         .durationDays(it.getDurationDays())
                         .quantity(it.getQuantity())
+                        .boughtQuantity(bought)
+                        .remainingQuantity(rem)
                         .unit(it.getUnit())
                         .usageInstruction(it.getUsageInstruction())
+                        .unitPrice(uPrice)
+                        .finalPrice(fPrice)
                         .build());
             }
         }
+
+        String statusName = p.getStatus() != null ? p.getStatus().name() : "PENDING";
+        String statusDisplay = switch (statusName) {
+            case "EXTERNAL_PURCHASE" -> "Tự mua ngoài";
+            case "CLINIC_PURCHASE_PARTIAL" -> "Đã mua 1 phần";
+            case "CLINIC_PURCHASE_COMPLETED" -> "Đã mua đủ tại PK";
+            case "CANCELLED" -> "Đã hủy";
+            default -> "Chờ tiếp nhận";
+        };
 
         return PrescriptionResponseDTO.builder()
                 .prescriptionId(p.getPrescriptionId())
@@ -243,7 +275,43 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .adviceNotes(p.getAdviceNotes())
                 .followupDate(p.getFollowupDate() != null ? p.getFollowupDate().format(DATE_FORMATTER) : null)
                 .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_TIME_FORMATTER) : null)
+                .totalAmount(totalPrescAmount)
+                .status(statusName)
+                .statusDisplay(statusDisplay)
+                .purchaseChoice(p.getPurchaseChoice() != null ? p.getPurchaseChoice().name() : null)
+                .choiceNote(p.getChoiceNote())
+                .handledByName(p.getHandledBy() != null ? p.getHandledBy().getFullName() : null)
+                .handledAt(p.getHandledAt() != null ? p.getHandledAt().format(DATE_TIME_FORMATTER) : null)
                 .items(itemDTOs)
                 .build();
+    }
+
+    private BigDecimal getEstimatedPriceForDrug(String drugName) {
+        if (drugName == null || drugName.trim().isEmpty()) {
+            return BigDecimal.valueOf(5000);
+        }
+        String lower = drugName.toLowerCase();
+        if (lower.contains("augmentin") || lower.contains("amoxicillin clavulanate")) {
+            return BigDecimal.valueOf(22000);
+        } else if (lower.contains("kin") || lower.contains("súc miệng") || lower.contains("suc mieng")) {
+            return BigDecimal.valueOf(130000);
+        } else if (lower.contains("ibuprofen")) {
+            return BigDecimal.valueOf(3500);
+        } else if (lower.contains("alphachymotrypsin") || lower.contains("chymo")) {
+            return BigDecimal.valueOf(3500);
+        } else if (lower.contains("paracetamol") || lower.contains("panadol") || lower.contains("efferalgan")) {
+            return BigDecimal.valueOf(2500);
+        } else if (lower.contains("rodogyl") || lower.contains("spiramycin")) {
+            return BigDecimal.valueOf(7000);
+        } else if (lower.contains("amoxicillin")) {
+            return BigDecimal.valueOf(3000);
+        } else if (lower.contains("cefuroxim") || lower.contains("zinnat")) {
+            return BigDecimal.valueOf(18000);
+        } else if (lower.contains("prednisolon") || lower.contains("medrol")) {
+            return BigDecimal.valueOf(4000);
+        } else if (lower.contains("gaviscon")) {
+            return BigDecimal.valueOf(12000);
+        }
+        return BigDecimal.valueOf(5000);
     }
 }

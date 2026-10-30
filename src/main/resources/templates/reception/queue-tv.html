@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hàng chờ khám</title><style>
+body{margin:0;background:#102b45;color:#fff;font-family:Arial,sans-serif}main{padding:3vw}h1{font-size:3vw;margin:0 0 2vw}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:3vw}.panel{background:#1b4163;border-radius:1vw;padding:2vw}.label{font-size:2vw;color:#c6dfef}
+.number{font-size:11vw;font-weight:800;color:#ffdc7a}.secondary{font-size:4vw;font-weight:700}.next{font-size:3vw;letter-spacing:1vw}
+</style></head><body><main><h1 id="branch" th:text="${board.branch}"></h1>
+<div class="grid"><section class="panel"><div class="label">ĐANG GỌI</div><div class="number" id="called">—</div><div class="secondary" id="location"></div>
+<div class="label">ĐANG PHỤC VỤ</div><div class="secondary" id="serving"></div></section>
+<section class="panel"><div class="label">ĐANG CHỜ</div><div class="number" id="waiting" th:text="${board.waiting}"></div><div class="label">SỐ TIẾP THEO</div><div class="next" id="next"></div></section></div></main>
+<script th:inline="javascript">
+const branchId = /*[[${branchId}]]*/ 0;
+async function refresh() {
+ try {
+  const response = await fetch('/reception/queue/tv/' + branchId + '/data', {cache:'no-store'});
+  if (!response.ok) return;
+  const data = await response.json();
+  document.getElementById('branch').textContent = data.branch;
+  document.getElementById('called').textContent = data.called.map(x => x.number).join(' · ') || '—';
+  document.getElementById('location').textContent = data.called.map(x => [x.room,x.chair].filter(Boolean).join(' · ')).join(' | ');
+  document.getElementById('serving').textContent = data.serving.map(x => x.number + ' ' + [x.room,x.chair].filter(Boolean).join(' · ')).join(' | ') || '—';
+  document.getElementById('waiting').textContent = data.waiting;
+  document.getElementById('next').textContent = data.next.join(' · ') || '—';
+ } catch (_) { /* retain last displayed numbers */ }
+}
+refresh(); setInterval(refresh, 5000);
+</script></body></html>

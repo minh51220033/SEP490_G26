@@ -3,18 +3,21 @@ package com.cvdcms.service.impl;
 import com.cvdcms.DTO.ClinicalCompletionCheckDTO;
 import com.cvdcms.DTO.DiagnosisRequestDTO;
 import com.cvdcms.DTO.DiagnosisResponseDTO;
+import com.cvdcms.DTO.GeneralExaminationRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
+import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.DiagnosisService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -22,7 +25,6 @@ import java.util.*;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class DiagnosisServiceImpl implements DiagnosisService {
 
@@ -33,7 +35,61 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final StaffProfileRepository staffProfileRepository;
     private final PerformedServiceRepository performedServiceRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final TreatmentPlanRepository treatmentPlanRepository;
     private final AppointmentRepository appointmentRepository;
+    private final PatientProfileRepository patientProfileRepository;
+    private final InvoiceRepository invoiceRepository;
+
+    @Autowired
+    public DiagnosisServiceImpl(
+            ExaminationDiagnosisRepository diagnosisRepository,
+            Icd10DiseaseRepository icd10DiseaseRepository,
+            VisitRepository visitRepository,
+            ClinicalExaminationRepository clinicalExamRepository,
+            StaffProfileRepository staffProfileRepository,
+            PerformedServiceRepository performedServiceRepository,
+            PrescriptionRepository prescriptionRepository,
+            TreatmentPlanRepository treatmentPlanRepository,
+            AppointmentRepository appointmentRepository,
+            PatientProfileRepository patientProfileRepository,
+            InvoiceRepository invoiceRepository) {
+        this.diagnosisRepository = diagnosisRepository;
+        this.icd10DiseaseRepository = icd10DiseaseRepository;
+        this.visitRepository = visitRepository;
+        this.clinicalExamRepository = clinicalExamRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.performedServiceRepository = performedServiceRepository;
+        this.prescriptionRepository = prescriptionRepository;
+        this.treatmentPlanRepository = treatmentPlanRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.invoiceRepository = invoiceRepository;
+    }
+
+    public DiagnosisServiceImpl(
+            ExaminationDiagnosisRepository diagnosisRepository,
+            Icd10DiseaseRepository icd10DiseaseRepository,
+            VisitRepository visitRepository,
+            ClinicalExaminationRepository clinicalExamRepository,
+            StaffProfileRepository staffProfileRepository,
+            PerformedServiceRepository performedServiceRepository,
+            PrescriptionRepository prescriptionRepository,
+            AppointmentRepository appointmentRepository,
+            PatientProfileRepository patientProfileRepository,
+            InvoiceRepository invoiceRepository) {
+        this(
+                diagnosisRepository,
+                icd10DiseaseRepository,
+                visitRepository,
+                clinicalExamRepository,
+                staffProfileRepository,
+                performedServiceRepository,
+                prescriptionRepository,
+                null,
+                appointmentRepository,
+                patientProfileRepository,
+                invoiceRepository);
+    }
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -59,21 +115,26 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         Visit visit = visitRepository.findWithDetailsById(request.getVisitId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + request.getVisitId()));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + request.getVisitId()));
 
-        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi đã chuyển thanh toán hoặc hoàn thành
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi đã chuyển thanh toán
+        // hoặc hoàn thành
         if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể thêm chẩn đoán mới.");
+            throw new IllegalStateException(
+                    "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể thêm chẩn đoán mới.");
         }
 
         Icd10Disease disease = icd10DiseaseRepository.findByIcd10Code(request.getIcd10Code().trim())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã bệnh ICD-10: " + request.getIcd10Code()));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Không tìm thấy mã bệnh ICD-10: " + request.getIcd10Code()));
 
         // Tìm hoặc tạo đợt khám lâm sàng ClinicalExamination tương ứng
         ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visit.getVisitId())
                 .orElseGet(() -> createDefaultExamination(visit));
 
-        // Nếu chẩn đoán mới là MAIN và đã có MAIN trước đó, chuyển MAIN cũ thành SECONDARY để bệnh án chuẩn y khoa
+        // Nếu chẩn đoán mới là MAIN và đã có MAIN trước đó, chuyển MAIN cũ thành
+        // SECONDARY để bệnh án chuẩn y khoa
         DiagnosisType type = request.getDiagnosisType() != null ? request.getDiagnosisType() : DiagnosisType.MAIN;
         if (type == DiagnosisType.MAIN) {
             List<ExaminationDiagnosis> existing = diagnosisRepository.findByVisit_VisitId(visit.getVisitId());
@@ -112,8 +173,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         // Quy tắc BR-EMR-02: Khóa bất biến
         if (diagnosis.getVisit() != null &&
-                (diagnosis.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || diagnosis.getVisit().getStatus() == VisitStatus.COMPLETED)) {
-            throw new IllegalStateException("Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể xóa chẩn đoán.");
+                (diagnosis.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT
+                        || diagnosis.getVisit().getStatus() == VisitStatus.COMPLETED)) {
+            throw new IllegalStateException(
+                    "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể xóa chẩn đoán.");
         }
 
         diagnosisRepository.delete(diagnosis);
@@ -130,8 +193,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Transactional(readOnly = true)
     public List<Visit> getAvailableVisitsForDiagnosis() {
         return visitRepository.findRecentVisitsByStatuses(
-                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT)
-        );
+                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT));
     }
 
     @Override
@@ -153,18 +215,73 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         int completedCount = completedServices.size();
         boolean hasCompletedServices = completedCount > 0;
 
-        BigDecimal totalBillableAmount = completedServices.stream()
+        BigDecimal totalServiceAmount = completedServices.stream()
                 .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
         List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId);
         int prescriptionCount = prescriptions.size();
         boolean hasPrescription = prescriptionCount > 0;
 
+        BigDecimal totalPrescriptionAmount = BigDecimal.ZERO;
+        List<Map<String, Object>> prescriptionSummaries = new ArrayList<>();
+        for (Prescription p : prescriptions) {
+            BigDecimal pTotal = BigDecimal.ZERO;
+            List<String> drugNames = new ArrayList<>();
+            if (p.getItems() != null) {
+                for (PrescriptionItem it : p.getItems()) {
+                    BigDecimal qty = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                    BigDecimal price = it.getUnitPrice() != null ? it.getUnitPrice() : BigDecimal.ZERO;
+                    BigDecimal itTotal = price.multiply(qty);
+                    pTotal = pTotal.add(itTotal);
+                    drugNames.add(
+                            it.getDrugName() + " (" + qty + " " + (it.getUnit() != null ? it.getUnit() : "viên") + ")");
+                }
+            }
+            totalPrescriptionAmount = totalPrescriptionAmount.add(pTotal);
+
+            Map<String, Object> pMap = new HashMap<>();
+            pMap.put("prescriptionId", p.getPrescriptionId());
+            pMap.put("prescriptionCode", p.getPrescriptionCode());
+            pMap.put("totalAmount", pTotal);
+            pMap.put("drugCount", p.getItems() != null ? p.getItems().size() : 0);
+            pMap.put("drugList", String.join(", ", drugNames));
+            prescriptionSummaries.add(pMap);
+        }
+
+        BigDecimal grandTotalAmount = totalServiceAmount.add(totalPrescriptionAmount);
+
+        List<TreatmentPlan> activePlans = (patient != null && patient.getProfileId() != null
+                && treatmentPlanRepository != null)
+                        ? treatmentPlanRepository.findByProfileIdWithDetails(patient.getProfileId()).stream()
+                                .filter(tp -> tp.getStatus() != TreatmentPlanStatus.CANCELLED)
+                                .toList()
+                        : Collections.emptyList();
+        int treatmentPlanCount = activePlans.size();
+        boolean hasTreatmentPlan = treatmentPlanCount > 0;
+
+        BigDecimal totalEstimatedPlanAmount = BigDecimal.ZERO;
+        List<Map<String, Object>> treatmentPlanSummaries = new ArrayList<>();
+        for (TreatmentPlan tp : activePlans) {
+            BigDecimal planEst = tp.getFinalEstimatedCost() != null ? tp.getFinalEstimatedCost()
+                    : (tp.getTotalEstimatedCost() != null ? tp.getTotalEstimatedCost() : BigDecimal.ZERO);
+            totalEstimatedPlanAmount = totalEstimatedPlanAmount.add(planEst);
+
+            Map<String, Object> tpMap = new HashMap<>();
+            tpMap.put("planId", tp.getPlanId());
+            tpMap.put("planCode", tp.getPlanCode());
+            tpMap.put("planName", tp.getPlanName());
+            tpMap.put("estimatedAmount", planEst);
+            tpMap.put("status", tp.getStatus() != null ? tp.getStatus().name() : "PROPOSED");
+            treatmentPlanSummaries.add(tpMap);
+        }
+
         List<Appointment> upcomingAppointments = (patient != null && patient.getProfileId() != null)
-                ? appointmentRepository.findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(patient.getProfileId()).stream()
-                .filter(a -> a.getAppointmentDate() != null && !a.getAppointmentDate().isBefore(LocalDate.now()))
-                .toList()
+                ? appointmentRepository.findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(patient.getProfileId())
+                        .stream()
+                        .filter(a -> a.getAppointmentDate() != null
+                                && !a.getAppointmentDate().isBefore(LocalDate.now()))
+                        .toList()
                 : Collections.emptyList();
         int reExamCount = upcomingAppointments.size();
         boolean hasReExam = reExamCount > 0;
@@ -173,21 +290,29 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         List<String> warnings = new ArrayList<>();
 
         if (visit.getStatus() == VisitStatus.WAITING_PAYMENT) {
-            missingRequirements.add("Ca khám này hiện đã ở trạng thái Chờ thanh toán (WAITING_PAYMENT) và đã khóa bệnh án.");
+            missingRequirements
+                    .add("Ca khám này hiện đã ở trạng thái Chờ thanh toán (WAITING_PAYMENT) và đã khóa bệnh án.");
         } else if (visit.getStatus() == VisitStatus.COMPLETED) {
             missingRequirements.add("Ca khám này đã hoàn tất toàn bộ quy trình và xuất hóa đơn.");
         }
 
         // Kiểm tra điều kiện 1: Đã có chẩn đoán ICD-10
         if (!hasDiagnosis) {
-            missingRequirements.add("Chưa có chẩn đoán ICD-10. Bác sĩ cần thêm ít nhất 01 chẩn đoán trước khi hoàn tất ca khám.");
+            missingRequirements
+                    .add("Chưa có chẩn đoán ICD-10. Bác sĩ cần thêm ít nhất 01 chẩn đoán trước khi hoàn tất ca khám.");
         } else if (!hasMainDiagnosis) {
-            warnings.add("Chưa có chẩn đoán loại CHÍNH (MAIN). Khuyến nghị xác định chẩn đoán chính để bệnh án chuẩn y khoa.");
+            warnings.add(
+                    "Chưa có chẩn đoán loại CHÍNH (MAIN). Khuyến nghị xác định chẩn đoán chính để bệnh án chuẩn y khoa.");
         }
 
-        // Kiểm tra điều kiện 2: Dịch vụ đã chuyển COMPLETED
-        if (!hasCompletedServices) {
-            missingRequirements.add("Chưa có dịch vụ nào chuyển trạng thái COMPLETED. Bác sĩ cần ghi nhận ít nhất 01 dịch vụ hoàn thành để Kế toán lập hóa đơn thu tiền.");
+        // Kiểm tra điều kiện 2: Có ít nhất 01 Dịch vụ thực hiện (COMPLETED), Kế hoạch
+        // điều trị hoặc Đơn thuốc để bàn giao Kế toán
+        if (!hasCompletedServices && !hasTreatmentPlan && !hasPrescription) {
+            missingRequirements.add(
+                    "Chưa có dịch vụ thực hiện (COMPLETED), kế hoạch điều trị hoặc đơn thuốc nào. Bác sĩ cần lập kế hoạch điều trị, kê đơn thuốc hoặc ghi nhận dịch vụ thực hiện trước khi bàn giao sang Kế toán.");
+        } else if (!hasCompletedServices) {
+            warnings.add(
+                    "Chưa có dịch vụ thực hiện tại ghế (COMPLETED) trong ca này — Hệ thống sẽ bàn giao Giá dự kiến của Kế hoạch điều trị / Đơn thuốc sang Kế toán xử lý.");
         }
 
         // Cảnh báo bổ sung (không chặn hoàn tất)
@@ -195,7 +320,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             warnings.add("Chưa kê đơn thuốc cho ca khám này (bác sĩ có thể bỏ qua nếu điều trị không cần thuốc).");
         }
         if (!hasReExam) {
-            warnings.add("Chưa hẹn lịch tái khám cho bệnh nhân (bác sĩ có thể bấm nút 'Hẹn tái khám' nếu cần theo dõi tiếp).");
+            warnings.add(
+                    "Chưa hẹn lịch tái khám cho bệnh nhân (bác sĩ có thể bấm nút 'Hẹn tái khám' nếu cần theo dõi tiếp).");
         }
 
         boolean isReady = missingRequirements.isEmpty();
@@ -204,7 +330,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             Map<String, Object> map = new HashMap<>();
             map.put("diagnosisId", d.getDiagnosisId());
             map.put("icd10Code", d.getIcd10Disease() != null ? d.getIcd10Disease().getIcd10Code() : "");
-            map.put("diseaseName", d.getDiagnosisText() != null ? d.getDiagnosisText() : (d.getIcd10Disease() != null ? d.getIcd10Disease().getDiseaseNameVi() : ""));
+            map.put("diseaseName", d.getDiagnosisText() != null ? d.getDiagnosisText()
+                    : (d.getIcd10Disease() != null ? d.getIcd10Disease().getDiseaseNameVi() : ""));
             map.put("diagnosisType", d.getDiagnosisType() != null ? d.getDiagnosisType().name() : "MAIN");
             map.put("toothNumbers", d.getToothNumbers() != null ? d.getToothNumbers() : "Toàn hàm");
             return map;
@@ -237,15 +364,22 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .hasMainDiagnosis(hasMainDiagnosis)
                 .hasCompletedServices(hasCompletedServices)
                 .completedServiceCount(completedCount)
-                .totalBillableAmount(totalBillableAmount)
+                .totalServiceAmount(totalServiceAmount)
+                .totalPrescriptionAmount(totalPrescriptionAmount)
+                .totalBillableAmount(grandTotalAmount)
                 .hasPrescription(hasPrescription)
                 .prescriptionCount(prescriptionCount)
+                .hasTreatmentPlan(hasTreatmentPlan)
+                .treatmentPlanCount(treatmentPlanCount)
+                .totalEstimatedPlanAmount(totalEstimatedPlanAmount)
                 .hasReExamination(hasReExam)
                 .reExaminationCount(reExamCount)
                 .missingRequirements(missingRequirements)
                 .warnings(warnings)
                 .diagnoses(diagnosisSummaries)
                 .services(serviceSummaries)
+                .prescriptions(prescriptionSummaries)
+                .treatmentPlans(treatmentPlanSummaries)
                 .build();
     }
 
@@ -263,19 +397,36 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         visit.setStatus(VisitStatus.WAITING_PAYMENT);
 
+        NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
+        String svcCostStr = vndFmt
+                .format(check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO) + "đ";
+        String planCostStr = vndFmt.format(
+                check.getTotalEstimatedPlanAmount() != null ? check.getTotalEstimatedPlanAmount() : BigDecimal.ZERO)
+                + "đ";
+        String prescCostStr = vndFmt.format(
+                check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO)
+                + "đ";
+
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
-        String doctorName = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getFullName() : "Bác sĩ điều trị";
-        String auditLog = String.format("\n[%s] Bác sĩ %s hoàn tất ca khám lâm sàng và chuyển sang Chờ thanh toán. (Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng).%s",
+        String doctorName = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getFullName()
+                : "Bác sĩ điều trị";
+        String auditLog = String.format(
+                "\n[%s] Bác sĩ %s hoàn tất khám lâm sàng & chuyển Kế toán xử lý (BR-EMR-02: Khóa bệnh án). " +
+                        "Dự kiến viện phí bàn giao: [DV thực hiện: %s | KHDT dự kiến: %s | Thuốc dự kiến (Tạm tính - BN tự chọn mua tại PK/mua ngoài): %s].%s",
                 timestamp,
                 doctorName,
-                (doctorNotes != null && !doctorNotes.trim().isEmpty() ? " Ghi chú bàn giao: " + doctorNotes.trim() : "")
-        );
+                svcCostStr,
+                planCostStr,
+                prescCostStr,
+                (doctorNotes != null && !doctorNotes.trim().isEmpty() ? " Ghi chú bàn giao: " + doctorNotes.trim()
+                        : ""));
 
         String existingNotes = visit.getNotes();
         visit.setNotes(existingNotes != null ? existingNotes + auditLog : auditLog.trim());
 
         Visit saved = visitRepository.save(visit);
-        log.info("Ca khám visitId={} đã được bác sĩ hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked)", visitId);
+        log.info("Ca khám visitId={} đã được bác sĩ hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked)",
+                visitId);
         return saved;
     }
 
@@ -283,7 +434,15 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     public Visit reopenClinicalExamination(Long visitId, String reason) {
         Visit visit = getVisitOrThrow(visitId);
         if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
-            throw new IllegalStateException("Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: " + visit.getStatus().name());
+            throw new IllegalStateException(
+                    "Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: "
+                            + visit.getStatus().name());
+        }
+
+        if (invoiceRepository.existsByVisit_VisitIdAndStatusNot(visitId,
+                com.cvdcms.entity.enums.InvoiceStatus.CANCELLED)) {
+            throw new IllegalStateException(
+                    "Không thể mở lại ca khám đã có hóa đơn còn hiệu lực. Vui lòng xử lý hóa đơn trước.");
         }
 
         visit.setStatus(VisitStatus.IN_EXAM);
@@ -291,8 +450,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         String auditLog = String.format("\n[%s] Mở lại ca khám lâm sàng từ trạng thái Chờ thanh toán để điều chỉnh.%s",
                 timestamp,
-                (reason != null && !reason.trim().isEmpty() ? " Lý do: " + reason.trim() : "")
-        );
+                (reason != null && !reason.trim().isEmpty() ? " Lý do: " + reason.trim() : ""));
 
         String existingNotes = visit.getNotes();
         visit.setNotes(existingNotes != null ? existingNotes + auditLog : auditLog.trim());
@@ -313,7 +471,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
         }
         exam.setDoctor(doctor);
-        exam.setChiefComplaint(visit.getInitialSymptoms() != null ? visit.getInitialSymptoms() : "Đến khám nha khoa định kỳ");
+        exam.setChiefComplaint(
+                visit.getInitialSymptoms() != null ? visit.getInitialSymptoms() : "Đến khám nha khoa định kỳ");
         exam.setExamTime(LocalDateTime.now());
         return clinicalExamRepository.save(exam);
     }
@@ -344,5 +503,124 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .toothNumbers(ed.getToothNumbers())
                 .notes(ed.getNotes())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ClinicalExamination getClinicalExaminationByVisitId(Long visitId) {
+        if (visitId == null)
+            return null;
+        return clinicalExamRepository.findByVisit_VisitId(visitId).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GeneralExaminationRequestDTO getGeneralExamination(Long visitId) {
+        Visit visit = getVisitOrThrow(visitId);
+        PatientProfile patient = visit.getPatientProfile();
+        ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visitId).orElse(null);
+
+        boolean hasCardio = patient != null && Boolean.TRUE.equals(patient.getHasCardiovascularDisease());
+        boolean hasAllergies = patient != null && Boolean.TRUE.equals(patient.getHasAllergies());
+        String allergyDetails = patient != null ? patient.getAllergyDetails() : null;
+
+        String underlyingDetails = patient != null ? patient.getUnderlyingDiseaseDetails() : null;
+        boolean hasDiabetes = underlyingDetails != null && underlyingDetails.contains("Đái tháo đường");
+        boolean hasBleeding = underlyingDetails != null && underlyingDetails.contains("Rối loạn đông máu");
+        boolean isPregnant = underlyingDetails != null
+                && (underlyingDetails.contains("Mang thai") || underlyingDetails.contains("Cho con bú"));
+
+        return GeneralExaminationRequestDTO.builder()
+                .visitId(visitId)
+                .initialSymptoms(visit.getInitialSymptoms() != null ? visit.getInitialSymptoms()
+                        : (exam != null ? exam.getChiefComplaint() : null))
+                .hasAllergies(hasAllergies)
+                .allergyDetails(allergyDetails)
+                .hasCardiovascularDisease(hasCardio)
+                .hasDiabetes(hasDiabetes)
+                .hasBleedingDisorder(hasBleeding)
+                .isPregnant(isPregnant)
+                .underlyingDiseaseDetails(underlyingDetails)
+                .tmjStatus(exam != null && exam.getExtraoralExam() != null ? exam.getExtraoralExam() : "NORMAL")
+                .hygieneStatus(exam != null && exam.getIntraoralExam() != null ? exam.getIntraoralExam() : "MEDIUM")
+                .gingivaStatus(
+                        exam != null && exam.getPeriodontalStatus() != null ? exam.getPeriodontalStatus() : "HEALTHY")
+                .build();
+    }
+
+    @Override
+    public void saveGeneralExamination(GeneralExaminationRequestDTO request) {
+        if (request == null || request.getVisitId() == null) {
+            throw new IllegalArgumentException("Mã ca khám (visitId) không hợp lệ.");
+        }
+
+        Visit visit = getVisitOrThrow(request.getVisitId());
+
+        // Kiểm tra khóa bất biến EMR (BR-EMR-02)
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException(
+                    "Hồ sơ bệnh án lâm sàng đã khóa (BR-EMR-02). Không thể chỉnh sửa thông tin khám.");
+        }
+
+        // 1. Cập nhật triệu chứng ban đầu trên Visit
+        if (request.getInitialSymptoms() != null) {
+            visit.setInitialSymptoms(request.getInitialSymptoms().trim());
+            visitRepository.save(visit);
+        }
+
+        // 2. Cập nhật tiền sử y khoa & cảnh báo dị ứng trên PatientProfile
+        PatientProfile patient = visit.getPatientProfile();
+        if (patient != null) {
+            patient.setHasAllergies(Boolean.TRUE.equals(request.getHasAllergies()));
+            patient.setAllergyDetails(request.getAllergyDetails() != null ? request.getAllergyDetails().trim() : null);
+            patient.setHasCardiovascularDisease(Boolean.TRUE.equals(request.getHasCardiovascularDisease()));
+
+            List<String> conditions = new ArrayList<>();
+            if (Boolean.TRUE.equals(request.getHasDiabetes())) {
+                conditions.add("Đái tháo đường");
+            }
+            if (Boolean.TRUE.equals(request.getHasBleedingDisorder())) {
+                conditions.add("Rối loạn đông máu");
+            }
+            if (Boolean.TRUE.equals(request.getIsPregnant())) {
+                conditions.add("Mang thai / Cho con bú");
+            }
+            if (request.getUnderlyingDiseaseDetails() != null
+                    && !request.getUnderlyingDiseaseDetails().trim().isEmpty()) {
+                String extra = request.getUnderlyingDiseaseDetails().trim();
+                if (!conditions.contains(extra)) {
+                    conditions.add(extra);
+                }
+            }
+
+            if (!conditions.isEmpty()) {
+                patient.setHasUnderlyingDisease(true);
+                patient.setUnderlyingDiseaseDetails(String.join("; ", conditions));
+            } else {
+                patient.setHasUnderlyingDisease(false);
+                patient.setUnderlyingDiseaseDetails(null);
+            }
+            patient.setMedicalHistoryCompleted(true);
+            patientProfileRepository.save(patient);
+        }
+
+        // 3. Cập nhật hoặc khởi tạo ClinicalExamination
+        ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visit.getVisitId())
+                .orElseGet(() -> createDefaultExamination(visit));
+
+        if (request.getInitialSymptoms() != null && !request.getInitialSymptoms().trim().isEmpty()) {
+            exam.setChiefComplaint(request.getInitialSymptoms().trim());
+        }
+        if (request.getTmjStatus() != null) {
+            exam.setExtraoralExam(request.getTmjStatus().trim());
+        }
+        if (request.getHygieneStatus() != null) {
+            exam.setIntraoralExam(request.getHygieneStatus().trim());
+        }
+        if (request.getGingivaStatus() != null) {
+            exam.setPeriodontalStatus(request.getGingivaStatus().trim());
+        }
+        clinicalExamRepository.save(exam);
+        log.info("Đã lưu kết quả khám tổng quát cho ca khám visitId={}", visit.getVisitId());
     }
 }

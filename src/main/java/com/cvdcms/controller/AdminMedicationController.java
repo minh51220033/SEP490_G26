@@ -7,6 +7,7 @@ import com.cvdcms.service.MedicationService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -52,6 +53,10 @@ public class AdminMedicationController {
         try {
             medicationService.createMedication(dto);
             ra.addFlashAttribute("successMessage", "Đã thêm thuốc '" + dto.getDrugName() + "' thành công.");
+        } catch (DataIntegrityViolationException e) {
+            // Gửi request lặp / bấm lưu nhiều lần: ràng buộc UNIQUE chặn bản ghi trùng, transaction đã rollback.
+            log.warn("Trùng dữ liệu khi thêm thuốc {}: {}", dto.getDrugCode(), e.getMostSpecificCause().getMessage());
+            ra.addFlashAttribute("errorMessage", "Mã thuốc hoặc mã hàng kho đã tồn tại (có thể do gửi yêu cầu lặp). Không có dữ liệu nào bị thay đổi.");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {

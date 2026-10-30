@@ -62,26 +62,6 @@
                     align-items: center;
                     gap: 4px;
                 }
-                .wf-btn-ai {
-                    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-                    color: #ffffff;
-                    border: none;
-                    padding: 9px 18px;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    font-size: 14px;
-                    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
-                    transition: all 0.2s ease;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .wf-btn-ai:hover {
-                    background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
-                    color: #ffffff;
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 16px rgba(147, 51, 234, 0.35);
-                }
                 .wf-btn-primary {
                     background-color: var(--primary-blue);
                     color: #ffffff;
@@ -178,10 +158,6 @@
                     </p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="wf-btn-ai" onclick="openAiExtractModal()">
-                        <i class="bi bi-stars"></i>
-                        <span>⚡ AI Bóc tách từ Bộ Y Tế</span>
-                    </button>
                     <button type="button" class="wf-btn-primary" onclick="openAddWorkflowModal()">
                         <i class="bi bi-plus-lg"></i>
                         <span>+ Thêm quy trình mới</span>
@@ -235,7 +211,7 @@
                         <tr th:if="${workflows == null or workflows.isEmpty()}">
                             <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary"></i>
-                                <span>Chưa có quy trình kỹ thuật nào được thiết lập. Hãy nhấn <strong>"+ Thêm quy trình mới"</strong> hoặc dùng <strong>"⚡ AI Bóc tách từ Bộ Y Tế"</strong>.</span>
+                                <span>Chưa có quy trình kỹ thuật nào được thiết lập. Hãy nhấn <strong>"+ Thêm quy trình mới"</strong>.</span>
                             </td>
                         </tr>
                         <tr th:each="wf : ${workflows}" th:id="'wf-row-' + ${wf.templateId}">
@@ -421,82 +397,10 @@
     </div>
 </div>
 
-<!-- ===================================================================== -->
-<!-- MODAL 3: TRỢ LÝ AI BÓC TÁCH QUY TRÌNH TỪ BỘ Y TẾ (PDF/VĂN BẢN/ẢNH)    -->
-<!-- ===================================================================== -->
-<div class="modal fade" id="aiExtractModal" tabindex="-1" aria-labelledby="aiExtractModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius: 16px;">
-            <div class="modal-header border-bottom py-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f3e8ff 100%);">
-                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="aiExtractModalLabel">
-                    <i class="bi bi-stars text-purple" style="color: #9333ea;"></i>
-                    <span>Trợ lý AI Bóc tách Quy trình Kỹ thuật Bộ Y Tế</span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small">
-                    Dán văn bản trích xuất từ tài liệu <strong>"Kỹ thuật Răng-Hàm-Mặt.pdf" (Bộ Y Tế - QĐ 3207/QĐ-BYT)</strong> hoặc tải ảnh chụp trang sách.
-                    Gemini AI sẽ tự động phân tích và bóc tách thành các bước tuần tự <strong>Bước 1, Bước 2, Bước 3...</strong> điền thẳng vào form CRUD!
-                </p>
-
-                <!-- NÚT MẪU VĂN BẢN BYT THỬ NGAY -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-dark small">Thử nhanh với mẫu quy trình chuẩn BYT:</label>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('caovoi')">
-                            🦷 Cạo vôi &amp; Đánh bóng
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('tramrang')">
-                            ✨ Hàn răng Composite
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('tuyrang')">
-                            🔬 Điều trị tủy (Nội nha)
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loadSampleMOH('nhorang')">
-                            🩺 Phẫu thuật Nhổ răng khôn
-                        </button>
-                    </div>
-                </div>
-
-                <!-- KHUNG DÁN VĂN BẢN -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-dark small">Nội dung văn bản quy trình kỹ thuật</label>
-                    <textarea id="aiInputText" class="form-control" rows="8"
-                              placeholder="Dán đoạn văn bản các bước tiến hành kỹ thuật từ tài liệu Bộ Y Tế vào đây..."></textarea>
-                </div>
-
-                <!-- UPLOAD ẢNH NẾU CÓ -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-dark small">Hoặc tải ảnh chụp trang sách quy trình kỹ thuật (Tùy chọn)</label>
-                    <input type="file" id="aiImageInput" class="form-control" accept="image/*" onchange="handleAiImageSelect(this)">
-                    <div id="aiImagePreview" class="mt-2 d-none">
-                        <img id="previewImg" src="" alt="Preview" style="max-height: 120px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    </div>
-                </div>
-
-                <!-- LOADING SPINNER -->
-                <div id="aiLoadingIndicator" class="text-center py-3 d-none">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="text-primary fw-semibold mt-2 mb-0">Gemini 3.5 Flash đang phân tích văn bản y khoa và bóc tách các bước...</p>
-                </div>
-            </div>
-            <div class="modal-footer border-top py-2">
-                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
-                <button type="button" class="wf-btn-ai px-4" id="btnRunAiExtract" onclick="runAiExtract()">
-                    <i class="bi bi-stars"></i> Phân tích &amp; Bóc tách bước
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let workflowsData = [];
     let currentStepCount = 0;
-    let selectedImageBase64 = null;
-    let selectedImageMime = null;
 
     // Load initial workflows
     document.addEventListener("DOMContentLoaded", () => {
@@ -863,148 +767,6 @@
             }
         } catch (e) {
             alert("Lỗi: " + e.message);
-        }
-    }
-
-    // =========================================================================
-    // MODAL 3: TRỢ LÝ AI BÓC TÁCH TỪ BỘ Y TẾ (GEMINI AI)
-    // =========================================================================
-    function openAiExtractModal() {
-        document.getElementById("aiInputText").value = '';
-        document.getElementById("aiImageInput").value = '';
-        document.getElementById("aiImagePreview").classList.add("d-none");
-        document.getElementById("aiLoadingIndicator").classList.add("d-none");
-        document.getElementById("btnRunAiExtract").disabled = false;
-        selectedImageBase64 = null;
-        selectedImageMime = null;
-
-        const modal = new bootstrap.Modal(document.getElementById("aiExtractModal"));
-        modal.show();
-    }
-
-    function handleAiImageSelect(input) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            selectedImageMime = file.type;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                selectedImageBase64 = e.target.result;
-                document.getElementById("previewImg").src = selectedImageBase64;
-                document.getElementById("aiImagePreview").classList.remove("d-none");
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    const sampleMOHData = {
-        caovoi: `QUY TRÌNH KỸ THUẬT LẤY CAO RĂNG VÀ ĐÁNH BÓNG (Theo Quyết định số 3207/QĐ-BYT)
-V. CÁC BƯỚC TIẾN HÀNH
-1. Kiểm tra hồ sơ bệnh án và đánh giá toàn thân, tại chỗ. Giải thích cho người bệnh quy trình thao tác.
-2. Thực hiện kỹ thuật lấy cao răng:
-- Dùng đầu rung siêu âm nghiêng góc 15-20 độ so với trục răng.
-- Di chuyển liên tục đầu rung siêu âm từ thân răng đến cổ răng dưới tia nước làm mát vô trùng.
-- Lấy sạch cao răng trên lợi và dưới bờ lợi.
-3. Đánh bóng:
-- Dùng chổi cước hoặc đài cao su lắp vào tay khoan chậm.
-- Lấy lượng bột đánh bóng vừa đủ xoa đều lên các mặt răng.
-- Đánh bóng làm nhẵn toàn bộ bề mặt men răng và kẽ răng.
-4. Bơm rửa sát khuẩn bằng Chlorhexidine 0.12%, kiểm tra cầm máu nướu và dặn dò bệnh nhân cách chải răng đúng cách.`,
-
-        tramrang: `ĐIỀU TRỊ SÂU NGÀ RĂNG PHỤC HỒI BẰNG COMPOSITE (Theo Quyết định số 3207/QĐ-BYT)
-V. CÁC BƯỚC TIẾN HÀNH
-1. Khám, làm sạch xoang sâu và so màu Composite bằng bảng so màu VITA.
-2. Sửa soạn xoang hàn: Nạo bỏ toàn bộ ngà mủn hoại tử, tạo vát men 45 độ bờ xoang. Đặt đê cao su cách ly khô ráo tuyệt đối.
-3. Xử lý bề mặt men ngà: Bơm Etching Acid Phosphoric 37% lên men 15s, ngà 10s. Rửa sạch 20s, thổi khô nhẹ. Quét Bonding và chiếu đèn LED 20s.
-4. Đắp Composite từng lớp: Đưa composite vào xoang từng lớp nghiêng dày dưới 2mm, điêu khắc múi rãnh giải phẫu răng tự nhiên và chiếu đèn trùng hợp 20-40s mỗi lớp.
-5. Kiểm tra khớp cắn bằng giấy cắn xanh đỏ, mài chỉnh điểm cộm sớm và đánh bóng hoàn thiện bằng đĩa Sof-Lex và mũi silicon.`,
-
-        tuyrang: `QUY TRÌNH ĐIỀU TRỊ TỦY RĂNG (NỘI NHA) (Theo Quyết định số 3207/QĐ-BYT)
-V. CÁC BƯỚC TIẾN HÀNH
-1. Khám lâm sàng, chụp phim X-quang cuống răng và gây tê vô cảm vùng điều trị.
-2. Mở tủy: Dùng mũi khoan tròn bộc lộ trần buồng tủy, dùng thám châm nội nha DG-16 tìm đủ các lỗ ống tủy.
-3. Đo chiều dài làm việc bằng máy Apex Locator kết hợp trâm K-file #15, tạo hình ống tủy thuôn đều bằng hệ thống trâm máy quay Ni-Ti.
-4. Bơm rửa sạch bằng dung dịch NaOCl 2.5% kết hợp kích hoạt sóng siêu âm, hút khô bằng côn giấy và đặt thuốc sát trùng.
-5. Thử côn Gutta Percha chính khít sát chóp và bít kín hệ thống ống tủy 3 chiều bằng xi măng sinh học Bioceramic. Chụp phim kiểm tra sau bít.`,
-
-        nhorang: `PHẪU THUẬT NHỔ RĂNG KHÔN MỌC LỆCH CẮT THÂN CHIA CHÂN (Theo Quyết định số 3207/QĐ-BYT)
-V. CÁC BƯỚC TIẾN HÀNH
-1. Kiểm tra toàn thân, đo huyết áp, đọc phim Panorama/ConeBeam CT xác định khoảng cách dây thần kinh răng dưới.
-2. Sát khuẩn phẫu trường trong ngoài miệng và gây tê gai Spix kết hợp gây tê ngách lợi tiền đình.
-3. Rạch lợi tạo vạt niêm mạc màng xương bộc lộ xương và thân răng khôn mọc kẹt.
-4. Mở xương bằng tay khoan nghiêng 45 độ, cắt chia tách thân và chân răng khôn, dùng bẩy lấy từng phần an toàn ra ngoài.
-5. Nạo sạch mô hạt, bơm rửa nước muối sinh lý vô trùng, đặt gạc cầm máu và khâu khép vạt bằng chỉ tiêu Vicryl 3-0.`
-    };
-
-    function loadSampleMOH(key) {
-        if (sampleMOHData[key]) {
-            document.getElementById("aiInputText").value = sampleMOHData[key];
-        }
-    }
-
-    async function runAiExtract() {
-        const text = document.getElementById("aiInputText").value.trim();
-        if (!text && !selectedImageBase64) {
-            alert("Vui lòng dán văn bản quy trình hoặc chọn ảnh tài liệu để phân tích.");
-            return;
-        }
-
-        const indicator = document.getElementById("aiLoadingIndicator");
-        const btn = document.getElementById("btnRunAiExtract");
-        indicator.classList.remove("d-none");
-        btn.disabled = true;
-
-        try {
-            const res = await fetch('/api/doctor/workflows/ai-extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: text,
-                    imageBase64: selectedImageBase64,
-                    mimeType: selectedImageMime
-                })
-            });
-
-            if (!res.ok) {
-                const err = await res.text();
-                throw new Error(err || "Lỗi khi gọi AI bóc tách");
-            }
-
-            const parsed = await res.json();
-
-            // Đóng modal AI
-            const aiModal = bootstrap.Modal.getInstance(document.getElementById("aiExtractModal"));
-            if (aiModal) aiModal.hide();
-
-            // Điền vào Form Thêm/Sửa Quy trình
-            document.getElementById("formTemplateId").value = '';
-            document.getElementById("formTemplateName").value = parsed.templateName || '';
-            document.getElementById("formTemplateCode").value = parsed.templateCode || ('QTKT-' + Math.floor(Math.random()*10000));
-            document.getElementById("formStatus").value = 'ACTIVE';
-            document.getElementById("formDescription").value = parsed.description || '';
-            document.getElementById("editModalHeading").textContent = "✨ Xem xét & Lưu Quy trình Bóc tách bởi AI";
-
-            // Điền các bước
-            const container = document.getElementById("stepsContainer");
-            container.innerHTML = '';
-            currentStepCount = 0;
-
-            if (parsed.steps && parsed.steps.length > 0) {
-                parsed.steps.forEach(st => {
-                    addNewStepRow(st.stepName, st.stepDescription, st.completionCriteria, st.estimatedDurationMinutes, st.stepCode, st.stepType);
-                });
-            } else {
-                addNewStepRow("Bước 1: ", "", "", 10);
-            }
-
-            // Mở modal Thêm/Sửa
-            const editModal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
-            editModal.show();
-
-        } catch (e) {
-            alert("Lỗi AI: " + e.message);
-        } finally {
-            indicator.classList.add("d-none");
-            btn.disabled = false;
         }
     }
 

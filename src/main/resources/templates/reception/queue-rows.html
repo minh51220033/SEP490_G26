@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><body>
+<div th:fragment="rows" id="queueRows">
+<style>
+.queue-kanban{display:grid;grid-template-columns:repeat(5,minmax(235px,1fr));gap:12px;overflow-x:auto;padding-bottom:14px}
+.queue-lane{min-height:280px;background:#edf3f8;border:1px solid #d9e4ed;border-radius:12px;padding:12px}
+.queue-card{background:white;border:1px solid #d5e0e8;border-radius:10px;padding:12px;margin-top:10px;box-shadow:0 2px 6px #102b4515}
+.queue-card strong{font-size:1.6rem}.queue-actions{display:flex;flex-wrap:wrap;gap:5px}.queue-actions form{margin:0}
+@media(max-width:1100px){.queue-kanban{grid-template-columns:repeat(5,235px)}}
+</style>
+<div class="queue-kanban">
+<section class="queue-lane" th:each="lane : ${lanes}">
+<h2 class="h5" th:text="${lane.name() == 'WAITING' ? 'Đang chờ' : lane.name() == 'CALLED' ? 'Đang gọi' : lane.name() == 'IN_SERVICE' ? 'Đang khám' : lane.name() == 'PAUSED' ? 'Tạm dừng' : 'Hoàn tất'}"></h2>
+<span class="badge bg-secondary" th:text="${laneCounts.get(lane) ?: 0}"></span>
+<article class="queue-card" th:each="t : ${board.tickets}" th:if="${t.status == lane}">
+<div><strong th:text="${t.displayNumber}"></strong>
+<span class="badge bg-danger" th:if="${t.isEmergency}">Cấp cứu</span>
+<span class="badge bg-warning text-dark" th:if="${t.isPriority and !t.isEmergency}">Ưu tiên</span></div>
+<div th:text="${t.visit.patientProfile.fullName}"></div>
+<small th:text="${t.visit.visitCode}"></small><br>
+<small th:text="${t.visit.primaryDoctor != null ? t.visit.primaryDoctor.fullName : 'Chưa phân bác sĩ'}"></small><br>
+<small th:text="|Phòng ${t.visit.roomId ?: '—'} · Ghế ${t.visit.chairId ?: '—'}|"></small>
+<div class="queue-actions mt-2">
+<form th:if="${t.status.name() == 'WAITING'}" th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post"><input type="hidden" name="branchId" th:value="${board.branchId}"><button class="btn btn-primary btn-sm">Gọi số</button></form>
+<form th:if="${t.status.name() == 'WAITING' or t.status.name() == 'CALLED'}" th:action="@{/reception/queue/{id}/PAUSE(id=${t.ticketId})}" method="post"><input type="hidden" name="branchId" th:value="${board.branchId}"><button class="btn btn-outline-secondary btn-sm">Tạm dừng</button></form>
+<form th:if="${t.status.name() == 'PAUSED'}" th:action="@{/reception/queue/{id}/RESUME(id=${t.ticketId})}" method="post"><input type="hidden" name="branchId" th:value="${board.branchId}"><button class="btn btn-outline-primary btn-sm">Tiếp tục</button></form>
+<form th:if="${t.status.name() == 'CALLED'}" th:action="@{/reception/queue/{id}/START(id=${t.ticketId})}" method="post"><input type="hidden" name="branchId" th:value="${board.branchId}"><button class="btn btn-success btn-sm">Bắt đầu khám</button></form>
+<form th:if="${t.status.name() == 'IN_SERVICE'}" th:action="@{/reception/queue/{id}/DONE(id=${t.ticketId})}" method="post"><input type="hidden" name="branchId" th:value="${board.branchId}"><button class="btn btn-outline-success btn-sm">Hoàn tất số</button></form>
+</div>
+<form th:if="${(t.status.name() == 'WAITING' or t.status.name() == 'PAUSED') and !t.isEmergency}"
+      th:action="@{/reception/queue/{id}/EMERGENCY(id=${t.ticketId})}" method="post" class="mt-2">
+<input type="hidden" name="branchId" th:value="${board.branchId}">
+<input type="text" name="reason" class="form-control form-control-sm mb-1" minlength="10" maxlength="255" required placeholder="Lý do cấp cứu">
+<button class="btn btn-danger btn-sm">Kích hoạt cấp cứu</button></form>
+</article>
+</section>
+</div>
+</div></body></html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Hộp thư tin nhắn cơ sở')}"></head>
+
+<body class="app-body">
+
+<div class="app-shell">
+    <!-- SIDEBAR HỆ THỐNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('chat')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <!-- NỘI DUNG CHÍNH -->
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Hộp thư tin nhắn trực tuyến theo Cơ sở')}"></header>
+
+        <main class="app-content container-fluid py-3 px-3 px-lg-4"
+              id="chatInboxApp"
+              th:attr="data-user-id=${currentUserId},
+                       data-username=${currentUsername},
+                       data-role=${chatRole},
+                       data-is-admin=${isAdmin},
+                       data-can-handle-patients=${canHandlePatients},
+                       data-default-branch-id=${currentBranch != null ? currentBranch.branchId : ''}">
+
+            <div class="chat-inbox-shell">
+
+                <!-- ======================================================= -->
+                <!-- CỘT TRÁI: BỘ LỌC, TÌM KIẾM & DANH SÁCH CUỘC HỘI THOẠI   -->
+                <!-- ======================================================= -->
+                <section class="chat-inbox-sidebar" aria-label="Danh sách cuộc hội thoại">
+
+                    <div class="chat-inbox-filters">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size:14.5px;">
+                                <i class="bi bi-chat-left-text-fill text-primary"></i>
+                                <span>Hộp thư cơ sở</span>
+                                <span id="chatTotalConvBadge" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">0</span>
+                            </div>
+                            <button type="button" id="chatOpenRecipientModalBtn" class="chat-new-msg-btn"
+                                    title="Tìm kiếm tất cả tài khoản trong cùng cơ sở để gửi tin nhắn">
+                                <i class="bi bi-person-plus-fill"></i>
+                                <span>Nhắn tin mới</span>
+                            </button>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-muted" style="font-size:11.5px;">
+                                Tìm hội thoại hoặc bấm <strong>Nhắn tin mới</strong> để chọn người nhận
+                            </span>
+                            <span id="chatWsStatusBadge" class="badge rounded-pill bg-secondary-subtle text-secondary" style="font-size:11px;">
+                                <i class="bi bi-wifi me-1"></i>Đang kết nối...
+                            </span>
+                        </div>
+
+                        <!-- Ô tìm kiếm từ khóa (Tên người dùng, SĐT, Username, Nội dung tin nhắn) -->
+                        <div class="chat-search-box">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <input type="search" id="chatKeywordInput"
+                                   placeholder="Tìm theo tên, SĐT, username hoặc nội dung tin nhắn..."
+                                   autocomplete="off">
+                        </div>
+
+                        <!-- Hàng lọc Vai trò & Cơ sở -->
+                        <div class="chat-filter-row">
+                            <div>
+                                <label for="chatInitiatorRoleFilter" class="form-label mb-1 text-muted" style="font-size:11px;font-weight:600;">
+                                    Vai trò tài khoản
+                                </label>
+                                <select id="chatInitiatorRoleFilter" class="chat-filter-select">
+                                    <option value="ALL">Tất cả vai trò</option>
+                                    <option th:if="${canHandlePatients}" value="BENH_NHAN">Bệnh nhân</option>
+                                    <option value="LE_TAN">Lễ tân</option>
+                                    <option value="BAC_SI">Bác sĩ</option>
+                                    <option value="QUAN_LY_KHO">Quản lý kho</option>
+                                    <option value="KE_TOAN">Kế toán</option>
+                                    <option value="ADMIN">Admin</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="chatBranchFilter" class="form-label mb-1 text-muted" style="font-size:11px;font-weight:600;">
+                                    Cơ sở phụ trách
+                                </label>
+                                <!-- Chỉ Admin mới được chọn Tất cả cơ sở hoặc đổi cơ sở; các role khác chỉ xem đúng cơ sở được phân công -->
+                                <select id="chatBranchFilter" class="chat-filter-select"
+                                        th:disabled="${!isAdmin}">
+                                    <option th:if="${isAdmin}" value="">Tất cả cơ sở</option>
+                                    <option th:each="b : ${accessibleBranches}"
+                                            th:value="${b.branchId}"
+                                            th:selected="${!isAdmin and currentBranch != null and b.branchId == currentBranch.branchId}"
+                                            th:text="${b.branchName}">Cơ sở</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Hàng lọc Chưa đọc & Nút xóa bộ lọc -->
+                        <div class="chat-filter-actions">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="chatUnreadOnlyToggle">
+                                <label class="form-check-label fw-medium text-secondary" for="chatUnreadOnlyToggle">
+                                    Chỉ hiện chưa đọc
+                                </label>
+                            </div>
+                            <button type="button" id="chatClearFiltersBtn" class="btn btn-link btn-sm text-decoration-none p-0 fw-semibold" style="font-size:12px;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Xóa bộ lọc
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách cuộc hội thoại -->
+                    <div id="chatConversationList" class="chat-conversation-list">
+                        <div class="p-4 text-center text-muted small">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            Đang tải danh sách hội thoại...
+                        </div>
+                    </div>
+
+                    <!-- Phân trang -->
+                    <div id="chatPaginationBar" class="px-3 py-2 border-top bg-light d-flex align-items-center justify-content-between small text-muted" hidden>
+                        <span id="chatPageInfoText">Trang 1 / 1</span>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" id="chatPrevPageBtn" class="btn btn-outline-secondary py-0 px-2">Trước</button>
+                            <button type="button" id="chatNextPageBtn" class="btn btn-outline-secondary py-0 px-2">Sau</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ======================================================= -->
+                <!-- CỘT PHẢI: CHI TIẾT LỊCH SỬ TIN NHẮN & KHUNG SOẠN THẢO   -->
+                <!-- ======================================================= -->
+                <section class="chat-inbox-main" aria-label="Chi tiết cuộc hội thoại">
+
+                    <!-- Header cuộc hội thoại đang chọn -->
+                    <div id="chatActiveHeader" class="chat-main-header" hidden>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="chatActiveAvatar"
+                                 class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center"
+                                 style="width:42px;height:42px;font-size:16px;">U</div>
+                            <div>
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <h5 id="chatActiveUserName" class="mb-0 fw-bold text-dark" style="font-size:15px;">Người dùng</h5>
+                                    <span id="chatActiveUserRoleBadge" class="chat-role-badge chat-role-badge--BENH_NHAN">Bệnh nhân</span>
+                                    <span id="chatActiveBranchBadge" class="chat-branch-badge">
+                                        <i class="bi bi-geo-alt-fill text-primary"></i>
+                                        <span>Cơ sở</span>
+                                    </span>
+                                    <span id="chatActiveModeBadge" class="chat-direct-badge" hidden>
+                                        <i class="bi bi-person-lines-fill"></i>
+                                        <span>Chat trực tiếp</span>
+                                    </span>
+                                </div>
+                                <div class="text-muted small mt-1" id="chatActiveSubInfo">
+                                    Mã hội thoại: #0
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end small text-muted d-none d-md-block">
+                            <span id="chatActiveRightBadge" class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-people-fill me-1"></i>Lễ tân &amp; Bác sĩ cơ sở tiếp nhận
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Vùng hiển thị lịch sử tin nhắn -->
+                    <div id="chatMainMessages" class="chat-main-messages">
+                        <div class="chat-empty-state">
+                            <div class="chat-empty-state__icon">
+                                <i class="bi bi-chat-square-dots"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Chưa chọn cuộc hội thoại</h6>
+                            <p class="small mb-3">
+                                Hãy chọn một cuộc hội thoại ở danh sách bên trái hoặc tìm kiếm tài khoản trong cùng cơ sở để bắt đầu nhắn tin.
+                            </p>
+                            <button type="button" id="chatEmptyStateNewMsgBtn" class="chat-new-msg-btn">
+                                <i class="bi bi-person-plus-fill"></i>
+                                <span>Tìm người nhận trong cơ sở</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Khung nhập và gửi tin nhắn -->
+                    <div id="chatMainComposer" class="chat-main-composer" hidden>
+                        <textarea id="chatReplyInput" class="chat-composer-input" rows="1"
+                                  placeholder="Nhập nội dung tin nhắn (Enter để gửi, Shift+Enter để xuống dòng)..."></textarea>
+                        <button type="button" id="chatReplySendBtn" class="chat-send-btn">
+                            <i class="bi bi-send-fill"></i>
+                            <span>Gửi</span>
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- =========================================================== -->
+            <!-- MODAL TÌM KIẾM TẤT CẢ TÀI KHOẢN TRONG CÙNG CƠ SỞ ĐỂ NHẮN TIN -->
+            <!-- =========================================================== -->
+            <div id="chatRecipientModalBackdrop" class="chat-recipient-modal-backdrop" hidden>
+                <div class="chat-recipient-modal" role="dialog" aria-modal="true" aria-labelledby="chatRecipientModalTitle">
+                    <div class="chat-recipient-modal__header">
+                        <div>
+                            <h6 id="chatRecipientModalTitle" class="mb-0 fw-bold">
+                                <i class="bi bi-person-plus-fill me-2"></i>Tìm tài khoản trong cơ sở để gửi tin nhắn
+                            </h6>
+                            <div class="small text-white-50 mt-1">
+                                Hiển thị các tài khoản đang hoạt động thuộc cùng cơ sở của bạn
+                            </div>
+                        </div>
+                        <button type="button" id="chatCloseRecipientModalBtn" class="btn btn-sm text-white p-1" aria-label="Đóng">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="chat-recipient-modal__filters">
+                        <div class="chat-search-box">
+                            <i class="bi bi-search"></i>
+                            <input type="search" id="chatRecipientSearchInput"
+                                   placeholder="Nhập họ tên, username, số điện thoại hoặc email người nhận..."
+                                   autocomplete="off">
+                        </div>
+                        <div class="chat-filter-row">
+                            <div>
+                                <label for="chatRecipientRoleSelect" class="form-label mb-1 text-muted" style="font-size:11px;font-weight:600;">
+                                    Lọc theo vai trò
+                                </label>
+                                <select id="chatRecipientRoleSelect" class="chat-filter-select">
+                                    <option value="ALL">Tất cả vai trò được phép</option>
+                                    <option value="LE_TAN">Lễ tân</option>
+                                    <option value="BAC_SI">Bác sĩ</option>
+                                    <option value="QUAN_LY_KHO">Quản lý kho</option>
+                                    <option value="KE_TOAN">Kế toán</option>
+                                    <option th:if="${canHandlePatients}" value="BENH_NHAN">Bệnh nhân</option>
+                                    <option value="ADMIN">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="chatRecipientBranchSelect" class="form-label mb-1 text-muted" style="font-size:11px;font-weight:600;">
+                                    Cơ sở
+                                </label>
+                                <select id="chatRecipientBranchSelect" class="chat-filter-select"
+                                        th:disabled="${!isAdmin}">
+                                    <option th:if="${isAdmin}" value="">Tất cả cơ sở</option>
+                                    <option th:each="b : ${accessibleBranches}"
+                                            th:value="${b.branchId}"
+                                            th:selected="${!isAdmin and currentBranch != null and b.branchId == currentBranch.branchId}"
+                                            th:text="${b.branchName}">Cơ sở</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chatRecipientListContainer" class="chat-recipient-modal__list">
+                        <div class="p-4 text-center text-muted small">
+                            Đang tải danh sách tài khoản trong cơ sở...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script th:src="@{/js/chat-inbox.js}" src="../../static/js/chat-inbox.js"></script>
+</body>
+</html>

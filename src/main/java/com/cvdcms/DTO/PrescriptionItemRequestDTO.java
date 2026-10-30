@@ -19,4 +19,5 @@ public class PrescriptionItemRequestDTO {
     private BigDecimal quantity;
     private String unit;
     private String usageInstruction;
+    private BigDecimal unitPrice;
 }

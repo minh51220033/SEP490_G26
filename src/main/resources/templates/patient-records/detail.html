@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết hồ sơ bệnh nhân')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+            <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ bệnh nhân.</div>
+            <div class="alert alert-success" th:if="${documentSuccess != null}" th:text="${documentSuccess}"></div>
+            <div class="alert alert-danger" th:if="${documentError != null}" th:text="${documentError}"></div>
+            <div class="patient-page-heading"><div><a th:href="${recordBasePath}">← Danh sách hồ sơ</a>
+                <h1 th:text="${patient.fullName}">Bệnh nhân</h1><p><span th:text="${patient.code}">BN001</span> · <span th:text="${patient.gender}">Nam</span> · <span th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa có ngày sinh'}">Ngày sinh</span> · <span th:text="${patient.phoneNumber}">SĐT</span></p></div>
+                <a th:if="${canManageAdministrative}" class="btn btn-outline-primary" th:href="${recordBasePath + '/' + patient.id + '/edit'}"><i class="bi bi-pencil"></i> Chỉnh sửa</a></div>
+            <section class="panel patient-detail">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#personal" type="button">Thông tin cá nhân</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#photos" type="button">Ảnh tổng hợp</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medical" type="button">Bệnh án</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" type="button">Quá trình điều trị</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="personal">
+                        <div class="patient-facts">
+                            <div><span>Mã hồ sơ</span><strong th:text="${patient.code}">—</strong></div><div><span>Chi nhánh</span><strong th:text="${patient.branchName}">—</strong></div>
+                            <div><span>Địa chỉ</span><strong th:text="${patient.address != null and !patient.address.isBlank() ? patient.address : 'Chưa cập nhật'}">—</strong></div>
+                            <div><span>CCCD</span><strong th:text="${patient.idCardNumber != null ? patient.idCardNumber : 'Chưa cập nhật'}">—</strong></div>
+                            <div><span>Bảo hiểm y tế</span><strong th:text="${patient.healthInsuranceNumber != null ? patient.healthInsuranceNumber : 'Chưa cập nhật'}">—</strong></div>
+                            <div><span>Người giám hộ</span><strong th:text="${patient.guardianName != null ? patient.guardianName : 'Không có'}">—</strong></div>
+                            <div><span>Quan hệ giám hộ</span><strong th:text="${patient.guardianRelationship != null ? patient.guardianRelationship : '—'}">—</strong></div>
+                            <div><span>Liên hệ giám hộ</span><strong th:text="${patient.guardianPhone != null ? patient.guardianPhone : '—'}">—</strong></div>
+                            <div><span>Trạng thái</span><strong th:text="${patient.status}">—</strong></div>
+                        </div>
+                        <h3 class="h5 mt-4">Bản scan giấy tờ</h3>
+                        <div th:if="${#lists.isEmpty(documents)}" class="text-muted">Chưa tải lên bản scan CCCD hoặc BHYT.</div>
+                        <div class="table-responsive" th:unless="${#lists.isEmpty(documents)}"><table class="table align-middle"><thead><tr><th>Loại</th><th>Tên file</th><th>Ngày tải</th><th></th></tr></thead><tbody>
+                            <tr th:each="document : ${documents}"><td th:text="${document.type.name() == 'ID_CARD' ? 'CCCD' : (document.type.name() == 'INSURANCE_CARD' ? 'BHYT' : document.type.name())}">Loại</td><td th:text="${document.name}">File</td><td th:text="${document.uploadedAt != null ? #temporals.format(document.uploadedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</td><td><a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" th:href="${recordBasePath + '/' + patient.id + '/documents/' + document.id}">Xem file</a></td></tr>
+                        </tbody></table></div>
+                        <form th:if="${canManageAdministrative}" method="post" enctype="multipart/form-data" class="patient-form mt-3" th:action="${recordBasePath + '/' + patient.id + '/documents'}">
+                            <div class="patient-form-grid"><div><label for="documentType">Loại giấy tờ</label><select id="documentType" name="documentType" class="form-select" required><option value="ID_CARD">CCCD</option><option value="INSURANCE_CARD">Bảo hiểm y tế</option></select></div>
+                            <div><label for="documentFile">File scan</label><input id="documentFile" name="file" type="file" class="form-control" accept="application/pdf,image/jpeg,image/png,image/webp" required><small>PDF, JPG, PNG hoặc WebP; tối đa 5 MB.</small></div></div>
+                            <button class="btn btn-primary mt-2" type="submit">Tải lên giấy tờ</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="photos">
+                        <p th:unless="${canViewClinical}" class="text-muted mt-3">Ảnh lâm sàng chỉ hiển thị cho Bác sĩ và Bệnh nhân theo quyền.</p>
+                        <p th:if="${canViewClinical and #lists.isEmpty(photos)}" class="text-muted mt-3">Chưa có ảnh lâm sàng.</p>
+                        <div th:if="${canViewClinical and !#lists.isEmpty(photos)}" class="patient-visit-grid mt-3"><figure th:each="photo : ${photos}" class="panel p-2"><img class="img-fluid rounded" th:src="${photo.url}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"><figcaption th:text="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">Ảnh</figcaption></figure></div>
+                    </div>
+                    <div class="tab-pane fade" id="medical">
+                        <p th:unless="${canViewClinical}" class="text-muted mt-3">Nội dung bệnh án thuộc phạm vi chuyên môn của Bác sĩ.</p>
+                        <div th:if="${canViewClinical}"><div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div>
+                            <h3 class="h6 mt-3">Kế hoạch điều trị</h3><p th:if="${#lists.isEmpty(plans)}" class="text-muted">Chưa có kế hoạch.</p><ul th:unless="${#lists.isEmpty(plans)}"><li th:each="plan : ${plans}"><span th:text="${plan.name}">Kế hoạch</span> · <span th:text="${plan.status}">Trạng thái</span></li></ul></div>
+                    </div>
+                    <div class="tab-pane fade" id="history"><div th:if="${#lists.isEmpty(visits)}" class="patient-empty">Chưa có lượt khám.</div><div class="patient-timeline" th:unless="${#lists.isEmpty(visits)}"><article th:each="visit : ${visits}"><div><strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</strong><span th:text="${visit.status}">Trạng thái</span></div><p><span th:text="${visit.branchName}">Chi nhánh</span> · <span th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span></p><a th:href="${recordBasePath + '/' + patient.id + '/visits/' + visit.id}">Xem chi tiết lượt khám →</a></article></div></div>
+                </div>
+            </section>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>

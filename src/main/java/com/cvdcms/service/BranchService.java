@@ -2,23 +2,86 @@
 package com.cvdcms.service;
 
 import com.cvdcms.DTO.BranchConfigDTO;
+import com.cvdcms.DTO.ManagerOptionDTO;
 import com.cvdcms.entity.Branch;
-import tools.jackson.databind.ObjectMapper;
+import com.cvdcms.entity.StaffProfile;
+import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
+import com.cvdcms.repository.StaffProfileRepository;
+import com.cvdcms.repository.UserRepository;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class BranchService {
 
     private final BranchRepository branchRepository;
+    private final UserRepository userRepository;
+    private final StaffProfileRepository staffProfileRepository;
 
     // Constructor injection: Spring tự truyền Repository vào Service.
-    public BranchService(BranchRepository branchRepository) {
+    public BranchService(
+            BranchRepository branchRepository,
+            UserRepository userRepository,
+            StaffProfileRepository staffProfileRepository) {
         this.branchRepository = branchRepository;
+        this.userRepository = userRepository;
+        this.staffProfileRepository = staffProfileRepository;
+    }
+
+    // Danh sách tài khoản có thể đảm nhiệm vai trò Quản lý / Trưởng chi nhánh kèm Họ tên & Chức danh.
+    @Transactional(readOnly = true)
+    public List<ManagerOptionDTO> getPotentialManagers() {
+        List<User> users = userRepository.findAll().stream()
+                .filter(u -> Boolean.TRUE.equals(u.getIsActive()))
+                .filter(u -> u.getRoles().stream().anyMatch(r ->
+                        "ADMIN".equalsIgnoreCase(r.getRoleName())
+                                || "BAC_SI".equalsIgnoreCase(r.getRoleName())
+                                || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName())))
+                .toList();
+
+        Map<Long, StaffProfile> staffByUserId = staffProfileRepository.findAll().stream()
+                .filter(s -> s.getUser() != null && s.getUser().getUserId() != null)
+                .collect(Collectors.toMap(s -> s.getUser().getUserId(), s -> s, (a, b) -> a));
+
+        List<ManagerOptionDTO> list = new ArrayList<>();
+        for (User u : users) {
+            StaffProfile staff = staffByUserId.get(u.getUserId());
+            String fullName = staff != null ? staff.getFullName() : null;
+            boolean isDoctor = u.getRoles().stream().anyMatch(r -> "BAC_SI".equalsIgnoreCase(r.getRoleName()));
+            boolean isAdmin = u.getRoles().stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()));
+
+            String roleDisplay = isDoctor ? "Bác sĩ" : (isAdmin ? "Quản trị viên" : "Quản lý");
+            String displayName;
+            if (fullName != null && !fullName.isBlank()) {
+                if (isDoctor) {
+                    displayName = "BS. " + fullName + " (" + u.getUsername() + ")";
+                } else {
+                    displayName = fullName + " (" + u.getUsername() + ") - " + roleDisplay;
+                }
+            } else {
+                displayName = u.getUsername() + " (" + roleDisplay + ")";
+            }
+
+            list.add(new ManagerOptionDTO(u.getUserId(), u.getUsername(), fullName, roleDisplay, displayName));
+        }
+
+        list.sort((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()));
+        return list;
+    }
+
+    // Map nhanh từ userId -> Tên hiển thị người quản lý cơ sở
+    @Transactional(readOnly = true)
+    public Map<Long, String> getManagerDisplayMap() {
+        return getPotentialManagers().stream()
+                .collect(Collectors.toMap(ManagerOptionDTO::getUserId, ManagerOptionDTO::getDisplayName, (a, b) -> a));
     }
 
     // Lấy toàn bộ chi nhánh để hiển thị ở trang quản lý.
@@ -72,9 +135,16 @@ public class BranchService {
         }
         branch.setAddress(address);
 
-        // Kiểm tra số điện thoại và email
+        // Kiểm tra số điện thoại, email và mã số thuế
         branch.setPhone(validatePhone(branch.getPhone()));
         branch.setEmail(validateEmail(branch.getEmail()));
+        branch.setTaxCode(validateTaxCode(branch.getTaxCode()));
+
+        if (branch.getManagerUser() != null && branch.getManagerUser().getUserId() != null) {
+            branch.setManagerUser(userRepository.findById(branch.getManagerUser().getUserId()).orElse(null));
+        } else {
+            branch.setManagerUser(null);
+        }
 
         // Không cho phép tạo hai chi nhánh có cùng mã.
         if (branchRepository.existsByBranchCode(code)) {
@@ -140,6 +210,14 @@ public class BranchService {
         branch.setAddress(address);
         branch.setPhone(validatePhone(data.getPhone()));
         branch.setEmail(validateEmail(data.getEmail()));
+        branch.setTaxCode(validateTaxCode(data.getTaxCode()));
+
+        if (data.getManagerUser() != null && data.getManagerUser().getUserId() != null) {
+            branch.setManagerUser(userRepository.findById(data.getManagerUser().getUserId()).orElse(null));
+        } else {
+            branch.setManagerUser(null);
+        }
+
         branchRepository.save(branch);
     }
 
@@ -200,6 +278,22 @@ public class BranchService {
             throw new IllegalArgumentException("Email không được vượt quá 100 ký tự.");
         }
         return e.toLowerCase(Locale.ROOT);
+    }
+
+    private String validateTaxCode(String taxCode) {
+        String t = blankToNull(taxCode);
+        if (t == null) {
+            return null;
+        }
+        t = t.trim();
+        if (t.length() > 20) {
+            throw new IllegalArgumentException("Mã số thuế không được vượt quá 20 ký tự.");
+        }
+        // Mã số thuế Việt Nam gồm 10 số (doanh nghiệp) hoặc 13 số / 10 số kèm gạch nối (chi nhánh)
+        if (!t.matches("^[0-9]{10}(-[0-9]{3})?$") && !t.matches("^[0-9]{13}$")) {
+            throw new IllegalArgumentException("Mã số thuế không hợp lệ. MST doanh nghiệp gồm 10 số, MST chi nhánh gồm 13 số (ví dụ: 0101234567 hoặc 0101234567-001).");
+        }
+        return t;
     }
 
     private String blankToNull(String value) {

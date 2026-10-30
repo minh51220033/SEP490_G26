@@ -5,6 +5,7 @@ import com.cvdcms.DTO.DiagnosisResponseDTO;
 import com.cvdcms.DTO.Icd10DiseaseDTO;
 import com.cvdcms.DTO.MedicationDTO;
 import com.cvdcms.DTO.PerformedServiceResponseDTO;
+import com.cvdcms.DTO.PrescriptionItemResponseDTO;
 import com.cvdcms.DTO.PrescriptionResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
@@ -49,6 +50,9 @@ public class DiagnosisController {
     private final TreatmentPlanService treatmentPlanService;
     private final com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
     private final com.cvdcms.service.ReExaminationService reExaminationService;
+    private final com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
+    private final com.cvdcms.service.LaboOrderService laboOrderService;
+    private final SupplierRepository supplierRepository;
     private final VisitRepository visitRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
@@ -161,6 +165,10 @@ public class DiagnosisController {
         model.addAttribute("diagnosisTypes", DiagnosisType.values());
         model.addAttribute("allVisits", otherVisits);
 
+        // Khám tổng quát & Tiền sử
+        com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
+        model.addAttribute("generalExam", generalExam);
+
         // FT16 Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
@@ -178,6 +186,27 @@ public class DiagnosisController {
         List<MedicationDTO> activeMedications = prescriptionService.getActiveMedications();
         model.addAttribute("prescriptions", prescriptions);
         model.addAttribute("activeMedications", activeMedications);
+
+        // Tính tổng tiền đơn thuốc & tổng hợp thanh toán (Dịch vụ khám + Đơn thuốc)
+        BigDecimal totalPrescriptionAmount = BigDecimal.ZERO;
+        if (prescriptions != null) {
+            for (PrescriptionResponseDTO pr : prescriptions) {
+                if (pr.getTotalAmount() != null) {
+                    totalPrescriptionAmount = totalPrescriptionAmount.add(pr.getTotalAmount());
+                } else if (pr.getItems() != null) {
+                    for (PrescriptionItemResponseDTO it : pr.getItems()) {
+                        if (it.getFinalPrice() != null) {
+                            totalPrescriptionAmount = totalPrescriptionAmount.add(it.getFinalPrice());
+                        }
+                    }
+                }
+            }
+        }
+        model.addAttribute("totalPrescriptionAmount", totalPrescriptionAmount);
+
+        BigDecimal grandTotalAmount = (totalPerformedAmount != null ? totalPerformedAmount : BigDecimal.ZERO)
+                .add(totalPrescriptionAmount);
+        model.addAttribute("grandTotalAmount", grandTotalAmount);
 
         // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
@@ -200,6 +229,32 @@ public class DiagnosisController {
                 : Collections.emptyList();
         model.addAttribute("reExaminations", reExaminations);
         model.addAttribute("preferredSessions", com.cvdcms.entity.enums.PreferredSession.values());
+
+        // FT11 / UC-10: Chỉ định cận lâm sàng & Chẩn đoán hình ảnh (SCR-11.2, SCR-11.3)
+        List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
+        List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
+        model.addAttribute("paraclinicalOrders", paraclinicalOrders);
+        model.addAttribute("paraclinicalServices", paraclinicalServices);
+
+        // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
+        List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
+        Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
+        List<Supplier> laboSuppliers = supplierRepository.findAll();
+        model.addAttribute("laboOrders", laboOrders);
+        model.addAttribute("laboStats", laboStats);
+        model.addAttribute("laboSuppliers", laboSuppliers);
+
+        boolean isClinicalLocked = visit.getStatus() != null &&
+                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
+        model.addAttribute("isClinicalLocked", isClinicalLocked);
+
+        com.cvdcms.DTO.ClinicalCompletionCheckDTO clinicalCheck = null;
+        try {
+            clinicalCheck = diagnosisService.checkClinicalCompletionReadiness(visitId);
+        } catch (Exception ex) {
+            log.warn("Không thể kiểm tra điều kiện lâm sàng cho visitId={}: {}", visitId, ex.getMessage());
+        }
+        model.addAttribute("clinicalCheck", clinicalCheck);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");

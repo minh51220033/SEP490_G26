@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Đặt lịch khám')}"></head>
+<body class="app-body"><div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Đặt lịch khám')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/portal-appointments.css}">
+            <div class="patient-page-heading"><div><a th:href="@{/portal/appointments}">← Lịch hẹn của tôi</a>
+                <h1 th:text="${appointmentId == null ? 'Đặt lịch khám' : 'Đổi lịch hẹn'}">Đặt lịch khám</h1>
+                <p>Phòng khám tiếp nhận theo ngày và buổi; giờ đến cụ thể không được ấn định trước.</p></div></div>
+            <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
+            <form id="appointmentForm" class="panel patient-form appointment-form" th:attr="data-appointment-id=${appointmentId}">
+                <h2>Người khám và lịch mong muốn</h2>
+                <div class="patient-form-grid">
+                    <div><label for="profileId">Hồ sơ bệnh nhân *</label><select id="profileId" class="form-select" required></select></div>
+                    <div><label for="branchId">Chi nhánh *</label><select id="branchId" class="form-select" required></select></div>
+                    <div><label for="appointmentDate">Ngày khám *</label><input type="date" id="appointmentDate" class="form-control" required></div>
+                    <div><label for="preferredSession">Buổi khám *</label><select id="preferredSession" class="form-select" required>
+                        <option value="">Chọn buổi</option><option value="MORNING">Buổi sáng</option>
+                        <option value="AFTERNOON">Buổi chiều</option><option value="EVENING">Buổi tối</option></select></div>
+                    <div><label for="doctorId">Bác sĩ đích danh</label><select id="doctorId" class="form-select" disabled><option value="">Không yêu cầu bác sĩ</option></select>
+                        <small>Nếu chọn đích danh, bạn sẽ chờ đúng bác sĩ này. Thời gian chờ thực tế tùy tình hình khám.</small></div>
+                    <div id="serviceField"><label for="serviceId">Dịch vụ quan tâm</label><select id="serviceId" class="form-select"></select>
+                        <small>Dịch vụ sẽ được bác sĩ xác định sau khi khám; lựa chọn này chưa phát sinh phí.</small></div>
+                </div>
+                <p id="availabilityMessage" class="appointment-availability" role="status">Chọn chi nhánh, ngày và buổi để xem khả năng tiếp nhận.</p>
+                <section id="symptomsSection"><h2>Tình trạng ban đầu</h2>
+                    <label for="symptoms">Lý do đến khám / triệu chứng</label>
+                    <textarea id="symptoms" class="form-control" rows="4" maxlength="500" placeholder="Ví dụ: đau răng hàm dưới, ê buốt khi ăn lạnh…"></textarea>
+                    <small>Thông tin này giúp lễ tân tiếp nhận; bác sĩ sẽ đánh giá trực tiếp khi khám.</small></section>
+                <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="@{/portal/appointments}">Quay lại</a>
+                    <button id="submitAppointment" type="submit" class="btn btn-primary" disabled>Xác nhận đặt lịch</button></div>
+            </form>
+        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+    </div>
+</div><script th:src="@{/js/portal-appointments.js}" defer></script></body></html>

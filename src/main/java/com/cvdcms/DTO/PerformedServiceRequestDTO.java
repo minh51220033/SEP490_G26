@@ -36,4 +36,6 @@ public class PerformedServiceRequestDTO {
     private Long assistantId;
 
     private String clinicalNotes;
+
+    private Long planItemId;
 }

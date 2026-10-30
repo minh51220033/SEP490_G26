@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Hạng thành viên & Quy tắc tích điểm (FT19)')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('membership-tiers')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Hạng thành viên & Tích điểm')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Alert Messages -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header mb-4">
+                <div>
+                    <h1>Quản lý Hạng thành viên &amp; Quy tắc tích điểm (SCR-19.1)</h1>
+                    <p class="text-muted">Cấu hình các hạng thành viên, quyền lợi chiết khấu, quy tắc quy đổi điểm chi tiêu và điều kiện thăng hạng.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-primary" onclick="openCreateModal()">
+                        <i class="bi bi-plus-lg"></i> Thêm hạng thành viên mới
+                    </button>
+                    <a th:href="@{/reception/memberships}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-person-badge"></i> Tra cứu thẻ bệnh nhân
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quy tắc tích điểm & Xếp hạng tổng quan Card -->
+            <div class="fin-card mb-4" style="background: linear-gradient(135deg, #f8faff 0%, #eef4fe 100%); border-left: 4px solid #0d6efd;">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-shield-check text-primary fs-4 me-2"></i>
+                    <h5 class="fw-bold m-0 text-dark">Quy tắc tích điểm &amp; Căn cứ xếp hạng toàn hệ thống</h5>
+                </div>
+                <div class="row g-3 mt-1 small">
+                    <div class="col-md-3">
+                        <div class="p-2 bg-white rounded border">
+                            <span class="text-muted d-block">Căn cứ xếp hạng:</span>
+                            <strong class="text-primary"><i class="bi bi-cash-coin me-1"></i>Tổng chi tiêu lũy kế hợp lệ</strong>
+                            <div class="text-muted" style="font-size: 11px;">(Không dùng điểm lũy kế làm căn cứ xếp hạng đồng thời)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 bg-white rounded border">
+                            <span class="text-muted d-block">Quy tắc làm tròn:</span>
+                            <strong class="text-dark"><i class="bi bi-arrow-down-right-circle me-1"></i>Làm tròn xuống (FLOOR)</strong>
+                            <div class="text-muted" style="font-size: 11px;">Số điểm nhận = Số tiền / Mức quy đổi lấy nguyên</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 bg-white rounded border">
+                            <span class="text-muted d-block">Thời điểm cộng điểm:</span>
+                            <strong class="text-success"><i class="bi bi-check2-circle me-1"></i>Thanh toán thành công</strong>
+                            <div class="text-muted" style="font-size: 11px;">Chống cộng trùng qua mã giao dịch &amp; Idempotency</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 bg-white rounded border">
+                            <span class="text-muted d-block">Điều chỉnh / Hoàn tiền:</span>
+                            <strong class="text-warning"><i class="bi bi-arrow-counterclockwise me-1"></i>Ghi giao dịch đối ứng</strong>
+                            <div class="text-muted" style="font-size: 11px;">Lưu lịch sử ADJUST, tính lại hạng nếu giảm</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Danh sách các Hạng thành viên -->
+            <div class="fin-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0 text-dark"><i class="bi bi-card-checklist me-2 text-primary"></i>Danh sách Hạng thành viên hiện hành</h5>
+                    <span class="text-muted small">Sắp xếp theo thứ tự hiển thị và mức chi tiêu</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="fin-table table">
+                        <thead>
+                        <tr>
+                            <th class="text-center" style="width: 70px;">Thứ tự</th>
+                            <th>Mã hạng</th>
+                            <th>Tên hạng</th>
+                            <th class="text-end">Chi tiêu tối thiểu</th>
+                            <th class="text-center">Chiết khấu</th>
+                            <th class="text-end">Quy đổi 1 điểm</th>
+                            <th class="text-end">Giá trị 1 điểm</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-end" style="width: 140px;">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="tier : ${tiers}">
+                            <td class="text-center fw-bold" th:text="${tier.displayOrder}">1</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${tier.tierCode == 'DIAMOND' ? 'bg-primary' : (tier.tierCode == 'GOLD' ? 'bg-warning text-dark' : (tier.tierCode == 'SILVER' ? 'bg-secondary' : 'bg-light text-dark border'))}"
+                                      th:text="${tier.tierCode}">STANDARD</span>
+                            </td>
+                            <td>
+                                <strong th:text="${tier.tierName}">Thành viên mới</strong>
+                            </td>
+                            <td class="text-end fw-bold text-dark"
+                                th:text="${#numbers.formatDecimal(tier.minTotalSpent, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                0 đ
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success" th:text="${tier.discountPercent} + '%'">0%</span>
+                            </td>
+                            <td class="text-end"
+                                th:text="${#numbers.formatDecimal(tier.spendPerPoint, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                10.000 đ
+                            </td>
+                            <td class="text-end text-success fw-bold"
+                                th:text="${#numbers.formatDecimal(tier.pointValue, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                1.000 đ
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${tier.isActive}" class="fin-badge fin-badge-paid"><i class="bi bi-check-circle me-1"></i>Đang áp dụng</span>
+                                <span th:unless="${tier.isActive}" class="fin-badge fin-badge-cancelled"><i class="bi bi-x-circle me-1"></i>Vô hiệu</span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <button type="button" class="fin-btn fin-btn-outline py-1 px-2 btn-sm"
+                                            th:data-id="${tier.tierId}"
+                                            th:data-code="${tier.tierCode}"
+                                            th:data-name="${tier.tierName}"
+                                            th:data-minspent="${tier.minTotalSpent}"
+                                            th:data-discount="${tier.discountPercent}"
+                                            th:data-spendperpoint="${tier.spendPerPoint}"
+                                            th:data-pointval="${tier.pointValue}"
+                                            th:data-order="${tier.displayOrder}"
+                                            th:data-active="${tier.isActive}"
+                                            onclick="openEditModal(this)"
+                                            title="Chỉnh sửa hạng">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <form th:action="@{/admin/membership-tiers/{id}/toggle-status(id=${tier.tierId})}" method="post" style="display:inline;"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái hạng thành viên này?');">
+                                        <button type="submit" class="fin-btn py-1 px-2 btn-sm"
+                                                th:classappend="${tier.isActive} ? 'fin-btn-outline text-danger' : 'fin-btn-outline text-success'"
+                                                th:title="${tier.isActive} ? 'Vô hiệu hóa' : 'Kích hoạt'">
+                                            <i th:class="${tier.isActive} ? 'bi bi-slash-circle' : 'bi bi-check2-circle'"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(tiers)}">
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>Chưa có hạng thành viên nào được thiết lập.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Thêm/Sửa Hạng thành viên -->
+<div class="modal fade" id="tierModal" tabindex="-1" aria-labelledby="tierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form th:action="@{/admin/membership-tiers/save}" method="post" id="tierForm">
+                <input type="hidden" id="modalTierId" name="tierId">
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="tierModalLabel">
+                        <i class="bi bi-award text-warning me-2"></i>Thêm hạng thành viên
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="modalTierCode" class="form-label fw-bold small text-muted">MÃ HẠNG (VIẾT HOA, KHÔNG DẤU) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modalTierCode" name="tierCode" required placeholder="VD: PLATINUM, VIP1...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalTierName" class="form-label fw-bold small text-muted">TÊN HIỂN THỊ HẠNG <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modalTierName" name="tierName" required placeholder="VD: Bạch Kim, Hội viên VIP...">
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="modalMinSpent" class="form-label fw-bold small text-muted">CHI TIÊU TỐI THIỂU (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="modalMinSpent" name="minTotalSpent" required min="0" step="any" placeholder="0">
+                        </div>
+                        <div class="col-6">
+                            <label for="modalDiscount" class="form-label fw-bold small text-muted">CHIẾT KHẤU (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="modalDiscount" name="discountPercent" required min="0" max="100" step="any" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="modalSpendPerPoint" class="form-label fw-bold small text-muted">CHI TIÊU / 1 ĐIỂM (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="modalSpendPerPoint" name="spendPerPoint" required min="1000" step="any" value="10000">
+                        </div>
+                        <div class="col-6">
+                            <label for="modalPointVal" class="form-label fw-bold small text-muted">GIÁ TRỊ 1 ĐIỂM (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="modalPointVal" name="pointValue" required min="1" step="1" value="10">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="modalOrder" class="form-label fw-bold small text-muted">THỨ TỰ HIỂN THỊ <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="modalOrder" name="displayOrder" required min="1" step="1" value="1">
+                        </div>
+                        <div class="col-6 d-flex align-items-center mt-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="modalIsActive" name="isActive" value="true" checked>
+                                <input type="hidden" name="_isActive" value="on">
+                                <label class="form-check-label fw-bold" for="modalIsActive">Kích hoạt áp dụng</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-save me-1"></i> Lưu cấu hình
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function openCreateModal() {
+        document.getElementById('tierForm').reset();
+        document.getElementById('tierModalLabel').innerHTML = '<i class="bi bi-award text-warning me-2"></i>Thêm hạng thành viên mới';
+        document.getElementById('modalTierId').value = '';
+        document.getElementById('modalTierCode').value = '';
+        document.getElementById('modalTierCode').readOnly = false;
+        document.getElementById('modalTierName').value = '';
+        document.getElementById('modalMinSpent').value = '0';
+        document.getElementById('modalDiscount').value = '0';
+        document.getElementById('modalSpendPerPoint').value = '10000';
+        document.getElementById('modalPointVal').value = '10';
+        document.getElementById('modalOrder').value = '1';
+        document.getElementById('modalIsActive').checked = true;
+
+        const modalEl = document.getElementById('tierModal');
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    function openEditModal(btn) {
+        document.getElementById('tierModalLabel').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa hạng thành viên';
+        document.getElementById('modalTierId').value = btn.getAttribute('data-id') || '';
+        document.getElementById('modalTierCode').value = btn.getAttribute('data-code') || '';
+        document.getElementById('modalTierCode').readOnly = false;
+        document.getElementById('modalTierName').value = btn.getAttribute('data-name') || '';
+        document.getElementById('modalMinSpent').value = btn.getAttribute('data-minspent') || '0';
+        document.getElementById('modalDiscount').value = btn.getAttribute('data-discount') || '0';
+        document.getElementById('modalSpendPerPoint').value = btn.getAttribute('data-spendperpoint') || '10000';
+        document.getElementById('modalPointVal').value = btn.getAttribute('data-pointval') || '10';
+        document.getElementById('modalOrder').value = btn.getAttribute('data-order') || '1';
+        document.getElementById('modalIsActive').checked = btn.getAttribute('data-active') === 'true';
+
+        const modalEl = document.getElementById('tierModal');
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+</script>
+
+<script th:if="${formTier != null}" th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEl = document.getElementById('tierModal');
+        if (modalEl && window.bootstrap && bootstrap.Modal) {
+            document.getElementById('modalTierId').value = /*[[${formTier.tierId}]]*/ '';
+            document.getElementById('modalTierCode').value = /*[[${formTier.tierCode}]]*/ '';
+            document.getElementById('modalTierName').value = /*[[${formTier.tierName}]]*/ '';
+            document.getElementById('modalMinSpent').value = /*[[${formTier.minTotalSpent}]]*/ '0';
+            document.getElementById('modalDiscount').value = /*[[${formTier.discountPercent}]]*/ '0';
+            document.getElementById('modalSpendPerPoint').value = /*[[${formTier.spendPerPoint}]]*/ '10000';
+            document.getElementById('modalPointVal').value = /*[[${formTier.pointValue}]]*/ '10';
+            document.getElementById('modalOrder').value = /*[[${formTier.displayOrder}]]*/ '1';
+            document.getElementById('modalIsActive').checked = /*[[${formTier.isActive != null ? formTier.isActive : true}]]*/ true;
+
+            const isEdit = document.getElementById('modalTierId').value !== '';
+            document.getElementById('tierModalLabel').innerHTML = isEdit
+                ? '<i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa hạng thành viên'
+                : '<i class="bi bi-award text-warning me-2"></i>Thêm hạng thành viên mới';
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    });
+    /*]]>*/
+</script>
+</body>
+</html>
