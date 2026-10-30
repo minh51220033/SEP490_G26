@@ -70,6 +70,7 @@ try {
     if ($hasDispatchConstraint -eq '0') { Invoke-DbFile 'database/migrations/V8__ft08_ft09_dispatch_ticket.sql' }
 
     Invoke-DbFile 'database/migrations/V11__emr_module.sql'
+    Invoke-DbFile 'database/migrations/V12__emr_printable_components.sql'
     if ($ResetEmrDemo) { Invoke-DbFile 'database/seeds/reset_emr_demo.sql' }
 
     # FT07/08/09/10 cung cấp tình huống tiếp đón, điều phối và hàng chờ.
