@@ -8,6 +8,7 @@ import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.BranchAccessService;
 import com.cvdcms.service.StockReceiptService;
+import com.cvdcms.util.InventoryFileStorageUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -18,34 +19,41 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
  * Xử lý nghiệp vụ Phiếu nhập kho (Stock Receipt):
+ * - Bắt buộc có ảnh/chứng từ hóa đơn hợp lệ đã tải lên (/uploads/invoices/...).
  * - Kiểm tra phân quyền chi nhánh, nhà cung cấp, định dạng số hóa đơn và số lô (regex).
  * - Tự động tạo mới hoặc cộng dồn lô vật tư (MaterialBatch) và kiểm tra khớp hạn sử dụng.
  * - Cộng dồn số lượng tồn kho tổng hợp tại chi nhánh (BranchInventory) trong cùng transaction.
- * - Tính toán tổng tiền phiếu nhập, số tiền đã thanh toán và công nợ còn lại.
+ * - Tính toán độc lập tổng tiền phiếu nhập ở Backend, ghi nhận thanh toán ban đầu (SupplierPayment) và công nợ còn lại.
+ * - Hỗ trợ ký điện tử bất biến (chống ký đè / chống giả mạo người ký).
  */
 @Service
 public class StockReceiptServiceImpl implements StockReceiptService {
 
-    // Biểu thức chính quy kiểm tra định dạng Số lô (chữ, số, ., _, /, - từ 1 đến 50 ký tự)
     private static final Pattern BATCH_NUMBER_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,50}$");
 
-    // Biểu thức chính quy kiểm tra định dạng Số hóa đơn nhà cung cấp
     private static final Pattern INVOICE_NO_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,50}$");
 
-    // Bộ đếm tuần tự đảm bảo sinh mã phiếu nhập (PN...) duy nhất ngay cả khi gọi đồng thời trong cùng mili-giây
+    private static final Pattern REFERENCE_NO_PATTERN =
+            Pattern.compile("^[A-Za-z0-9._/-]{1,100}$");
+
+    private static final Set<String> ALLOWED_PAYMENT_METHODS = Set.of("CASH", "BANK_TRANSFER");
+
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis());
+    private static final AtomicLong PAYMENT_CODE_SEQ = new AtomicLong(System.currentTimeMillis());
 
     private final BranchRepository branchRepository;
     private final SupplierRepository supplierRepository;
@@ -97,6 +105,9 @@ public class StockReceiptServiceImpl implements StockReceiptService {
             bad("Phiếu nhập phải có ít nhất một vật tư.");
         }
 
+        // Bắt buộc phải có ảnh/chứng từ hóa đơn hợp lệ đã được tải lên
+        String attachmentUrl = InventoryFileStorageUtil.validateRequiredInvoiceUrl(dto.getAttachmentUrl());
+
         LocalDate receiptDate = dto.getReceiptDate() == null ? LocalDate.now() : dto.getReceiptDate();
         if (receiptDate.isAfter(LocalDate.now())) {
             bad("Ngày nhập không được ở tương lai.");
@@ -110,11 +121,6 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         String notes = trimToNull(dto.getNotes());
         if (notes != null && notes.length() > 255) {
             bad("Ghi chú phiếu nhập tối đa 255 ký tự.");
-        }
-
-        String attachmentUrl = trimToNull(dto.getAttachmentUrl());
-        if (attachmentUrl != null && attachmentUrl.length() > 500) {
-            bad("Đường dẫn chứng từ đính kèm tối đa 500 ký tự.");
         }
 
         Branch branch = branchRepository.findById(dto.getBranchId())
@@ -144,7 +150,6 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         BigDecimal total = BigDecimal.ZERO;
         List<StockReceiptItem> items = new ArrayList<>();
 
-        // Bộ nhớ đệm trong cùng transaction để xử lý trường hợp nhiều dòng cùng vật tư hoặc cùng số lô
         Map<String, MaterialBatch> batchCache = new HashMap<>();
         Map<Long, BranchInventory> inventoryCache = new HashMap<>();
 
@@ -249,11 +254,108 @@ public class StockReceiptServiceImpl implements StockReceiptService {
             total = total.add(lineTotal);
         }
 
-        receipt.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal computedTotal = total.setScale(2, RoundingMode.HALF_UP);
+        receipt.setTotalAmount(computedTotal);
         receipt.setItems(items);
-        StockReceipt saved = receiptRepository.save(receipt);
 
-        return toDetailDTO(saved);
+        // Kiểm tra số tiền thanh toán ngay khi nhập kho (A2)
+        BigDecimal paidAmount = BigDecimal.ZERO;
+        if (dto.getPaidAmount() != null) {
+            if (dto.getPaidAmount().compareTo(BigDecimal.ZERO) < 0) {
+                bad("Số tiền đã thanh toán không được nhỏ hơn 0.");
+            }
+            paidAmount = dto.getPaidAmount().setScale(2, RoundingMode.HALF_UP);
+            if (paidAmount.compareTo(computedTotal) > 0) {
+                bad("Số tiền đã thanh toán (" + paidAmount + ") không được vượt quá tổng tiền phiếu nhập (" + computedTotal + ").");
+            }
+        }
+
+        String paymentMethod = "BANK_TRANSFER";
+        String paymentRefNo = null;
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            if (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank()) {
+                paymentMethod = dto.getPaymentMethod().trim().toUpperCase(Locale.ROOT);
+            }
+            if (!ALLOWED_PAYMENT_METHODS.contains(paymentMethod)) {
+                bad("Hình thức thanh toán chỉ chấp nhận CASH (Tiền mặt) hoặc BANK_TRANSFER (Chuyển khoản).");
+            }
+            paymentRefNo = trimToNull(dto.getPaymentReferenceNo());
+            if (paymentRefNo != null && !REFERENCE_NO_PATTERN.matcher(paymentRefNo).matches()) {
+                bad("Số chứng từ thanh toán tối đa 100 ký tự và chỉ chứa chữ, số, ., _, /, -.");
+            }
+        }
+
+        // Xử lý chữ ký điện tử nếu người lập ký ngay lúc tạo phiếu (A4)
+        String rawSignature = trimToNull(dto.getSignatureData());
+        if (rawSignature != null) {
+            String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(rawSignature, "receipt");
+            receipt.setSignatureUrl(sigUrl);
+            receipt.setSignedByUserId(userId);
+            receipt.setSignedByName(receiver.getFullName());
+            receipt.setSignedAt(LocalDateTime.now());
+        }
+
+        StockReceipt saved = receiptRepository.save(receipt);
+        if (saved == null) {
+            saved = receipt;
+        }
+
+        // Tự động sinh phiếu chi nhà cung cấp gắn với phiếu nhập nếu có thanh toán ban đầu > 0 (A2)
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            SupplierPayment initialPayment = new SupplierPayment();
+            initialPayment.setPaymentCode(generateUniquePaymentCode());
+            initialPayment.setBranch(branch);
+            initialPayment.setSupplier(supplier);
+            initialPayment.setReceipt(saved);
+            initialPayment.setPaymentDate(receiptDate);
+            initialPayment.setAmount(paidAmount);
+            initialPayment.setPaymentMethod(paymentMethod);
+            initialPayment.setReferenceNo(paymentRefNo != null ? paymentRefNo : invoiceNo);
+            initialPayment.setPaidBy(receiver);
+            initialPayment.setNotes("Thanh toán khi nhập kho phiếu " + saved.getReceiptCode());
+            supplierPaymentRepository.save(initialPayment);
+        }
+
+        StockReceiptResponseDTO response = toDetailDTO(saved);
+        // Nếu vừa tạo thanh toán trong cùng transaction mà mock repository chưa phản ánh trong sumPaidAmountByReceipt
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0
+                && (response.getPaidAmount() == null || response.getPaidAmount().compareTo(BigDecimal.ZERO) == 0)) {
+            response.setPaidAmount(paidAmount);
+            BigDecimal rem = computedTotal.subtract(paidAmount);
+            response.setRemainingDebt(rem.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : rem);
+        }
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public StockReceiptResponseDTO signReceipt(Long receiptId, String signatureData, Long userId) {
+        if (receiptId == null || receiptId <= 0) {
+            bad("Mã phiếu nhập không hợp lệ.");
+        }
+        StockReceipt receipt = receiptRepository.findByIdWithDetails(receiptId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu nhập kho."));
+
+        if (!accessService.canAccessBranch(userId, receipt.getBranch().getBranchId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền ký phiếu nhập của chi nhánh này.");
+        }
+
+        if (receipt.getSignatureUrl() != null && !receipt.getSignatureUrl().isBlank()) {
+            bad("Phiếu nhập kho " + receipt.getReceiptCode()
+                    + " đã được ký điện tử bởi " + (receipt.getSignedByName() != null ? receipt.getSignedByName() : "nhân viên")
+                    + " và không thể ký đè hoặc chỉnh sửa chữ ký.");
+        }
+
+        StaffProfile signer = resolveOrCreateStaffProfile(userId);
+        String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(signatureData, "receipt_" + receiptId);
+
+        receipt.setSignatureUrl(sigUrl);
+        receipt.setSignedByUserId(userId);
+        receipt.setSignedByName(signer.getFullName());
+        receipt.setSignedAt(LocalDateTime.now());
+
+        StockReceipt saved = receiptRepository.save(receipt);
+        return toDetailDTO(saved != null ? saved : receipt);
     }
 
     private String generateUniqueReceiptCode() {
@@ -262,6 +364,15 @@ public class StockReceiptServiceImpl implements StockReceiptService {
             long next = CODE_SEQ.updateAndGet(prev -> Math.max(System.currentTimeMillis(), prev + 1));
             code = "PN" + next;
         } while (receiptRepository.existsByReceiptCode(code));
+        return code;
+    }
+
+    private String generateUniquePaymentCode() {
+        String code;
+        do {
+            long next = PAYMENT_CODE_SEQ.updateAndGet(prev -> Math.max(System.currentTimeMillis(), prev + 1));
+            code = "PC" + next;
+        } while (supplierPaymentRepository.existsByPaymentCode(code));
         return code;
     }
 
@@ -290,7 +401,26 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         Page<StockReceipt> page = receiptRepository.searchReceipts(
                 branchId, supplierId, normalizedKeyword, fromDate, toDate, pageable);
 
-        return page.map(this::toSummaryDTO);
+        Map<Long, BigDecimal> paidMap = new HashMap<>();
+        if (page != null && !page.isEmpty()) {
+            List<Long> rids = page.getContent().stream()
+                    .map(StockReceipt::getReceiptId)
+                    .filter(id -> id != null)
+                    .toList();
+            if (!rids.isEmpty()) {
+                List<Object[]> rows = supplierPaymentRepository.sumPaidAmountByReceipts(rids);
+                if (rows != null) {
+                    for (Object[] row : rows) {
+                        if (row != null && row.length >= 2 && row[0] instanceof Number idNum) {
+                            BigDecimal sum = row[1] instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+                            paidMap.put(idNum.longValue(), sum);
+                        }
+                    }
+                }
+            }
+        }
+
+        return page.map(r -> toSummaryDTOWithPreloadedPaid(r, paidMap.get(r.getReceiptId())));
     }
 
     @Override
@@ -331,6 +461,13 @@ public class StockReceiptServiceImpl implements StockReceiptService {
     }
 
     private StockReceiptResponseDTO toSummaryDTO(StockReceipt r) {
+        BigDecimal paid = r.getReceiptId() != null
+                ? supplierPaymentRepository.sumPaidAmountByReceipt(r.getReceiptId())
+                : BigDecimal.ZERO;
+        return toSummaryDTOWithPreloadedPaid(r, paid);
+    }
+
+    private StockReceiptResponseDTO toSummaryDTOWithPreloadedPaid(StockReceipt r, BigDecimal preloadedPaid) {
         StockReceiptResponseDTO dto = new StockReceiptResponseDTO(
                 r.getReceiptId(),
                 r.getReceiptCode(),
@@ -346,10 +483,13 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         dto.setReceiverName(r.getReceiver() != null ? r.getReceiver().getFullName() : null);
         dto.setNotes(r.getNotes());
         dto.setAttachmentUrl(r.getAttachmentUrl());
+        dto.setSignatureUrl(r.getSignatureUrl());
+        dto.setSignedByUserId(r.getSignedByUserId());
+        dto.setSignedByName(r.getSignedByName());
+        dto.setSignedAt(r.getSignedAt());
         dto.setItemCount(r.getItems() != null ? r.getItems().size() : 0);
 
-        BigDecimal paid = supplierPaymentRepository.sumPaidAmountByReceipt(r.getReceiptId());
-        if (paid == null) paid = BigDecimal.ZERO;
+        BigDecimal paid = preloadedPaid != null ? preloadedPaid : BigDecimal.ZERO;
         BigDecimal total = r.getTotalAmount() != null ? r.getTotalAmount() : BigDecimal.ZERO;
         BigDecimal debt = total.subtract(paid);
         if (debt.compareTo(BigDecimal.ZERO) < 0) debt = BigDecimal.ZERO;

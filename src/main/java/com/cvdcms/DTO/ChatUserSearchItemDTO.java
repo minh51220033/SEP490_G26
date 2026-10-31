@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * DTO biểu diễn thông tin một tài khoản trong cùng cơ sở khi nhân viên / Admin tìm kiếm người nhận để gửi tin nhắn.
+ * Hỗ trợ trường hợp 1 tài khoản User quản lý nhiều hồ sơ bệnh nhân (PatientProfile) mà không tạo tài khoản chat trùng lặp.
  */
 @Data
 @Builder
@@ -26,6 +27,11 @@ public class ChatUserSearchItemDTO {
     private Long branchId;
     private String branchCode;
     private String branchName;
+
+    // Thông tin hồ sơ bệnh nhân liên kết (chỉ hiển thị mã BN & họ tên ngữ cảnh, không lộ dữ liệu lâm sàng nhạy cảm)
+    private String patientCode;
+    private Integer patientProfileCount;
+    private String patientProfilesSummary;
 
     // Nếu đã có cuộc hội thoại đang mở với tài khoản này tại cơ sở thì trả kèm conversationId
     private Long existingConversationId;

@@ -21,7 +21,7 @@ import java.util.Map;
  * - SCR-44.1: KPI Summary & Danh sách công việc CSKH.
  * - SCR-44.2: Lọc theo chi nhánh, nhân viên, trạng thái và các nhóm bệnh nhân.
  * - SCR-44.3: Lập lịch / Phân công CSKH thủ công & Tự động tổng hợp công việc.
- * - SCR-44.4: Chi tiết công việc & Ghi kết quả liên hệ (kèm hẹn gọi lại next_retry_at).
+ * - SCR-44.4: Chi tiết công việc & Ghi kết quả liên hệ (kèm hẹn gọi lại next_retry_at) + Xem hồ sơ khám lâm sàng / lời dặn (#tab-instructions).
  * - SCR-44.5: Chuyển Bác sĩ hỗ trợ chuyên môn & Nhập phản hồi chuyên môn của Bác sĩ.
  * - SCR-44.6: Xem Timeline lịch sử chăm sóc bệnh nhân.
  */
@@ -35,18 +35,12 @@ public class CustomerCareRestController {
         this.customerCareService = customerCareService;
     }
 
-    /**
-     * Lấy danh sách chi nhánh khả dụng.
-     */
     @GetMapping("/branches")
     public Map<String, Object> getBranches(HttpSession session) {
         User user = requireUser(session);
         return customerCareService.getAccessibleBranches(user.getUserId());
     }
 
-    /**
-     * Lấy danh sách nhân viên CSKH, bác sĩ, bệnh nhân, ca khám, lịch hẹn, đơn thuốc phục vụ bộ lọc & form.
-     */
     @GetMapping("/lookups")
     public Map<String, Object> getLookups(
             @RequestParam(required = false) Long branchId,
@@ -55,9 +49,6 @@ public class CustomerCareRestController {
         return customerCareService.getLookups(branchId, user.getUserId());
     }
 
-    /**
-     * Lấy số liệu KPI tổng quan và số lượng công việc theo từng nhóm tab (SCR-44.1 & SCR-44.2).
-     */
     @GetMapping("/summary")
     public Map<String, Object> getSummary(
             @RequestParam(required = false) Long branchId,
@@ -66,9 +57,6 @@ public class CustomerCareRestController {
         return customerCareService.getSummary(branchId, user.getUserId());
     }
 
-    /**
-     * Tìm kiếm, lọc và phân trang danh sách công việc CSKH (SCR-44.1, SCR-44.2, SCR-44.5).
-     */
     @GetMapping("/tasks")
     public Page<CustomerCareTaskDTO> listTasks(
             @RequestParam(required = false) Long branchId,
@@ -94,9 +82,6 @@ public class CustomerCareRestController {
         );
     }
 
-    /**
-     * Xem chi tiết một công việc CSKH kèm lịch sử các lần tương tác (SCR-44.4).
-     */
     @GetMapping("/tasks/{taskId}")
     public CustomerCareTaskDTO getTaskDetail(
             @PathVariable Long taskId,
@@ -105,9 +90,14 @@ public class CustomerCareRestController {
         return customerCareService.getTaskDetail(taskId, user.getUserId());
     }
 
-    /**
-     * Tạo mới / lập lịch công việc CSKH thủ công (SCR-44.3).
-     */
+    @GetMapping("/visits/{visitId}/examination-summary")
+    public Map<String, Object> getVisitExaminationSummary(
+            @PathVariable Long visitId,
+            HttpSession session) {
+        User user = requireUser(session);
+        return customerCareService.getVisitExaminationSummary(visitId, user.getUserId());
+    }
+
     @PostMapping("/tasks")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerCareTaskDTO createTask(
@@ -117,9 +107,6 @@ public class CustomerCareRestController {
         return customerCareService.createTask(dto, user.getUserId());
     }
 
-    /**
-     * Cập nhật phân công / ngày hẹn / ghi chú của công việc CSKH (SCR-44.3).
-     */
     @PutMapping("/tasks/{taskId}")
     public CustomerCareTaskDTO updateTask(
             @PathVariable Long taskId,
@@ -129,9 +116,6 @@ public class CustomerCareRestController {
         return customerCareService.updateTask(taskId, dto, user.getUserId());
     }
 
-    /**
-     * Tự động quét và tổng hợp công việc CSKH từ ca khám, đơn thuốc và lịch hẹn tại chi nhánh (SCR-44.3).
-     */
     @PostMapping("/tasks/auto-generate")
     public Map<String, Object> autoGenerateTasks(
             @RequestParam Long branchId,
@@ -140,10 +124,6 @@ public class CustomerCareRestController {
         return customerCareService.autoGenerateTasks(branchId, user.getUserId());
     }
 
-    /**
-     * Ghi nhận kết quả liên hệ bệnh nhân (SCR-44.4).
-     * Bắt buộc kiểm tra nextRetryAt khi contactResult = NO_ANSWER hoặc BUSY.
-     */
     @PostMapping("/tasks/{taskId}/interactions")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerCareTaskDTO recordInteraction(
@@ -154,9 +134,6 @@ public class CustomerCareRestController {
         return customerCareService.recordInteraction(taskId, dto, user.getUserId());
     }
 
-    /**
-     * Chuyển ca CSKH cho Bác sĩ tiếp nhận hỗ trợ chuyên môn (SCR-44.5).
-     */
     @PostMapping("/tasks/{taskId}/escalate")
     public CustomerCareTaskDTO escalateToDoctor(
             @PathVariable Long taskId,
@@ -166,9 +143,6 @@ public class CustomerCareRestController {
         return customerCareService.escalateToDoctor(taskId, dto, user.getUserId());
     }
 
-    /**
-     * Bác sĩ nhập phản hồi chuyên môn cho ca CSKH được chuyển đến (SCR-44.5).
-     */
     @PostMapping("/tasks/{taskId}/doctor-response")
     public CustomerCareTaskDTO submitDoctorResponse(
             @PathVariable Long taskId,
@@ -178,9 +152,6 @@ public class CustomerCareRestController {
         return customerCareService.submitDoctorResponse(taskId, dto, user.getUserId());
     }
 
-    /**
-     * Lấy toàn bộ lịch sử tương tác và công việc chăm sóc của một bệnh nhân theo dạng Timeline (SCR-44.6).
-     */
     @GetMapping("/patients/{profileId}/history")
     public Map<String, Object> getPatientCareHistory(
             @PathVariable Long profileId,
