@@ -20,17 +20,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminServiceCatalogInterceptor adminServiceCatalogInterceptor;
     //FT21-22 taichinh
     private final FinanceAccessInterceptor financeAccessInterceptor;
+    private final FeaturePermissionInterceptor featurePermissionInterceptor;
 
     public WebMvcConfig(
             AdminBranchInterceptor adminBranchInterceptor,
             AccountManagementInterceptor accountManagementInterceptor,
             AdminServiceCatalogInterceptor adminServiceCatalogInterceptor, //FT02
-            FinanceAccessInterceptor financeAccessInterceptor //FT21-22
+            FinanceAccessInterceptor financeAccessInterceptor, //FT21-22
+            FeaturePermissionInterceptor featurePermissionInterceptor
     ) {
         this.adminBranchInterceptor = adminBranchInterceptor;
         this.accountManagementInterceptor = accountManagementInterceptor;
         this.adminServiceCatalogInterceptor = adminServiceCatalogInterceptor; //FT02
         this.financeAccessInterceptor = financeAccessInterceptor;
+        this.featurePermissionInterceptor = featurePermissionInterceptor;
     }
 
     @Override
@@ -58,6 +61,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 "/favicon.ico"
         };
 
+        // Đồng bộ danh sách quyền hiệu lực (permissionCodes) và kiểm tra quyền chi tiết theo từng tính năng.
+        registry.addInterceptor(featurePermissionInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(staticFilesExclusions);
+
         // Chỉ tài khoản Admin hợp lệ mới được quản lý chi nhánh.
         registry.addInterceptor(adminBranchInterceptor)
                 .addPathPatterns("/admin/branches/**")
@@ -74,13 +82,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
                                  "/admin/services/**")
                 .excludePathPatterns(staticFilesExclusions);
 
-        // Bảo vệ phân hệ Tài chính FT21 & FT22 (cả Web UI và REST API)
+        // Bảo vệ phân hệ Tài chính FT21 & FT22, FT24, FT25, FT32 (cả Web UI và REST API)
         registry.addInterceptor(financeAccessInterceptor)
                 .addPathPatterns(
                         "/invoices", "/invoices/**",
                         "/payments", "/payments/**",
+                        "/expenses", "/expenses/**",
+                        "/payroll", "/payroll/**",
                         "/api/invoices", "/api/invoices/**",
-                        "/api/payments", "/api/payments/**"
+                        "/api/payments", "/api/payments/**",
+                        "/api/expenses", "/api/expenses/**",
+                        "/api/payroll", "/api/payroll/**"
                 )
                 .excludePathPatterns(staticFilesExclusions);
     }

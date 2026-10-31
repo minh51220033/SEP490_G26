@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Chi phí Vận hành - FT25')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('expenses')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý Chi phí Vận hành')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header">
+                <div>
+                    <h1>Quản lý Chi phí Vận hành (FT25)</h1>
+                    <p>Theo dõi các khoản chi thực tế phát sinh tại phòng khám, quản lý nguồn chi thủ công và đồng bộ từ bảng lương, tạm ứng.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/expenses/create}" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-plus-circle"></i> Lập phiếu chi mới
+                    </a>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="fin-stat-card" style="border-left: 4px solid #ef4444;">
+                        <span class="fin-stat-card__label">Tổng thực chi hợp lệ trong kỳ lọc</span>
+                        <div class="fin-stat-card__value text-danger"
+                             th:text="${#numbers.formatDecimal(totalActiveAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                        <span class="fin-stat-card__hint">Đã trừ các phiếu chi bị hủy</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fin-stat-card" style="border-left: 4px solid #3b82f6;">
+                        <span class="fin-stat-card__label">Số lượng phiếu chi</span>
+                        <div class="fin-stat-card__value" th:text="${expenses.totalElements}">0</div>
+                        <span class="fin-stat-card__hint">Bao gồm cả chi thủ công và hệ thống</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fin-stat-card" style="border-left: 4px solid #10b981;">
+                        <span class="fin-stat-card__label">Trạng thái dữ liệu</span>
+                        <div class="fin-stat-card__value text-success" style="font-size: 1.25rem;">Đã kiểm soát liên kết</div>
+                        <span class="fin-stat-card__hint">Bảo vệ chống trùng chi từ Lương & Tạm ứng</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="fin-card mb-4">
+                <form th:action="@{/expenses}" method="get" class="fin-filter-bar">
+                    <div class="fin-form-group">
+                        <label for="branchSelect">Cơ sở chi nhánh</label>
+                        <select id="branchSelect" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả chi nhánh --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${b.branchId == selectedBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="categorySelect">Danh mục chi</label>
+                        <select id="categorySelect" name="category" class="fin-select">
+                            <option value="">-- Tất cả danh mục --</option>
+                            <option th:each="c : ${categories}" th:value="${c}" th:text="${c}"
+                                    th:selected="${c == selectedCategory}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="sourceSelect">Nguồn chi</label>
+                        <select id="sourceSelect" name="sourceType" class="fin-select">
+                            <option value="">-- Tất cả nguồn --</option>
+                            <option th:each="s : ${sourceTypes}" th:value="${s}" th:text="${s.name() == 'MANUAL' ? 'Khai báo thủ công' : (s.name() == 'PAYROLL' ? 'Bảng lương' : 'Tạm ứng lương')}"
+                                    th:selected="${s == selectedSourceType}"></option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date" id="startDate" name="startDate" class="fin-input"
+                               th:value="${startDate != null ? #temporals.format(startDate, 'yyyy-MM-dd') : ''}">
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date" id="endDate" name="endDate" class="fin-input"
+                               th:value="${endDate != null ? #temporals.format(endDate, 'yyyy-MM-dd') : ''}">
+                    </div>
+
+                    <div class="fin-form-group">
+                        <label for="isCancelled">Trạng thái</label>
+                        <select id="isCancelled" name="isCancelled" class="fin-select">
+                            <option value="">-- Tất cả --</option>
+                            <option value="false" th:selected="${isCancelled != null and !isCancelled}">Đang hiệu lực</option>
+                            <option value="true" th:selected="${isCancelled != null and isCancelled}">Đã hủy</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
+                        <label for="keyword">Từ khóa tìm kiếm</label>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Mã phiếu, người nhận, nội dung chi..." th:value="${keyword}">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc</button>
+                        <a th:href="@{/expenses}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table of Expenses -->
+            <div class="fin-card">
+                <div class="table-responsive">
+                    <table class="fin-table" data-enhanced-table="ft25-expenses">
+                        <thead>
+                        <tr>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 130px;">Mã phiếu</th>
+                            <th data-column-key="date" style="min-width: 110px;">Ngày chi</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Chi nhánh</th>
+                            <th data-column-key="category" style="min-width: 130px;">Danh mục</th>
+                            <th data-column-key="recipient" style="min-width: 150px;">Người nhận</th>
+                            <th data-column-key="amount" class="text-end" style="min-width: 130px;">Số tiền chi</th>
+                            <th data-column-key="method" style="min-width: 120px;">Phương thức</th>
+                            <th data-column-key="source" style="min-width: 120px;">Nguồn chi</th>
+                            <th data-column-key="status" style="min-width: 110px;">Trạng thái</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 160px;">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${expenses.content.isEmpty()}">
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Không tìm thấy khoản chi phí vận hành nào phù hợp điều kiện lọc.
+                            </td>
+                        </tr>
+                        <tr th:each="exp : ${expenses.content}">
+                            <td data-column-key="code" class="fw-semibold text-primary" th:text="${exp.expenseCode}"></td>
+                            <td data-column-key="date" th:text="${#temporals.format(exp.expenseDate, 'dd/MM/yyyy')}"></td>
+                            <td data-column-key="branch" th:text="${exp.branch.branchName}"></td>
+                            <td data-column-key="category"><span class="badge bg-light text-dark border" th:text="${exp.category}"></span></td>
+                            <td data-column-key="recipient" th:text="${exp.recipientName != null ? exp.recipientName : '-'}"></td>
+                            <td data-column-key="amount" class="text-end fw-bold text-danger"
+                                th:text="${#numbers.formatDecimal(exp.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="method">
+                                <span class="badge bg-secondary-subtle text-secondary"
+                                      th:text="${exp.paymentMethod != null ? (exp.paymentMethod.name() == 'CASH' ? 'Tiền mặt' : (exp.paymentMethod.name() == 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Thẻ')) : '-'}"></span>
+                            </td>
+                            <td data-column-key="source">
+                                <span th:if="${exp.sourceType.name() == 'MANUAL'}" class="badge bg-primary-subtle text-primary">Thủ công</span>
+                                <span th:if="${exp.sourceType.name() == 'PAYROLL'}" class="badge bg-info-subtle text-info">Bảng lương</span>
+                                <span th:if="${exp.sourceType.name() == 'SALARY_ADVANCE'}" class="badge bg-warning-subtle text-warning">Tạm ứng lương</span>
+                            </td>
+                            <td data-column-key="status">
+                                <span th:if="${!exp.isCancelled}" class="badge bg-success-subtle text-success">Hiệu lực</span>
+                                <span th:if="${exp.isCancelled}" class="badge bg-danger-subtle text-danger"
+                                      th:title="${exp.cancelledReason}">Đã hủy</span>
+                            </td>
+                            <td data-column-key="actions" class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-info"
+                                        th:data-expense-id="${exp.expenseId}"
+                                        th:data-expense-code="${exp.expenseCode}"
+                                        th:data-branch="${exp.branch != null ? exp.branch.branchName : ''}"
+                                        th:data-category="${exp.category}"
+                                        th:data-amount="${#numbers.formatDecimal(exp.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"
+                                        th:data-date="${#temporals.format(exp.expenseDate, 'dd/MM/yyyy')}"
+                                        th:data-recipient="${exp.recipientName != null ? exp.recipientName : ''}"
+                                        th:data-method="${exp.paymentMethod != null ? exp.paymentMethod : ''}"
+                                        th:data-source="${exp.sourceType != null ? exp.sourceType : ''}"
+                                        th:data-description="${exp.description != null ? exp.description : ''}"
+                                        th:data-is-cancelled="${exp.isCancelled}"
+                                        th:data-cancel-reason="${exp.cancelledReason != null ? exp.cancelledReason : ''}"
+                                        onclick="handleViewExpenseDetail(this)">
+                                    <i class="bi bi-eye"></i> Chi tiết
+                                </button>
+                                <button th:if="${!exp.isCancelled and exp.sourceType.name() == 'MANUAL'}"
+                                        type="button" class="btn btn-sm btn-outline-danger ms-1"
+                                        th:data-expense-id="${exp.expenseId}"
+                                        th:data-expense-code="${exp.expenseCode}"
+                                        onclick="handleOpenCancelModal(this)">
+                                    <i class="bi bi-x-circle"></i> Hủy
+                                </button>
+                                <a th:if="${!exp.isCancelled and exp.sourceType.name() == 'MANUAL'}"
+                                   th:href="@{/expenses/{id}/edit(id=${exp.expenseId})}"
+                                   class="btn btn-sm btn-outline-primary ms-1"
+                                   title="Chỉnh sửa chi phí thủ công">
+                                    <i class="bi bi-pencil"></i> Sửa
+                                </a>
+                                <span th:if="${exp.sourceType.name() != 'MANUAL'}" class="text-muted ms-1 small" title="Phiếu chi hệ thống được bảo vệ">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${expenses.totalPages > 1}" class="fin-pagination mt-4 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        Hiển thị trang <b th:text="${expenses.number + 1}"></b> / <span th:text="${expenses.totalPages}"></span>
+                        (Tổng <span th:text="${expenses.totalElements}"></span> phiếu chi)
+                    </span>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" th:classappend="${expenses.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number - 1})}">&laquo;</a>
+                        </li>
+                        <li class="page-item" th:each="p : ${#numbers.sequence(0, expenses.totalPages - 1)}"
+                            th:classappend="${p == expenses.number} ? 'active'">
+                            <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${p})}"
+                               th:text="${p + 1}"></a>
+                        </li>
+                        <li class="page-item" th:classappend="${expenses.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number + 1})}">&raquo;</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Xem Chi Tiết Phiếu Chi -->
+<div class="modal fade" id="expenseDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-info-circle text-primary me-2"></i>Chi tiết phiếu chi <span id="mExpenseCode" class="text-primary"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><strong>Cơ sở:</strong> <span id="mBranch"></span></div>
+                    <div class="col-6"><strong>Ngày chi:</strong> <span id="mDate"></span></div>
+                    <div class="col-6"><strong>Danh mục:</strong> <span id="mCategory" class="badge bg-light text-dark border"></span></div>
+                    <div class="col-6"><strong>Số tiền:</strong> <span id="mAmount" class="fw-bold text-danger"></span></div>
+                    <div class="col-6"><strong>Người nhận:</strong> <span id="mRecipient"></span></div>
+                    <div class="col-6"><strong>Hình thức:</strong> <span id="mMethod"></span></div>
+                    <div class="col-6"><strong>Nguồn chi:</strong> <span id="mSource"></span></div>
+                    <div class="col-6"><strong>Trạng thái:</strong> <span id="mStatus"></span></div>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Nội dung chi tiết:</label>
+                    <div id="mDescription" class="p-2 bg-light rounded border text-muted small mt-1" style="white-space: pre-wrap;"></div>
+                </div>
+                <div id="mCancelAlert" class="alert alert-danger py-2 small d-none">
+                    <strong>Lý do hủy:</strong> <span id="mCancelReason" style="white-space: pre-wrap;"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Hủy Phiếu Chi -->
+<div class="modal fade" id="cancelExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="cancelExpenseForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận hủy phiếu chi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn hủy phiếu chi <strong id="cancelExpenseCode" class="text-danger"></strong>?</p>
+                    <div class="mb-3">
+                        <label for="cancelReasonInput" class="form-label fw-bold">Lý do hủy phiếu chi <span class="text-danger">*</span></label>
+                        <textarea id="cancelReasonInput" name="reason" class="form-control" rows="3" required
+                                  placeholder="Nhập lý do hủy phiếu chi..."></textarea>
+                    </div>
+                    <div class="alert alert-warning py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i> Phiếu chi sau khi hủy sẽ không được tính vào tổng chi phí hoạt động của phòng khám.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bỏ qua</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i> Xác nhận hủy</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function handleViewExpenseDetail(btn) {
+        if (!btn || !btn.dataset) return;
+        const ds = btn.dataset;
+        const isCancelled = ds.isCancelled === 'true';
+        viewExpenseDetail(
+            ds.expenseId,
+            ds.expenseCode,
+            ds.branch,
+            ds.category,
+            ds.amount,
+            ds.date,
+            ds.recipient,
+            ds.method,
+            ds.source,
+            ds.description,
+            isCancelled,
+            ds.cancelReason
+        );
+    }
+
+    function handleOpenCancelModal(btn) {
+        if (!btn || !btn.dataset) return;
+        const id = btn.dataset.expenseId;
+        const code = btn.dataset.expenseCode;
+        openCancelModal(id, code);
+    }
+
+    function viewExpenseDetail(id, code, branch, category, amount, date, recipient, method, source, desc, isCancelled, cancelReason) {
+        document.getElementById('mExpenseCode').textContent = code || '';
+        document.getElementById('mBranch').textContent = branch || '';
+        document.getElementById('mDate').textContent = date || '';
+        document.getElementById('mCategory').textContent = category || '';
+        document.getElementById('mAmount').textContent = amount || '';
+        document.getElementById('mRecipient').textContent = recipient || '-';
+        document.getElementById('mMethod').textContent = method || '-';
+        document.getElementById('mSource').textContent = source === 'MANUAL' ? 'Thủ công' : (source === 'PAYROLL' ? 'Bảng lương' : (source === 'SALARY_ADVANCE' ? 'Tạm ứng' : (source || '-')));
+        document.getElementById('mStatus').textContent = isCancelled ? 'Đã hủy' : 'Hiệu lực';
+        document.getElementById('mDescription').textContent = desc || '-';
+
+        const cancelBox = document.getElementById('mCancelAlert');
+        if (isCancelled) {
+            cancelBox.classList.remove('d-none');
+            document.getElementById('mCancelReason').textContent = cancelReason || 'Không có lý do chi tiết';
+        } else {
+            cancelBox.classList.add('d-none');
+        }
+
+        new bootstrap.Modal(document.getElementById('expenseDetailModal')).show();
+    }
+
+    function openCancelModal(id, code) {
+        document.getElementById('cancelExpenseCode').textContent = code || '';
+        document.getElementById('cancelExpenseForm').action = '/expenses/' + id + '/cancel';
+        new bootstrap.Modal(document.getElementById('cancelExpenseModal')).show();
+    }
+</script>
+</body>
+</html>

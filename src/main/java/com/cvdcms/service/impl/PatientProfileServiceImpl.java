@@ -6,6 +6,7 @@ import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
+import com.cvdcms.repository.UserRepository;
 
 import com.cvdcms.service.PatientProfileService;
 import org.springframework.stereotype.Service;
@@ -18,12 +19,24 @@ public class PatientProfileServiceImpl implements PatientProfileService {
 
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
+    private final UserRepository userRepository;
 
     public PatientProfileServiceImpl(
             PatientProfileRepository patientProfileRepository,
-            BranchRepository branchRepository) {
+            BranchRepository branchRepository,
+            UserRepository userRepository) {
         this.patientProfileRepository = patientProfileRepository;
         this.branchRepository = branchRepository;
+        this.userRepository = userRepository;
+    }
+
+    // Đồng bộ cơ sở khám đã chọn thành chi nhánh của tài khoản (chỉ khi tài khoản chưa có chi nhánh),
+    // để lọc danh sách tài khoản theo chi nhánh không bỏ sót bệnh nhân.
+    private void syncAccountBranch(User user, Branch branch) {
+        if (user.getBranch() == null && branch != null) {
+            user.setBranch(branch);
+            userRepository.save(user);
+        }
     }
 
     /**
@@ -74,6 +87,8 @@ public class PatientProfileServiceImpl implements PatientProfileService {
         profile.setIsDefault(true);
         profile.setStatus("ACTIVE");
         profile.setMedicalHistoryCompleted(false);
+
+        syncAccountBranch(user, branch);
 
         return patientProfileRepository.save(profile);
     }
@@ -153,6 +168,10 @@ public class PatientProfileServiceImpl implements PatientProfileService {
         profile.setIsDefault(firstProfile);
         profile.setStatus("ACTIVE");
         profile.setMedicalHistoryCompleted(false);
+
+        if (firstProfile) {
+            syncAccountBranch(user, branch);
+        }
 
         return patientProfileRepository.save(profile);
     }

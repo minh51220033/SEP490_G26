@@ -511,13 +511,13 @@
                             </div>
 
                             <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1 shadow-xs" onclick="openReExamModal()">
-                                    <i class="bi bi-calendar2-plus-fill"></i>
-                                    <span>+ Hẹn tái khám</span>
-                                </button>
                                 <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-presc" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
                                     <i class="bi bi-plus-lg"></i>
                                     <span>+ Kê đơn thuốc</span>
+                                </button>
+                                <button type="button" class="df-btn-white-plan" onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
+                                    <i class="bi bi-calendar2-plus-fill"></i>
+                                    <span>Hẹn tái khám</span>
                                 </button>
                                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                                     <i class="bi bi-lock-fill me-1"></i>Đã khóa (BR-EMR-02)
@@ -540,9 +540,25 @@
                                 </thead>
                                 <tbody id="prescriptionsTableBody">
                                 <tr th:if="${prescriptions == null or prescriptions.isEmpty()}" id="emptyPrescRow">
-                                    <td colspan="6" class="text-center py-4 text-muted">
-                                        <i class="bi bi-prescription2 fs-3 d-block mb-1 text-secondary"></i>
-                                        <span>Chưa có đơn thuốc nào được kê cho ca khám này. Nhấn <strong>"+ Kê đơn thuốc"</strong> để tạo đơn mới.</span>
+                                    <td colspan="6" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
+                                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
+                                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
+                                                <i class="bi bi-prescription2" style="font-size: 42px; color: #0284c7;"></i>
+                                            </div>
+                                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
+                                                Bệnh nhân chưa có Đơn thuốc nào cho ca khám này
+                                            </h4>
+                                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
+                                                Bác sĩ có thể kê đơn thuốc mới trực tiếp từ danh mục dược phẩm hoặc chọn nhanh từ các mẫu đơn thuốc đã thiết lập sẵn.
+                                            </p>
+                                            <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                                    style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 15px;"
+                                                    onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                                                <i class="bi bi-plus-circle-fill fs-6"></i>
+                                                <span>Kê đơn thuốc mới</span>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr th:each="pr : ${prescriptions}" th:id="'pr-row-' + ${pr.prescriptionId}">
@@ -897,7 +913,7 @@
 <!-- FT15: MODAL LẬP KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ (SCR-15.2)                -->
 <!-- Đã tách riêng thành component: doctor/fragments/treatment-plans.html -->
 <!-- ===================================================================== -->
-<div th:replace="~{doctor/fragments/treatment-plans :: treatmentPlanModal}"></div>
+<!-- modal moved -->
 
 <!-- ===================================================================== -->
 <!-- MODAL KÊ ĐƠN THUỐC (SCR-18.3 & SCR-18.4)                               -->
@@ -1193,13 +1209,40 @@
         updateToothInputFromSet();
     }
 
+    function updateOdontogramColorByType(type) {
+        const curType = type || document.querySelector('input[name="diagnosisType"]:checked')?.value || 'MAIN';
+        document.querySelectorAll('.tooth-group').forEach(el => {
+            el.classList.remove('has-caries', 'has-caries-main', 'has-caries-secondary', 'has-caries-diff', 'is-selected');
+            const tid = el.getAttribute('data-tooth');
+            if (selectedTeeth.has(tid)) {
+                if (curType === 'MAIN') {
+                    el.classList.add('has-caries-main');
+                } else if (curType === 'SECONDARY') {
+                    el.classList.add('has-caries-secondary');
+                } else {
+                    el.classList.add('has-caries-diff');
+                }
+            }
+        });
+    }
+
     function selectQuickTeeth(type) {
         selectedTeeth.clear();
-        if (type === 'ALL') {
+        if (type === 'CLEAR') {
             document.querySelectorAll('.tooth-group').forEach(el => {
-                const tid = el.getAttribute('data-tooth');
-                if (tid) selectedTeeth.add(tid);
+                el.classList.remove('has-caries', 'has-caries-main', 'has-caries-secondary', 'has-caries-diff', 'is-selected');
             });
+            document.querySelectorAll('#diagnosisTableBody tr').forEach(r => r.classList.remove('is-inspecting'));
+            const inputEl = document.getElementById('toothNumbersInput');
+            const hintEl = document.getElementById('toothCountHint');
+            if (inputEl) inputEl.value = '';
+            if (hintEl) hintEl.innerText = 'Đã bỏ chọn tất cả răng';
+            return;
+        }
+        const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+                       '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+        if (type === 'ALL') {
+            all32.forEach(t => selectedTeeth.add(t));
         } else if (type === 'UPPER') {
             const uppers = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'];
             uppers.forEach(t => selectedTeeth.add(t));
@@ -1218,24 +1261,24 @@
     }
 
     function syncActiveTeethUI() {
-        document.querySelectorAll('.tooth-group').forEach(el => {
-            const tid = el.getAttribute('data-tooth');
-            if (selectedTeeth.has(tid)) {
-                el.classList.add('is-selected');
-            } else {
-                el.classList.remove('is-selected');
-            }
-        });
+        const curType = document.querySelector('input[name="diagnosisType"]:checked')?.value || 'MAIN';
+        updateOdontogramColorByType(curType);
     }
 
     function updateToothInputFromSet() {
         const inputEl = document.getElementById('toothNumbersInput');
         const hintEl = document.getElementById('toothCountHint');
+        const curType = document.querySelector('input[name="diagnosisType"]:checked')?.value || 'MAIN';
+        const badgeColor = curType === 'MAIN' ? 'bg-danger text-white' : (curType === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
+        const typeText = curType === 'MAIN' ? 'Chính' : (curType === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
 
-        if (selectedTeeth.size > 0) {
+        if (selectedTeeth.size === 32) {
+            if (inputEl) inputEl.value = 'Toàn hàm (32 răng)';
+            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+        } else if (selectedTeeth.size > 0) {
             const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
             if (inputEl) inputEl.value = sorted.join(', ');
-            if (hintEl) hintEl.innerHTML = `<span class="badge bg-primary text-white">Đang chọn: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
         } else {
             if (inputEl) inputEl.value = '';
             if (hintEl) hintEl.innerText = 'Chưa chọn răng (Mặc định toàn hàm)';
@@ -1244,6 +1287,11 @@
 
     // Chiều 2: Nhập số răng bằng tay -> Tự động đánh dấu màu trên sơ đồ đồ họa
     function handleToothManualInput(val) {
+        const trimmed = (val || '').trim().toLowerCase();
+        if (trimmed === 'toàn hàm' || trimmed === 'toàn hàm (32 răng)' || trimmed === 'all') {
+            selectQuickTeeth('ALL');
+            return;
+        }
         const tokens = (val || '').toUpperCase().replace(/R/g, '').split(/[\s,]+/);
         const parsed = new Set();
         tokens.forEach(tok => {
@@ -1254,12 +1302,7 @@
         });
         selectedTeeth = parsed;
         syncActiveTeethUI();
-        const hintEl = document.getElementById('toothCountHint');
-        if (hintEl) {
-            hintEl.innerHTML = selectedTeeth.size > 0
-                ? `<span class="badge bg-primary text-white">Đang chọn: ${Array.from(selectedTeeth).map(t => 'R' + t).join(', ')}</span>`
-                : 'Chưa chọn răng (Mặc định toàn hàm)';
-        }
+        updateToothInputFromSet();
     }
 
     // 2. Cụm 5 mặt răng MODBL
@@ -1297,27 +1340,46 @@
         updateSurfaceFormula();
     }
 
-    // 3. Quét bảng chẩn đoán để tô đỏ răng bị bệnh lý (has-caries) trên sơ đồ
+    // 3. Quét bảng chẩn đoán để tô màu răng bệnh lý theo đúng phân loại (Đỏ: Chính, Vàng: Kèm theo, Xanh: Phân biệt)
     function syncDiagnosedTeethFromTable() {
         const rows = document.querySelectorAll('#diagnosisTableBody tr:not(#emptyRow)');
-        const diagnosedSet = new Set();
+        const toothTypeMap = new Map();
+        const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+                       '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
 
         rows.forEach(r => {
-            const toothAttr = r.getAttribute('data-teeth') || '';
-            const textContent = r.textContent || '';
-            const combined = toothAttr + ' ' + textContent;
-            const matches = combined.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
-            if (matches) {
-                matches.forEach(m => diagnosedSet.add(m));
+            const toothAttr = (r.getAttribute('data-teeth') || '').trim();
+            const type = r.getAttribute('data-type') || 'SECONDARY';
+            const matches = toothAttr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
+            const isFull = !toothAttr || toothAttr === '' || toothAttr.toLowerCase().includes('toàn hàm') || toothAttr.toLowerCase().includes('all') || !matches || matches.length === 0;
+
+            if (isFull) {
+                all32.forEach(m => {
+                    if (!toothTypeMap.has(m) || type === 'MAIN') {
+                        toothTypeMap.set(m, type);
+                    }
+                });
+            } else if (matches) {
+                matches.forEach(m => {
+                    if (!toothTypeMap.has(m) || type === 'MAIN') {
+                        toothTypeMap.set(m, type);
+                    }
+                });
             }
         });
 
         document.querySelectorAll('.tooth-group').forEach(el => {
             const tid = el.getAttribute('data-tooth');
-            if (diagnosedSet.has(tid)) {
-                el.classList.add('has-caries');
-            } else {
-                el.classList.remove('has-caries');
+            el.classList.remove('has-caries', 'has-caries-main', 'has-caries-secondary', 'has-caries-diff', 'is-selected');
+            if (toothTypeMap.has(tid)) {
+                const type = toothTypeMap.get(tid);
+                if (type === 'MAIN') {
+                    el.classList.add('has-caries-main');
+                } else if (type === 'SECONDARY') {
+                    el.classList.add('has-caries-secondary');
+                } else {
+                    el.classList.add('has-caries-diff');
+                }
             }
         });
     }
@@ -1441,7 +1503,132 @@
         document.querySelectorAll('#commonDiseasesListBody tr').forEach(r => r.classList.remove('is-selected'));
     }
 
-    // 7. Gửi chẩn đoán qua AJAX lưu vào Backend
+    // 7. Gửi chẩn đoán qua AJAX lưu vào Backend (Hỗ trợ Thêm mới & Cập nhật chẩn đoán)
+    var currentEditingDiagId = null;
+
+    function inspectDiagnosisRow(rowEl) {
+        if (!rowEl) return;
+        const diagId = rowEl.getAttribute('data-id');
+        const teethStr = (rowEl.getAttribute('data-teeth') || '').trim();
+        const icd = rowEl.getAttribute('data-icd') || '';
+        const text = rowEl.getAttribute('data-text') || '';
+        const nameVi = rowEl.getAttribute('data-name-vi') || text;
+        const nameEn = rowEl.getAttribute('data-name-en') || '';
+        const notes = rowEl.getAttribute('data-notes') || '';
+        const type = rowEl.getAttribute('data-type') || 'SECONDARY';
+
+        currentEditingDiagId = diagId;
+
+        // 1. Đánh dấu hàng đang inspect trong bảng
+        document.querySelectorAll('#diagnosisTableBody tr').forEach(r => r.classList.remove('is-inspecting'));
+        rowEl.classList.add('is-inspecting');
+
+        // 2. Chọn radio phân loại trước
+        const radioEl = document.querySelector(`input[name="diagnosisType"][value="${type}"]`);
+        if (radioEl) {
+            radioEl.checked = true;
+        }
+
+        // 3. Highlight trên sơ đồ răng FDI theo màu phân loại
+        selectedTeeth.clear();
+        const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+                       '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+        const matches = teethStr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g) || [];
+        const isFullMouth = !teethStr || teethStr === '' || teethStr.toLowerCase().includes('toàn hàm') || teethStr.toLowerCase().includes('all') || matches.length === 0;
+
+        if (isFullMouth) {
+            all32.forEach(t => selectedTeeth.add(t));
+        } else {
+            matches.forEach(t => selectedTeeth.add(t));
+        }
+
+        // Tô màu răng theo đúng type của chẩn đoán (Đỏ: Chính, Vàng: Kèm theo, Xanh: Phân biệt)
+        updateOdontogramColorByType(type);
+
+        const inputEl = document.getElementById('toothNumbersInput');
+        const hintEl = document.getElementById('toothCountHint');
+        const badgeColor = type === 'MAIN' ? 'bg-danger text-white' : (type === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
+        const typeText = type === 'MAIN' ? 'Chính' : (type === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
+
+        if (inputEl) {
+            inputEl.value = isFullMouth ? 'Toàn hàm (32 răng)' : matches.join(', ');
+        }
+        if (hintEl) {
+            if (isFullMouth) {
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+            } else {
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang xem ${typeText}: ${matches.map(t => 'R' + t).join(', ')}</span>`;
+            }
+        }
+
+        // 4. Đổ dữ liệu chi tiết lên Form đầy đủ không bị thiếu
+        selectIcd({
+            icd10Code: icd,
+            diseaseNameVi: nameVi || text,
+            diseaseNameEn: nameEn
+        });
+
+        const diagTextEl = document.getElementById('diagTextInput');
+        if (diagTextEl) diagTextEl.value = text || nameVi || '';
+
+        const notesEl = document.getElementById('notesInput');
+        if (notesEl) notesEl.value = (notes && notes !== '-') ? notes : '';
+
+        // Nhận diện mặt răng MODBL
+        clearSurfaces();
+        const surfaceMatch = teethStr.match(/mặt\s*([a-zA-Z]+)/i);
+        if (surfaceMatch) {
+            const surfs = surfaceMatch[1].toUpperCase().split('');
+            surfs.forEach(s => {
+                const chip = document.querySelector(`.surface-chip[data-surface="${s}"]`);
+                if (chip) toggleSurface(chip, s);
+            });
+        }
+
+        // 5. Chuyển form sang chế độ xem / sửa
+        const formTitle = document.getElementById('formTitleText');
+        if (formTitle) formTitle.innerText = `Chỉnh sửa chẩn đoán #${icd}`;
+        const formModeBadge = document.getElementById('formModeBadge');
+        if (formModeBadge) {
+            formModeBadge.innerHTML = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2.5 py-1 rounded-pill"><i class="bi bi-pencil-square me-1"></i>Đang xem &amp; sửa</span>`;
+        }
+
+        const btn = document.getElementById('btnSubmitDiagnosis');
+        if (btn) {
+            btn.className = 'btn btn-success btn-sm fw-bold';
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Cập nhật chẩn đoán';
+        }
+
+        const odontocard = document.querySelector('.odontogram-card');
+        if (odontocard) {
+            odontocard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function resetForm() {
+        currentEditingDiagId = null;
+        const form = document.getElementById('diagnosisForm');
+        if (form) form.reset();
+        clearSelectedIcd();
+        clearTeethSelection();
+        clearSurfaces();
+        document.querySelectorAll('#diagnosisTableBody tr').forEach(r => r.classList.remove('is-inspecting'));
+
+        const mainRadio = document.querySelector('input[name="diagnosisType"][value="MAIN"]');
+        if (mainRadio) mainRadio.checked = true;
+
+        const formTitle = document.getElementById('formTitleText');
+        if (formTitle) formTitle.innerText = 'Ghi nhận chẩn đoán bệnh lý & Tổn thương răng';
+        const formModeBadge = document.getElementById('formModeBadge');
+        if (formModeBadge) formModeBadge.innerHTML = '';
+
+        const btn = document.getElementById('btnSubmitDiagnosis');
+        if (btn) {
+            btn.className = 'btn btn-df-purple btn-sm';
+            btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán';
+        }
+    }
+
     function submitDiagnosis(e) {
         e.preventDefault();
         const visitId = document.getElementById('visitId')?.value;
@@ -1458,7 +1645,13 @@
         const diagnosisType = typeInput ? typeInput.value : 'MAIN';
 
         // Chuẩn hóa vị trí răng & mặt răng MODBL
-        let toothNumbers = document.getElementById('toothNumbersInput')?.value.trim() || '';
+        let rawTooth = document.getElementById('toothNumbersInput')?.value.trim() || '';
+        let toothNumbers = '';
+        if (rawTooth.toLowerCase().includes('toàn hàm') || selectedTeeth.size === 32) {
+            toothNumbers = 'Toàn hàm';
+        } else {
+            toothNumbers = rawTooth;
+        }
         if (selectedSurfaces.size > 0) {
             const surfaceStr = `(Mặt ${Array.from(selectedSurfaces).sort().join('')})`;
             if (toothNumbers && !toothNumbers.includes('(Mặt')) {
@@ -1484,6 +1677,43 @@
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+        }
+
+        if (currentEditingDiagId) {
+            // Chế độ CẬP NHẬT: xóa cũ và lưu lại
+            fetch(`/api/v1/diagnoses/${currentEditingDiagId}`, { method: 'DELETE' })
+                .then(delRes => {
+                    return fetch('/api/v1/diagnoses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || 'Có lỗi xảy ra khi cập nhật'); });
+                    }
+                    return res.json();
+                })
+                .then(saved => {
+                    showToast(`✓ Đã cập nhật chẩn đoán ${saved.icd10Code} thành công!`);
+                    const oldRow = document.getElementById(`diag-row-${currentEditingDiagId}`);
+                    if (oldRow) oldRow.remove();
+                    addDiagnosisRowToTable(saved);
+                    syncDiagnosedTeethFromTable();
+                    resetForm();
+                })
+                .catch(err => {
+                    showToast(err.message, true);
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.className = 'btn btn-df-purple btn-sm';
+                        btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán';
+                    }
+                });
+            return;
         }
 
         fetch('/api/v1/diagnoses', {
@@ -1567,10 +1797,18 @@
 
         const tr = document.createElement('tr');
         tr.id = `diag-row-${d.diagnosisId}`;
+        tr.setAttribute('data-id', d.diagnosisId);
         tr.setAttribute('data-teeth', d.toothNumbers || '');
         tr.setAttribute('data-icd', d.icd10Code || '');
         tr.setAttribute('data-text', d.diagnosisText || '');
+        tr.setAttribute('data-name-vi', d.diseaseNameVi || d.diagnosisText || '');
+        tr.setAttribute('data-name-en', d.diseaseNameEn || '');
+        tr.setAttribute('data-notes', d.notes || '');
         tr.setAttribute('data-type', d.diagnosisType || 'SECONDARY');
+        tr.className = 'df-diag-interactive-row';
+        tr.onclick = function() { inspectDiagnosisRow(this); };
+        tr.style.cursor = 'pointer';
+        tr.title = 'Bấm để xem chi tiết, tô màu răng trên sơ đồ & chỉnh sửa';
         tr.innerHTML = `
             <td style="padding: 16px 20px;"><span class="badge rounded-pill px-3 py-2" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 800;">${toothDisplay}</span></td>
             <td style="padding: 16px;"><span class="df-list-code" style="font-size: 13.5px; padding: 5px 12px;">${d.icd10Code}</span></td>
@@ -1581,12 +1819,16 @@
             <td style="padding: 16px;">${badgeHtml}</td>
             <td style="padding: 16px;"><span class="text-secondary" style="font-size: 13.5px; font-weight: 500;">${notesDisplay}</span></td>
             <td class="text-center" style="padding: 16px 20px;">
-                <div class="d-inline-flex align-items-center justify-content-center gap-2">
-                    <button type="button" class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;" title="Chuyển ngay chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)" onclick="openPlanModalForSingleDiagRow(this.closest('tr'))">
+                <div class="d-inline-flex align-items-center justify-content-center gap-1.5">
+                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;" title="Xem chi tiết & tô màu răng trên sơ đồ FDI" onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
+                        <i class="bi bi-eye-fill"></i>
+                        <span>Chi tiết</span>
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;" title="Chuyển ngay chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)" onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
                         <i class="bi bi-diagram-3-fill"></i>
                         <span>Lập phác đồ</span>
                     </button>
-                    <button type="button" class="btn btn-light text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px; border: 1px solid #fecdd3; background: #fff1f2;" title="Xóa" onclick="deleteDiagnosis(${d.diagnosisId})">
+                    <button type="button" class="btn btn-light text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; border: 1px solid #fecdd3; background: #fff1f2;" title="Xóa" onclick="event.stopPropagation(); deleteDiagnosis(${d.diagnosisId})">
                         <i class="bi bi-trash3-fill"></i>
                     </button>
                 </div>
@@ -1634,16 +1876,6 @@
         }
     }
 
-    function resetForm() {
-        const form = document.getElementById('diagnosisForm');
-        if (form) form.reset();
-        clearSelectedIcd();
-        clearTeethSelection();
-        clearSurfaces();
-        const mainRadio = document.querySelector('input[name="diagnosisType"][value="MAIN"]');
-        if (mainRadio) mainRadio.checked = true;
-    }
-
     // Gắn sự kiện khi trang hoàn tất tải DOM
     document.addEventListener('DOMContentLoaded', () => {
         // Gắn sự kiện click cho từng răng trên sơ đồ đồ họa FDI
@@ -1651,6 +1883,28 @@
             toothEl.addEventListener('click', function(e) {
                 const toothId = this.getAttribute('data-tooth');
                 if (toothId) toggleTooth(toothId);
+            });
+        });
+
+        // Thay đổi màu răng & badge ngay lập tức khi người dùng click chuyển đổi Radio phân loại (Chính / Kèm theo / Phân biệt)
+        document.querySelectorAll('input[name="diagnosisType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const newType = this.value;
+                if (selectedTeeth.size > 0) {
+                    updateOdontogramColorByType(newType);
+                    const hintEl = document.getElementById('toothCountHint');
+                    if (hintEl) {
+                        const isAll = selectedTeeth.size === 32;
+                        const badgeColor = newType === 'MAIN' ? 'bg-danger text-white' : (newType === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
+                        const typeText = newType === 'MAIN' ? 'Chính' : (newType === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
+                        if (isAll) {
+                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+                        } else {
+                            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
+                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+                        }
+                    }
+                }
             });
         });
 
@@ -1663,8 +1917,7 @@
             }
         });
 
-        // Đồng bộ răng bị bệnh lý từ dữ liệu ban đầu
-        syncDiagnosedTeethFromTable();
+        // Khởi tạo công thức mặt răng ban đầu
         updateSurfaceFormula();
     });
 
@@ -3015,9 +3268,25 @@
         if (count === 0) {
             document.getElementById('prescriptionsTableBody').innerHTML = `
                 <tr id="emptyPrescRow">
-                    <td colspan="7" class="text-center py-4 text-muted">
-                        <i class="bi bi-prescription2 fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Chưa có đơn thuốc nào được kê cho ca khám này. Nhấn <strong>"+ Kê đơn thuốc mới"</strong> để tạo đơn mới.</span>
+                    <td colspan="7" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
+                                <i class="bi bi-prescription2" style="font-size: 42px; color: #0284c7;"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
+                                Bệnh nhân chưa có Đơn thuốc nào cho ca khám này
+                            </h4>
+                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
+                                Bác sĩ có thể kê đơn thuốc mới trực tiếp từ danh mục dược phẩm hoặc chọn nhanh từ các mẫu đơn thuốc đã thiết lập sẵn. Giá thuốc dự kiến sẽ tự động đồng bộ sang bộ phận Kế toán.
+                            </p>
+                            <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                    style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 15px;"
+                                    onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                                <i class="bi bi-plus-circle-fill fs-6"></i>
+                                <span>Kê đơn thuốc mới</span>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;

@@ -60,12 +60,19 @@ public class ReceptionMembershipController {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User u)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập để tiếp tục.");
         }
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAuthorized = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> {
-            String s = String.valueOf(r).toUpperCase();
-            return s.contains("ADMIN") || s.contains("LE_TAN") || s.contains("KE_TOAN");
-        });
+        boolean isAuthorized = (u.getUserId() != null && (
+                userRepository.hasActiveAdminRole(u.getUserId())
+                || userRepository.hasActivePermission(u.getUserId(), "PATIENT_PROFILE_MANAGE")
+                || userRepository.hasActivePermission(u.getUserId(), "CUSTOMER_CARE_MANAGE")
+        ));
+        if (!isAuthorized) {
+            Object roleNames = session.getAttribute("roleNames");
+            isAuthorized = roleNames instanceof Collection<?> c
+                    && c.stream().anyMatch(r -> {
+                String s = String.valueOf(r).toUpperCase();
+                return s.contains("ADMIN");
+            });
+        }
         if (!isAuthorized) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập thông tin thẻ thành viên.");
         }
@@ -78,6 +85,9 @@ public class ReceptionMembershipController {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
+        if (branchIds == null || branchIds.isEmpty()) {
+            return branchRepository.findAll();
+        }
         return branchRepository.findAllById(branchIds);
     }
 
@@ -148,7 +158,7 @@ public class ReceptionMembershipController {
 
         boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
         if (!isAdmin) {
-            List<Long> allowedBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
+            List<Long> allowedBranchIds = resolveAllowedBranches(user.getUserId()).stream().map(Branch::getBranchId).toList();
             com.cvdcms.entity.PatientProfile patient = patientProfileRepository.findById(profileId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ bệnh nhân ID: " + profileId));
             Long preferredBranchId = patient.getPreferredBranch() != null ? patient.getPreferredBranch().getBranchId() : null;

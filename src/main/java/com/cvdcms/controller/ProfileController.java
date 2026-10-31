@@ -102,6 +102,19 @@ public class ProfileController {
     }
 
 
+    /**
+     * Chỉ tài khoản có vai trò BENH_NHAN mới có hồ sơ bệnh nhân.
+     * Admin và nhân sự không hiển thị khu vực hồ sơ bệnh nhân.
+     */
+    private boolean isPatientUser(User user) {
+        return user != null
+                && user.getRoles() != null
+                && user.getRoles().stream().anyMatch(role ->
+                role != null
+                        && role.getRoleName() != null
+                        && "BENH_NHAN".equalsIgnoreCase(role.getRoleName().trim()));
+    }
+
     // Kiểm tra định dạng email cơ bản.
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile(
@@ -127,6 +140,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute(
                 "currentBranchName",
                 user.getBranch() != null
@@ -206,6 +221,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute("patientProfiles", patientProfiles);
         model.addAttribute("patientProfile", selectedProfile);
         model.addAttribute(
@@ -263,6 +280,7 @@ public class ProfileController {
 
             model.addAttribute("error", "Email không hợp lệ.");
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             return "profile/edit";
         }
 
@@ -275,6 +293,8 @@ public class ProfileController {
             );
 
             model.addAttribute("user", user);
+
+            model.addAttribute("isPatient", isPatientUser(user));
             return "profile/edit";
         }
 
@@ -291,6 +311,7 @@ public class ProfileController {
                     "Số điện thoại này đã được tài khoản khác sử dụng."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             return "profile/edit";
         }
 
@@ -452,6 +473,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute(
                 "branches",
                 branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
@@ -565,6 +588,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute(
                 "branches",
                 branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
@@ -620,6 +645,7 @@ public class ProfileController {
                     "Vui lòng nhập đầy đủ và kiểm tra lại thông tin."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute(
                     "branches",
                     branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
@@ -634,6 +660,7 @@ public class ProfileController {
                     "Ngày sinh không được lớn hơn ngày hiện tại."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute(
                     "branches",
                     branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
@@ -663,6 +690,7 @@ public class ProfileController {
         } catch (IllegalArgumentException | IllegalStateException ex) {
             model.addAttribute("error", ex.getMessage());
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute(
                     "branches",
                     branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
@@ -743,6 +771,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute("patientProfiles", patientProfiles);
         model.addAttribute("patientProfile", selectedProfile);
         model.addAttribute(
@@ -955,6 +985,7 @@ public class ProfileController {
 
         // Dữ liệu tài khoản.
         model.addAttribute("user", user);
+        model.addAttribute("isPatient", isPatientUser(user));
 
         // Dữ liệu danh sách và hồ sơ đang được chọn.
         model.addAttribute("patientProfiles", patientProfiles);
@@ -999,10 +1030,13 @@ public class ProfileController {
                             + "Vui lòng thiết lập chi nhánh trước."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             return "profile/add-patient";
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute("branch", user.getBranch());
 
         return "profile/add-patient";
@@ -1047,6 +1081,7 @@ public class ProfileController {
                     "Tài khoản chưa được gán chi nhánh."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             return "profile/add-patient";
         }
 
@@ -1074,6 +1109,7 @@ public class ProfileController {
                     "Vui lòng nhập đầy đủ và kiểm tra lại thông tin."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute("branch", user.getBranch());
             return "profile/add-patient";
         }
@@ -1084,6 +1120,7 @@ public class ProfileController {
                     "Ngày sinh không được lớn hơn ngày hiện tại."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute("branch", user.getBranch());
             return "profile/add-patient";
         }
@@ -1095,6 +1132,7 @@ public class ProfileController {
                     "Vui lòng nhập thông tin bệnh nền."
             );
             model.addAttribute("user", user);
+            model.addAttribute("isPatient", isPatientUser(user));
             model.addAttribute("branch", user.getBranch());
             return "profile/add-patient";
         }
@@ -1148,6 +1186,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute("branch", user.getBranch());
 
         return "profile/add-patient";
@@ -1167,6 +1207,8 @@ public class ProfileController {
         }
 
         model.addAttribute("user", user);
+
+        model.addAttribute("isPatient", isPatientUser(user));
         model.addAttribute(
                 "branches",
                 branchRepository.findByIsActiveTrueOrderByBranchNameAsc()

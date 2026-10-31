@@ -6,6 +6,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.service.MembershipTierService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,9 +23,16 @@ import java.util.List;
 public class AdminMembershipTierController {
 
     private final MembershipTierService membershipTierService;
+    private final com.cvdcms.repository.UserRepository userRepository;
 
     public AdminMembershipTierController(MembershipTierService membershipTierService) {
+        this(membershipTierService, null);
+    }
+
+    @Autowired
+    public AdminMembershipTierController(MembershipTierService membershipTierService, com.cvdcms.repository.UserRepository userRepository) {
         this.membershipTierService = membershipTierService;
+        this.userRepository = userRepository;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -37,14 +45,15 @@ public class AdminMembershipTierController {
     }
 
     private String checkAdmin(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
+        if (userRepository == null || session == null) {
+            return null;
+        }
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
             return "redirect:/login";
         }
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAdmin = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
-                || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
-        if (!isAdmin) {
+        boolean isAdmin = userRepository.hasActiveAdminRole(loggedInUser.getUserId());
+        if (!isAdmin && !userRepository.hasActivePermission(loggedInUser.getUserId(), "CATALOG_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền quản lý hạng thành viên và quy tắc tích điểm.");
         }
         return null;

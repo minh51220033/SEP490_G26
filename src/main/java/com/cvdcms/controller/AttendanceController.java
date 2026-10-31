@@ -29,10 +29,12 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
     private final BranchService branchService;
+    private final com.cvdcms.repository.UserRepository userRepository;
 
-    public AttendanceController(AttendanceService attendanceService, BranchService branchService) {
+    public AttendanceController(AttendanceService attendanceService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
         this.attendanceService = attendanceService;
         this.branchService = branchService;
+        this.userRepository = userRepository;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -43,11 +45,11 @@ public class AttendanceController {
     }
 
     private void requireAdmin(HttpSession session) {
-        Object roleNames = session.getAttribute("roleNames");
-        boolean isAdmin = roleNames instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
-                        || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
-        if (!isAdmin) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem chấm công toàn chi nhánh.");
         }
     }
@@ -89,6 +91,9 @@ public class AttendanceController {
         if (isPureAdmin(session)) {
             return "redirect:/admin/attendance";
         }
+        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chấm công cá nhân.");
+        }
         addLayoutAttributes(session, model);
 
         YearMonth selected = month != null ? month : YearMonth.now();
@@ -119,6 +124,10 @@ public class AttendanceController {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
         }
+        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+            ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
+            return "redirect:/home";
+        }
         try {
             AttendanceRecord r = attendanceService.checkIn(user.getUserId(), clientIp(request));
             ra.addFlashAttribute("successMessage", r.getStatus().name().equals("LATE")
@@ -138,6 +147,10 @@ public class AttendanceController {
         if (isPureAdmin(session)) {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
+        }
+        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+            ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
+            return "redirect:/home";
         }
         try {
             attendanceService.checkOut(user.getUserId(), clientIp(request));

@@ -623,4 +623,27 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         clinicalExamRepository.save(exam);
         log.info("Đã lưu kết quả khám tổng quát cho ca khám visitId={}", visit.getVisitId());
     }
+
+    @Override
+    @Transactional
+    public void saveDoctorInstructions(Long visitId, String adviceNotes) {
+        if (visitId == null) {
+            throw new IllegalArgumentException("Mã ca khám không hợp lệ.");
+        }
+        Visit visit = getVisitOrThrow(visitId);
+
+        String trimmedNotes = (adviceNotes != null) ? adviceNotes.trim() : "";
+        visit.setNotes(trimmedNotes);
+        visitRepository.save(visit);
+
+        // Đồng bộ sang đơn thuốc nếu ca khám đã có đơn thuốc
+        List<com.cvdcms.entity.Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId);
+        if (!prescriptions.isEmpty()) {
+            for (com.cvdcms.entity.Prescription p : prescriptions) {
+                p.setAdviceNotes(trimmedNotes);
+                prescriptionRepository.save(p);
+            }
+        }
+        log.info("Đã lưu lời dặn của bác sĩ cho ca khám visitId={}", visitId);
+    }
 }
