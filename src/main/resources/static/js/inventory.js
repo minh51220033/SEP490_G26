@@ -148,6 +148,27 @@
         if ($("imageLightboxModal")) $("imageLightboxModal").hidden = false;
     }
 
+    function printInventoryDocument(baseUrl) {
+        if (!baseUrl) return;
+        const separator = baseUrl.includes("?") ? "&" : "?";
+        const targetUrl = `${baseUrl}${separator}autoprint=true`;
+
+        // Gọi trực tiếp trong sự kiện click của user để tránh bị chặn popup
+        const printWin = window.open(targetUrl, "_blank");
+        if (!printWin || printWin.closed || typeof printWin.closed === "undefined") {
+            showMessage(
+                `Trình duyệt đã chặn cửa sổ in tự động. <a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener" style="color:#0284c7;text-decoration:underline;font-weight:600;">Nhấn vào đây để mở và in phiếu</a>.`,
+                "warning"
+            );
+        } else {
+            try {
+                printWin.focus();
+            } catch (e) {
+                // bỏ qua nếu lỗi cross-window focus
+            }
+        }
+    }
+
     // =========================================================================
     // 0. LOAD CHI NHÁNH, DANH MỤC VẬT TƯ, NHÀ CUNG CẤP & KPI SUMMARY CARDS
     // =========================================================================
@@ -826,7 +847,7 @@
                         · Còn nợ: <strong class="stock-low">${money(saved.remainingDebt)}</strong>
                     </div>
                     <div class="row-actions">
-                        <a href="/inventory/receipts/${saved.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In phiếu A4</a>
+                        <a href="/inventory/receipts/${saved.receiptId}/print" class="button button-secondary button-sm">Xem & in phiếu A4</a>
                         <a href="/api/inventory/receipts/${saved.receiptId}/pdf?download=true" class="button button-primary button-sm">Xuất PDF</a>
                     </div>
                 </div>`;
@@ -909,7 +930,7 @@
                         <div class="row-actions">
                             <button type="button" class="button button-secondary button-sm" data-view-receipt="${r.receiptId}">Chi tiết</button>
                             <a href="/api/inventory/receipts/${r.receiptId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
-                            <a href="/inventory/receipts/${r.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
+                            <button type="button" class="button button-secondary button-sm" data-print-url="/inventory/receipts/${r.receiptId}/print">In A4</button>
                         </div>
                     </td>
                 </tr>`;
@@ -1005,7 +1026,7 @@
             if ($("detailModalActions")) {
                 $("detailModalActions").innerHTML = `
                     <a href="/api/inventory/receipts/${r.receiptId}/pdf?download=true" class="button button-primary">Tải PDF phiếu nhập</a>
-                    <a href="/inventory/receipts/${r.receiptId}/print" target="_blank" rel="noopener" class="button button-secondary">Xem bản in A4</a>
+                    <a href="/inventory/receipts/${r.receiptId}/print" class="button button-secondary">Xem bản in A4</a>
                     <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
                 `;
                 $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
@@ -1311,7 +1332,7 @@
                         <div class="row-actions">
                             <button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Chi tiết</button>
                             <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
-                            <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
+                            <button type="button" class="button button-secondary button-sm" data-print-url="/inventory/issues/${si.issueId}/print">In A4</button>
                         </div>
                     </td>
                 </tr>`;
@@ -1364,8 +1385,8 @@
                     <td>
                         <div class="row-actions">
                             <button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Chi tiết</button>
-                            <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
-                            <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary button-sm">In A4</a>
+                            <a href="/api/inventory/transfers/${si.issueId}/pdf?download=true" class="button button-secondary button-sm">PDF</a>
+                            <button type="button" class="button button-secondary button-sm" data-print-url="/inventory/transfers/${si.issueId}/print">In A4</button>
                         </div>
                     </td>
                 </tr>`;
@@ -1444,9 +1465,12 @@
             `;
 
             if ($("detailModalActions")) {
+                const printUrl = isTransfer ? `/inventory/transfers/${si.issueId}/print` : `/inventory/issues/${si.issueId}/print`;
+                const pdfUrl = isTransfer ? `/api/inventory/transfers/${si.issueId}/pdf?download=true` : `/api/inventory/issues/${si.issueId}/pdf?download=true`;
+                const pdfLabel = isTransfer ? "Tải PDF điều chuyển" : "Tải PDF phiếu xuất";
                 $("detailModalActions").innerHTML = `
-                    <a href="/api/inventory/issues/${si.issueId}/pdf?download=true" class="button button-primary">Tải PDF phiếu xuất</a>
-                    <a href="/inventory/issues/${si.issueId}/print" target="_blank" rel="noopener" class="button button-secondary">Xem bản in A4</a>
+                    <a href="${pdfUrl}" class="button button-primary">${pdfLabel}</a>
+                    <a href="${printUrl}" class="button button-secondary">Xem bản in A4</a>
                     <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
                 `;
                 $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
@@ -2345,6 +2369,12 @@
             const signIssueBtn = e.target.closest("[data-sign-issue]");
             if (signIssueBtn) {
                 openSignatureModal("issue-existing", Number(signIssueBtn.dataset.signIssue));
+                return;
+            }
+
+            const printDocBtn = e.target.closest("[data-print-url]");
+            if (printDocBtn) {
+                printInventoryDocument(printDocBtn.dataset.printUrl);
                 return;
             }
 
