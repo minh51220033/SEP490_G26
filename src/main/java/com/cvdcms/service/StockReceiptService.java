@@ -21,4 +21,6 @@ public interface StockReceiptService {
     );
 
     StockReceiptResponseDTO getById(Long receiptId, Long userId);
+
+    StockReceiptResponseDTO signReceipt(Long receiptId, String signatureData, Long userId);
 }

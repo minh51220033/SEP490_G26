@@ -17,16 +17,13 @@
                     <h4 class="mb-0 fw-bold text-dark fs-6">Lịch hẹn &amp; Kế hoạch tái khám (SCR-18.1)</h4>
                     <span class="text-secondary small">Quản lý lịch hẹn tái khám của bệnh nhân theo lộ trình điều trị</span>
                 </div>
-                <span class="badge bg-primary-subtle text-primary border border-primary ms-2"
-                      th:text="${reExaminations != null ? #lists.size(reExaminations) : 0} + ' lịch hẹn'">
-                    0 lịch hẹn
-                </span>
+
             </div>
 
             <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
                     onclick="openReExamModal()">
                 <i class="bi bi-calendar2-plus-fill"></i>
-                <span>+ Đặt hẹn tái khám mới</span>
+                <span>Đặt hẹn tái khám mới</span>
             </button>
         </div>
 
@@ -46,9 +43,25 @@
                 </thead>
                 <tbody id="reExaminationsTableBody">
                 <tr th:if="${reExaminations == null or reExaminations.isEmpty()}" id="emptyReExamRow">
-                    <td colspan="8" class="text-center py-4 text-muted">
-                        <i class="bi bi-calendar-x fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Bệnh nhân chưa có lịch hẹn tái khám nào. Bấm <strong>"+ Đặt hẹn tái khám mới"</strong> để hẹn lịch cho bệnh nhân.</span>
+                    <td colspan="8" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 2px dashed #c084fc; box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12);">
+                                <i class="bi bi-calendar2-check-fill" style="font-size: 42px; color: #7c3aed;"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
+                                Bệnh nhân chưa có Lịch hẹn tái khám nào
+                            </h4>
+                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
+                                Hẹn lịch tái khám giúp theo dõi tiến trình hồi phục vết thương, kiểm tra định kỳ hoặc phân bổ các công đoạn trong phác đồ điều trị kế tiếp.
+                            </p>
+                            <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                    style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); border: none; font-size: 15px;"
+                                    onclick="openReExamModal()">
+                                <i class="bi bi-calendar2-plus-fill fs-6"></i>
+                                <span>Đặt hẹn tái khám mới</span>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 <tr th:each="re : ${reExaminations}">

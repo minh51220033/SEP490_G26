@@ -271,9 +271,12 @@
                     <!-- CỘT PHẢI: FORM NHẬP THÔNG TIN CHẨN ĐOÁN (SCR-14.1) -->
                     <div class="col-lg-7">
                         <div class="df-form-card shadow-sm h-100">
-                            <div class="df-form-title">
-                                <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
-                                <span>Ghi nhận chẩn đoán bệnh lý &amp; Tổn thương răng</span>
+                            <div class="df-form-title d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
+                                    <span id="formTitleText">Ghi nhận chẩn đoán bệnh lý &amp; Tổn thương răng</span>
+                                </div>
+                                <span id="formModeBadge"></span>
                             </div>
 
                             <form id="diagnosisForm" onsubmit="submitDiagnosis(event)">
@@ -482,10 +485,18 @@
                         <!-- DANH SÁCH HÀNG DỮ LIỆU ĐÃ CÓ TỪ DATABASE -->
                         <tr th:each="d : ${diagnoses}"
                             th:id="'diag-row-' + ${d.diagnosisId}"
+                            th:data-id="${d.diagnosisId}"
                             th:data-teeth="${d.toothNumbers}"
                             th:data-icd="${d.icd10Code}"
                             th:data-text="${d.diagnosisText}"
-                            th:data-type="${d.diagnosisType != null ? d.diagnosisType.name() : 'SECONDARY'}">
+                            th:data-name-vi="${d.diseaseNameVi}"
+                            th:data-name-en="${d.diseaseNameEn}"
+                            th:data-notes="${d.notes}"
+                            th:data-type="${d.diagnosisType != null ? d.diagnosisType.name() : 'SECONDARY'}"
+                            class="df-diag-interactive-row"
+                            onclick="inspectDiagnosisRow(this)"
+                            style="cursor: pointer;"
+                            title="Bấm để xem chi tiết, tô màu răng trên sơ đồ &amp; chỉnh sửa">
                             <td style="padding: 16px 20px;">
                                 <span class="badge rounded-pill px-3 py-2" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 800;"
                                       th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</span>
@@ -512,21 +523,29 @@
                                 <span class="text-secondary" style="font-size: 13.5px; font-weight: 500;" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
                             </td>
                             <td class="text-center" style="padding: 16px 20px;">
-                                <div class="d-inline-flex align-items-center justify-content-center gap-2" th:if="${!isClinicalLocked}">
+                                <div class="d-inline-flex align-items-center justify-content-center gap-1.5" th:if="${!isClinicalLocked}">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                            style="font-size: 12px;"
+                                            title="Xem chi tiết &amp; tô màu răng trên sơ đồ FDI"
+                                            onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
+                                        <i class="bi bi-eye-fill"></i>
+                                        <span>Chi tiết</span>
+                                    </button>
                                     <button type="button"
                                             class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs"
                                             style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;"
                                             title="Chuyển ngay chẩn đoán &amp; vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)"
-                                            onclick="openPlanModalForSingleDiagRow(this.closest('tr'))">
+                                            onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
                                         <i class="bi bi-diagram-3-fill"></i>
                                         <span>Lập phác đồ</span>
                                     </button>
                                     <button type="button"
                                             class="btn btn-light text-danger rounded-circle d-inline-flex align-items-center justify-content-center"
-                                            style="width: 34px; height: 34px; border: 1px solid #fecdd3; background: #fff1f2;"
+                                            style="width: 32px; height: 32px; border: 1px solid #fecdd3; background: #fff1f2;"
                                             title="Xóa chẩn đoán này"
                                             th:data-id="${d.diagnosisId}"
-                                            onclick="deleteDiagnosis(this.getAttribute('data-id'))">
+                                            onclick="event.stopPropagation(); deleteDiagnosis(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3-fill"></i>
                                     </button>
                                 </div>

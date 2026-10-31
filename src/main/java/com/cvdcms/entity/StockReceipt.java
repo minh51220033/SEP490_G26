@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,6 +57,18 @@ public class StockReceipt {
 
     @Column(name = "attachment_url", length = 500)
     private String attachmentUrl;
+
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
+    @Column(name = "signed_by_user_id")
+    private Long signedByUserId;
+
+    @Column(name = "signed_by_name", length = 150)
+    private String signedByName;
+
+    @Column(name = "signed_at")
+    private LocalDateTime signedAt;
 
     @OneToMany(mappedBy = "receipt", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StockReceiptItem> items = new ArrayList<>();

@@ -32,4 +32,6 @@ public interface DiagnosisService {
     GeneralExaminationRequestDTO getGeneralExamination(Long visitId);
 
     void saveGeneralExamination(GeneralExaminationRequestDTO request);
+
+    void saveDoctorInstructions(Long visitId, String adviceNotes);
 }
