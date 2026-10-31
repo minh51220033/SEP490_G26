@@ -8,6 +8,7 @@
 <!-- ===================================================================== -->
 <div th:fragment="instructionsTab">
     <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <!-- Header -->
         <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
             <div class="d-flex align-items-center gap-2">
                 <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
@@ -18,65 +19,97 @@
                     <span class="text-secondary small">Chế độ vệ sinh răng miệng, lưu ý ăn uống và xử trí khi đau nhức khẩn cấp</span>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('In hướng dẫn dặn dò cho bệnh nhân.');">
-                <i class="bi bi-printer me-1"></i>In phiếu dặn dò
-            </button>
+
+            <!-- Cụm nút Thao tác: Tạo lời dặn & In phiếu dặn dò -->
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <button type="button" class="df-btn-add-plan text-decoration-none border-0 text-white"
+                        onclick="openDoctorInstructionModal()"
+                        title="Soạn lời dặn dò riêng cho bệnh nhân sau ca khám này">
+                    <i class="bi bi-pencil-square me-1"></i>
+                    <span>Tạo / Soạn lời dặn</span>
+                </button>
+
+                <button type="button" class="df-btn-white-plan"
+                        onclick="printDoctorInstructions()"
+                        title="In phiếu hướng dẫn dặn dò cho bệnh nhân mang về">
+                    <i class="bi bi-printer text-primary"></i>
+                    <span>In phiếu dặn dò</span>
+                </button>
+            </div>
         </div>
 
         <div class="card-body p-4 bg-white">
             <div class="row g-4">
-                <!-- 1. HƯỚNG DẪN CHUNG SAU ĐIỀU TRỊ -->
+                <!-- 1. HƯỚNG DẪN CHUNG SAU ĐIỀU TRỊ (CHẾ ĐỘ TIÊU CHUẨN) -->
                 <div class="col-lg-6">
-                    <div class="border rounded-3 p-3 bg-light-subtle h-100">
-                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                            <i class="bi bi-shield-check text-success me-1"></i>Chế độ kiêng cữ &amp; Vệ sinh tại nhà
+                    <div class="border rounded-3 p-3.5 bg-light-subtle h-100">
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-shield-check text-success fs-5"></i>
+                            <span>Chế độ kiêng cữ &amp; Vệ sinh tại nhà tiêu chuẩn</span>
                         </h6>
-                        <div class="d-flex flex-column gap-2.5 small text-secondary">
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
-                                <span><strong>Cắn gòn / Cầm máu:</strong> Cắn chặt gạc tại vị trí can thiệp trong vòng 45 - 60 phút. Không khạc nhổ nước bọt, không dùng lưỡi hoặc vật lạ chạm vào vết mổ.</span>
+                        <div class="d-flex flex-column gap-3 small text-secondary">
+                            <div class="d-flex align-items-start gap-2.5">
+                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">1</span>
+                                <div>
+                                    <strong class="text-dark">Cắn gòn / Cầm máu:</strong> Cắn chặt gạc tại vị trí can thiệp trong vòng 45 - 60 phút. Không khạc nhổ nước bọt, không dùng lưỡi hoặc vật lạ chạm vào vết mổ.
+                                </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
-                                <span><strong>Chườm má giảm sưng:</strong> Trong 24h đầu chườm lạnh ngoài má (15 phút chườm, 15 phút nghỉ). Từ ngày thứ 2 chườm ấm để tan máu bầm.</span>
+                            <div class="d-flex align-items-start gap-2.5">
+                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">2</span>
+                                <div>
+                                    <strong class="text-dark">Chườm má giảm sưng:</strong> Trong 24h đầu chườm lạnh ngoài má (15 phút chườm, 15 phút nghỉ). Từ ngày thứ 2 chườm ấm để tan máu bầm và lưu thông khí huyết.
+                                </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
-                                <span><strong>Chế độ ăn uống:</strong> Dùng thức ăn mềm, nguội, lỏng (cháo, súp). Tránh đồ ăn quá cay nóng, cứng hoặc giòn. Không uống rượu bia, không hút thuốc lá.</span>
+                            <div class="d-flex align-items-start gap-2.5">
+                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">3</span>
+                                <div>
+                                    <strong class="text-dark">Chế độ ăn uống:</strong> Dùng thức ăn mềm, nguội, lỏng (cháo, súp). Tránh đồ ăn quá cay nóng, giòn cứng. Tuyệt đối không dùng rượu bia, không hút thuốc lá trong 72 giờ đầu.
+                                </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="bi bi-dot text-primary fs-5 mt-n1"></i>
-                                <span><strong>Vệ sinh răng miệng:</strong> Đánh răng nhẹ nhàng tránh vùng vết thương. Ngày đầu không súc miệng nước muối mạnh để tránh bong cục máu đông.</span>
+                            <div class="d-flex align-items-start gap-2.5">
+                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">4</span>
+                                <div>
+                                    <strong class="text-dark">Vệ sinh răng miệng:</strong> Đánh răng nhẹ nhàng tránh vùng vết thương. Ngày đầu không súc miệng nước muối quá mạnh để tránh bong cục máu đông.
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. LỜI DẶN RIÊNG CỦA BÁC SĨ TRONG CA KHÁM -->
+                <!-- 2. LỜI DẶN RIÊNG CỦA BÁC SĨ TRONG CA KHÁM NÀY -->
                 <div class="col-lg-6">
-                    <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column justify-content-between">
+                    <div class="border rounded-3 p-3.5 bg-white h-100 d-flex flex-column justify-content-between shadow-xs">
                         <div>
-                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                                <i class="bi bi-chat-left-dots text-primary me-1"></i>Ghi chú dặn dò riêng cho ca khám này
-                            </h6>
-                            <div class="p-3 bg-light rounded-3 text-secondary small fst-italic mb-3">
-                                <i class="bi bi-quote fs-4 text-primary opacity-50 d-block mb-1"></i>
-                                <span th:if="${prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null}"
-                                      th:text="${prescriptions[0].adviceNotes}">
-                                    Uống thuốc đều đặn theo đơn. Sau 7 ngày quay lại tái khám và cắt chỉ. Nếu có dấu hiệu sốt cao hoặc chảy máu kéo dài hãy liên hệ hotline ngay.
-                                </span>
-                                <span th:unless="${prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null}">
-                                    Bác sĩ chưa nhập dặn dò riêng. Bệnh nhân tuân thủ đúng chế độ chăm sóc răng miệng tiêu chuẩn và uống thuốc giảm đau nếu cần.
+                            <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-dots text-primary fs-5"></i>
+                                    <span>Ghi chú dặn dò riêng của Bác sĩ cho ca này</span>
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold"
+                                        onclick="openDoctorInstructionModal()">
+                                    <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
+                                </button>
+                            </div>
+
+                            <!-- Khung hiển thị Lời dặn -->
+                            <div class="p-3 bg-light rounded-3 text-dark small mb-3 border" style="background: #f8fafc !important; border-color: #e2e8f0 !important; line-height: 1.6;">
+                                <i class="bi bi-quote fs-3 text-primary opacity-50 d-block mb-1"></i>
+                                <span id="displayDoctorAdviceText" class="fw-medium"
+                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
+                                    Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút "Tạo / Soạn lời dặn" ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.
                                 </span>
                             </div>
                         </div>
 
-                        <!-- HOTLINE KHẨN CẤP -->
+                        <!-- HOTLINE KHẨN CẤP 24/7 -->
                         <div class="alert alert-danger border-danger-subtle d-flex align-items-center gap-3 p-3 rounded-3 mb-0">
-                            <i class="bi bi-telephone-inbound-fill fs-3 text-danger"></i>
+                            <i class="bi bi-telephone-inbound-fill fs-2 text-danger flex-shrink-0"></i>
                             <div>
-                                <div class="fw-bold text-danger">HỖ TRỢ Y TẾ KHẨN CẤP 24/7</div>
-                                <div class="small text-secondary">Khi có triệu chứng bất thường (chảy máu ồ ạt, sưng lan tỏa, sốt &gt; 38.5°C): <strong>Hotline: 1900 6868</strong></div>
+                                <div class="fw-bold text-danger" style="letter-spacing: 0.3px;">HỖ TRỢ Y TẾ KHẨN CẤP 24/7</div>
+                                <div class="small text-secondary mt-0.5">
+                                    Khi có triệu chứng bất thường (chảy máu kéo dài &gt; 2h, sốt &gt; 38.5°C, sưng đau tăng dần):
+                                    <strong class="text-danger d-block mt-0.5 fs-6">Hotline: 1900 6868 &bull; 024 3999 8888</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -84,6 +117,286 @@
             </div>
         </div>
     </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL SOẠN / CẬP NHẬT LỜI DẶN CỦA BÁC SĨ                              -->
+    <!-- ===================================================================== -->
+    <div class="modal fade" id="doctorInstructionModal" tabindex="-1" aria-labelledby="doctorInstructionModalLabel" aria-hidden="true"
+         th:data-visit-id="${visit != null ? visit.visitId : ''}">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+                <div class="modal-header py-3 px-4 bg-light border-bottom">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0 fs-6" id="doctorInstructionModalLabel">
+                                Soạn lời dặn dò &amp; Hướng dẫn chăm sóc tại nhà
+                            </h5>
+                            <div class="text-muted small" style="font-size: 12px;">
+                                Lời dặn sẽ được lưu vào hồ sơ bệnh án, đồng bộ sang đơn thuốc và in ra phiếu cho bệnh nhân
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <!-- Mẫu dặn dò nhanh theo thủ thuật -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1.5 d-block text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
+                            Chọn nhanh mẫu dặn dò theo thủ thuật:
+                        </label>
+                        <div class="d-flex flex-wrap gap-1.5">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('NHO_RANG')">
+                                <i class="bi bi-plus me-0.5"></i>Nhổ răng / Cắt chỉ
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('IMPLANT')">
+                                <i class="bi bi-plus me-0.5"></i>Cấy ghép Implant
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('CHUA_TUY')">
+                                <i class="bi bi-plus me-0.5"></i>Điều trị tủy
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('BOC_SU')">
+                                <i class="bi bi-plus me-0.5"></i>Bọc răng sứ
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('CHINH_NHA')">
+                                <i class="bi bi-plus me-0.5"></i>Niềng răng / Chỉnh nha
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                                    onclick="applyInstructionPreset('TAY_TRANG')">
+                                <i class="bi bi-plus me-0.5"></i>Tẩy trắng răng
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ô nhập Lời dặn -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">
+                            Nội dung lời dặn chi tiết của Bác sĩ: <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control rounded-3" id="doctorInstructionTextarea" rows="6"
+                                  placeholder="Nhập nội dung dặn dò, chế độ dùng thuốc, kiêng cữ thức ăn và theo dõi vết thương..."
+                                  style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6;"></textarea>
+                        <div class="form-text text-muted small mt-1" style="font-size: 11.5px;">
+                            Bác sĩ có thể bấm các nút mẫu nhanh ở trên để chèn nhanh, sau đó bổ sung dặn dò riêng theo tình trạng thực tế của bệnh nhân.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light btn-sm px-3.5 rounded-pill text-secondary fw-semibold border" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs" id="btnSaveDoctorInstruction" onclick="submitDoctorInstructions()">
+                        <i class="bi bi-check-circle-fill me-1"></i>Lưu lời dặn bác sĩ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TEMPLATE IN PHIẾU DẶN DÒ CHO BỆNH NHÂN (ẨN, DÙNG ĐỂ PRINT)            -->
+    <!-- ===================================================================== -->
+    <div id="printInstructionSection" class="d-none">
+        <div style="font-family: Arial, sans-serif; padding: 24px; color: #1e293b; max-width: 800px; margin: 0 auto;">
+            <!-- Header phòng khám -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 18px;">
+                <div>
+                    <h2 style="margin: 0; color: #0284c7; font-size: 20px; font-weight: bold;">HỆ THỐNG NHA KHOA DENTALFLOW</h2>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Cơ sở: <span th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám Chuyên khoa Răng Hàm Mặt'}">Chi nhánh</span> &bull; Hotline: 1900 6868</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 16px; font-weight: bold; color: #0f172a;">PHIẾU DẶN DÒ SAU ĐIỀU TRỊ</div>
+                    <div style="font-size: 12px; color: #64748b;" th:text="${'Mã ca khám: #' + visit.visitId}">Mã ca khám</div>
+                </div>
+            </div>
+
+            <!-- Thông tin bệnh nhân -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <div>Họ và tên: <strong th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Nguyễn Văn A</strong></div>
+                    <div>Mã KH: <strong th:text="${patient != null ? patient.patientCode : '---'}">KH1001</strong></div>
+                    <div>SĐT: <strong th:text="${patient != null ? patient.phoneNumber : '---'}">0912345678</strong></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <div>Bác sĩ điều trị: <strong th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Lê Hoàng Nam</strong></div>
+                    <div>Ngày khám: <strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">28/10/2026</strong></div>
+                </div>
+            </div>
+
+            <!-- Lời dặn riêng của bác sĩ -->
+            <div style="border: 1.5px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; background: #f0f9ff;">
+                <h4 style="margin: 0 0 8px 0; color: #0284c7; font-size: 14px; text-transform: uppercase;">Lời dặn riêng của Bác sĩ điều trị:</h4>
+                <div id="printDoctorAdviceText" style="font-size: 13.5px; line-height: 1.6; color: #0f172a; white-space: pre-wrap;"
+                     th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null) ? prescriptions[0].adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.')}">
+                    Uống thuốc đúng giờ theo đơn...
+                </div>
+            </div>
+
+            <!-- Chế độ chăm sóc tiêu chuẩn -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 12.5px; line-height: 1.55;">
+                <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 13px; text-transform: uppercase;">Chế độ chăm sóc &amp; Vệ sinh tại nhà tiêu chuẩn:</h4>
+                <p style="margin: 4px 0;">&bull; <strong>Cắn gòn:</strong> Cắn chặt gạc 45 - 60 phút sau can thiệp. Không khạc nhổ, không đưa lưỡi/vật lạ vào vết thương.</p>
+                <p style="margin: 4px 0;">&bull; <strong>Chườm má:</strong> Chườm lạnh trong 24 giờ đầu (15 phút chườm, 15 phút nghỉ). Ngày thứ 2 trở đi chườm ấm.</p>
+                <p style="margin: 4px 0;">&bull; <strong>Ăn uống:</strong> Ăn thức ăn mềm, lỏng, nguội (cháo, súp). Tránh đồ ăn cay nóng, đồ cứng/dai. Không uống rượu bia, không hút thuốc lá.</p>
+                <p style="margin: 4px 0;">&bull; <strong>Vệ sinh:</strong> Đánh răng nhẹ nhàng tránh vùng vết thương. Ngày đầu không súc miệng nước muối mạnh.</p>
+            </div>
+
+            <!-- Chữ ký & Hotline -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px;">
+                <div style="font-size: 12px; color: #e11d48; line-height: 1.4;">
+                    <strong>HOTLINE KHẨN CẤP 24/7: 1900 6868</strong><br>
+                    Liên hệ ngay nếu sốt cao &gt; 38.5&deg;C hoặc chảy máu kéo dài &gt; 2 giờ.
+                </div>
+                <div style="text-align: center; width: 200px;">
+                    <div style="font-size: 12px; color: #64748b;">Hà Nội, ngày ... tháng ... năm 20...</div>
+                    <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">BÁC SĨ ĐIỀU TRỊ</div>
+                    <div style="height: 50px;"></div>
+                    <div style="font-size: 13px; font-weight: bold;" th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ'}">BS. Lê Hoàng Nam</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Script Logic cho Lời dặn Bác sĩ -->
+    <script>
+        const INSTRUCTION_PRESETS = {
+            'NHO_RANG': 'Cắn chặt gạc tại vị trí nhổ răng trong vòng 45 - 60 phút. Không khạc nhổ nước bọt, không dùng lưỡi hoặc tăm chạm vào huyệt ổ răng. Trong 24h đầu chườm lạnh ngoài má để giảm sưng. Ăn thức ăn lỏng, nguội, mềm. Tuyệt đối không hút thuốc, không uống rượu bia và không súc miệng nước muối mạnh trong ngày đầu. Uống thuốc đều đặn theo đơn đã kê.',
+            'IMPLANT': 'Trong 3 ngày đầu ăn cháo/súp nguội mềm, tránh nhai bên răng vừa cấy ghép Implant. Không dùng ống hút, không khạc nhổ mạnh làm tăng áp lực xoang hàm. Vệ sinh răng miệng nhẹ nhàng, dùng bàn chải lông mềm. Uống thuốc kháng sinh, chống viêm theo đúng liều lượng chỉ định. Sau 7 - 10 ngày quay lại phòng khám cắt chỉ.',
+            'CHUA_TUY': 'Tránh nhai cắn đồ cứng/dai ở bên răng đang điều trị tủy để phòng ngừa gãy nứt thân răng. Khi hết tê thuốc có thể hơi ê ẩm nhẹ, bệnh nhân uống thuốc giảm đau theo đơn nếu cần. Tuân thủ đúng lịch hẹn buổi điều trị tủy tiếp theo để hoàn tất trám bít ống tủy vĩnh viễn.',
+            'BOC_SU': 'Sau khi gắn răng sứ, kiêng ăn nhai trong 60 phút đầu để xi măng nha khoa đông cứng hoàn toàn. Trong 48 giờ đầu hạn chế đồ ăn quá cứng hoặc quá dính. Đánh răng đúng cách và sử dụng chỉ nha khoa làm sạch kẽ răng. Nếu phát hiện cảm giác cộm cấn khi cắn chạm hoặc ăn nhai, hãy liên hệ ngay với phòng khám để bác sĩ chỉnh khớp cắn.',
+            'CHINH_NHA': 'Sau mỗi đợt siết dây cung hoặc thay thun, răng có thể căng tức trong 2 - 3 ngày đầu, nên ăn thức ăn mềm. Tránh cắn xé đồ ăn quá cứng, quá dai làm bong tuột mắc cài. Sử dụng sáp nha khoa nếu mắc cài cọ xát gây xước niêm mạc miệng. Vệ sinh kỹ bằng bàn chải kẽ và máy tăm nước sau mỗi bữa ăn.',
+            'TAY_TRANG': 'Trong vòng 48 giờ đến 1 tuần đầu sau tẩy trắng răng, men răng đang trong quá trình ổn định màu: kiêng tuyệt đối thực phẩm và đồ uống có màu đậm (cà phê, trà, nước ngọt có ga sẫm màu, nước tương, tương ớt, sốt cà chua). Tránh đồ ăn quá nóng hoặc quá lạnh. Đánh răng với kem đánh răng chống ê buốt nếu có cảm giác nhạy cảm.'
+        };
+
+        function openDoctorInstructionModal() {
+            const currentTextEl = document.getElementById('displayDoctorAdviceText');
+            let currentText = currentTextEl ? currentTextEl.innerText.trim() : '';
+            if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng')) {
+                currentText = '';
+            }
+
+            const textarea = document.getElementById('doctorInstructionTextarea');
+            if (textarea) {
+                textarea.value = currentText;
+            }
+
+            const modalEl = document.getElementById('doctorInstructionModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        function applyInstructionPreset(presetKey) {
+            const presetText = INSTRUCTION_PRESETS[presetKey];
+            if (!presetText) return;
+            const textarea = document.getElementById('doctorInstructionTextarea');
+            if (!textarea) return;
+
+            if (textarea.value.trim().length > 0) {
+                textarea.value = textarea.value.trim() + '\n\n' + presetText;
+            } else {
+                textarea.value = presetText;
+            }
+            textarea.focus();
+        }
+
+        async function submitDoctorInstructions() {
+            const textarea = document.getElementById('doctorInstructionTextarea');
+            const adviceNotes = textarea ? textarea.value.trim() : '';
+
+            const modalEl = document.getElementById('doctorInstructionModal');
+            const currentVisitId = modalEl?.getAttribute('data-visit-id') || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+            if (!currentVisitId) {
+                alert('Không tìm thấy mã ca khám hiện tại!');
+                return;
+            }
+
+            const btnSave = document.getElementById('btnSaveDoctorInstruction');
+            if (btnSave) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+            }
+
+            try {
+                const res = await fetch(`/api/doctor/visits/${currentVisitId}/instructions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adviceNotes: adviceNotes })
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    if (typeof showToast === 'function') {
+                        showToast(result.message || 'Đã lưu lời dặn của bác sĩ thành công!');
+                    } else {
+                        alert(result.message || 'Đã lưu lời dặn của bác sĩ thành công!');
+                    }
+
+                    // Cập nhật text hiển thị trên giao diện ngay lập tức
+                    const displayEl = document.getElementById('displayDoctorAdviceText');
+                    if (displayEl) {
+                        displayEl.innerText = adviceNotes.length > 0 ? adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút \'Tạo / Soạn lời dặn\' ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.';
+                    }
+
+                    const printEl = document.getElementById('printDoctorAdviceText');
+                    if (printEl) {
+                        printEl.innerText = adviceNotes.length > 0 ? adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.';
+                    }
+
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Không thể lưu lời dặn. Vui lòng thử lại!');
+                }
+            } catch (e) {
+                console.error('Error saving doctor instructions:', e);
+                alert('Lỗi mạng khi lưu lời dặn: ' + e.message);
+            } finally {
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Lưu lời dặn bác sĩ';
+                }
+            }
+        }
+
+        function printDoctorInstructions() {
+            const printContent = document.getElementById('printInstructionSection');
+            if (!printContent) return;
+
+            const printWindow = window.open('', '_blank', 'width=850,height=900');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Phiếu dặn dò sau điều trị - DentalFlow</title>
+                    <style>
+                        body { margin: 0; font-family: Arial, sans-serif; }
+                        @media print {
+                            @page { margin: 15mm; size: A4; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent.innerHTML}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 300);
+        }
+    </script>
 </div>
 
 </body>

@@ -135,4 +135,29 @@ public class DoctorExaminationRestController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
+
+    /**
+     * Bác sĩ lưu / cập nhật lời dặn và hướng dẫn chăm sóc tại nhà (SCR-18.x)
+     */
+    @PostMapping("/{visitId}/instructions")
+    public ResponseEntity<Map<String, Object>> saveDoctorInstructions(
+            @PathVariable Long visitId,
+            @RequestBody Map<String, String> body
+    ) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String adviceNotes = (body != null) ? body.get("adviceNotes") : "";
+            diagnosisService.saveDoctorInstructions(visitId, adviceNotes);
+
+            response.put("success", true);
+            response.put("message", "Đã lưu lời dặn của bác sĩ thành công!");
+            response.put("adviceNotes", adviceNotes);
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            log.error("Lỗi khi lưu lời dặn bác sĩ ca khám {}: ", visitId, ex);
+            response.put("success", false);
+            response.put("message", "Lỗi khi lưu lời dặn bác sĩ: " + ex.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 }

@@ -734,7 +734,8 @@
                 teethArray = [{
                     num: 'Toàn hàm',
                     surf: '',
-                    disp: 'Toàn hàm'
+                    disp: 'Toàn hàm',
+                    isFullJaw: true
                 }];
             }
 
@@ -773,7 +774,7 @@
                 autoReason: autoReason,
                 presetKey: bestPresetKey,
                 serviceId: matchedSrvId,
-                qty: teethArray.length,
+                qty: (icd.startsWith('K01') && teethArray.some(t => t.num === 'Toàn hàm')) ? 4 : (teethArray.some(t => t.num === 'Toàn hàm') ? 1 : teethArray.length),
                 stages: []
             });
         });
@@ -817,14 +818,16 @@
         const p = PRESETS_DICT[d.presetKey];
         if (!p) return;
         d.serviceId = findBestServiceForPreset(d.presetKey);
-        d.qty = d.teeth.length;
+        if (!d.qty) {
+            d.qty = (d.icd && d.icd.startsWith('K01') && d.teeth.some(t => t.num === 'Toàn hàm')) ? 4 : (d.teeth.some(t => t.num === 'Toàn hàm') ? 1 : d.teeth.length);
+        }
         d.stages = p.stages.map(st => ({
             name: st.name,
             days: st.days,
             steps: st.steps.map(sp => ({
                 name: sp.name,
                 activeTeeth: d.teeth.map(t => t.num),
-                qty: d.teeth.length,
+                qty: d.qty,
                 notes: sp.notes
             }))
         }));
@@ -873,10 +876,18 @@
         let html = '';
 
         DIAGNOSES.forEach(d => {
+            const isFullJaw = d.teeth.some(t => t.num === 'Toàn hàm' || t.isFullJaw);
             const teethTokens = d.teeth.map(t => {
+                if (t.num === 'Toàn hàm' || t.isFullJaw) {
+                    return `<span class="chip-tooth bg-info-subtle text-info border fw-bold">Toàn hàm</span>`;
+                }
                 const surf = t.surf ? ` <span class="chip-surface">${t.surf}</span>` : '';
                 return `<span class="chip-tooth">R-${t.num}${surf}</span>`;
             }).join(' , ');
+
+            const countBadge = isFullJaw
+                ? `<span class="badge bg-primary-subtle text-primary border ms-1 fw-semibold">${d.icd && d.icd.startsWith('K01') ? d.qty + ' răng khôn' : 'Toàn hàm'}</span>`
+                : `<span class="text-muted small ms-1">(${d.teeth.length} răng)</span>`;
 
             html += `
                 <tr>
@@ -889,7 +900,7 @@
                     </td>
                     <td>
                         ${teethTokens}
-                        <span class="text-muted small ms-1">(${d.teeth.length} răng)</span>
+                        ${countBadge}
                     </td>
                     <td>
                         <span class="badge bg-light text-dark border font-monospace">${d.icd}</span>
@@ -939,8 +950,9 @@
 
         let html = '';
         active.forEach(d => {
-            const maxT = d.teeth.length;
-            const teethText = d.teeth.map(t => t.disp).join(', ');
+            const isFullJaw = d.teeth.some(t => t.num === 'Toàn hàm' || t.isFullJaw);
+            const teethText = isFullJaw ? '<span class="badge bg-info-subtle text-info border">Toàn hàm</span>' : d.teeth.map(t => t.disp).join(', ');
+            const qtyLabel = isFullJaw ? (d.icd && d.icd.startsWith('K01') ? `${d.qty} răng khôn` : 'Toàn hàm') : `${d.qty} răng`;
             const srv = SERVICES_DICT[d.serviceId] || { name: 'Chọn dịch vụ...', price: 0 };
             const unitP = Number(srv.price || 0);
             const total = unitP * d.qty;
@@ -959,7 +971,7 @@
                 <tr>
                     <td>
                         <div class="fw-bold text-dark fs-6">CĐ #${d.order}: ${d.name}</div>
-                        <div class="text-muted small mt-1">${teethText} &bull; <strong>${maxT} răng</strong></div>
+                        <div class="text-muted small mt-1">${teethText} &bull; <strong>${qtyLabel}</strong></div>
                     </td>
                     <td>
                         <div class="text-muted small mb-1">Gợi ý tự động: <strong>${d.autoReason}</strong></div>
@@ -977,8 +989,16 @@
                     </td>
                     <td>
                         <div class="small">
-                            <div>${formatMoney(unitP)} &times; <strong>${d.qty} răng</strong></div>
-                            <div class="fw-bold text-primary fs-6 mt-0.5">= ${formatMoney(total)}</div>
+                            <div class="d-flex align-items-center gap-1.5 mb-1">
+                                <span class="text-muted">${formatMoney(unitP)} &times;</span>
+                                <input type="number" class="form-control form-control-sm text-center fw-bold"
+                                       style="width: 65px; height: 32px; font-size: 13.5px; border-color: #0284c7;"
+                                       min="1" max="32" value="${d.qty}"
+                                       onchange="changeDiagQty('${d.id}', this.value)"
+                                       title="Bác sĩ có thể chỉnh số lượng thực hiện">
+                                <span class="text-muted" style="font-size: 11.5px;">${isFullJaw && d.qty === 1 ? 'gói' : 'răng'}</span>
+                            </div>
+                            <div class="fw-bold text-primary fs-6">= ${formatMoney(total)}</div>
                         </div>
                     </td>
                 </tr>
@@ -987,6 +1007,23 @@
 
         tbody.innerHTML = html;
         document.getElementById('servicesCountBadge').innerText = `${active.length} dịch vụ liên kết`;
+    }
+
+    function changeDiagQty(id, val) {
+        const d = DIAGNOSES.find(x => x.id === id);
+        if (!d) return;
+        const q = parseInt(val, 10);
+        d.qty = (!isNaN(q) && q > 0) ? q : 1;
+        if (d.stages) {
+            d.stages.forEach(st => {
+                if (st.steps) {
+                    st.steps.forEach(sp => {
+                        sp.qty = d.qty;
+                    });
+                }
+            });
+        }
+        renderAll();
     }
 
     function changePreset(id, key) {
