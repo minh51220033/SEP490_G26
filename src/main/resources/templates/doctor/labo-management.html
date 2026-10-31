@@ -152,13 +152,65 @@
                         </select>
                     </div>
 
-                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" onclick="openCreateLaboModalMain()">
-                        <i class="bi bi-plus-lg me-1"></i>Thêm phiếu
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill px-3 py-1.5"
+                              style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12px; font-weight: 700;">
+                            <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                        </span>
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" onclick="openCreateLaboModalMain()">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm phiếu
+                        </button>
+                    </div>
                 </div>
 
+                <style>
+                    /* Khung Hover nổi chuẩn daily-visits: Khi cuộn ngang ở bất kỳ cột nào, hover qua hàng sẽ nổi cụm nút ở mép phải */
+                    .labo-floating-actions-track {
+                        position: sticky !important;
+                        right: 0 !important;
+                        width: 0 !important;
+                        min-width: 0 !important;
+                        max-width: 0 !important;
+                        height: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        overflow: visible !important;
+                        z-index: 25;
+                        background: transparent !important;
+                    }
+
+                    .labo-floating-actions-bar {
+                        position: absolute;
+                        right: 0;
+                        top: 50%;
+                        transform: translateY(-50%) translateX(10px);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        padding: 6px 14px 6px 32px;
+                        background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.98) 22%, #f0f9ff 100%);
+                        opacity: 0;
+                        visibility: hidden;
+                        pointer-events: none;
+                        transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                        white-space: nowrap;
+                        z-index: 30;
+                        box-shadow: -6px 0 16px rgba(0, 0, 0, 0.08);
+                        border-radius: 8px 0 0 8px;
+                    }
+
+                    /* Rê chuột vào dòng: Nổi thanh thao tác nhanh ở mép phải màn hình */
+                    .table-hover tbody tr:hover .labo-floating-actions-bar {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: translateY(-50%) translateX(0);
+                        pointer-events: auto;
+                    }
+                </style>
+
                 <!-- TABLE PHIẾU ĐẶT XƯỞNG (CÓ THANH CUỘN NGANG DENTALSOFT, TIÊU ĐỀ 1 DÒNG GỌN GÀNG) -->
-                <div class="table-scroll-container rounded-3 border bg-white shadow-xs">
+                <div class="table-scroll-container rounded-3 border bg-white shadow-xs position-relative">
                     <table class="table table-hover align-middle mb-0 text-nowrap" id="mainLaboTable" style="min-width: 1220px; font-size: 13.5px;">
                         <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                         <tr style="text-transform: uppercase; font-size: 11.5px; font-weight: 700; color: #475569; letter-spacing: 0.3px;">
@@ -173,11 +225,12 @@
                             <th style="width: 110px;" class="text-center py-3">ẢNH KẾT QUẢ</th>
                             <th style="width: 125px;" class="text-center py-3">TRẠNG THÁI</th>
                             <th style="width: 105px;" class="text-center py-3">THAO TÁC</th>
+                            <th class="labo-floating-actions-track"></th>
                         </tr>
                         </thead>
                         <tbody id="mainLaboTableBody">
                         <tr th:if="${orders == null or #lists.isEmpty(orders)}">
-                            <td colspan="11" class="text-center py-5 text-muted">
+                            <td colspan="12" class="text-center py-5 text-muted">
                                 <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
                                 <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào. Nhấn <strong>"+ Thêm phiếu"</strong> để tạo mới.</span>
                             </td>
@@ -267,6 +320,34 @@
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa"
                                             th:data-id="${order.laboId}" onclick="deleteOrderMain(this.getAttribute('data-id'))">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <!-- CỤM NÚT NỔI BÁM MÉP PHẢI KHI HOVER QUA HÀNG (CHUẨN DAILY-VISITS) -->
+                            <td class="labo-floating-actions-track">
+                                <div class="labo-floating-actions-bar" onclick="event.stopPropagation()">
+                                    <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
+                                            style="border-color: #cbd5e1 !important; font-size: 12.5px;"
+                                            th:data-id="${order.laboId}" onclick="openEditLaboModalMain(this.getAttribute('data-id'))" title="Chỉnh sửa phiếu đặt xưởng">
+                                        <i class="bi bi-pencil-square text-primary"></i>
+                                        <span>Sửa</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
+                                            style="border-color: #cbd5e1 !important; font-size: 12.5px;"
+                                            th:data-id="${order.laboId}" th:data-code="${order.laboCode}" onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))" title="Đính kèm ảnh giấy xét nghiệm / phiếu xưởng">
+                                        <i class="bi bi-camera-fill text-info"></i>
+                                        <span>Ảnh KQ</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
+                                            style="border-color: #cbd5e1 !important; font-size: 12.5px;"
+                                            th:data-id="${order.laboId}" onclick="printOrder(this.getAttribute('data-id'))" title="In phiếu đặt xưởng">
+                                        <i class="bi bi-printer-fill text-secondary"></i>
+                                        <span>In phiếu</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light border text-danger px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center shadow-xs"
+                                            style="background: #fff1f2; border-color: #fecdd3 !important;"
+                                            th:data-id="${order.laboId}" onclick="deleteOrderMain(this.getAttribute('data-id'))" title="Xóa phiếu đặt xưởng">
                                         <i class="bi bi-trash3-fill"></i>
                                     </button>
                                 </div>
@@ -462,19 +543,19 @@
 <!-- MODAL 1: THÊM / SỬA PHIẾU ĐẶT XƯỞNG LABO (CHUẨN DENTALSOFT RỘNG RÃI)  -->
 <!-- ===================================================================== -->
 <div class="modal fade" id="mainCreateLaboModal" tabindex="-1" aria-labelledby="mainCreateLaboModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1060px; width: 92%;">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
-            <!-- Header chuẩn DentalSoft: nền trắng tinh, không icon, text xám đậm -->
-            <div class="modal-header py-3.5 px-4 bg-white border-0 pb-1 d-flex align-items-start justify-content-between">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable my-3" style="max-width: 1060px; width: 92%; max-height: 94vh;">
+        <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; max-height: 94vh;">
+            <!-- Header chuẩn DentalSoft: nền trắng tinh, border phân cách rõ ràng, nút đóng [X] luôn hiển thị -->
+            <div class="modal-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important;">
                 <div>
                     <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="mainCreateLaboModalLabel">Thêm phiếu đặt xưởng</h5>
                     <p class="text-muted small mb-0 mt-0.5" id="mainCreateLaboModalSub">Phiếu đặt xưởng labo</p>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.85rem; opacity: 0.6;"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.9rem;"></button>
             </div>
 
-            <div class="modal-body px-4 py-3 bg-white">
-                <form id="mainLaboForm" onsubmit="event.preventDefault(); submitMainLaboForm();">
+            <form id="mainLaboForm" onsubmit="event.preventDefault(); submitMainLaboForm();" class="d-flex flex-column m-0" style="min-height: 0; flex: 1 1 auto; overflow: hidden;">
+                <div class="modal-body px-4 py-3 bg-white" style="overflow-y: auto;">
                     <input type="hidden" id="mainLaboEditId" value="">
 
                     <!-- HÀNG 1: KHÁCH HÀNG, DỊCH VỤ, NHÀ CUNG CẤP -->
@@ -626,18 +707,18 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- FOOTER: NÚT LƯU VÀ ĐÓNG CHUẨN DENTALSOFT -->
-                    <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-3 border-top" style="border-color: #f1f5f9 !important;">
-                        <button type="submit" class="btn btn-sm text-white fw-semibold px-4" id="btnSaveMainModal" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
-                            Lưu
-                        </button>
-                        <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
-                            Đóng
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <!-- FOOTER: NÚT LƯU VÀ ĐÓNG CỐ ĐỊNH Ở ĐÁY -->
+                <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2 flex-shrink-0" style="border-color: #e2e8f0 !important;">
+                    <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                        Đóng
+                    </button>
+                    <button type="submit" class="btn btn-sm text-white fw-semibold px-4" id="btnSaveMainModal" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                        <i class="bi bi-check2-circle me-1"></i> Lưu
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

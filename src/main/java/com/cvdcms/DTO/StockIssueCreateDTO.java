@@ -15,6 +15,7 @@ public class StockIssueCreateDTO {
     private Long destinationBranchId;
     private LocalDate issueDate;
     private String notes;
+    private String signatureData;
     private List<Item> items;
 
     @Getter

@@ -90,10 +90,42 @@ public class ChatRestController {
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "role", required = false) String role,
             @RequestParam(name = "branchId", required = false) Long branchId,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
             HttpSession session) {
 
         Long userId = requireSessionUserId(session);
+        if (page != null || size != null) {
+            int safePage = page != null ? Math.max(page, 0) : 0;
+            int safeSize = size != null ? Math.min(Math.max(size, 1), 100) : 30;
+            Page<ChatUserSearchItemDTO> paged = chatService.searchRecipientUsersPage(
+                    userId, keyword, role, branchId, PageRequest.of(safePage, safeSize));
+            return ResponseEntity.ok()
+                    .header("X-Total-Count", String.valueOf(paged.getTotalElements()))
+                    .header("X-Total-Pages", String.valueOf(paged.getTotalPages()))
+                    .header("X-Has-More", String.valueOf(paged.hasNext()))
+                    .body(paged.getContent());
+        }
         return ResponseEntity.ok(chatService.searchRecipientUsers(userId, keyword, role, branchId));
+    }
+
+    /**
+     * Tìm kiếm tài khoản người nhận có phân trang chuẩn Page<ChatUserSearchItemDTO>.
+     */
+    @GetMapping("/recipients/page")
+    public ResponseEntity<Page<ChatUserSearchItemDTO>> searchRecipientUsersPage(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "role", required = false) String role,
+            @RequestParam(name = "branchId", required = false) Long branchId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "30") int size,
+            HttpSession session) {
+
+        Long userId = requireSessionUserId(session);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return ResponseEntity.ok(chatService.searchRecipientUsersPage(
+                userId, keyword, role, branchId, PageRequest.of(safePage, safeSize)));
     }
 
     /**

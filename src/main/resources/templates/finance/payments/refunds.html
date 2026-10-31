@@ -83,52 +83,60 @@
             <!-- Table Card -->
             <div class="fin-card p-0">
                 <div class="fin-table-wrapper">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft24-refunds">
                         <thead>
                         <tr>
-                            <th>Mã hoàn tiền</th>
-                            <th>Thời điểm</th>
-                            <th>Bệnh nhân</th>
-                            <th>Hóa đơn liên quan</th>
-                            <th>Cơ sở</th>
-                            <th>Phương thức</th>
-                            <th class="text-end">Số tiền hoàn</th>
-                            <th>Lý do hoàn tiền</th>
-                            <th>Người thực hiện</th>
+                            <th data-column-key="code" data-pinned="true" style="min-width: 130px;">Mã hoàn tiền</th>
+                            <th data-column-key="date" style="min-width: 120px;">Thời điểm</th>
+                            <th data-column-key="patient" style="min-width: 170px;">Bệnh nhân</th>
+                            <th data-column-key="invoice" style="min-width: 130px;">Hóa đơn liên quan</th>
+                            <th data-column-key="branch" style="min-width: 130px;">Cơ sở</th>
+                            <th data-column-key="method" style="min-width: 120px;">Phương thức</th>
+                            <th data-column-key="amount" class="text-end" style="min-width: 130px;">Số tiền hoàn</th>
+                            <th data-column-key="reason" style="min-width: 200px;">Lý do hoàn tiền</th>
+                            <th data-column-key="creator" style="min-width: 130px;">Người thực hiện</th>
+                            <th data-column-key="actions" class="text-end" style="min-width: 100px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(refunds)}">
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
                                 Chưa có giao dịch hoàn tiền nào.
                             </td>
                         </tr>
                         <tr th:each="rf : ${refunds}">
-                            <td>
+                            <td data-column-key="code">
                                 <strong class="text-danger" th:text="${rf.refundCode}">HT10001</strong>
                             </td>
-                            <td>
+                            <td data-column-key="date">
                                 <span th:text="${#temporals.format(rf.refundedAt, 'dd/MM/yyyy')}">24/10/2026</span>
                                 <small class="text-muted d-block" th:text="${#temporals.format(rf.refundedAt, 'HH:mm')}">14:30</small>
                             </td>
-                            <td>
+                            <td data-column-key="patient">
                                 <div class="fw-bold" th:text="${rf.patientProfile.fullName}">Nguyễn Văn An</div>
                                 <small class="text-muted" th:text="${rf.patientProfile.patientCode}">BN001</small>
                             </td>
-                            <td>
+                            <td data-column-key="invoice">
                                 <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
                                    class="text-primary fw-bold text-decoration-none" th:text="${rf.invoice.invoiceCode}">HD123456</a>
-                                <span th:if="${rf.invoice == null}" class="text-muted small">-</span>
+                                <span th:if="${rf.invoice == null}" class="badge bg-warning text-dark"><i class="bi bi-wallet2"></i> Ví tạm ứng</span>
                             </td>
-                            <td th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
-                            <td>
+                            <td data-column-key="branch" th:text="${rf.branch.branchName}">Cơ sở Quận 1</td>
+                            <td data-column-key="method">
                                 <span class="badge bg-light text-dark border" th:text="${rf.refundMethod}">CASH</span>
                             </td>
-                            <td class="text-end fw-bold text-danger fs-6"
+                            <td data-column-key="amount" class="text-end fw-bold text-danger fs-6"
                                 th:text="${#numbers.formatDecimal(rf.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td th:text="${rf.reason}">Bệnh nhân hủy ca phẫu thuật</td>
-                            <td th:text="${rf.refundedBy.fullName}">Thu ngân A</td>
+                            <td data-column-key="reason" th:text="${rf.reason}">Bệnh nhân hủy ca phẫu thuật</td>
+                            <td data-column-key="creator" th:text="${rf.refundedBy.fullName}">Thu ngân A</td>
+                            <td data-column-key="actions" class="text-end">
+                                <a th:if="${rf.invoice != null}" th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}"
+                                   class="fin-btn fin-btn-sm fin-btn-outline" title="Xem hóa đơn liên quan">
+                                    <i class="bi bi-receipt"></i> Xem HĐ
+                                </a>
+                                <span th:if="${rf.invoice == null}" class="text-muted small">Tạm ứng</span>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -157,14 +165,15 @@
     </div>
 </div>
 
-<!-- Modal Lập Phiếu Hoàn Tiền -->
+<!-- Modal Lập Phiếu Hoàn Tiền (SCR-24.3) -->
 <div id="refundModal" class="fin-modal-backdrop" style="display: none;">
     <div class="fin-modal-card">
         <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền</h5>
+            <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền (SCR-24.3)</h5>
             <button type="button" class="btn-close" onclick="toggleRefundModal()"></button>
         </div>
-        <form th:action="@{/payments/refunds}" method="post" class="p-4">
+        <form th:action="@{/payments/refunds}" method="post" class="p-4" onsubmit="generateRefundKey()">
+            <input type="hidden" id="refundIdempotencyKey" name="idempotencyKey">
             <div class="mb-3">
                 <label for="refundPatientSearch" class="form-label fw-bold">Tìm Bệnh nhân nhận tiền hoàn <span class="text-danger">*</span></label>
                 <input type="text"
@@ -175,6 +184,23 @@
                 <input type="hidden" name="profileId" id="refundProfileId" required>
                 <div id="selectedRefundPatientName" class="mt-2 fw-bold text-primary" style="display: none;"></div>
                 <div id="refundPatientList" class="list-group mt-2" style="max-height: 160px; overflow-y: auto; display: none;"></div>
+            </div>
+
+            <div class="mb-3">
+                <label for="refundInvoiceIdInput" class="form-label fw-bold">Mã ID Hóa đơn hoàn (Để trống nếu hoàn từ Ví tạm ứng)</label>
+                <input type="number" id="refundInvoiceIdInput" name="invoiceId" class="form-control"
+                       placeholder="Nhập Invoice ID nếu hoàn cho hóa đơn cụ thể..." oninput="toggleReduceInvoiceTotal(this.value)">
+                <small class="text-muted d-block mt-1">Để trống trường này nếu hoàn trả từ số dư Ví tạm ứng của bệnh nhân.</small>
+            </div>
+
+            <div class="mb-3 form-check" id="modalReduceInvoiceTotalGroup" style="display: none;">
+                <input type="checkbox" class="form-check-input" id="modalReduceInvoiceTotal" name="reduceInvoiceTotal" value="true">
+                <label class="form-check-label fw-bold text-dark" for="modalReduceInvoiceTotal">
+                    Kèm giảm giá trị hóa đơn (hủy / giảm nghĩa vụ thanh toán)
+                </label>
+                <div class="form-text small text-muted">
+                    Nếu tích chọn: Tổng tiền hóa đơn sẽ giảm tương ứng số tiền hoàn. Nếu không chọn: Hóa đơn giữ nguyên tổng tiền và tăng lại số nợ (hoàn tiền đã thu đơn thuần).
+                </div>
             </div>
 
             <div class="mb-3">
@@ -214,9 +240,27 @@
 </div>
 
 <script th:inline="javascript">
+    function ensureRefundKey() {
+        const keyInput = document.getElementById('refundIdempotencyKey');
+        if (keyInput && !keyInput.value) {
+            keyInput.value = 'REF-KEY-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
+    }
+
+    function generateRefundKey() {
+        ensureRefundKey();
+    }
+
     function toggleRefundModal() {
         const m = document.getElementById('refundModal');
-        m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+        const isOpening = (m.style.display === 'none' || m.style.display === '');
+        m.style.display = isOpening ? 'flex' : 'none';
+        if (isOpening) {
+            ensureRefundKey();
+        } else {
+            const keyInput = document.getElementById('refundIdempotencyKey');
+            if (keyInput) keyInput.value = '';
+        }
     }
 
     let searchTimer = null;

@@ -17,4 +17,6 @@ public class RefundRequestDTO {
     private BigDecimal amount = BigDecimal.ZERO;
     private RefundMethod refundMethod = RefundMethod.CASH;
     private String reason;
+    private Boolean reduceInvoiceTotal = false; // Kết hợp hoàn tiền và giảm nghĩa vụ hóa đơn tương ứng
+    private String idempotencyKey;
 }

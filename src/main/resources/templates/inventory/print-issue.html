@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Xem trước & In phiếu xuất kho - ' + ${issue.issueCode})}"></head>
+<body class="app-body">
+
+<!-- Nhúng stylesheet xem trước và in ấn A4 chuyên dụng -->
+<link rel="stylesheet" th:href="@{/css/inventory-print.css}">
+
+<div class="app-shell">
+    <!-- Sidebar và Backdrop điều hướng của hệ thống CV-DCMS -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('inventory')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- Topbar tiêu đề hệ thống -->
+        <header th:replace="~{fragments/header :: appTopbar('Xem trước và in phiếu kho')}"></header>
+
+        <main class="app-content inventory-preview-page">
+
+            <!-- THANH CÔNG CỤ XEM TRƯỚC (Ẩn khi in ấn) -->
+            <section class="preview-toolbar no-print">
+                <div class="preview-toolbar__left">
+                    <a th:href="@{/inventory}" class="btn btn-outline-secondary btn-sm fw-semibold">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại Quản lý kho
+                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fs-6">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Phiếu xuất kho
+                        </span>
+                        <span class="preview-badge-code fs-6 text-dark" th:text="${issue.issueCode}">PXK-001</span>
+                    </div>
+                </div>
+
+                <div class="preview-toolbar__right">
+                    <a th:href="@{'/api/inventory/issues/' + ${issue.issueId} + '/pdf?download=true'}"
+                       class="btn btn-outline-primary btn-sm fw-semibold">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Tải PDF
+                    </a>
+                    <button type="button" class="btn btn-primary btn-sm fw-semibold" onclick="window.print()">
+                        <i class="bi bi-printer-fill me-1"></i> In phiếu (A4)
+                    </button>
+                </div>
+            </section>
+
+            <!-- VÙNG HIỂN THỊ KHỔ GIẤY A4 CHUẨN IN -->
+            <div class="print-preview-container">
+                <article class="print-sheet" id="printSheet">
+
+                    <!-- ĐẦU TRANG PHÒNG KHÁM -->
+                    <div class="clinic-header">
+                        <div>
+                            <div class="clinic-title">PHÒNG KHÁM NHA KHOA CƯỜNG VIỆT (CV-DCMS)</div>
+                            <div class="clinic-sub" th:text="'Cơ sở: ' + (${issue.branchName} ?: 'Hệ thống nha khoa')">Cơ sở: Nha khoa Cường Việt</div>
+                        </div>
+                        <div class="clinic-meta">
+                            <div>Mẫu chứng từ: <strong>PXK-A4</strong></div>
+                            <div th:text="'Ngày in: ' + ${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}">Ngày in: 31/10/2026 10:00</div>
+                        </div>
+                    </div>
+
+                    <!-- TIÊU ĐỀ PHIẾU -->
+                    <div class="doc-title-wrap">
+                        <h1 class="doc-title">PHIẾU XUẤT KHO VẬT TƯ</h1>
+                        <div class="doc-meta">
+                            <span>Mã phiếu: <strong th:text="${issue.issueCode}">PXK001</strong></span>
+                            <span class="mx-2">|</span>
+                            <span>Ngày xuất: <strong th:text="${issue.issueDate != null ? #temporals.format(issue.issueDate, 'dd/MM/yyyy') : '—'}">31/10/2026</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- KHUNG THÔNG TIN CHUNG -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Chi nhánh xuất:</span>
+                            <span class="info-value" th:text="${issue.branchName ?: '—'}">Chi nhánh Quận 1</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Loại phiếu xuất:</span>
+                            <span class="info-value"
+                                  th:text="${issue.issueType == 'DISCARD_EXPIRED' ? 'Xuất hủy hàng hết hạn' : 'Xuất sử dụng nội bộ'}">Xuất sử dụng nội bộ</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Người lập phiếu:</span>
+                            <span class="info-value" th:text="${issue.issuerName ?: '—'}">Thủ kho</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Người nhận:</span>
+                            <span class="info-value">Theo bộ phận chuyên môn / phòng khám</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <span class="info-label">Lý do / Ghi chú:</span>
+                            <span class="info-value" th:text="${issue.notes ?: '—'}">Xuất phục vụ ca điều trị nha khoa</span>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DANH SÁCH VẬT TƯ / THUỐC XUẤT -->
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 42px;">STT</th>
+                                <th style="width: 100px;">Mã VT</th>
+                                <th>Tên vật tư / thuốc xuất kho</th>
+                                <th class="text-center" style="width: 65px;">ĐVT</th>
+                                <th style="width: 100px;">Số lô xuất</th>
+                                <th class="text-center" style="width: 90px;">Hạn dùng</th>
+                                <th class="text-end" style="width: 75px;">SL xuất</th>
+                                <th class="text-end" style="width: 110px;">Đơn giá vốn</th>
+                                <th class="text-end" style="width: 120px;">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${issue.items == null or issue.items.isEmpty()}">
+                                <td colspan="9" class="text-center text-muted py-3">Phiếu xuất chưa có chi tiết mặt hàng nào.</td>
+                            </tr>
+                            <tr th:each="it, stat : ${issue.items}">
+                                <td class="text-center" th:text="${stat.count}">1</td>
+                                <td><code th:text="${it.materialCode}">VT001</code></td>
+                                <td th:text="${it.materialName}">Vật tư nha khoa</td>
+                                <td class="text-center" th:text="${it.unit}">Hộp</td>
+                                <td th:text="${it.batchNumber ?: '—'}">LO-1234</td>
+                                <td class="text-center" th:text="${it.expiryDate != null ? #temporals.format(it.expiryDate, 'dd/MM/yyyy') : '—'}">31/12/2027</td>
+                                <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(it.quantity, 1, 'POINT', 0, 'COMMA')}">5</td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(it.importPrice, 1, 'POINT', 0, 'COMMA')} + ' đ'">150.000 đ</td>
+                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.lineValue, 1, 'POINT', 0, 'COMMA')} + ' đ'">750.000 đ</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- TỔNG KẾT SỐ LƯỢNG & GIÁ TRỊ XUẤT -->
+                    <div class="summary-wrap">
+                        <div class="summary-box">
+                            <div class="summary-row">
+                                <span>Tổng số lượng xuất:</span>
+                                <strong th:text="${#numbers.formatDecimal(issue.totalQuantity, 1, 'POINT', 0, 'COMMA')}">5</strong>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Tổng giá trị xuất kho:</span>
+                                <span th:text="${#numbers.formatDecimal(issue.totalEstimatedValue, 1, 'POINT', 0, 'COMMA')} + ' đ'">750.000 đ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHỮ KÝ ĐIỆN TỬ & XÁC NHẬN -->
+                    <div class="sig-grid">
+                        <div>
+                            <div class="sig-title">NGƯỜI NHẬN VẬT TƯ</div>
+                            <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
+                            <div class="sig-box">
+                                <span class="sig-unsigned">(Ký xác nhận khi nhận hàng)</span>
+                            </div>
+                            <div class="sig-name">Đại diện bộ phận sử dụng</div>
+                        </div>
+
+                        <div>
+                            <div class="sig-title">NGƯỜI LẬP PHIẾU XUẤT</div>
+                            <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                            <div class="sig-box">
+                                <img th:if="${issue.signatureUrl != null and !#strings.isEmpty(issue.signatureUrl)}"
+                                     th:src="${issue.signatureUrl}"
+                                     alt="Chữ ký điện tử"/>
+                                <span th:if="${issue.signatureUrl == null or #strings.isEmpty(issue.signatureUrl)}"
+                                      class="sig-unsigned">(Chưa ký điện tử)</span>
+                            </div>
+                            <div class="sig-name" th:text="${issue.signedByName != null ? issue.signedByName : issue.issuerName}">Thủ kho</div>
+                            <div class="sig-time" th:if="${issue.signedAt != null}"
+                                 th:text="'Đã ký: ' + ${#temporals.format(issue.signedAt, 'dd/MM/yyyy HH:mm')}">Đã ký: 31/10/2026 10:15</div>
+                        </div>
+                    </div>
+
+                </article>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autoprint') === 'true') {
+        const waitForAssets = () => {
+            const fontPromise = (document.fonts && document.fonts.ready)
+                ? document.fonts.ready
+                : Promise.resolve();
+
+            const images = Array.from(document.querySelectorAll('#printSheet img'));
+            const imagePromises = images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            });
+
+            return Promise.all([fontPromise, Promise.all(imagePromises)]);
+        };
+
+        const executePrint = () => {
+            waitForAssets().then(() => {
+                setTimeout(() => {
+                    window.addEventListener('afterprint', () => {
+                        try { window.close(); } catch (e) {}
+                    }, { once: true });
+                    window.onafterprint = function() {
+                        try { window.close(); } catch (e) {}
+                    };
+
+                    window.print();
+                }, 200);
+            });
+        };
+
+        if (document.readyState === 'complete') {
+            executePrint();
+        } else {
+            window.addEventListener('load', executePrint, { once: true });
+        }
+    }
+})();
+</script>
+</body>
+</html>

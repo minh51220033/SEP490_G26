@@ -99,19 +99,19 @@
             <!-- Table Card -->
             <div class="fin-card p-0">
                 <div class="fin-table-wrapper">
-                    <table class="fin-table">
+                    <table class="fin-table" data-enhanced-table="ft22-payments">
                         <thead>
                         <tr>
-                            <th>Mã phiếu</th>
-                            <th>Thời điểm</th>
-                            <th>Loại phiếu</th>
-                            <th>Bệnh nhân</th>
-                            <th>Hóa đơn liên kết</th>
-                            <th>Cơ sở</th>
-                            <th>Phương thức</th>
-                            <th class="text-end">Số tiền thu</th>
-                            <th>Thu ngân</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-column-key="payment_code" data-column-required="true" data-column-pinned="true">Mã phiếu</th>
+                            <th data-column-key="paid_at">Thời điểm</th>
+                            <th data-column-key="payment_type">Loại phiếu</th>
+                            <th data-column-key="patient" data-column-pinned="true">Bệnh nhân</th>
+                            <th data-column-key="invoice_code">Hóa đơn liên kết</th>
+                            <th data-column-key="branch">Cơ sở</th>
+                            <th data-column-key="method">Phương thức</th>
+                            <th class="text-end" data-column-key="amount">Số tiền thu</th>
+                            <th data-column-key="cashier">Thu ngân</th>
+                            <th class="text-center" data-column-key="actions" data-column-action="true">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -122,39 +122,39 @@
                             </td>
                         </tr>
                         <tr th:each="p : ${payments}">
-                            <td>
+                            <td data-column-key="payment_code">
                                 <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
                                    class="fw-bold text-success text-decoration-none" th:text="${p.paymentCode}">TT10001</a>
                             </td>
-                            <td>
+                            <td data-column-key="paid_at">
                                 <span th:text="${#temporals.format(p.paidAt, 'dd/MM/yyyy')}">24/10/2026</span>
                                 <small class="text-muted d-block" th:text="${#temporals.format(p.paidAt, 'HH:mm')}">14:30</small>
                             </td>
-                            <td>
+                            <td data-column-key="payment_type">
                                 <span th:if="${p.paymentType.name() == 'PAYMENT'}" class="badge bg-primary text-white">Thanh toán HĐ</span>
                                 <span th:if="${p.paymentType.name() == 'ADVANCE_DEPOSIT'}" class="badge bg-warning text-dark">Nộp tạm ứng</span>
                             </td>
-                            <td>
+                            <td data-column-key="patient">
                                 <div class="fw-bold" th:text="${p.patientProfile.fullName}">Nguyễn Văn An</div>
                                 <small class="text-muted" th:text="${p.patientProfile.patientCode} + ' - ' + ${p.patientProfile.phoneNumber}">BN001 - 098...</small>
                             </td>
-                            <td>
+                            <td data-column-key="invoice_code">
                                 <a th:if="${p.invoice != null}" th:href="@{/invoices/{id}(id=${p.invoice.invoiceId})}"
                                    class="text-primary fw-bold text-decoration-none" th:text="${p.invoice.invoiceCode}">HD123456</a>
                                 <span th:if="${p.invoice == null}" class="text-muted small">-</span>
                             </td>
-                            <td th:text="${p.branch.branchName}">Cơ sở Quận 1</td>
-                            <td>
+                            <td data-column-key="branch" th:text="${p.branch.branchName}">Cơ sở Quận 1</td>
+                            <td data-column-key="method">
                                 <span th:if="${p.paymentMethod.name() == 'CASH'}" class="fin-badge fin-badge-method">💵 Tiền mặt</span>
                                 <span th:if="${p.paymentMethod.name() == 'BANK_TRANSFER'}" class="fin-badge fin-badge-method">🏦 Chuyển khoản QR</span>
                                 <span th:if="${p.paymentMethod.name() == 'POS_CARD'}" class="fin-badge fin-badge-method">💳 Quẹt thẻ POS</span>
                                 <span th:if="${p.paymentMethod.name() == 'DEPOSIT_WALLET'}" class="fin-badge fin-badge-method">👛 Ví tạm ứng</span>
                                 <small class="text-muted d-block" th:if="${p.transactionRef != null and !p.transactionRef.isEmpty()}" th:text="'Ref: ' + ${p.transactionRef}"></small>
                             </td>
-                            <td class="text-end fw-bold text-success fs-6"
+                            <td data-column-key="amount" class="text-end fw-bold text-success fs-6"
                                 th:text="${#numbers.formatDecimal(p.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                            <td th:text="${p.cashier.fullName}">Nguyễn Thu Ngân</td>
-                            <td class="text-center">
+                            <td data-column-key="cashier" th:text="${p.cashier.fullName}">Nguyễn Thu Ngân</td>
+                            <td data-column-key="actions" data-column-action="true" class="text-center">
                                 <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
                                    class="btn btn-sm btn-outline-secondary" title="In phiếu thu viện phí">
                                     <i class="bi bi-printer"></i> In phiếu
@@ -171,14 +171,14 @@
                     <nav aria-label="Phân trang">
                         <ul class="pagination pagination-sm m-0">
                             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}">Trước</a>
+                                <a class="page-link" th:href="@{/payments(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">Trước</a>
                             </li>
                             <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                                 class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
-                                <a class="page-link" th:href="@{/payments(page=${i}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+                                <a class="page-link" th:href="@{/payments(page=${i}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" th:text="${i + 1}">1</a>
                             </li>
                             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, keyword=${keyword})}">Sau</a>
+                                <a class="page-link" th:href="@{/payments(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">Sau</a>
                             </li>
                         </ul>
                     </nav>
@@ -187,5 +187,17 @@
         </main>
     </div>
 </div>
+<script>
+(function() {
+    const kwInput = document.getElementById('keyword');
+    const form = kwInput ? kwInput.closest('form') : null;
+    if (!form || !kwInput) return;
+    let debounceTimer = null;
+    kwInput.addEventListener('input', function() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { form.submit(); }, 350);
+    });
+})();
+</script>
 </body>
 </html>

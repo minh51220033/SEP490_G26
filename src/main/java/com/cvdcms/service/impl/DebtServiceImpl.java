@@ -9,13 +9,12 @@ import com.cvdcms.repository.InvoiceRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.service.DebtService;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -32,43 +31,46 @@ public class DebtServiceImpl implements DebtService {
 
     @Override
     public Page<PatientDebtSummaryDTO> getPatientDebts(Long branchId, String keyword, Pageable pageable) {
-        List<Long> profileIds = invoiceRepository.findPatientProfileIdsWithDebt(branchId);
-        if (profileIds.isEmpty()) {
+        return getPatientDebts(branchId, branchId != null ? List.of(branchId) : null, null, keyword, pageable);
+    }
+
+    @Override
+    public Page<PatientDebtSummaryDTO> getPatientDebts(
+            Long branchId,
+            List<Long> allowedBranchIds,
+            InvoicePaymentStatus paymentStatus,
+            String keyword,
+            Pageable pageable
+    ) {
+        // Nếu kế toán không có chi nhánh nào được phân công, từ chối và trả về rỗng ngay lập tức
+        if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
             return Page.empty(pageable);
         }
 
-        List<PatientProfile> allPatients = patientProfileRepository.findAllById(profileIds);
-        List<PatientDebtSummaryDTO> summaries = new ArrayList<>();
+        String kw = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
-        for (PatientProfile patient : allPatients) {
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                String kw = keyword.trim().toLowerCase();
-                boolean match = (patient.getFullName() != null && patient.getFullName().toLowerCase().contains(kw))
-                        || (patient.getPatientCode() != null && patient.getPatientCode().toLowerCase().contains(kw))
-                        || (patient.getPhoneNumber() != null && patient.getPhoneNumber().contains(kw));
-                if (!match) {
-                    continue;
-                }
+        // Nếu người dùng chọn branchId cụ thể
+        if (branchId != null) {
+            // Kiểm tra phân quyền: nếu không phải admin và branchId không thuộc allowedBranchIds thì từ chối
+            if (allowedBranchIds != null && !allowedBranchIds.contains(branchId)) {
+                return Page.empty(pageable);
             }
-
-            PatientDebtSummaryDTO summary = getPatientDebtDetail(patient.getProfileId());
-            if (summary.getTotalDebt().compareTo(BigDecimal.ZERO) > 0) {
-                summaries.add(summary);
-            }
+            return invoiceRepository.findPatientDebtsByBranch(branchId, paymentStatus, kw, pageable);
         }
 
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), summaries.size());
-        List<PatientDebtSummaryDTO> subList = (start <= end && start < summaries.size())
-                ? summaries.subList(start, end)
-                : new ArrayList<>();
+        // Nếu branchId == null:
+        // Với non-admin: chỉ truy vấn trong các chi nhánh được phân công
+        if (allowedBranchIds != null) {
+            return invoiceRepository.findPatientDebtsByBranches(allowedBranchIds, paymentStatus, kw, pageable);
+        }
 
-        return new PageImpl<>(subList, pageable, summaries.size());
+        // Với Admin: truy vấn toàn hệ thống
+        return invoiceRepository.findPatientDebtsByBranch(null, paymentStatus, kw, pageable);
     }
 
     @Override
     public PatientDebtSummaryDTO getPatientDebtDetail(Long profileId) {
-        return getPatientDebtDetail(profileId, null);
+        return getPatientDebtDetail(profileId, (List<Long>) null);
     }
 
     @Override
@@ -76,13 +78,30 @@ public class DebtServiceImpl implements DebtService {
         PatientProfile patient = patientProfileRepository.findById(profileId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + profileId));
 
+        PatientDebtSummaryDTO dto = new PatientDebtSummaryDTO();
+        dto.setProfileId(patient.getProfileId());
+        dto.setPatientCode(patient.getPatientCode());
+        dto.setFullName(patient.getFullName());
+        dto.setPhoneNumber(patient.getPhoneNumber());
+        dto.setDepositBalance(patient.getDepositBalance() != null ? patient.getDepositBalance() : BigDecimal.ZERO);
+
+        // Bảo vệ quyền chi nhánh: nếu danh sách chi nhánh được phép là rỗng -> không trả dữ liệu nợ
+        if (branchIds != null && branchIds.isEmpty()) {
+            dto.setTotalBilled(BigDecimal.ZERO);
+            dto.setTotalPaid(BigDecimal.ZERO);
+            dto.setTotalDebt(BigDecimal.ZERO);
+            dto.setUnpaidInvoicesCount(0);
+            dto.setLastInvoiceDate(null);
+            return dto;
+        }
+
         BigDecimal totalBilled;
         BigDecimal totalPaid;
         BigDecimal totalDebt;
         List<Invoice> unpaidInvoices;
         List<Invoice> validInvoices;
 
-        if (branchIds != null && !branchIds.isEmpty()) {
+        if (branchIds != null) {
             totalBilled = invoiceRepository.sumTotalInvoicedByPatientAndBranches(profileId, branchIds);
             totalPaid = invoiceRepository.sumTotalPaidByPatientAndBranches(profileId, branchIds);
             totalDebt = invoiceRepository.sumTotalDebtByPatientAndBranches(profileId, branchIds);
@@ -99,18 +118,12 @@ public class DebtServiceImpl implements DebtService {
             validInvoices = invoiceRepository.findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(profileId, InvoiceStatus.CANCELLED);
         }
 
-        PatientDebtSummaryDTO dto = new PatientDebtSummaryDTO();
-        dto.setProfileId(patient.getProfileId());
-        dto.setPatientCode(patient.getPatientCode());
-        dto.setFullName(patient.getFullName());
-        dto.setPhoneNumber(patient.getPhoneNumber());
-        dto.setDepositBalance(patient.getDepositBalance() != null ? patient.getDepositBalance() : BigDecimal.ZERO);
         dto.setTotalBilled(totalBilled != null ? totalBilled : BigDecimal.ZERO);
         dto.setTotalPaid(totalPaid != null ? totalPaid : BigDecimal.ZERO);
         dto.setTotalDebt(totalDebt != null ? totalDebt : BigDecimal.ZERO);
-        dto.setUnpaidInvoicesCount(unpaidInvoices.size());
+        dto.setUnpaidInvoicesCount(unpaidInvoices != null ? unpaidInvoices.size() : 0);
 
-        if (!validInvoices.isEmpty()) {
+        if (validInvoices != null && !validInvoices.isEmpty()) {
             dto.setLastInvoiceDate(validInvoices.get(0).getIssuedAt());
         }
 
@@ -119,12 +132,15 @@ public class DebtServiceImpl implements DebtService {
 
     @Override
     public List<Invoice> getUnpaidInvoicesForPatient(Long profileId) {
-        return getUnpaidInvoicesForPatient(profileId, null);
+        return getUnpaidInvoicesForPatient(profileId, (List<Long>) null);
     }
 
     @Override
     public List<Invoice> getUnpaidInvoicesForPatient(Long profileId, List<Long> branchIds) {
-        if (branchIds != null && !branchIds.isEmpty()) {
+        if (branchIds != null && branchIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (branchIds != null) {
             return invoiceRepository.findUnpaidInvoicesByPatientAndBranches(profileId, branchIds);
         }
         return invoiceRepository.findByPatientProfile_ProfileIdAndPaymentStatusIn(

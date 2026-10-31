@@ -32,14 +32,31 @@
           </button>
         </div>
 
-        <!-- TÌM KIẾM -->
-        <form th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
+        <!-- TÌM KIẾM & BỘ LỌC -->
+        <form id="medicationFilterForm" th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
           <div class="row g-2 align-items-end">
             <div class="col-md-5 col-lg-4">
               <label for="searchKeyword" class="form-label">Tìm kiếm</label>
               <input id="searchKeyword" type="text" name="q" class="form-control"
                      placeholder="Tên thuốc, mã thuốc, hoạt chất..."
                      th:value="${keyword}">
+            </div>
+            <div class="col-md-3 col-lg-2">
+              <label for="filterActive" class="form-label">Trạng thái</label>
+              <select id="filterActive" name="active" class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Đang dùng</option>
+                <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Ngừng dùng</option>
+              </select>
+            </div>
+            <div class="col-md-2 col-lg-2">
+              <label for="filterSize" class="form-label">Số dòng / trang</label>
+              <select id="filterSize" name="size" class="form-select">
+                <option value="10" th:selected="${size == 10}">10 dòng</option>
+                <option value="15" th:selected="${size == null or size == 15}">15 dòng</option>
+                <option value="30" th:selected="${size == 30}">30 dòng</option>
+                <option value="50" th:selected="${size == 50}">50 dòng</option>
+              </select>
             </div>
             <div class="col-md-auto">
               <button type="submit" class="btn btn-primary">
@@ -52,16 +69,16 @@
 
         <!-- BẢNG DANH SÁCH -->
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" id="tblMedications">
+          <table class="table table-hover align-middle mb-0" id="tblMedications" data-enhanced-table="admin-medications">
             <thead class="table-light">
               <tr>
-                <th style="width:130px">Mã thuốc</th>
-                <th>Tên thuốc</th>
-                <th>Hoạt chất</th>
-                <th style="width:90px">Đơn vị</th>
-                <th>Hướng dẫn sử dụng</th>
-                <th style="width:120px" class="text-center">Trạng thái</th>
-                <th style="width:140px" class="text-center">Thao tác</th>
+                <th data-column-key="code" data-pinned="true" style="min-width:130px">Mã thuốc</th>
+                <th data-column-key="name" style="min-width:180px">Tên thuốc</th>
+                <th data-column-key="activeIngredient" style="min-width:160px">Hoạt chất</th>
+                <th data-column-key="unit" style="min-width:90px">Đơn vị</th>
+                <th data-column-key="usage" style="min-width:200px">Hướng dẫn sử dụng</th>
+                <th data-column-key="status" style="min-width:120px" class="text-center">Trạng thái</th>
+                <th data-column-key="actions" data-column-action="true" style="min-width:140px" class="text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -69,17 +86,17 @@
                 <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
               </tr>
               <tr th:each="med : ${medications}">
-                <td><code th:text="${med.drugCode}">TH001</code></td>
-                <td th:text="${med.drugName}">Amoxicillin</td>
-                <td th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
-                <td th:text="${med.unit}">Viên</td>
-                <td th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
-                <td class="text-center">
+                <td data-column-key="code"><code th:text="${med.drugCode}">TH001</code></td>
+                <td data-column-key="name" th:text="${med.drugName}">Amoxicillin</td>
+                <td data-column-key="activeIngredient" th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
+                <td data-column-key="unit" th:text="${med.unit}">Viên</td>
+                <td data-column-key="usage" th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
+                <td data-column-key="status" class="text-center">
                   <span class="badge"
                         th:classappend="${med.isActive} ? 'bg-success' : 'bg-secondary'"
                         th:text="${med.isActive} ? 'Đang dùng' : 'Ngừng dùng'">Đang dùng</span>
                 </td>
-                <td class="text-center">
+                <td data-column-key="actions" data-column-action="true" class="text-center">
                   <!-- Sửa -->
                   <button type="button" class="btn btn-sm btn-outline-primary me-1"
                           th:data-id="${med.medicationId}"
@@ -116,6 +133,28 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- PHÂN TRANG SERVER-SIDE -->
+        <div th:if="${totalPages != null and totalPages > 1}" class="p-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="text-muted small">
+            Hiển thị <strong th:text="${medications.size()}">0</strong> / <strong th:text="${totalItems}">0</strong> thuốc
+            (Trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages}">1</strong>)
+          </div>
+          <nav aria-label="Phân trang danh mục thuốc">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/medications(page=${currentPage - 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Trước</a>
+              </li>
+              <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                  th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link" th:href="@{/admin/medications(page=${i}, size=${size}, q=${keyword}, active=${selectedActive})}" th:text="${i + 1}">1</a>
+              </li>
+              <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/medications(page=${currentPage + 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Sau</a>
+              </li>
+            </ul>
+          </nav>
         </div>
 
       </section><!-- /panel -->
@@ -286,6 +325,28 @@ function openEditModal(btn) {
   const modal = new bootstrap.Modal(document.getElementById('modalEdit'));
   modal.show();
 }
+
+// Debounce 350ms cho tìm kiếm & tự động lọc khi đổi trạng thái/số dòng
+(function() {
+  const form = document.getElementById('medicationFilterForm');
+  const kw = document.getElementById('searchKeyword');
+  const activeSel = document.getElementById('filterActive');
+  const sizeSel = document.getElementById('filterSize');
+  if (!form) return;
+  let timer = null;
+  if (kw) {
+    kw.addEventListener('input', function() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function() { form.submit(); }, 350);
+    });
+  }
+  if (activeSel) {
+    activeSel.addEventListener('change', function() { form.submit(); });
+  }
+  if (sizeSel) {
+    sizeSel.addEventListener('change', function() { form.submit(); });
+  }
+})();
 </script>
 
 </body>
