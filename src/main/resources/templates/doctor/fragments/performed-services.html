@@ -71,14 +71,14 @@
             </div>
             
             <div class="table-responsive bg-white rounded-3 border">
-                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px; min-width: 950px; width: 100%;">
                     <thead class="table-light">
                     <tr>
-                        <th>Tên bước thủ thuật KHDT</th>
+                        <th style="min-width: 260px;">Tên bước thủ thuật KHDT</th>
                         <th style="width: 260px;">Phác đồ / Kế hoạch &amp; Giai đoạn</th>
-                        <th style="width: 120px;" class="text-center">Vị trí răng</th>
-                        <th style="width: 70px;" class="text-center">SL</th>
-                        <th style="width: 190px;" class="text-center">Thao tác tại ghế</th>
+                        <th style="width: 120px; white-space: nowrap;" class="text-center">Vị trí răng</th>
+                        <th style="width: 70px; white-space: nowrap;" class="text-center">SL</th>
+                        <th style="width: 190px; white-space: nowrap;" class="text-center">Thao tác tại ghế</th>
                     </tr>
                     </thead>
                     <tbody id="pendingPlanItemsBody">
@@ -95,7 +95,7 @@
                                         <span class="badge bg-light text-secondary border small" th:text="'Giai đoạn: ' + ${stage.stageName}">Giai đoạn 1</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-primary-subtle text-primary border" th:text="${item.toothNumbers != null and !item.toothNumbers.isEmpty() ? item.toothNumbers : 'Toàn hàm'}">R16</span>
+                                        <span class="badge bg-primary-subtle text-primary border" th:text="${item.toothNumbers != null and !item.toothNumbers.isEmpty() ? ((item.toothNumbers == 'Toàn hàm' and item.serviceName != null and item.serviceName.toLowerCase().contains('răng khôn')) ? '18, 28, 38, 48' : item.toothNumbers) : 'Toàn hàm'}">R16</span>
                                     </td>
                                     <td class="text-center fw-bold" th:text="${item.quantity != null ? item.quantity : 1}">1</td>
                                     <td class="text-center">
@@ -118,31 +118,138 @@
         </div>
 
         <!-- BẢNG DANH SÁCH DỊCH VỤ ĐÃ THỰC HIỆN TRONG CA KHÁM (HÔM NAY) -->
+        <style>
+            /* NÚT THAO TÁC ĐỒNG BỘ CHUẨN DAILY-VISITS */
+            .ps-btn-workflow {
+                height: 34px;
+                padding: 0 14px;
+                background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+                color: #ffffff !important;
+                border: none;
+                border-radius: 9px;
+                font-size: 13px;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                text-decoration: none !important;
+                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
+                transition: all 0.15s ease;
+                white-space: nowrap;
+                cursor: pointer;
+            }
+            .ps-btn-workflow:hover {
+                background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(2, 132, 199, 0.38);
+            }
+
+            .ps-btn-delete {
+                height: 34px;
+                padding: 0 14px;
+                background: #ffffff;
+                color: #e11d48 !important;
+                border: 1.5px solid #fecdd3;
+                border-radius: 9px;
+                font-size: 13px;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                text-decoration: none !important;
+                transition: all 0.15s ease;
+                white-space: nowrap;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+                cursor: pointer;
+            }
+            .ps-btn-delete:hover {
+                background: #fff1f2;
+                border-color: #fda4af;
+                transform: translateY(-1px);
+            }
+
+            /* 1. CỘT THAO TÁC Ở CUỐI BẢNG: Luôn hiển thị các nút đầy đủ */
+            .ps-actions-cell-always {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                white-space: nowrap;
+            }
+
+            /* 2. CỤM NÚT NỔI BÁM MÉP PHẢI VIEWPORT KHI HOVER (CHUẨN 100% DAILY-VISITS) */
+            .ps-floating-actions-track {
+                position: sticky !important;
+                right: 0 !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                overflow: visible !important;
+                z-index: 25;
+                background: transparent !important;
+            }
+
+            .ps-floating-actions-bar {
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%) translateX(10px);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 14px 6px 36px;
+                background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 22%, #f0f9ff 100%);
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                white-space: nowrap;
+                z-index: 30;
+                border-radius: 8px 0 0 8px;
+                box-shadow: -6px 0 16px rgba(0, 0, 0, 0.06);
+            }
+
+            /* Rê chuột vào dòng: Nổi thanh thao tác nhanh ở mép phải màn hình */
+            .table-hover tbody tr:hover .ps-floating-actions-bar {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(-50%) translateX(0);
+                pointer-events: auto;
+            }
+        </style>
+
         <div class="p-3 bg-white">
-            <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                 <span class="small fw-bold text-dark text-uppercase" style="letter-spacing: 0.3px;">
                     Danh sách dịch vụ / thủ thuật đã thực hiện tại ghế (Đã đồng bộ sang Kế toán):
                 </span>
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px; min-width: 1100px; width: 100%;">
                     <thead class="table-light">
                     <tr>
-                        <th style="width: 100px;">Mã DV</th>
-                        <th>Tên dịch vụ điều trị &amp; Quy trình</th>
-                        <th style="width: 100px;" class="text-center">Răng</th>
-                        <th style="width: 110px;" class="text-end">Đơn giá</th>
-                        <th style="width: 70px;" class="text-center">SL</th>
-                        <th style="width: 120px;" class="text-end">Thành tiền</th>
-                        <th style="width: 180px;">Bác sĩ &amp; Phụ tá</th>
-                        <th style="width: 130px;" class="text-center">Trạng thái</th>
-                        <th style="width: 120px;" class="text-center">Thao tác</th>
+                        <th style="width: 100px; white-space: nowrap;">Mã DV</th>
+                        <th style="min-width: 280px;">Tên dịch vụ điều trị &amp; Quy trình</th>
+                        <th style="width: 100px; white-space: nowrap;" class="text-center">Răng</th>
+                        <th style="width: 120px; white-space: nowrap;" class="text-end">Đơn giá</th>
+                        <th style="width: 70px; white-space: nowrap;" class="text-center">SL</th>
+                        <th style="width: 140px; white-space: nowrap;" class="text-end">Thành tiền</th>
+                        <th style="width: 220px; min-width: 200px; white-space: nowrap;">Bác sĩ &amp; Phụ tá</th>
+                        <th style="width: 130px; white-space: nowrap;" class="text-center">Trạng thái</th>
+                        <th style="width: 250px; min-width: 240px; white-space: nowrap;" class="text-center">Thao tác</th>
+                        <th class="ps-floating-actions-track"></th>
                     </tr>
                     </thead>
                     <tbody id="performedServicesTableBody">
                     <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
-                        <td colspan="9" class="text-center py-5 text-muted bg-white">
+                        <td colspan="10" class="text-center py-5 text-muted bg-white">
                             <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 200px;">
                                 <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
                                      style="width: 68px; height: 68px; background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%); border: 2px dashed #38bdf8;">
@@ -161,31 +268,47 @@
                         </td>
                     </tr>
                     <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
-                        <td>
+                        <td style="white-space: nowrap;">
                             <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
                         </td>
                         <td>
                             <div class="fw-bold text-dark" th:text="${ps.serviceName}">Hàn răng sâu Composite</div>
-                            <div class="small text-muted" th:if="${ps.planName != null}">
-                                <span class="badge bg-info-subtle text-primary border border-primary-subtle me-1" style="font-size: 11px;">
-                                    <i class="bi bi-diagram-3-fill me-1"></i>Từ KHDT: <span th:text="${ps.planName}"></span>
+                            <!-- Hiển thị công đoạn KHDT gọn gàng, loại bỏ chuỗi tên KHDT bị lặp dài ngoằng -->
+                            <div class="small text-secondary mt-0.5" th:if="${ps.stageName != null and !ps.stageName.isEmpty()}" th:title="${ps.planName != null ? 'Kế hoạch gốc: ' + ps.planName : ps.clinicalNotes}">
+                                <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">
+                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT: <span th:text="${ps.stageName}">[CĐ #1] Công đoạn</span>
                                 </span>
                             </div>
-                            <div class="small text-secondary fst-italic" th:if="${ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}" th:text="${ps.clinicalNotes}"></div>
+                            <div class="small text-secondary mt-0.5" th:if="${(ps.stageName == null or ps.stageName.isEmpty()) and ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}">
+                                <!-- Nếu là ghi chú KHDT cũ chứa chuỗi dài ([CĐ...]) thì trích xuất phần công đoạn cụ thể -->
+                                <span th:if="${#strings.contains(ps.clinicalNotes, '([CĐ')}"
+                                      th:with="startIdx=${#strings.indexOf(ps.clinicalNotes, '([CĐ')}, endIdx=${#strings.length(ps.clinicalNotes)}"
+                                      class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;"
+                                      th:title="${ps.clinicalNotes}">
+                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT: <span th:text="${#strings.substring(ps.clinicalNotes, startIdx + 1, endIdx - 1)}">[CĐ #1] Công đoạn</span>
+                                </span>
+                                <!-- Nếu là ghi chú thông thường -->
+                                <span th:unless="${#strings.contains(ps.clinicalNotes, '([CĐ')}" class="fst-italic" th:text="${ps.clinicalNotes}">Ghi chú</span>
+                            </div>
+                            <div class="small text-secondary mt-0.5" th:if="${ps.stageName == null and (ps.clinicalNotes == null or ps.clinicalNotes.isEmpty()) and ps.planName != null}">
+                                <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;" th:title="${ps.planName}">
+                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT
+                                </span>
+                            </div>
                         </td>
-                        <td class="text-center">
-                            <span class="badge bg-primary-subtle text-primary border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">R16</span>
+                        <td class="text-center" style="white-space: nowrap;">
+                            <span class="badge bg-primary-subtle text-primary border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ((ps.toothNumbers == 'Toàn hàm' and ps.serviceName != null and ps.serviceName.toLowerCase().contains('răng khôn')) ? '18, 28, 38, 48' : ps.toothNumbers) : 'Toàn hàm'}">R16</span>
                         </td>
-                        <td class="text-end text-muted small" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        <td class="text-end text-muted small" style="white-space: nowrap;" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                             350,000 đ
                         </td>
-                        <td class="text-center fw-semibold" th:text="${ps.quantity != null ? ps.quantity : 1}">
+                        <td class="text-center fw-semibold" style="white-space: nowrap;" th:text="${ps.quantity != null ? ps.quantity : 1}">
                             1
                         </td>
-                        <td class="text-end fw-bold text-success" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        <td class="text-end fw-bold text-success" style="white-space: nowrap;" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                             350,000 đ
                         </td>
-                        <td>
+                        <td style="white-space: nowrap;">
                             <div class="small fw-semibold text-dark">
                                 <i class="bi bi-person-badge text-primary me-1"></i><span th:text="${ps.doctorName}">BS. Lê Hoàng Nam</span>
                             </div>
@@ -193,29 +316,56 @@
                                 <i class="bi bi-person-heart text-secondary me-1"></i><span th:text="'PT: ' + ${ps.assistantName}"></span>
                             </div>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center" style="white-space: nowrap;">
                             <span class="badge bg-success-subtle text-success border border-success">
                                 <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
                             </span>
                         </td>
-                        <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-sm btn-outline-info"
-                                        title="Theo dõi các bước quy trình kỹ thuật tại ghế"
+                        <td class="text-center" style="white-space: nowrap; min-width: 240px;">
+                            <!-- 1. CỘT THAO TÁC Ở CUỐI BẢNG: Luôn hiển thị các nút đầy đủ -->
+                            <div class="ps-actions-cell-always" onclick="event.stopPropagation()">
+                                <button type="button" class="ps-btn-workflow"
                                         th:data-service-id="${ps.serviceId}"
                                         th:data-service-name="${ps.serviceName}"
                                         th:data-performed-id="${ps.performedId}"
-                                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))">
-                                    <i class="bi bi-diagram-3"></i>
+                                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))"
+                                        title="Theo dõi các bước quy trình kỹ thuật tại ghế">
+                                    <i class="bi bi-diagram-3-fill"></i>
+                                    <span>Quy trình ghế</span>
                                 </button>
-                                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)"
+                                <button th:if="${!isClinicalLocked}" type="button" class="ps-btn-delete"
                                         th:data-id="${ps.performedId}"
-                                        onclick="deletePerformedService(this.getAttribute('data-id'))">
+                                        onclick="deletePerformedService(this.getAttribute('data-id'))"
+                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)">
                                     <i class="bi bi-trash3-fill"></i>
+                                    <span>Hủy dịch vụ</span>
                                 </button>
-                                <span th:if="${isClinicalLocked}" class="text-muted ms-2" title="Bệnh án đã khóa (BR-EMR-02)">
-                                    <i class="bi bi-lock-fill text-secondary"></i>
+                                <span th:if="${isClinicalLocked}" class="badge bg-light text-secondary border px-2 py-1" style="font-size: 12px;" title="Bệnh án đã khóa (BR-EMR-02)">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã khóa
+                                </span>
+                            </div>
+                        </td>
+                        <!-- 2. CỤM NÚT NỔI BÁM MÉP PHẢI VIEWPORT KHI HOVER (CHUẨN 100% DAILY-VISITS) -->
+                        <td class="ps-floating-actions-track">
+                            <div class="ps-floating-actions-bar" onclick="event.stopPropagation()">
+                                <button type="button" class="ps-btn-workflow"
+                                        th:data-service-id="${ps.serviceId}"
+                                        th:data-service-name="${ps.serviceName}"
+                                        th:data-performed-id="${ps.performedId}"
+                                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))"
+                                        title="Theo dõi các bước quy trình kỹ thuật tại ghế">
+                                    <i class="bi bi-diagram-3-fill"></i>
+                                    <span>Quy trình ghế</span>
+                                </button>
+                                <button th:if="${!isClinicalLocked}" type="button" class="ps-btn-delete"
+                                        th:data-id="${ps.performedId}"
+                                        onclick="deletePerformedService(this.getAttribute('data-id'))"
+                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)">
+                                    <i class="bi bi-trash3-fill"></i>
+                                    <span>Hủy dịch vụ</span>
+                                </button>
+                                <span th:if="${isClinicalLocked}" class="badge bg-light text-secondary border px-2 py-1" style="font-size: 12px;" title="Bệnh án đã khóa (BR-EMR-02)">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã khóa
                                 </span>
                             </div>
                         </td>

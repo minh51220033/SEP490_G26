@@ -410,19 +410,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         String doctorName = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getFullName()
                 : "Bác sĩ điều trị";
-        String auditLog = String.format(
-                "\n[%s] Bác sĩ %s hoàn tất khám lâm sàng & chuyển Kế toán xử lý (BR-EMR-02: Khóa bệnh án). " +
-                        "Dự kiến viện phí bàn giao: [DV thực hiện: %s | KHDT dự kiến: %s | Thuốc dự kiến (Tạm tính - BN tự chọn mua tại PK/mua ngoài): %s].%s",
-                timestamp,
-                doctorName,
-                svcCostStr,
-                planCostStr,
-                prescCostStr,
-                (doctorNotes != null && !doctorNotes.trim().isEmpty() ? " Ghi chú bàn giao: " + doctorNotes.trim()
-                        : ""));
-
-        String existingNotes = visit.getNotes();
-        visit.setNotes(existingNotes != null ? existingNotes + auditLog : auditLog.trim());
+        log.info("Ca khám visitId={} đã được bác sĩ {} hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked). Dự kiến viện phí bàn giao: [DV: {} | KHDT: {} | Thuốc: {}]. Ghi chú bàn giao: {}", visitId, doctorName, svcCostStr, planCostStr, prescCostStr, doctorNotes);
 
         Visit saved = visitRepository.save(visit);
         log.info("Ca khám visitId={} đã được bác sĩ hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked)",
@@ -448,12 +436,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         visit.setStatus(VisitStatus.IN_EXAM);
 
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
-        String auditLog = String.format("\n[%s] Mở lại ca khám lâm sàng từ trạng thái Chờ thanh toán để điều chỉnh.%s",
-                timestamp,
-                (reason != null && !reason.trim().isEmpty() ? " Lý do: " + reason.trim() : ""));
-
-        String existingNotes = visit.getNotes();
-        visit.setNotes(existingNotes != null ? existingNotes + auditLog : auditLog.trim());
+        log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM từ WAITING_PAYMENT lúc {}. Lý do: {}", visitId, timestamp, reason);
 
         Visit saved = visitRepository.save(visit);
         log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM", visitId);
