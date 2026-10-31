@@ -85,51 +85,51 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="fin-table table">
+                    <table class="fin-table table" data-enhanced-table="ft19-memberships">
                         <thead>
                         <tr>
-                            <th class="text-center" style="width: 70px;">Thứ tự</th>
-                            <th>Mã hạng</th>
-                            <th>Tên hạng</th>
-                            <th class="text-end">Chi tiêu tối thiểu</th>
-                            <th class="text-center">Chiết khấu</th>
-                            <th class="text-end">Quy đổi 1 điểm</th>
-                            <th class="text-end">Giá trị 1 điểm</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-end" style="width: 140px;">Thao tác</th>
+                            <th class="text-center" style="width: 70px;" data-column-key="display_order" data-column-required="true" data-column-pinned="true">Thứ tự</th>
+                            <th data-column-key="tier_code" data-column-pinned="true">Mã hạng</th>
+                            <th data-column-key="tier_name" data-column-pinned="true">Tên hạng</th>
+                            <th class="text-end" data-column-key="min_spent">Chi tiêu tối thiểu</th>
+                            <th class="text-center" data-column-key="discount">Chiết khấu</th>
+                            <th class="text-end" data-column-key="spend_per_point">Quy đổi 1 điểm</th>
+                            <th class="text-end" data-column-key="point_value">Giá trị 1 điểm</th>
+                            <th class="text-center" data-column-key="status">Trạng thái</th>
+                            <th class="text-end" style="width: 140px;" data-column-key="actions" data-column-action="true">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="tier : ${tiers}">
-                            <td class="text-center fw-bold" th:text="${tier.displayOrder}">1</td>
-                            <td>
+                            <td data-column-key="display_order" class="text-center fw-bold" th:text="${tier.displayOrder}">1</td>
+                            <td data-column-key="tier_code">
                                 <span class="badge"
                                       th:classappend="${tier.tierCode == 'DIAMOND' ? 'bg-primary' : (tier.tierCode == 'GOLD' ? 'bg-warning text-dark' : (tier.tierCode == 'SILVER' ? 'bg-secondary' : 'bg-light text-dark border'))}"
                                       th:text="${tier.tierCode}">STANDARD</span>
                             </td>
-                            <td>
+                            <td data-column-key="tier_name">
                                 <strong th:text="${tier.tierName}">Thành viên mới</strong>
                             </td>
-                            <td class="text-end fw-bold text-dark"
+                            <td data-column-key="min_spent" class="text-end fw-bold text-dark"
                                 th:text="${#numbers.formatDecimal(tier.minTotalSpent, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 0 đ
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="discount" class="text-center">
                                 <span class="badge bg-success" th:text="${tier.discountPercent} + '%'">0%</span>
                             </td>
-                            <td class="text-end"
+                            <td data-column-key="spend_per_point" class="text-end"
                                 th:text="${#numbers.formatDecimal(tier.spendPerPoint, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 10.000 đ
                             </td>
-                            <td class="text-end text-success fw-bold"
+                            <td data-column-key="point_value" class="text-end text-success fw-bold"
                                 th:text="${#numbers.formatDecimal(tier.pointValue, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 1.000 đ
                             </td>
-                            <td class="text-center">
+                            <td data-column-key="status" class="text-center">
                                 <span th:if="${tier.isActive}" class="fin-badge fin-badge-paid"><i class="bi bi-check-circle me-1"></i>Đang áp dụng</span>
                                 <span th:unless="${tier.isActive}" class="fin-badge fin-badge-cancelled"><i class="bi bi-x-circle me-1"></i>Vô hiệu</span>
                             </td>
-                            <td class="text-end">
+                            <td data-column-key="actions" data-column-action="true" class="text-end">
                                 <div class="d-flex justify-content-end gap-1">
                                     <button type="button" class="fin-btn fin-btn-outline py-1 px-2 btn-sm"
                                             th:data-id="${tier.tierId}"

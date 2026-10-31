@@ -5,6 +5,7 @@ import com.cvdcms.DTO.PaymentRequestDTO;
 import com.cvdcms.DTO.RefundRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.entity.enums.InvoicePaymentStatus;
 import com.cvdcms.entity.enums.InvoiceStatus;
 import com.cvdcms.entity.enums.PaymentMethod;
 import com.cvdcms.entity.enums.PaymentType;
@@ -48,7 +49,10 @@ public class PaymentPageController {
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.TreatmentPlanRepository treatmentPlanRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public PaymentPageController(
             PaymentService paymentService,
             RefundService refundService,
@@ -69,6 +73,23 @@ public class PaymentPageController {
         this.paymentRepository = paymentRepository;
         this.userRepository = userRepository;
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+    }
+
+    public PaymentPageController(
+            PaymentService paymentService,
+            RefundService refundService,
+            DebtService debtService,
+            BranchRepository branchRepository,
+            InvoiceRepository invoiceRepository,
+            PatientProfileRepository patientProfileRepository,
+            PaymentRepository paymentRepository,
+            UserRepository userRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            com.cvdcms.repository.TreatmentPlanRepository treatmentPlanRepository
+    ) {
+        this(paymentService, refundService, debtService, branchRepository, invoiceRepository,
+                patientProfileRepository, paymentRepository, userRepository, staffBranchAssignmentRepository);
+        this.treatmentPlanRepository = treatmentPlanRepository;
     }
 
     private void populateUserAndSidebar(Model model, HttpSession session, String activeMenu) {
@@ -394,6 +415,8 @@ public class PaymentPageController {
                         ))
                 );
                 model.addAttribute("branches", allowedBranches);
+                model.addAttribute("treatmentPlans", treatmentPlanRepository != null ? treatmentPlanRepository.findByProfileIdWithDetails(patient.getProfileId()) : java.util.Collections.emptyList());
+                model.addAttribute("refunds", refundService.getRefundsByProfileId(patient.getProfileId(), allowedBranchIds));
             });
         }
 
@@ -603,6 +626,7 @@ public class PaymentPageController {
     @GetMapping("/debts")
     public String listDebts(
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) InvoicePaymentStatus paymentStatus,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -612,11 +636,14 @@ public class PaymentPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "debts");
 
-        Long effectiveBranchId = resolveBranchId(branchId, currentUserId);
+        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+
+        Long effectiveBranchId = (branchId != null) ? resolveBranchId(branchId, currentUserId) : null;
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<PatientDebtSummaryDTO> debtPage = debtService.getPatientDebts(effectiveBranchId, keyword, pageable);
+        Page<PatientDebtSummaryDTO> debtPage = debtService.getPatientDebts(effectiveBranchId, allowedBranchIds, paymentStatus, keyword, pageable);
 
         model.addAttribute("patientDebts", debtPage.getContent());
         model.addAttribute("currentPage", page);
@@ -624,6 +651,7 @@ public class PaymentPageController {
         model.addAttribute("totalElements", debtPage.getTotalElements());
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
+        model.addAttribute("selectedPaymentStatus", paymentStatus);
         model.addAttribute("keyword", keyword);
 
         return "finance/payments/debts";

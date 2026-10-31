@@ -19,9 +19,22 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     Optional<Refund> findByRefundCode(String refundCode);
 
+    Optional<Refund> findByIdempotencyKey(String idempotencyKey);
+
     List<Refund> findByInvoice_InvoiceIdOrderByRefundedAtDesc(Long invoiceId);
 
     List<Refund> findByPatientProfile_ProfileIdOrderByRefundedAtDesc(Long profileId);
+
+    @Query("""
+        SELECT r FROM Refund r
+        WHERE r.patientProfile.profileId = :profileId
+          AND (:branchIds IS NULL OR r.branch.branchId IN :branchIds)
+        ORDER BY r.refundedAt DESC
+    """)
+    List<Refund> findByPatientProfile_ProfileIdAndAllowedBranches(
+            @Param("profileId") Long profileId,
+            @Param("branchIds") List<Long> branchIds
+    );
 
     @Query("""
         SELECT r FROM Refund r

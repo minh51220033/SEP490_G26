@@ -90,6 +90,23 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
+    // Cờ đánh dấu tài khoản có tùy chỉnh tập quyền riêng (trong phạm vi quyền của Role) hay kế thừa mặc định toàn bộ quyền của Role
+    @Column(name = "custom_permissions_enabled")
+    private Boolean customPermissionsEnabled = false;
+
+    // Tập quyền được tích chọn riêng cho tài khoản này (quan hệ nhiều-nhiều qua bảng user_permissions)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_permissions",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_user_permissions",
+                    columnNames = {"user_id", "permission_id"}
+            )
+    )
+    private Set<Permission> customPermissions = new HashSet<>();
+
     // Một tài khoản có thể quản lý nhiều hồ sơ bệnh nhân
     @OneToMany(
             mappedBy = "user",

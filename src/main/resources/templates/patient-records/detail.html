@@ -5,7 +5,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/patient-emr.css}">
             <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ bệnh nhân.</div>
             <div class="alert alert-success" th:if="${documentSuccess != null}" th:text="${documentSuccess}"></div>
             <div class="alert alert-danger" th:if="${documentError != null}" th:text="${documentError}"></div>
@@ -49,8 +49,19 @@
                     </div>
                     <div class="tab-pane fade" id="medical">
                         <p th:unless="${canViewClinical}" class="text-muted mt-3">Nội dung bệnh án thuộc phạm vi chuyên môn của Bác sĩ.</p>
-                        <div th:if="${canViewClinical}"><div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div>
-                            <h3 class="h6 mt-3">Kế hoạch điều trị</h3><p th:if="${#lists.isEmpty(plans)}" class="text-muted">Chưa có kế hoạch.</p><ul th:unless="${#lists.isEmpty(plans)}"><li th:each="plan : ${plans}"><span th:text="${plan.name}">Kế hoạch</span> · <span th:text="${plan.status}">Trạng thái</span></li></ul></div>
+                        <div th:if="${canViewClinical}">
+                            <div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div>
+                            <div class="patient-section-heading"><div><h3>Bệnh án điện tử</h3><p>Hồ sơ được tạo từ dữ liệu khám, chẩn đoán, thủ thuật và đơn thuốc.</p></div><a class="btn btn-sm btn-outline-primary" th:href="@{/emr/records(query=${patient.code})}">Mở module EMR</a></div>
+                            <p th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}" class="text-muted">Bệnh nhân chưa có bệnh án điện tử.</p>
+                            <div class="patient-emr-list" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}">
+                                <article th:each="emr : ${emrRecords}">
+                                    <div><strong th:text="${emr.code}">EMR-001</strong><span class="patient-emr-status" th:classappend="| status-${emr.status}|" th:text="${emr.status.displayName}">Bản nháp</span></div>
+                                    <p><span th:text="|Lượt khám ${emr.visitCode}|">Lượt khám</span> · <span th:text="${#temporals.format(emr.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</span> · <span th:text="|Phiên bản v${emr.versionNumber}|">v1</span></p>
+                                    <a th:href="@{/emr/records/{id}(id=${emr.id})}">Xem chi tiết bệnh án →</a>
+                                </article>
+                            </div>
+                            <h3 class="h6 mt-4">Kế hoạch điều trị</h3><p th:if="${#lists.isEmpty(plans)}" class="text-muted">Chưa có kế hoạch.</p><ul th:unless="${#lists.isEmpty(plans)}"><li th:each="plan : ${plans}"><span th:text="${plan.name}">Kế hoạch</span> · <span th:text="${plan.status}">Trạng thái</span></li></ul>
+                        </div>
                     </div>
                     <div class="tab-pane fade" id="history"><div th:if="${#lists.isEmpty(visits)}" class="patient-empty">Chưa có lượt khám.</div><div class="patient-timeline" th:unless="${#lists.isEmpty(visits)}"><article th:each="visit : ${visits}"><div><strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</strong><span th:text="${visit.status}">Trạng thái</span></div><p><span th:text="${visit.branchName}">Chi nhánh</span> · <span th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span></p><a th:href="${recordBasePath + '/' + patient.id + '/visits/' + visit.id}">Xem chi tiết lượt khám →</a></article></div></div>
                 </div>

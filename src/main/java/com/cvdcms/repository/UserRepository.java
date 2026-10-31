@@ -3,6 +3,7 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.Role;
 import com.cvdcms.entity.User;
+import com.cvdcms.entity.enums.UserType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -118,7 +119,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * - Email
      * - Số điện thoại tài khoản
      *
-     * Có thể lọc thêm theo roleId và trạng thái isActive.
+     * Có thể lọc thêm theo roleId, trạng thái isActive, chi nhánh và loại tài khoản.
      *
      * Lưu ý:
      * fullName không còn nằm trong User.
@@ -128,6 +129,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             value = """
             SELECT DISTINCT u
             FROM User u
+            LEFT JOIN FETCH u.branch b
             LEFT JOIN u.roles r
             LEFT JOIN u.patientProfiles p
             LEFT JOIN StaffProfile sp ON sp.user = u
@@ -138,11 +140,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(p.fullName, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
-                    OR LOWER(COALESCE(p.patientCode, ''))
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(sp.fullName, ''))
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-                    OR LOWER(COALESCE(sp.staffCode, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(u.email)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -151,6 +149,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 )
                 AND (:roleId IS NULL OR r.roleId = :roleId)
                 AND (:active IS NULL OR u.isActive = :active)
+                AND (:branchId IS NULL OR b.branchId = :branchId)
+                AND (:userType IS NULL OR u.userType = :userType)
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM User ua
+                    JOIN ua.roles ra
+                    WHERE ua = u
+                      AND UPPER(ra.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+                )
             """,
             countQuery = """
             SELECT COUNT(DISTINCT u.userId)
@@ -158,6 +165,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             LEFT JOIN u.roles r
             LEFT JOIN u.patientProfiles p
             LEFT JOIN StaffProfile sp ON sp.user = u
+            LEFT JOIN u.branch b
             WHERE
                 (
                     :keyword = ''
@@ -165,11 +173,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(p.fullName, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
-                    OR LOWER(COALESCE(p.patientCode, ''))
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(COALESCE(sp.fullName, ''))
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-                    OR LOWER(COALESCE(sp.staffCode, ''))
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
                     OR LOWER(u.email)
                         LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -178,12 +182,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 )
                 AND (:roleId IS NULL OR r.roleId = :roleId)
                 AND (:active IS NULL OR u.isActive = :active)
+                AND (:branchId IS NULL OR b.branchId = :branchId)
+                AND (:userType IS NULL OR u.userType = :userType)
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM User ua
+                    JOIN ua.roles ra
+                    WHERE ua = u
+                      AND UPPER(ra.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+                )
             """
     )
     Page<User> searchUsers(
             @Param("keyword") String keyword,
             @Param("roleId") Integer roleId,
             @Param("active") Boolean active,
+            @Param("branchId") Long branchId,
+            @Param("userType") UserType userType,
             Pageable pageable
     );
 
@@ -245,31 +260,31 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean hasActiveAdminRole(@Param("userId") Long userId);
 
     /**
-     * Kiểm tra tài khoản có vai trò Tài chính (ADMIN hoặc KE_TOAN) đang hoạt động hay không.
-     * So khớp chính xác tên vai trò, kiểm tra trạng thái hoạt động trong database.
+     * Kiểm tra tài khoản có vai trò Tài chính (ADMIN, KE_TOAN hoặc Role mở rộng có quyền FINANCE) đang hoạt động hay không.
      */
     @Query("""
-    SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END
+    SELECT CASE WHEN COUNT(DISTINCT u) > 0 THEN TRUE ELSE FALSE END
     FROM User u
     JOIN u.roles r
+    LEFT JOIN r.permissions p
+    LEFT JOIN u.customPermissions cp
     WHERE u.userId = :userId
       AND u.isActive = TRUE
       AND r.isActive = TRUE
-      AND UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN', 'KE_TOAN', 'ROLE_KE_TOAN')
+      AND (
+          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          OR (
+              (UPPER(COALESCE(p.module, '')) = 'FINANCE'
+               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVOICE_VIEW', 'INVOICE_CREATE', 'PAYMENT_COLLECT', 'REFUND_MANAGE'))
+              AND (COALESCE(u.customPermissionsEnabled, FALSE) = FALSE OR cp = p)
+          )
+      )
     """)
     boolean hasActiveFinanceRole(@Param("userId") Long userId);
 
 
     /**
      * Kiểm tra tài khoản có quyền quản lý tài khoản hay không.
-     *
-     * Điều kiện:
-     * 1. User tồn tại và đang hoạt động.
-     * 2. Có vai trò ADMIN hoặc LE_TAN.
-     * 3. Vai trò tương ứng cũng đang hoạt động.
-     *
-     * Truy vấn dữ liệu hiện tại trong database thay vì chỉ tin vào
-     * thông tin vai trò được lưu trong session khi đăng nhập.
      */
     @Query("""
     SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END
@@ -295,13 +310,86 @@ public interface UserRepository extends JpaRepository<User, Long> {
         THEN TRUE ELSE FALSE END
     FROM User u
     JOIN u.roles r
+    LEFT JOIN r.permissions p
+    LEFT JOIN u.customPermissions cp
     WHERE u.userId = :userId
       AND u.isActive = TRUE
       AND r.isActive = TRUE
-      AND UPPER(r.roleName) IN ('ADMIN', 'QUAN_LY_KHO')
+      AND (
+          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          OR (
+              (UPPER(COALESCE(p.module, '')) = 'INVENTORY'
+               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVENTORY_VIEW', 'INVENTORY_MANAGE', 'SUPPLIER_MANAGE'))
+              AND (COALESCE(u.customPermissionsEnabled, FALSE) = FALSE OR cp = p)
+          )
+      )
 """)
     boolean hasActiveSupplierManagementRole(
             @Param("userId") Long userId
+    );
+
+    /**
+     * Lấy tài khoản kèm tập vai trò, quyền của vai trò và quyền tùy chỉnh riêng của tài khoản.
+     */
+    @Query("""
+    SELECT DISTINCT u
+    FROM User u
+    LEFT JOIN FETCH u.roles r
+    LEFT JOIN FETCH r.permissions
+    LEFT JOIN FETCH u.customPermissions
+    WHERE u.userId = :userId
+    """)
+    Optional<User> findByIdWithRolesAndPermissions(@Param("userId") Long userId);
+
+    /**
+     * Lấy danh sách mã quyền tĩnh (permissionCode) đang hiệu lực của tài khoản:
+     * - Nếu tài khoản bật tùy chỉnh quyền riêng (customPermissionsEnabled = true): chỉ lấy các quyền vừa thuộc Role vừa được tích chọn trong customPermissions.
+     * - Nếu không bật tùy chỉnh riêng: kế thừa toàn bộ quyền của các Role đang hoạt động.
+     */
+    @Query("""
+    SELECT DISTINCT p.permissionCode
+    FROM User u
+    JOIN u.roles r
+    JOIN r.permissions p
+    LEFT JOIN u.customPermissions cp
+    WHERE u.userId = :userId
+      AND u.isActive = TRUE
+      AND r.isActive = TRUE
+      AND (
+          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          OR COALESCE(u.customPermissionsEnabled, FALSE) = FALSE
+          OR cp = p
+      )
+    """)
+    List<String> findActivePermissionCodesByUserId(@Param("userId") Long userId);
+
+    /**
+     * Kiểm tra tài khoản có quyền cụ thể (hoặc là ADMIN) đang hoạt động hay không.
+     * Tôn trọng cấu hình tùy chỉnh quyền riêng của từng tài khoản (customPermissionsEnabled).
+     */
+    @Query("""
+    SELECT CASE WHEN COUNT(DISTINCT u) > 0 THEN TRUE ELSE FALSE END
+    FROM User u
+    JOIN u.roles r
+    LEFT JOIN r.permissions p
+    LEFT JOIN u.customPermissions cp
+    WHERE u.userId = :userId
+      AND u.isActive = TRUE
+      AND r.isActive = TRUE
+      AND (
+          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          OR (
+              UPPER(COALESCE(p.permissionCode, '')) = UPPER(:permissionCode)
+              AND (
+                  COALESCE(u.customPermissionsEnabled, FALSE) = FALSE
+                  OR cp = p
+              )
+          )
+      )
+    """)
+    boolean hasActivePermission(
+            @Param("userId") Long userId,
+            @Param("permissionCode") String permissionCode
     );
 
 
