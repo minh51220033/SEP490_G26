@@ -1,329 +1,229 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="'Phiếu nhập kho ' + ${receipt.receiptCode}">In Phiếu Nhập Kho</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-            color: #0f172a;
-            background: #f1f5f9;
-            padding: 24px 12px;
-            font-size: 13.5px;
-            line-height: 1.5;
-        }
-        .toolbar {
-            max-width: 210mm;
-            margin: 0 auto 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #ffffff;
-            padding: 12px 18px;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-        .btn-primary { background: #0284c7; color: #fff; }
-        .btn-primary:hover { background: #0369a1; }
-        .btn-outline { background: #fff; color: #334155; border-color: #cbd5e1; }
-        .btn-outline:hover { background: #f8fafc; }
+<head th:replace="~{fragments/head :: head('Xem trước & In phiếu nhập kho - ' + ${receipt.receiptCode})}"></head>
+<body class="app-body">
 
-        .sheet {
-            width: 210mm;
-            min-height: 285mm;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 16mm 16mm 18mm;
-            border-radius: 6px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
-        }
-        .clinic-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 2px solid #0284c7;
-            padding-bottom: 12px;
-            margin-bottom: 18px;
-        }
-        .clinic-title {
-            font-size: 17px;
-            font-weight: 800;
-            color: #0369a1;
-            text-transform: uppercase;
-        }
-        .clinic-sub {
-            font-size: 13px;
-            color: #475569;
-            margin-top: 2px;
-        }
-        .doc-title-wrap {
-            text-align: center;
-            margin-bottom: 18px;
-        }
-        .doc-title {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: 0.4px;
-            color: #0f172a;
-        }
-        .doc-meta {
-            font-size: 13px;
-            color: #475569;
-            margin-top: 4px;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px 24px;
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 18px;
-        }
-        .info-item {
-            display: flex;
-            gap: 6px;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #475569;
-            min-width: 125px;
-        }
-        .info-value {
-            color: #0f172a;
-            font-weight: 500;
-        }
-        table.items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 18px;
-        }
-        table.items-table th, table.items-table td {
-            border: 1px solid #cbd5e1;
-            padding: 8px 10px;
-            font-size: 12.5px;
-        }
-        table.items-table th {
-            background: #f1f5f9;
-            font-weight: 700;
-            color: #1e293b;
-            text-align: left;
-        }
-        .text-end { text-align: right !important; }
-        .text-center { text-align: center !important; }
+<!-- Nhúng stylesheet xem trước và in ấn A4 chuyên dụng -->
+<link rel="stylesheet" th:href="@{/css/inventory-print.css}">
 
-        .summary-wrap {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 26px;
-        }
-        .summary-box {
-            width: 340px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background: #f8fafc;
-            padding: 10px 14px;
-        }
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 13.5px;
-        }
-        .summary-row.total {
-            border-top: 1px dashed #cbd5e1;
-            margin-top: 4px;
-            padding-top: 8px;
-            font-weight: 700;
-            font-size: 14.5px;
-        }
-        .sig-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-top: 24px;
-            text-align: center;
-        }
-        .sig-title {
-            font-weight: 700;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-        .sig-sub {
-            font-size: 12px;
-            color: #64748b;
-            font-style: italic;
-            margin-bottom: 10px;
-        }
-        .sig-box {
-            height: 105px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 8px;
-        }
-        .sig-box img {
-            max-height: 98px;
-            max-width: 220px;
-            object-fit: contain;
-        }
-        .sig-name {
-            font-weight: 700;
-            font-size: 14px;
-            color: #0f172a;
-        }
-        .sig-time {
-            font-size: 11.5px;
-            color: #64748b;
-            margin-top: 2px;
-        }
-        @media print {
-            body { background: #fff; padding: 0; }
-            .toolbar { display: none !important; }
-            .sheet { box-shadow: none; width: 100%; padding: 8mm; }
-        }
-    </style>
-</head>
-<body>
-    <div class="toolbar">
-        <div>
-            <strong th:text="'Phiếu nhập kho: ' + ${receipt.receiptCode}">Phiếu nhập kho</strong>
-            <span style="color:#64748b; margin-left: 8px;" th:text="${receipt.branchName}"></span>
-        </div>
-        <div style="display:flex; gap:8px;">
-            <a class="btn btn-outline" th:href="@{'/api/inventory/receipts/' + ${receipt.receiptId} + '/pdf?download=true'}">Tải file PDF</a>
-            <button type="button" class="btn btn-primary" onclick="window.print()">In phiếu (A4)</button>
-        </div>
+<div class="app-shell">
+    <!-- Sidebar và Backdrop điều hướng của hệ thống CV-DCMS -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('inventory')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- Topbar tiêu đề hệ thống -->
+        <header th:replace="~{fragments/header :: appTopbar('Xem trước và in phiếu kho')}"></header>
+
+        <main class="app-content inventory-preview-page">
+
+            <!-- THANH CÔNG CỤ XEM TRƯỚC (Ẩn khi in ấn) -->
+            <section class="preview-toolbar no-print">
+                <div class="preview-toolbar__left">
+                    <a th:href="@{/inventory}" class="btn btn-outline-secondary btn-sm fw-semibold">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại Quản lý kho
+                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6">
+                            <i class="bi bi-box-arrow-in-down me-1"></i>Phiếu nhập kho
+                        </span>
+                        <span class="preview-badge-code fs-6 text-dark" th:text="${receipt.receiptCode}">PNK-001</span>
+                    </div>
+                </div>
+
+                <div class="preview-toolbar__right">
+                    <a th:href="@{'/api/inventory/receipts/' + ${receipt.receiptId} + '/pdf?download=true'}"
+                       class="btn btn-outline-primary btn-sm fw-semibold">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Tải PDF
+                    </a>
+                    <button type="button" class="btn btn-primary btn-sm fw-semibold" onclick="window.print()">
+                        <i class="bi bi-printer-fill me-1"></i> In phiếu (A4)
+                    </button>
+                </div>
+            </section>
+
+            <!-- VÙNG HIỂN THỊ KHỔ GIẤY A4 CHUẨN IN -->
+            <div class="print-preview-container">
+                <article class="print-sheet" id="printSheet">
+
+                    <!-- ĐẦU TRANG PHÒNG KHÁM -->
+                    <div class="clinic-header">
+                        <div>
+                            <div class="clinic-title">PHÒNG KHÁM NHA KHOA CƯỜNG VIỆT (CV-DCMS)</div>
+                            <div class="clinic-sub" th:text="'Cơ sở: ' + (${receipt.branchName} ?: 'Hệ thống nha khoa')">Cơ sở: Nha khoa Cường Việt</div>
+                        </div>
+                        <div class="clinic-meta">
+                            <div>Mẫu chứng từ: <strong>PNK-A4</strong></div>
+                            <div th:text="'Ngày in: ' + ${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}">Ngày in: 31/10/2026 10:00</div>
+                        </div>
+                    </div>
+
+                    <!-- TIÊU ĐỀ PHIẾU -->
+                    <div class="doc-title-wrap">
+                        <h1 class="doc-title">PHIẾU NHẬP KHO VẬT TƯ</h1>
+                        <div class="doc-meta">
+                            <span>Mã phiếu: <strong th:text="${receipt.receiptCode}">PNK001</strong></span>
+                            <span class="mx-2">|</span>
+                            <span>Ngày nhập: <strong th:text="${receipt.receiptDate != null ? #temporals.format(receipt.receiptDate, 'dd/MM/yyyy') : '—'}">31/10/2026</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- KHUNG THÔNG TIN CHUNG -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Nhà cung cấp:</span>
+                            <span class="info-value" th:text="${receipt.supplierName} + (${receipt.supplierCode != null ? ' (' + receipt.supplierCode + ')' : ''})">Công ty Vật tư Nha khoa</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Số hóa đơn NCC:</span>
+                            <span class="info-value" th:text="${receipt.supplierInvoiceNo ?: '—'}">HD-00123</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Chi nhánh nhập:</span>
+                            <span class="info-value" th:text="${receipt.branchName ?: '—'}">Chi nhánh Quận 1</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Người lập phiếu:</span>
+                            <span class="info-value" th:text="${receipt.receiverName ?: '—'}">Thủ kho</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <span class="info-label">Ghi chú:</span>
+                            <span class="info-value" th:text="${receipt.notes ?: '—'}">Nhập hàng định kỳ</span>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DANH SÁCH VẬT TƯ / THUỐC -->
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 42px;">STT</th>
+                                <th style="width: 100px;">Mã VT</th>
+                                <th>Tên vật tư / thuốc nha khoa</th>
+                                <th class="text-center" style="width: 65px;">ĐVT</th>
+                                <th style="width: 100px;">Số lô</th>
+                                <th class="text-center" style="width: 90px;">Hạn dùng</th>
+                                <th class="text-end" style="width: 75px;">SL nhập</th>
+                                <th class="text-end" style="width: 110px;">Đơn giá</th>
+                                <th class="text-end" style="width: 120px;">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${receipt.items == null or receipt.items.isEmpty()}">
+                                <td colspan="9" class="text-center text-muted py-3">Phiếu nhập chưa có chi tiết mặt hàng nào.</td>
+                            </tr>
+                            <tr th:each="it, stat : ${receipt.items}">
+                                <td class="text-center" th:text="${stat.count}">1</td>
+                                <td><code th:text="${it.materialCode}">VT001</code></td>
+                                <td th:text="${it.materialName}">Vật tư nha khoa</td>
+                                <td class="text-center" th:text="${it.unit}">Hộp</td>
+                                <td th:text="${it.batchNumber ?: '—'}">LO-1234</td>
+                                <td class="text-center" th:text="${it.expiryDate != null ? #temporals.format(it.expiryDate, 'dd/MM/yyyy') : '—'}">31/12/2027</td>
+                                <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(it.quantity, 1, 'POINT', 0, 'COMMA')}">10</td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(it.unitPrice, 1, 'POINT', 0, 'COMMA')} + ' đ'">150.000 đ</td>
+                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.lineTotal, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.500.000 đ</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- TỔNG KẾT SỐ LƯỢNG & TÀI CHÍNH -->
+                    <div class="summary-wrap">
+                        <div class="summary-box">
+                            <div class="summary-row">
+                                <span>Tổng số lượng nhập:</span>
+                                <strong th:text="${#numbers.formatDecimal(receipt.totalQuantity, 1, 'POINT', 0, 'COMMA')}">10</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Tổng tiền phiếu nhập:</span>
+                                <strong th:text="${#numbers.formatDecimal(receipt.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.500.000 đ</strong>
+                            </div>
+                            <div class="summary-row" style="color: #15803d;">
+                                <span>Số tiền đã thanh toán:</span>
+                                <strong th:text="${#numbers.formatDecimal(receipt.paidAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.500.000 đ</strong>
+                            </div>
+                            <div class="summary-row total" style="color: #b91c1c;">
+                                <span>Công nợ còn lại:</span>
+                                <span th:text="${#numbers.formatDecimal(receipt.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'">0 đ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHỮ KÝ ĐIỆN TỬ & XÁC NHẬN -->
+                    <div class="sig-grid">
+                        <div>
+                            <div class="sig-title">NGƯỜI GIAO HÀNG / NHÀ CUNG CẤP</div>
+                            <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
+                            <div class="sig-box">
+                                <span class="sig-unsigned">(Ký xác nhận khi nhận bàn giao)</span>
+                            </div>
+                            <div class="sig-name" th:text="${receipt.supplierName}">Đại diện NCC</div>
+                        </div>
+
+                        <div>
+                            <div class="sig-title">NGƯỜI LẬP PHIẾU / THỦ KHO</div>
+                            <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                            <div class="sig-box">
+                                <img th:if="${receipt.signatureUrl != null and !#strings.isEmpty(receipt.signatureUrl)}"
+                                     th:src="${receipt.signatureUrl}"
+                                     alt="Chữ ký điện tử"/>
+                                <span th:if="${receipt.signatureUrl == null or #strings.isEmpty(receipt.signatureUrl)}"
+                                      class="sig-unsigned">(Chưa ký điện tử)</span>
+                            </div>
+                            <div class="sig-name" th:text="${receipt.signedByName != null ? receipt.signedByName : receipt.receiverName}">Thủ kho</div>
+                            <div class="sig-time" th:if="${receipt.signedAt != null}"
+                                 th:text="'Đã ký: ' + ${#temporals.format(receipt.signedAt, 'dd/MM/yyyy HH:mm')}">Đã ký: 31/10/2026 10:15</div>
+                        </div>
+                    </div>
+
+                </article>
+            </div>
+
+        </main>
     </div>
+</div>
 
-    <div class="sheet">
-        <div class="clinic-header">
-            <div>
-                <div class="clinic-title">PHÒNG KHÁM NHA KHOA CƯỜNG VIỆT (CV-DCMS)</div>
-                <div class="clinic-sub" th:text="'Cơ sở: ' + (${receipt.branchName} ?: '—')"></div>
-            </div>
-            <div style="text-align:right; font-size:12px; color:#475569;">
-                <div>Mẫu chứng từ: <strong>PNK-A4</strong></div>
-                <div th:text="'Ngày in: ' + ${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}"></div>
-            </div>
-        </div>
+<script>
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autoprint') === 'true') {
+        const waitForAssets = () => {
+            const fontPromise = (document.fonts && document.fonts.ready)
+                ? document.fonts.ready
+                : Promise.resolve();
 
-        <div class="doc-title-wrap">
-            <div class="doc-title">PHIẾU NHẬP KHO VẬT TƯ</div>
-            <div class="doc-meta">
-                <span>Mã phiếu: <strong th:text="${receipt.receiptCode}"></strong></span>
-                <span style="margin: 0 10px;">|</span>
-                <span>Ngày nhập: <strong th:text="${receipt.receiptDate != null ? #temporals.format(receipt.receiptDate, 'dd/MM/yyyy') : '—'}"></strong></span>
-            </div>
-        </div>
+            const images = Array.from(document.querySelectorAll('#printSheet img'));
+            const imagePromises = images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            });
 
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">Nhà cung cấp:</span>
-                <span class="info-value" th:text="${receipt.supplierName} + (${receipt.supplierCode != null ? ' (' + receipt.supplierCode + ')' : ''})"></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Số hóa đơn NCC:</span>
-                <span class="info-value" th:text="${receipt.supplierInvoiceNo ?: '—'}"></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Chi nhánh nhập:</span>
-                <span class="info-value" th:text="${receipt.branchName ?: '—'}"></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Người lập phiếu:</span>
-                <span class="info-value" th:text="${receipt.receiverName ?: '—'}"></span>
-            </div>
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Ghi chú:</span>
-                <span class="info-value" th:text="${receipt.notes ?: '—'}"></span>
-            </div>
-        </div>
+            return Promise.all([fontPromise, Promise.all(imagePromises)]);
+        };
 
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th class="text-center" style="width:42px;">STT</th>
-                    <th style="width:95px;">Mã VT</th>
-                    <th>Tên vật tư / hàng hóa</th>
-                    <th class="text-center" style="width:65px;">ĐVT</th>
-                    <th style="width:95px;">Số lô</th>
-                    <th class="text-center" style="width:88px;">Hạn dùng</th>
-                    <th class="text-end" style="width:75px;">Số lượng</th>
-                    <th class="text-end" style="width:105px;">Đơn giá</th>
-                    <th class="text-end" style="width:115px;">Thành tiền</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="it, stat : ${receipt.items}">
-                    <td class="text-center" th:text="${stat.count}">1</td>
-                    <td th:text="${it.materialCode}"></td>
-                    <td th:text="${it.materialName}"></td>
-                    <td class="text-center" th:text="${it.unit}"></td>
-                    <td th:text="${it.batchNumber}"></td>
-                    <td class="text-center" th:text="${it.expiryDate != null ? #temporals.format(it.expiryDate, 'dd/MM/yyyy') : '—'}"></td>
-                    <td class="text-end" th:text="${#numbers.formatDecimal(it.quantity, 1, 'POINT', 0, 'COMMA')}"></td>
-                    <td class="text-end" th:text="${#numbers.formatDecimal(it.unitPrice, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
-                    <td class="text-end"><strong th:text="${#numbers.formatDecimal(it.lineTotal, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong></td>
-                </tr>
-            </tbody>
-        </table>
+        const executePrint = () => {
+            waitForAssets().then(() => {
+                setTimeout(() => {
+                    window.addEventListener('afterprint', () => {
+                        try { window.close(); } catch (e) {}
+                    }, { once: true });
+                    window.onafterprint = function() {
+                        try { window.close(); } catch (e) {}
+                    };
 
-        <div class="summary-wrap">
-            <div class="summary-box">
-                <div class="summary-row">
-                    <span>Tổng tiền phiếu nhập:</span>
-                    <strong th:text="${#numbers.formatDecimal(receipt.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong>
-                </div>
-                <div class="summary-row" style="color:#15803d;">
-                    <span>Số tiền đã thanh toán:</span>
-                    <strong th:text="${#numbers.formatDecimal(receipt.paidAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong>
-                </div>
-                <div class="summary-row total" style="color:#b91c1c;">
-                    <span>Công nợ còn lại:</span>
-                    <span th:text="${#numbers.formatDecimal(receipt.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'"></span>
-                </div>
-            </div>
-        </div>
+                    window.print();
+                }, 200);
+            });
+        };
 
-        <div class="sig-grid">
-            <div>
-                <div class="sig-title">NGƯỜI GIAO HÀNG / NHÀ CUNG CẤP</div>
-                <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
-                <div class="sig-box"></div>
-                <div class="sig-name" th:text="${receipt.supplierName}"></div>
-            </div>
-            <div>
-                <div class="sig-title">NGƯỜI LẬP PHIẾU / THỦ KHO</div>
-                <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
-                <div class="sig-box">
-                    <img th:if="${receipt.signatureUrl != null and !#strings.isEmpty(receipt.signatureUrl)}"
-                         th:src="${receipt.signatureUrl}"
-                         alt="Chữ ký điện tử"/>
-                    <span th:if="${receipt.signatureUrl == null or #strings.isEmpty(receipt.signatureUrl)}"
-                          style="color:#94a3b8; font-size:12px;">(Chưa ký điện tử)</span>
-                </div>
-                <div class="sig-name" th:text="${receipt.signedByName != null ? receipt.signedByName : receipt.receiverName}"></div>
-                <div class="sig-time" th:if="${receipt.signedAt != null}"
-                     th:text="'Đã ký: ' + ${#temporals.format(receipt.signedAt, 'dd/MM/yyyy HH:mm')}"></div>
-            </div>
-        </div>
-    </div>
+        if (document.readyState === 'complete') {
+            executePrint();
+        } else {
+            window.addEventListener('load', executePrint, { once: true });
+        }
+    }
+})();
+</script>
 </body>
 </html>
