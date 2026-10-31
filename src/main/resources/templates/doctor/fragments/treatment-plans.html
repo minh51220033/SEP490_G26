@@ -58,6 +58,77 @@
             color: #be123c;
             transform: translateY(-1px);
         }
+        .df-btn-white-plan {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: #ffffff;
+            color: #0284c7;
+            border: 1.5px solid #0284c7;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .df-btn-white-plan:hover {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
+        }
+        .df-btn-white-plan i {
+            font-size: 14px;
+            color: #0284c7;
+        }
+        .df-btn-white-plan:hover i {
+            color: #0369a1;
+        }
+        .df-btn-white-plan .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: #0284c7 !important;
+            color: #ffffff;
+        }
+        .df-course-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .df-course-card:hover {
+            border-color: #94a3b8;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+        }
+        .df-course-header {
+            padding: 12px 16px;
+            cursor: pointer;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            user-select: none;
+            transition: background 0.15s ease;
+        }
+        .df-course-header:hover {
+            background: #f1f5f9;
+        }
+        .df-course-body {
+            padding: 16px;
+            background: #f8fafc;
+        }
+        .df-course-chevron {
+            transition: transform 0.2s ease;
+        }
     </style>
 
     <div class="df-plan-card" id="treatmentPlanSection">
@@ -90,25 +161,23 @@
                 </span>
 
                 <!-- NÚT HẸN TÁI KHÁM -->
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-xs"
+                <button type="button" class="df-btn-white-plan"
                         onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
-                    <i class="bi bi-calendar2-plus-fill text-primary"></i>
+                    <i class="bi bi-calendar2-plus-fill"></i>
                     <span>Hẹn tái khám</span>
-                    <span class="badge bg-primary text-white rounded-pill ms-0.5" id="sessionReExamCountBadge"
+                    <span class="badge bg-primary text-white rounded-pill ms-1" id="sessionReExamCountBadge"
                           th:text="${reExaminations != null ? reExaminations.size() : 0}">0</span>
                 </button>
             </div>
         </div>
 
-        <!-- Ghi chú nghiệp vụ Kế hoạch điều trị -->
-        <div class="px-3 pt-3">
-            <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
-                <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
-                <div>
-                    <strong>Lưu ý chuyên môn:</strong> Kế hoạch điều trị hiển thị <em>Tổng chi phí dự kiến (Tạm tính)</em> để bệnh nhân tham khảo lộ trình.
-                    <strong>Kế hoạch không tự phát sinh hóa đơn hoặc công nợ.</strong>
-                    Chỉ các dịch vụ thực tế được bác sĩ xác nhận hoàn thành mới đủ điều kiện để Kế toán lập hóa đơn dịch vụ.
-                </div>
+        <!-- Ghi chú nghiệp vụ Kế hoạch điều trị (Trải dài ngang bằng với hàng MÃ KHĐT ở dưới) -->
+        <div class="alert alert-info py-2.5 px-3 mb-0 small d-flex align-items-center rounded-0 border-start-0 border-end-0 border-top-0" style="width: 100%;">
+            <i class="bi bi-info-circle-fill text-info me-2 fs-6 flex-shrink-0"></i>
+            <div>
+                <strong>Lưu ý chuyên môn:</strong> Kế hoạch điều trị hiển thị <em>Tổng chi phí dự kiến (Tạm tính)</em> để bệnh nhân tham khảo lộ trình.
+                <strong>Kế hoạch không tự phát sinh hóa đơn hoặc công nợ.</strong>
+                Chỉ các dịch vụ thực tế được bác sĩ xác nhận hoàn thành mới đủ điều kiện để Kế toán lập hóa đơn dịch vụ.
             </div>
         </div>
 
@@ -219,135 +288,10 @@
         <div id="planRoadmapStandaloneArea" style="width: 100%; max-width: 100%; overflow-x: hidden; margin-top: 16px;">
             <th:block th:each="plan : ${treatmentPlans}">
             <div th:id="'plan-roadmap-row-' + ${plan.planId}" class="df-plan-roadmap-row border rounded-3 shadow-xs mb-3" style="display: none; width: 100%; max-width: 100%; background: #f8fafc; overflow: hidden;">
-                <div class="df-inline-roadmap-container p-3 p-md-4" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
-                    <!-- HEADER TÓM TẮT TIẾN ĐỘ -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary text-white px-2.5 py-1 rounded-pill fw-bold">
-                                <i class="bi bi-diagram-3-fill me-1"></i>LỘ TRÌNH CHI TIẾT TỪNG BƯỚC
-                            </span>
-                            <strong class="text-dark fs-6" th:text="${plan.planName}">Phác đồ điều trị</strong>
-                        </div>
-                        <div class="d-flex flex-wrap align-items-center gap-2 small">
-                            <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
-                                <i class="bi bi-calendar-check text-primary me-1"></i>
-                                <span>Dự kiến xong: </span>
-                                <strong th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">30/12/2026</strong>
-                            </span>
-                            <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" th:id="'plan-progress-badge-' + ${plan.planId}"
-                                  th:text="${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn (' + ${plan.progressPercent} + '%)'">
-                                1/3 giai đoạn (33%)
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- DANH SÁCH CÁC GIAI ĐOẠN & THỦ THUẬT (INLINE) -->
-                    <div th:id="'stages-container-' + ${plan.planId}">
-                        <div th:each="st : ${plan.stages}"
-                             th:id="'stage-card-' + ${st.stageId}"
-                             class="df-inline-stage-card"
-                             th:classappend="${st.status == 'COMPLETED'} ? 'is-completed' : (${st.status == 'IN_PROGRESS'} ? 'is-in-progress' : 'is-pending')">
-
-                            <!-- TIÊU ĐỀ GIAI ĐOẠN -->
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold" th:text="'Giai đoạn ' + ${st.stageOrder}">Giai đoạn 1</span>
-                                    <strong class="text-dark" style="font-size: 15px;" th:text="${st.stageName}">Giai đoạn 1: Khám &amp; Cấy trụ</strong>
-                                </div>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <!-- NGÀY LÀM (GHI NHẬN NOW()) -->
-                                    <span class="badge px-2.5 py-1.5 rounded-pill"
-                                          th:id="'stage-completed-badge-' + ${st.stageId}"
-                                          th:classappend="${st.completedAt != null} ? 'bg-success-subtle text-success border border-success' : 'bg-light text-secondary border'">
-                                        <i class="bi bi-clock-history me-1"></i>
-                                        <span th:text="${st.completedAt != null} ? 'Ngày làm: ' + ${st.completedAt} : 'Chưa thực hiện'">Chưa thực hiện</span>
-                                    </span>
-
-                                    <!-- NGÀY DỰ KIẾN XONG -->
-                                    <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
-                                        <i class="bi bi-calendar-check text-primary me-1"></i>
-                                        <span>Dự kiến xong: </span>
-                                        <strong th:text="${st.expectedEndDate != null ? st.expectedEndDate : (plan.expectedEndDate != null ? plan.expectedEndDate : '---')}">30/12/2026</strong>
-                                    </span>
-
-                                    <!-- TRẠNG THÁI GIAI ĐOẠN -->
-                                    <span class="badge px-3 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1.5"
-                                          th:id="'stage-status-badge-' + ${st.stageId}"
-                                          th:classappend="${st.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success fw-bold' : (${st.status == 'IN_PROGRESS'} ? 'bg-primary-subtle text-primary border border-primary fw-bold' : 'bg-light text-secondary border')">
-                                        <i th:class="${st.status == 'COMPLETED'} ? 'bi bi-check-circle-fill' : (${st.status == 'IN_PROGRESS'} ? 'bi bi-arrow-repeat' : 'bi bi-clock')"></i>
-                                        <span th:text="${st.status == 'COMPLETED'} ? 'Hoàn thành giai đoạn' : (${st.status == 'IN_PROGRESS'} ? 'Đang điều trị' : 'Chưa thực hiện')">Chưa thực hiện</span>
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- MÔ TẢ GIAI ĐOẠN -->
-                            <div class="small text-secondary mb-2 fst-italic" th:if="${st.description != null and !st.description.isEmpty()}" th:text="${st.description}"></div>
-
-                            <!-- BẢNG CÁC BƯỚC THỰC HIỆN LÂM SÀNG & GIÁ DỰ KIẾN TỪNG BƯỚC -->
-                            <div class="table-responsive bg-white rounded-3 border">
-                                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 45px;" class="text-center">#</th>
-                                            <th>Tên bước thực hiện / Quy trình thủ thuật</th>
-                                            <th style="width: 110px;" class="text-center">Vị trí răng</th>
-                                            <th style="width: 75px;" class="text-center">SL</th>
-                                            <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
-                                            <th style="width: 205px;" class="text-center">Trạng thái &amp; Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody th:id="'stage-items-body-' + ${st.stageId}">
-                                        <tr th:if="${st.items == null or st.items.isEmpty()}">
-                                            <td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td>
-                                        </tr>
-                                        <tr th:each="it, itStat : ${st.items}" th:id="'item-row-' + ${it.planItemId}">
-                                            <td class="text-center text-muted" th:text="${itStat.index + 1}">1</td>
-                                            <td>
-                                                <strong class="text-dark" th:text="${it.serviceName}">Cấy trụ Implant</strong>
-                                                <span class="badge bg-light text-muted border ms-1" style="font-size: 10px;" th:if="${it.categoryName != null}" th:text="${it.categoryName}">Cấy ghép</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-primary-subtle text-primary border" th:if="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}" th:text="'R' + ${it.toothNumbers}">R16</span>
-                                                <span class="text-muted" th:unless="${it.toothNumbers != null and !it.toothNumbers.isEmpty()}">-</span>
-                                            </td>
-                                            <td class="text-center fw-bold" th:text="${it.quantity}">1</td>
-                                            <td class="text-center small" th:id="'item-completed-cell-' + ${it.planItemId}">
-                                                <span class="badge bg-success-subtle text-success border" th:if="${it.completedAt != null}">
-                                                    <i class="bi bi-check-circle-fill me-1"></i><span th:text="${it.completedAt}">11:20 22/10</span>
-                                                </span>
-                                                <span class="text-muted" th:unless="${it.completedAt != null}">---</span>
-                                            </td>
-                                            <td class="text-center" th:id="'item-action-cell-' + ${it.planItemId}">
-                                                <!-- ĐÃ HOÀN THÀNH -->
-                                                <div class="d-inline-flex align-items-center gap-1.5" th:if="${it.status == 'COMPLETED'}">
-                                                    <span class="badge bg-success-subtle text-success border border-success px-2.5 py-1 rounded-pill fw-bold">
-                                                        <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
-                                                    </span>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1.5 py-0.5 rounded-pill"
-                                                            title="Hoàn tác lại bước này (Chưa làm)"
-                                                            th:data-item-id="${it.planItemId}"
-                                                            onclick="revertPlanItemStatus(this.getAttribute('data-item-id'))">
-                                                        <i class="bi bi-arrow-counterclockwise" style="font-size: 11px;"></i>
-                                                    </button>
-                                                </div>
-                                                <!-- CHƯA LÀM: NÚT LIÊN KẾT VÀO CA KHÁM HIỆN TẠI -->
-                                                <div class="d-inline-flex align-items-center gap-1.5" th:if="${it.status != 'COMPLETED'}">
-                                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
-                                                            style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
-                                                            title="Thực hiện thủ thuật này trong ca khám hôm nay (Tự động đưa vào Dịch vụ thực hiện FT16)"
-                                                            th:data-item-id="${it.planItemId}"
-                                                            onclick="executePlanItemDirectly(this.getAttribute('data-item-id'))">
-                                                        <i class="bi bi-lightning-charge-fill text-warning"></i>
-                                                        <span>Làm trong ca này</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                <!-- NỘI DUNG ĐƯỢC TỰ ĐỘNG PHÂN TÁCH THEO CÁC QUÁ TRÌNH ĐIỀU TRỊ (GẬP/MỞ) BỞI treatment-plan.js -->
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span>Đang tải lộ trình chi tiết các quá trình điều trị...</span>
                 </div>
             </div>
             </th:block>
@@ -359,6 +303,11 @@
 <!-- FRAGMENT 2: SCRIPTS KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ                      -->
 <!-- ===================================================================== -->
 <th:block th:fragment="treatmentPlanScripts">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.INITIAL_TREATMENT_PLANS = /*[[${treatmentPlans}]]*/ [];
+        /*]]>*/
+    </script>
     <script th:src="@{/js/doctor/treatment-plan.js}"></script>
 </th:block>
 

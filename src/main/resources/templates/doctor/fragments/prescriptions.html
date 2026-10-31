@@ -7,6 +7,48 @@
 <!-- Frontend Fragment: doctor/fragments/prescriptions.html                -->
 <!-- ===================================================================== -->
 <div th:fragment="prescriptionsSection">
+    <style>
+        .df-btn-white-plan {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: #ffffff;
+            color: #0284c7;
+            border: 1.5px solid #0284c7;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .df-btn-white-plan:hover {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
+        }
+        .df-btn-white-plan i {
+            font-size: 14px;
+            color: #0284c7;
+        }
+        .df-btn-white-plan:hover i {
+            color: #0369a1;
+        }
+        .df-btn-white-plan .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: #0284c7 !important;
+            color: #ffffff;
+        }
+    </style>
     <div class="df-presc-card" id="prescriptionsSection">
         <div class="df-presc-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
             <div class="df-presc-title-box d-flex flex-wrap align-items-center gap-2">
@@ -17,29 +59,16 @@
                     <h4 class="mb-0 fw-bold text-dark fs-6">Đơn thuốc &amp; Dặn dò dùng thuốc sau điều trị (FT18)</h4>
                     <span class="text-secondary small">Đã đồng bộ sang Kế toán (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự mua ngoài)</span>
                 </div>
-                <!--/* Tạm ẩn 3 huy hiệu theo yêu cầu người dùng
-                <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="prescCountBadge"
-                      th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn thuốc'">
-                    0 đơn thuốc
-                </span>
-                <span class="badge bg-success-subtle text-success border border-success ms-1" id="prescTotalAmountBadge">
-                    Giá thuốc dự kiến (Tạm tính): <strong id="prescTotalAmountText" th:text="${totalPrescriptionAmount != null ? #numbers.formatDecimal(totalPrescriptionAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
-                </span>
-                <span class="badge bg-info-subtle text-primary border border-primary-subtle ms-1"
-                      title="Thông tin giá thuốc dự kiến được đồng bộ sang Kế toán — Bệnh nhân có quyền chọn mua tại phòng khám hoặc tự mua ngoài">
-                    <i class="bi bi-send-check-fill me-1"></i>Đã đồng bộ sang Kế toán (BN tự chọn mua tại PK / mua ngoài)
-                </span>
-                */-->
             </div>
 
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1 shadow-xs" onclick="openReExamModal()">
+                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-plan text-decoration-none border-0 text-white" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    <span>Kê đơn thuốc mới</span>
+                </button>
+                <button type="button" class="df-btn-white-plan" onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
                     <i class="bi bi-calendar2-plus-fill"></i>
                     <span>Hẹn tái khám</span>
-                </button>
-                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
-                    <i class="bi bi-plus-circle-fill"></i>
-                    <span>Kê đơn thuốc mới</span>
                 </button>
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
