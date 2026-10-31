@@ -188,7 +188,7 @@ public class TreatmentPlanRestController {
                     .doctorId(docId)
                     .assistantId(assistantId)
                     .planItemId(itemId)
-                    .clinicalNotes("Thực hiện từ KHDT: " + (item.getPlan() != null ? item.getPlan().getPlanName() : "") + " (" + (item.getStage() != null ? item.getStage().getStageName() : "") + ")")
+                                        .clinicalNotes("Từ KHDT: " + (item.getStage() != null && item.getStage().getStageName() != null ? item.getStage().getStageName() : (item.getPlan() != null ? item.getPlan().getPlanCode() : "")))
                     .build();
 
             PerformedServiceResponseDTO ps = performedServiceService.createPerformedService(req);

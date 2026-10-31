@@ -233,38 +233,56 @@ function renderPlanInlineRoadmapHtml(plan) {
                 let itemsRows = '';
                 if (st.items && st.items.length > 0) {
                     st.items.forEach((it, idx) => {
-                        const toothBadge = it.toothNumbers ? `<span class="badge bg-primary-subtle text-primary border">R${it.toothNumbers}</span>` : '<span class="text-muted">-</span>';
+                        let toothBadge = '<span class="text-muted">-</span>';
+                        if (it.toothNumbers) {
+                            const tn = String(it.toothNumbers).trim();
+                            if (tn.toLowerCase().includes('toàn hàm') || tn.toLowerCase().includes('toan ham')) {
+                                toothBadge = `<span class="badge bg-info-subtle text-info border">Toàn hàm</span>`;
+                            } else {
+                                const cleanNum = tn.startsWith('R-') || tn.startsWith('R') ? tn : `R-${tn}`;
+                                toothBadge = `<span class="badge bg-primary-subtle text-primary border">${cleanNum}</span>`;
+                            }
+                        }
                         const completedItemHtml = it.completedAt
                             ? `<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>${it.completedAt}</span>`
                             : '<span class="text-muted">---</span>';
 
                         const isComp = it.status === 'COMPLETED';
 
+                        let statusBadgeHtml = '';
                         let actionBtnHtml = '';
+
                         if (isComp) {
+                            statusBadgeHtml = `
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
+                                    <i class="bi bi-check2-circle"></i>
+                                    <span>Đã thực hiện</span>
+                                </span>
+                            `;
                             actionBtnHtml = `
-                                <div class="d-inline-flex align-items-center gap-1.5">
-                                    <span class="badge bg-success-subtle text-success border border-success px-2.5 py-1 rounded-pill fw-bold">
-                                        <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
-                                    </span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1.5 py-0.5 rounded-pill"
-                                            title="Hoàn tác lại bước này (Chưa làm)"
-                                            onclick="revertPlanItemStatus(${it.planItemId})">
-                                        <i class="bi bi-arrow-counterclockwise" style="font-size: 11px;"></i>
-                                    </button>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                        style="font-size: 12px;"
+                                        title="Hoàn tác lại bước này (Chuyển về Chưa làm)"
+                                        onclick="revertPlanItemStatus(${it.planItemId})">
+                                    <i class="bi bi-arrow-counterclockwise text-primary fw-bold" style="font-size: 13px;"></i>
+                                    <span>Hoàn tác</span>
+                                </button>
                             `;
                         } else {
+                            statusBadgeHtml = `
+                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
+                                    <i class="bi bi-clock"></i>
+                                    <span>Chưa làm</span>
+                                </span>
+                            `;
                             actionBtnHtml = `
-                                <div class="d-inline-flex align-items-center gap-1.5">
-                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
-                                            style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
-                                            title="Thực hiện thủ thuật này trong ca khám hôm nay (Tự động đưa vào Dịch vụ thực hiện FT16)"
-                                            onclick="executePlanItemDirectly(${it.planItemId})">
-                                        <i class="bi bi-lightning-charge-fill text-warning"></i>
-                                        <span>Làm trong ca này</span>
-                                    </button>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                        style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
+                                        title="Thực hiện thủ thuật này trong ca khám hôm nay (Tự động đưa vào Dịch vụ thực hiện FT16)"
+                                        onclick="executePlanItemDirectly(${it.planItemId})">
+                                    <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                    <span>Làm trong ca này</span>
+                                </button>
                             `;
                         }
 
@@ -276,14 +294,18 @@ function renderPlanInlineRoadmapHtml(plan) {
                                     ${it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : ''}
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
-                                <td class="text-center fw-bold">${it.quantity}</td>
+                                <td class="text-center">
+                                    <span class="fw-bold text-dark">${(it.quantity != null && Number(it.quantity) % 1 === 0) ? Number(it.quantity) : (it.quantity || 1)}</span>
+                                    <span class="badge bg-light text-secondary border ms-1" style="font-size: 11px;">${(it.unit && it.unit.trim()) ? it.unit.trim() : 'răng'}</span>
+                                </td>
                                 <td class="text-center small" id="item-completed-cell-${it.planItemId}">${completedItemHtml}</td>
+                                <td class="text-center" id="item-status-cell-${it.planItemId}">${statusBadgeHtml}</td>
                                 <td class="text-center" id="item-action-cell-${it.planItemId}">${actionBtnHtml}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    itemsRows = '<tr><td colspan="6" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
+                    itemsRows = '<tr><td colspan="7" class="text-center text-muted py-2 fst-italic">Giai đoạn này chưa có danh mục bước thực hiện chi tiết.</td></tr>';
                 }
 
                 const stageStatusClass = st.status === 'COMPLETED' ? 'bg-success-subtle text-success border border-success fw-bold' : (st.status === 'IN_PROGRESS' ? 'bg-primary-subtle text-primary border border-primary fw-bold' : 'bg-light text-secondary border');
@@ -318,9 +340,10 @@ function renderPlanInlineRoadmapHtml(plan) {
                                         <th style="width: 45px;" class="text-center">#</th>
                                         <th>Tên bước thực hiện / Quy trình thủ thuật</th>
                                         <th style="width: 110px;" class="text-center">Vị trí răng</th>
-                                        <th style="width: 75px;" class="text-center">SL</th>
+                                        <th style="width: 95px;" class="text-center">Số lượng</th>
                                         <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
-                                        <th style="width: 205px;" class="text-center">Trạng thái &amp; Thao tác</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 140px;" class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stage-items-body-${st.stageId}">

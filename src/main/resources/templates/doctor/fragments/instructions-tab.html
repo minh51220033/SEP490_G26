@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
@@ -95,7 +95,7 @@
                             <div class="p-3 bg-light rounded-3 text-dark small mb-3 border" style="background: #f8fafc !important; border-color: #e2e8f0 !important; line-height: 1.6;">
                                 <i class="bi bi-quote fs-3 text-primary opacity-50 d-block mb-1"></i>
                                 <span id="displayDoctorAdviceText" class="fw-medium"
-                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
+                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
                                     Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút "Tạo / Soạn lời dặn" ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.
                                 </span>
                             </div>
@@ -234,7 +234,7 @@
             <div style="border: 1.5px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; background: #f0f9ff;">
                 <h4 style="margin: 0 0 8px 0; color: #0284c7; font-size: 14px; text-transform: uppercase;">Lời dặn riêng của Bác sĩ điều trị:</h4>
                 <div id="printDoctorAdviceText" style="font-size: 13.5px; line-height: 1.6; color: #0f172a; white-space: pre-wrap;"
-                     th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null) ? prescriptions[0].adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.')}">
+                     th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null) ? prescriptions[0].adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.')}">
                     Uống thuốc đúng giờ theo đơn...
                 </div>
             </div>
@@ -278,7 +278,10 @@
         function openDoctorInstructionModal() {
             const currentTextEl = document.getElementById('displayDoctorAdviceText');
             let currentText = currentTextEl ? currentTextEl.innerText.trim() : '';
-            if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng')) {
+            if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng') ||
+                currentText.includes('BR-EMR-02') ||
+                currentText.includes('hoàn tất khám lâm sàng') ||
+                currentText.includes('Mở lại ca khám')) {
                 currentText = '';
             }
 
