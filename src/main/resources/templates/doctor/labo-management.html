@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head th:replace="~{fragments/head :: head('Quản lý labo - DentalSoft')}"></head>
@@ -113,7 +113,111 @@
                     border-color: #2563eb;
                     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
                 }
-            </style>
+            
+        /* ========================================================================= */
+        /* ========================================================================= */
+        /* INTEGRATED TABLE FOOTER PAGINATION (LIỀN ĐÁY BẢNG, KHÔNG TÁCH Ô)          */
+        /* ========================================================================= */
+        .dv-pagination-container {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            border-radius: 0 0 12px 12px;
+            padding: 10px 20px;
+            padding-right: 90px; /* Tránh nút chat tròn */
+            margin-top: 0;
+            margin-bottom: 0;
+            box-shadow: none;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .modern-pagination-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .modern-pagination-nav .pg-btn {
+            min-width: 32px;
+            height: 32px;
+            padding: 0 9px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+        .modern-pagination-nav .pg-btn:hover:not(.is-disabled):not(.is-active) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0284c7;
+        }
+        .modern-pagination-nav .pg-btn.is-active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-color: transparent;
+            color: #ffffff;
+            box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
+            font-weight: 700;
+        }
+        .modern-pagination-nav .pg-btn.is-disabled {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+        .modern-pagination-nav .pg-dots {
+            min-width: 22px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 700;
+            user-select: none;
+        }
+        .modern-pagination-nav .pg-btn:hover:not(.is-disabled):not(.is-active) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0284c7;
+            transform: translateY(-1px);
+        }
+        .modern-pagination-nav .pg-btn.is-active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-color: transparent;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+            font-weight: 700;
+        }
+        .modern-pagination-nav .pg-btn.is-disabled {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .modern-pagination-nav .pg-dots {
+            min-width: 24px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 700;
+            user-select: none;
+        }
+
+    </style>
 
 
             <!-- 3 MAIN TABS THEO ĐÚNG ẢNH 1, 2, 3 CỦA DENTALSOFT -->
@@ -153,10 +257,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge rounded-pill px-3 py-1.5"
-                              style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12px; font-weight: 700;">
-                            <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
-                        </span>
                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" onclick="openCreateLaboModalMain()">
                             <i class="bi bi-plus-lg me-1"></i>Thêm phiếu
                         </button>
@@ -207,11 +307,26 @@
                         transform: translateY(-50%) translateX(0);
                         pointer-events: auto;
                     }
+
+                    /* KHI Ở CỘT CUỐI: KHÔNG HOVER NÚT NỔI NỮA
+                       1. Khi bảng cuộn sang phải (thấy các cột cuối)
+                       2. Hoặc khi con trỏ chuột rê vào các cột cuối (Thành tiền, Ảnh KQ, Trạng thái, Thao tác)
+                    */
+                    .table-scroll-container.is-scrolled-end .labo-floating-actions-bar,
+                    .table-scroll-container.is-scrolled-end .table-hover tbody tr:hover .labo-floating-actions-bar,
+                    .table-hover tbody tr:has(td:nth-last-child(-n+4):hover) .labo-floating-actions-bar {
+                        opacity: 0 !important;
+                        visibility: hidden !important;
+                        pointer-events: none !important;
+                        display: none !important;
+                    }
                 </style>
 
                 <!-- TABLE PHIẾU ĐẶT XƯỞNG (CÓ THANH CUỘN NGANG DENTALSOFT, TIÊU ĐỀ 1 DÒNG GỌN GÀNG) -->
-                <div class="table-scroll-container rounded-3 border bg-white shadow-xs position-relative">
-                    <table class="table table-hover align-middle mb-0 text-nowrap" id="mainLaboTable" style="min-width: 1220px; font-size: 13.5px;">
+                <!-- KHỐI BẢNG VÀ CHÂN PHÂN TRANG LIỀN MẠCH TRONG 1 KHUNG DUY NHẤT -->
+                <div class="rounded-3 border bg-white shadow-xs position-relative overflow-hidden">
+                    <div class="table-scroll-container position-relative">
+                        <table class="table table-hover align-middle mb-0 text-nowrap" id="mainLaboTable" style="min-width: 1220px; font-size: 13.5px;">
                         <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                         <tr style="text-transform: uppercase; font-size: 11.5px; font-weight: 700; color: #475569; letter-spacing: 0.3px;">
                             <th style="width: 50px;" class="text-center py-3">TT</th>
@@ -354,12 +469,23 @@
                             </td>
                         </tr>
                         </tbody>
-                    </table>
-                </div>
+                        </table>
+                    </div>
 
-                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 text-muted small">
-                    <span>Hiển thị <strong th:text="${#lists.size(orders)}">2</strong> phiếu</span>
-                    <span class="fst-italic text-secondary">Tự động đồng bộ với Bệnh án lâm sàng của Bác sĩ</span>
+                    <!-- CHÂN PHÂN TRANG LIỀN KHỐI Ở ĐÁY BẢNG -->
+                    <div id="laboPaginationBar" class="dv-pagination-container">
+                        <div class="d-flex align-items-center flex-wrap gap-2.5">
+                            <span class="text-secondary small fw-semibold">
+                                Hiển thị <strong id="laboPageRangeText" class="text-dark">1 - 10</strong>
+                            </span>
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            <div id="laboPaginationNav" class="modern-pagination-nav">
+                                <!-- Rendered by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1139,19 +1265,145 @@
         window.print();
     }
 
-    // Lọc nhanh bảng phiếu đặt xưởng
-    function filterLaboOrdersLocal(kw) {
-        const keyword = (kw !== undefined ? kw : document.getElementById('searchOrdersInput').value || '').toLowerCase().trim();
-        const status = document.getElementById('filterStatusSelect').value;
-        const rows = document.querySelectorAll('.labo-order-row');
+    // =========================================================================
+    // PHÂN TRANG VÀ LỌC NHANH PHIẾU ĐẶT XƯỞNG LABO
+    // =========================================================================
+    let laboCurrentPage = 1;
+    let laboPageSize = 10;
 
-        rows.forEach(r => {
+    function filterLaboOrdersLocal(kw) {
+        laboCurrentPage = 1;
+        applyLaboPagination(kw);
+    }
+
+    function applyLaboPagination(kw) {
+        const keyword = (kw !== undefined ? kw : document.getElementById('searchOrdersInput')?.value || '').toLowerCase().trim();
+        const status = document.getElementById('filterStatusSelect')?.value || '';
+        const allRows = Array.from(document.querySelectorAll('.labo-order-row'));
+        const paginationBar = document.getElementById('laboPaginationBar');
+
+        const matchedRows = allRows.filter(r => {
             const text = r.innerText.toLowerCase();
             const matchKw = (!keyword || text.includes(keyword));
             const matchStatus = (!status || r.innerHTML.includes(status));
-            r.style.display = (matchKw && matchStatus) ? '' : 'none';
+            return matchKw && matchStatus;
         });
+
+        const total = matchedRows.length;
+        if (total === 0) {
+            allRows.forEach(r => r.style.display = 'none');
+            if (paginationBar) paginationBar.style.display = 'none';
+            return;
+        }
+
+        if (paginationBar) paginationBar.style.display = 'flex';
+
+        const totalPages = Math.ceil(total / laboPageSize) || 1;
+        if (laboCurrentPage > totalPages) laboCurrentPage = totalPages;
+        if (laboCurrentPage < 1) laboCurrentPage = 1;
+
+        const startIdx = (laboCurrentPage - 1) * laboPageSize;
+        const endIdx = Math.min(startIdx + laboPageSize, total);
+
+        // Ẩn tất cả dòng không khớp
+        allRows.forEach(r => r.style.display = 'none');
+        // Chỉ hiện các dòng thuộc trang hiện tại
+        matchedRows.slice(startIdx, endIdx).forEach(r => r.style.display = '');
+
+        renderLaboPagination(total, totalPages, startIdx, endIdx); if (typeof checkTableScrollEnd === 'function') setTimeout(checkTableScrollEnd, 50);
     }
+
+    function renderLaboPagination(total, totalPages, startIdx, endIdx) {
+        const rangeText = document.getElementById('laboPageRangeText');
+        const totalText = document.getElementById('laboTotalCountText');
+        const nav = document.getElementById('laboPaginationNav');
+        if (rangeText) rangeText.textContent = `${startIdx + 1} - ${endIdx}`;
+        if (totalText) totalText.textContent = total;
+        if (!nav) return;
+
+        let html = '';
+
+        // Nút Đầu (<<)
+        const disablePrev = laboCurrentPage === 1 ? 'is-disabled' : '';
+        html += `<button type="button" class="pg-btn ${disablePrev}" ${laboCurrentPage === 1 ? 'disabled' : ''} onclick="goToLaboPage(1)" title="Trang đầu">
+            <i class="bi bi-chevron-double-left"></i>
+        </button>`;
+
+        // Nút Trước (<)
+        html += `<button type="button" class="pg-btn ${disablePrev}" ${laboCurrentPage === 1 ? 'disabled' : ''} onclick="goToLaboPage(${laboCurrentPage - 1})" title="Trang trước">
+            <i class="bi bi-chevron-left"></i>
+        </button>`;
+
+        let startPage = Math.max(1, laboCurrentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        if (startPage > 1) {
+            html += `<button type="button" class="pg-btn" onclick="goToLaboPage(1)">1</button>`;
+            if (startPage > 2) {
+                html += `<span class="pg-dots">&bull;&bull;&bull;</span>`;
+            }
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            const active = p === laboCurrentPage ? 'is-active' : '';
+            html += `<button type="button" class="pg-btn ${active}" onclick="goToLaboPage(${p})">${p}</button>`;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += `<span class="pg-dots">&bull;&bull;&bull;</span>`;
+            }
+            html += `<button type="button" class="pg-btn" onclick="goToLaboPage(${totalPages})">${totalPages}</button>`;
+        }
+
+        // Nút Tiếp (>)
+        const disableNext = laboCurrentPage === totalPages ? 'is-disabled' : '';
+        html += `<button type="button" class="pg-btn ${disableNext}" ${laboCurrentPage === totalPages ? 'disabled' : ''} onclick="goToLaboPage(${laboCurrentPage + 1})" title="Trang kế">
+            <i class="bi bi-chevron-right"></i>
+        </button>`;
+
+        // Nút Cuối (>>)
+        html += `<button type="button" class="pg-btn ${disableNext}" ${laboCurrentPage === totalPages ? 'disabled' : ''} onclick="goToLaboPage(${totalPages})" title="Trang cuối">
+            <i class="bi bi-chevron-double-right"></i>
+        </button>`;
+
+        nav.innerHTML = html;
+    }
+
+    function goToLaboPage(page) {
+        laboCurrentPage = page;
+        applyLaboPagination();
+        const table = document.getElementById('mainLaboTable');
+        if (table) table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function changeLaboPageSize(size) {
+        laboPageSize = parseInt(size, 10) || 10;
+        laboCurrentPage = 1;
+        applyLaboPagination();
+    }
+
+    // Kích hoạt phân trang ngay khi tải trang xong
+    function checkTableScrollEnd() {
+        const container = document.querySelector('.table-scroll-container');
+        if (!container) return;
+        const remainingScroll = container.scrollWidth - container.clientWidth - container.scrollLeft;
+        const isAtEnd = remainingScroll <= 25;
+        container.classList.toggle('is-scrolled-end', isAtEnd);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        applyLaboPagination();
+        const container = document.querySelector('.table-scroll-container');
+        if (container) {
+            container.addEventListener('scroll', checkTableScrollEnd, { passive: true });
+            window.addEventListener('resize', checkTableScrollEnd);
+            checkTableScrollEnd();
+        }
+    });
 
     // Lọc nhanh bảng nhà cung cấp
     function filterSuppliersLocal(kw) {

@@ -82,62 +82,13 @@
                 </div>
             </div>
 
-            <!-- 2. BẢNG DANH SÁCH PHIẾU ĐẶT XƯỞNG & GỬI MẪU XÉT NGHIỆM (CÓ THANH CUỘN NGANG DENTALSOFT) -->
-            <style>
-                /* Khung Hover nổi chuẩn daily-visits: Khi cuộn ngang ở bất kỳ cột nào, hover qua hàng sẽ nổi cụm nút ở mép phải */
-                .labo-floating-actions-track {
-                    position: sticky !important;
-                    right: 0 !important;
-                    width: 0 !important;
-                    min-width: 0 !important;
-                    max-width: 0 !important;
-                    height: 0 !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    border: none !important;
-                    overflow: visible !important;
-                    z-index: 25;
-                    background: transparent !important;
-                }
-
-                .labo-floating-actions-bar {
-                    position: absolute;
-                    right: 0;
-                    top: 50%;
-                    transform: translateY(-50%) translateX(10px);
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 14px 6px 32px;
-                    background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.98) 22%, #f0f9ff 100%);
-                    opacity: 0;
-                    visibility: hidden;
-                    pointer-events: none;
-                    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
-                    white-space: nowrap;
-                    z-index: 30;
-                    box-shadow: -6px 0 16px rgba(0, 0, 0, 0.08);
-                    border-radius: 8px 0 0 8px;
-                }
-
-                /* Rê chuột vào dòng: Nổi thanh thao tác nhanh ở mép phải màn hình */
-                .table-hover tbody tr:hover .labo-floating-actions-bar {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateY(-50%) translateX(0);
-                    pointer-events: auto;
-                }
-            </style>
+            <!-- 2. BẢNG DANH SÁCH PHIẾU ĐẶT XƯỞNG & GỬI MẪU XÉT NGHIỆM -->
 
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2.5 px-1 gap-2">
                 <div class="text-secondary small fw-bold text-uppercase" style="letter-spacing: 0.3px;">
                     <i class="bi bi-box-seam text-primary me-1"></i>
                     <span>Danh sách phiếu đặt xưởng &amp; gửi mẫu</span>
                 </div>
-                <span class="badge rounded-pill px-3 py-1.5"
-                      style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
-                    <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
-                </span>
             </div>
 
             <div class="rounded-3 border bg-white shadow-xs position-relative" style="overflow-x: auto;">
@@ -152,14 +103,13 @@
                         <th style="width: 125px;" class="text-end py-3">THÀNH TIỀN</th>
                         <th style="width: 110px;" class="text-center py-3">ẢNH KẾT QUẢ</th>
                         <th style="width: 125px;" class="text-center py-3">TRẠNG THÁI</th>
-                        <th style="width: 105px;" class="text-center py-3">THAO TÁC</th>
-                        <th class="labo-floating-actions-track"></th>
+                        <th style="width: 125px;" class="text-center py-3">THAO TÁC</th>
                     </tr>
                     </thead>
                     <tbody id="laboOrdersTableBody">
                     <!-- Hàng trống khi không có dữ liệu -->
                     <tr th:if="${laboOrders == null or #lists.isEmpty(laboOrders)}" id="emptyLaboRow">
-                        <td colspan="10" class="text-center py-5 text-muted">
+                        <td colspan="9" class="text-center py-5 text-muted">
                             <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
                             <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này. Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.</span>
                         </td>
@@ -252,52 +202,24 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-sm btn-outline-primary" title="Xem chi tiết & In phiếu"
+                            <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="In phiếu đặt xưởng"
                                         th:data-id="${order.laboId}" onclick="printLaboOrderModal(this.getAttribute('data-id'))">
-                                    <i class="bi bi-printer-fill"></i>
+                                    <i class="bi bi-printer-fill" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Sửa phiếu"
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Chỉnh sửa phiếu"
                                         th:data-id="${order.laboId}" onclick="openEditLaboModal(this.getAttribute('data-id'))">
-                                    <i class="bi bi-pencil-square"></i>
+                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa phiếu"
+                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Xóa phiếu"
                                         th:data-id="${order.laboId}" onclick="deleteLaboOrder(this.getAttribute('data-id'))">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <!-- CỤM NÚT NỔI BÁM MÉP PHẢI VIEWPORT KHI HOVER QUA HÀNG (CHUẨN DAILY-VISITS) -->
-                        <td class="labo-floating-actions-track">
-                            <div class="labo-floating-actions-bar" onclick="event.stopPropagation()">
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        th:data-id="${order.laboId}" onclick="openEditLaboModal(this.getAttribute('data-id'))" title="Chỉnh sửa phiếu đặt xưởng">
-                                    <i class="bi bi-pencil-square text-primary"></i>
-                                    <span>Sửa</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        th:data-id="${order.laboId}" th:data-status="${order.status}" onclick="quickUpdateLaboStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))" title="Đổi trạng thái tiếp theo">
-                                    <i class="bi bi-arrow-repeat text-warning"></i>
-                                    <span>Đổi TT</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        th:data-id="${order.laboId}" th:data-code="${order.laboCode}" onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))" title="Đính kèm ảnh giấy xét nghiệm / phiếu xưởng">
-                                    <i class="bi bi-camera-fill text-info"></i>
-                                    <span>Ảnh KQ</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        th:data-id="${order.laboId}" onclick="printLaboOrderModal(this.getAttribute('data-id'))" title="In phiếu đặt xưởng">
-                                    <i class="bi bi-printer-fill text-secondary"></i>
-                                    <span>In phiếu</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-light border text-danger px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center shadow-xs"
-                                        style="background: #fff1f2; border-color: #fecdd3 !important;"
-                                        th:data-id="${order.laboId}" onclick="deleteLaboOrder(this.getAttribute('data-id'))" title="Xóa phiếu đặt xưởng">
-                                    <i class="bi bi-trash3-fill"></i>
+                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
                                 </button>
                             </div>
                         </td>
@@ -312,10 +234,10 @@
     <!-- MODAL 1: THÊM / SỬA PHIẾU ĐẶT XƯỞNG LABO & GỬI MẪU XÉT NGHIỆM (ẢNH 2) -->
     <!-- ===================================================================== -->
     <div class="modal fade" id="laboOrderModal" tabindex="-1" aria-labelledby="laboOrderModalLabel" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable my-3" style="max-width: 1060px; width: 92%; max-height: 94vh;">
-            <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; max-height: 94vh;">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 1060px; width: 94%; margin: 1.5rem auto; height: calc(100vh - 3rem);">
+            <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; height: 100%; max-height: calc(100vh - 3rem);">
                 <!-- Header chuẩn DentalSoft: nền trắng tinh, border phân cách rõ ràng, nút đóng [X] luôn hiển thị -->
-                <div class="modal-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
                     <div>
                         <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="laboOrderModalLabel">Thêm phiếu đặt xưởng</h5>
                         <p class="text-muted small mb-0 mt-0.5">Phiếu đặt xưởng labo &amp; gửi mẫu xét nghiệm</p>
@@ -324,7 +246,7 @@
                 </div>
 
                 <form id="laboOrderForm" onsubmit="event.preventDefault(); submitLaboOrderForm();" class="d-flex flex-column m-0" style="min-height: 0; flex: 1 1 auto; overflow: hidden;">
-                    <div class="modal-body px-4 py-3 bg-white" style="overflow-y: auto;">
+                    <div class="modal-body px-4 py-3 bg-white" style="flex: 1 1 auto; overflow-y: auto;">
                         <input type="hidden" id="laboFormId" value="">
 
                         <!-- HÀNG 1: KHÁCH HÀNG, DỊCH VỤ, NHÀ CUNG CẤP -->
@@ -507,7 +429,7 @@
                     </div>
 
                     <!-- FOOTER CỐ ĐỊNH Ở ĐÁY, KHÔNG BỊ TRÔI MẤT -->
-                    <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2 flex-shrink-0" style="border-color: #e2e8f0 !important;">
+                    <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2 flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
                         <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
                             Đóng
                         </button>
@@ -617,6 +539,8 @@
         if (modalEl) {
             const m = bootstrap.Modal.getOrCreateInstance(modalEl);
             m.show();
+            const modalBody = modalEl.querySelector('.modal-body');
+            if (modalBody) modalBody.scrollTop = 0;
         }
     }
 
@@ -663,6 +587,8 @@
             if (modalEl) {
                 const m = bootstrap.Modal.getOrCreateInstance(modalEl);
                 m.show();
+                const modalBody = modalEl.querySelector('.modal-body');
+                if (modalBody) modalBody.scrollTop = 0;
             }
         } catch (err) {
             console.error(err);
@@ -1100,52 +1026,24 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-sm btn-outline-primary" title="Xem chi tiết & In phiếu"
+                            <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="In phiếu đặt xưởng"
                                         onclick="printLaboOrderModal(${ord.laboId})">
-                                    <i class="bi bi-printer-fill"></i>
+                                    <i class="bi bi-printer-fill" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Sửa phiếu"
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Chỉnh sửa phiếu"
                                         onclick="openEditLaboModal(${ord.laboId})">
-                                    <i class="bi bi-pencil-square"></i>
+                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa phiếu"
+                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Xóa phiếu"
                                         onclick="deleteLaboOrder(${ord.laboId})">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <!-- CỤM NÚT NỔI BÁM MÉP PHẢI KHI HOVER QUA HÀNG (JS DYNAMIC) -->
-                        <td class="labo-floating-actions-track">
-                            <div class="labo-floating-actions-bar" onclick="event.stopPropagation()">
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        onclick="openEditLaboModal(${ord.laboId})" title="Chỉnh sửa phiếu đặt xưởng">
-                                    <i class="bi bi-pencil-square text-primary"></i>
-                                    <span>Sửa</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        onclick="quickUpdateLaboStatus(${ord.laboId}, '${esc(ord.status)}')" title="Đổi trạng thái tiếp theo">
-                                    <i class="bi bi-arrow-repeat text-warning"></i>
-                                    <span>Đổi TT</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')" title="Đính kèm ảnh giấy xét nghiệm / phiếu xưởng">
-                                    <i class="bi bi-camera-fill text-info"></i>
-                                    <span>Ảnh KQ</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-white bg-white border fw-bold text-dark px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                        style="border-color: #cbd5e1 !important; font-size: 12.5px;"
-                                        onclick="printLaboOrderModal(${ord.laboId})" title="In phiếu đặt xưởng">
-                                    <i class="bi bi-printer-fill text-secondary"></i>
-                                    <span>In phiếu</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-light border text-danger px-2.5 py-1.5 rounded-2 d-inline-flex align-items-center shadow-xs"
-                                        style="background: #fff1f2; border-color: #fecdd3 !important;"
-                                        onclick="deleteLaboOrder(${ord.laboId})" title="Xóa phiếu đặt xưởng">
-                                    <i class="bi bi-trash3-fill"></i>
+                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
                                 </button>
                             </div>
                         </td>
