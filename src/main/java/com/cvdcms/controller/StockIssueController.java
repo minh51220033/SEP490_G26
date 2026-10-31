@@ -128,7 +128,7 @@ public class StockIssueController {
     /**
      * Xuất phiếu xuất kho / điều chuyển kho ra file PDF chuẩn A4 (nhúng chữ ký điện tử & họ tên người ký).
      */
-    @GetMapping(value = "/issues/{issueId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping(value = {"/issues/{issueId}/pdf", "/transfers/{issueId}/pdf"}, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> exportPdf(
             @PathVariable Long issueId,
             @RequestParam(defaultValue = "false") boolean download,
