@@ -17,10 +17,9 @@ public class ReceptionAppointmentPageController {
     public ReceptionAppointmentPageController(PatientAccess access, ReceptionAppointmentService appointments) {
         this.access = access; this.appointments = appointments;
     }
-    @ModelAttribute("roleNames")
-    public List<String> roles(HttpSession session) {
-        var scope = access.require(session);
-        return scope.admin() ? List.of("ADMIN", "LE_TAN") : List.of("LE_TAN");
+    @ModelAttribute
+    public void validateAccess(HttpSession session) {
+        access.require(session);
     }
     @GetMapping
     public String dashboard() { return "reception/appointments/dashboard"; }

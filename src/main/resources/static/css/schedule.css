@@ -1,63 +1,442 @@
-/* FT33 - Phân ca làm việc (SCR-33.1, SCR-33.3).
-   Dùng lại biến màu của layout.css để đồng bộ giao diện toàn nhóm. */
+/* FT33 - Phân ca làm việc (SCR-33.1, SCR-33.3)
+   Chuẩn thiết kế giao diện MISA AMIS Table & Modern Calendar */
 
-/* ---------- Ma trận tuần (SCR-33.1) ---------- */
-.schedule-table { table-layout: fixed; min-width: 900px; }
-.schedule-table thead th {
-    background: var(--brand-50);
-    color: var(--brand-700);
-    text-align: center;
-    border-bottom: 0;
+/* ---------- Container & Header Card ---------- */
+.schedule-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
 }
-.schedule-table__corner { width: 130px; text-align: left !important; }
-.schedule-day { display: flex; flex-direction: column; line-height: 1.2; }
-.schedule-day span { font-size: .75rem; font-weight: 600; text-transform: uppercase; }
-.schedule-day strong { font-size: .95rem; }
 
-.schedule-shift { background: #fafbfd; vertical-align: top !important; }
-.schedule-shift__name { font-weight: 700; color: var(--ink); }
+.schedule-header-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
 
-.schedule-cell { vertical-align: top !important; min-height: 90px; padding: 8px !important; }
-.schedule-table .is-today { background: #f3f8ff; }
+.schedule-header-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
 
+.schedule-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.schedule-subtitle {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* ---------- Toolbar Điều Khiển (Hàng Ngang Gọn Gàng) ---------- */
+.schedule-toolbar-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 12px 18px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.schedule-branch-select {
+    min-width: 200px;
+    max-width: 260px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    border-color: #cbd5e1;
+    border-radius: 6px;
+}
+
+.schedule-toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+}
+
+.schedule-nav-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border-color: #cbd5e1;
+    color: #475569;
+    transition: all 0.15s ease;
+}
+.schedule-nav-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.schedule-today-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.schedule-week-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    color: #334155;
+    white-space: nowrap;
+}
+
+/* Legend Chú thích */
+.schedule-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.legend-dot--doctor { background: #2563eb; }
+.legend-dot--staff { background: #16a34a; }
+.legend-dot--leave { background: #d97706; }
+
+/* ---------- Ma Trận Bảng Lịch Tuần (Weekly Matrix) ---------- */
+.schedule-table-card {
+    background: #ffffff;
+    border: 1px solid var(--staff-border, #e2e8f0);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.schedule-table-card .table-responsive {
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.schedule-table {
+    table-layout: fixed;
+    min-width: 980px;
+    width: 100%;
+    height: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.schedule-table thead th {
+    background: #f8fafc;
+    color: #334155;
+    text-align: center;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.schedule-table__corner {
+    width: 160px !important;
+    min-width: 160px;
+    max-width: 160px;
+    text-align: left !important;
+    padding-left: 16px !important;
+    font-weight: 700;
+    color: #475569 !important;
+    background: #f1f5f9 !important;
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 15;
+}
+
+.schedule-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.schedule-day span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.5px;
+}
+.schedule-day strong {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Cột Hôm nay nổi bật */
+.schedule-table th.is-today {
+    background: #eff6ff !important;
+    border-top: 3px solid #2563eb;
+    color: #1d4ed8;
+}
+.schedule-table th.is-today .schedule-day span {
+    color: #2563eb;
+}
+.schedule-table th.is-today .schedule-day strong {
+    color: #1d4ed8;
+}
+.schedule-today-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 999px;
+    margin-top: 2px;
+}
+
+/* Cột ngày trong quá khứ */
+.schedule-table th.is-past {
+    background: #f8fafc;
+    opacity: 0.85;
+}
+.schedule-table th.is-past .schedule-day strong {
+    color: #64748b;
+}
+
+.schedule-table tbody {
+    height: 100%;
+}
+
+.schedule-table tbody tr {
+    height: 33.333%;
+}
+
+/* Cột Ca làm việc bên trái */
+.schedule-shift {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+    background: #fafbfd;
+    vertical-align: top !important;
+    padding: 16px 14px !important;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+.schedule-shift__name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.schedule-shift__time {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: monospace;
+    margin-top: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Các ô ngày x ca (Cell) */
+.schedule-cell {
+    vertical-align: top !important;
+    padding: 10px 8px !important;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    transition: background 0.1s ease;
+}
+
+.schedule-cell.is-today {
+    background: #fbfdff;
+    border-left: 1px solid #bfdbfe;
+    border-right: 1px solid #bfdbfe;
+}
+
+.schedule-cell.is-past {
+    background: #fafbfc;
+}
+
+/* Trạng thái rỗng cho ngày đã qua */
+.schedule-past-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 28px 0;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    user-select: none;
+}
+
+/* Thẻ nhân viên trong ca (Schedule Chip) */
 .schedule-chip {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    padding: 4px 8px;
-    margin-bottom: 4px;
-    border-radius: 8px;
-    background: var(--brand-50);
-    color: var(--brand-700);
-    font-size: .8rem;
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: all 0.12s ease;
+}
+.schedule-chip:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* Phân loại thẻ: Bác sĩ */
+.schedule-chip--doctor {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+.schedule-chip--doctor .schedule-role-tag {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Phân loại thẻ: Nhân sự thường */
+.schedule-chip--staff {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+.schedule-chip--staff .schedule-role-tag {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+/* Phân loại thẻ: Nghỉ phép */
+.schedule-chip--leave {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+}
+.schedule-chip--leave .schedule-role-tag {
+    background: #d97706;
+    color: #ffffff;
+}
+
+.schedule-role-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.schedule-chip__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
     font-weight: 600;
 }
-.schedule-chip--leave { background: #fff3d6; color: #8a5a00; }
-.schedule-chip__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .schedule-chip__remove {
     border: 0;
     background: transparent;
-    color: inherit;
-    opacity: .55;
-    padding: 0 2px;
+    color: #94a3b8;
+    padding: 2px 4px;
     line-height: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
 }
-.schedule-chip__remove:hover { opacity: 1; color: #c0392b; }
+.schedule-chip__remove:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
 
+/* Nút thêm nhân viên vào ca */
 .schedule-add {
     width: 100%;
-    border: 1px dashed #c9d2e0;
-    background: transparent;
-    color: var(--muted);
-    border-radius: 8px;
-    padding: 3px 0;
-    font-size: .76rem;
-    transition: all .15s ease;
+    border: 1px dashed #cbd5e1;
+    background: #ffffff;
+    color: #64748b;
+    border-radius: 6px;
+    padding: 5px 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
 }
-.schedule-add:hover { border-color: var(--brand-700); color: var(--brand-700); background: var(--brand-50); }
+.schedule-add:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #eff6ff;
+}
 
-.schedule-empty { padding: 28px; text-align: center; color: var(--muted); }
+.schedule-empty {
+    padding: 48px 20px;
+    text-align: center;
+    color: #64748b;
+    background: #ffffff;
+    border: 1px solid var(--staff-border, #e2e8f0);
+    border-radius: 8px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
 
 /* ---------- Lịch cá nhân (SCR-33.3) ---------- */
 .my-week {
@@ -74,21 +453,21 @@
     background: #fff;
     min-height: 150px;
 }
-.my-day.is-today { border-color: var(--brand-700); background: #f3f8ff; }
+.my-day.is-today { border-color: var(--brand-700, #2563eb); background: #f3f8ff; }
 .my-day__head { display: flex; flex-direction: column; margin-bottom: 8px; line-height: 1.2; }
-.my-day__head span { font-size: .75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.my-day__head span { font-size: .75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
 .my-day__empty { color: #aab3c2; font-size: .85rem; text-align: center; margin-top: 24px; }
 
 .my-shift {
     padding: 8px;
     margin-bottom: 8px;
     border-radius: 10px;
-    background: var(--brand-50);
+    background: #eff6ff;
 }
-.my-shift--leave { background: #fff3d6; }
+.my-shift--leave { background: #fffbeb; }
 .my-shift--cancel { background: #eceff4; opacity: .75; }
-.my-shift__name { font-weight: 700; color: var(--brand-700); }
-.my-shift__time { font-size: .85rem; font-weight: 600; color: var(--ink); }
+.my-shift__name { font-weight: 700; color: #1d4ed8; }
+.my-shift__time { font-size: .85rem; font-weight: 600; color: #0f172a; }
 .my-shift .status-badge { margin-top: 4px; }
 
 @media (max-width: 992px) {

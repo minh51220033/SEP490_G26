@@ -97,27 +97,25 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
 
         // =====================================================================
-        // 1. TIẾP ĐÓN, LỊCH HẸN & CSKH (RECEPTION) - 4 QUYỀN
+        // 1. TIẾP ĐÓN, LỊCH HẸN & CSKH (RECEPTION - 7 chức năng độc lập 1:1)
         // =====================================================================
         if (uri.startsWith("/reception/patients") || uri.startsWith("/api/reception/patients")) {
             return List.of("PATIENT_PROFILE_MANAGE");
         }
-        if (uri.startsWith("/reception/memberships")) {
-            return List.of("PATIENT_PROFILE_MANAGE", "CUSTOMER_CARE_MANAGE");
+        if (uri.startsWith("/reception/memberships") || uri.startsWith("/api/reception/memberships")) {
+            return List.of("RECEPTION_MEMBERSHIPS");
         }
-        if (uri.startsWith("/reception/check-in") || uri.startsWith("/api/reception/check-in")) {
+        if (uri.startsWith("/reception/appointments") || uri.startsWith("/api/reception/appointments")) {
             return List.of("APPOINTMENT_MANAGE");
         }
-        if (uri.startsWith("/reception/appointments")) {
-            if (uri.equals("/reception/appointments/new")
-                    || uri.endsWith("/edit")
-                    || (uri.startsWith("/reception/appointments/api") && isWriteMethod)) {
-                return List.of("APPOINTMENT_MANAGE");
-            }
-            return List.of("APPOINTMENT_VIEW", "APPOINTMENT_MANAGE");
+        if (uri.startsWith("/reception/check-in") || uri.startsWith("/api/reception/check-in")) {
+            return List.of("RECEPTION_CHECKIN");
         }
-        if (uri.startsWith("/reception/queue")) {
-            return List.of("APPOINTMENT_VIEW", "APPOINTMENT_MANAGE");
+        if (uri.startsWith("/reception/queue") || uri.startsWith("/api/reception/queue")) {
+            return List.of("APPOINTMENT_VIEW");
+        }
+        if (uri.startsWith("/reception/dispatch") || uri.startsWith("/api/reception/dispatch")) {
+            return List.of("RECEPTION_DISPATCH", "CLINICAL_DISPATCH");
         }
         if (uri.startsWith("/customer-care")
                 || uri.startsWith("/api/customer-care")
@@ -128,65 +126,68 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
 
         // =====================================================================
-        // 2. KHÁM BỆNH & ĐIỀU TRỊ LÂM SÀNG (CLINICAL) - 4 QUYỀN
+        // 2. KHÁM BỆNH & ĐIỀU TRỊ LÂM SÀNG (CLINICAL - 9 chức năng độc lập 1:1)
         // =====================================================================
         if (uri.startsWith("/doctor/daily-visits")
                 || uri.startsWith("/doctor/visits")
                 || uri.startsWith("/api/doctor/patients/daily-visits")) {
-            return List.of("CLINICAL_EXAM_WRITE", "MEDICAL_RECORD_VIEW");
+            return List.of("CLINICAL_DAILY_VISITS");
+        }
+        if (uri.startsWith("/doctor/workflows") || uri.startsWith("/api/doctor/workflows")) {
+            return List.of("CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/api/doctor/prescriptions")) {
-            if (isWriteMethod) {
-                return List.of("PRESCRIPTION_WRITE");
-            }
-            return List.of("PRESCRIPTION_WRITE", "CLINICAL_EXAM_WRITE", "MEDICAL_RECORD_VIEW");
+            return List.of("PRESCRIPTION_WRITE");
         }
-        if (uri.startsWith("/doctor/labo")
-                || uri.startsWith("/api/doctor/labo-orders")
-                || (uri.startsWith("/api/doctor/treatment-plans") && isWriteMethod)) {
+        if (uri.startsWith("/doctor/labo") || uri.startsWith("/api/doctor/labo-orders")) {
+            return List.of("CLINICAL_LABO");
+        }
+        if (uri.startsWith("/api/doctor/treatment-plans")) {
             return List.of("TREATMENT_PLAN_MANAGE");
         }
         if (uri.startsWith("/doctor/patient-records") || uri.startsWith("/api/doctor/patients")) {
             return List.of("MEDICAL_RECORD_VIEW");
         }
+        if (uri.startsWith("/records")) {
+            return List.of("MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+        }
+        if (uri.startsWith("/xray") || uri.startsWith("/api/xray")) {
+            return List.of("CLINICAL_XRAY");
+        }
+        if (uri.startsWith("/api/doctor/clinical-photos") || uri.startsWith("/doctor/clinical-photos")) {
+            return List.of("CLINICAL_PHOTOS");
+        }
         if (uri.startsWith("/doctor/examination")
                 || uri.startsWith("/doctor/diagnoses")
                 || uri.startsWith("/doctor/treatment")
-                || uri.startsWith("/doctor/workflows")
                 || uri.startsWith("/doctor/queue")
                 || uri.startsWith("/api/doctor/diagnoses")
                 || uri.startsWith("/api/doctor/performed-services")
-                || uri.startsWith("/api/doctor/paraclinical")
-                || uri.startsWith("/api/doctor/clinical-photos")
-                || (uri.startsWith("/api/doctor/visits") && isWriteMethod)) {
-            return List.of("CLINICAL_EXAM_WRITE");
+                || uri.startsWith("/api/doctor/paraclinical")) {
+            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
 
         // =====================================================================
-        // 3. TÀI CHÍNH, HÓA ĐƠN & THANH TOÁN (FINANCE) - 4 QUYỀN
+        // 3. TÀI CHÍNH, HÓA ĐƠN & THANH TOÁN (FINANCE - 5 chức năng độc lập 1:1)
         // =====================================================================
+        if (uri.startsWith("/payments/dashboard")) {
+            return List.of("FINANCE_DASHBOARD");
+        }
+        if (uri.startsWith("/payments/debts")) {
+            return List.of("FINANCE_DEBT");
+        }
         if (uri.startsWith("/payments/refunds") || uri.startsWith("/api/payments/refunds")) {
             return List.of("REFUND_MANAGE");
         }
-        if (uri.startsWith("/invoices/new")
-                || ((uri.startsWith("/invoices") || uri.startsWith("/api/invoices")) && isWriteMethod)) {
+        if (uri.startsWith("/invoices") || uri.startsWith("/api/invoices")) {
             return List.of("INVOICE_CREATE");
         }
-        if ((uri.startsWith("/payments") || uri.startsWith("/api/payments")) && isWriteMethod) {
+        if (uri.startsWith("/payments") || uri.startsWith("/api/payments")) {
             return List.of("PAYMENT_COLLECT");
-        }
-        if (uri.equals("/payments") || uri.startsWith("/api/payments")) {
-            return List.of("PAYMENT_COLLECT", "INVOICE_VIEW");
-        }
-        if (uri.startsWith("/invoices")
-                || uri.startsWith("/api/invoices")
-                || uri.startsWith("/payments/dashboard")
-                || uri.startsWith("/payments/debts")) {
-            return List.of("INVOICE_VIEW", "INVOICE_CREATE", "PAYMENT_COLLECT");
         }
 
         // =====================================================================
-        // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY) - 3 QUYỀN
+        // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY - 2 chức năng độc lập 1:1)
         // =====================================================================
         if (uri.startsWith("/suppliers")
                 || uri.startsWith("/inventory/suppliers")
@@ -194,35 +195,36 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/api/inventory/supplier-payments")) {
             return List.of("SUPPLIER_MANAGE");
         }
-        if (uri.startsWith("/inventory/receipts")
-                || uri.startsWith("/api/inventory/receipts")
-                || uri.startsWith("/inventory/issues")
-                || uri.startsWith("/api/inventory/issues")
-                || ((uri.startsWith("/inventory") || uri.startsWith("/api/inventory")) && isWriteMethod)) {
-            return List.of("INVENTORY_MANAGE");
-        }
         if (uri.startsWith("/inventory") || uri.startsWith("/api/inventory")) {
-            return List.of("INVENTORY_VIEW", "INVENTORY_MANAGE");
+            return List.of("INVENTORY_STOCK");
         }
 
         // =====================================================================
-        // 5. NHÂN SỰ, CA TRỰC & CHẤM CÔNG (HR) - 3 QUYỀN
+        // 5. NHÂN SỰ, CA TRỰC & CHẤM CÔNG (HR - 6 chức năng độc lập 1:1)
         // =====================================================================
-        if (uri.startsWith("/schedules/my")
-                || uri.startsWith("/attendance/my")
+        if (uri.startsWith("/attendance/my")
                 || uri.startsWith("/attendance/check-in")
                 || uri.startsWith("/attendance/check-out")) {
+            return List.of("HR_MY_ATTENDANCE");
+        }
+        if (uri.startsWith("/doctor/leave-requests") || uri.startsWith("/api/doctor/leave-requests")) {
+            return List.of("HR_LEAVE_REQUESTS");
+        }
+        if (uri.startsWith("/schedules/my")) {
             return List.of("SCHEDULE_MY");
         }
-        if (uri.startsWith("/admin/schedules") || uri.startsWith("/admin/attendance")) {
+        if (uri.startsWith("/admin/attendance") || uri.startsWith("/api/attendance")) {
+            return List.of("HR_BRANCH_ATTENDANCE");
+        }
+        if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
             return List.of("SCHEDULE_MANAGE");
         }
-        if (uri.startsWith("/admin/staffs")) {
+        if (uri.startsWith("/admin/staffs") || uri.startsWith("/staffs")) {
             return List.of("STAFF_MANAGE");
         }
 
         // =====================================================================
-        // 6. QUẢN TRỊ HỆ THỐNG & DANH MỤC (SYSTEM) - 4 QUYỀN
+        // 6. QUẢN TRỊ HỆ THỐNG & DANH MỤC (SYSTEM - 12 chức năng độc lập 1:1)
         // =====================================================================
         if (uri.startsWith("/accounts/roles")) {
             return List.of("ROLE_MANAGE");
@@ -233,12 +235,32 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/branches")) {
             return List.of("BRANCH_MANAGE");
         }
-        if (uri.startsWith("/admin/services")
-                || uri.startsWith("/admin/medications")
-                || uri.startsWith("/admin/icd10")
-                || uri.startsWith("/admin/membership-tiers")
-                || uri.startsWith("/admin/promotions")) {
-            return List.of("CATALOG_MANAGE");
+        if (uri.startsWith("/admin/reports")) {
+            return List.of("FINANCE_REPORTS");
+        }
+        if (uri.startsWith("/admin/audit")) {
+            return List.of("SYSTEM_AUDIT");
+        }
+        if (uri.startsWith("/admin/bans")) {
+            return List.of("SYSTEM_BANS");
+        }
+        if (uri.startsWith("/admin/services")) {
+            return List.of("CATALOG_SERVICES");
+        }
+        if (uri.startsWith("/admin/medications")) {
+            return List.of("CATALOG_MEDICATIONS");
+        }
+        if (uri.startsWith("/admin/icd10")) {
+            return List.of("CATALOG_ICD10");
+        }
+        if (uri.startsWith("/admin/membership-tiers")) {
+            return List.of("CATALOG_MEMBERSHIP_TIERS");
+        }
+        if (uri.startsWith("/admin/promotions")) {
+            return List.of("CATALOG_PROMOTIONS");
+        }
+        if (uri.startsWith("/admin/news")) {
+            return List.of("CATALOG_NEWS");
         }
 
         return null;

@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý cơ sở')}"></head>
 
-<body class="app-body">
+<body class="app-body staff-page-body">
 
 <div class="app-shell">
 
@@ -15,161 +15,1002 @@
         <header th:replace="~{fragments/header :: appTopbar('Quản lý cơ sở')}"></header>
 
         <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/branch.css}">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
 
-            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
-            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <!-- THÔNG BÁO ALERT DISMISSIBLE -->
+            <div class="alert alert-success alert-dismissible fade show" th:if="${successMessage}">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+            <div class="alert alert-danger alert-dismissible fade show" th:if="${errorMessage}">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
 
-            <!-- DANH SÁCH CHI NHÁNH (SCR-40.1) -->
-            <section class="panel">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Danh sách chi nhánh</h3>
-                        <p class="panel__subtitle">Quản lý cơ sở, phòng khám và ghế nha khoa</p>
-                    </div>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal">
-                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm chi nhánh
-                    </button>
+            <!-- TIÊU ĐỀ TRANG CHUẨN MISA -->
+            <div class="staff-header-row">
+                <div class="staff-header-left">
+                    <h2 class="staff-page-title">Quản lý cơ sở</h2>
+                    <p class="staff-page-subtitle">Quản lý danh sách chi nhánh phòng khám, sơ đồ phòng và ghế nha khoa</p>
                 </div>
+            </div>
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 branch-table">
-                        <thead class="table-light">
+            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ Quản lý tài khoản & Quản lý nhân sự) -->
+            <section class="staff-toolbar-card">
+                <div class="staff-toolbar-form">
+                    <!-- Bên trái: Ô tìm kiếm nhanh + Dropdown Trạng thái + Nút Lọc nâng cao -->
+                    <div class="staff-toolbar-left">
+                        <!-- 1. Ô tìm kiếm cơ sở -->
+                        <div class="staff-search-box-compact">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="branchKeywordInput" class="form-control"
+                                   placeholder="Tìm kiếm cơ sở, mã, địa chỉ...">
+                        </div>
+
+                        <!-- 2. Dropdown Trạng thái (hay dùng nhất) -->
+                        <div>
+                            <select id="branchStatusSelect" class="form-select staff-select-compact" aria-label="Trạng thái">
+                                <option value="">Trạng thái: Tất cả</option>
+                                <option value="active">Đang hoạt động</option>
+                                <option value="inactive">Ngừng hoạt động</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. Nút Lọc nâng cao (có badge đếm số tiêu chí đang lọc) -->
+                        <button type="button" id="btnOpenBranchAdvFilter"
+                                class="btn btn-secondary-custom btn-vua position-relative"
+                                data-bs-toggle="modal" data-bs-target="#branchAdvancedFilterModal">
+                            <i class="bi bi-funnel"></i> Lọc nâng cao
+                            <span id="branchFilterBadge" class="filter-badge-count ms-1 d-none">0</span>
+                        </button>
+
+                        <!-- Nút Xóa nhanh lọc (ẩn khi chưa lọc) -->
+                        <button type="button" id="btnResetBranchFilter"
+                                class="btn btn-link text-decoration-none text-muted p-0 ms-1 small d-none"
+                                title="Xóa tất cả bộ lọc">
+                            <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                        </button>
+                    </div>
+
+                    <!-- Bên phải: Nút Thêm mới + Bánh răng Tùy chỉnh cột (Popover xổ dưới bánh răng) -->
+                    <div class="staff-toolbar-right">
+                        <button type="button" class="btn btn-primary btn-vua shadow-sm" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm mới
+                        </button>
+
+                        <!-- Bánh răng mở Dropdown Tùy chỉnh cột (Xổ xuống ngay bên dưới bánh răng, không làm đen màn hình) -->
+                        <div class="custom-col-dropdown position-relative d-inline-block">
+                            <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                <i class="bi bi-gear"></i>
+                            </button>
+
+                            <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG (Không làm đen màn hình) -->
+                            <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                <div class="custom-column-header">
+                                    <h6 class="custom-column-title">
+                                        <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                    </h6>
+                                    <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                </div>
+
+                                <!-- Ô tìm kiếm tên trường -->
+                                <div class="custom-column-search">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                        <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                    </div>
+                                </div>
+
+                                <!-- Tiêu đề danh sách cột -->
+                                <div class="custom-column-table-head">
+                                    <div class="flex-grow-1">Tên trường</div>
+                                </div>
+
+                                <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả (cuộn nội bộ) -->
+                                <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                    <div class="custom-col-item" data-col-target="stt">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                        <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="code">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-code" checked>
+                                        <label for="chk-col-code" class="custom-col-name">Mã cơ sở</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="name">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-name" checked>
+                                        <label for="chk-col-name" class="custom-col-name">Tên chi nhánh</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="address">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-address" checked>
+                                        <label for="chk-col-address" class="custom-col-name">Địa chỉ</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="contact">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-contact" checked>
+                                        <label for="chk-col-contact" class="custom-col-name">Thông tin liên hệ</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="scale">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-scale" checked>
+                                        <label for="chk-col-scale" class="custom-col-name">Quy mô</label>
+                                    </div>
+                                    <div class="custom-col-item" data-col-target="status">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                        <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                    </div>
+                                </div>
+
+                                <!-- Chân Popover -->
+                                <div class="custom-column-footer">
+                                    <button type="button" class="btn btn-link custom-column-reset" id="btnResetCols">Lấy lại mặc định</button>
+                                    <div class="custom-column-actions">
+                                        <button type="button" class="btn btn-secondary-custom btn-be" id="btnCancelColPopover">Hủy</button>
+                                        <button type="button" class="btn btn-primary btn-be" id="btnSaveCols">Lưu</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BẢNG DỮ LIỆU CƠ SỞ CHUẨN MISA (Hỗ trợ kéo dãn cột & Cuộn ngang chuẩn desktop) -->
+            <section class="staff-table-card">
+                <div class="staff-table-wrapper">
+                    <table class="table staff-modern-table align-middle" id="branchTable" style="min-width: 1540px; width: 1540px;">
+                        <colgroup>
+                            <col data-col="stt" style="width: 60px;">
+                            <col data-col="code" style="width: 140px;">
+                            <col data-col="name" style="width: 250px;">
+                            <col data-col="address" style="width: 280px;">
+                            <col data-col="contact" style="width: 220px;">
+                            <col data-col="scale" style="width: 190px;">
+                            <col data-col="status" style="width: 170px;">
+                            <col data-col="actions" style="width: 230px;">
+                        </colgroup>
+                        <thead>
                         <tr>
-                            <th>Mã</th>
-                            <th>Tên chi nhánh</th>
-                            <th>Địa chỉ</th>
-                            <th>Liên hệ</th>
-                            <th>Phòng / Ghế</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
+                            <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                <span>#</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="code" style="width: 140px; min-width: 120px;">
+                                <span>Mã cơ sở</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="name" style="width: 250px; min-width: 200px;">
+                                <span>Tên chi nhánh</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="address" style="width: 280px; min-width: 220px;">
+                                <span>Địa chỉ</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="contact" style="width: 220px; min-width: 180px;">
+                                <span>Thông tin liên hệ</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="scale" style="width: 190px; min-width: 160px;">
+                                <span>Quy mô</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="status" style="width: 170px; min-width: 140px;">
+                                <span>Trạng thái</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="actions" style="width: 230px; min-width: 230px;" class="text-center">
+                                <span>Thao tác</span>
+                            </th>
                         </tr>
                         </thead>
-                        <tbody>
-                        <tr th:each="branch : ${branches}">
-                            <td>
-                                <strong th:text="${branch.branchCode}">CN01</strong>
-                                <div class="text-muted small" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
+                        <tbody id="branchTableBody">
+                        <tr th:each="branch, iterStat : ${branches}"
+                            class="branch-data-row"
+                            th:attr="data-status=${branch.isActive ? 'active' : 'inactive'},
+                                     data-code=${branch.branchCode},
+                                     data-name=${branch.branchName},
+                                     data-address=${branch.address},
+                                     data-manager-id=${branch.managerUser != null ? branch.managerUser.userId : ''},
+                                     data-rooms=${roomCounts[branch.branchId] != null ? roomCounts[branch.branchId] : 0},
+                                     data-chairs=${chairCounts[branch.branchId] != null ? chairCounts[branch.branchId] : 0},
+                                     data-search=${(branch.branchCode != null ? branch.branchCode : '') + ' ' + (branch.branchName != null ? branch.branchName : '') + ' ' + (branch.address != null ? branch.address : '') + ' ' + (branch.phone != null ? branch.phone : '') + ' ' + (branch.email != null ? branch.email : '')}">
+                            <!-- 1. STT -->
+                            <td class="text-center text-muted small" th:text="${iterStat.count}" data-col="stt">1</td>
+
+                            <!-- 2. Mã chi nhánh -->
+                            <td data-col="code">
+                                <span class="badge bg-light text-dark border fw-bold font-monospace" th:text="${branch.branchCode}">CN01</span>
+                                <div class="text-muted small mt-1" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
                                     MST: <span th:text="${branch.taxCode}">0101234567</span>
                                 </div>
                             </td>
-                            <td>
-                                <div class="fw-semibold" th:text="${branch.branchName}">Chi nhánh</div>
-                                <small class="text-muted" th:if="${branch.managerUser != null}">
-                                    <i class="bi bi-person-badge"></i> Quản lý: <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
-                                </small>
-                            </td>
-                            <td th:text="${branch.address}">Địa chỉ</td>
-                            <td>
-                                <div th:text="${branch.phone != null ? branch.phone : '-'}">-</div>
-                                <small class="text-muted" th:text="${branch.email}"></small>
-                            </td>
-                            <td>
-                                <span class="mini-stat"><i class="bi bi-door-open" aria-hidden="true"></i>
-                                    <span th:text="${roomCounts[branch.branchId]}">0</span> phòng</span>
-                                <span class="mini-stat"><i class="bi bi-heart-pulse" aria-hidden="true"></i>
-                                    <span th:text="${chairCounts[branch.branchId]}">0</span> ghế</span>
-                            </td>
-                            <td>
-                                <span th:if="${branch.isActive}" class="badge bg-success">Đang hoạt động</span>
-                                <span th:unless="${branch.isActive}" class="badge bg-secondary">Ngừng hoạt động</span>
-                            </td>
-                            <td class="text-center text-nowrap">
-                                <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-diagram-3" aria-hidden="true"></i> Phòng &amp; ghế
-                                </a>
 
-                                <form th:if="${branch.isActive}"
-                                      th:action="@{/admin/branches/{id}/deactivate(id=${branch.branchId})}"
-                                      method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Bạn có chắc muốn ngừng hoạt động chi nhánh này?')">
-                                        Ngừng
+                            <!-- 3. Tên chi nhánh & Quản lý -->
+                            <td data-col="name">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="staff-avatar-circle" style="background: #e0f2fe; color: #0284c7; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                                        <i class="bi bi-buildings"></i>
+                                    </div>
+                                    <div>
+                                        <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
+                                           class="fw-bold text-dark text-decoration-none hover-primary"
+                                           th:text="${branch.branchName}">Chi nhánh</a>
+                                        <div class="text-muted small mt-1" th:if="${branch.managerUser != null}">
+                                            <i class="bi bi-person-badge text-primary me-1"></i>
+                                            <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- 4. Địa chỉ -->
+                            <td data-col="address">
+                                <div class="text-secondary small" th:text="${branch.address}">Địa chỉ</div>
+                            </td>
+
+                            <!-- 5. Thông tin liên hệ -->
+                            <td data-col="contact">
+                                <div class="small fw-semibold text-dark" th:if="${branch.phone != null and !branch.phone.isBlank()}">
+                                    <i class="bi bi-telephone text-muted me-1"></i><span th:text="${branch.phone}">0901234567</span>
+                                </div>
+                                <div class="text-muted small mt-1" th:if="${branch.email != null and !branch.email.isBlank()}">
+                                    <i class="bi bi-envelope text-muted me-1"></i><span th:text="${branch.email}">contact@clinic.vn</span>
+                                </div>
+                                <div class="text-muted small" th:if="${(branch.phone == null or branch.phone.isBlank()) and (branch.email == null or branch.email.isBlank())}">
+                                    -
+                                </div>
+                            </td>
+
+                            <!-- 6. Quy mô (Phòng / Ghế) -->
+                            <td data-col="scale">
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 small">
+                                        <i class="bi bi-door-open me-1"></i><span th:text="${roomCounts[branch.branchId]}">0</span> phòng
+                                    </span>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-1 small">
+                                        <i class="bi bi-heart-pulse me-1"></i><span th:text="${chairCounts[branch.branchId]}">0</span> ghế
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- 7. Trạng thái -->
+                            <td data-col="status">
+                                <span th:if="${branch.isActive}" class="badge-subtle badge-subtle-success">
+                                    <span class="status-dot status-dot-success"></span> Đang hoạt động
+                                </span>
+                                <span th:unless="${branch.isActive}" class="badge-subtle badge-subtle-secondary">
+                                    <span class="status-dot status-dot-secondary"></span> Ngừng hoạt động
+                                </span>
+                            </td>
+
+                            <!-- 8. Thao tác -->
+                            <td class="text-center text-nowrap" data-col="actions">
+                                <div class="d-inline-flex align-items-center gap-1 justify-content-center">
+                                    <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
+                                       class="btn btn-sm btn-outline-primary py-1 px-2" title="Sơ đồ phòng khám &amp; ghế nha">
+                                        <i class="bi bi-diagram-3 me-1"></i>Phòng &amp; ghế
+                                    </a>
+
+                                    <form th:if="${branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/deactivate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning py-1 px-2"
+                                                title="Ngừng hoạt động cơ sở này"
+                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?');">
+                                            Ngừng
+                                        </button>
+                                    </form>
+                                    <form th:unless="${branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/activate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2"
+                                                title="Kích hoạt lại cơ sở này">
+                                            Kích hoạt
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Xóa: Sáng và cho phép xóa nếu tạo nhầm (chưa có dữ liệu); Mờ nếu đã có dữ liệu -->
+                                    <form th:if="${canDeleteMap != null and canDeleteMap[branch.branchId]}"
+                                          th:action="@{/admin/branches/{id}/delete(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2"
+                                                title="Xóa chi nhánh tạo nhầm (chưa có dữ liệu)"
+                                                onclick="return confirm('Chi nhánh này chưa phát sinh dữ liệu. Bạn có chắc chắn muốn xóa vĩnh viễn không?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    <button th:unless="${canDeleteMap != null and canDeleteMap[branch.branchId]}"
+                                            type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 opacity-50 m-0"
+                                            disabled
+                                            title="Không thể xóa vì chi nhánh đã phát sinh dữ liệu (nhân sự, phòng khám, lịch hẹn...). Chỉ có thể Ngừng hoạt động.">
+                                        <i class="bi bi-trash"></i>
                                     </button>
-                                </form>
-                                <form th:unless="${branch.isActive}"
-                                      th:action="@{/admin/branches/{id}/activate(id=${branch.branchId})}"
-                                      method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Kích hoạt</button>
-                                </form>
+                                </div>
                             </td>
                         </tr>
-                        <tr th:if="${#lists.isEmpty(branches)}">
-                            <td colspan="7" class="text-center py-4 text-muted">Chưa có chi nhánh nào.</td>
+
+                        <!-- Hàng trống khi không có cơ sở nào -->
+                        <tr th:if="${#lists.isEmpty(branches)}" id="emptyBranchStaticRow">
+                            <td colspan="8" class="p-0">
+                                <div class="staff-empty-state">
+                                    <div class="staff-empty-icon text-muted">
+                                        <i class="bi bi-buildings fs-1"></i>
+                                    </div>
+                                    <h5 class="staff-empty-title">Chưa có chi nhánh nào</h5>
+                                    <p class="staff-empty-desc">
+                                        Hệ thống chưa có cơ sở phòng khám nào. Bấm nút bên dưới để thêm chi nhánh đầu tiên.
+                                    </p>
+                                    <button type="button" class="btn btn-primary btn-vua" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+                                        <i class="bi bi-plus-lg me-1"></i> Thêm chi nhánh
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Hàng thông báo khi tìm kiếm không ra kết quả -->
+                        <tr id="emptySearchFilterRow" class="d-none">
+                            <td colspan="8" class="p-0">
+                                <div class="staff-empty-state">
+                                    <div class="staff-empty-icon text-muted">
+                                        <i class="bi bi-search fs-1"></i>
+                                    </div>
+                                    <h5 class="staff-empty-title">Không tìm thấy cơ sở nào phù hợp</h5>
+                                    <p class="staff-empty-desc">
+                                        Thử thay đổi từ khóa tìm kiếm hoặc đặt lại bộ lọc nâng cao.
+                                    </p>
+                                    <button type="button" class="btn btn-secondary-custom btn-be" id="btnEmptyResetFilter">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại bộ lọc
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
                 </div>
-            </section>
-        </main>
 
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS (Đồng bộ Quản lý tài khoản & Quản lý nhân sự) -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="visibleBranchCount" th:text="${#lists.size(branches)}">0</strong> cơ sở
+                    </div>
+
+                    <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="branchPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+
+                        <div class="misa-page-range">
+                            <span id="pageRangeText" th:text="${#lists.isEmpty(branches) ? '0 - 0' : '1 - ' + #lists.size(branches)}">1 - 5</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="misa-nav-btn disabled" id="branchFirstBtn" title="Trang đầu"><i class="bi bi-chevron-bar-left"></i></button>
+                            <button type="button" class="misa-nav-btn disabled" id="branchPrevBtn" title="Trang trước"><i class="bi bi-chevron-left"></i></button>
+                            <button type="button" class="misa-nav-btn disabled" id="branchNextBtn" title="Trang sau"><i class="bi bi-chevron-right"></i></button>
+                            <button type="button" class="misa-nav-btn disabled" id="branchLastBtn" title="Trang cuối"><i class="bi bi-chevron-bar-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
     </div>
 </div>
 
-<!-- MODAL: THÊM CHI NHÁNH -->
-<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchTitle" aria-hidden="true">
-    <div class="modal-dialog">
-        <form class="modal-content" th:action="@{/admin/branches}" th:object="${branchForm}" method="post">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createBranchTitle">Thêm chi nhánh mới</h5>
+<!-- ==================== POPUP: MODAL BỘ LỌC NÂNG CAO (CHUẨN MISA AMIS) ==================== -->
+<div class="modal fade" id="branchAdvancedFilterModal" tabindex="-1" aria-labelledby="branchAdvFilterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="branchAdvFilterTitle">
+                    <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                <!-- 1. Người quản lý cơ sở -->
                 <div class="mb-3">
-                    <label for="branchCode" class="form-label">Mã chi nhánh</label>
-                    <input type="text" id="branchCode" th:field="*{branchCode}" class="form-control text-uppercase"
-                           maxlength="30" pattern="^[A-Za-z0-9_\-]{2,30}$"
-                           title="Mã chỉ gồm chữ cái, số, dấu gạch ngang/dưới (2-30 ký tự)" required>
+                    <label for="advBranchManager" class="form-label small fw-semibold text-muted">Người quản lý cơ sở</label>
+                    <select id="advBranchManager" class="form-select">
+                        <option value="">Tất cả người quản lý</option>
+                        <option th:each="m : ${managers}" th:value="${m.userId}" th:text="${m.displayName}">Quản lý</option>
+                    </select>
                 </div>
+
+                <!-- 2. Quy mô cơ sở -->
                 <div class="mb-3">
-                    <label for="branchName" class="form-label">Tên chi nhánh</label>
-                    <input type="text" id="branchName" th:field="*{branchName}" class="form-control"
-                           maxlength="150" required>
+                    <label for="advBranchScale" class="form-label small fw-semibold text-muted">Quy mô cơ sở</label>
+                    <select id="advBranchScale" class="form-select">
+                        <option value="">Tất cả quy mô</option>
+                        <option value="has_rooms">Đã có phòng khám (&gt; 0 phòng)</option>
+                        <option value="no_rooms">Chưa có phòng khám (0 phòng)</option>
+                    </select>
                 </div>
+
+                <!-- 3. Khu vực / Địa bàn (Động 100% từ dữ liệu thực tế) -->
                 <div class="mb-3">
-                    <label for="address" class="form-label">Địa chỉ</label>
-                    <input type="text" id="address" th:field="*{address}" class="form-control"
-                           maxlength="255" required>
+                    <label for="advBranchArea" class="form-label small fw-semibold text-muted">Khu vực / Địa bàn</label>
+                    <select id="advBranchArea" class="form-select">
+                        <option value="">Tất cả khu vực</option>
+                        <option th:each="loc : ${locations}" th:value="${loc}" th:text="${loc}">Khu vực</option>
+                    </select>
                 </div>
-                <div class="row g-3 mb-3">
+
+                <!-- 4. Sắp xếp theo & Thứ tự (Đồng bộ Quản lý tài khoản) -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="advBranchSort" class="form-label small fw-semibold text-muted">Sắp xếp theo</label>
+                        <select id="advBranchSort" class="form-select">
+                            <option value="name">Tên chi nhánh</option>
+                            <option value="code">Mã cơ sở</option>
+                            <option value="rooms">Số lượng phòng</option>
+                            <option value="chairs">Số lượng ghế</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="advBranchDirection" class="form-label small fw-semibold text-muted">Thứ tự</label>
+                        <select id="advBranchDirection" class="form-select">
+                            <option value="asc">Tăng dần (A-Z / Thấp đến cao)</option>
+                            <option value="desc">Giảm dần (Z-A / Cao đến thấp)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" id="btnResetBranchAdvFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                    Đặt lại
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnApplyBranchAdvFilter" class="btn btn-primary btn-vua">
+                        Áp dụng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL: THÊM CHI NHÁNH MỚI CHUẨN MISA ==================== -->
+<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
+        <form class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;"
+              th:action="@{/admin/branches}" th:object="${branchForm}" method="post">
+            <div class="modal-header py-3 px-4 bg-white" style="border-bottom: 1px solid #e2e8f0;">
+                <h5 class="modal-title fs-6 fw-bold text-dark" id="createBranchTitle">
+                    <i class="bi bi-buildings text-primary me-2"></i>Thêm chi nhánh mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3 bg-white">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="branchCode" class="form-label small fw-semibold text-muted">Mã chi nhánh <span class="text-danger">*</span></label>
+                        <input type="text" id="branchCode" th:field="*{branchCode}" class="form-control text-uppercase font-monospace"
+                               maxlength="30" pattern="^[A-Za-z0-9_\-]{2,30}$"
+                               placeholder="Ví dụ: CN_DONGDA"
+                               title="Mã chỉ gồm chữ cái không dấu, số, gạch ngang/dưới (2-30 ký tự)" required>
+                    </div>
+                    <div class="col-md-7">
+                        <label for="branchName" class="form-label small fw-semibold text-muted">Tên chi nhánh <span class="text-danger">*</span></label>
+                        <input type="text" id="branchName" th:field="*{branchName}" class="form-control"
+                               maxlength="150" placeholder="Ví dụ: Cơ sở Đống Đa" required>
+                    </div>
+                    <div class="col-12">
+                        <label for="address" class="form-label small fw-semibold text-muted">Địa chỉ cơ sở <span class="text-danger">*</span></label>
+                        <input type="text" id="address" th:field="*{address}" class="form-control"
+                               maxlength="255" placeholder="Ví dụ: 123 Tây Sơn, Đống Đa, Hà Nội" required>
+                    </div>
                     <div class="col-md-6">
-                        <label for="phone" class="form-label">Số điện thoại</label>
+                        <label for="phone" class="form-label small fw-semibold text-muted">Số điện thoại</label>
                         <input type="tel" id="phone" th:field="*{phone}" class="form-control"
                                pattern="^(\+84|0)[0-9]{9,10}$"
-                               title="SĐT gồm 10-11 số (ví dụ: 0901234567)" maxlength="20">
+                               title="SĐT gồm 10-11 số (ví dụ: 0901234567)" maxlength="20"
+                               placeholder="0901234567">
                     </div>
                     <div class="col-md-6">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" id="email" th:field="*{email}" class="form-control" maxlength="100">
+                        <label for="email" class="form-label small fw-semibold text-muted">Email liên hệ</label>
+                        <input type="email" id="email" th:field="*{email}" class="form-control" maxlength="100"
+                               placeholder="contact@dentalclinic.com">
                     </div>
-                </div>
-                <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="taxCode" class="form-label">Mã số thuế</label>
-                        <input type="text" id="taxCode" th:field="*{taxCode}" class="form-control" maxlength="20"
+                        <label for="taxCode" class="form-label small fw-semibold text-muted">Mã số thuế</label>
+                        <input type="text" id="taxCode" th:field="*{taxCode}" class="form-control font-monospace" maxlength="20"
                                pattern="^([0-9]{10}|[0-9]{13}|[0-9]{10}-[0-9]{3})$"
-                               title="Mã số thuế gồm 10 số (doanh nghiệp) hoặc 13 số (chi nhánh). Ví dụ: 0101234567 hoặc 0101234567-001"
-                               placeholder="Ví dụ: 0101234567">
+                               title="MST gồm 10 hoặc 13 số" placeholder="0101234567">
                     </div>
                     <div class="col-md-6">
-                        <label for="managerUserId" class="form-label">Người quản lý cơ sở</label>
-                        <select id="managerUserId" th:field="*{managerUser.userId}" class="form-select">
+                        <label for="managerUserId" class="form-label small fw-semibold text-muted">Người quản lý cơ sở</label>
+                        <select id="managerUserId" name="managerUser.userId" class="form-select">
                             <option value="">-- Chưa chỉ định --</option>
                             <option th:each="m : ${managers}" th:value="${m.userId}" th:text="${m.displayName}">Quản lý</option>
                         </select>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="btn btn-primary">Thêm chi nhánh</button>
+            <div class="modal-footer py-3 px-4 bg-white" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-vua">
+                    <i class="bi bi-check-lg me-1"></i>Thêm chi nhánh
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Elements
+        const keywordInput = document.getElementById('branchKeywordInput');
+        const statusSelect = document.getElementById('branchStatusSelect');
+        const btnReset = document.getElementById('btnResetBranchFilter');
+        const btnEmptyReset = document.getElementById('btnEmptyResetFilter');
+        const filterBadge = document.getElementById('branchFilterBadge');
+        const countEl = document.getElementById('visibleBranchCount');
+        const pageRangeText = document.getElementById('pageRangeText');
+        const pageSizeSelect = document.getElementById('branchPageSizeSelect');
+        const firstBtn = document.getElementById('branchFirstBtn');
+        const prevBtn = document.getElementById('branchPrevBtn');
+        const nextBtn = document.getElementById('branchNextBtn');
+        const lastBtn = document.getElementById('branchLastBtn');
+        const emptySearchRow = document.getElementById('emptySearchFilterRow');
+        const tbody = document.getElementById('branchTableBody');
+        const allRows = Array.from(document.querySelectorAll('.branch-data-row'));
+
+        // Advanced filter modal elements
+        const advManager = document.getElementById('advBranchManager');
+        const advScale = document.getElementById('advBranchScale');
+        const advArea = document.getElementById('advBranchArea');
+        const advSort = document.getElementById('advBranchSort');
+        const advDirection = document.getElementById('advBranchDirection');
+        const btnApplyAdv = document.getElementById('btnApplyBranchAdvFilter');
+        const btnResetAdv = document.getElementById('btnResetBranchAdvFilter');
+        const advModalEl = document.getElementById('branchAdvancedFilterModal');
+        const advModal = advModalEl ? bootstrap.Modal.getOrCreateInstance(advModalEl) : null;
+
+        let currentPage = 0;
+        let pageSize = 10;
+        let currentFilteredRows = [...allRows];
+
+        function normStr(str) {
+            return (str || '').toString().toLowerCase().trim().normalize('NFC');
+        }
+
+        // 1. Logic lọc & sắp xếp chi nhánh
+        function applyAllFilters() {
+            const kw = normStr(keywordInput ? keywordInput.value : '');
+            const st = statusSelect ? statusSelect.value : '';
+            const mgr = advManager ? advManager.value : '';
+            const scale = advScale ? advScale.value : '';
+            const area = normStr(advArea ? advArea.value : '');
+            const sortBy = advSort ? advSort.value : 'name';
+            const sortDir = advDirection ? advDirection.value : 'asc';
+
+            // Tính số lượng tiêu chí nâng cao đang lọc
+            let advCount = 0;
+            if (mgr) advCount++;
+            if (scale) advCount++;
+            if (area) advCount++;
+            if (filterBadge) {
+                if (advCount > 0) {
+                    filterBadge.textContent = advCount;
+                    filterBadge.classList.remove('d-none');
+                } else {
+                    filterBadge.classList.add('d-none');
+                }
+            }
+
+            // Hiện nút Xóa lọc nếu có bất kỳ điều kiện nào
+            if (btnReset) {
+                if (kw || st || advCount > 0) {
+                    btnReset.classList.remove('d-none');
+                } else {
+                    btnReset.classList.add('d-none');
+                }
+            }
+
+            // Lọc danh sách rows
+            currentFilteredRows = allRows.filter(r => {
+                const searchData = normStr(r.getAttribute('data-search'));
+                const rowStatus = r.getAttribute('data-status') || '';
+                const rowManager = r.getAttribute('data-manager-id') || '';
+                const rowRooms = parseInt(r.getAttribute('data-rooms') || '0', 10);
+                const rowAddress = normStr(r.getAttribute('data-address'));
+
+                if (kw && !searchData.includes(kw)) return false;
+                if (st && rowStatus !== st) return false;
+                if (mgr && rowManager !== mgr) return false;
+                if (scale === 'has_rooms' && rowRooms <= 0) return false;
+                if (scale === 'no_rooms' && rowRooms > 0) return false;
+                if (area && !rowAddress.includes(area)) return false;
+
+                return true;
+            });
+
+            // Sắp xếp rows
+            currentFilteredRows.sort((a, b) => {
+                let valA = '';
+                let valB = '';
+                if (sortBy === 'code') {
+                    valA = a.getAttribute('data-code') || '';
+                    valB = b.getAttribute('data-code') || '';
+                } else if (sortBy === 'rooms') {
+                    valA = parseInt(a.getAttribute('data-rooms') || '0', 10);
+                    valB = parseInt(b.getAttribute('data-rooms') || '0', 10);
+                    return sortDir === 'desc' ? valB - valA : valA - valB;
+                } else if (sortBy === 'chairs') {
+                    valA = parseInt(a.getAttribute('data-chairs') || '0', 10);
+                    valB = parseInt(b.getAttribute('data-chairs') || '0', 10);
+                    return sortDir === 'desc' ? valB - valA : valA - valB;
+                } else {
+                    valA = a.getAttribute('data-name') || '';
+                    valB = b.getAttribute('data-name') || '';
+                }
+                const cmp = valA.localeCompare(valB, 'vi');
+                return sortDir === 'desc' ? -cmp : cmp;
+            });
+
+            currentPage = 0;
+            renderPagination();
+        }
+
+        // 2. Phân trang MISA chuẩn
+        function renderPagination() {
+            const total = currentFilteredRows.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage >= totalPages) currentPage = totalPages - 1;
+            if (currentPage < 0) currentPage = 0;
+
+            const fromIdx = total === 0 ? 0 : (currentPage * pageSize + 1);
+            const toIdx = Math.min((currentPage + 1) * pageSize, total);
+
+            // Cập nhật text tổng số và range
+            if (countEl) countEl.textContent = total;
+            if (pageRangeText) {
+                pageRangeText.textContent = total === 0 ? '0 - 0' : `${fromIdx} - ${toIdx}`;
+            }
+
+            // Nút navigation
+            if (firstBtn) firstBtn.classList.toggle('disabled', currentPage === 0 || total === 0);
+            if (prevBtn) prevBtn.classList.toggle('disabled', currentPage === 0 || total === 0);
+            if (nextBtn) nextBtn.classList.toggle('disabled', currentPage >= totalPages - 1 || total === 0);
+            if (lastBtn) lastBtn.classList.toggle('disabled', currentPage >= totalPages - 1 || total === 0);
+
+            // Ẩn toàn bộ dòng trước
+            allRows.forEach(r => r.style.display = 'none');
+
+            // Hiển thị các dòng thuộc trang hiện tại
+            const pageRows = currentFilteredRows.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+            pageRows.forEach(r => {
+                r.style.display = '';
+                tbody.appendChild(r); // Đảm bảo thứ tự sắp xếp được phản ánh trên DOM
+            });
+
+            // Hàng báo trống
+            if (emptySearchRow) {
+                if (total === 0 && allRows.length > 0) {
+                    emptySearchRow.classList.remove('d-none');
+                } else {
+                    emptySearchRow.classList.add('d-none');
+                }
+            }
+        }
+
+        // Navigation listeners
+        if (firstBtn) firstBtn.addEventListener('click', () => { if (currentPage > 0) { currentPage = 0; renderPagination(); } });
+        if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderPagination(); } });
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(currentFilteredRows.length / pageSize);
+            if (currentPage < totalPages - 1) { currentPage++; renderPagination(); }
+        });
+        if (lastBtn) lastBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(currentFilteredRows.length / pageSize);
+            if (currentPage < totalPages - 1) { currentPage = totalPages - 1; renderPagination(); }
+        });
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSize = parseInt(this.value, 10) || 10;
+                currentPage = 0;
+                renderPagination();
+            });
+        }
+
+        // Listeners for inputs
+        if (keywordInput) keywordInput.addEventListener('input', applyAllFilters);
+        if (statusSelect) statusSelect.addEventListener('change', applyAllFilters);
+
+        function resetAllFilters() {
+            if (keywordInput) keywordInput.value = '';
+            if (statusSelect) statusSelect.value = '';
+            if (advManager) advManager.value = '';
+            if (advScale) advScale.value = '';
+            if (advArea) advArea.value = '';
+            if (advSort) advSort.value = 'name';
+            if (advDirection) advDirection.value = 'asc';
+            applyAllFilters();
+        }
+
+        if (btnReset) btnReset.addEventListener('click', resetAllFilters);
+        if (btnEmptyReset) btnEmptyReset.addEventListener('click', resetAllFilters);
+        if (btnResetAdv) btnResetAdv.addEventListener('click', () => {
+            if (advManager) advManager.value = '';
+            if (advScale) advScale.value = '';
+            if (advArea) advArea.value = '';
+            if (advSort) advSort.value = 'name';
+            if (advDirection) advDirection.value = 'asc';
+        });
+
+        if (btnApplyAdv) {
+            btnApplyAdv.addEventListener('click', () => {
+                applyAllFilters();
+                if (advModal) advModal.hide();
+            });
+        }
+
+        // ==================== KÉO DÃN CỘT (COLUMN RESIZER) ====================
+        const defaultBranchColWidths = {
+            stt: 60,
+            code: 140,
+            name: 250,
+            address: 280,
+            contact: 220,
+            scale: 190,
+            status: 170,
+            actions: 230
+        };
+        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v2';
+        const table = document.getElementById('branchTable');
+
+        function loadColWidths() {
+            try {
+                const raw = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return raw ? Object.assign({}, defaultBranchColWidths, JSON.parse(raw)) : Object.assign({}, defaultBranchColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultBranchColWidths);
+            }
+        }
+
+        let currentWidths = loadColWidths();
+
+        function applyColWidths() {
+            let totalW = 0;
+            const hidden = (branchColConfig && branchColConfig.hidden) ? branchColConfig.hidden : [];
+            Object.keys(defaultBranchColWidths).forEach(col => {
+                const w = currentWidths[col] || defaultBranchColWidths[col];
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                }
+                if (!hidden.includes(col)) {
+                    totalW += w;
+                }
+            });
+            const wrapperW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(totalW, wrapperW, 1540) + 'px';
+        }
+
+        let isResizing = false;
+        let startX = 0;
+        let startW = 0;
+        let targetColKey = null;
+
+        document.querySelectorAll('#branchTable .col-resizer').forEach(resizer => {
+            resizer.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const th = this.closest('th');
+                targetColKey = th.getAttribute('data-col');
+                if (!targetColKey) return;
+
+                isResizing = true;
+                startX = e.pageX;
+                startW = currentWidths[targetColKey] || th.offsetWidth;
+                resizer.classList.add('is-resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                function onMouseMove(e) {
+                    if (!isResizing) return;
+                    const diff = e.pageX - startX;
+                    const newW = Math.max(startW + diff, 60);
+                    currentWidths[targetColKey] = newW;
+                    applyColWidths();
+                }
+
+                function onMouseUp() {
+                    if (!isResizing) return;
+                    isResizing = false;
+                    resizer.classList.remove('is-resizing');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    try {
+                        localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(currentWidths));
+                    } catch (err) {}
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
+
+        // ==================== TÙY CHỈNH CỘT (POPOVER) ====================
+        const defaultBranchCols = ['stt', 'code', 'name', 'address', 'contact', 'scale', 'status'];
+        const STORAGE_BRANCH_COLS_KEY = 'cv_branch_table_columns_v2';
+        const popoverEl = document.getElementById('customColumnPopover');
+        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        const btnCloseCol = document.getElementById('btnCloseColPopover');
+        const btnCancelCol = document.getElementById('btnCancelColPopover');
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        const btnResetCols = document.getElementById('btnResetCols');
+
+        function loadBranchColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_BRANCH_COLS_KEY);
+                return raw ? JSON.parse(raw) : { hidden: [] };
+            } catch (e) {
+                return { hidden: [] };
+            }
+        }
+
+        let branchColConfig = loadBranchColConfig();
+
+        function applyBranchColConfig(cfg) {
+            if (!table) return;
+            const hidden = (cfg && cfg.hidden) ? cfg.hidden : [];
+            defaultBranchCols.forEach(col => {
+                const isHidden = hidden.includes(col);
+                table.querySelectorAll(`[data-col="${col}"]`).forEach(el => {
+                    if (isHidden) el.classList.add('d-none');
+                    else el.classList.remove('d-none');
+                });
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.display = isHidden ? 'none' : '';
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+            applyColWidths();
+        }
+
+        function openCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'block';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'true');
+                btnToggleCol.classList.add('active');
+            }
+            defaultBranchCols.forEach(col => {
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !branchColConfig.hidden.includes(col);
+            });
+            const searchInput = document.getElementById('colSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                document.querySelectorAll('#customColList .custom-col-item').forEach(it => it.style.display = '');
+                setTimeout(() => searchInput.focus(), 60);
+            }
+        }
+
+        function closeCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'false');
+                btnToggleCol.classList.remove('active');
+            }
+        }
+
+        if (btnToggleCol) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                    openCustomColPopover();
+                } else {
+                    closeCustomColPopover();
+                }
+            });
+        }
+
+        if (btnCloseCol) btnCloseCol.addEventListener('click', (e) => { e.preventDefault(); closeCustomColPopover(); });
+        if (btnCancelCol) btnCancelCol.addEventListener('click', (e) => { e.preventDefault(); closeCustomColPopover(); });
+
+        document.addEventListener('click', function (e) {
+            if (popoverEl && popoverEl.style.display !== 'none') {
+                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                    closeCustomColPopover();
+                }
+            }
+        });
+
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const hidden = [];
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+                branchColConfig = { hidden };
+                localStorage.setItem(STORAGE_BRANCH_COLS_KEY, JSON.stringify(branchColConfig));
+                applyBranchColConfig(branchColConfig);
+                closeCustomColPopover();
+            });
+        }
+
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                branchColConfig = { hidden: [] };
+                localStorage.removeItem(STORAGE_BRANCH_COLS_KEY);
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                currentWidths = Object.assign({}, defaultBranchColWidths);
+                applyBranchColConfig(branchColConfig);
+                closeCustomColPopover();
+            });
+        }
+
+        const colSearchInput = document.getElementById('colSearchInput');
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const val = this.value.toLowerCase().trim();
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const name = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = name.includes(val) ? 'flex' : 'none';
+                });
+            });
+        }
+
+        // Tự động bổ sung địa bàn từ dữ liệu bảng nếu chưa có trong select (Đảm bảo 100% động)
+        function populateLocations() {
+            if (!advArea) return;
+            const existing = Array.from(advArea.options).map(o => o.value.toLowerCase().trim()).filter(Boolean);
+            const locSet = new Set();
+            allRows.forEach(r => {
+                const addr = (r.getAttribute('data-address') || '').trim();
+                if (addr) {
+                    const parts = addr.split(',');
+                    const loc = parts[parts.length - 1].trim();
+                    if (loc && !existing.includes(loc.toLowerCase())) {
+                        locSet.add(loc);
+                    }
+                }
+            });
+            locSet.forEach(loc => {
+                const opt = document.createElement('option');
+                opt.value = loc;
+                opt.textContent = loc;
+                advArea.appendChild(opt);
+            });
+        }
+        populateLocations();
+
+        // Khởi tạo
+        applyBranchColConfig(branchColConfig);
+        applyAllFilters();
+    });
+</script>
 </body>
 </html>

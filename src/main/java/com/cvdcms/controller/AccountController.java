@@ -128,12 +128,7 @@ public class AccountController {
                 }
 
                 // Giới hạn size
-                if (size != 10 &&
-                                size != 20 &&
-                                size != 50) {
-
-                        size = 10;
-                }
+                if (size != 10 && size != 25 && size != 50 && size != 100) { size = 10; }
 
                 // =====================================================
                 // WHITELIST SORT
@@ -186,6 +181,12 @@ public class AccountController {
                 // =====================================================
                 // DATA CHO THYMELEAF
                 // =====================================================
+
+                int from = accountPage.isEmpty() ? 0 : (accountPage.getNumber() * size + 1);
+                int to = accountPage.isEmpty() ? 0 : (int) Math.min((long) (accountPage.getNumber() + 1) * size, accountPage.getTotalElements());
+                model.addAttribute("fromItem", from);
+                model.addAttribute("toItem", to);
+                model.addAttribute("pageSize", size);
 
                 model.addAttribute(
                                 "accounts",
@@ -263,7 +264,9 @@ public class AccountController {
 
                 model.addAttribute(
                                 "roles",
-                                roleRepository.findAllWithPermissions());
+                                roleRepository.findAllWithPermissions().stream()
+                                        .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                                        .toList());
 
                 model.addAttribute(
                                 "branches",
@@ -300,6 +303,10 @@ public class AccountController {
                                         .orElseThrow(() -> new ResponseStatusException(
                                                         HttpStatus.BAD_REQUEST,
                                                         "Role không tồn tại."));
+
+                        if (Boolean.FALSE.equals(selectedRole.getIsActive())) {
+                                throw new IllegalArgumentException("Vai trò '" + (selectedRole.getDisplayName() != null ? selectedRole.getDisplayName() : selectedRole.getRoleName()) + "' đang tạm ngưng hoạt động, không thể gán cho tài khoản mới.");
+                        }
 
                         // Chỉ Quản trị viên được tạo tài khoản.
                         requireAdmin(session);
@@ -432,7 +439,9 @@ public class AccountController {
 
                 model.addAttribute(
                                 "roles",
-                                roleRepository.findAllWithPermissions());
+                                roleRepository.findAllWithPermissions().stream()
+                                        .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                                        .toList());
 
                 // Chỉ ADMIN mới được thấy lựa chọn vai trò ADMIN
                 model.addAttribute(

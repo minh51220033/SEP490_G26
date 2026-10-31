@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Phân ca làm việc')}"></head>
 
-<body class="app-body">
+<body class="app-body staff-page-body">
 
 <div class="app-shell">
 
@@ -18,170 +18,297 @@
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/schedule.css}">
 
-            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
-            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <div class="alert alert-success alert-dismissible fade show mb-3" th:if="${successMessage}">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+            <div class="alert alert-danger alert-dismissible fade show mb-3" th:if="${errorMessage}">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
 
-            <!-- BẢNG PHÂN CA TUẦN (SCR-33.1) -->
-            <section class="panel">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Bảng phân ca theo tuần</h3>
-                        <p class="panel__subtitle">
-                            Xếp nhân sự vào ca Sáng / Chiều / Tối theo chi nhánh ·
-                            Tuần
-                            <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">01/01/2026</strong>
-                            -
-                            <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">07/01/2026</strong>
-                        </p>
-                    </div>
+            <!-- 1. TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản, Quản lý nhân sự, Quản lý cơ sở) -->
+            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 flex-shrink-0">
+                <div>
+                    <h1 class="staff-page-title">Bảng phân ca làm việc theo tuần</h1>
+                    <p class="staff-page-subtitle">
+                        Xếp nhân sự vào ca Sáng / Chiều / Tối theo từng chi nhánh phòng khám
+                    </p>
+                </div>
+
+                <!-- Nút Sao chép tuần trước -->
+                <div class="d-flex align-items-center gap-2">
                     <form th:if="${selectedBranchId != null}" th:action="@{/admin/schedules/copy-week}" method="post"
-                          onsubmit="return confirm('Sao chép lịch tuần trước sang tuần này?');">
+                          class="m-0"
+                          onsubmit="return confirm('Bạn có chắc chắn muốn sao chép toàn bộ lịch trực của tuần trước sang tuần này?');">
                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                         <input type="hidden" name="week" th:value="${monday}">
-                        <button type="submit" class="btn btn-light">
-                            <i class="bi bi-copy" aria-hidden="true"></i> Sao chép tuần trước
+                        <button type="submit" class="btn btn-secondary-custom btn-vua shadow-sm">
+                            <i class="bi bi-copy me-1"></i> Sao chép tuần trước
                         </button>
                     </form>
                 </div>
+            </div>
 
-                <!-- Bộ lọc chi nhánh + điều hướng tuần -->
-                <form th:action="@{/admin/schedules}" method="get" class="filter-bar">
-                    <input type="hidden" name="week" th:value="${monday}">
-                    <div>
-                        <label for="branchId" class="form-label small mb-1">Chi nhánh</label>
-                        <select id="branchId" name="branchId" class="form-select" onchange="this.form.submit()">
-                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh
-                            </option>
-                        </select>
-                    </div>
-                    <div class="d-flex gap-2 align-items-end">
-                        <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${prevWeek})}"
-                           class="btn btn-light"><i class="bi bi-chevron-left" aria-hidden="true"></i> Tuần trước</a>
-                        <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
-                           class="btn btn-light">Tuần này</a>
-                        <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${nextWeek})}"
-                           class="btn btn-light">Tuần sau <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-                    </div>
-                </form>
+            <!-- 2. TOOLBAR ĐIỀU KHIỂN (Hàng ngang tích hợp) -->
+            <div class="schedule-toolbar-card flex-shrink-0">
+                    <form th:action="@{/admin/schedules}" method="get" class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <input type="hidden" name="week" th:value="${monday}">
 
-                <div th:if="${selectedBranchId == null}" class="schedule-empty">
-                    Chưa có chi nhánh nào đang hoạt động.
-                </div>
-
-                <div class="table-responsive" th:if="${matrix != null}">
-                    <table class="table align-middle mb-0 schedule-table">
-                        <thead>
-                        <tr>
-                            <th class="schedule-table__corner">Ca / Ngày</th>
-                            <th th:each="d : ${matrix.keySet()}"
-                                th:classappend="${d == today} ? 'is-today' : ''">
-                                <div class="schedule-day">
-                                    <span th:text="${#temporals.dayOfWeekNameShort(d)}">T2</span>
-                                    <strong th:text="${#temporals.format(d, 'dd/MM')}">01/01</strong>
-                                </div>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="sh : ${shifts}">
-                            <th class="schedule-shift">
-                                <div class="schedule-shift__name" th:text="${sh.shiftName}">Ca sáng</div>
-                                <div class="staff-sub"
-                                     th:text="${#temporals.format(sh.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(sh.endTime, 'HH:mm')}">
-                                    08:00 - 12:00
-                                </div>
-                            </th>
-                            <td th:each="entry : ${matrix}" class="schedule-cell"
-                                th:classappend="${entry.key == today} ? 'is-today' : ''">
-                                <div th:each="s : ${entry.value[sh.shiftId]}" class="schedule-chip"
-                                     th:classappend="${s.status.name() == 'ON_LEAVE'} ? 'schedule-chip--leave' : ''">
-                                    <span class="schedule-chip__name" th:text="${s.staff.fullName}"
-                                          th:title="${s.staff.staffCode}">Họ tên</span>
-                                    <form th:if="${!entry.key.isBefore(today)}"
-                                          th:action="@{/admin/schedules/{id}/delete(id=${s.scheduleId})}" method="post"
-                                          class="m-0"
-                                          onsubmit="return confirm('Gỡ nhân viên này khỏi ca?');">
-                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
-                                        <input type="hidden" name="week" th:value="${monday}">
-                                        <button type="submit" class="schedule-chip__remove" aria-label="Gỡ khỏi ca">
-                                            <i class="bi bi-x-lg" aria-hidden="true"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                                <button type="button" class="schedule-add"
-                                        th:if="${!entry.key.isBefore(today)}"
-                                        data-bs-toggle="modal" data-bs-target="#assignModal"
-                                        th:attr="data-date=${entry.key}, data-shift=${sh.shiftId},
-                                                 data-label=${sh.shiftName + ' · ' + #temporals.format(entry.key, 'dd/MM/yyyy')}">
-                                    <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm
-                                </button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- MODAL XẾP CA -->
-            <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <form class="modal-content" th:action="@{/admin/schedules/assign}" method="post">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="assignModalLabel">Xếp nhân viên vào ca</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
-                            <input type="hidden" name="workDate" id="assignDate">
-                            <input type="hidden" name="shiftId" id="assignShift">
-
-                            <p class="mb-3">Ca làm: <strong id="assignLabel">-</strong></p>
-
-                            <div class="mb-3">
-                                <label for="assignStaff" class="form-label">Nhân viên <span class="text-danger">*</span></label>
-                                <select id="assignStaff" name="staffId" class="form-select" required
-                                        th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
-                                    <option value="">-- Chọn nhân viên --</option>
-                                    <option th:each="a : ${assignableStaff}" th:value="${a.staff.staffId}"
-                                            th:text="${a.staff.fullName + ' (' + a.staff.staffCode + ') - ' + (a.role.displayName != null ? a.role.displayName : a.role.roleName)}">
-                                        Nhân viên
+                        <!-- Bên trái: Chọn Chi nhánh + Điều hướng tuần -->
+                        <div class="d-flex align-items-center flex-wrap gap-3">
+                            <!-- Dropdown Chi nhánh gọn gàng -->
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small fw-semibold text-nowrap"><i class="bi bi-buildings me-1"></i>Chi nhánh:</span>
+                                <select id="branchId" name="branchId" class="form-select form-select-sm schedule-branch-select" onchange="this.form.submit()">
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                            th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh
                                     </option>
                                 </select>
-                                <div class="alert alert-warning py-2 px-3 mt-2 small mb-0"
-                                     th:if="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                    Chi nhánh này chưa có nhân viên được phân công làm việc.
-                                    Vui lòng vào <a th:href="@{/admin/staffs}" class="alert-link fw-bold" target="_blank">Quản lý nhân sự</a> để phân công trước.
-                                </div>
                             </div>
-                            <div>
-                                <label for="assignNote" class="form-label">Ghi chú</label>
-                                <input type="text" id="assignNote" name="note" maxlength="255" class="form-control"
-                                       placeholder="Không bắt buộc">
+
+                            <!-- Vạch ngăn cách -->
+                            <div class="schedule-toolbar-divider d-none d-md-block"></div>
+
+                            <!-- Bộ nút điều hướng tuần -->
+                            <div class="d-flex align-items-center gap-1">
+                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${prevWeek})}"
+                                   class="schedule-nav-btn" title="Tuần trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
+                                   class="schedule-today-btn"
+                                   th:classappend="${!today.isBefore(monday) and !today.isAfter(monday.plusDays(6))} ? 'btn btn-primary' : 'btn btn-outline-secondary'">
+                                    Tuần này
+                                </a>
+                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${nextWeek})}"
+                                   class="schedule-nav-btn" title="Tuần sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+
+                                <!-- Khoảng thời gian tuần -->
+                                <span class="schedule-week-badge ms-2">
+                                    <i class="bi bi-calendar3 me-1 text-primary"></i>
+                                    <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">26/10/2026</strong>
+                                    <span class="text-muted mx-1">&rarr;</span>
+                                    <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">01/11/2026</strong>
+                                </span>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-primary"
-                                    th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">Xếp ca</button>
+
+                        <!-- Bên phải: Chú thích loại nhân sự (Legend) -->
+                        <div class="d-flex align-items-center gap-3 small">
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--doctor"></span>Bác sĩ</span>
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--staff"></span>Nhân sự khác</span>
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--leave"></span>Nghỉ phép</span>
                         </div>
                     </form>
                 </div>
-            </div>
+
+                <!-- Khi chưa có chi nhánh -->
+                <div th:if="${selectedBranchId == null}" class="schedule-card schedule-empty">
+                    <i class="bi bi-buildings fs-1 text-muted d-block mb-2"></i>
+                    <p class="mb-0">Chưa có chi nhánh nào đang hoạt động trong hệ thống.</p>
+                </div>
+
+                <!-- 3. MA TRẬN BẢNG PHÂN CA (Full width, thoáng đãng) -->
+                <div class="schedule-table-card" th:if="${matrix != null}">
+                    <div class="table-responsive m-0 p-0">
+                        <table class="table schedule-table">
+                            <thead>
+                            <tr>
+                                <th class="schedule-table__corner">Ca / Ngày</th>
+                                <th th:each="d : ${matrix.keySet()}"
+                                    th:classappend="${d == today} ? 'is-today' : (${d.isBefore(today)} ? 'is-past' : '')">
+                                    <div class="schedule-day">
+                                        <span th:text="${#temporals.dayOfWeekNameShort(d)}">T2</span>
+                                        <strong th:text="${#temporals.format(d, 'dd/MM')}">01/01</strong>
+                                        <span th:if="${d == today}" class="schedule-today-pill">Hôm nay</span>
+                                    </div>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="sh : ${shifts}">
+                                <!-- Cột Tên Ca Bên Trái -->
+                                <th class="schedule-shift">
+                                    <div class="schedule-shift__name">
+                                        <i class="bi"
+                                           th:classappend="${#strings.containsIgnoreCase(sh.shiftName, 'sáng')} ? 'bi-sunrise text-warning' : (${#strings.containsIgnoreCase(sh.shiftName, 'chiều')} ? 'bi-sun text-primary' : 'bi-moon-stars text-indigo')"></i>
+                                        <span th:text="${sh.shiftName}">Ca sáng</span>
+                                    </div>
+                                    <div class="schedule-shift__time"
+                                         th:text="${#temporals.format(sh.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(sh.endTime, 'HH:mm')}">
+                                        08:00 - 12:00
+                                    </div>
+                                </th>
+
+                                <!-- Các Ô Ngày x Ca -->
+                                <td th:each="entry : ${matrix}" class="schedule-cell"
+                                    th:classappend="${entry.key == today} ? 'is-today' : (${entry.key.isBefore(today)} ? 'is-past' : '')">
+
+                                    <!-- Danh sách nhân viên trong ca -->
+                                    <div th:each="s : ${entry.value[sh.shiftId]}"
+                                         class="schedule-chip"
+                                         th:classappend="${#strings.toString(s.status) == 'ON_LEAVE' ? 'schedule-chip--leave' : (#strings.startsWith(s.staff.staffCode, 'BS') ? 'schedule-chip--doctor' : 'schedule-chip--staff')}">
+
+                                        <!-- Badge vai trò -->
+                                        <span class="schedule-role-tag"
+                                              th:text="${#strings.toString(s.status) == 'ON_LEAVE' ? 'Nghỉ' : (#strings.startsWith(s.staff.staffCode, 'BS') ? 'BS' : 'NV')}">
+                                            NV
+                                        </span>
+
+                                        <!-- Tên nhân viên -->
+                                        <span class="schedule-chip__name"
+                                              th:text="${s.staff.fullName}"
+                                              th:title="${s.staff.staffCode + (s.staff.positionTitle != null ? ' - ' + s.staff.positionTitle : '')}">
+                                            Họ tên
+                                        </span>
+
+                                        <!-- Badge báo đã check-in hôm nay -->
+                                        <span th:if="${entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)}"
+                                              class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 ms-1 d-inline-flex align-items-center gap-1"
+                                              style="font-size: 0.68rem;"
+                                              th:title="'Đã check-in lúc ' + ${checkedInStaffTimesToday[s.staff.staffId]}">
+                                            <i class="bi bi-fingerprint"></i><span th:text="${checkedInStaffTimesToday[s.staff.staffId]}">08:00</span>
+                                        </span>
+
+                                        <!-- Nút gỡ nhân viên (chỉ khả dụng từ hôm nay trở đi) -->
+                                        <form th:if="${!entry.key.isBefore(today)}"
+                                              th:action="@{/admin/schedules/{id}/delete(id=${s.scheduleId})}" method="post"
+                                              class="m-0"
+                                              th:attr="data-staff-name=${s.staff.fullName},
+                                                       data-checked-in=${entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)},
+                                                       data-checkin-time=${(entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)) ? checkedInStaffTimesToday[s.staff.staffId] : ''}"
+                                              onsubmit="return handleConfirmRemove(this);">
+                                            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                            <input type="hidden" name="week" th:value="${monday}">
+                                            <button type="submit" class="schedule-chip__remove" title="Gỡ khỏi ca">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Nút Thêm nhân viên (Cho hôm nay và tương lai) -->
+                                    <button type="button" class="schedule-add"
+                                            th:if="${!entry.key.isBefore(today)}"
+                                            data-bs-toggle="modal" data-bs-target="#assignModal"
+                                            th:attr="data-date=${entry.key}, data-shift=${sh.shiftId},
+                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(entry.key, 'dd/MM/yyyy')}">
+                                        <i class="bi bi-plus-lg"></i> Thêm nhân sự
+                                    </button>
+
+                                    <!-- Hiển thị nhãn mờ lịch sự nếu ngày đã qua và không có ai trong ca -->
+                                    <div th:if="${entry.key.isBefore(today) and #lists.isEmpty(entry.value[sh.shiftId])}"
+                                         class="schedule-past-empty">
+                                        <i class="bi bi-clock-history me-1"></i>Đã qua
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- FOOTER CHUẨN MISA AMIS (Đồng bộ Quản lý tài khoản, Quản lý nhân sự, Quản lý cơ sở) -->
+                    <div class="misa-pagination-footer" style="flex-shrink: 0;">
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${shifts != null ? #lists.size(shifts) : 0}">3</strong> ca làm việc / ngày (Sáng · Chiều · Tối)
+                        </div>
+                        <div class="misa-pagination-right">
+                            <span class="text-muted small">
+                                <i class="bi bi-shield-check me-1 text-primary"></i>Hệ thống quản lý chuỗi nha khoa CV-DCMS
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
         </main>
     </div>
 </div>
 
+<!-- ==================== MODAL XẾP CA (ĐẶT NGOÀI app-shell ĐỂ KHÔNG BỊ BACKDROP CHE) ==================== -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+        <form class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;"
+              th:action="@{/admin/schedules/assign}" method="post">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="assignModalLabel">
+                    <i class="bi bi-person-plus text-primary me-2"></i>Xếp nhân viên vào ca
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                <input type="hidden" name="workDate" id="assignDate">
+                <input type="hidden" name="shiftId" id="assignShift">
+
+                <!-- Khung thông tin ca & ngày trực -->
+                <div class="alert alert-primary bg-primary-subtle text-primary border-0 rounded-3 py-2 px-3 mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar-event fs-5"></i>
+                    <div>
+                        <div class="small text-muted" style="font-size: 0.75rem;">Ca &amp; Ngày phân công:</div>
+                        <strong id="assignLabel" class="text-primary">-</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="assignStaff" class="form-label small fw-semibold text-muted">
+                        Chọn nhân viên <span class="text-danger">*</span>
+                    </label>
+                    <select id="assignStaff" name="staffId" class="form-select" required
+                            th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
+                        <option value="">-- Chọn nhân viên --</option>
+                        <option th:each="a : ${assignableStaff}" th:value="${a.staff.staffId}"
+                                th:text="${a.staff.fullName + ' (' + a.staff.staffCode + ') - ' + (a.role.displayName != null ? a.role.displayName : a.role.roleName)}">
+                            Nhân viên
+                        </option>
+                    </select>
+                    <div class="alert alert-warning py-2 px-3 mt-2 small mb-0 rounded-2"
+                         th:if="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Chi nhánh này chưa có nhân viên được phân công làm việc.
+                        Vui lòng vào <a th:href="@{/admin/staffs}" class="alert-link fw-bold" target="_blank">Quản lý nhân sự</a> để phân công trước.
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label for="assignNote" class="form-label small fw-semibold text-muted">Ghi chú ca trực</label>
+                    <input type="text" id="assignNote" name="note" maxlength="255" class="form-control"
+                           placeholder="Ví dụ: Trực phụ tá chính, trực bàn khám số 1...">
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-vua"
+                        th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận xếp ca
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    function handleConfirmRemove(form) {
+        var name = form.getAttribute('data-staff-name') || 'nhân viên này';
+        var isCheckedIn = form.getAttribute('data-checked-in') === 'true';
+        var time = form.getAttribute('data-checkin-time') || '';
+        if (isCheckedIn) {
+            var msg = '⚠️ CẢNH BÁO: Nhân viên ' + name + ' ĐÃ CHẤM CÔNG hôm nay' + (time ? ' (lúc ' + time + ')' : '') + '!\n\n';
+            msg += 'Bạn có chắc chắn muốn gỡ nhân viên này khỏi ca trực không?\n';
+            msg += '(Lượt chấm công nhầm hôm nay của nhân viên cũng sẽ được TỰ ĐỘNG HỦY / XÓA BỎ)';
+            return confirm(msg);
+        }
+        return confirm('Gỡ nhân viên ' + name + ' khỏi ca trực?');
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var modalEl = document.getElementById('assignModal');
         if (!modalEl) return;
-        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
 
         function fillModalData(btn) {
+            if (!btn) return;
             document.getElementById('assignDate').value = btn.getAttribute('data-date') || '';
             document.getElementById('assignShift').value = btn.getAttribute('data-shift') || '';
             document.getElementById('assignLabel').textContent = btn.getAttribute('data-label') || '-';
@@ -195,12 +322,9 @@
             }
         });
 
-        // Bắt sự kiện click trực tiếp để đảm bảo 100% modal mở kể cả khi attribute data-bs-toggle bị chặn
         document.querySelectorAll('.schedule-add').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
+            btn.addEventListener('click', function () {
                 fillModalData(this);
-                modalInstance.show();
             });
         });
     });
