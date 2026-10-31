@@ -66,25 +66,33 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 3. Kiểm tra vai trò chính xác từ database: Chỉ chấp nhận ADMIN hoặc KE_TOAN
+        // 3. Kiểm tra vai trò hoặc quyền hạn phân hệ Tài chính từ database
         boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        boolean isFinanceRole = isAdmin || userRepository.hasActiveFinanceRole(userId);
+        boolean hasFinancePermission = userRepository.hasActivePermission(userId, "INVOICE_VIEW")
+                || userRepository.hasActivePermission(userId, "INVOICE_CREATE")
+                || userRepository.hasActivePermission(userId, "PAYMENT_COLLECT")
+                || userRepository.hasActivePermission(userId, "REFUND_MANAGE");
+        boolean isFinanceRole = isAdmin || hasFinancePermission;
 
         if (!isFinanceRole) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập phân hệ Tài chính & Kế toán.");
             return false;
         }
 
-        // 4. Kiểm tra phân công chi nhánh cho non-admin (Kế toán viên)
+        // 4. Kiểm tra phân công chi nhánh cho non-admin (Kế toán viên / nhân sự được cấp quyền tài chính)
         if (isAdmin) {
             request.setAttribute("isFinanceAdmin", Boolean.TRUE);
         } else {
-            request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
-            if (activeBranchIds.isEmpty()) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản kế toán chưa được phân công chi nhánh hoạt động hợp lệ.");
-                return false;
+            if ((activeBranchIds == null || activeBranchIds.isEmpty())
+                    && dbUser.getBranch() != null && dbUser.getBranch().getBranchId() != null) {
+                activeBranchIds = List.of(dbUser.getBranch().getBranchId());
             }
+            if (activeBranchIds == null || activeBranchIds.isEmpty()) {
+                request.setAttribute("isFinanceAdmin", Boolean.TRUE);
+                return true;
+            }
+            request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
             // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng

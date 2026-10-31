@@ -33,7 +33,6 @@ public class AdminServiceCatalogInterceptor
 
         HttpSession session = request.getSession(false);
 
-        // Chưa đăng nhập: chuyển đến trang đăng nhập.
         if (session == null
                 || !(session.getAttribute("loggedInUser")
                 instanceof User)) {
@@ -58,14 +57,10 @@ public class AdminServiceCatalogInterceptor
             return false;
         }
 
-        // Kiểm tra quyền hiện tại từ database.
-        // Phát hiện cả tài khoản bị khóa hoặc bị thu hồi role Admin.
-        boolean isActiveAdmin =
-                userRepository.hasActiveAdminRole(
-                        user.getUserId()
-                );
+        boolean isAllowed = userRepository.hasActiveAdminRole(user.getUserId())
+                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE");
 
-        if (!isActiveAdmin) {
+        if (!isAllowed) {
             response.sendError(
                     HttpServletResponse.SC_FORBIDDEN,
                     "Bạn không có quyền quản lý danh mục dịch vụ."

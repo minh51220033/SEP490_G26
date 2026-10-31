@@ -53,12 +53,13 @@ public interface CustomerCareService {
     );
 
     /**
-     * Xem chi tiết một công việc CSKH kèm lịch sử tương tác (SCR-44.4).
+     * Xem chi tiết một công việc CSKH kèm lịch sử tương tác và dữ liệu khám lâm sàng / lời dặn (SCR-44.4).
      */
     CustomerCareTaskDTO getTaskDetail(Long taskId, Long userId);
 
     /**
      * Lập lịch / tạo mới công việc CSKH thủ công (SCR-44.3).
+     * Chống tạo trùng công việc đang hoạt động cho cùng bệnh nhân / ca khám / lịch hẹn / đơn thuốc.
      */
     CustomerCareTaskDTO createTask(CustomerCareCreateDTO dto, Long userId);
 
@@ -91,4 +92,10 @@ public interface CustomerCareService {
      * Lấy toàn bộ lịch sử tương tác và công việc chăm sóc của một bệnh nhân theo dạng Timeline (SCR-44.6).
      */
     Map<String, Object> getPatientCareHistory(Long profileId, Long branchId, Long userId);
+
+    /**
+     * Lấy tóm tắt hồ sơ khám lâm sàng, chẩn đoán, lời dặn điều trị (#tab-instructions) và đơn thuốc của một lượt khám (Visit)
+     * phục vụ nhân viên CSKH tra cứu khi chăm sóc sau điều trị (chỉ đọc dữ liệu, tuân thủ phân quyền cơ sở).
+     */
+    Map<String, Object> getVisitExaminationSummary(Long visitId, Long userId);
 }

@@ -218,10 +218,10 @@
             </form>
         </section>
 
-        <hr>
+        <hr th:if="${isPatient}">
 
-        <!-- PHẦN 2: CHỌN HỒ SƠ BỆNH NHÂN -->
-        <section>
+        <!-- PHẦN 2: CHỌN HỒ SƠ BỆNH NHÂN (chỉ dành cho BENH_NHAN) -->
+        <section th:if="${isPatient}">
             <h2>2. Hồ sơ bệnh nhân</h2>
 
             <p class="description">

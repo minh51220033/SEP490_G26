@@ -154,7 +154,7 @@
                 <div class="filter-grid">
                     <div class="filter-field filter-keyword">
                         <label for="keyword">Tìm kiếm nhanh</label>
-                        <input id="keyword" type="search" placeholder="Mã CV (TASK001), mã BN, họ tên bệnh nhân, số điện thoại, nội dung...">
+                        <input id="keyword" type="search" placeholder="Mã CV (TASK001), mã BN, họ tên bệnh nhân, số điện thoại, mã ca khám, nội dung...">
                     </div>
 
                     <div class="filter-field">
@@ -211,9 +211,9 @@
                         <tr>
                             <th class="th-code">Mã CV</th>
                             <th class="th-patient">Bệnh nhân</th>
-                            <th class="th-group">Phân nhóm &amp; Hồ sơ</th>
+                            <th class="th-group">Phân nhóm &amp; Hồ sơ khám</th>
                             <th class="th-due">Hạn / Gọi lại</th>
-                            <th class="th-notes">Nội dung &amp; Phản hồi BS</th>
+                            <th class="th-notes">Chẩn đoán, Lời dặn &amp; Nội dung CSKH</th>
                             <th class="th-staff">Phụ trách</th>
                             <th class="th-interaction">Tương tác gần nhất</th>
                             <th class="th-status">Trạng thái</th>
@@ -338,6 +338,8 @@
                             </select>
                         </label>
 
+                        <div id="formVisitExamPreview" class="span-2" hidden style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:13px;color:#0f172a;"></div>
+
                         <label class="form-field span-2">
                             <span class="field-label">Liên kết Lịch hẹn (Appointment - tùy chọn)</span>
                             <select id="formAppointmentId" class="form-control">
@@ -370,7 +372,7 @@
             <div class="cc-modal-header modal-header">
                 <div class="modal-title-wrap">
                     <h3 id="interactionModalTitle">Chi tiết công việc &amp; Ghi kết quả liên hệ (SCR-44.4)</h3>
-                    <span class="sub-hint">Ghi nhận thông tin cuộc gọi/Zalo/SMS và cập nhật trạng thái công việc</span>
+                    <span class="sub-hint">Ghi nhận thông tin cuộc gọi/Zalo/SMS, đối chiếu chẩn đoán &amp; lời dặn sau điều trị</span>
                 </div>
                 <button type="button" class="cc-modal-close modal-close" id="closeInteractionModalBtn" aria-label="Đóng">×</button>
             </div>
@@ -379,6 +381,9 @@
                 <!-- Thông tin công việc & hồ sơ liên kết -->
                 <div class="modal-section-title">📌 Thông tin công việc chăm sóc</div>
                 <div id="interactionTaskMeta" class="detail-meta-grid"></div>
+
+                <!-- Thông tin Hồ sơ Khám lâm sàng, Chẩn đoán & Lời dặn sau điều trị (#tab-instructions) -->
+                <div id="interactionExaminationBox" class="sub-card" hidden style="margin-bottom:14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px 16px;"></div>
 
                 <!-- Phản hồi chuyên môn của Bác sĩ (nếu có) -->
                 <div id="interactionDoctorAlert" class="doctor-response-box" hidden></div>

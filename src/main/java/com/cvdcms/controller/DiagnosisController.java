@@ -262,6 +262,51 @@ public class DiagnosisController {
         return "doctor/diagnoses";
     }
 
+    /**
+     * SCR-15.2: Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
+     */
+    @GetMapping("/doctor/examination/{visitId}/treatment-plans/create")
+    public String showCreateTreatmentPlanPage(
+            @PathVariable("visitId") Long visitId,
+            @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
+            Model model
+    ) {
+        Visit visit = diagnosisService.getVisitOrThrow(visitId);
+        List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
+        List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
+        List<StaffProfile> doctors = performedServiceService.getAvailableDoctors();
+        List<Visit> allVisits = visitRepository.findAll();
+
+        model.addAttribute("visit", visit);
+        model.addAttribute("patient", visit.getPatientProfile());
+        model.addAttribute("diagnoses", diagnoses);
+        model.addAttribute("preselectedDiagId", preselectedDiagId);
+        model.addAttribute("activeServices", activeServices);
+        model.addAttribute("doctors", doctors);
+        model.addAttribute("allVisits", allVisits);
+
+        String activeServicesJson = "[]";
+        try {
+            activeServicesJson = new ObjectMapper().writeValueAsString(activeServices);
+        } catch (Exception ignored) {}
+        model.addAttribute("activeServicesJson", activeServicesJson);
+
+        String diagnosesJson = "[]";
+        try {
+            diagnosesJson = new ObjectMapper().writeValueAsString(diagnoses);
+        } catch (Exception ignored) {}
+        model.addAttribute("diagnosesJson", diagnosesJson);
+
+        boolean isClinicalLocked = visit.getStatus() != null &&
+                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
+        model.addAttribute("isClinicalLocked", isClinicalLocked);
+
+        model.addAttribute("pageTitle", "Lập Kế hoạch & Lộ trình điều trị - DentalFlow");
+        model.addAttribute("activeMenu", "examination");
+
+        return "doctor/treatment-plan-create";
+    }
+
     private Visit createSampleVisitIfEmpty() {
         Branch branch = branchRepository.findAll().stream().findFirst().orElseGet(() -> {
             Branch b = new Branch();
@@ -319,3 +364,4 @@ public class DiagnosisController {
         return visitRepository.save(visit);
     }
 }
+

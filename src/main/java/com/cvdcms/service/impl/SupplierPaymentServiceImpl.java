@@ -20,29 +20,34 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
  * Xử lý nghiệp vụ Công nợ & Thanh toán Nhà cung cấp (Supplier Payment):
- * - Tổng hợp công nợ nhà cung cấp theo từng chi nhánh (Tổng tiền nhập - Tổng tiền đã thanh toán).
- * - Kiểm tra số tiền thanh toán không vượt quá công nợ còn lại của phiếu nhập hoặc tổng công nợ tại chi nhánh.
- * - Kiểm tra định dạng số chứng từ/tham chiếu (regex) và hình thức thanh toán (CASH / BANK_TRANSFER).
+ * - Tổng hợp công nợ nhà cung cấp theo từng chi nhánh (Tổng tiền nhập - Tổng tiền đã thanh toán) tối ưu chống N+1 query.
+ * - Khóa bi quan (Pessimistic Write Lock) trên Nhà cung cấp & Phiếu nhập khi thanh toán để chống race condition.
+ * - Chặn gửi trùng thanh toán (clientRequestId idempotency + kiểm tra giao dịch trùng trong 5 giây).
+ * - Kiểm tra số tiền thanh toán không vượt quá công nợ còn lại của phiếu nhập VÀ tổng công nợ nhà cung cấp tại chi nhánh.
  */
 @Service
 public class SupplierPaymentServiceImpl implements SupplierPaymentService {
 
-    // Chỉ chấp nhận 2 phương thức thanh toán: Tiền mặt hoặc Chuyển khoản
     private static final Set<String> ALLOWED_METHODS = Set.of("CASH", "BANK_TRANSFER");
-    // Biểu thức chính quy kiểm tra định dạng Số chứng từ / Mã giao dịch ngân hàng
     private static final Pattern REFERENCE_NO_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,100}$");
-    // Bộ đếm tuần tự sinh mã phiếu chi thanh toán NCC (PC...)
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis());
+
+    // Chống double-submit theo clientRequestId trong cửa sổ 30 giây
+    private final Map<String, Long> recentRequestIds = new ConcurrentHashMap<>();
 
     private final SupplierRepository supplierRepository;
     private final BranchRepository branchRepository;
@@ -79,7 +84,6 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem công nợ nhà cung cấp của chi nhánh này.");
         }
 
-        // Lấy danh sách nhà cung cấp để tổng hợp công nợ nhập kho và thanh toán tại chi nhánh
         Page<Supplier> suppliers = supplierRepository.searchSuppliers(
                 trimToNull(keyword),
                 null,
@@ -89,21 +93,68 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
                 ? suppliers.getContent()
                 : supplierRepository.findAll();
 
-        List<SupplierDebtSummaryDTO> result = new ArrayList<>();
+        if (supplierList == null || supplierList.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> supplierIds = supplierList.stream()
+                .map(Supplier::getSupplierId)
+                .filter(id -> id != null)
+                .toList();
+
+        Map<Long, Integer> receiptCountMap = new HashMap<>();
+        Map<Long, BigDecimal> importSumMap = new HashMap<>();
+        Map<Long, BigDecimal> paidSumMap = new HashMap<>();
+        boolean hasBatchReceiptAgg = false;
+        boolean hasBatchPaidAgg = false;
+
+        if (!supplierIds.isEmpty()) {
+            List<Object[]> receiptAggs = receiptRepository.aggregateReceiptsByBranchAndSuppliers(branchId, supplierIds);
+            if (receiptAggs != null && !receiptAggs.isEmpty()) {
+                hasBatchReceiptAgg = true;
+                for (Object[] row : receiptAggs) {
+                    if (row != null && row.length >= 3 && row[0] instanceof Number sid) {
+                        int cnt = row[1] instanceof Number n ? n.intValue() : 0;
+                        BigDecimal sum = row[2] instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+                        receiptCountMap.put(sid.longValue(), cnt);
+                        importSumMap.put(sid.longValue(), sum);
+                    }
+                }
+            }
+            List<Object[]> paidAggs = paymentRepository.aggregatePaidByBranchAndSuppliers(branchId, supplierIds);
+            if (paidAggs != null && !paidAggs.isEmpty()) {
+                hasBatchPaidAgg = true;
+                for (Object[] row : paidAggs) {
+                    if (row != null && row.length >= 2 && row[0] instanceof Number sid) {
+                        BigDecimal sum = row[1] instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+                        paidSumMap.put(sid.longValue(), sum);
+                    }
+                }
+            }
+        }
+
+        List<SupplierDebtSummaryDTO> result = new ArrayList<>(supplierList.size());
         for (Supplier s : supplierList) {
-            List<StockReceipt> receipts = receiptRepository.findByBranchAndSupplierOrderByReceiptDateDesc(
-                    branchId, s.getSupplierId());
-            long countedReceipts = receiptRepository.countReceiptsByBranchAndSupplier(
-                    branchId, s.getSupplierId());
-            int receiptCount = Math.max((int) countedReceipts, receipts != null ? receipts.size() : 0);
+            Long sid = s.getSupplierId();
+            int receiptCount;
+            BigDecimal totalImport;
+            if (hasBatchReceiptAgg) {
+                receiptCount = receiptCountMap.getOrDefault(sid, 0);
+                totalImport = importSumMap.getOrDefault(sid, BigDecimal.ZERO);
+            } else {
+                long countedReceipts = receiptRepository.countReceiptsByBranchAndSupplier(branchId, sid);
+                receiptCount = (int) countedReceipts;
+                totalImport = receiptRepository.sumTotalAmountByBranchAndSupplier(branchId, sid);
+                if (totalImport == null) totalImport = BigDecimal.ZERO;
+            }
 
-            BigDecimal totalImport = receiptRepository.sumTotalAmountByBranchAndSupplier(
-                    branchId, s.getSupplierId());
-            if (totalImport == null) totalImport = BigDecimal.ZERO;
-
-            BigDecimal totalPaid = paymentRepository.sumPaidAmountByBranchAndSupplier(
-                    branchId, s.getSupplierId());
-            if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+            BigDecimal totalPaid;
+            if (hasBatchPaidAgg) {
+                totalPaid = paidSumMap.getOrDefault(sid, BigDecimal.ZERO);
+            } else {
+                totalPaid = paymentRepository.sumPaidAmountByBranchAndSupplier(branchId, sid);
+                if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+            }
 
             BigDecimal remainingDebt = totalImport.subtract(totalPaid);
             if (remainingDebt.compareTo(BigDecimal.ZERO) < 0) {
@@ -192,17 +243,43 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
             bad("Ghi chú thanh toán tối đa 255 ký tự.");
         }
 
+        // Chống gửi trùng qua clientRequestId
+        String clientReqId = trimToNull(dto.getClientRequestId());
+        long nowMs = System.currentTimeMillis();
+        recentRequestIds.entrySet().removeIf(e -> nowMs - e.getValue() > 30_000L);
+        if (clientReqId != null) {
+            Long prevTime = recentRequestIds.putIfAbsent(userId + "::" + clientReqId, nowMs);
+            if (prevTime != null && (nowMs - prevTime) <= 30_000L) {
+                bad("Yêu cầu thanh toán đang được xử lý hoặc vừa được gửi. Vui lòng không bấm thanh toán nhiều lần.");
+            }
+        }
+
         Branch branch = branchRepository.findById(dto.getBranchId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
-        Supplier supplier = supplierRepository.findById(dto.getSupplierId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhà cung cấp."));
+
+        // Khóa bi quan nhà cung cấp để chống thanh toán vượt công nợ khi gửi đồng thời
+        Supplier supplier = supplierRepository.findByIdForUpdate(dto.getSupplierId())
+                .orElseGet(() -> supplierRepository.findById(dto.getSupplierId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhà cung cấp.")));
 
         BigDecimal amount = dto.getAmount().setScale(2, RoundingMode.HALF_UP);
 
+        Long targetReceiptId = (dto.getReceiptId() != null && dto.getReceiptId() > 0) ? dto.getReceiptId() : null;
+        if (paymentRepository.existsRecentDuplicatePayment(
+                branch.getBranchId(),
+                supplier.getSupplierId(),
+                targetReceiptId,
+                amount,
+                LocalDateTime.now().minusSeconds(5))) {
+            bad("Giao dịch thanh toán cùng số tiền vừa được ghi nhận cách đây vài giây. Vui lòng kiểm tra lại lịch sử thanh toán.");
+        }
+
         StockReceipt linkedReceipt = null;
-        if (dto.getReceiptId() != null && dto.getReceiptId() > 0) {
-            linkedReceipt = receiptRepository.findById(dto.getReceiptId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu nhập kho."));
+        if (targetReceiptId != null) {
+            linkedReceipt = receiptRepository.findByIdForUpdate(targetReceiptId)
+                    .orElseGet(() -> receiptRepository.findById(targetReceiptId)
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu nhập kho.")));
+
             if (!linkedReceipt.getBranch().getBranchId().equals(branch.getBranchId())
                     || !linkedReceipt.getSupplier().getSupplierId().equals(supplier.getSupplierId())) {
                 bad("Phiếu nhập được chọn không thuộc nhà cung cấp hoặc chi nhánh này.");
@@ -210,18 +287,28 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
             BigDecimal paidForReceipt = paymentRepository.sumPaidAmountByReceipt(linkedReceipt.getReceiptId());
             if (paidForReceipt == null) paidForReceipt = BigDecimal.ZERO;
             BigDecimal receiptRemaining = linkedReceipt.getTotalAmount().subtract(paidForReceipt);
+            if (receiptRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+                bad("Phiếu nhập " + linkedReceipt.getReceiptCode() + " đã được thanh toán đủ, không còn công nợ.");
+            }
             if (amount.compareTo(receiptRemaining) > 0) {
                 bad("Số tiền thanh toán (" + amount + ") vượt quá công nợ còn lại của phiếu nhập "
                         + linkedReceipt.getReceiptCode() + " (Còn nợ: " + receiptRemaining + ").");
             }
-        } else {
-            BigDecimal totalImport = receiptRepository.sumTotalAmountByBranchAndSupplier(
-                    branch.getBranchId(), supplier.getSupplierId());
-            if (totalImport == null) totalImport = BigDecimal.ZERO;
-            BigDecimal totalPaid = paymentRepository.sumPaidAmountByBranchAndSupplier(
-                    branch.getBranchId(), supplier.getSupplierId());
-            if (totalPaid == null) totalPaid = BigDecimal.ZERO;
-            BigDecimal totalRemaining = totalImport.subtract(totalPaid);
+        }
+
+        // Luôn kiểm tra tổng công nợ còn lại của nhà cung cấp tại chi nhánh (kể cả khi chọn hoặc không chọn phiếu nhập)
+        BigDecimal totalImport = receiptRepository.sumTotalAmountByBranchAndSupplier(
+                branch.getBranchId(), supplier.getSupplierId());
+        if (totalImport == null) totalImport = BigDecimal.ZERO;
+        BigDecimal totalPaid = paymentRepository.sumPaidAmountByBranchAndSupplier(
+                branch.getBranchId(), supplier.getSupplierId());
+        if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+        BigDecimal totalRemaining = totalImport.subtract(totalPaid);
+
+        if (linkedReceipt == null || totalImport.compareTo(BigDecimal.ZERO) > 0) {
+            if (totalRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+                bad("Nhà cung cấp " + supplier.getSupplierName() + " không còn công nợ tại chi nhánh này.");
+            }
             if (amount.compareTo(totalRemaining) > 0) {
                 bad("Số tiền thanh toán (" + amount + ") vượt quá tổng công nợ hiện tại của nhà cung cấp "
                         + supplier.getSupplierName() + " tại chi nhánh (Còn nợ: " + totalRemaining + ").");
@@ -243,7 +330,7 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         payment.setNotes(notes);
 
         SupplierPayment saved = paymentRepository.save(payment);
-        return toDTO(saved);
+        return toDTO(saved != null ? saved : payment);
     }
 
     private String generateUniquePaymentCode() {

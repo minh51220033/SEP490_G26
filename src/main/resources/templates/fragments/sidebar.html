@@ -71,7 +71,7 @@
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div class="side-group" data-accordion
              th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}"
-             th:classappend="${#strings.contains(',accounts,staffs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',accounts,roles,staffs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgAdmin">
                 <i class="bi bi-shield-lock" aria-hidden="true"></i>
                 <span class="side-group__label">Quản trị hệ thống</span>
@@ -82,6 +82,10 @@
                     <a th:href="@{/accounts}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">
                         <i class="bi bi-people" aria-hidden="true"></i><span class="side-link__label">Quản lý tài khoản</span>
+                    </a>
+                    <a th:href="@{/accounts/roles}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'roles'} ? 'is-active' : ''">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i><span class="side-link__label">Vai trò &amp; Phân quyền</span>
                     </a>
                     <a th:href="@{/admin/staffs}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'staffs'} ? 'is-active' : ''">
@@ -363,7 +367,7 @@
 
         <!-- HỒ SƠ & TÁI KHÁM -->
         <div class="side-group" data-accordion
-             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'customer-care'} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'emr' or activeMenu == 'customer-care'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgRecords">
                 <i class="bi bi-folder2-open" aria-hidden="true"></i>
                 <span class="side-group__label">Hồ sơ &amp; Tái khám</span>
@@ -381,6 +385,12 @@
                        th:classappend="${activeMenu == 'doctor-records'} ? 'is-active' : ''"
                        title="Tra cứu hồ sơ bệnh nhân &amp; bệnh án EMR">
                         <i class="bi bi-file-earmark-medical" aria-hidden="true"></i><span class="side-link__label">Hồ sơ bệnh nhân</span>
+                    </a>
+                    <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI'))}"
+                       th:href="@{/emr/records}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'emr'} ? 'is-active' : ''"
+                       title="Tạo, khóa, ký và quản lý phiên bản bệnh án điện tử">
+                        <i class="bi bi-file-earmark-lock2" aria-hidden="true"></i><span class="side-link__label">Bệnh án điện tử</span>
                     </a>
                     <!-- FT44: ADMIN, LE_TAN, BAC_SI -->
                     <a th:if="${roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))}"

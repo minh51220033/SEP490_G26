@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * 2. Các vai trò nhân viên khác (LE_TAN, BAC_SI, QUAN_LY_KHO, KE_TOAN) được phân ở cơ sở nào thì CHỈ được xem và nhắn tin trong phạm vi cơ sở đó.
  * 3. Người nhận được tin nhắn của Bệnh nhân (BENH_NHAN) để tiếp nhận và phản hồi CHỈ bao gồm: Lễ tân (LE_TAN), Bác sĩ (BAC_SI) cùng cơ sở và Admin (ADMIN).
  *    Quản lý kho (QUAN_LY_KHO) và Kế toán (KE_TOAN) không được xem hoặc phản hồi tin nhắn của Bệnh nhân (chỉ nhắn tin nội bộ với các tài khoản nhân viên cùng cơ sở).
- * 4. Các vai trò ngoài Bệnh nhân có thể tìm kiếm tài khoản trong cùng cơ sở để gửi tin nhắn trực tiếp.
+ * 4. Hỗ trợ 1 tài khoản User liên kết với nhiều hồ sơ bệnh nhân (PatientProfile): tìm kiếm theo tên/mã BN/SĐT của bất kỳ hồ sơ nào, hiển thị ngữ cảnh hồ sơ mà không tạo tài khoản chat trùng lặp hay lộ thông tin bệnh án nhạy cảm.
  */
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -84,9 +84,6 @@ public class ChatServiceImpl implements ChatService {
         return user;
     }
 
-    /**
-     * Chỉ Lễ tân (LE_TAN), Bác sĩ (BAC_SI) và Admin (ADMIN) mới được phép tiếp nhận & phản hồi tin nhắn của Bệnh nhân.
-     */
     private boolean canHandlePatientMessages(String roleCode) {
         return "ADMIN".equalsIgnoreCase(roleCode)
                 || "LE_TAN".equalsIgnoreCase(roleCode)
@@ -146,7 +143,6 @@ public class ChatServiceImpl implements ChatService {
             }
             normalized.add(clean);
         }
-        // Thứ tự ưu tiên nhất quán: ADMIN -> BAC_SI -> LE_TAN -> QUAN_LY_KHO -> KE_TOAN -> BENH_NHAN
         if (normalized.contains("ADMIN")) {
             return "ADMIN";
         }
@@ -223,11 +219,6 @@ public class ChatServiceImpl implements ChatService {
         return "ADMIN".equals(resolvePrimaryRoleCode(userId));
     }
 
-    /**
-     * Kiểm tra quyền SUBSCRIBE vào kênh hộp thư bệnh nhân của cơ sở (/topic/chat/branch/{branchId}):
-     * - Chỉ ADMIN, LE_TAN và BAC_SI thuộc đúng cơ sở đó mới được phép nhận tin nhắn của Bệnh nhân gửi tới cơ sở.
-     * - QUAN_LY_KHO, KE_TOAN và BENH_NHAN bị từ chối.
-     */
     @Override
     @Transactional(readOnly = true)
     public boolean canAccessBranchTopic(Long userId, Long branchId) {
@@ -264,18 +255,12 @@ public class ChatServiceImpl implements ChatService {
         return active != null ? active : List.of();
     }
 
-    /**
-     * Xác định cơ sở mà một nhân viên hoặc Admin được phép truy cập:
-     * - ADMIN: Tất cả các cơ sở đang hoạt động.
-     * - Các vai trò khác (LE_TAN, BAC_SI, QUAN_LY_KHO, KE_TOAN): CHỈ cơ sở được phân công của tài khoản đó.
-     */
     private List<Branch> resolveStaffAllowedBranches(Long userId, String roleCode) {
         List<Branch> allActive = getAllActiveBranches();
         if ("ADMIN".equals(roleCode)) {
             return allActive;
         }
 
-        // 1. Kiểm tra trực tiếp thuộc tính user.getBranch() (cột users.branch_id) nếu có
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isPresent() && userOpt.get().getBranch() != null && userOpt.get().getBranch().getBranchId() != null) {
             Long userBranchId = userOpt.get().getBranch().getBranchId();
@@ -287,7 +272,6 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // 2. Kiểm tra phân công chính thức trong staff_branch_assignments
         List<Long> explicitIds = conversationRepository.findExplicitBranchIdsByUserId(userId);
         if (explicitIds != null && !explicitIds.isEmpty()) {
             Set<Long> allowedSet = new LinkedHashSet<>(explicitIds);
@@ -299,8 +283,6 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // 3. Dự phòng cho dữ liệu seed nhân sự chưa chèn bảng staff_branch_assignments:
-        // Suy luận cơ sở từ lịch sử công tác của hồ sơ nhân viên (ca khám, lịch hẹn, đơn thuốc, công việc CSKH)
         Optional<StaffProfile> staffOpt = staffProfileRepository.findByUser_UserId(userId);
         if (staffOpt.isPresent()) {
             List<Long> inferredIds = customerCareTaskRepository.findInferredBranchIdsByStaffId(staffOpt.get().getStaffId());
@@ -315,13 +297,21 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // 4. Nếu nhân viên mới hoàn toàn chưa có phân công, khóa phạm vi vào 1 cơ sở đầu tiên (không bao giờ mở toàn bộ như Admin)
         return allActive.isEmpty() ? List.of() : List.of(allActive.get(0));
     }
 
-    /**
-     * Xác định cơ sở gắn với tài khoản người dùng khi gửi tin nhắn từ khung chat nổi (Floating Widget).
-     */
+    private List<PatientProfile> loadPatientProfilesForUser(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        List<PatientProfile> profiles = patientProfileRepository.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(userId);
+        if (profiles != null && !profiles.isEmpty()) {
+            return profiles;
+        }
+        Optional<PatientProfile> defaultProfile = patientProfileRepository.findFirstByUser_UserIdAndIsDefaultTrue(userId);
+        return defaultProfile.map(List::of).orElse(List.of());
+    }
+
     private Branch resolveUserHomeBranch(User user, String roleCode) {
         if (user.getBranch() != null && user.getBranch().getBranchId() != null) {
             Optional<Branch> branchOpt = branchRepository.findById(user.getBranch().getBranchId());
@@ -330,16 +320,10 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        Optional<PatientProfile> defaultProfile = patientProfileRepository.findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId());
-        if (defaultProfile.isPresent() && defaultProfile.get().getPreferredBranch() != null) {
-            return defaultProfile.get().getPreferredBranch();
-        }
-        List<PatientProfile> profiles = patientProfileRepository.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(user.getUserId());
-        if (profiles != null) {
-            for (PatientProfile p : profiles) {
-                if (p.getPreferredBranch() != null) {
-                    return p.getPreferredBranch();
-                }
+        List<PatientProfile> profiles = loadPatientProfilesForUser(user.getUserId());
+        for (PatientProfile p : profiles) {
+            if (p.getPreferredBranch() != null) {
+                return p.getPreferredBranch();
             }
         }
 
@@ -363,12 +347,26 @@ public class ChatServiceImpl implements ChatService {
 
     /**
      * Lấy danh sách cơ sở của một tài khoản ứng viên khi tìm kiếm người nhận trong cùng cơ sở.
+     * Đối với tài khoản Bệnh nhân quản lý nhiều PatientProfile, gom toàn bộ preferredBranch của các hồ sơ.
      */
     private List<Branch> resolveAccountBranches(User account, String accountRoleCode) {
         if ("ADMIN".equals(accountRoleCode)) {
             return getAllActiveBranches();
         }
         if ("BENH_NHAN".equals(accountRoleCode)) {
+            Map<Long, Branch> branchMap = new LinkedHashMap<>();
+            if (account.getBranch() != null && account.getBranch().getBranchId() != null) {
+                Branch b = branchRepository.findById(account.getBranch().getBranchId()).orElse(account.getBranch());
+                branchMap.put(b.getBranchId(), b);
+            }
+            for (PatientProfile p : loadPatientProfilesForUser(account.getUserId())) {
+                if (p.getPreferredBranch() != null && p.getPreferredBranch().getBranchId() != null) {
+                    branchMap.putIfAbsent(p.getPreferredBranch().getBranchId(), p.getPreferredBranch());
+                }
+            }
+            if (!branchMap.isEmpty()) {
+                return new ArrayList<>(branchMap.values());
+            }
             try {
                 Branch home = resolveUserHomeBranch(account, accountRoleCode);
                 return home != null ? List.of(home) : List.of();
@@ -379,9 +377,6 @@ public class ChatServiceImpl implements ChatService {
         return resolveStaffAllowedBranches(account.getUserId(), accountRoleCode);
     }
 
-    /**
-     * Lấy họ tên hiển thị chuẩn xác của một tài khoản (StaffProfile.fullName -> PatientProfile.fullName -> User.username).
-     */
     private String resolveDisplayName(User user) {
         if (user == null) {
             return "Người dùng";
@@ -392,16 +387,10 @@ public class ChatServiceImpl implements ChatService {
             if (staffOpt.isPresent() && staffOpt.get().getFullName() != null && !staffOpt.get().getFullName().isBlank()) {
                 return staffOpt.get().getFullName().trim();
             }
-            Optional<PatientProfile> defaultPatientOpt = patientProfileRepository.findFirstByUser_UserIdAndIsDefaultTrue(uid);
-            if (defaultPatientOpt.isPresent() && defaultPatientOpt.get().getFullName() != null && !defaultPatientOpt.get().getFullName().isBlank()) {
-                return defaultPatientOpt.get().getFullName().trim();
-            }
-            List<PatientProfile> patientList = patientProfileRepository.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(uid);
-            if (patientList != null) {
-                for (PatientProfile p : patientList) {
-                    if (p.getFullName() != null && !p.getFullName().isBlank()) {
-                        return p.getFullName().trim();
-                    }
+            List<PatientProfile> patientList = loadPatientProfilesForUser(uid);
+            for (PatientProfile p : patientList) {
+                if (p.getFullName() != null && !p.getFullName().isBlank()) {
+                    return p.getFullName().trim();
                 }
             }
         }
@@ -420,7 +409,6 @@ public class ChatServiceImpl implements ChatService {
             String roleFilter,
             Long branchId) {
 
-        // Chặn tuyệt đối Bệnh nhân (403 FORBIDDEN)
         String currentRole = requireInboxAccess(currentUserId);
         boolean canChatWithPatient = canHandlePatientMessages(currentRole);
 
@@ -455,7 +443,6 @@ public class ChatServiceImpl implements ChatService {
             cleanRoleFilter = "";
         }
 
-        // Nếu vai trò hiện tại là Quản lý kho hoặc Kế toán -> không được tìm Bệnh nhân để phản hồi/nhắn tin
         if (!canChatWithPatient && "BENH_NHAN".equalsIgnoreCase(cleanRoleFilter)) {
             return List.of();
         }
@@ -482,7 +469,6 @@ public class ChatServiceImpl implements ChatService {
 
             String candidateRole = resolvePrimaryRoleCode(candidate.getUserId());
 
-            // Quản lý kho và Kế toán không nhận/phản hồi tin nhắn của Bệnh nhân
             if (!canChatWithPatient && "BENH_NHAN".equalsIgnoreCase(candidateRole)) {
                 continue;
             }
@@ -503,18 +489,70 @@ public class ChatServiceImpl implements ChatService {
                 continue;
             }
 
+            List<PatientProfile> patientProfiles = "BENH_NHAN".equals(candidateRole)
+                    ? loadPatientProfilesForUser(candidate.getUserId())
+                    : List.of();
+
             String fullName = resolveDisplayName(candidate);
             String username = candidate.getUsername() != null ? candidate.getUsername() : "";
             String phone = candidate.getPhoneNumber() != null ? candidate.getPhoneNumber() : "";
             String email = candidate.getEmail() != null ? candidate.getEmail() : "";
             String roleLabel = toRoleLabel(candidateRole);
 
+            String primaryPatientCode = null;
+            String patientProfilesSummary = null;
+            if (!patientProfiles.isEmpty()) {
+                PatientProfile firstProfile = patientProfiles.get(0);
+                primaryPatientCode = firstProfile.getPatientCode();
+                if (phone.isEmpty() && firstProfile.getPhoneNumber() != null) {
+                    phone = firstProfile.getPhoneNumber();
+                }
+                List<String> profileLabels = new ArrayList<>();
+                for (PatientProfile pp : patientProfiles) {
+                    String pName = pp.getFullName() != null ? pp.getFullName().trim() : "";
+                    String pCode = pp.getPatientCode() != null ? pp.getPatientCode().trim() : "";
+                    if (!pName.isEmpty() && !pCode.isEmpty()) {
+                        profileLabels.add(pName + " (" + pCode + ")");
+                    } else if (!pName.isEmpty()) {
+                        profileLabels.add(pName);
+                    } else if (!pCode.isEmpty()) {
+                        profileLabels.add(pCode);
+                    }
+                }
+                if (!profileLabels.isEmpty()) {
+                    patientProfilesSummary = String.join(", ", profileLabels);
+                }
+                // Nếu từ khóa khớp chính xác một hồ sơ con (người thân) trong tài khoản, hiển thị rõ tên hồ sơ đó kèm chủ tài khoản
+                if (!cleanKeyword.isEmpty() && patientProfiles.size() > 1) {
+                    for (PatientProfile pp : patientProfiles) {
+                        boolean subMatched = (pp.getFullName() != null && pp.getFullName().toLowerCase(Locale.ROOT).contains(cleanKeyword))
+                                || (pp.getPatientCode() != null && pp.getPatientCode().toLowerCase(Locale.ROOT).contains(cleanKeyword));
+                        if (subMatched && pp.getFullName() != null && !pp.getFullName().equalsIgnoreCase(fullName)) {
+                            fullName = pp.getFullName().trim() + " (TK: " + resolveDisplayName(candidate) + ")";
+                            primaryPatientCode = pp.getPatientCode();
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (!cleanKeyword.isEmpty()) {
                 boolean matched = fullName.toLowerCase(Locale.ROOT).contains(cleanKeyword)
                         || username.toLowerCase(Locale.ROOT).contains(cleanKeyword)
                         || phone.toLowerCase(Locale.ROOT).contains(cleanKeyword)
                         || email.toLowerCase(Locale.ROOT).contains(cleanKeyword)
-                        || roleLabel.toLowerCase(Locale.ROOT).contains(cleanKeyword);
+                        || roleLabel.toLowerCase(Locale.ROOT).contains(cleanKeyword)
+                        || (patientProfilesSummary != null && patientProfilesSummary.toLowerCase(Locale.ROOT).contains(cleanKeyword));
+                if (!matched && !patientProfiles.isEmpty()) {
+                    for (PatientProfile pp : patientProfiles) {
+                        if ((pp.getFullName() != null && pp.getFullName().toLowerCase(Locale.ROOT).contains(cleanKeyword))
+                                || (pp.getPatientCode() != null && pp.getPatientCode().toLowerCase(Locale.ROOT).contains(cleanKeyword))
+                                || (pp.getPhoneNumber() != null && pp.getPhoneNumber().toLowerCase(Locale.ROOT).contains(cleanKeyword))) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
                 if (!matched) {
                     continue;
                 }
@@ -535,6 +573,9 @@ public class ChatServiceImpl implements ChatService {
                     .branchId(matchedBranch.getBranchId())
                     .branchCode(matchedBranch.getBranchCode())
                     .branchName(matchedBranch.getBranchName())
+                    .patientCode(primaryPatientCode)
+                    .patientProfileCount(patientProfiles.isEmpty() ? null : patientProfiles.size())
+                    .patientProfilesSummary(patientProfilesSummary)
                     .existingConversationId(existingConvId)
                     .build());
         }
@@ -544,6 +585,24 @@ public class ChatServiceImpl implements ChatService {
                 .thenComparing(u -> u.getFullName() != null ? u.getFullName().toLowerCase(Locale.ROOT) : ""));
 
         return results;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ChatUserSearchItemDTO> searchRecipientUsersPage(
+            Long currentUserId,
+            String keyword,
+            String roleFilter,
+            Long branchId,
+            Pageable pageable) {
+        List<ChatUserSearchItemDTO> all = searchRecipientUsers(currentUserId, keyword, roleFilter, branchId);
+        int total = all.size();
+        int start = (int) pageable.getOffset();
+        if (start >= total) {
+            return new PageImpl<>(List.of(), pageable, total);
+        }
+        int end = Math.min(start + pageable.getPageSize(), total);
+        return new PageImpl<>(all.subList(start, end), pageable, total);
     }
 
     private Long findExistingConversationIdInMemory(
@@ -602,11 +661,6 @@ public class ChatServiceImpl implements ChatService {
         return getConversationMessages(currentUserId, conversation.getConversationId());
     }
 
-    /**
-     * Tìm hoặc khởi tạo cuộc hội thoại với một người nhận cụ thể (targetUserId) trong cùng cơ sở:
-     * - Kiểm tra nghiêm ngặt: người gửi và người nhận phải thuộc cùng một cơ sở được phép truy cập (trừ khi người gửi là ADMIN).
-     * - Chỉ Lễ tân (LE_TAN), Bác sĩ (BAC_SI) và Admin (ADMIN) mới được phép mở hội thoại và phản hồi Bệnh nhân (BENH_NHAN).
-     */
     private ChatConversation resolveOrCreateConversationForRecipient(
             User sender,
             String senderRole,
@@ -616,7 +670,6 @@ public class ChatServiceImpl implements ChatService {
         User targetUser = requireActiveUser(targetUserId);
         String targetRole = resolvePrimaryRoleCode(targetUserId);
 
-        // Nếu người nhận là Bệnh nhân -> chỉ Lễ tân, Bác sĩ và Admin được phép nhắn tin/phản hồi
         if ("BENH_NHAN".equals(targetRole) && !canHandlePatientMessages(senderRole)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -756,8 +809,6 @@ public class ChatServiceImpl implements ChatService {
         List<ChatMessageDTO> messages = List.of();
         long unreadCount = 0L;
 
-        // Bệnh nhân (hoặc Lễ tân/Bác sĩ/Admin) mới có hộp thư chung cơ sở;
-        // Quản lý kho & Kế toán dùng widget để chọn đồng nghiệp cùng cơ sở nhắn tin trực tiếp
         if ("BENH_NHAN".equals(roleCode) || canHandlePatientMessages(roleCode)) {
             conversation = findActiveConversationForUserAndBranch(user, homeBranch);
             if (conversation != null) {
@@ -823,8 +874,10 @@ public class ChatServiceImpl implements ChatService {
         created.setChannel(ChatChannel.WEB_WIDGET);
         created.setStatus(ChatStatus.STAFF_HANDLING);
 
-        Optional<PatientProfile> defaultPatient = patientProfileRepository.findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId());
-        defaultPatient.ifPresent(created::setPatientProfile);
+        List<PatientProfile> profiles = loadPatientProfilesForUser(user.getUserId());
+        if (!profiles.isEmpty()) {
+            created.setPatientProfile(profiles.get(0));
+        }
 
         LocalDateTime now = LocalDateTime.now();
         created.setCreatedAt(now);
@@ -855,7 +908,6 @@ public class ChatServiceImpl implements ChatService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // Chỉ ADMIN mới được xem tất cả cơ sở; các role khác bắt buộc khóa chặt vào cơ sở được phân công
         if (!"ADMIN".equals(currentRole)) {
             if (allowedBranchIds.isEmpty()) {
                 throw new ResponseStatusException(
@@ -878,7 +930,6 @@ public class ChatServiceImpl implements ChatService {
 
         Map<Long, String> userRoleCache = new HashMap<>();
 
-        // Lọc theo phạm vi cơ sở (Branch Scope) và quyền tiếp nhận tin nhắn Bệnh nhân
         List<ChatConversation> branchFiltered = new ArrayList<>();
         for (ChatConversation c : allConversations) {
             if (c.getUser() == null) {
@@ -890,9 +941,6 @@ public class ChatServiceImpl implements ChatService {
             }
             Long convBranchId = convBranch != null ? convBranch.getBranchId() : null;
 
-            // 1. Kiểm tra phạm vi Cơ sở:
-            // - ADMIN: Xem được mọi cơ sở (hoặc lọc theo branchId nếu truyền vào).
-            // - Các role khác: CHỈ được xem tin nhắn thuộc đúng cơ sở mình được phân công (allowedBranchIds).
             if ("ADMIN".equals(currentRole)) {
                 if (branchId != null && !Objects.equals(convBranchId, branchId)) {
                     continue;
@@ -912,7 +960,6 @@ public class ChatServiceImpl implements ChatService {
             String initRoleCode = userRoleCache.computeIfAbsent(initiator.getUserId(), this::resolvePrimaryRoleCode);
 
             if (isDirect) {
-                // Hội thoại trực tiếp 1-1: đối với nhân viên không phải Admin, chỉ hiển thị nếu là 1 trong 2 người tham gia
                 if (!"ADMIN".equals(currentRole)) {
                     boolean isParticipant = Objects.equals(initiator.getUserId(), currentUserId)
                             || Objects.equals(recipient.getUserId(), currentUserId);
@@ -920,7 +967,6 @@ public class ChatServiceImpl implements ChatService {
                         continue;
                     }
                 }
-                // Nếu người xem không có quyền tiếp nhận Bệnh nhân (QUAN_LY_KHO, KE_TOAN) -> loại bỏ mọi hội thoại có Bệnh nhân
                 if (!canHandlePatient) {
                     String recRoleCode = userRoleCache.computeIfAbsent(recipient.getUserId(), this::resolvePrimaryRoleCode);
                     if ("BENH_NHAN".equals(initRoleCode) || "BENH_NHAN".equals(recRoleCode)) {
@@ -928,8 +974,6 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }
             } else {
-                // Hội thoại chung của cơ sở (do Bệnh nhân hoặc nhân viên gửi vào hộp thư chung):
-                // CHỈ Lễ tân (LE_TAN), Bác sĩ (BAC_SI) của cơ sở đó và Admin (ADMIN) mới được nhận và phản hồi!
                 if (!canHandlePatient) {
                     continue;
                 }
@@ -1007,7 +1051,6 @@ public class ChatServiceImpl implements ChatService {
             String counterpartPhone = currentIsInitiator ? recPhone : initPhone;
             String counterpartRoleCode = currentIsInitiator ? recRoleCode : initRoleCode;
 
-            // 1. Lọc theo vai trò người khởi tạo (hoặc đối phương trong hội thoại trực tiếp 1-1)
             if (!cleanRoleFilter.isEmpty()) {
                 boolean roleMatch = cleanRoleFilter.equalsIgnoreCase(initRoleCode)
                         || (isDirect && cleanRoleFilter.equalsIgnoreCase(counterpartRoleCode));
@@ -1020,7 +1063,6 @@ public class ChatServiceImpl implements ChatService {
                     ? directUnreadMap.getOrDefault(c.getConversationId(), 0L)
                     : staffUnreadMap.getOrDefault(c.getConversationId(), 0L);
 
-            // 2. Lọc chỉ hội thoại chưa đọc (nếu bật)
             if (Boolean.TRUE.equals(unreadOnly) && unreadCount <= 0) {
                 continue;
             }
@@ -1028,7 +1070,6 @@ public class ChatServiceImpl implements ChatService {
             ChatMessage lastMsg = latestMessageMap.get(c.getConversationId());
             String lastMsgText = lastMsg != null && lastMsg.getMessageText() != null ? lastMsg.getMessageText() : "";
 
-            // 3. Lọc theo từ khóa
             if (!cleanKeyword.isEmpty()) {
                 boolean nameMatch = initFullName.toLowerCase(Locale.ROOT).contains(cleanKeyword)
                         || initUsername.toLowerCase(Locale.ROOT).contains(cleanKeyword)
@@ -1037,6 +1078,16 @@ public class ChatServiceImpl implements ChatService {
                         || (isDirect && recUsername.toLowerCase(Locale.ROOT).contains(cleanKeyword))
                         || (isDirect && recPhone.toLowerCase(Locale.ROOT).contains(cleanKeyword))
                         || String.valueOf(c.getConversationId()).contains(cleanKeyword);
+                if (!nameMatch && "BENH_NHAN".equals(initRoleCode)) {
+                    for (PatientProfile pp : loadPatientProfilesForUser(initiatorId)) {
+                        if ((pp.getFullName() != null && pp.getFullName().toLowerCase(Locale.ROOT).contains(cleanKeyword))
+                                || (pp.getPatientCode() != null && pp.getPatientCode().toLowerCase(Locale.ROOT).contains(cleanKeyword))
+                                || (pp.getPhoneNumber() != null && pp.getPhoneNumber().toLowerCase(Locale.ROOT).contains(cleanKeyword))) {
+                            nameMatch = true;
+                            break;
+                        }
+                    }
+                }
                 boolean msgMatch = lastMsgText.toLowerCase(Locale.ROOT).contains(cleanKeyword)
                         || messageMatchedConvIds.contains(c.getConversationId());
                 if (!nameMatch && !msgMatch) {
@@ -1119,15 +1170,6 @@ public class ChatServiceImpl implements ChatService {
     // 5. XEM CHI TIẾT TIN NHẮN, GỬI TIN NHẮN & ĐÁNH DẤU ĐÃ ĐỌC
     // =========================================================================
 
-    /**
-     * Kiểm tra quyền xem và trả lời một cuộc hội thoại:
-     * 1. ADMIN: Được phép xem và trả lời hội thoại của tất cả cơ sở.
-     * 2. BENH_NHAN: Chỉ được xem và gửi tin nhắn trong hội thoại của chính mình tại cơ sở gắn với tài khoản.
-     * 3. Nhân viên (LE_TAN, BAC_SI, QUAN_LY_KHO, KE_TOAN):
-     *    - Bắt buộc hội thoại phải thuộc đúng cơ sở được phân công (không bao giờ được xem tin nhắn của cơ sở khác).
-     *    - Nếu là hội thoại của Bệnh nhân (recipientUser == null hoặc có bên là BENH_NHAN): CHỈ Lễ tân (LE_TAN) và Bác sĩ (BAC_SI) cùng cơ sở mới được xem và phản hồi; Quản lý kho (QUAN_LY_KHO) và Kế toán (KE_TOAN) bị từ chối (403 FORBIDDEN).
-     *    - Nếu là hội thoại trực tiếp 1-1 nội bộ (recipientUser != null): Chỉ 2 người tham gia trong cùng cơ sở (và Admin) được phép xem/trả lời.
-     */
     private ChatConversation requireConversationAccess(Long currentUserId, Long conversationId) {
         User currentUser = requireActiveUser(currentUserId);
         ChatConversation conversation = conversationRepository.findByIdWithDetails(conversationId)
@@ -1137,12 +1179,10 @@ public class ChatServiceImpl implements ChatService {
         User initiator = conversation.getUser();
         User recipient = conversation.getRecipientUser();
 
-        // 1. Admin được phép xem và trả lời hội thoại của mọi cơ sở
         if ("ADMIN".equals(currentRole)) {
             return conversation;
         }
 
-        // 2. Bệnh nhân chỉ được truy cập hội thoại của chính mình
         if ("BENH_NHAN".equals(currentRole)) {
             if (recipient == null && initiator != null && Objects.equals(initiator.getUserId(), currentUser.getUserId())) {
                 return conversation;
@@ -1153,8 +1193,6 @@ public class ChatServiceImpl implements ChatService {
             );
         }
 
-        // 3. Các role nhân viên (LE_TAN, BAC_SI, QUAN_LY_KHO, KE_TOAN):
-        // Bắt buộc kiểm tra hội thoại phải thuộc cơ sở được phân công của nhân viên đó!
         List<Branch> allowedBranches = resolveStaffAllowedBranches(currentUserId, currentRole);
         Set<Long> allowedBranchIds = allowedBranches.stream()
                 .map(Branch::getBranchId)
@@ -1173,7 +1211,6 @@ public class ChatServiceImpl implements ChatService {
             );
         }
 
-        // 4. Nếu là hội thoại trực tiếp 1-1 giữa các nhân viên trong cơ sở:
         if (recipient != null) {
             boolean isParticipant = (initiator != null && Objects.equals(initiator.getUserId(), currentUserId))
                     || Objects.equals(recipient.getUserId(), currentUserId);
@@ -1186,8 +1223,6 @@ public class ChatServiceImpl implements ChatService {
             return conversation;
         }
 
-        // 5. Nếu là hội thoại hộp thư cơ sở (tin nhắn của Bệnh nhân):
-        // CHỈ Lễ tân (LE_TAN) và Bác sĩ (BAC_SI) tại cơ sở đó (cùng Admin) mới được phép xem và phản hồi!
         if (!canHandlePatientMessages(currentRole)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -1300,8 +1335,6 @@ public class ChatServiceImpl implements ChatService {
             }
             conversation = resolveOrCreateConversationForRecipient(sender, senderRoleCode, request.getRecipientUserId(), null);
         } else {
-            // Gửi từ Floating Widget khi chưa có conversationId và không chọn người nhận cụ thể:
-            // Quản lý kho và Kế toán bắt buộc phải chọn đồng nghiệp trong cùng cơ sở để nhắn tin
             if (!"BENH_NHAN".equals(senderRoleCode) && !canHandlePatientMessages(senderRoleCode)) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
@@ -1404,10 +1437,6 @@ public class ChatServiceImpl implements ChatService {
         res.put("unreadCount", 0);
         return res;
     }
-
-    // =========================================================================
-    // 6. HÀM CHUYỂN ĐỔI DANH SÁCH TIN NHẮN SANG DTO (BATCH OPTIMAL)
-    // =========================================================================
 
     private List<ChatMessageDTO> mapMessagesToDTOs(ChatConversation conversation, List<ChatMessage> rawMessages) {
         if (rawMessages == null || rawMessages.isEmpty()) {

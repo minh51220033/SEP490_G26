@@ -4,6 +4,8 @@ import com.cvdcms.DTO.StockReceiptCreateDTO;
 import com.cvdcms.DTO.StockReceiptResponseDTO;
 import com.cvdcms.entity.User;
 import com.cvdcms.service.StockReceiptService;
+import com.cvdcms.util.InventoryFileStorageUtil;
+import com.cvdcms.util.InventoryPdfGenerator;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -11,13 +13,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,8 +33,9 @@ import java.util.Set;
 /**
  * REST Controller quản lý Phiếu nhập kho (Stock Receipt):
  * - Tìm kiếm/lọc lịch sử phiếu nhập kho theo chi nhánh, nhà cung cấp, từ khóa và khoảng ngày.
- * - Xem chi tiết phiếu nhập kho kèm danh sách lô vật tư.
- * - Tạo phiếu nhập kho mới và cập nhật tồn kho + lô hàng.
+ * - Xem chi tiết phiếu nhập kho kèm danh sách lô vật tư, hóa đơn đính kèm và chữ ký điện tử.
+ * - Tải lên file ảnh/chứng từ hóa đơn (MultipartFile) và tạo phiếu nhập kho.
+ * - Ký điện tử lên phiếu nhập kho và xuất phiếu nhập kho ra file PDF chuẩn A4.
  */
 @RestController
 @RequestMapping("/api/inventory/receipts")
@@ -80,13 +88,81 @@ public class StockReceiptController {
         return service.getById(receiptId, user.getUserId());
     }
 
-    @PostMapping
+    /**
+     * Tải file ảnh hoặc PDF hóa đơn nhà cung cấp trực tiếp từ máy tính.
+     */
+    @PostMapping(value = "/upload-invoice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, String> uploadInvoice(
+            @RequestParam("file") MultipartFile file,
+            HttpSession session) {
+        requireUser(session);
+        String savedUrl = InventoryFileStorageUtil.saveInvoiceFile(file);
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("attachmentUrl", savedUrl);
+        result.put("fileName", file.getOriginalFilename() != null ? file.getOriginalFilename() : "");
+        return result;
+    }
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public StockReceiptResponseDTO create(
             @Valid @RequestBody StockReceiptCreateDTO dto,
             HttpSession session) {
         User user = requireUser(session);
         return service.create(dto, user.getUserId());
+    }
+
+    /**
+     * Hỗ trợ gửi trực tiếp cả dữ liệu phiếu nhập và file hóa đơn trong cùng một request multipart/form-data.
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public StockReceiptResponseDTO createMultipart(
+            @RequestPart("receipt") StockReceiptCreateDTO dto,
+            @RequestPart(value = "invoiceFile", required = false) MultipartFile invoiceFile,
+            HttpSession session) {
+        User user = requireUser(session);
+        if (invoiceFile != null && !invoiceFile.isEmpty()) {
+            String savedUrl = InventoryFileStorageUtil.saveInvoiceFile(invoiceFile);
+            dto.setAttachmentUrl(savedUrl);
+        }
+        return service.create(dto, user.getUserId());
+    }
+
+    /**
+     * Ký điện tử vào phiếu nhập kho (không cho phép ký đè nếu phiếu đã có chữ ký).
+     */
+    @PostMapping("/{receiptId}/sign")
+    public StockReceiptResponseDTO signReceipt(
+            @PathVariable Long receiptId,
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+        User user = requireUser(session);
+        String signatureData = body != null ? body.get("signatureData") : null;
+        return service.signReceipt(receiptId, signatureData, user.getUserId());
+    }
+
+    /**
+     * Xuất phiếu nhập kho ra file PDF chuẩn A4 (có nhúng chữ ký điện tử & họ tên người ký).
+     */
+    @GetMapping(value = "/{receiptId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf(
+            @PathVariable Long receiptId,
+            @RequestParam(defaultValue = "false") boolean download,
+            HttpSession session) {
+        User user = requireUser(session);
+        StockReceiptResponseDTO receipt = service.getById(receiptId, user.getUserId());
+        byte[] pdfBytes = InventoryPdfGenerator.generateReceiptPdf(receipt);
+
+        String filename = "PhieuNhapKho_" + (receipt.getReceiptCode() != null ? receipt.getReceiptCode() : receiptId) + ".pdf";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(
+                ContentDisposition.builder(download ? "attachment" : "inline")
+                        .filename(filename, StandardCharsets.UTF_8)
+                        .build()
+        );
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
     private User requireUser(HttpSession session) {

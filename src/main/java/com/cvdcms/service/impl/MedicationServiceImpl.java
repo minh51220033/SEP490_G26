@@ -9,6 +9,10 @@ import com.cvdcms.repository.PrescriptionItemRepository;
 import com.cvdcms.service.MedicationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -192,6 +196,17 @@ public class MedicationServiceImpl implements MedicationService {
         return medicationRepository.searchByKeyword(kw).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MedicationDTO> searchMedicationsPage(String keyword, Boolean active, Pageable pageable) {
+        String kw = keyword == null ? "" : keyword.trim();
+        Pageable safePageable = pageable != null
+                ? pageable
+                : PageRequest.of(0, 15, Sort.by(Sort.Direction.ASC, "drugName"));
+        return medicationRepository.searchMedicationsPage(kw, active, safePageable)
+                .map(this::toDTO);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────

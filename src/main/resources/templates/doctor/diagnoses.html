@@ -538,6 +538,15 @@
             activePane.style.display = 'block';
             activePane.classList.add('active');
 
+            if (tabId === 'tab-clinical-photos') {
+                const contentPhotos = document.getElementById('content-photos');
+                if (contentPhotos) contentPhotos.style.display = 'block';
+                const barPhotos = document.getElementById('bar-photos');
+                if (barPhotos) barPhotos.classList.add('is-expanded');
+                const chevPhotos = document.getElementById('chevron-photos');
+                if (chevPhotos) chevPhotos.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
+            }
+
             // Cuộn mượt màn hình lên đầu phân vùng nội dung
             const container = document.getElementById('mainTabContainer');
             if (container) {

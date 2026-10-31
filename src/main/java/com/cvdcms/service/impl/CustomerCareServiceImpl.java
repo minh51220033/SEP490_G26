@@ -5,6 +5,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.CustomerCareService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -27,8 +28,8 @@ import java.util.stream.Collectors;
  *   + Các vai trò khác (BENH_NHAN, QUAN_LY_KHO, Y_TA...): Từ chối truy cập (403 FORBIDDEN).
  * - SCR-44.1: Tổng quan Dashboard KPI Cards & Danh sách công việc CSKH.
  * - SCR-44.2: Bộ lọc & Phân nhóm bệnh nhân (Sau điều trị, Nhắc lịch hẹn, Nhắc trả góp, Lịch hẹn lỡ, Không làm dịch vụ, Phản ánh).
- * - SCR-44.3: Lập lịch / Phân công chăm sóc thủ công và Tự động tổng hợp công việc từ Ca khám / Đơn thuốc / Lịch hẹn.
- * - SCR-44.4: Chi tiết công việc & Ghi kết quả liên hệ (kiểm tra bắt buộc next_retry_at khi NO_ANSWER hoặc BUSY).
+ * - SCR-44.3: Lập lịch / Phân công chăm sóc thủ công (chống tạo trùng) và Tự động tổng hợp công việc từ Ca khám / Đơn thuốc / Lịch hẹn.
+ * - SCR-44.4: Chi tiết công việc & Ghi kết quả liên hệ (kiểm tra bắt buộc next_retry_at khi NO_ANSWER hoặc BUSY) + Kết nối dữ liệu Khám lâm sàng, Chẩn đoán, Lời dặn (#tab-instructions) & Đơn thuốc.
  * - SCR-44.5: Chuyển Bác sĩ hỗ trợ chuyên môn (ESCALATED_TO_DOCTOR) và Bác sĩ nhập phản hồi chuyên môn (doctor_response).
  * - SCR-44.6: Timeline lịch sử chăm sóc bệnh nhân.
  */
@@ -53,6 +54,8 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     private final AppointmentRepository appointmentRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final UserRepository userRepository;
+    private final ClinicalExaminationRepository clinicalExaminationRepository;
+    private final ExaminationDiagnosisRepository examinationDiagnosisRepository;
 
     public CustomerCareServiceImpl(
             CustomerCareTaskRepository taskRepository,
@@ -64,6 +67,34 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             AppointmentRepository appointmentRepository,
             PrescriptionRepository prescriptionRepository,
             UserRepository userRepository) {
+        this(
+                taskRepository,
+                interactionRepository,
+                patientRepository,
+                branchRepository,
+                staffRepository,
+                visitRepository,
+                appointmentRepository,
+                prescriptionRepository,
+                userRepository,
+                null,
+                null
+        );
+    }
+
+    @Autowired
+    public CustomerCareServiceImpl(
+            CustomerCareTaskRepository taskRepository,
+            CustomerCareInteractionRepository interactionRepository,
+            PatientProfileRepository patientRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffRepository,
+            VisitRepository visitRepository,
+            AppointmentRepository appointmentRepository,
+            PrescriptionRepository prescriptionRepository,
+            UserRepository userRepository,
+            ClinicalExaminationRepository clinicalExaminationRepository,
+            ExaminationDiagnosisRepository examinationDiagnosisRepository) {
         this.taskRepository = taskRepository;
         this.interactionRepository = interactionRepository;
         this.patientRepository = patientRepository;
@@ -73,16 +104,14 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         this.appointmentRepository = appointmentRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
+        this.clinicalExaminationRepository = clinicalExaminationRepository;
+        this.examinationDiagnosisRepository = examinationDiagnosisRepository;
     }
 
     // =========================================================================
     // 0. KIỂM TRA PHÂN QUYỀN VAI TRÒ & CƠ SỞ (ROLE & BRANCH AUTHORIZATION)
     // =========================================================================
 
-    /**
-     * Xác định vai trò truy cập phân hệ CSKH của tài khoản ('ADMIN', 'LE_TAN', 'BAC_SI').
-     * Nếu tài khoản không tồn tại, bị khóa hoặc thuộc role khác (BENH_NHAN, QUAN_LY_KHO, Y_TA...) -> ném lỗi 403 FORBIDDEN.
-     */
     @Override
     @Transactional(readOnly = true)
     public String requireCareRole(Long userId) {
@@ -100,6 +129,18 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         if (userRepository.hasActiveAdminRole(userId)) {
             return "ADMIN";
+        }
+
+        if (userRepository.hasActivePermission(userId, "CUSTOMER_CARE_MANAGE")) {
+            List<String> userRoles = taskRepository.findActiveRoleNamesByUserId(userId);
+            if (userRoles != null) {
+                for (String r : userRoles) {
+                    if ("BAC_SI".equalsIgnoreCase(r) || "ROLE_BAC_SI".equalsIgnoreCase(r) || "DOCTOR".equalsIgnoreCase(r)) {
+                        return "BAC_SI";
+                    }
+                }
+            }
+            return "LE_TAN";
         }
 
         List<String> activeRoles = taskRepository.findActiveRoleNamesByUserId(userId);
@@ -120,15 +161,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     return "LE_TAN";
                 }
             }
-            // Tài khoản có role nhưng không phải ADMIN, LE_TAN, BAC_SI (ví dụ: QUAN_LY_KHO, BENH_NHAN, Y_TA...)
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Bạn không có quyền truy cập trang Quản lý Chăm sóc khách hàng. Chức năng này chỉ dành cho Admin, Lễ tân và Bác sĩ."
             );
         }
 
-        // Trường hợp dữ liệu seed nhân sự chưa gán bảng user_roles (như letan01, bacsi01):
-        // Kiểm tra hồ sơ nhân viên (staff_profiles) để xác định Lễ tân hoặc Bác sĩ.
         Optional<StaffProfile> staffOpt = staffRepository.findByUser_UserId(userId);
         if (staffOpt.isPresent() && staffOpt.get().getStatus() == StaffStatus.ACTIVE) {
             StaffProfile sp = staffOpt.get();
@@ -146,12 +184,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         );
     }
 
-    /**
-     * Lấy danh sách các cơ sở (Branch) mà người dùng được phép xem và thao tác:
-     * - ADMIN: Toàn bộ các cơ sở đang hoạt động.
-     * - LE_TAN / BAC_SI: Chỉ cơ sở được phân công trong staff_branch_assignments / users.branch_id
-     *   (hoặc cơ sở gắn với hồ sơ nhân viên trong dữ liệu seed).
-     */
     private List<Branch> resolveAllowedBranches(Long userId, String careRole) {
         List<Branch> allActive = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
         if (allActive.isEmpty()) {
@@ -162,7 +194,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             return allActive;
         }
 
-        // 1. Ưu tiên kiểm tra phân công chính thức trong bảng staff_branch_assignments và cột users.branch_id
         List<Long> explicitIds = taskRepository.findExplicitBranchIdsByUserId(userId);
         if (explicitIds != null && !explicitIds.isEmpty()) {
             Set<Long> allowedSet = new LinkedHashSet<>(explicitIds);
@@ -171,8 +202,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     .toList();
         }
 
-        // 2. Dự phòng cho dữ liệu seed test chưa chèn bảng staff_branch_assignments:
-        // Suy luận cơ sở công tác từ staff_profiles (ca khám, lịch hẹn, đơn thuốc, công việc CSKH của nhân viên đó)
         Optional<StaffProfile> staffOpt = staffRepository.findByUser_UserId(userId);
         if (staffOpt.isPresent()) {
             List<Long> inferredIds = taskRepository.findInferredBranchIdsByStaffId(staffOpt.get().getStaffId());
@@ -187,18 +216,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             }
         }
 
-        // Nếu nhân viên mới hoàn toàn chưa có bản ghi phân công, mặc định gắn với cơ sở đầu tiên (CN01)
-        // để khóa phạm vi thao tác vào 1 cơ sở duy nhất, không bao giờ cho xem tất cả cơ sở như Admin.
         return allActive.isEmpty() ? List.of() : List.of(allActive.get(0));
     }
 
-    /**
-     * Chuẩn hóa và kiểm tra quyền truy cập branchId của người dùng:
-     * - ADMIN: Có thể truyền branchId = null (xem tất cả cơ sở) hoặc chọn bất kỳ cơ sở hợp lệ nào.
-     * - LE_TAN / BAC_SI:
-     *   + Nếu không truyền branchId -> tự động ép về cơ sở được phân công của nhân viên đó.
-     *   + Nếu truyền branchId không thuộc cơ sở của mình -> chặn ngay bằng lỗi 403 FORBIDDEN.
-     */
     private Long resolveAndAuthorizeBranchId(Long requestedBranchId, Long userId, boolean requireSpecificBranch) {
         String careRole = requireCareRole(userId);
         validateBranchIdIfPresent(requestedBranchId);
@@ -236,9 +256,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return requestedBranchId;
     }
 
-    /**
-     * Kiểm tra nhân viên (Lễ tân / Bác sĩ) có quyền thao tác trên công việc CSKH thuộc cơ sở của task hay không.
-     */
     private String assertCanAccessTask(CustomerCareTask task, Long userId) {
         String careRole = requireCareRole(userId);
         if ("ADMIN".equals(careRole)) {
@@ -276,7 +293,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("careRole", careRole);
         res.put("isAdmin", "ADMIN".equals(careRole));
-        // Chỉ Admin (hoặc nhân sự được phân công từ 2 cơ sở trở lên) mới được đổi dropdown cơ sở
         res.put("branchSelectionAllowed", "ADMIN".equals(careRole) || options.size() > 1);
         res.put("currentStaffId", currentStaff != null ? currentStaff.getStaffId() : null);
         res.put("currentStaffName", currentStaff != null ? currentStaff.getFullName() : null);
@@ -294,7 +310,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             allStaff = staffRepository.findAll();
         }
 
-        // Lọc nhân sự & bác sĩ thuộc cơ sở đang chọn
         List<StaffProfile> branchStaff = allStaff;
         if (effectiveBranchId != null) {
             List<Long> staffIdsAtBranch = taskRepository.findActiveStaffIdsByBranch(effectiveBranchId);
@@ -330,12 +345,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             doctorOptions.addAll(staffOptions);
         }
 
-        // Sử dụng truy vấn JOIN FETCH an toàn (loại bỏ các bản ghi mồ côi như profile_id = 201 không tồn tại)
         List<Appointment> appointments = appointmentRepository.findByBranchWithDetails(effectiveBranchId);
         List<Visit> visits = taskRepository.findValidVisitsByBranchForLookup(effectiveBranchId);
         List<Prescription> prescriptions = taskRepository.findValidPrescriptionsByBranchForCare(effectiveBranchId);
 
-        // Lọc danh sách bệnh nhân liên quan đến cơ sở (hoặc toàn bộ nếu là Admin xem tất cả cơ sở)
         List<PatientProfile> allPatients = patientRepository.findAll();
         Set<Long> branchPatientIds = new HashSet<>();
         if (effectiveBranchId != null) {
@@ -387,6 +400,14 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 })
                 .toList();
 
+        // Map prescriptions by visitId for quick lookup enrichment
+        Map<Long, Prescription> latestPrescByVisit = new HashMap<>();
+        for (Prescription pr : prescriptions) {
+            if (pr.getVisit() != null && pr.getVisit().getVisitId() != null) {
+                latestPrescByVisit.putIfAbsent(pr.getVisit().getVisitId(), pr);
+            }
+        }
+
         List<Map<String, Object>> visitOptions = visits.stream()
                 .limit(200)
                 .map(v -> {
@@ -397,6 +418,17 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     m.put("patientName", v.getPatientProfile().getFullName());
                     m.put("checkInAt", v.getCheckInAt());
                     m.put("status", v.getStatus() != null ? v.getStatus().name() : null);
+                    m.put("doctorName", v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName() : null);
+                    m.put("initialSymptoms", v.getInitialSymptoms());
+                    m.put("notes", v.getNotes());
+                    Prescription pr = latestPrescByVisit.get(v.getVisitId());
+                    if (pr != null) {
+                        m.put("prescriptionId", pr.getPrescriptionId());
+                        m.put("prescriptionCode", pr.getPrescriptionCode());
+                        m.put("diagnosisText", pr.getDiagnosisText());
+                        m.put("adviceNotes", pr.getAdviceNotes());
+                    }
+                    m.put("examinationDetailUrl", "/doctor/examination/" + v.getVisitId() + "/diagnoses#tab-instructions");
                     return m;
                 })
                 .toList();
@@ -559,7 +591,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         String normStatus = trimToNull(status) == null ? null : status.trim().toUpperCase(Locale.ROOT);
         String normKeyword = trimToNull(keyword) == null ? null : keyword.trim().toLowerCase(Locale.ROOT);
 
-        List<CustomerCareTaskDTO> filtered = new ArrayList<>();
+        List<CustomerCareTask> matchedTasks = new ArrayList<>();
         for (CustomerCareTask task : allTasks) {
             List<CustomerCareInteraction> taskInteractions = interactionsByTask.getOrDefault(task.getTaskId(), List.of());
             CustomerCareInteraction latest = taskInteractions.isEmpty() ? null : taskInteractions.get(0);
@@ -590,16 +622,19 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 continue;
             }
 
-            filtered.add(toTaskDTO(task, taskInteractions, false));
+            matchedTasks.add(task);
         }
 
-        int total = filtered.size();
+        int total = matchedTasks.size();
         int start = (int) pageable.getOffset();
         if (start >= total) {
             return new PageImpl<>(List.of(), pageable, total);
         }
         int end = Math.min(start + pageable.getPageSize(), total);
-        return new PageImpl<>(filtered.subList(start, end), pageable, total);
+        List<CustomerCareTaskDTO> pageContent = matchedTasks.subList(start, end).stream()
+                .map(task -> toTaskDTO(task, interactionsByTask.getOrDefault(task.getTaskId(), List.of()), false))
+                .toList();
+        return new PageImpl<>(pageContent, pageable, total);
     }
 
     @Override
@@ -651,6 +686,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         CustomerCareTaskType resolvedType = mapCareGroupToDbType(requestedGroup);
         String formattedNotes = formatNotesWithGroupTag(requestedGroup, dto.getNotes());
 
+        // Kiểm tra chống tạo trùng công việc CSKH đang hoạt động (PENDING, IN_PROGRESS, ESCALATED_TO_DOCTOR)
+        assertNoActiveDuplicateTask(effectiveBranchId, dto.getProfileId(), requestedGroup, resolvedType,
+                dto.getVisitId(), dto.getAppointmentId(), dto.getPrescriptionId(), dto.getDueDate());
+
         CustomerCareTask task = new CustomerCareTask();
         task.setTaskCode(generateUniqueTaskCode());
         task.setBranch(branch);
@@ -672,6 +711,58 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         CustomerCareTask saved = taskRepository.save(task);
         return toTaskDTO(saved != null ? saved : task, List.of(), true);
+    }
+
+    private void assertNoActiveDuplicateTask(
+            Long branchId,
+            Long profileId,
+            String requestedGroup,
+            CustomerCareTaskType resolvedType,
+            Long visitId,
+            Long appointmentId,
+            Long prescriptionId,
+            LocalDate dueDate) {
+
+        List<CustomerCareTask> existingForPatient = taskRepository.findByPatientProfileIdWithDetails(profileId);
+        if (existingForPatient == null || existingForPatient.isEmpty()) {
+            return;
+        }
+
+        String normGroup = requestedGroup.trim().toUpperCase(Locale.ROOT);
+        if ("POST_TREATMENT".equals(normGroup)) {
+            normGroup = "POST_TREATMENT_FOLLOWUP";
+        }
+
+        for (CustomerCareTask ex : existingForPatient) {
+            if (ex.getStatus() == CustomerCareTaskStatus.COMPLETED || ex.getStatus() == CustomerCareTaskStatus.CANCELLED) {
+                continue;
+            }
+            if (ex.getBranch() != null && branchId != null && !branchId.equals(ex.getBranch().getBranchId())) {
+                continue;
+            }
+            String exGroup = resolveCareGroup(ex);
+            boolean sameGroupOrType = normGroup.equalsIgnoreCase(exGroup) || resolvedType == ex.getTaskType();
+            if (!sameGroupOrType) {
+                continue;
+            }
+
+            if (visitId != null && visitId > 0 && ex.getVisit() != null && visitId.equals(ex.getVisit().getVisitId())) {
+                bad("Bệnh nhân đã có công việc CSKH đang hoạt động (" + ex.getTaskCode() + ") cho ca khám này. Không thể tạo trùng.");
+            }
+            if (appointmentId != null && appointmentId > 0 && ex.getAppointment() != null && appointmentId.equals(ex.getAppointment().getAppointmentId())) {
+                bad("Bệnh nhân đã có công việc CSKH đang hoạt động (" + ex.getTaskCode() + ") cho lịch hẹn này. Không thể tạo trùng.");
+            }
+            if (prescriptionId != null && prescriptionId > 0 && ex.getPrescription() != null && prescriptionId.equals(ex.getPrescription().getPrescriptionId())) {
+                bad("Bệnh nhân đã có công việc CSKH đang hoạt động (" + ex.getTaskCode() + ") cho đơn thuốc này. Không thể tạo trùng.");
+            }
+            if ((visitId == null || visitId <= 0)
+                    && (appointmentId == null || appointmentId <= 0)
+                    && (prescriptionId == null || prescriptionId <= 0)
+                    && dueDate != null && dueDate.equals(ex.getDueDate())
+                    && normGroup.equalsIgnoreCase(exGroup)) {
+                bad("Bệnh nhân đã có công việc CSKH cùng phân nhóm và cùng hạn hoàn thành (" + ex.getTaskCode() + "). Không thể tạo trùng.");
+            }
+        }
     }
 
     @Override
@@ -720,11 +811,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return toTaskDTO(saved != null ? saved : task, interactions, true);
     }
 
-    /**
-     * Tự động quét và tổng hợp công việc CSKH từ ca khám hoàn thành, đơn thuốc và lịch hẹn tại chi nhánh (SCR-44.3).
-     * Sử dụng các truy vấn INNER JOIN FETCH an toàn để tự động bỏ qua các bản ghi có khoá ngoại mồ côi
-     * (ví dụ: profile_id = 201 không tồn tại trong bảng patient_profiles).
-     */
     @Override
     @Transactional
     public Map<String, Object> autoGenerateTasks(Long branchId, Long userId) {
@@ -757,8 +843,16 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 LocalDate visitDate = v.getCheckInAt() != null ? v.getCheckInAt().toLocalDate() : today;
                 t.setDueDate(visitDate.plusDays(1).isBefore(today) ? today : visitDate.plusDays(1));
                 t.setStatus(CustomerCareTaskStatus.PENDING);
-                t.setNotes("Hỏi thăm sức khỏe bệnh nhân sau ca khám " + v.getVisitCode()
-                        + (v.getInitialSymptoms() != null ? " (" + v.getInitialSymptoms() + ")" : ""));
+
+                StringBuilder noteBuilder = new StringBuilder("Hỏi thăm sức khỏe bệnh nhân sau ca khám ")
+                        .append(v.getVisitCode());
+                if (v.getInitialSymptoms() != null && !v.getInitialSymptoms().isBlank()) {
+                    noteBuilder.append(" (").append(v.getInitialSymptoms().trim()).append(")");
+                }
+                if (v.getNotes() != null && !v.getNotes().isBlank()) {
+                    noteBuilder.append(" — Ghi chú điều trị: ").append(v.getNotes().trim());
+                }
+                t.setNotes(noteBuilder.toString());
                 taskRepository.save(t);
                 createdPostTreatment++;
             }
@@ -781,8 +875,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 t.setAssignedStaff(defaultStaff);
                 t.setDueDate(pr.getFollowupDate() != null ? pr.getFollowupDate() : today);
                 t.setStatus(CustomerCareTaskStatus.PENDING);
-                t.setNotes("Nhắc bệnh nhân dùng thuốc theo đơn " + pr.getPrescriptionCode()
-                        + " — Chẩn đoán: " + pr.getDiagnosisText());
+                String note = "Nhắc bệnh nhân dùng thuốc theo đơn " + pr.getPrescriptionCode()
+                        + " — Chẩn đoán: " + pr.getDiagnosisText();
+                if (pr.getAdviceNotes() != null && !pr.getAdviceNotes().isBlank()) {
+                    note += " — Lời dặn: " + pr.getAdviceNotes().trim();
+                }
+                t.setNotes(note);
                 taskRepository.save(t);
                 createdMedication++;
             }
@@ -872,8 +970,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             bad("Nội dung ghi chú kết quả liên hệ tối đa 2000 ký tự.");
         }
 
-        // Quy tắc nghiệp vụ bắt buộc (SCR-44.4):
-        // Khi contact_result = NO_ANSWER hoặc BUSY, bắt buộc phải nhập next_retry_at để lập lịch gọi lại.
         if (contactResult == ContactResult.NO_ANSWER || contactResult == ContactResult.BUSY) {
             if (dto.getNextRetryAt() == null) {
                 bad("Khi kết quả liên hệ là Không bắt máy (NO_ANSWER) hoặc Máy bận (BUSY), bắt buộc phải nhập Thời gian hẹn gọi lại (next_retry_at).");
@@ -905,7 +1001,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         interactionRepository.save(interaction);
 
-        // Cập nhật trạng thái công việc sau khi tương tác
         String requestedStatus = trimToNull(dto.getNextStatus());
         if (requestedStatus != null) {
             task.setStatus(parseTaskStatus(requestedStatus));
@@ -1026,7 +1121,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     }
 
     // =========================================================================
-    // 7. LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6)
+    // 7. LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) & TÓM TẮT CA KHÁM LÂM SÀNG
     // =========================================================================
 
     @Override
@@ -1045,7 +1140,6 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         List<CustomerCareTask> patientTasks = taskRepository.findByPatientProfileIdWithDetails(profileId);
         List<CustomerCareInteraction> patientInteractions = interactionRepository.findByProfileIdWithDetails(profileId);
 
-        // Nếu là Lễ tân hoặc Bác sĩ, chỉ hiển thị công việc & tương tác thuộc cơ sở được phân quyền
         if (!"ADMIN".equals(careRole)) {
             Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
                     .map(Branch::getBranchId)
@@ -1097,6 +1191,156 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         result.put("totalTasks", taskDTOs.size());
         result.put("totalInteractions", timelineDTOs.size());
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getVisitExaminationSummary(Long visitId, Long userId) {
+        if (visitId == null || visitId <= 0) {
+            bad("Mã lượt khám (visitId) không hợp lệ.");
+        }
+        String careRole = requireCareRole(userId);
+        Visit visit = visitRepository.findWithDetailsById(visitId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám #" + visitId + "."));
+
+        if (!"ADMIN".equals(careRole) && visit.getBranch() != null) {
+            Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
+                    .map(Branch::getBranchId)
+                    .collect(Collectors.toSet());
+            if (!allowedBranchIds.contains(visit.getBranch().getBranchId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Lượt khám này thuộc cơ sở khác. Bạn chỉ được xem thông tin khám của bệnh nhân tại cơ sở mình đang công tác."
+                );
+            }
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("visitId", visit.getVisitId());
+        summary.put("visitCode", visit.getVisitCode());
+        summary.put("visitStatus", visit.getStatus() != null ? visit.getStatus().name() : null);
+        summary.put("checkInAt", visit.getCheckInAt());
+        summary.put("completedAt", visit.getCompletedAt());
+        summary.put("initialSymptoms", visit.getInitialSymptoms());
+        summary.put("visitNotes", visit.getNotes());
+        summary.put("examinationDetailUrl", "/doctor/examination/" + visit.getVisitId() + "/diagnoses#tab-instructions");
+
+        if (visit.getPatientProfile() != null) {
+            PatientProfile p = visit.getPatientProfile();
+            Map<String, Object> pMap = new LinkedHashMap<>();
+            pMap.put("profileId", p.getProfileId());
+            pMap.put("patientCode", p.getPatientCode());
+            pMap.put("fullName", p.getFullName());
+            pMap.put("phoneNumber", p.getPhoneNumber());
+            pMap.put("gender", p.getGender());
+            pMap.put("dob", p.getDob());
+            summary.put("patient", pMap);
+        }
+
+        if (visit.getPrimaryDoctor() != null) {
+            StaffProfile d = visit.getPrimaryDoctor();
+            Map<String, Object> dMap = new LinkedHashMap<>();
+            dMap.put("staffId", d.getStaffId());
+            dMap.put("staffCode", d.getStaffCode());
+            dMap.put("fullName", d.getFullName());
+            dMap.put("positionTitle", d.getPositionTitle());
+            summary.put("doctor", dMap);
+        }
+
+        ClinicalExamination exam = clinicalExaminationRepository != null
+                ? clinicalExaminationRepository.findByVisit_VisitId(visitId).orElse(null)
+                : null;
+        if (exam != null) {
+            summary.put("examId", exam.getExamId());
+            summary.put("examTime", exam.getExamTime());
+            summary.put("chiefComplaint", exam.getChiefComplaint());
+            summary.put("historyIllness", exam.getHistoryIllness());
+            summary.put("extraoralExam", exam.getExtraoralExam());
+            summary.put("intraoralExam", exam.getIntraoralExam());
+            summary.put("periodontalStatus", exam.getPeriodontalStatus());
+            summary.put("summaryAssessment", exam.getSummaryAssessment());
+        }
+
+        List<ExaminationDiagnosis> diagEntities = examinationDiagnosisRepository != null
+                ? examinationDiagnosisRepository.findByVisitIdWithDetails(visitId)
+                : List.of();
+        List<Map<String, Object>> diagnoses = new ArrayList<>();
+        List<String> diagTexts = new ArrayList<>();
+        for (ExaminationDiagnosis ed : diagEntities) {
+            Map<String, Object> dm = new LinkedHashMap<>();
+            dm.put("diagnosisId", ed.getDiagnosisId());
+            dm.put("diagnosisType", ed.getDiagnosisType() != null ? ed.getDiagnosisType().name() : "MAIN");
+            String icdCode = ed.getIcd10Disease() != null ? ed.getIcd10Disease().getIcd10Code() : null;
+            dm.put("icd10Code", icdCode);
+            dm.put("diagnosisText", ed.getDiagnosisText());
+            dm.put("toothNumbers", ed.getToothNumbers());
+            dm.put("notes", ed.getNotes());
+            diagnoses.add(dm);
+
+            String line = (icdCode != null ? "[" + icdCode + "] " : "")
+                    + (ed.getDiagnosisText() != null ? ed.getDiagnosisText() : "")
+                    + (ed.getToothNumbers() != null && !ed.getToothNumbers().isBlank() ? " (Răng: " + ed.getToothNumbers() + ")" : "");
+            if (!line.isBlank()) {
+                diagTexts.add(line.trim());
+            }
+        }
+        summary.put("diagnoses", diagnoses);
+
+        List<Prescription> prescriptions = prescriptionRepository != null
+                ? prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId)
+                : List.of();
+        List<Map<String, Object>> prescItems = new ArrayList<>();
+        List<String> adviceParts = new ArrayList<>();
+        LocalDate followupDate = null;
+
+        if (!prescriptions.isEmpty()) {
+            Prescription latestPresc = prescriptionRepository.findByIdWithDetails(prescriptions.get(0).getPrescriptionId())
+                    .orElse(prescriptions.get(0));
+            summary.put("prescriptionId", latestPresc.getPrescriptionId());
+            summary.put("prescriptionCode", latestPresc.getPrescriptionCode());
+            summary.put("prescriptionDiagnosis", latestPresc.getDiagnosisText());
+            summary.put("prescriptionAdvice", latestPresc.getAdviceNotes());
+            followupDate = latestPresc.getFollowupDate();
+
+            if (diagTexts.isEmpty() && latestPresc.getDiagnosisText() != null && !latestPresc.getDiagnosisText().isBlank()) {
+                diagTexts.add(latestPresc.getDiagnosisText().trim());
+            }
+            if (latestPresc.getAdviceNotes() != null && !latestPresc.getAdviceNotes().isBlank()) {
+                adviceParts.add(latestPresc.getAdviceNotes().trim());
+            }
+            if (latestPresc.getItems() != null) {
+                for (PrescriptionItem item : latestPresc.getItems()) {
+                    Map<String, Object> im = new LinkedHashMap<>();
+                    im.put("itemId", item.getItemId());
+                    im.put("drugName", item.getDrugName());
+                    im.put("dosage", item.getDosage());
+                    im.put("durationDays", item.getDurationDays());
+                    im.put("quantity", item.getQuantity());
+                    im.put("unit", item.getUnit());
+                    im.put("usageInstruction", item.getUsageInstruction());
+                    prescItems.add(im);
+                }
+            }
+        }
+
+        if (visit.getNotes() != null && !visit.getNotes().isBlank()) {
+            String vn = visit.getNotes().trim();
+            if (adviceParts.stream().noneMatch(a -> a.contains(vn))) {
+                adviceParts.add("Ghi chú bác sĩ: " + vn);
+            }
+        }
+        if (exam != null && exam.getSummaryAssessment() != null && !exam.getSummaryAssessment().isBlank()) {
+            String sa = exam.getSummaryAssessment().trim();
+            if (adviceParts.stream().noneMatch(a -> a.contains(sa))) {
+                adviceParts.add("Kết luận khám: " + sa);
+            }
+        }
+
+        summary.put("diagnosisSummary", diagTexts.isEmpty() ? null : String.join("; ", diagTexts));
+        summary.put("treatmentInstructions", adviceParts.isEmpty() ? null : String.join(" | ", adviceParts));
+        summary.put("prescriptionItems", prescItems);
+        summary.put("followupDate", followupDate);
+        return summary;
     }
 
     // =========================================================================
@@ -1179,6 +1423,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             if (p.getPatientCode() != null && p.getPatientCode().toLowerCase(Locale.ROOT).contains(kw)) return true;
             if (p.getPhoneNumber() != null && p.getPhoneNumber().toLowerCase(Locale.ROOT).contains(kw)) return true;
         }
+        if (task.getVisit() != null && task.getVisit().getVisitCode() != null
+                && task.getVisit().getVisitCode().toLowerCase(Locale.ROOT).contains(kw)) return true;
+        if (task.getPrescription() != null && task.getPrescription().getPrescriptionCode() != null
+                && task.getPrescription().getPrescriptionCode().toLowerCase(Locale.ROOT).contains(kw)) return true;
+        if (task.getAppointment() != null && task.getAppointment().getAppointmentCode() != null
+                && task.getAppointment().getAppointmentCode().toLowerCase(Locale.ROOT).contains(kw)) return true;
         if (task.getNotes() != null && task.getNotes().toLowerCase(Locale.ROOT).contains(kw)) return true;
         if (task.getDoctorResponse() != null && task.getDoctorResponse().toLowerCase(Locale.ROOT).contains(kw)) return true;
         if (task.getAssignedStaff() != null && task.getAssignedStaff().getFullName() != null
@@ -1339,11 +1589,24 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         dto.setCareGroup(careGroup);
         dto.setCareGroupLabel(resolveCareGroupLabel(careGroup, t.getTaskType()));
 
-        if (t.getVisit() != null) {
-            dto.setVisitId(t.getVisit().getVisitId());
-            dto.setVisitCode(t.getVisit().getVisitCode());
-            dto.setVisitCheckInAt(t.getVisit().getCheckInAt());
-            dto.setVisitSymptoms(t.getVisit().getInitialSymptoms());
+        Visit visit = t.getVisit();
+        if (visit == null && t.getPrescription() != null && t.getPrescription().getVisit() != null) {
+            visit = t.getPrescription().getVisit();
+        }
+
+        if (visit != null) {
+            dto.setVisitId(visit.getVisitId());
+            dto.setVisitCode(visit.getVisitCode());
+            dto.setVisitCheckInAt(visit.getCheckInAt());
+            dto.setVisitSymptoms(visit.getInitialSymptoms());
+            dto.setVisitStatus(visit.getStatus() != null ? visit.getStatus().name() : null);
+            dto.setVisitNotes(visit.getNotes());
+            dto.setExaminationDetailUrl("/doctor/examination/" + visit.getVisitId() + "/diagnoses#tab-instructions");
+            if (visit.getPrimaryDoctor() != null) {
+                dto.setDoctorId(visit.getPrimaryDoctor().getStaffId());
+                dto.setDoctorCode(visit.getPrimaryDoctor().getStaffCode());
+                dto.setDoctorName(visit.getPrimaryDoctor().getFullName());
+            }
         }
 
         if (t.getAppointment() != null) {
@@ -1355,12 +1618,29 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             }
         }
 
-        if (t.getPrescription() != null) {
-            dto.setPrescriptionId(t.getPrescription().getPrescriptionId());
-            dto.setPrescriptionCode(t.getPrescription().getPrescriptionCode());
-            dto.setPrescriptionDiagnosis(t.getPrescription().getDiagnosisText());
-            dto.setPrescriptionAdvice(t.getPrescription().getAdviceNotes());
+        Prescription linkedPresc = t.getPrescription();
+        if (linkedPresc == null && visit != null && visit.getVisitId() != null && prescriptionRepository != null) {
+            List<Prescription> visitPrescs = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visit.getVisitId());
+            if (visitPrescs != null && !visitPrescs.isEmpty()) {
+                linkedPresc = visitPrescs.get(0);
+            }
         }
+
+        if (linkedPresc != null) {
+            dto.setPrescriptionId(linkedPresc.getPrescriptionId());
+            dto.setPrescriptionCode(linkedPresc.getPrescriptionCode());
+            dto.setPrescriptionDiagnosis(linkedPresc.getDiagnosisText());
+            dto.setPrescriptionAdvice(linkedPresc.getAdviceNotes());
+            dto.setFollowupDate(linkedPresc.getFollowupDate());
+            if (dto.getDoctorName() == null && linkedPresc.getDoctor() != null) {
+                dto.setDoctorId(linkedPresc.getDoctor().getStaffId());
+                dto.setDoctorCode(linkedPresc.getDoctor().getStaffCode());
+                dto.setDoctorName(linkedPresc.getDoctor().getFullName());
+            }
+        }
+
+        // Bổ sung thông tin Khám lâm sàng, Chẩn đoán ICD-10, Lời dặn điều trị (#tab-instructions) & Đơn thuốc
+        populateClinicalExaminationContext(dto, visit, linkedPresc, includeFullInteractions);
 
         if (t.getAssignedStaff() != null) {
             dto.setAssignedStaffId(t.getAssignedStaff().getStaffId());
@@ -1402,6 +1682,121 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             dto.setInteractions(safeList.stream().map(this::toInteractionDTO).toList());
         }
         return dto;
+    }
+
+    private void populateClinicalExaminationContext(
+            CustomerCareTaskDTO dto,
+            Visit visit,
+            Prescription linkedPresc,
+            boolean includeFullDetails) {
+
+        List<String> diagParts = new ArrayList<>();
+        List<String> instructionParts = new ArrayList<>();
+        List<String> medParts = new ArrayList<>();
+
+        if (visit != null && visit.getVisitId() != null) {
+            Long visitId = visit.getVisitId();
+            if (clinicalExaminationRepository != null) {
+                ClinicalExamination exam = clinicalExaminationRepository.findByVisit_VisitId(visitId).orElse(null);
+                if (exam != null) {
+                    dto.setExamId(exam.getExamId());
+                    dto.setExamTime(exam.getExamTime());
+                    dto.setChiefComplaint(exam.getChiefComplaint());
+                    dto.setSummaryAssessment(exam.getSummaryAssessment());
+                    if (dto.getDoctorName() == null && exam.getDoctor() != null) {
+                        dto.setDoctorId(exam.getDoctor().getStaffId());
+                        dto.setDoctorCode(exam.getDoctor().getStaffCode());
+                        dto.setDoctorName(exam.getDoctor().getFullName());
+                    }
+                }
+            }
+
+            if (examinationDiagnosisRepository != null) {
+                List<ExaminationDiagnosis> diagEntities = examinationDiagnosisRepository.findByVisitIdWithDetails(visitId);
+                if (diagEntities != null && !diagEntities.isEmpty()) {
+                    List<Map<String, Object>> diagMaps = new ArrayList<>();
+                    for (ExaminationDiagnosis ed : diagEntities) {
+                        String icd = ed.getIcd10Disease() != null ? ed.getIcd10Disease().getIcd10Code() : null;
+                        String text = ed.getDiagnosisText() != null ? ed.getDiagnosisText().trim() : "";
+                        String teeth = ed.getToothNumbers() != null && !ed.getToothNumbers().isBlank()
+                                ? " (Răng: " + ed.getToothNumbers().trim() + ")"
+                                : "";
+                        String line = (icd != null ? "[" + icd + "] " : "") + text + teeth;
+                        if (!line.isBlank()) {
+                            diagParts.add(line.trim());
+                        }
+                        if (includeFullDetails) {
+                            Map<String, Object> dm = new LinkedHashMap<>();
+                            dm.put("diagnosisId", ed.getDiagnosisId());
+                            dm.put("diagnosisType", ed.getDiagnosisType() != null ? ed.getDiagnosisType().name() : "MAIN");
+                            dm.put("icd10Code", icd);
+                            dm.put("diagnosisText", ed.getDiagnosisText());
+                            dm.put("toothNumbers", ed.getToothNumbers());
+                            dm.put("notes", ed.getNotes());
+                            diagMaps.add(dm);
+                        }
+                    }
+                    if (includeFullDetails) {
+                        dto.setDiagnoses(diagMaps);
+                    }
+                }
+            }
+        }
+
+        if (linkedPresc != null) {
+            if (diagParts.isEmpty() && linkedPresc.getDiagnosisText() != null && !linkedPresc.getDiagnosisText().isBlank()) {
+                diagParts.add(linkedPresc.getDiagnosisText().trim());
+            }
+            if (linkedPresc.getAdviceNotes() != null && !linkedPresc.getAdviceNotes().isBlank()) {
+                instructionParts.add(linkedPresc.getAdviceNotes().trim());
+            }
+
+            Prescription detailedPresc = linkedPresc;
+            if (includeFullDetails && linkedPresc.getPrescriptionId() != null && prescriptionRepository != null) {
+                detailedPresc = prescriptionRepository.findByIdWithDetails(linkedPresc.getPrescriptionId()).orElse(linkedPresc);
+            }
+            if (detailedPresc.getItems() != null && !detailedPresc.getItems().isEmpty()) {
+                List<Map<String, Object>> itemMaps = new ArrayList<>();
+                for (PrescriptionItem item : detailedPresc.getItems()) {
+                    String medStr = item.getDrugName()
+                            + (item.getQuantity() != null ? " x" + item.getQuantity().stripTrailingZeros().toPlainString() : "")
+                            + (item.getUnit() != null ? " " + item.getUnit() : "")
+                            + (item.getDosage() != null ? " (" + item.getDosage() + ")" : "");
+                    medParts.add(medStr);
+                    if (includeFullDetails) {
+                        Map<String, Object> im = new LinkedHashMap<>();
+                        im.put("itemId", item.getItemId());
+                        im.put("drugName", item.getDrugName());
+                        im.put("dosage", item.getDosage());
+                        im.put("durationDays", item.getDurationDays());
+                        im.put("quantity", item.getQuantity());
+                        im.put("unit", item.getUnit());
+                        im.put("usageInstruction", item.getUsageInstruction());
+                        itemMaps.add(im);
+                    }
+                }
+                if (includeFullDetails) {
+                    dto.setPrescriptionItems(itemMaps);
+                }
+            }
+        }
+
+        if (visit != null && visit.getNotes() != null && !visit.getNotes().isBlank()) {
+            String vn = visit.getNotes().trim();
+            if (instructionParts.stream().noneMatch(s -> s.contains(vn))) {
+                instructionParts.add(vn);
+            }
+        }
+        if (dto.getSummaryAssessment() != null && !dto.getSummaryAssessment().isBlank()) {
+            String sa = dto.getSummaryAssessment().trim();
+            if (instructionParts.stream().noneMatch(s -> s.contains(sa))) {
+                instructionParts.add(sa);
+            }
+        }
+
+        dto.setDiagnosisSummary(diagParts.isEmpty() ? dto.getPrescriptionDiagnosis() : String.join("; ", diagParts));
+        dto.setTreatmentInstructions(instructionParts.isEmpty() ? dto.getPrescriptionAdvice() : String.join(" | ", instructionParts));
+        dto.setPrescriptionSummary(medParts.isEmpty() ? null : String.join(", ", medParts));
     }
 
     private CustomerCareInteractionDTO toInteractionDTO(CustomerCareInteraction i) {
