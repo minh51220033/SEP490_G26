@@ -40,7 +40,14 @@
         recipientKeyword: '',
         recipientRole: 'ALL',
         recipientBranchId: rootEl.dataset.isAdmin === 'true' ? '' : (rootEl.dataset.defaultBranchId || ''),
+        recipientPage: 0,
+        recipientSize: 30,
+        recipientHasMore: false,
+        recipientTotalCount: 0,
+        recipientUsers: [],
         recipientDebounceTimer: null,
+        recipientAbortController: null,
+        recipientRequestSeq: 0,
 
         // WebSocket STOMP
         stompClient: null,
@@ -48,6 +55,8 @@
         reconnectTimer: null,
         reconnectAttempts: 0,
         searchDebounceTimer: null,
+        convAbortController: null,
+        convRequestSeq: 0,
         isSending: false
     };
 
@@ -132,7 +141,8 @@
         if (elRecipientSearchInput) {
             elRecipientSearchInput.focus();
         }
-        fetchRecipientAccounts();
+        state.recipientPage = 0;
+        fetchRecipientAccounts(false);
     }
 
     function closeRecipientModal() {
@@ -140,8 +150,20 @@
         elRecipientModalBackdrop.hidden = true;
     }
 
-    async function fetchRecipientAccounts() {
+    async function fetchRecipientAccounts(append = false) {
         if (!elRecipientListContainer) return;
+
+        if (!append) {
+            state.recipientPage = 0;
+            state.recipientUsers = [];
+        }
+
+        if (state.recipientAbortController) {
+            try { state.recipientAbortController.abort(); } catch (e) { /* ignore */ }
+        }
+        const abortController = new AbortController();
+        state.recipientAbortController = abortController;
+        const requestSeq = ++state.recipientRequestSeq;
 
         const params = new URLSearchParams();
         if (state.recipientKeyword && state.recipientKeyword.trim() !== '') {
@@ -153,24 +175,40 @@
         if (state.recipientBranchId && String(state.recipientBranchId).trim() !== '') {
             params.set('branchId', String(state.recipientBranchId).trim());
         }
+        params.set('page', String(state.recipientPage));
+        params.set('size', String(state.recipientSize));
 
-        elRecipientListContainer.innerHTML = `
-            <div class="p-4 text-center text-muted small">
-                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                Đang tìm kiếm tài khoản trong cơ sở...
-            </div>
-        `;
+        if (!append) {
+            elRecipientListContainer.innerHTML = `
+                <div class="p-4 text-center text-muted small">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    Đang tìm kiếm tài khoản trong cơ sở...
+                </div>
+            `;
+        }
 
         try {
             const resp = await fetch(`/api/chat/recipients?${params.toString()}`, {
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: abortController.signal
             });
+            if (requestSeq !== state.recipientRequestSeq) return;
             if (!resp.ok) {
                 throw new Error('Không thể tải danh sách tài khoản trong cơ sở.');
             }
+            const hasMoreHeader = resp.headers.get('X-Has-More');
+            const totalCountHeader = resp.headers.get('X-Total-Count');
             const users = await resp.json();
-            renderRecipientList(Array.isArray(users) ? users : []);
+            if (requestSeq !== state.recipientRequestSeq) return;
+
+            const pageItems = Array.isArray(users) ? users : [];
+            state.recipientUsers = append ? state.recipientUsers.concat(pageItems) : pageItems;
+            state.recipientHasMore = hasMoreHeader === 'true';
+            state.recipientTotalCount = totalCountHeader ? Number(totalCountHeader) : state.recipientUsers.length;
+            renderRecipientList(state.recipientUsers);
         } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            if (requestSeq !== state.recipientRequestSeq) return;
             elRecipientListContainer.innerHTML = `
                 <div class="p-4 text-center text-danger small">
                     <i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(err.message || 'Lỗi tải danh sách tài khoản.')}
@@ -201,9 +239,16 @@
             const branchName = u.branchName || 'Cơ sở';
             const subDetails = [
                 u.username ? `@${u.username}` : '',
+                u.patientCode ? `Mã BN: ${u.patientCode}` : '',
                 u.phoneNumber ? `SĐT: ${u.phoneNumber}` : '',
                 u.email || ''
             ].filter(Boolean).join(' • ');
+
+            const profilesBadge = (u.patientProfilesSummary && Number(u.patientProfileCount || 0) > 0)
+                ? `<div class="text-primary text-truncate" style="font-size:11px;margin-top:2px;" title="${escapeHtml(u.patientProfilesSummary)}">
+                       <i class="bi bi-person-vcard me-1"></i>Hồ sơ BN (${Number(u.patientProfileCount)}): ${escapeHtml(u.patientProfilesSummary)}
+                   </div>`
+                : '';
 
             const actionLabel = u.existingConversationId ? 'Mở hội thoại' : 'Nhắn tin';
 
@@ -223,10 +268,21 @@
                             <div class="text-muted text-truncate" style="font-size:11.5px;margin-top:2px;">
                                 ${escapeHtml(subDetails)}
                             </div>
+                            ${profilesBadge}
                         </div>
                     </div>
                     <button type="button" class="btn btn-sm btn-primary fw-semibold px-3 flex-shrink-0" style="border-radius:8px;font-size:12px;">
                         <i class="bi bi-chat-dots-fill me-1"></i>${actionLabel}
+                    </button>
+                </div>
+            `;
+        }
+
+        if (state.recipientHasMore) {
+            html += `
+                <div class="p-2 text-center border-top bg-light">
+                    <button type="button" id="chatLoadMoreRecipientsBtn" class="btn btn-sm btn-outline-primary fw-semibold">
+                        <i class="bi bi-arrow-down-circle me-1"></i>Tải thêm tài khoản (${users.length}/${state.recipientTotalCount})
                     </button>
                 </div>
             `;
@@ -244,6 +300,15 @@
                 }
             });
         });
+
+        const loadMoreBtn = document.getElementById('chatLoadMoreRecipientsBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.recipientPage += 1;
+                fetchRecipientAccounts(true);
+            });
+        }
     }
 
     async function startConversationWithUser(targetUserId, targetBranchId) {
@@ -283,6 +348,13 @@
     // =========================================================================
 
     async function fetchConversations(preserveActiveSelection = true) {
+        if (state.convAbortController) {
+            try { state.convAbortController.abort(); } catch (e) { /* ignore */ }
+        }
+        const abortController = new AbortController();
+        state.convAbortController = abortController;
+        const requestSeq = ++state.convRequestSeq;
+
         const params = new URLSearchParams();
         if (state.keyword && state.keyword.trim() !== '') {
             params.set('keyword', state.keyword.trim());
@@ -301,12 +373,15 @@
 
         try {
             const resp = await fetch(`/api/chat/conversations?${params.toString()}`, {
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: abortController.signal
             });
+            if (requestSeq !== state.convRequestSeq) return;
             if (!resp.ok) {
                 throw new Error('Không thể tải danh sách hội thoại');
             }
             const pageData = await resp.json();
+            if (requestSeq !== state.convRequestSeq) return;
             state.conversations = Array.isArray(pageData.content) ? pageData.content : [];
             state.totalPages = Math.max(Number(pageData.totalPages || 1), 1);
             state.totalElements = Number(pageData.totalElements || state.conversations.length);
@@ -322,6 +397,8 @@
                 selectConversation(state.conversations[0].conversationId);
             }
         } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            if (requestSeq !== state.convRequestSeq) return;
             console.error(err);
             if (elConvList) {
                 elConvList.innerHTML = `
@@ -777,22 +854,22 @@
             }
             state.recipientDebounceTimer = setTimeout(() => {
                 state.recipientKeyword = elRecipientSearchInput.value || '';
-                fetchRecipientAccounts();
-            }, 250);
+                fetchRecipientAccounts(false);
+            }, 350);
         });
     }
 
     if (elRecipientRoleSelect) {
         elRecipientRoleSelect.addEventListener('change', () => {
             state.recipientRole = elRecipientRoleSelect.value || 'ALL';
-            fetchRecipientAccounts();
+            fetchRecipientAccounts(false);
         });
     }
 
     if (elRecipientBranchSelect) {
         elRecipientBranchSelect.addEventListener('change', () => {
             state.recipientBranchId = elRecipientBranchSelect.value || '';
-            fetchRecipientAccounts();
+            fetchRecipientAccounts(false);
         });
     }
 
@@ -805,7 +882,7 @@
                 state.keyword = elKeyword.value || '';
                 state.page = 0;
                 fetchConversations(false);
-            }, 280);
+            }, 350);
         });
     }
 

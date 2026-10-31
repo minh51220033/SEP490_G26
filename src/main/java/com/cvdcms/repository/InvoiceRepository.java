@@ -277,5 +277,103 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    @Query(value = """
+        SELECT new com.cvdcms.DTO.PatientDebtSummaryDTO(
+            pp.profileId,
+            pp.patientCode,
+            pp.fullName,
+            pp.phoneNumber,
+            pp.depositBalance,
+            COUNT(i.invoiceId),
+            COALESCE(SUM(i.totalAmount), 0),
+            COALESCE(SUM(i.paidAmount), 0),
+            COALESCE(SUM(i.remainingDebt), 0),
+            MAX(i.issuedAt)
+        )
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:branchId IS NULL OR i.branch.branchId = :branchId)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+        GROUP BY pp.profileId, pp.patientCode, pp.fullName, pp.phoneNumber, pp.depositBalance
+        ORDER BY MAX(i.issuedAt) DESC
+    """, countQuery = """
+        SELECT COUNT(DISTINCT pp.profileId)
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:branchId IS NULL OR i.branch.branchId = :branchId)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+    """)
+    Page<com.cvdcms.DTO.PatientDebtSummaryDTO> findPatientDebtsByBranch(
+            @Param("branchId") Long branchId,
+            @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT new com.cvdcms.DTO.PatientDebtSummaryDTO(
+            pp.profileId,
+            pp.patientCode,
+            pp.fullName,
+            pp.phoneNumber,
+            pp.depositBalance,
+            COUNT(i.invoiceId),
+            COALESCE(SUM(i.totalAmount), 0),
+            COALESCE(SUM(i.paidAmount), 0),
+            COALESCE(SUM(i.remainingDebt), 0),
+            MAX(i.issuedAt)
+        )
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (i.branch.branchId IN :branchIds)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+        GROUP BY pp.profileId, pp.patientCode, pp.fullName, pp.phoneNumber, pp.depositBalance
+        ORDER BY MAX(i.issuedAt) DESC
+    """, countQuery = """
+        SELECT COUNT(DISTINCT pp.profileId)
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (i.branch.branchId IN :branchIds)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+    """)
+    Page<com.cvdcms.DTO.PatientDebtSummaryDTO> findPatientDebtsByBranches(
+            @Param("branchIds") List<Long> branchIds,
+            @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }
 

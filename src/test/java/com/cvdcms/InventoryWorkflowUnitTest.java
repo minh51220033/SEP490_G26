@@ -437,4 +437,111 @@ class InventoryWorkflowUnitTest {
         assertEquals(new BigDecimal("3000000.00"), summary.get("totalSupplierDebt"));
         assertEquals(1L, summary.get("suppliersWithDebtCount"));
     }
+
+    @Test
+    void testStockReceiptTotalQuantityHelper() {
+        StockReceiptResponseDTO dto = new StockReceiptResponseDTO();
+        assertEquals(BigDecimal.ZERO, dto.getTotalQuantity());
+
+        StockReceiptResponseDTO.ItemDetail it1 = new StockReceiptResponseDTO.ItemDetail();
+        it1.setQuantity(new BigDecimal("12.500"));
+        StockReceiptResponseDTO.ItemDetail it2 = new StockReceiptResponseDTO.ItemDetail();
+        it2.setQuantity(new BigDecimal("7.500"));
+
+        dto.setItems(List.of(it1, it2));
+        assertEquals(new BigDecimal("20.000"), dto.getTotalQuantity());
+    }
+
+    @Test
+    void testPrintPreviewEndpoints_AllThreeOperations() {
+        com.cvdcms.controller.InventoryPageController pageController =
+                new com.cvdcms.controller.InventoryPageController(receiptService, issueService);
+
+        User user = new User();
+        user.setUserId(1L);
+        user.setUsername("kho_user");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", user);
+        session.setAttribute("roleNames", List.of("QUAN_LY_KHO"));
+
+        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+
+        // 1. Nhập kho
+        StockReceipt receipt = new StockReceipt();
+        receipt.setReceiptId(100L);
+        receipt.setReceiptCode("PNK-2026-001");
+        receipt.setBranch(branch1);
+        receipt.setSupplier(supplier);
+        receipt.setReceiver(staff);
+        receipt.setReceiptDate(LocalDate.now());
+        receipt.setTotalAmount(new BigDecimal("1000000.00"));
+        when(receiptRepository.findByIdWithDetails(100L)).thenReturn(Optional.of(receipt));
+        when(supplierPaymentRepository.sumPaidAmountByReceipt(100L)).thenReturn(new BigDecimal("1000000.00"));
+        when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
+
+        String receiptView = pageController.printReceiptPage(100L, session, model);
+        assertEquals("inventory/print-receipt", receiptView);
+        assertNotNull(model.get("receipt"));
+        assertNotNull(model.get("printedAt"));
+        assertEquals("inventory", model.get("activeMenu"));
+
+        // 2. Xuất kho thông thường
+        StockIssue issue = new StockIssue();
+        issue.setIssueId(200L);
+        issue.setIssueCode("PXK-2026-001");
+        issue.setBranch(branch1);
+        issue.setIssuer(staff);
+        issue.setIssueType(com.cvdcms.entity.enums.StockIssueType.DISCARD_EXPIRED);
+        issue.setIssueDate(LocalDate.now());
+        when(issueRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(issue));
+
+        org.springframework.ui.ExtendedModelMap modelIssue = new org.springframework.ui.ExtendedModelMap();
+        String issueView = pageController.printIssuePage(200L, session, modelIssue);
+        assertEquals("inventory/print-issue", issueView);
+        assertNotNull(modelIssue.get("issue"));
+
+        // 3. Điều chuyển kho liên chi nhánh
+        StockIssue transfer = new StockIssue();
+        transfer.setIssueId(300L);
+        transfer.setIssueCode("PDC-2026-001");
+        transfer.setBranch(branch1);
+        transfer.setDestinationBranch(branch2);
+        transfer.setIssuer(staff);
+        transfer.setIssueType(com.cvdcms.entity.enums.StockIssueType.TRANSFER);
+        transfer.setIssueDate(LocalDate.now());
+        when(issueRepository.findByIdWithDetails(300L)).thenReturn(Optional.of(transfer));
+
+        // Gọi qua printIssuePage nhận diện TRANSFER -> print-transfer
+        org.springframework.ui.ExtendedModelMap modelTrans1 = new org.springframework.ui.ExtendedModelMap();
+        String transView1 = pageController.printIssuePage(300L, session, modelTrans1);
+        assertEquals("inventory/print-transfer", transView1);
+
+        // Gọi qua printTransferPage trực tiếp
+        org.springframework.ui.ExtendedModelMap modelTrans2 = new org.springframework.ui.ExtendedModelMap();
+        String transView2 = pageController.printTransferPage(300L, session, modelTrans2);
+        assertEquals("inventory/print-transfer", transView2);
+        assertNotNull(modelTrans2.get("issue"));
+    }
+
+    @Test
+    void testPrintPreview_UnauthorizedBranchRejected() {
+        com.cvdcms.controller.InventoryPageController pageController =
+                new com.cvdcms.controller.InventoryPageController(receiptService, issueService);
+
+        User user = new User();
+        user.setUserId(99L);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", user);
+
+        StockReceipt receipt = new StockReceipt();
+        receipt.setReceiptId(101L);
+        receipt.setBranch(branch1);
+        when(receiptRepository.findByIdWithDetails(101L)).thenReturn(Optional.of(receipt));
+        when(accessService.canAccessBranch(99L, 1L)).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pageController.printReceiptPage(101L, session, new org.springframework.ui.ExtendedModelMap()));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
 }

@@ -17,4 +17,5 @@ public class SupplierPaymentCreateDTO {
     private String paymentMethod; // CASH, BANK_TRANSFER
     private String referenceNo;
     private String notes;
+    private String clientRequestId;
 }

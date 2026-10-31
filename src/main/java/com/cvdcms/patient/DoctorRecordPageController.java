@@ -48,6 +48,7 @@ public class DoctorRecordPageController {
         model.addAttribute("photos", records.photos(session, id));
         model.addAttribute("plans", records.plans(session, id));
         model.addAttribute("documents", records.documents(session, id));
+        model.addAttribute("emrRecords", records.emrRecords(session, id));
         shared(model);
         return "patient-records/detail";
     }

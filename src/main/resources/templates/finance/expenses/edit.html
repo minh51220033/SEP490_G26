@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Chỉnh Sửa Phiếu Chi Vận Hành - FT25')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('expenses')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Chỉnh Sửa Phiếu Chi Vận Hành')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh Sửa Phiếu Chi Thủ Công (SCR-25.2)</h1>
+                    <p>Phiếu chi: <strong class="text-primary" th:text="${expense.expenseCode}"></strong> - Tạo bởi: <span th:text="${expense.createdBy != null ? expense.createdBy.fullName : 'Hệ thống'}"></span></p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/expenses}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại danh sách</a>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="fin-card">
+                        <form th:action="@{/expenses/{id}/edit(id=${expense.expenseId})}" th:object="${expenseDTO}" method="post">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="branchId" class="form-label fw-semibold">Cơ sở chi nhánh <span class="text-danger">*</span></label>
+                                    <select id="branchId" th:field="*{branchId}" class="fin-select" required>
+                                        <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                                    </select>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('branchId')}" th:errors="*{branchId}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="category" class="form-label fw-semibold">Danh mục chi phí <span class="text-danger">*</span></label>
+                                    <input type="text" id="category" th:field="*{category}" class="fin-input" list="categoryOptions" required placeholder="Chọn hoặc nhập danh mục">
+                                    <datalist id="categoryOptions">
+                                        <option th:each="c : ${categories}" th:value="${c}"></option>
+                                    </datalist>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="amount" class="form-label fw-semibold">Số tiền chi (VNĐ) <span class="text-danger">*</span></label>
+                                    <input type="number" id="amount" th:field="*{amount}" class="fin-input" min="1000" step="1000" required placeholder="Nhập số tiền...">
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="expenseDate" class="form-label fw-semibold">Ngày thực chi <span class="text-danger">*</span></label>
+                                    <input type="date" id="expenseDate" th:field="*{expenseDate}" class="fin-input" required>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('expenseDate')}" th:errors="*{expenseDate}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="recipientName" class="form-label fw-semibold">Người nhận / Đơn vị thụ hưởng</label>
+                                    <input type="text" id="recipientName" th:field="*{recipientName}" class="fin-input" placeholder="Tên cá nhân hoặc công ty nhận tiền...">
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('recipientName')}" th:errors="*{recipientName}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="paymentMethod" class="form-label fw-semibold">Hình thức thanh toán <span class="text-danger">*</span></label>
+                                    <select id="paymentMethod" th:field="*{paymentMethod}" class="fin-select" required>
+                                        <option th:each="m : ${paymentMethods}" th:value="${m}"
+                                                th:text="${m.name() == 'CASH' ? 'Tiền mặt' : (m.name() == 'BANK_TRANSFER' ? 'Chuyển khoản ngân hàng' : 'Thẻ')}"></option>
+                                    </select>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('paymentMethod')}" th:errors="*{paymentMethod}"></div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="description" class="form-label fw-semibold">Diễn giải nội dung chi phí <span class="text-danger">*</span></label>
+                                    <textarea id="description" th:field="*{description}" class="fin-input" rows="3" required placeholder="Ghi rõ nội dung chi phí..."></textarea>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-3 bg-light rounded border">
+                                        <label for="editReason" class="form-label fw-bold text-danger">Lý do chỉnh sửa chi phí <span class="text-danger">* (Lưu audit)</span></label>
+                                        <input type="text" id="editReason" name="editReason" class="fin-input" required
+                                               placeholder="VD: Điều chỉnh hóa đơn sau khi đối soát, nhập sai số tiền ban đầu...">
+                                        <small class="text-muted d-block mt-1">Thông tin sửa đổi, người sửa và lý do sẽ được lưu vĩnh viễn trong vết kiểm toán (Audit Trail).</small>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 mt-4 d-flex justify-content-end gap-2">
+                                    <a th:href="@{/expenses}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
+                                    <button type="submit" class="fin-btn fin-btn-primary">
+                                        <i class="bi bi-check-lg"></i> Cập nhật phiếu chi
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

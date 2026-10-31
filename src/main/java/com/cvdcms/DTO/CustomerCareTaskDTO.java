@@ -8,9 +8,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
- * DTO trả về thông tin công việc chăm sóc khách hàng (SCR-44.1, SCR-44.2, SCR-44.4, SCR-44.5).
+ * DTO trả về thông tin công việc chăm sóc khách hàng (SCR-44.1, SCR-44.2, SCR-44.4, SCR-44.5)
+ * kèm thông tin liên kết Hồ sơ khám lâm sàng, Chẩn đoán, Lời dặn điều trị (#tab-instructions) và Đơn thuốc.
  */
 @Getter
 @Setter
@@ -38,11 +40,30 @@ public class CustomerCareTaskDTO {
     private String careGroup;
     private String careGroupLabel;
 
-    // Thông tin hồ sơ gốc liên kết (Ca khám, Lịch hẹn, Đơn thuốc)
+    // Thông tin hồ sơ gốc liên kết (Ca khám, Khám lâm sàng, Chẩn đoán, Lời dặn điều trị, Lịch hẹn, Đơn thuốc)
     private Long visitId;
     private String visitCode;
     private LocalDateTime visitCheckInAt;
     private String visitSymptoms;
+    private String visitStatus;
+    private String visitNotes;
+
+    private Long doctorId;
+    private String doctorCode;
+    private String doctorName;
+
+    private Long examId;
+    private LocalDateTime examTime;
+    private String chiefComplaint;
+    private String summaryAssessment;
+    private String diagnosisSummary;
+    private String treatmentInstructions;
+    private String prescriptionSummary;
+    private LocalDate followupDate;
+    private String examinationDetailUrl;
+
+    private List<Map<String, Object>> diagnoses = new ArrayList<>();
+    private List<Map<String, Object>> prescriptionItems = new ArrayList<>();
 
     private Long appointmentId;
     private String appointmentCode;

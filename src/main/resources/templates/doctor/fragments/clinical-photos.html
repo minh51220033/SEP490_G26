@@ -7,9 +7,9 @@
 <!-- Frontend Fragment: doctor/fragments/clinical-photos.html                  -->
 <!-- ========================================================================= -->
 <div th:fragment="clinicalPhotosSection">
-    <div class="df-foldable-bar" id="bar-photos" onclick="toggleMainBar('photos')">
+    <div class="df-foldable-bar is-expanded" id="bar-photos" onclick="toggleMainBar('photos')">
         <div class="d-flex align-items-center">
-            <i class="bi bi-chevron-right df-foldable-chevron text-secondary" id="chevron-photos"></i>
+            <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-photos"></i>
             <span class="df-foldable-title">FILM ẢNH &amp; THEO DÕI LÂM SÀNG</span>
             <span class="df-foldable-subtitle d-none d-md-inline">(Kho ảnh trước/sau FT17, đối chiếu Before/After slider)</span>
         </div>
@@ -17,11 +17,15 @@
             <span class="badge bg-light text-primary border small" id="foldablePhotoCountBadge">
                 <span th:text="${photoStats != null ? photoStats.get('total') : 0} + ' ảnh'">0 ảnh</span>
             </span>
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold text-white shadow-sm ms-2"
+                    onclick="event.stopPropagation(); openUploadPhotoModal()">
+                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Tải ảnh mới
+            </button>
         </div>
     </div>
 
-    <div class="df-foldable-content" id="content-photos" style="display: none;">
-        <div class="p-3 p-md-4 bg-white border-bottom" id="clinicalPhotosSection">
+    <div class="df-foldable-content" id="content-photos" style="display: block;">
+        <div class="p-3 p-md-4 bg-white border-bottom" id="clinicalPhotosSection" style="min-height: calc(85vh - 120px); border-radius: 0 0 14px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
             <!-- TOOLBAR LỌC ẢNH (SCR-17.1) -->
             <div class="df-photo-toolbar">
                 <div class="df-photo-pill-group">
@@ -45,16 +49,27 @@
                     </button>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
-                    <label class="small text-muted fw-semibold">Góc chụp:</label>
-                    <select class="form-select form-select-sm" id="photoCategorySelect" style="width: 170px;" onchange="filterPhotosCategory(this.value)">
-                        <option value="ALL">Tất cả góc chụp</option>
-                        <option value="SMILE">Nụ cười (Smile)</option>
-                        <option value="INTRAORAL">Trong miệng (Intraoral)</option>
-                        <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
-                        <option value="EXTRAORAL">Mặt ngoài (Extraoral)</option>
-                        <option value="OTHER">Khác (Other)</option>
-                    </select>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted fw-semibold">Góc chụp:</label>
+                        <select class="form-select form-select-sm" id="photoCategorySelect" style="width: 170px;" onchange="filterPhotosCategory(this.value)">
+                            <option value="ALL">Tất cả góc chụp</option>
+                            <option value="SMILE">Nụ cười (Smile)</option>
+                            <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                            <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                            <option value="EXTRAORAL">Mặt ngoài (Extraoral)</option>
+                            <option value="OTHER">Khác (Other)</option>
+                        </select>
+                    </div>
+
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Kích thước hiển thị ảnh">
+                        <button type="button" class="btn btn-outline-secondary active fw-semibold" id="btnGridLarge" onclick="setPhotoGridSize('large')" title="Hiển thị ảnh lớn rộng rãi">
+                            <i class="bi bi-grid-fill me-1"></i> Ảnh lớn
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary fw-semibold" id="btnGridMedium" onclick="setPhotoGridSize('medium')" title="Hiển thị ảnh vừa">
+                            <i class="bi bi-grid-3x3-gap-fill me-1"></i> Ảnh vừa
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -103,13 +118,27 @@
             </div>
 
             <!-- EMPTY STATE NẾU CHƯA CÓ ẢNH HOẶC KHÔNG KHỚP LỌC -->
-            <div class="df-photos-empty mt-3" id="clinicalPhotoEmptyState" th:style="${clinicalPhotos == null or clinicalPhotos.isEmpty()} ? 'display: block;' : 'display: none;'">
-                <i class="bi bi-camera text-secondary fs-1 mb-2 d-block"></i>
-                <h6 class="fw-bold text-dark">Chưa có ảnh chụp lâm sàng nào phù hợp</h6>
-                <p class="text-muted small mb-3">Tải lên hình ảnh trước, trong hoặc sau điều trị để theo dõi tiến trình của bệnh nhân.</p>
-                <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3" onclick="openUploadPhotoModal()">
-                    <i class="bi bi-cloud-arrow-up-fill me-1"></i> Tải ảnh ngay
-                </button>
+            <div class="card border rounded-3 text-center my-3" id="clinicalPhotoEmptyState"
+                 th:style="${clinicalPhotos == null or clinicalPhotos.isEmpty()} ? 'display: block;' : 'display: none;'"
+                 style="padding: 70px 24px 90px 24px !important; background: #ffffff; border: 2px dashed #cbd5e1 !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);">
+                <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
+                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                         style="width: 88px; height: 88px; background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border: 2px dashed #818cf8; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);">
+                        <i class="bi bi-images" style="font-size: 42px; color: #4f46e5;"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-2" id="clinicalPhotoEmptyTitle" style="font-size: 20px; letter-spacing: -0.3px;">
+                        Chưa có ảnh chụp lâm sàng hoặc phim X-quang nào
+                    </h4>
+                    <p class="text-muted mb-4" id="clinicalPhotoEmptySubtitle" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
+                        Lưu trữ hình ảnh nụ cười, khớp cắn, phim chẩn đoán theo từng giai đoạn (Trước / Trong / Sau điều trị) giúp bác sĩ theo dõi trực quan tiến trình và đối chiếu so sánh Before/After sinh động.
+                    </p>
+                    <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                            style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border: none; font-size: 15px;"
+                            onclick="openUploadPhotoModal()">
+                        <i class="bi bi-cloud-arrow-up-fill fs-6"></i>
+                        <span>Tải ảnh lâm sàng mới</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -428,10 +457,48 @@
         const emptyBox = document.getElementById('clinicalPhotoEmptyState');
         if (emptyBox) {
             emptyBox.style.display = (visibleCount === 0) ? 'block' : 'none';
+            const emptyTitle = document.getElementById('clinicalPhotoEmptyTitle');
+            const emptySubtitle = document.getElementById('clinicalPhotoEmptySubtitle');
+            if (emptyTitle && emptySubtitle) {
+                if (cards.length === 0) {
+                    emptyTitle.textContent = 'Chưa có ảnh chụp lâm sàng hoặc phim X-quang nào';
+                    emptySubtitle.textContent = 'Lưu trữ hình ảnh nụ cười, khớp cắn, phim chẩn đoán theo từng giai đoạn (Trước / Trong / Sau điều trị) giúp bác sĩ theo dõi trực quan tiến trình và đối chiếu so sánh Before/After sinh động.';
+                } else if (visibleCount === 0) {
+                    emptyTitle.textContent = 'Không tìm thấy ảnh chụp phù hợp với bộ lọc';
+                    emptySubtitle.textContent = 'Không có ảnh nào khớp với giai đoạn hoặc góc chụp đang chọn. Bác sĩ có thể bấm chọn bộ lọc "Tất cả" hoặc tải thêm ảnh mới.';
+                }
+            }
         }
     }
 
     // Mở Modal Upload ảnh
+        function setPhotoGridSize(size) {
+        const grid = document.getElementById('clinicalPhotoGalleryGrid');
+        const btnL = document.getElementById('btnGridLarge');
+        const btnM = document.getElementById('btnGridMedium');
+        if (!grid) return;
+        if (size === 'medium') {
+            grid.classList.add('is-medium');
+            if (btnM) btnM.classList.add('active');
+            if (btnL) btnL.classList.remove('active');
+            try { localStorage.setItem('df_photo_grid_size', 'medium'); } catch(e){}
+        } else {
+            grid.classList.remove('is-medium');
+            if (btnL) btnL.classList.add('active');
+            if (btnM) btnM.classList.remove('active');
+            try { localStorage.setItem('df_photo_grid_size', 'large'); } catch(e){}
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            const savedSize = localStorage.getItem('df_photo_grid_size');
+            if (savedSize === 'medium') {
+                setPhotoGridSize('medium');
+            }
+        } catch(e){}
+    });
+
     function openUploadPhotoModal() {
         const form = document.getElementById('clinicalPhotoUploadForm');
         if (form) form.reset();

@@ -1,0 +1,418 @@
+﻿/* =========================================================================
+   CV-DCMS — Stylesheet Xem trước và In Phiếu Kho Chuẩn A4
+   Áp dụng cho:
+   1. Phiếu nhập kho (Stock-in)
+   2. Phiếu xuất kho (Stock-out)
+   3. Phiếu điều chuyển kho liên chi nhánh (Stock Transfer)
+   ========================================================================= */
+
+.inventory-preview-page {
+    padding: 20px 24px 48px;
+    background-color: #f8fafc;
+    min-height: calc(100vh - 70px);
+}
+
+/* 1. THANH CÔNG CỤ XEM TRƯỚC (TOOLBAR) */
+.preview-toolbar {
+    max-width: 210mm;
+    margin: 0 auto 20px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.preview-toolbar__left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.preview-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.preview-badge-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 700;
+}
+
+/* 2. KHU VỰC KHỔ GIẤY A4 (PRINT SHEET CONTAINER) */
+.print-preview-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.print-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff;
+    padding: 16mm 18mm 20mm 18mm;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    font-size: 13.5px;
+    line-height: 1.5;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* 3. ĐẦU TRANG PHÒNG KHÁM */
+.clinic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #0284c7;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+
+.clinic-title {
+    font-size: 16.5px;
+    font-weight: 800;
+    color: #0369a1;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.clinic-sub {
+    font-size: 13px;
+    color: #475569;
+    margin-top: 3px;
+    font-weight: 500;
+}
+
+.clinic-meta {
+    text-align: right;
+    font-size: 12px;
+    color: #475569;
+}
+
+/* 4. TIÊU ĐỀ CHỨNG TỪ */
+.doc-title-wrap {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.doc-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.doc-meta {
+    font-size: 13px;
+    color: #475569;
+    margin-top: 4px;
+}
+
+/* 5. KHUNG THÔNG TIN CHUNG */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #475569;
+    min-width: 130px;
+    flex-shrink: 0;
+}
+
+.info-value {
+    color: #0f172a;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+/* 6. BẢNG DANH SÁCH VẬT TƯ / THUỐC */
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.items-table th, 
+.items-table td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    vertical-align: middle;
+}
+
+.items-table th {
+    background-color: #f1f5f9;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: left;
+}
+
+.items-table .text-center {
+    text-align: center !important;
+}
+
+.items-table .text-end {
+    text-align: right !important;
+}
+
+/* 7. KHUNG TỔNG KẾT GIÁ TRỊ & SỐ LƯỢNG */
+.summary-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 26px;
+}
+
+.summary-box {
+    width: 360px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 12px 16px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13.5px;
+    color: #334155;
+}
+
+.summary-row.total {
+    border-top: 1px dashed #cbd5e1;
+    margin-top: 6px;
+    padding-top: 8px;
+    font-weight: 700;
+    font-size: 14.5px;
+    color: #0f172a;
+}
+
+/* 8. KHU VỰC CHỮ KÝ ĐIỆN TỬ */
+.sig-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 24px;
+    text-align: center;
+}
+
+.sig-title {
+    font-weight: 700;
+    font-size: 13.5px;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.sig-sub {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+    margin-bottom: 8px;
+}
+
+.sig-box {
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    border: 1px dashed #e2e8f0;
+    border-radius: 6px;
+    background: #fafbfc;
+}
+
+.sig-box img {
+    max-height: 96px;
+    max-width: 220px;
+    object-fit: contain;
+}
+
+.sig-unsigned {
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.sig-name {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #0f172a;
+}
+
+.sig-time {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* =========================================================================
+   9. THIẾT LẬP CHẾ ĐỘ IN ẤN BẰNG @MEDIA PRINT (A4 CHUẨN)
+   ========================================================================= */
+@media print {
+    /* Ẩn triệt để tất cả các thành phần giao diện không thuộc chứng từ */
+    .no-print,
+    .app-sidebar,
+    .app-sidebar-backdrop,
+    .app-topbar,
+    .preview-toolbar,
+    .cvdcms-chat-widget,
+    #cvdcmsFloatingChatWidget,
+    footer,
+    header,
+    aside,
+    nav {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Đặt nền và lề giấy in */
+    html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-family: 'Times New Roman', 'Segoe UI', Arial, sans-serif !important;
+        font-size: 11pt !important;
+    }
+
+    .app-shell, 
+    .app-main, 
+    .app-content, 
+    .inventory-preview-page, 
+    .print-preview-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        background: transparent !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 12mm 15mm 15mm 15mm;
+    }
+
+    .print-sheet {
+        width: 100% !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        background: #ffffff !important;
+        font-size: 11pt !important;
+    }
+
+    .clinic-header {
+        border-bottom: 2px solid #000000 !important;
+    }
+
+    .clinic-title {
+        color: #000000 !important;
+    }
+
+    .doc-title {
+        color: #000000 !important;
+    }
+
+    .info-grid {
+        border: 1px solid #333333 !important;
+        background: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .info-label {
+        color: #333333 !important;
+    }
+
+    .info-value {
+        color: #000000 !important;
+    }
+
+    /* Bảng và ngắt trang */
+    table.items-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto !important;
+    }
+
+    table.items-table thead {
+        display: table-header-group !important; /* Lặp lại header bảng ở trang mới */
+    }
+
+    table.items-table tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
+    }
+
+    table.items-table th, 
+    table.items-table td {
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+        padding: 5px 6px !important;
+        font-size: 10pt !important;
+    }
+
+    table.items-table th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .summary-wrap, 
+    .summary-box {
+        page-break-inside: avoid !important;
+        border: 1px solid #333333 !important;
+    }
+
+    .sig-grid {
+        page-break-inside: avoid !important; /* Giữ chữ ký và người ký không bị ngắt đôi trang */
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 20px !important;
+        margin-top: 25px !important;
+    }
+
+    .sig-box {
+        border: 1px dashed #999999 !important;
+        background: transparent !important;
+    }
+}

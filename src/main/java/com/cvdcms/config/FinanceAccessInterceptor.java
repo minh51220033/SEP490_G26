@@ -95,6 +95,16 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
+            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng
+            if (uri.contains("/payroll/commission-config")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền truy cập hoặc chỉnh sửa cấu hình hoa hồng.");
+                return false;
+            }
+            if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền phê duyệt hoặc từ chối tạm ứng lương.");
+                return false;
+            }
+
             // Kiểm tra tham số branchId nếu có trên URL hoặc form
             String branchIdParam = request.getParameter("branchId");
             if (branchIdParam != null && !branchIdParam.trim().isEmpty()) {

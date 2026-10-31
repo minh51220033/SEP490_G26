@@ -6,6 +6,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.service.MembershipTierService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,7 +29,7 @@ public class AdminMembershipTierController {
         this(membershipTierService, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public AdminMembershipTierController(MembershipTierService membershipTierService, com.cvdcms.repository.UserRepository userRepository) {
         this.membershipTierService = membershipTierService;
         this.userRepository = userRepository;
