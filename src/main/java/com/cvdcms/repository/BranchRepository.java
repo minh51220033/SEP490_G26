@@ -74,4 +74,30 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     List<Branch> findAccessibleBranchesByUserId(
             @Param("userId") Long userId
     );
+
+    /**
+     * Đếm tổng số bản ghi nghiệp vụ liên quan đến chi nhánh.
+     * Dùng để kiểm tra xem chi nhánh có thể xóa an toàn khi tạo nhầm hay không.
+     */
+    @Query(value = """
+        SELECT (
+            (SELECT COUNT(*) FROM rooms WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM dental_chairs WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM staff_branch_assignments WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM staff_schedules WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM appointments WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM visits WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM invoices WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM payments WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM prescriptions WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM treatment_plans WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM queue_tickets WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM attendance_records WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM branch_inventory WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM stock_receipts WHERE branch_id = :branchId) +
+            (SELECT COUNT(*) FROM stock_issues WHERE branch_id = :branchId OR destination_branch_id = :branchId) +
+            (SELECT COUNT(*) FROM users WHERE branch_id = :branchId)
+        )
+    """, nativeQuery = true)
+    long countOperationalReferences(@Param("branchId") Long branchId);
 }

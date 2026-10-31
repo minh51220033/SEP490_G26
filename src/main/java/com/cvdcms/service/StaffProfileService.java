@@ -67,9 +67,26 @@ public class StaffProfileService {
     // Tìm kiếm theo Mã NV / Họ tên / CCCD / SĐT và lọc theo chuyên khoa, trạng thái, chi nhánh.
     @Transactional(readOnly = true)
     public List<StaffProfile> searchStaff(String keyword, String specialty, StaffStatus status, Long branchId) {
+        return searchStaff(keyword, specialty, status, branchId, null, null, null, null, null);
+    }
+
+    // Tra cứu nâng cao theo từ khóa, chuyên khoa, trạng thái, chi nhánh, vị trí công việc, CCHN, vai trò, sắp xếp
+    @Transactional(readOnly = true)
+    public List<StaffProfile> searchStaff(
+            String keyword,
+            String specialty,
+            StaffStatus status,
+            Long branchId,
+            String positionTitle,
+            String hasLicense,
+            Long roleId,
+            String sort,
+            String direction) {
+
         String kw = trimToNull(keyword);
         String kwLower = kw == null ? null : kw.toLowerCase(Locale.ROOT);
         String spec = trimToNull(specialty);
+        String pos = trimToNull(positionTitle);
 
         Set<Long> staffInBranch = null;
         if (branchId != null) {
@@ -79,9 +96,18 @@ public class StaffProfileService {
             }
         }
 
+        Set<Long> staffWithRole = null;
+        if (roleId != null) {
+            staffWithRole = new HashSet<>();
+            for (StaffBranchAssignment a : assignmentRepository.findAllByStatus(AssignmentStatus.ACTIVE)) {
+                if (a.getRole() != null && roleId.equals(a.getRole().getRoleId())) {
+                    staffWithRole.add(a.getStaff().getStaffId());
+                }
+            }
+        }
+
         List<StaffProfile> result = new ArrayList<>();
         for (StaffProfile s : staffRepository.findAllByOrderByStaffCodeAsc()) {
-            // Loại bỏ hoàn toàn hồ sơ gắn với tài khoản Admin hoặc mang vai trò Quản trị hệ thống (dữ liệu test cũ)
             if (s.getUser() != null && isPureAdminUser(s.getUser())) {
                 continue;
             }
@@ -98,14 +124,54 @@ public class StaffProfileService {
             if (spec != null && !spec.equalsIgnoreCase(s.getSpecialty())) {
                 continue;
             }
+            if (pos != null && !pos.equalsIgnoreCase(s.getPositionTitle())) {
+                continue;
+            }
             if (status != null && s.getStatus() != status) {
                 continue;
             }
             if (staffInBranch != null && !staffInBranch.contains(s.getStaffId())) {
                 continue;
             }
+            if (staffWithRole != null && !staffWithRole.contains(s.getStaffId())) {
+                continue;
+            }
+            if ("YES".equalsIgnoreCase(hasLicense) && (s.getPracticeLicenseNo() == null || s.getPracticeLicenseNo().isBlank())) {
+                continue;
+            }
+            if ("NO".equalsIgnoreCase(hasLicense) && (s.getPracticeLicenseNo() != null && !s.getPracticeLicenseNo().isBlank())) {
+                continue;
+            }
             result.add(s);
         }
+
+        // Sắp xếp
+        if ("fullName".equalsIgnoreCase(sort)) {
+            result.sort((a, b) -> {
+                String nameA = a.getFullName() != null ? a.getFullName() : "";
+                String nameB = b.getFullName() != null ? b.getFullName() : "";
+                return "desc".equalsIgnoreCase(direction) ? nameB.compareToIgnoreCase(nameA) : nameA.compareToIgnoreCase(nameB);
+            });
+        } else if ("createdAt".equalsIgnoreCase(sort)) {
+            result.sort((a, b) -> {
+                java.time.LocalDateTime tA = a.getCreatedAt() != null ? a.getCreatedAt() : java.time.LocalDateTime.MIN;
+                java.time.LocalDateTime tB = b.getCreatedAt() != null ? b.getCreatedAt() : java.time.LocalDateTime.MIN;
+                return "desc".equalsIgnoreCase(direction) ? tB.compareTo(tA) : tA.compareTo(tB);
+            });
+        } else if ("positionTitle".equalsIgnoreCase(sort)) {
+            result.sort((a, b) -> {
+                String pA = a.getPositionTitle() != null ? a.getPositionTitle() : "";
+                String pB = b.getPositionTitle() != null ? b.getPositionTitle() : "";
+                return "desc".equalsIgnoreCase(direction) ? pB.compareToIgnoreCase(pA) : pA.compareToIgnoreCase(pB);
+            });
+        } else {
+            result.sort((a, b) -> {
+                String cA = a.getStaffCode() != null ? a.getStaffCode() : "";
+                String cB = b.getStaffCode() != null ? b.getStaffCode() : "";
+                return "desc".equalsIgnoreCase(direction) ? cB.compareToIgnoreCase(cA) : cA.compareToIgnoreCase(cB);
+            });
+        }
+
         return result;
     }
 
@@ -130,6 +196,11 @@ public class StaffProfileService {
     @Transactional(readOnly = true)
     public List<String> getSpecialties() {
         return staffRepository.findDistinctSpecialties();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getPositionTitles() {
+        return staffRepository.findDistinctPositionTitles();
     }
 
     // Các phân công đang hiệu lực gom theo nhân viên - để hiển thị chi nhánh/vai trò trong danh sách.

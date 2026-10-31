@@ -104,7 +104,7 @@
                                 <select id="roleId" class="form-select" th:field="*{roleId}" required>
                                     <option value="">-- Chọn vai trò --</option>
                                     <option th:each="r : ${roles}"
-                                        th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN'}"
+                                        th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and (r.isActive == null or r.isActive)}"
                                         th:data-role-name="${r.roleName}" th:value="${r.roleId}"
                                         th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
                                 </select>

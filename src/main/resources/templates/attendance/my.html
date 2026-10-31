@@ -80,7 +80,10 @@
                         <div th:each="s : ${todayShifts}" class="checkin-shift">
                             <div>
                                 <strong th:text="${s.shift.shiftName}">Ca sáng</strong>
-                                <div class="staff-sub" th:text="${s.branch.branchName}">Chi nhánh</div>
+                                <div class="staff-sub" th:classappend="${!s.branch.isActive} ? 'text-danger' : ''">
+                                    <span th:text="${s.branch.branchName}">Chi nhánh</span>
+                                    <span th:if="${!s.branch.isActive}" class="badge bg-danger ms-1">Đã ngừng hoạt động</span>
+                                </div>
                             </div>
                             <span th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">08:00 - 12:00</span>
                         </div>
