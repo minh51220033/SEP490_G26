@@ -47,62 +47,53 @@
             <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ theo Quản lý nhân sự) -->
             <section class="staff-toolbar-card">
                 <form th:action="@{/accounts}" method="get" id="accountFilterForm" class="staff-toolbar-form">
-                    <!-- Bên trái: Tìm kiếm gọn + Dropdowns nhanh -->
+                    <!-- Bên trái: Tìm kiếm gọn + Dropdowns hay dùng nhất trên màn chính -->
                     <div class="staff-toolbar-left">
-                        <!-- Ô tìm kiếm làm ngắn gọn -->
+                        <!-- 1. Ô tìm kiếm tài khoản -->
                         <div class="staff-search-box-compact">
                             <i class="bi bi-search"></i>
                             <input type="text" id="keyword" name="keyword" th:value="${keyword}"
                                    class="form-control" placeholder="Tìm kiếm tài khoản...">
                         </div>
 
-                        <!-- Dropdown Trạng thái -->
+                        <!-- 2. Dropdown Trạng thái (hay dùng nhất) -->
                         <div>
                             <select id="active" name="active" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
                                 <option value="">Trạng thái: Tất cả</option>
                                 <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Hoạt động</option>
                                 <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Đã khóa</option>
-                                </select>
-                            </div>
-
-                        <!-- Dropdown Chi nhánh -->
-                        <div>
-                            <select id="branchId" name="branchId" class="form-select staff-select-compact" aria-label="Chi nhánh" onchange="this.form.submit()">
-                                <option value="">Chi nhánh: Tất cả</option>
-                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                        th:selected="${selectedBranch != null and selectedBranch == b.branchId}">
-                                </option>
                             </select>
                         </div>
 
-                        <!-- Dropdown Vai trò -->
-                        <div>
-                            <select id="roleId" name="roleId" class="form-select staff-select-compact" aria-label="Vai trò" onchange="this.form.submit()">
-                                <option value="">Vai trò: Tất cả</option>
-                                <option th:each="r : ${roles}"
-                                        th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN'}"
-                                        th:value="${r.roleId}"
-                                        th:text="${r.displayName != null ? r.displayName : r.roleName}"
-                                        th:selected="${selectedRole != null and selectedRole == r.roleId}">
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Ẩn các trường lọc nâng cao & phân trang -->
+                        <!-- Ẩn các trường lọc nâng cao & phân trang (chuyển vào popup Lọc nâng cao) -->
+                        <input type="hidden" id="roleIdInput" name="roleId" th:value="${selectedRole}">
+                        <input type="hidden" id="branchIdInput" name="branchId" th:value="${selectedBranch}">
                         <input type="hidden" id="userType" name="userType" th:value="${selectedUserType}">
                         <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
                         <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
                         <input type="hidden" id="sortInput" name="sort" th:value="${sort}">
                         <input type="hidden" id="directionInput" name="direction" th:value="${direction}">
 
-                        <!-- Nút Lọc nâng cao -->
-                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                        <!-- 3. Nút Lọc nâng cao (có badge hiển thị số lượng tiêu chí đang lọc) -->
+                        <button type="button" class="btn btn-secondary-custom btn-vua position-relative" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
                             <i class="bi bi-funnel"></i> Lọc nâng cao
-                            <span th:if="${selectedUserType != null and selectedUserType != ''}" class="filter-badge-count">1</span>
+                            <span th:if="${(selectedRole != null) or (selectedBranch != null) or (selectedUserType != null and selectedUserType != '')}"
+                                  class="filter-badge-count ms-1"
+                                  th:text="${(selectedRole != null ? 1 : 0) + (selectedBranch != null ? 1 : 0) + (selectedUserType != null and selectedUserType != '' ? 1 : 0)}">
+                                1
+                            </span>
                         </button>
+
+                        <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
+                        <a th:if="${(keyword != null and keyword != '') or selectedActive != null or selectedRole != null or selectedBranch != null or (selectedUserType != null and selectedUserType != '')}"
+                           th:href="@{/accounts}"
+                           class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                           title="Xóa tất cả bộ lọc">
+                            <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                        </a>
                     </div>
 
-                    <!-- Bên phải: Nút Vai trò & Phân quyền + Nút Thêm mới + Bánh răng Tùy chỉnh cột -->
+                    <!-- Bên phải: Nút Vai trò & Phân quyền + Nút Thêm mới + Bánh răng Tùy chỉnh cột (Popover xổ dưới bánh răng) -->
                     <div class="staff-toolbar-right">
                         <a th:href="@{/accounts/roles}" class="btn btn-secondary-custom btn-vua text-primary">
                             <i class="bi bi-shield-lock me-1"></i> Vai trò &amp; Phân quyền
@@ -110,9 +101,106 @@
                         <a th:href="@{/accounts/create}" class="btn btn-primary btn-vua">
                             <i class="bi bi-plus-lg"></i> Thêm mới
                         </a>
-                        <button type="button" class="btn-icon-square" data-bs-toggle="offcanvas" data-bs-target="#customColumnDrawer" title="Tùy chỉnh cột">
-                            <i class="bi bi-gear"></i>
-                        </button>
+
+                        <!-- Bánh răng mở Dropdown Tùy chỉnh cột (Xổ xuống ngay bên dưới bánh răng, không làm đen màn hình) -->
+                        <div class="custom-col-dropdown position-relative d-inline-block">
+                            <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                <i class="bi bi-gear"></i>
+                            </button>
+
+                            <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG (Không làm đen màn hình) -->
+                            <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                <div class="custom-column-header">
+                                    <h6 class="custom-column-title">
+                                        <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                    </h6>
+                                    <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                </div>
+
+                                <!-- Ô tìm kiếm tên trường -->
+                                <div class="custom-column-search">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                        <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                    </div>
+                                </div>
+
+                                <!-- Tiêu đề danh sách cột -->
+                                <div class="custom-column-table-head">
+                                    <div class="flex-grow-1">Tên trường</div>
+                                </div>
+
+                                <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả (cuộn nội bộ) -->
+                                <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                    <!-- 1. STT -->
+                                    <div class="custom-col-item" data-col-target="stt">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                        <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                    </div>
+
+                                    <!-- 2. Tài khoản -->
+                                    <div class="custom-col-item" data-col-target="username">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-username" checked>
+                                        <label for="chk-col-username" class="custom-col-name">Tài khoản</label>
+                                    </div>
+
+                                    <!-- 3. Họ và tên -->
+                                    <div class="custom-col-item" data-col-target="fullname">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-fullname" checked>
+                                        <label for="chk-col-fullname" class="custom-col-name">Họ và tên</label>
+                                    </div>
+
+                                    <!-- 4. Thông tin liên hệ -->
+                                    <div class="custom-col-item" data-col-target="contact">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-contact" checked>
+                                        <label for="chk-col-contact" class="custom-col-name">Thông tin liên hệ</label>
+                                    </div>
+
+                                    <!-- 5. Vai trò -->
+                                    <div class="custom-col-item" data-col-target="role">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-role" checked>
+                                        <label for="chk-col-role" class="custom-col-name">Vai trò</label>
+                                    </div>
+
+                                    <!-- 6. Loại tài khoản -->
+                                    <div class="custom-col-item" data-col-target="type">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-type" checked>
+                                        <label for="chk-col-type" class="custom-col-name">Loại tài khoản</label>
+                                    </div>
+
+                                    <!-- 7. Chi nhánh -->
+                                    <div class="custom-col-item" data-col-target="branch">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+                                        <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
+                                    </div>
+
+                                    <!-- 8. Trạng thái -->
+                                    <div class="custom-col-item" data-col-target="status">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                        <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                    </div>
+                                </div>
+
+                                <!-- Nút Thao tác Footer -->
+                                <div class="custom-column-footer">
+                                    <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                        Lấy lại mặc định
+                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                        <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </section>
@@ -260,42 +348,13 @@
                                 <span th:unless="${account.branch != null}" class="text-muted small">—</span>
                             </td>
 
-                            <!-- 8. Trạng thái + Floating Actions on Hover (Chuẩn MISA) -->
+                            <!-- 8. Trạng thái -->
                             <td data-col="status">
                                 <span class="misa-status-badge"
                                       th:classappend="${account.isActive} ? 'misa-status-badge--active' : 'misa-status-badge--inactive'"
                                       th:text="${account.isActive} ? 'Hoạt động' : 'Đã khóa'">
                                     Hoạt động
                                 </span>
-
-                                <!-- Các icon thao tác xuất hiện khi di chuột đến dòng -->
-                                <div class="staff-row-floating-actions">
-                                    <a th:href="@{/accounts/{id}(id=${account.userId})}"
-                                       class="staff-action-icon-btn btn-view"
-                                       data-bs-toggle="tooltip"
-                                       data-bs-placement="top"
-                                       title="Xem chi tiết">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a th:href="@{/accounts/{id}/edit(id=${account.userId})}"
-                                       class="staff-action-icon-btn btn-edit"
-                                       data-bs-toggle="tooltip"
-                                       data-bs-placement="top"
-                                       title="Chỉnh sửa">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form th:action="@{/accounts/{id}/toggle-status(id=${account.userId})}" method="post" class="d-inline"
-                                          onsubmit="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản này?');">
-                                        <button type="submit" class="staff-action-icon-btn"
-                                                th:disabled="${session.loggedInUser != null and session.loggedInUser.userId == account.userId}"
-                                                th:classappend="${account.isActive} ? 'text-danger' : 'text-success'"
-                                                data-bs-toggle="tooltip"
-                                                data-bs-placement="top"
-                                                th:title="${account.isActive} ? 'Khóa tài khoản' : 'Mở khóa tài khoản'">
-                                            <i class="bi" th:classappend="${account.isActive} ? 'bi-lock' : 'bi-unlock'"></i>
-                                        </button>
-                                    </form>
-                                </div>
                             </td>
                         </tr>
 
@@ -323,6 +382,20 @@
                         </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS Table) -->
+                <div id="tableHoverFloatingActions" class="staff-row-floating-actions-bar">
+                    <a id="btnFloatingView" href="#"
+                       class="staff-action-icon-btn btn-view"
+                       title="Xem chi tiết">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a id="btnFloatingEdit" href="#"
+                       class="staff-action-icon-btn btn-edit"
+                       title="Chỉnh sửa">
+                        <i class="bi bi-pencil"></i>
+                    </a>
                 </div>
 
                 <!-- FOOTER PHÂN TRANG CHUẨN MISA (Đồng bộ Quản lý nhân sự) -->
@@ -391,108 +464,43 @@
     </div>
 </div>
 
-<!-- ==================== POPUP 1: DRAWER TÙY CHỈNH CỘT (MISA AMIS STYLE) ==================== -->
-<div class="offcanvas offcanvas-end custom-column-offcanvas" tabindex="-1" id="customColumnDrawer" aria-labelledby="customColumnDrawerLabel">
-    <div class="custom-column-header">
-        <h5 class="custom-column-title" id="customColumnDrawerLabel">Tùy chỉnh cột</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
-    </div>
-
-    <!-- Ô tìm kiếm tên trường -->
-    <div class="custom-column-search">
-        <div class="input-group input-group-sm">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
-        </div>
-    </div>
-
-    <!-- Tiêu đề danh sách cột -->
-    <div class="custom-column-table-head">
-        <div class="flex-grow-1">Tên trường</div>
-    </div>
-
-    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
-    <div class="offcanvas-body p-0" id="customColList">
-        <!-- 1. STT -->
-        <div class="custom-col-item" data-col-target="stt">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
-            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
-        </div>
-
-        <!-- 2. Tài khoản -->
-        <div class="custom-col-item" data-col-target="username">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-username" checked>
-            <label for="chk-col-username" class="custom-col-name">Tài khoản</label>
-        </div>
-
-        <!-- 3. Họ và tên -->
-        <div class="custom-col-item" data-col-target="fullname">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-fullname" checked>
-            <label for="chk-col-fullname" class="custom-col-name">Họ và tên</label>
-        </div>
-
-        <!-- 4. Thông tin liên hệ -->
-        <div class="custom-col-item" data-col-target="contact">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-contact" checked>
-            <label for="chk-col-contact" class="custom-col-name">Thông tin liên hệ</label>
-        </div>
-
-        <!-- 5. Vai trò -->
-        <div class="custom-col-item" data-col-target="role">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-role" checked>
-            <label for="chk-col-role" class="custom-col-name">Vai trò</label>
-        </div>
-
-        <!-- 6. Loại tài khoản -->
-        <div class="custom-col-item" data-col-target="type">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-type" checked>
-            <label for="chk-col-type" class="custom-col-name">Loại tài khoản</label>
-        </div>
-
-        <!-- 7. Chi nhánh -->
-        <div class="custom-col-item" data-col-target="branch">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
-            <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
-        </div>
-
-        <!-- 8. Trạng thái -->
-        <div class="custom-col-item" data-col-target="status">
-            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
-            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
-        </div>
-    </div>
-
-    <!-- Nút Thao tác Footer Drawer -->
-    <div class="custom-column-footer">
-        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
-            Lấy lại mặc định
-        </button>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="offcanvas">Hủy</button>
-            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO ==================== -->
+<!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO (CHI TIẾT ĐẦY ĐỦ) ==================== -->
 <div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="advancedFilterModalLabel">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="advancedFilterModalLabel">
                     <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                <!-- 1. Vai trò -->
+                <div class="mb-3">
+                    <label for="advRoleId" class="form-label small fw-semibold text-muted">Vai trò</label>
+                    <select id="advRoleId" class="form-select">
+                        <option value="">Tất cả vai trò</option>
+                        <option th:each="r : ${roles}"
+                                th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN'}"
+                                th:value="${r.roleId}"
+                                th:text="${r.displayName != null ? r.displayName : r.roleName}"
+                                th:selected="${selectedRole != null and selectedRole == r.roleId}">
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 2. Chi nhánh -->
+                <div class="mb-3">
+                    <label for="advBranchId" class="form-label small fw-semibold text-muted">Chi nhánh</label>
+                    <select id="advBranchId" class="form-select">
+                        <option value="">Tất cả chi nhánh</option>
+                        <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                th:selected="${selectedBranch != null and selectedBranch == b.branchId}">
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 3. Loại tài khoản -->
                 <div class="mb-3">
                     <label for="advUserType" class="form-label small fw-semibold text-muted">Loại tài khoản</label>
                     <select id="advUserType" class="form-select">
@@ -502,6 +510,7 @@
                     </select>
                 </div>
 
+                <!-- 4. Sắp xếp theo & Thứ tự -->
                 <div class="row g-2">
                     <div class="col-6">
                         <label for="advSort" class="form-label small fw-semibold text-muted">Sắp xếp theo</label>
@@ -521,7 +530,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
+            <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
                 <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
                     Đặt lại
                 </button>
@@ -560,18 +569,25 @@
             });
         }
 
-        // 3. Xử lý Bộ lọc nâng cao (Modal)
+        // 3. Xử lý Bộ lọc nâng cao (Modal chi tiết)
         const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
         const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+        const advRoleId = document.getElementById('advRoleId');
+        const advBranchId = document.getElementById('advBranchId');
         const advUserType = document.getElementById('advUserType');
         const advSort = document.getElementById('advSort');
         const advDirection = document.getElementById('advDirection');
+
+        const roleIdInput = document.getElementById('roleIdInput');
+        const branchIdInput = document.getElementById('branchIdInput');
         const userTypeInput = document.getElementById('userType');
         const sortInput = document.getElementById('sortInput');
         const directionInput = document.getElementById('directionInput');
 
         if (btnApplyAdv) {
             btnApplyAdv.addEventListener('click', function () {
+                if (roleIdInput && advRoleId) roleIdInput.value = advRoleId.value;
+                if (branchIdInput && advBranchId) branchIdInput.value = advBranchId.value;
                 if (userTypeInput && advUserType) userTypeInput.value = advUserType.value;
                 if (sortInput && advSort) sortInput.value = advSort.value;
                 if (directionInput && advDirection) directionInput.value = advDirection.value;
@@ -582,9 +598,14 @@
 
         if (btnResetAdv) {
             btnResetAdv.addEventListener('click', function () {
+                if (advRoleId) advRoleId.value = '';
+                if (advBranchId) advBranchId.value = '';
                 if (advUserType) advUserType.value = '';
                 if (advSort) advSort.value = 'createdDate';
                 if (advDirection) advDirection.value = 'desc';
+
+                if (roleIdInput) roleIdInput.value = '';
+                if (branchIdInput) branchIdInput.value = '';
                 if (userTypeInput) userTypeInput.value = '';
                 if (sortInput) sortInput.value = 'createdDate';
                 if (directionInput) directionInput.value = 'desc';
@@ -595,8 +616,8 @@
 
         // 4. Kéo dãn kích thước cột (Column Resizer chuẩn MISA)
         const table = document.getElementById('accountTable');
-        const STORAGE_WIDTH_KEY = 'cv_account_table_widths_v1';
-        const STORAGE_CONFIG_KEY = 'cv_account_cols_v1';
+        const STORAGE_WIDTH_KEY = 'cv_account_table_widths_v2';
+        const STORAGE_CONFIG_KEY = 'cv_account_cols_v2';
 
         const defaultColOrder = ['stt', 'username', 'fullname', 'contact', 'role', 'type', 'branch', 'status'];
         const defaultColWidths = {
@@ -706,11 +727,7 @@
             });
 
             const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-            if (totalColsWidth > containerW) {
-                table.style.width = totalColsWidth + 'px';
-            } else {
-                table.style.width = '100%';
-            }
+            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
         }
 
         function applyColConfig(config) {
@@ -744,11 +761,7 @@
             });
 
             const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-            if (visibleTotalW > containerW) {
-                table.style.width = visibleTotalW + 'px';
-            } else {
-                table.style.width = '100%';
-            }
+            table.style.width = Math.max(visibleTotalW, containerW) + 'px';
         }
 
         function initDrawerDragAndDrop() {
@@ -785,9 +798,12 @@
             });
         }
 
+        let isResizingCol = false;
+
         function initColumnResizers() {
             if (!table) return;
             const resizers = table.querySelectorAll('.col-resizer');
+            const floatingBar = document.getElementById('tableHoverFloatingActions');
 
             resizers.forEach(resizer => {
                 let startX, startW, colKey, colEl, thEl;
@@ -795,9 +811,12 @@
                 resizer.addEventListener('mousedown', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
+                    isResizingCol = true;
+                    if (floatingBar) floatingBar.classList.remove('is-visible');
 
                     thEl = resizer.parentElement;
                     colKey = thEl.getAttribute('data-col');
+                    if (colKey === 'actions') return;
                     colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
 
                     startX = e.pageX;
@@ -809,7 +828,8 @@
 
                     function onMouseMove(e) {
                         const diff = e.pageX - startX;
-                        const newW = Math.max(startW + diff, 50);
+                        const minW = (colKey === 'status') ? 160 : 60;
+                        const newW = Math.max(startW + diff, minW);
 
                         if (thEl) {
                             thEl.style.width = newW + 'px';
@@ -820,21 +840,21 @@
                         }
                         currentWidths[colKey] = newW;
 
+                        // Tính tổng chiều rộng dựa trên kích thước cấu hình thực tế của tất cả các cột
+                        // Ngăn chặn trình duyệt tự ý co ép các cột bên trái/phải khi kéo một cột
                         let totalW = 0;
-                        table.querySelectorAll('thead th').forEach(th => {
-                            if (!th.classList.contains('d-none')) {
-                                totalW += th.offsetWidth;
+                        defaultColOrder.forEach(col => {
+                            if (!currentConfig.hidden.includes(col)) {
+                                totalW += (currentWidths[col] || defaultColWidths[col] || 160);
                             }
                         });
+
                         const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-                        if (totalW > containerW) {
-                            table.style.width = totalW + 'px';
-                        } else {
-                            table.style.width = '100%';
-                        }
+                        table.style.width = Math.max(totalW, containerW) + 'px';
                     }
 
                     function onMouseUp() {
+                        isResizingCol = false;
                         resizer.classList.remove('is-resizing');
                         document.body.style.cursor = '';
                         document.body.style.userSelect = '';
@@ -850,6 +870,79 @@
                 });
             });
         }
+
+                // Quản lý Popover Tùy chỉnh cột (Xổ xuống dưới bánh răng, không làm đen màn hình)
+        const popoverEl = document.getElementById('customColumnPopover');
+        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        const btnCloseCol = document.getElementById('btnCloseColPopover');
+        const btnCancelCol = document.getElementById('btnCancelCols');
+
+        function openCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'block';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'true');
+                btnToggleCol.classList.add('active');
+            }
+            // Đồng bộ lại trạng thái checkbox theo cấu hình đang áp dụng
+            document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                const colKey = item.getAttribute('data-col-target');
+                const chk = item.querySelector('.custom-col-check');
+                if (chk) {
+                    chk.checked = !currentConfig.hidden.includes(colKey);
+                }
+            });
+            if (colSearchInput) {
+                colSearchInput.value = '';
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(it => it.style.display = '');
+                setTimeout(() => colSearchInput.focus(), 60);
+            }
+        }
+
+        function closeCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'false');
+                btnToggleCol.classList.remove('active');
+            }
+        }
+
+        if (btnToggleCol) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                    openCustomColPopover();
+                } else {
+                    closeCustomColPopover();
+                }
+            });
+        }
+
+        if (btnCloseCol) {
+            btnCloseCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeCustomColPopover();
+            });
+        }
+
+        if (btnCancelCol) {
+            btnCancelCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeCustomColPopover();
+            });
+        }
+
+        // Bấm ra ngoài popover -> tự động đóng
+        document.addEventListener('click', function (e) {
+            if (popoverEl && popoverEl.style.display !== 'none') {
+                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                    closeCustomColPopover();
+                }
+            }
+        });
 
         // Tìm kiếm tên trường trong Drawer
         const colSearchInput = document.getElementById('colSearchInput');
@@ -887,9 +980,7 @@
                 applyColOrder(order);
                 applyColConfig(currentConfig);
 
-                const offcanvasEl = document.getElementById('customColumnDrawer');
-                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                if (offcanvas) offcanvas.hide();
+                closeCustomColPopover();
             });
         }
 
@@ -907,9 +998,130 @@
                 applyColConfig(currentConfig);
                 applyColWidths();
 
-                const offcanvasEl = document.getElementById('customColumnDrawer');
-                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                if (offcanvas) offcanvas.hide();
+                closeCustomColPopover();
+            });
+        }
+
+        // 5. Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS)
+        function initFixedHoverActions() {
+            const tableCard = document.querySelector('.staff-table-card');
+            const tableWrapper = document.querySelector('.staff-table-wrapper');
+            const floatingBar = document.getElementById('tableHoverFloatingActions');
+            const btnView = document.getElementById('btnFloatingView');
+            const btnEdit = document.getElementById('btnFloatingEdit');
+            if (!tableCard || !tableWrapper || !floatingBar || !table) return;
+
+            const tableThead = table.querySelector('thead');
+            const tableTbody = table.querySelector('tbody');
+            if (!tableTbody) return;
+
+            let activeRow = null;
+            let hideTimer = null;
+
+            function updateBarPosition(row) {
+                if (!row || isResizingCol) {
+                    floatingBar.classList.remove('is-visible');
+                    return;
+                }
+                const rowRect = row.getBoundingClientRect();
+                const cardRect = tableCard.getBoundingClientRect();
+                const theadRect = tableThead.getBoundingClientRect();
+                const wrapperRect = tableWrapper.getBoundingClientRect();
+
+                // Kiểm tra xem dòng có đang nằm trong vùng hiển thị theo chiều dọc của bảng không
+                if (rowRect.bottom <= theadRect.bottom + 2 || rowRect.top >= wrapperRect.bottom - 2) {
+                    floatingBar.classList.remove('is-visible');
+                    return;
+                }
+
+                const barH = floatingBar.offsetHeight || 32;
+                const top = (rowRect.top - cardRect.top) + (rowRect.height - barH) / 2;
+                floatingBar.style.top = top + 'px';
+                floatingBar.classList.add('is-visible');
+            }
+
+            function showBarForRow(row) {
+                if (isResizingCol) return;
+                const accountId = row.getAttribute('data-account-id');
+                if (!accountId) {
+                    hideBar();
+                    return;
+                }
+
+                activeRow = row;
+                tableTbody.querySelectorAll('tr.is-row-hovered').forEach(r => {
+                    if (r !== row) r.classList.remove('is-row-hovered');
+                });
+                row.classList.add('is-row-hovered');
+
+                if (btnView) btnView.href = `/accounts/${accountId}`;
+                if (btnEdit) btnEdit.href = `/accounts/${accountId}/edit`;
+
+                updateBarPosition(row);
+            }
+
+            function hideBar() {
+                floatingBar.classList.remove('is-visible');
+                if (activeRow) {
+                    activeRow.classList.remove('is-row-hovered');
+                    activeRow = null;
+                }
+            }
+
+            // Lắng nghe di chuột trên các dòng
+            tableTbody.addEventListener('mousemove', function (e) {
+                if (isResizingCol) return;
+                const row = e.target.closest('tr[data-account-id]');
+                if (row) {
+                    clearTimeout(hideTimer);
+                    if (row !== activeRow) {
+                        showBarForRow(row);
+                    } else {
+                        updateBarPosition(row);
+                    }
+                }
+            });
+
+            // Rời khỏi wrapper
+            tableWrapper.addEventListener('mouseleave', function (e) {
+                if (e.relatedTarget && floatingBar.contains(e.relatedTarget)) {
+                    return;
+                }
+                hideTimer = setTimeout(hideBar, 120);
+            });
+
+            // Di chuột vào chính thanh thao tác
+            floatingBar.addEventListener('mouseenter', function () {
+                clearTimeout(hideTimer);
+                if (activeRow) {
+                    activeRow.classList.add('is-row-hovered');
+                }
+                floatingBar.classList.add('is-visible');
+            });
+
+            floatingBar.addEventListener('mouseleave', function (e) {
+                if (e.relatedTarget && activeRow && activeRow.contains(e.relatedTarget)) {
+                    return;
+                }
+                hideTimer = setTimeout(hideBar, 120);
+            });
+
+            // Rời khỏi toàn bộ tableCard
+            tableCard.addEventListener('mouseleave', function () {
+                hideBar();
+            });
+
+            // Cập nhật vị trí khi cuộn bảng hoặc thay đổi kích thước cửa sổ
+            tableWrapper.addEventListener('scroll', function () {
+                if (activeRow) {
+                    updateBarPosition(activeRow);
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (activeRow) {
+                    updateBarPosition(activeRow);
+                }
             });
         }
 
@@ -920,6 +1132,7 @@
             applyColConfig(currentConfig);
             initColumnResizers();
             initDrawerDragAndDrop();
+            initFixedHoverActions();
         }
     });
 </script>

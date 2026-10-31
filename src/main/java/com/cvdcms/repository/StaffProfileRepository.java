@@ -39,4 +39,8 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, Long
     @Query("SELECT DISTINCT s.specialty FROM StaffProfile s "
             + "WHERE s.specialty IS NOT NULL AND s.specialty <> '' ORDER BY s.specialty")
     List<String> findDistinctSpecialties();
+
+    // Danh sách vị trí công việc đang có để đổ vào bộ lọc nâng cao
+    @Query("SELECT DISTINCT s.positionTitle FROM StaffProfile s WHERE s.positionTitle IS NOT NULL AND s.positionTitle != '' ORDER BY s.positionTitle")
+    List<String> findDistinctPositionTitles();
 }
