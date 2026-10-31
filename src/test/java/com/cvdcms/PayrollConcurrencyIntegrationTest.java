@@ -2,317 +2,321 @@ package com.cvdcms;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
-import com.cvdcms.repository.*;
+import com.cvdcms.repository.StaffBranchAssignmentRepository;
+import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.PayrollService;
-import org.junit.jupiter.api.DisplayName;
+import com.cvdcms.service.SalaryAdvanceService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Explicit reset of tagged financial DEMO data, followed by past-dated fixtures.
+ * Replaces the old concurrency test at the user's request.
+ * No TRUNCATE, no disabled foreign keys, no deletion by year alone.
+ * All cleanup and inserts share one transaction. Failure rolls them back.
+ * Not executed by normal test runs. Run only with -Ddemo.finance.reset=true.
+ */
 @SpringBootTest
+@EnabledIfSystemProperty(named = "demo.finance.reset", matches = "true")
 public class PayrollConcurrencyIntegrationTest {
+    @Autowired private EntityManager em;
+    @Autowired private PayrollService payrollService;
+    @Autowired private SalaryAdvanceService advanceService;
+    @Autowired private UserRepository users;
+    @Autowired private StaffBranchAssignmentRepository assignments;
+    @Autowired private PlatformTransactionManager transactionManager;
 
-    @Autowired
-    private PayrollService payrollService;
-
-    @Autowired
-    private PayrollPeriodRepository payrollPeriodRepository;
-
-    @Autowired
-    private PayrollItemRepository payrollItemRepository;
-
-    @Autowired
-    private SalaryAdvanceRepository salaryAdvanceRepository;
-
-    @Autowired
-    private SalaryAdvanceAllocationRepository salaryAdvanceAllocationRepository;
-
-    @Autowired
-    private BranchRepository branchRepository;
-
-    @Autowired
-    private StaffProfileRepository staffProfileRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final BigDecimal SALARY = new BigDecimal("8000000.00");
+    private static final BigDecimal ONE_MILLION = new BigDecimal("1000000.00");
+    private static final String PREFIX = "DEMO FT32 PAST | ";
+    private long branchId;
+    private long adminId;
+    private String tag;
+    private Branch branch;
+    private User admin;
+    private StaffProfile staff;
 
     @Test
-    @DisplayName("Kiểm thử đồng thời: Hai giao dịch chi trả hai kỳ cùng lúc từ 1 khoản tạm ứng (Chống Lost Update)")
-    void testConcurrentPayPeriodSharingSameAdvanceNoLostUpdate() throws Exception {
-        Branch branch = branchRepository.findById(1L).orElseThrow();
-        StaffProfile staff = staffProfileRepository.findById(1L).orElseThrow();
-        User adminUser = userRepository.findById(1L).orElseThrow();
+    void resetTaggedDemoAndCreatePastDatedFixtures() {
+        branchId = Long.parseLong(System.getProperty("demo.branchId", "1"));
+        adminId = Long.parseLong(System.getProperty("demo.adminUserId", "1"));
+        String database = System.getProperty("demo.database", "cv_dcms_db");
+        tag = "D26B" + branchId + "-";
+        assertTrue(tag.length() < 16, "branchId is too long for fixture codes");
+        assertTrue(LocalDate.of(2026, 9, 30).isBefore(LocalDate.now()),
+                "This fixture requires a date after 2026-09-30");
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
+            assertEquals(database, String.valueOf(em.createNativeQuery("SELECT DATABASE()").getSingleResult()),
+                    "Wrong database. demo.database checks the name; it does not change datasource URL");
+            branch = em.find(Branch.class, branchId);
+            admin = em.find(User.class, adminId);
+            assertNotNull(branch, "Missing branch. Correct demo.branchId");
+            assertNotNull(admin, "Missing Admin user. Correct demo.adminUserId");
+            assertTrue(users.hasActiveAdminRole(adminId), "The chosen user must have an active Admin role");
+            assertTrue(Boolean.TRUE.equals(admin.getIsActive()) && "ACTIVE".equalsIgnoreCase(admin.getStatus()),
+                    "Admin account must be active");
 
-        // 1. Tạo khoản tạm ứng 10 triệu đã chi (status = PAID), còn lại 10 triệu
-        SalaryAdvance advance = new SalaryAdvance();
-        advance.setAdvanceCode("ADV-CONC-" + UUID.randomUUID().toString().substring(0, 8));
-        advance.setStaff(staff);
-        advance.setBranch(branch);
-        advance.setAmount(new BigDecimal("10000000.00"));
-        advance.setAllocatedAmount(BigDecimal.ZERO);
-        advance.setRemainingAmount(new BigDecimal("10000000.00"));
-        advance.setStatus(SalaryAdvanceStatus.PAID);
-        advance.setPaymentMethod(RefundMethod.BANK_TRANSFER);
-        advance.setReason("Tạm ứng chi phí nha khoa");
-        advance.setCreatedBy(adminUser);
-        advance.setApprovedBy(staff);
-        advance.setApprovedAt(LocalDateTime.now());
-        advance.setPaidAt(LocalDateTime.now());
-        final SalaryAdvance savedAdvance = salaryAdvanceRepository.save(advance);
+            cleanupTaggedData();
+            em.clear();
+            branch = em.find(Branch.class, branchId);
+            admin = em.find(User.class, adminId);
+            assertEquals(0L, number("SELECT COUNT(*) FROM payroll_periods WHERE branch_id=" + branchId
+                            + " AND year=2026 AND month BETWEEN 6 AND 9"),
+                    "Months 6-9/2026 contain non-demo payrolls. Reset rolled back; no data was removed");
+            prepareDemoStaff();
 
-        // 2. Tạo Kỳ lương 1 (APPROVED, lương 15tr, ứng 5tr, thực chi 10tr)
-        PayrollPeriod period1 = new PayrollPeriod();
-        period1.setPeriodName("Kỳ lương Concurrency 1 - " + UUID.randomUUID().toString().substring(0, 5));
-        period1.setBranch(branch);
-        period1.setMonth((int) (System.currentTimeMillis() % 12 + 1));
-        period1.setYear(2030);
-        period1.setStatus(PayrollStatus.APPROVED);
-        period1.setTotalBaseSalary(new BigDecimal("15000000.00"));
-        period1.setTotalAllowance(BigDecimal.ZERO);
-        period1.setTotalBonus(BigDecimal.ZERO);
-        period1.setTotalCommission(BigDecimal.ZERO);
-        period1.setTotalDeduction(BigDecimal.ZERO);
-        period1.setTotalSalary(new BigDecimal("15000000.00"));
-        period1.setTotalAdvanceAllocated(new BigDecimal("5000000.00"));
-        period1.setTotalRemainingPayable(new BigDecimal("10000000.00"));
-        period1.setApprovedBy(staff);
-        period1.setApprovedAt(LocalDateTime.now());
-        PayrollPeriod savedP1 = payrollPeriodRepository.save(period1);
+            // June advance is actually paid, allocated and settled by June payroll.
+            SalaryAdvance settled = advance("SETTLED", "Tạm ứng tháng 6 - sẽ được cấn đủ vào lương",
+                    ONE_MILLION, SalaryAdvanceStatus.PAID, LocalDate.of(2026, 6, 10));
+            payroll(6, PayrollStatus.PAID, settled);
+            payroll(7, PayrollStatus.APPROVED, null);
+            payroll(8, PayrollStatus.SUBMITTED, null);
+            payroll(9, PayrollStatus.DRAFT, null);
 
-        PayrollItem item1 = new PayrollItem();
-        item1.setPayrollPeriod(savedP1);
-        item1.setStaff(staff);
-        item1.setBaseSalary(new BigDecimal("15000000.00"));
-        item1.setActualWorkDays(new BigDecimal("26.00"));
-        item1.setActualBaseSalary(new BigDecimal("15000000.00"));
-        item1.setTotalAllowance(BigDecimal.ZERO);
-        item1.setBonusAmount(BigDecimal.ZERO);
-        item1.setTotalCommission(BigDecimal.ZERO);
-        item1.setDeductionAmount(BigDecimal.ZERO);
-        item1.setNetSalary(new BigDecimal("15000000.00"));
-        item1.setAdvanceAllocatedAmount(new BigDecimal("5000000.00"));
-        item1.setRemainingPayable(new BigDecimal("10000000.00"));
-        item1.setPaymentStatus(PayrollItemStatus.UNPAID);
-        item1.setPeriodMonth(savedP1.getMonth());
-        item1.setPeriodYear(savedP1.getYear());
-        PayrollItem savedItem1 = payrollItemRepository.save(item1);
+            advance("PENDING", "Đề nghị tạm ứng để chi sinh hoạt", new BigDecimal("500000"),
+                    SalaryAdvanceStatus.PENDING, LocalDate.of(2026, 9, 10));
+            advance("APPROVED", "Tạm ứng đã duyệt, chờ kế toán chi", new BigDecimal("800000"),
+                    SalaryAdvanceStatus.APPROVED, LocalDate.of(2026, 9, 11));
+            advance("PAID", "Tạm ứng đã nhận, chờ cấn vào kỳ lương tiếp theo", ONE_MILLION,
+                    SalaryAdvanceStatus.PAID, LocalDate.of(2026, 9, 12));
+            advance("REJECTED", "Yêu cầu tạm ứng chưa đủ thông tin", new BigDecimal("300000"),
+                    SalaryAdvanceStatus.REJECTED, LocalDate.of(2026, 9, 13));
+            manualExpense(false);
+            manualExpense(true);
+            em.flush();
+            em.clear();
 
-        SalaryAdvanceAllocation alloc1 = new SalaryAdvanceAllocation();
-        alloc1.setAdvance(savedAdvance);
-        alloc1.setPayrollItem(savedItem1);
-        alloc1.setAllocatedAmount(new BigDecimal("5000000.00"));
-        alloc1.setStatus(AdvanceAllocationStatus.RESERVED);
-        salaryAdvanceAllocationRepository.save(alloc1);
-
-        // 3. Tạo Kỳ lương 2 (APPROVED, lương 15tr, ứng 5tr, thực chi 10tr)
-        PayrollPeriod period2 = new PayrollPeriod();
-        period2.setPeriodName("Kỳ lương Concurrency 2 - " + UUID.randomUUID().toString().substring(0, 5));
-        period2.setBranch(branch);
-        period2.setMonth((int) ((System.currentTimeMillis() + 1) % 12 + 1));
-        period2.setYear(2031);
-        period2.setStatus(PayrollStatus.APPROVED);
-        period2.setTotalBaseSalary(new BigDecimal("15000000.00"));
-        period2.setTotalAllowance(BigDecimal.ZERO);
-        period2.setTotalBonus(BigDecimal.ZERO);
-        period2.setTotalCommission(BigDecimal.ZERO);
-        period2.setTotalDeduction(BigDecimal.ZERO);
-        period2.setTotalSalary(new BigDecimal("15000000.00"));
-        period2.setTotalAdvanceAllocated(new BigDecimal("5000000.00"));
-        period2.setTotalRemainingPayable(new BigDecimal("10000000.00"));
-        period2.setApprovedBy(staff);
-        period2.setApprovedAt(LocalDateTime.now());
-        PayrollPeriod savedP2 = payrollPeriodRepository.save(period2);
-
-        PayrollItem item2 = new PayrollItem();
-        item2.setPayrollPeriod(savedP2);
-        item2.setStaff(staff);
-        item2.setBaseSalary(new BigDecimal("15000000.00"));
-        item2.setActualWorkDays(new BigDecimal("26.00"));
-        item2.setActualBaseSalary(new BigDecimal("15000000.00"));
-        item2.setTotalAllowance(BigDecimal.ZERO);
-        item2.setBonusAmount(BigDecimal.ZERO);
-        item2.setTotalCommission(BigDecimal.ZERO);
-        item2.setDeductionAmount(BigDecimal.ZERO);
-        item2.setNetSalary(new BigDecimal("15000000.00"));
-        item2.setAdvanceAllocatedAmount(new BigDecimal("5000000.00"));
-        item2.setRemainingPayable(new BigDecimal("10000000.00"));
-        item2.setPaymentStatus(PayrollItemStatus.UNPAID);
-        item2.setPeriodMonth(savedP2.getMonth());
-        item2.setPeriodYear(savedP2.getYear());
-        PayrollItem savedItem2 = payrollItemRepository.save(item2);
-
-        SalaryAdvanceAllocation alloc2 = new SalaryAdvanceAllocation();
-        alloc2.setAdvance(savedAdvance);
-        alloc2.setPayrollItem(savedItem2);
-        alloc2.setAllocatedAmount(new BigDecimal("5000000.00"));
-        alloc2.setStatus(AdvanceAllocationStatus.RESERVED);
-        salaryAdvanceAllocationRepository.save(alloc2);
-
-        // 4. Kích hoạt hai luồng thực thi đồng thời chi trả hai kỳ
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(2);
-
-        AtomicReference<Throwable> err1 = new AtomicReference<>();
-        AtomicReference<Throwable> err2 = new AtomicReference<>();
-
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                payrollService.payPeriod(savedP1.getPeriodId(), RefundMethod.BANK_TRANSFER, "REF-T1", adminUser.getUserId());
-            } catch (Throwable t) {
-                err1.set(t);
-            } finally {
-                doneLatch.countDown();
-            }
+            assertEquals(4L, number("SELECT COUNT(*) FROM payroll_periods WHERE branch_id=" + branchId
+                    + " AND period_name LIKE 'DEMO FT32 PAST | %'"));
+            assertEquals(5L, number("SELECT COUNT(*) FROM salary_advances WHERE advance_code LIKE '" + tag + "TU-%'"));
+            assertEquals(1L, number("SELECT COUNT(*) FROM salary_advances WHERE advance_code='" + tag
+                    + "TU-SETTLED' AND status='SETTLED' AND remaining_amount=0 AND allocated_amount=1000000"));
+            assertEquals(5L, number("SELECT COUNT(*) FROM operating_expenses WHERE expense_code LIKE '" + tag + "CP-%'"));
+            BigDecimal expenseTotal = (BigDecimal) em.createNativeQuery(
+                    "SELECT SUM(amount) FROM operating_expenses WHERE expense_code LIKE '" + tag
+                            + "CP-%' AND is_cancelled=0").getSingleResult();
+            assertEquals(0, new BigDecimal("9500000").compareTo(expenseTotal));
+            assertEquals(0L, number("SELECT COUNT(*) FROM salary_advances WHERE advance_code LIKE '" + tag
+                    + "TU-%' AND (created_at>=CURRENT_DATE OR approved_at>=CURRENT_DATE OR paid_at>=CURRENT_DATE)"));
+            assertEquals(0L, number("SELECT COUNT(*) FROM operating_expenses WHERE expense_code LIKE '" + tag
+                    + "CP-%' AND (expense_date>=CURRENT_DATE OR created_at>=CURRENT_DATE OR cancelled_at>=CURRENT_DATE)"));
+            assertEquals(0L, number("SELECT COUNT(*) FROM payroll_periods WHERE branch_id=" + branchId
+                    + " AND period_name LIKE 'DEMO FT32 PAST | %' AND (created_at>=CURRENT_DATE"
+                    + " OR updated_at>=CURRENT_DATE OR submitted_at>=CURRENT_DATE OR approved_at>=CURRENT_DATE OR paid_at>=CURRENT_DATE)"));
         });
-
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                payrollService.payPeriod(savedP2.getPeriodId(), RefundMethod.BANK_TRANSFER, "REF-T2", adminUser.getUserId());
-            } catch (Throwable t) {
-                err2.set(t);
-            } finally {
-                doneLatch.countDown();
-            }
-        });
-
-        // Nhả chốt để 2 luồng cùng lao vào
-        startLatch.countDown();
-        boolean finished = doneLatch.await(15, TimeUnit.SECONDS);
-        executor.shutdown();
-
-        assertTrue(finished, "Cả hai luồng phải hoàn thành trong 15s");
-        assertNull(err1.get(), "Luồng 1 không được có lỗi: " + (err1.get() != null ? err1.get().getMessage() : ""));
-        assertNull(err2.get(), "Luồng 2 không được có lỗi: " + (err2.get() != null ? err2.get().getMessage() : ""));
-
-        // 5. Kiểm tra kết quả sau hai giao dịch đồng thời
-        SalaryAdvance finalAdvance = salaryAdvanceRepository.findById(savedAdvance.getAdvanceId()).orElseThrow();
-        assertEquals(0, new BigDecimal("10000000.00").compareTo(finalAdvance.getAllocatedAmount()),
-                "Tổng tiền đã cấn trừ phải là đúng 10.000.000đ (5tr + 5tr)");
-        assertEquals(0, BigDecimal.ZERO.compareTo(finalAdvance.getRemainingAmount()),
-                "Số dư còn lại của phiếu tạm ứng phải là đúng 0đ, không được mất cập nhật thành 5tr");
-        assertEquals(SalaryAdvanceStatus.SETTLED, finalAdvance.getStatus(),
-                "Phiếu tạm ứng phải được đổi trạng thái thành SETTLED");
-
-        PayrollPeriod finalP1 = payrollPeriodRepository.findById(savedP1.getPeriodId()).orElseThrow();
-        PayrollPeriod finalP2 = payrollPeriodRepository.findById(savedP2.getPeriodId()).orElseThrow();
-        assertEquals(PayrollStatus.PAID, finalP1.getStatus());
-        assertEquals(PayrollStatus.PAID, finalP2.getStatus());
+        System.out.println("RESET COMMITTED: " + database + ", branch " + branchId);
+        System.out.println("Payroll: 06/2026 PAID (7m + advance 1m), 07 APPROVED (8m), 08 SUBMITTED (8m), 09 DRAFT (8m).");
+        System.out.println("Advances: PENDING 500k, APPROVED 800k, PAID 1m, SETTLED 1m, REJECTED 300k.");
+        System.out.println("Expenses: 5 tagged records; 4 active total 9.5m, 1 cancelled 200k. Filter by year 2026 / code " + tag);
     }
 
-    @Test
-    @DisplayName("Kiểm thử đồng thời: Chi trả (payPeriod) cạnh tranh với Trả về sửa đổi (rejectPeriod)")
-    void testConcurrentPayPeriodVsRejectPeriodEnforcesStateConsistency() throws Exception {
-        Branch branch = branchRepository.findById(1L).orElseThrow();
-        StaffProfile staff = staffProfileRepository.findById(1L).orElseThrow();
-        User adminUser = userRepository.findById(1L).orElseThrow();
+    private void cleanupTaggedData() {
+        List<Long> periods = ids("SELECT period_id FROM payroll_periods WHERE branch_id=" + branchId
+                + " AND (period_name LIKE 'Kỳ lương Concurrency %' OR period_name LIKE 'Kỳ lương Race Condition %'"
+                + " OR period_name LIKE 'DEMO FT32 %')");
+        List<Long> items = ids("SELECT item_id FROM payroll_items WHERE period_id IN " + in(periods));
+        List<Long> advances = ids("SELECT advance_id FROM salary_advances WHERE branch_id=" + branchId
+                + " AND (advance_code LIKE 'ADV-CONC-%' OR advance_code LIKE '" + tag + "TU-%')");
+        List<Long> relatedAdvances = ids("SELECT DISTINCT advance_id FROM salary_advance_allocations WHERE item_id IN " + in(items));
+        assertTrue(new HashSet<>(advances).containsAll(relatedAdvances),
+                "A target payroll uses an untagged advance. No changes; inspect this link first");
+        assertEquals(0L, number("SELECT COUNT(*) FROM salary_advance_allocations WHERE advance_id IN "
+                        + in(advances) + " AND item_id NOT IN " + in(items)),
+                "A test advance is linked to a payroll outside this reset. No changes");
+        assertEquals(0L, number("SELECT COUNT(*) FROM service_commissions WHERE payroll_item_id IN " + in(items)),
+                "A target payroll has service commissions. No changes; inspect before deleting");
+        List<Long> expenses = ids("SELECT expense_id FROM operating_expenses WHERE payroll_period_id IN " + in(periods)
+                + " OR salary_advance_id IN " + in(advances)
+                + " OR (branch_id=" + branchId + " AND (expense_code IN ('EXP_TEST_CANCELLED','EXP_TEST_SPECIAL_CHARS')"
+                + " OR expense_code LIKE '" + tag + "CP-%'))");
+        assertEquals(0L, number("SELECT COUNT(*) FROM operating_expenses WHERE expense_id IN " + in(expenses)
+                        + " AND ((payroll_period_id IS NOT NULL AND payroll_period_id NOT IN " + in(periods) + ")"
+                        + " OR (salary_advance_id IS NOT NULL AND salary_advance_id NOT IN " + in(advances) + "))"),
+                "A test expense references financial data outside the reset. No changes");
+        System.out.println("Reset scope: payrolls=" + periods + "; advances=" + advances + "; expenses=" + expenses);
+        deleteAudit("operating_expenses", expenses);
+        deleteAudit("payroll_periods", periods);
+        deleteAudit("payroll_items", items);
+        deleteAudit("salary_advances", advances);
+        exec("DELETE FROM operating_expenses WHERE expense_id IN " + in(expenses));
+        exec("DELETE FROM salary_advance_allocations WHERE item_id IN " + in(items));
+        exec("DELETE FROM payroll_items WHERE item_id IN " + in(items));
+        exec("DELETE FROM payroll_periods WHERE period_id IN " + in(periods));
+        exec("DELETE FROM salary_advances WHERE advance_id IN " + in(advances));
+        // Keep staff/roles/accounts: other modules can reference these records.
+    }
 
-        // Tạo 1 kỳ APPROVED
-        PayrollPeriod period = new PayrollPeriod();
-        period.setPeriodName("Kỳ lương Race Condition - " + UUID.randomUUID().toString().substring(0, 5));
-        period.setBranch(branch);
-        period.setMonth((int) ((System.currentTimeMillis() + 2) % 12 + 1));
-        period.setYear(2032);
-        period.setStatus(PayrollStatus.APPROVED);
-        period.setTotalBaseSalary(new BigDecimal("10000000.00"));
-        period.setTotalAllowance(BigDecimal.ZERO);
-        period.setTotalBonus(BigDecimal.ZERO);
-        period.setTotalCommission(BigDecimal.ZERO);
-        period.setTotalDeduction(BigDecimal.ZERO);
-        period.setTotalSalary(new BigDecimal("10000000.00"));
-        period.setTotalAdvanceAllocated(BigDecimal.ZERO);
-        period.setTotalRemainingPayable(new BigDecimal("10000000.00"));
-        period.setApprovedBy(staff);
-        period.setApprovedAt(LocalDateTime.now());
-        final PayrollPeriod savedP = payrollPeriodRepository.save(period);
+    private void prepareDemoStaff() {
+        String code = tag + "NV";
+        List<StaffProfile> existing = em.createQuery("SELECT s FROM StaffProfile s WHERE s.staffCode=:code", StaffProfile.class)
+                .setParameter("code", code).getResultList();
+        if (!existing.isEmpty()) {
+            staff = existing.get(0);
+            assertEquals(0L, number("SELECT COUNT(*) FROM payroll_items WHERE staff_id=" + staff.getStaffId()),
+                    "Demo employee has payrolls outside reset. Transaction rolled back");
+            assertEquals(0L, number("SELECT COUNT(*) FROM salary_advances WHERE staff_id=" + staff.getStaffId()),
+                    "Demo employee has manually created advances. Transaction rolled back");
+            assertTrue(assignments.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE),
+                    "Demo employee needs an active assignment in the selected branch");
+            assertEquals(StaffStatus.ACTIVE, staff.getStatus());
+            assertEquals(0, SALARY.compareTo(staff.getBaseSalary()));
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        StaffBranchAssignment template = assignments.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE).stream()
+                .filter(a -> a.getStaff().getStatus() == StaffStatus.ACTIVE)
+                .filter(a -> a.getStartDate() != null && !a.getStartDate().isAfter(today))
+                .filter(a -> a.getEndDate() == null || !a.getEndDate().isBefore(today))
+                .findFirst().orElseThrow(() -> new IllegalStateException("Branch needs an active staff assignment"));
+        staff = new StaffProfile();
+        staff.setStaffCode(code);
+        staff.setFullName("Nguyễn Minh An (DEMO tài chính)");
+        staff.setBaseSalary(SALARY);
+        staff.setAllowanceAmount(ZERO);
+        staff.setInsuranceSalary(ZERO);
+        staff.setStatus(StaffStatus.ACTIVE);
+        staff.setHireDate(LocalDate.of(2026, 1, 5));
+        em.persist(staff);
+        StaffBranchAssignment assignment = new StaffBranchAssignment();
+        assignment.setStaff(staff);
+        assignment.setBranch(branch);
+        assignment.setRole(template.getRole());
+        assignment.setIsPrimary(true);
+        assignment.setStatus(AssignmentStatus.ACTIVE);
+        assignment.setStartDate(LocalDate.of(2026, 1, 5));
+        em.persist(assignment);
+        em.flush();
+        exec("UPDATE staff_profiles SET created_at='2026-01-05 08:00:00', updated_at='2026-01-05 08:00:00' WHERE staff_id=" + staff.getStaffId());
+        exec("UPDATE staff_branch_assignments SET created_at='2026-01-05 08:00:00' WHERE assignment_id=" + assignment.getAssignmentId());
+    }
 
-        PayrollItem item = new PayrollItem();
-        item.setPayrollPeriod(savedP);
-        item.setStaff(staff);
-        item.setBaseSalary(new BigDecimal("10000000.00"));
-        item.setActualWorkDays(new BigDecimal("26.00"));
-        item.setActualBaseSalary(new BigDecimal("10000000.00"));
-        item.setTotalAllowance(BigDecimal.ZERO);
-        item.setBonusAmount(BigDecimal.ZERO);
-        item.setTotalCommission(BigDecimal.ZERO);
-        item.setDeductionAmount(BigDecimal.ZERO);
-        item.setNetSalary(new BigDecimal("10000000.00"));
-        item.setAdvanceAllocatedAmount(BigDecimal.ZERO);
-        item.setRemainingPayable(new BigDecimal("10000000.00"));
-        item.setPaymentStatus(PayrollItemStatus.UNPAID);
-        item.setPeriodMonth(savedP.getMonth());
-        item.setPeriodYear(savedP.getYear());
-        payrollItemRepository.save(item);
+    private SalaryAdvance advance(String code, String reason, BigDecimal amount, SalaryAdvanceStatus target, LocalDate date) {
+        SalaryAdvance a = new SalaryAdvance();
+        a.setAdvanceCode(tag + "TU-" + code);
+        a.setStaff(staff); a.setBranch(branch); a.setAmount(amount);
+        a.setReason(reason); a.setNotes("Dữ liệu DEMO tài chính 2026");
+        a.setPaymentMethod(RefundMethod.BANK_TRANSFER);
+        a.setStatus(SalaryAdvanceStatus.PENDING);
+        a.setAllocatedAmount(ZERO); a.setRemainingAmount(amount); a.setCreatedBy(admin);
+        em.persist(a); em.flush();
+        if (target == SalaryAdvanceStatus.APPROVED || target == SalaryAdvanceStatus.PAID) {
+            advanceService.approveAdvance(a.getAdvanceId(), adminId);
+        }
+        if (target == SalaryAdvanceStatus.PAID) {
+            advanceService.payAdvance(a.getAdvanceId(), RefundMethod.BANK_TRANSFER, adminId);
+        }
+        if (target == SalaryAdvanceStatus.REJECTED) {
+            advanceService.rejectAdvance(a.getAdvanceId(), "Cần bổ sung thông tin trước khi duyệt", adminId);
+        }
+        em.flush(); em.refresh(a);
+        assertEquals(target, a.getStatus());
+        String approved = target == SalaryAdvanceStatus.APPROVED || target == SalaryAdvanceStatus.PAID
+                ? stamp(date.plusDays(1), "09:00:00") : "NULL";
+        String paid = target == SalaryAdvanceStatus.PAID ? stamp(date.plusDays(2), "10:00:00") : "NULL";
+        exec("UPDATE salary_advances SET created_at=" + stamp(date, "08:00:00")
+                + ", approved_at=" + approved + ", paid_at=" + paid + " WHERE advance_id=" + a.getAdvanceId());
+        if (target == SalaryAdvanceStatus.PAID) {
+            backdateExpense("salary_advance_id", a.getAdvanceId(), tag + "CP-TU-" + code, date.plusDays(2));
+        }
+        return a;
+    }
 
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(2);
-
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failureCount = new AtomicInteger(0);
-        AtomicReference<String> payResult = new AtomicReference<>();
-        AtomicReference<String> rejectResult = new AtomicReference<>();
-
-        // Luồng 1: Chi trả lương
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                payrollService.payPeriod(savedP.getPeriodId(), RefundMethod.BANK_TRANSFER, "REF-RACE", adminUser.getUserId());
-                successCount.incrementAndGet();
-                payResult.set("SUCCESS");
-            } catch (Throwable t) {
-                failureCount.incrementAndGet();
-                payResult.set("ERROR: " + t.getMessage());
-            } finally {
-                doneLatch.countDown();
-            }
-        });
-
-        // Luồng 2: Trả về DRAFT
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                payrollService.rejectPeriod(savedP.getPeriodId(), "Admin từ chối tái duyệt", adminUser.getUserId());
-                successCount.incrementAndGet();
-                rejectResult.set("SUCCESS");
-            } catch (Throwable t) {
-                failureCount.incrementAndGet();
-                rejectResult.set("ERROR: " + t.getMessage());
-            } finally {
-                doneLatch.countDown();
-            }
-        });
-
-        startLatch.countDown();
-        boolean finished = doneLatch.await(15, TimeUnit.SECONDS);
-        executor.shutdown();
-
-        assertTrue(finished, "Cả hai luồng phải hoàn thành trong 15s");
-
-        // Một luồng phải thành công và luồng kia phải thất bại do trạng thái đã đổi sau khi nhận khóa
-        assertEquals(1, successCount.get(), "Chính xác 1 luồng phải thành công");
-        assertEquals(1, failureCount.get(), "Chính xác 1 luồng phải bị từ chối do xung đột trạng thái");
-
-        PayrollPeriod finalPeriod = payrollPeriodRepository.findById(savedP.getPeriodId()).orElseThrow();
-        if ("SUCCESS".equals(payResult.get())) {
-            assertEquals(PayrollStatus.PAID, finalPeriod.getStatus(), "Nếu payPeriod thắng, kỳ phải là PAID");
-            assertTrue(rejectResult.get().contains("PAID") || rejectResult.get().contains("chi trả"),
-                    "rejectPeriod phải báo lỗi không được sửa kỳ đã PAID");
-        } else {
-            assertEquals(PayrollStatus.DRAFT, finalPeriod.getStatus(), "Nếu rejectPeriod thắng, kỳ phải là DRAFT");
-            assertTrue(payResult.get().contains("APPROVED") || payResult.get().contains("phê duyệt"),
-                    "payPeriod phải báo lỗi kỳ không còn ở trạng thái APPROVED");
+    private void payroll(int month, PayrollStatus target, SalaryAdvance advance) {
+        BigDecimal allocated = advance == null ? ZERO : advance.getAmount();
+        BigDecimal remaining = SALARY.subtract(allocated);
+        LocalDate created = LocalDate.of(2026, month, 25);
+        PayrollPeriod p = new PayrollPeriod();
+        p.setPeriodName(PREFIX + "Lương tháng " + month + "/2026");
+        p.setBranch(branch); p.setMonth(month); p.setYear(2026); p.setStatus(PayrollStatus.DRAFT);
+        p.setTotalBaseSalary(SALARY); p.setTotalSalary(SALARY);
+        p.setTotalAllowance(ZERO); p.setTotalBonus(ZERO); p.setTotalCommission(ZERO); p.setTotalDeduction(ZERO);
+        p.setTotalAdvanceAllocated(allocated); p.setTotalRemainingPayable(remaining);
+        em.persist(p);
+        PayrollItem i = new PayrollItem();
+        i.setPayrollPeriod(p); i.setStaff(staff); i.setPeriodMonth(month); i.setPeriodYear(2026);
+        i.setBaseSalary(SALARY); i.setActualBaseSalary(SALARY); i.setActualWorkDays(ZERO);
+        i.setTotalAllowance(ZERO); i.setBonusAmount(ZERO); i.setTotalCommission(ZERO); i.setDeductionAmount(ZERO);
+        i.setNetSalary(SALARY); i.setAdvanceAllocatedAmount(allocated); i.setRemainingPayable(remaining);
+        i.setPaymentStatus(PayrollItemStatus.UNPAID);
+        i.setNote("DEMO: lương tháng cố định 8 triệu; ngày công 0 là dữ liệu mẫu, không giảm lương.");
+        em.persist(i);
+        SalaryAdvanceAllocation allocation = null;
+        if (advance != null) {
+            allocation = new SalaryAdvanceAllocation();
+            allocation.setAdvance(advance); allocation.setPayrollItem(i); allocation.setAllocatedAmount(allocated);
+            allocation.setStatus(AdvanceAllocationStatus.RESERVED); em.persist(allocation);
+        }
+        em.flush();
+        if (target != PayrollStatus.DRAFT) payrollService.submitPeriod(p.getPeriodId(), adminId);
+        if (target == PayrollStatus.APPROVED || target == PayrollStatus.PAID) payrollService.approvePeriod(p.getPeriodId(), adminId);
+        if (target == PayrollStatus.PAID) payrollService.payPeriod(p.getPeriodId(), RefundMethod.BANK_TRANSFER,
+                tag + "LUONG-" + month, adminId);
+        em.flush(); em.refresh(p); em.refresh(i);
+        assertEquals(target, p.getStatus());
+        assertEquals(target == PayrollStatus.PAID ? PayrollItemStatus.PAID : PayrollItemStatus.UNPAID, i.getPaymentStatus());
+        String submitted = target != PayrollStatus.DRAFT ? stamp(created.plusDays(1), "08:00:00") : "NULL";
+        String approved = target == PayrollStatus.APPROVED || target == PayrollStatus.PAID ? stamp(created.plusDays(2), "09:00:00") : "NULL";
+        String paid = target == PayrollStatus.PAID ? stamp(created.plusDays(3), "10:00:00") : "NULL";
+        LocalDate last = target == PayrollStatus.PAID ? created.plusDays(3) : target == PayrollStatus.APPROVED
+                ? created.plusDays(2) : target == PayrollStatus.SUBMITTED ? created.plusDays(1) : created;
+        exec("UPDATE payroll_periods SET created_at=" + stamp(created, "08:00:00") + ", updated_at=" + stamp(last, "10:00:00")
+                + ", submitted_at=" + submitted + ", approved_at=" + approved + ", paid_at=" + paid + " WHERE period_id=" + p.getPeriodId());
+        if (target == PayrollStatus.PAID) backdateExpense("payroll_period_id", p.getPeriodId(), tag + "CP-LUONG-" + month, last);
+        if (allocation != null) {
+            exec("UPDATE salary_advance_allocations SET created_at=" + stamp(created, "08:00:00")
+                    + ", updated_at=" + stamp(last, "10:00:00") + " WHERE allocation_id=" + allocation.getAllocationId());
+            // Settlement dirties the advance: restore its original historical dates after service flush.
+            exec("UPDATE salary_advances SET created_at='2026-06-10 08:00:00', approved_at='2026-06-11 09:00:00',"
+                    + " paid_at='2026-06-12 10:00:00' WHERE advance_id=" + advance.getAdvanceId());
         }
     }
+
+    private void manualExpense(boolean cancelled) {
+        OperatingExpense e = new OperatingExpense();
+        e.setExpenseCode(tag + (cancelled ? "CP-HUY" : "CP-THUCONG"));
+        e.setBranch(branch); e.setCategory(cancelled ? "Văn phòng phẩm" : "Điện nước");
+        e.setAmount(new BigDecimal(cancelled ? "200000" : "500000"));
+        e.setExpenseDate(LocalDate.of(2026, 9, 15)); e.setRecipientName("Nhà cung cấp DEMO");
+        e.setPaymentMethod(RefundMethod.CASH); e.setSourceType(ExpenseSourceType.MANUAL);
+        e.setDescription(cancelled ? "DEMO: phiếu nhập nhầm, đã hủy" : "DEMO: chi phí điện nước tháng 9/2026");
+        e.setIsCancelled(cancelled); e.setCreatedBy(admin);
+        if (cancelled) {
+            e.setCancelledBy(admin); e.setCancelledReason("Nhập trùng phiếu chi mẫu");
+            e.setCancelledAt(LocalDate.of(2026, 9, 16).atTime(9, 0));
+        }
+        em.persist(e); em.flush();
+        exec("UPDATE operating_expenses SET created_at='2026-09-15 08:00:00' WHERE expense_id=" + e.getExpenseId());
+    }
+
+    private void backdateExpense(String foreignKey, long id, String code, LocalDate date) {
+        int count = exec("UPDATE operating_expenses SET expense_code='" + code + "', expense_date='" + date
+                + "', created_at=" + stamp(date, "10:00:00") + " WHERE " + foreignKey + "=" + id);
+        assertEquals(1, count, "Expected one linked expense");
+    }
+    private void deleteAudit(String table, List<Long> ids) {
+        exec("DELETE FROM system_audit_logs WHERE entity_table='" + table + "' AND entity_id IN " + in(ids));
+    }
+    private int exec(String sql) { return em.createNativeQuery(sql).executeUpdate(); }
+    private long number(String sql) { return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue(); }
+    private List<Long> ids(String sql) {
+        List<?> rows = em.createNativeQuery(sql).getResultList();
+        return rows.stream().map(x -> ((Number) x).longValue()).collect(Collectors.toList());
+    }
+    // Only database-returned numeric IDs are interpolated. Empty sets never match.
+    private String in(List<Long> ids) {
+        return ids.isEmpty() ? "(-1)" : ids.stream().map(String::valueOf).collect(Collectors.joining(",", "(", ")"));
+    }
+    private String stamp(LocalDate date, String time) { return "'" + date + " " + time + "'"; }
 }
