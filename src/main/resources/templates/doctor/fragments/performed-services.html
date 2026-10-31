@@ -5,134 +5,242 @@
 <!-- ===================================================================== -->
 <!-- TAB: DỊCH VỤ THỰC HIỆN THỰC TẾ (FT16 / SCR-16.1, 16.2)               -->
 <!-- Frontend Fragment: doctor/fragments/performed-services.html           -->
+<!-- Liên kết trực tiếp & đồng bộ với Kế hoạch điều trị (FT15)             -->
 <!-- ===================================================================== -->
 <div th:fragment="performedServicesSection">
     <div class="df-treatment-card" id="performedServicesSection">
+        <!-- Header: Đồng bộ liên kết chặt chẽ với Kế hoạch điều trị FT15, xóa nút thêm lẻ tẻ & xóa tổng thành tiền -->
         <div class="df-treatment-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
             <div class="df-treatment-title-box d-flex align-items-center gap-2">
                 <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
                     <i class="bi bi-tools fs-5"></i>
                 </div>
                 <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Nội dung điều trị / Dịch vụ thực hiện tại ghế (FT16)</h4>
-                    <span class="text-secondary small">Ghi nhận dịch vụ thực hiện thực tế, bác sĩ/phụ tá &amp; tính viện phí</span>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Dịch vụ thực hiện tại ghế theo Kế hoạch điều trị (FT16)</h4>
+                    <span class="text-secondary small">Đồng bộ trực tiếp từ các bước thủ thuật trong Kế hoạch điều trị (FT15) &amp; chuyển Kế toán thu tiền</span>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="performedCountBadge"
-                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
-                    0 dịch vụ
+                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'">
+                    0 dịch vụ đã làm
                 </span>
             </div>
 
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <div class="df-treatment-total-pill bg-white border rounded-pill px-3 py-1.5 shadow-xs d-flex align-items-center gap-2">
-                    <i class="bi bi-cash-stack text-success fs-6"></i>
-                    <span class="small text-secondary">Tổng thành tiền: </span>
-                    <strong id="totalPerformedText" class="text-success fs-6"
-                            th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                        0 đ
-                    </strong>
-                </div>
+                <!-- Ẩn id="totalPerformedText" để giữ an toàn cho JS ngầm tính toán không phát sinh lỗi -->
+                <span id="totalPerformedText" class="d-none"
+                      th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</span>
 
-                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
-                        onclick="openAddTreatmentModal()">
-                    <i class="bi bi-plus-circle-fill"></i>
-                    <span>+ Thêm dịch vụ điều trị</span>
+                <!-- NÚT CHUYỂN SANG KẾ HOẠCH ĐIỀU TRỊ (FT15) - STYLE TRẮNG BO TRÒN ĐỒNG BỘ -->
+                <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-treatment-plan')"
+                        title="Chuyển sang Kế hoạch điều trị (FT15) để xem lộ trình chi tiết">
+                    <i class="bi bi-diagram-3-fill text-primary"></i>
+                    <span>Kế hoạch điều trị (FT15)</span>
                 </button>
+
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>
             </div>
         </div>
 
-        <!-- BẢNG DANH SÁCH DỊCH VỤ ĐÃ THỰC HIỆN TRONG CA KHÁM -->
-        <div class="table-responsive p-3 bg-white">
-            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
-                <thead class="table-light">
-                <tr>
-                    <th style="width: 100px;">Mã DV</th>
-                    <th>Tên dịch vụ điều trị &amp; Quy trình</th>
-                    <th style="width: 100px;" class="text-center">Răng</th>
-                    <th style="width: 110px;" class="text-end">Đơn giá</th>
-                    <th style="width: 70px;" class="text-center">SL</th>
-                    <th style="width: 90px;" class="text-end">Giảm trừ</th>
-                    <th style="width: 120px;" class="text-end">Thành tiền</th>
-                    <th style="width: 180px;">Bác sĩ &amp; Phụ tá</th>
-                    <th style="width: 120px;" class="text-center">Trạng thái</th>
-                    <th style="width: 130px;" class="text-center">Thao tác</th>
-                </tr>
-                </thead>
-                <tbody id="performedServicesTableBody">
-                <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
-                    <td colspan="10" class="text-center py-4 text-muted">
-                        <i class="bi bi-tools fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Chưa có dịch vụ điều trị nào được ghi nhận cho ca khám này. Nhấn <strong>"+ Thêm dịch vụ điều trị"</strong> để thêm mới.</span>
-                    </td>
-                </tr>
-                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
-                    <td>
-                        <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark" th:text="${ps.serviceName}">Hàn răng sâu Composite</div>
-                        <div class="small text-muted" th:if="${ps.planName != null}" th:text="'Theo KHDT: ' + ${ps.planName}"></div>
-                        <div class="small text-secondary fst-italic" th:if="${ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}" th:text="${ps.clinicalNotes}"></div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-primary-subtle text-primary border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">R16</span>
-                    </td>
-                    <td class="text-end text-muted small" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                        350,000 đ
-                    </td>
-                    <td class="text-center fw-semibold" th:text="${ps.quantity != null ? ps.quantity : 1}">
-                        1
-                    </td>
-                    <td class="text-end text-danger small" th:text="${ps.discountAmount != null and ps.discountAmount > 0 ? ('-' + #numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT') + ' đ') : '-'}">
-                        -
-                    </td>
-                    <td class="text-end fw-bold text-success" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                        350,000 đ
-                    </td>
-                    <td>
-                        <div class="small fw-semibold text-dark">
-                            <i class="bi bi-person-badge text-primary me-1"></i><span th:text="${ps.doctorName}">BS. Lê Hoàng Nam</span>
-                        </div>
-                        <div class="small text-muted" th:if="${ps.assistantName != null}">
-                            <i class="bi bi-person-heart text-secondary me-1"></i><span th:text="'PT: ' + ${ps.assistantName}"></span>
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge"
-                              th:classappend="${ps.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
-                              th:text="${ps.status == 'COMPLETED' ? 'Hoàn thành' : 'Đang làm'}">
-                            Hoàn thành
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-sm btn-outline-info"
-                                    title="Theo dõi các bước quy trình kỹ thuật tại ghế"
-                                    th:data-service-id="${ps.serviceId}"
-                                    th:data-service-name="${ps.serviceName}"
-                                    th:data-performed-id="${ps.performedId}"
-                                    onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))">
-                                <i class="bi bi-diagram-3"></i>
-                            </button>
-                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                    title="Hủy dịch vụ thực hiện này"
-                                    th:data-id="${ps.performedId}"
-                                    onclick="deletePerformedService(this.getAttribute('data-id'))">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                            <span th:if="${isClinicalLocked}" class="text-muted ms-2" title="Bệnh án đã khóa (BR-EMR-02)">
-                                <i class="bi bi-lock-fill text-secondary"></i>
+        <!-- Banner liên kết nghiệp vụ trực tiếp với Kế hoạch điều trị (FT15) -->
+        <div class="alert alert-info py-2.5 px-3 mb-0 small d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-0 border-start-0 border-end-0 border-top-0" style="width: 100%;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-link-45deg fs-5 text-primary flex-shrink-0"></i>
+                <div>
+                    <strong>Cơ chế đồng bộ trực tiếp:</strong> Dịch vụ thực hiện tại ghế được bác sĩ xác nhận từ các bước trong <strong>Kế hoạch điều trị (FT15)</strong> (bằng cách bấm <em>"Làm trong ca này"</em>). Dịch vụ hoàn thành sẽ tự động xuất hiện tại đây và đồng bộ sang Kế toán xử lý viện phí.
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary px-3 py-1 rounded-pill fw-semibold small shadow-xs" onclick="switchMainTab('tab-treatment-plan')">
+                <i class="bi bi-arrow-right-circle me-1"></i>Đến lộ trình KHDT
+            </button>
+        </div>
+
+        <!-- KHỐI BƯỚC THỦ THUẬT KHDT CHỜ THỰC HIỆN TRONG CA NÀY (LIÊN KẾT TRỰC TIẾP FT15 -> FT16) -->
+        <div class="p-3 bg-light border-bottom" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-lightning-charge-fill text-warning fs-6"></i>
+                    <span class="small fw-bold text-dark text-uppercase" style="letter-spacing: 0.3px;">
+                        Các bước thủ thuật theo KHDT đang chờ thực hiện tại ghế:
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small" onclick="switchMainTab('tab-treatment-plan')">
+                    Xem toàn bộ lộ trình <i class="bi bi-chevron-right small"></i>
+                </button>
+            </div>
+            
+            <div class="table-responsive bg-white rounded-3 border">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Tên bước thủ thuật KHDT</th>
+                        <th style="width: 260px;">Phác đồ / Kế hoạch &amp; Giai đoạn</th>
+                        <th style="width: 120px;" class="text-center">Vị trí răng</th>
+                        <th style="width: 70px;" class="text-center">SL</th>
+                        <th style="width: 190px;" class="text-center">Thao tác tại ghế</th>
+                    </tr>
+                    </thead>
+                    <tbody id="pendingPlanItemsBody">
+                    <th:block th:each="plan : ${treatmentPlans}">
+                        <th:block th:each="stage : ${plan.stages}">
+                            <th:block th:each="item : ${stage.items}">
+                                <tr th:if="${item.status != 'COMPLETED'}" th:id="'pending-plan-item-' + ${item.planItemId}">
+                                    <td>
+                                        <strong class="text-dark" th:text="${item.serviceName}">Hàn răng sâu</strong>
+                                        <span class="badge bg-light text-muted border ms-1" th:if="${item.categoryName != null}" th:text="${item.categoryName}" style="font-size: 10.5px;">Hàn răng</span>
+                                    </td>
+                                    <td>
+                                        <div class="text-dark fw-semibold small text-truncate" style="max-width: 250px;" th:text="${plan.planName}">Phác đồ điều trị</div>
+                                        <span class="badge bg-light text-secondary border small" th:text="'Giai đoạn: ' + ${stage.stageName}">Giai đoạn 1</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border" th:text="${item.toothNumbers != null and !item.toothNumbers.isEmpty() ? item.toothNumbers : 'Toàn hàm'}">R16</span>
+                                    </td>
+                                    <td class="text-center fw-bold" th:text="${item.quantity != null ? item.quantity : 1}">1</td>
+                                    <td class="text-center">
+                                        <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                                style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
+                                                th:onclick="'executePlanItemFromTab(' + ${item.planItemId} + ')'"
+                                                title="Xác nhận thực hiện thủ thuật này tại ghế trong ca khám hôm nay">
+                                            <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                            <span>Làm trong ca này</span>
+                                        </button>
+                                        <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border">Đã khóa</span>
+                                    </td>
+                                </tr>
+                            </th:block>
+                        </th:block>
+                    </th:block>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BẢNG DANH SÁCH DỊCH VỤ ĐÃ THỰC HIỆN TRONG CA KHÁM (HÔM NAY) -->
+        <div class="p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-bold text-dark text-uppercase" style="letter-spacing: 0.3px;">
+                    Danh sách dịch vụ / thủ thuật đã thực hiện tại ghế (Đã đồng bộ sang Kế toán):
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
+                    <thead class="table-light">
+                    <tr>
+                        <th style="width: 100px;">Mã DV</th>
+                        <th>Tên dịch vụ điều trị &amp; Quy trình</th>
+                        <th style="width: 100px;" class="text-center">Răng</th>
+                        <th style="width: 110px;" class="text-end">Đơn giá</th>
+                        <th style="width: 70px;" class="text-center">SL</th>
+                        <th style="width: 120px;" class="text-end">Thành tiền</th>
+                        <th style="width: 180px;">Bác sĩ &amp; Phụ tá</th>
+                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                        <th style="width: 120px;" class="text-center">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="performedServicesTableBody">
+                    <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
+                        <td colspan="9" class="text-center py-5 text-muted bg-white">
+                            <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 200px;">
+                                <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                     style="width: 68px; height: 68px; background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%); border: 2px dashed #38bdf8;">
+                                    <i class="bi bi-diagram-3-fill" style="font-size: 30px; color: #0284c7;"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận thực hiện trong ca khám này</h6>
+                                <p class="text-muted mb-3 small" style="max-width: 520px; line-height: 1.6;">
+                                    Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị (FT15)</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
+                                </p>
+                                <button type="button" class="btn btn-primary px-3.5 py-1.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                        onclick="switchMainTab('tab-treatment-plan')">
+                                    <i class="bi bi-diagram-3-fill"></i>
+                                    <span>Mở Kế hoạch điều trị &amp; Chọn bước thực hiện</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
+                        <td>
+                            <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark" th:text="${ps.serviceName}">Hàn răng sâu Composite</div>
+                            <div class="small text-muted" th:if="${ps.planName != null}">
+                                <span class="badge bg-info-subtle text-primary border border-primary-subtle me-1" style="font-size: 11px;">
+                                    <i class="bi bi-diagram-3-fill me-1"></i>Từ KHDT: <span th:text="${ps.planName}"></span>
+                                </span>
+                            </div>
+                            <div class="small text-secondary fst-italic" th:if="${ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}" th:text="${ps.clinicalNotes}"></div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-primary-subtle text-primary border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">R16</span>
+                        </td>
+                        <td class="text-end text-muted small" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                            350,000 đ
+                        </td>
+                        <td class="text-center fw-semibold" th:text="${ps.quantity != null ? ps.quantity : 1}">
+                            1
+                        </td>
+                        <td class="text-end fw-bold text-success" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                            350,000 đ
+                        </td>
+                        <td>
+                            <div class="small fw-semibold text-dark">
+                                <i class="bi bi-person-badge text-primary me-1"></i><span th:text="${ps.doctorName}">BS. Lê Hoàng Nam</span>
+                            </div>
+                            <div class="small text-muted" th:if="${ps.assistantName != null}">
+                                <i class="bi bi-person-heart text-secondary me-1"></i><span th:text="'PT: ' + ${ps.assistantName}"></span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success-subtle text-success border border-success">
+                                <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
                             </span>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-sm btn-outline-info"
+                                        title="Theo dõi các bước quy trình kỹ thuật tại ghế"
+                                        th:data-service-id="${ps.serviceId}"
+                                        th:data-service-name="${ps.serviceName}"
+                                        th:data-performed-id="${ps.performedId}"
+                                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))">
+                                    <i class="bi bi-diagram-3"></i>
+                                </button>
+                                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)"
+                                        th:data-id="${ps.performedId}"
+                                        onclick="deletePerformedService(this.getAttribute('data-id'))">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                                <span th:if="${isClinicalLocked}" class="text-muted ms-2" title="Bệnh án đã khóa (BR-EMR-02)">
+                                    <i class="bi bi-lock-fill text-secondary"></i>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
+    <!-- Script hỗ trợ thực hiện nhanh bước KHDT ngay tại tab FT16 -->
+    <script>
+        function executePlanItemFromTab(planItemId) {
+            if (typeof executePlanItemDirectly === 'function') {
+                executePlanItemDirectly(planItemId);
+                // Ẩn hàng tương ứng khỏi danh sách chờ
+                const pendingRow = document.getElementById('pending-plan-item-' + planItemId);
+                if (pendingRow) {
+                    pendingRow.remove();
+                }
+            } else {
+                alert('Vui lòng mở Kế hoạch điều trị để thao tác.');
+            }
+        }
+    </script>
 </div>
 
 </body>

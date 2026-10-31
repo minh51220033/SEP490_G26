@@ -1344,6 +1344,51 @@ html {
     box-shadow: 0 4px 8px rgba(2, 132, 199, 0.3);
 }
 
+.df-btn-white-plan {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: #ffffff;
+    color: #0284c7;
+    border: 1.5px solid #0284c7;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.df-btn-white-plan:hover {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #0369a1;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
+}
+
+.df-btn-white-plan i {
+    font-size: 14px;
+    color: #0284c7;
+}
+
+.df-btn-white-plan:hover i {
+    color: #0369a1;
+}
+
+.df-btn-white-plan .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: #0284c7 !important;
+    color: #ffffff;
+}
+
 /* AI Box styling - Tối giản chuẩn brand navy của dự án */
 .df-ai-assistant-card {
     background: #f8fafc;
@@ -2463,7 +2508,8 @@ html {
     transform: none !important;
 }
 
-.tooth-contour.tooth-group.has-caries {
+.tooth-contour.tooth-group.has-caries,
+.tooth-contour.tooth-group.has-caries-main {
     fill: rgba(239, 68, 68, 0.5) !important;
     stroke: #ef4444 !important;
     stroke-width: 2.5 !important;
@@ -2471,6 +2517,37 @@ html {
     stroke-linecap: round;
     filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)) !important;
     transform: none !important;
+}
+
+.tooth-contour.tooth-group.has-caries-secondary {
+    fill: rgba(245, 158, 11, 0.5) !important;
+    stroke: #f59e0b !important;
+    stroke-width: 2.5 !important;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.9)) !important;
+    transform: none !important;
+}
+
+.tooth-contour.tooth-group.has-caries-diff {
+    fill: rgba(2, 132, 199, 0.5) !important;
+    stroke: #0284c7 !important;
+    stroke-width: 2.5 !important;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.9)) !important;
+    transform: none !important;
+}
+
+.df-diag-interactive-row {
+    transition: background-color 0.15s ease;
+}
+.df-diag-interactive-row:hover {
+    background-color: #f8fafc !important;
+}
+.df-diag-interactive-row.is-inspecting {
+    background-color: #eff6ff !important;
+    outline: 2px solid #38bdf8 !important;
 }
 
 .tooth-contour.tooth-group.has-caries.is-selected {
