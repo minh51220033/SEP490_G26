@@ -264,7 +264,9 @@ public class AccountController {
 
                 model.addAttribute(
                                 "roles",
-                                roleRepository.findAllWithPermissions());
+                                roleRepository.findAllWithPermissions().stream()
+                                        .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                                        .toList());
 
                 model.addAttribute(
                                 "branches",
@@ -301,6 +303,10 @@ public class AccountController {
                                         .orElseThrow(() -> new ResponseStatusException(
                                                         HttpStatus.BAD_REQUEST,
                                                         "Role không tồn tại."));
+
+                        if (Boolean.FALSE.equals(selectedRole.getIsActive())) {
+                                throw new IllegalArgumentException("Vai trò '" + (selectedRole.getDisplayName() != null ? selectedRole.getDisplayName() : selectedRole.getRoleName()) + "' đang tạm ngưng hoạt động, không thể gán cho tài khoản mới.");
+                        }
 
                         // Chỉ Quản trị viên được tạo tài khoản.
                         requireAdmin(session);
@@ -433,7 +439,9 @@ public class AccountController {
 
                 model.addAttribute(
                                 "roles",
-                                roleRepository.findAllWithPermissions());
+                                roleRepository.findAllWithPermissions().stream()
+                                        .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                                        .toList());
 
                 // Chỉ ADMIN mới được thấy lựa chọn vai trò ADMIN
                 model.addAttribute(

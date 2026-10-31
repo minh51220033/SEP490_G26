@@ -1,0 +1,174 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-10-22T19:16:00.000Z" agent="Mozilla/5.0" version="24.0.0" type="device">
+  <diagram id="workflow_activity_standard" name="UC-12 &amp; UC-13 Clinical Workflow Activity">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="BIỂU ĐỒ HOẠT ĐỘNG: QUẢN LÝ &amp; THỰC THI QUY TRÌNH KỸ THUẬT LÂM SÀNG (UC-12 &amp; UC-13)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontStyle=1;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="50" y="15" width="860" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pool" value="QUY TRÌNH KỸ THUẬT NHA KHOA (CLINICAL WORKFLOW)" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=28;horizontal=1;horizontalStack=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="880" height="1030" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_actor" value="Bác sĩ / Quản trị viên (Doctor / Admin)" style="swimlane;html=1;startSize=26;fillColor=#FFFFFF;strokeColor=#000000;fontStyle=1;fontSize=12;fontColor=#000000;" vertex="1" parent="pool">
+          <mxGeometry width="440" height="1002" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_system" value="Hệ thống (CV-DCMS System)" style="swimlane;html=1;startSize=26;fillColor=#FFFFFF;strokeColor=#000000;fontStyle=1;fontSize=12;fontColor=#000000;" vertex="1" parent="pool">
+          <mxGeometry width="440" height="1002" as="geometry" />
+        </mxCell>
+        <mxCell id="n_start" value="" style="ellipse;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="245" y="105" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n_open_wf" value="Truy cập Quản lý Quy trình Kỹ thuật&#10;(/doctor/workflows)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="145" y="160" width="230" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_load" value="Truy vấn CSDL &amp; hiển thị danh sách&#10;mẫu quy trình kỹ thuật hiện có" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="160" width="230" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n_click_new" value="Chọn &quot;Tạo Mẫu Quy trình mới&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="150" y="235" width="220" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n_dec_method" value="Phương thức&#10;nhập liệu?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="305" width="120" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="n_upload" value="Tải lên ảnh chụp / văn bản quy trình&#10;chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="70" y="385" width="210" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_ai" value="Tự động bóc tách phân đoạn, các bước kỹ thuật,&#10;thời lượng &amp; điền vào form thiết kế" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="385" width="230" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n_manual" value="Nhập thông tin mẫu (tên, dịch vụ)&#10;&amp; tạo thủ công các bước kỹ thuật lâm sàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="290" y="385" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n_click_save" value="Xem lại cấu trúc bước, gán vai trò Bác sĩ/Phụ tá&#10;&amp; nhấn &quot;Lưu Quy trình&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="140" y="470" width="240" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_save" value="Kiểm tra dữ liệu, lưu vào CSDL&#10;&amp; thông báo thành công" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="470" width="230" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sep_note" value="HOÀN TẤT UC-12 (CẤU HÌNH MẪU QUY TRÌNH)  ▼  THỰC THI QUY TRÌNH TRONG CA KHÁM (UC-13)" style="shape=note;whiteSpace=wrap;html=1;size=14;verticalAlign=middle;align=center;fillColor=#FFFFFF;strokeColor=#000000;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="545" width="760" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n_open_diag" value="Mở ca khám bệnh nhân (/doctor/diagnoses)&#10;&amp; chỉ định Dịch vụ kỹ thuật" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="140" y="605" width="240" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_init" value="Khởi tạo / nạp phiên thực thi quy trình&#10;&amp; hiển thị Stepper các bước kỹ thuật tại ghế" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="605" width="230" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="n_do_step" value="Thực hiện bước kỹ thuật trên ghế khám&#10;&amp; cập nhật trạng thái bước (COMPLETED/SKIPPED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="130" y="685" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_record" value="Ghi nhận thời gian, ghi chú lâm sàng,&#10;người thực hiện &amp; cập nhật CSDL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="685" width="230" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n_dec_next" value="Còn bước kỹ thuật&#10;tiếp theo?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="640" y="765" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n_sys_complete" value="Kiểm tra hoàn thành mọi bước bắt buộc,&#10;đóng phiên thực thi (COMPLETED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="585" y="860" width="230" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="n_finish" value="Hoàn tất thủ thuật lâm sàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="150" y="860" width="220" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="n_end" value="" style="ellipse;html=1;shape=endState;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="245" y="940" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_start" target="n_open_wf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_open_wf" target="n_sys_load" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_load" target="n_click_new" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="258" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_click_new" target="n_dec_method" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="Tải tài liệu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_dec_method" target="n_upload" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="175" y="332" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_upload" target="n_sys_ai" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="Điền vào form" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_ai" target="n_click_save" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="450" />
+              <mxPoint x="260" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="Nhập tay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_dec_method" target="n_manual" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="332" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_manual" target="n_click_save" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="450" />
+              <mxPoint x="260" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_click_save" target="n_sys_save" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_save" target="n_open_diag" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="530" />
+              <mxPoint x="260" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_open_diag" target="n_sys_init" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_init" target="n_do_step" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="665" />
+              <mxPoint x="260" y="665" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_do_step" target="n_sys_record" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_record" target="n_dec_next" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="Còn bước" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_dec_next" target="n_do_step" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="795" />
+              <mxPoint x="550" y="710" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e17" value="Hết bước" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_dec_next" target="n_sys_complete" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_sys_complete" target="n_finish" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;" edge="1" source="n_finish" target="n_end" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

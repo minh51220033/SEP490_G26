@@ -29,6 +29,31 @@ public class GlobalModelAttributesAdvice {
         return Collections.emptyList();
     }
 
+    @ModelAttribute("permissionCodes")
+    public List<String> populatePermissionCodes(HttpSession session) {
+        if (session != null) {
+            Object perms = session.getAttribute("permissionCodes");
+            if (perms instanceof List<?> list) {
+                return list.stream().map(Object::toString).toList();
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    @ModelAttribute("isAdmin")
+    public boolean populateIsAdmin(HttpSession session) {
+        if (session != null) {
+            Object roles = session.getAttribute("roleNames");
+            if (roles instanceof List<?> list) {
+                return list.stream().anyMatch(r -> {
+                    String s = r != null ? r.toString().trim().toUpperCase() : "";
+                    return "ADMIN".equals(s) || "ROLE_ADMIN".equals(s);
+                });
+            }
+        }
+        return false;
+    }
+
     @ModelAttribute("displayName")
     public String populateDisplayName(HttpSession session) {
         if (session != null) {

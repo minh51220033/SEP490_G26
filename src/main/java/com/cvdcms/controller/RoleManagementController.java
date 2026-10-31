@@ -169,7 +169,15 @@ public class RoleManagementController {
                         .collect(Collectors.toSet())
                 : Set.of();
 
-        boolean selectedRoleEditable = selectedRole != null && !isAdminRole(selectedRole) && !isPatientRole(selectedRole);
+        boolean isAdminRole = isAdminRole(selectedRole);
+        boolean selectedRoleEditable = selectedRole != null && !isAdminRole && !isPatientRole(selectedRole);
+
+        if (isAdminRole && selectedRole != null) {
+            selectedPermissionIds = allPermissions.stream()
+                    .map(Permission::getPermissionId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        }
 
         model.addAttribute("roles", roles);
         model.addAttribute("permissionsByModule", permissionsByModule);
@@ -179,6 +187,7 @@ public class RoleManagementController {
         model.addAttribute("selectedRole", selectedRole);
         model.addAttribute("selectedPermissionIds", selectedPermissionIds);
         model.addAttribute("selectedRoleEditable", selectedRoleEditable);
+        model.addAttribute("isAdminRole", isAdminRole);
         model.addAttribute("totalPermissionsCount", allPermissions.size());
 
         return "account/roles";
@@ -187,7 +196,7 @@ public class RoleManagementController {
     @PostMapping("/create")
     @Transactional
     public String createRole(
-            @RequestParam String roleName,
+            @RequestParam(required = false) String roleName,
             @RequestParam String displayName,
             @RequestParam(required = false) String description,
             @RequestParam(required = false) List<Long> permissionIds,
@@ -197,7 +206,14 @@ public class RoleManagementController {
         requireAdmin(session);
 
         try {
-            String normalizedCode = normalizeRoleCode(roleName);
+            String cleanDisplayName = displayName == null ? "" : displayName.trim();
+            if (cleanDisplayName.isEmpty()) {
+                throw new IllegalArgumentException("Tên hiển thị vai trò không được để trống.");
+            }
+
+            // Tự động sinh mã kỹ thuật từ tên hiển thị nếu người dùng để trống
+            String candidateCode = (roleName != null && !roleName.trim().isEmpty()) ? roleName : cleanDisplayName;
+            String normalizedCode = normalizeRoleCode(candidateCode);
             if (!ROLE_CODE_PATTERN.matcher(normalizedCode).matches()) {
                 throw new IllegalArgumentException(
                         "Mã vai trò không hợp lệ. Vui lòng nhập chữ cái in hoa, chữ số hoặc dấu gạch dưới (ví dụ: DIEU_DUONG, THU_NGAN, CSKH)."
@@ -210,11 +226,6 @@ public class RoleManagementController {
 
             if (roleRepository.existsByRoleNameIgnoreCase(normalizedCode)) {
                 throw new IllegalArgumentException("Mã vai trò '" + normalizedCode + "' đã tồn tại trong hệ thống.");
-            }
-
-            String cleanDisplayName = displayName == null ? "" : displayName.trim();
-            if (cleanDisplayName.isEmpty()) {
-                throw new IllegalArgumentException("Tên hiển thị vai trò không được để trống.");
             }
 
             Role newRole = new Role();
@@ -340,25 +351,28 @@ public class RoleManagementController {
             }
 
             boolean currentlyActive = Boolean.TRUE.equals(role.getIsActive());
-            if (currentlyActive) {
-                List<User> assignedUsers = userRepository.findByRole_RoleId(roleId.intValue());
-                if (!assignedUsers.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "Đang có " + assignedUsers.size() + " tài khoản đảm nhiệm vai trò '"
-                                    + (role.getDisplayName() != null ? role.getDisplayName() : role.getRoleName())
-                                    + "'. Vui lòng chuyển đổi vai trò cho các tài khoản đó trước khi ngừng hoạt động vai trò này."
-                    );
-                }
-            }
-
             role.setIsActive(!currentlyActive);
             roleRepository.save(role);
 
+            List<User> assignedUsers = userRepository.findByRole_RoleId(roleId.intValue());
+            int userCount = assignedUsers.size();
+
+            String roleDisplay = role.getDisplayName() != null ? role.getDisplayName() : role.getRoleName();
             String statusText = Boolean.TRUE.equals(role.getIsActive()) ? "Kích hoạt lại" : "Ngừng hoạt động";
+            String extraMsg = "";
+            if (!currentlyActive) {
+                if (userCount > 0) {
+                    extraMsg = " " + userCount + " tài khoản thuộc vai trò này đã có thể đăng nhập bình thường.";
+                }
+            } else {
+                if (userCount > 0) {
+                    extraMsg = " Toàn bộ " + userCount + " tài khoản thuộc vai trò này đã bị chặn đăng nhập vào hệ thống.";
+                }
+            }
+
             redirectAttributes.addFlashAttribute(
                     "successMessage",
-                    "Đã chuyển trạng thái vai trò '" + (role.getDisplayName() != null ? role.getDisplayName() : role.getRoleName())
-                            + "' sang: " + statusText + "."
+                    "Đã chuyển trạng thái vai trò '" + roleDisplay + "' sang: " + statusText + "." + extraMsg
             );
             return "redirect:/accounts/roles?editRoleId=" + roleId;
 
@@ -373,29 +387,7 @@ public class RoleManagementController {
      * Nếu người dùng tích chọn quyền Tạo/Quản lý thì tự động đảm bảo quyền Xem tương ứng cũng được bật.
      */
     private List<Permission> findPermissionsWithImpliedView(List<Long> permissionIds) {
-        List<Permission> selected = new ArrayList<>(permissionRepository.findAllById(permissionIds));
-        Set<String> codes = selected.stream()
-                .map(Permission::getPermissionCode)
-                .filter(Objects::nonNull)
-                .map(String::toUpperCase)
-                .collect(Collectors.toSet());
-
-        Map<String, String> impliedMap = Map.of(
-                "APPOINTMENT_MANAGE", "APPOINTMENT_VIEW",
-                "CLINICAL_EXAM_WRITE", "MEDICAL_RECORD_VIEW",
-                "INVOICE_CREATE", "INVOICE_VIEW",
-                "PAYMENT_COLLECT", "INVOICE_VIEW",
-                "INVENTORY_MANAGE", "INVENTORY_VIEW"
-        );
-
-        for (Map.Entry<String, String> entry : impliedMap.entrySet()) {
-            if (codes.contains(entry.getKey()) && !codes.contains(entry.getValue())) {
-                permissionRepository.findByPermissionCodeIgnoreCase(entry.getValue())
-                        .ifPresent(selected::add);
-                codes.add(entry.getValue());
-            }
-        }
-        return selected;
+        return new ArrayList<>(permissionRepository.findAllById(permissionIds));
     }
 
     /**
@@ -428,7 +420,7 @@ public class RoleManagementController {
                         "Tra cứu thông tin hạng thẻ thành viên, điểm tích lũy và đổi quyền lợi bệnh nhân (FT19).",
                         "Thẻ thành viên & Điểm",
                         "bi-credit-card",
-                        List.of(new ActionSpec("CUSTOMER_CARE_MANAGE", "Toàn quyền", "Tra cứu thẻ thành viên & điểm tích lũy", ""))
+                        List.of(new ActionSpec("RECEPTION_MEMBERSHIPS", "Toàn quyền", "Tra cứu thẻ thành viên & điểm tích lũy", ""))
                 ),
                 new GroupSpec(
                         "GRP_RECEPTION_APPOINTMENT",
@@ -436,10 +428,7 @@ public class RoleManagementController {
                         "Xem danh sách lịch hẹn khám, đặt lịch hẹn mới và điều phối lịch hẹn theo tuần/tháng.",
                         "Quản lý lịch hẹn",
                         "bi-calendar3",
-                        List.of(
-                                new ActionSpec("APPOINTMENT_VIEW", "Xem", "Xem danh sách lịch hẹn bệnh nhân", ""),
-                                new ActionSpec("APPOINTMENT_MANAGE", "Đặt lịch", "Tạo và quản lý lịch hẹn khám", "APPOINTMENT_VIEW")
-                        )
+                        List.of(new ActionSpec("APPOINTMENT_MANAGE", "Toàn quyền", "Tạo và quản lý lịch hẹn khám", ""))
                 ),
                 new GroupSpec(
                         "GRP_RECEPTION_CHECKIN",
@@ -447,7 +436,7 @@ public class RoleManagementController {
                         "Thực hiện thủ tục check-in đón bệnh nhân và phân luồng tiếp đón tại quầy.",
                         "Tiếp đón & Check-in",
                         "bi-person-check",
-                        List.of(new ActionSpec("APPOINTMENT_MANAGE", "Toàn quyền", "Thực hiện check-in tiếp đón bệnh nhân", ""))
+                        List.of(new ActionSpec("RECEPTION_CHECKIN", "Toàn quyền", "Thực hiện check-in tiếp đón bệnh nhân", ""))
                 ),
                 new GroupSpec(
                         "GRP_RECEPTION_QUEUE",
@@ -456,6 +445,14 @@ public class RoleManagementController {
                         "Hàng chờ khám",
                         "bi-list-ol",
                         List.of(new ActionSpec("APPOINTMENT_VIEW", "Toàn quyền", "Theo dõi hàng chờ khám tại phòng khám", ""))
+                ),
+                new GroupSpec(
+                        "GRP_RECEPTION_DISPATCH",
+                        "Điều phối ghế nha",
+                        "Bảng Kanban theo dõi và điều phối bệnh nhân vào từng ghế khám răng.",
+                        "Điều phối ghế nha",
+                        "bi-kanban",
+                        List.of(new ActionSpec("RECEPTION_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
                 ),
                 new GroupSpec(
                         "GRP_RECEPTION_CUSTOMER_CARE",
@@ -471,14 +468,11 @@ public class RoleManagementController {
         moduleSpecs.put("CLINICAL", List.of(
                 new GroupSpec(
                         "GRP_CLINICAL_DAILY_VISITS",
-                        "Danh sách khám trong ngày",
-                        "Xem danh sách bệnh nhân khám theo ngày, tuần và chọn ca để bắt đầu phiên khám.",
-                        "Danh sách khám trong ngày",
+                        "Khám trong ngày",
+                        "Xem danh sách ca khám theo ngày, tuần và mở ca để bắt đầu phiên khám.",
+                        "Khám trong ngày",
                         "bi-calendar2-week",
-                        List.of(
-                                new ActionSpec("MEDICAL_RECORD_VIEW", "Xem", "Xem danh sách ca khám trong ngày", ""),
-                                new ActionSpec("CLINICAL_EXAM_WRITE", "Khám lâm sàng", "Bắt đầu ca khám và chẩn đoán bệnh", "MEDICAL_RECORD_VIEW")
-                        )
+                        List.of(new ActionSpec("CLINICAL_DAILY_VISITS", "Toàn quyền", "Bắt đầu ca khám và chẩn đoán bệnh", ""))
                 ),
                 new GroupSpec(
                         "GRP_CLINICAL_WORKFLOWS",
@@ -486,7 +480,7 @@ public class RoleManagementController {
                         "Quản lý và thực hiện quy trình kỹ thuật lâm sàng chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT).",
                         "Quy trình kỹ thuật",
                         "bi-journal-medical",
-                        List.of(new ActionSpec("CLINICAL_EXAM_WRITE", "Toàn quyền", "Thực hiện quy trình kỹ thuật lâm sàng", ""))
+                        List.of(new ActionSpec("CLINICAL_WORKFLOWS", "Toàn quyền", "Thực hiện quy trình kỹ thuật lâm sàng", ""))
                 ),
                 new GroupSpec(
                         "GRP_CLINICAL_CHAIRS",
@@ -494,7 +488,7 @@ public class RoleManagementController {
                         "Bảng Kanban theo dõi và điều phối bệnh nhân vào từng ghế khám răng.",
                         "Điều phối ghế nha",
                         "bi-kanban",
-                        List.of(new ActionSpec("CLINICAL_EXAM_WRITE", "Toàn quyền", "Điều phối ghế nha khoa", ""))
+                        List.of(new ActionSpec("CLINICAL_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
                 ),
                 new GroupSpec(
                         "GRP_CLINICAL_PRESCRIPTION",
@@ -518,15 +512,23 @@ public class RoleManagementController {
                         "Quản lý kho hình ảnh trước/sau điều trị và ảnh chụp khoang miệng của bệnh nhân (FT17).",
                         "Kho ảnh lâm sàng",
                         "bi-images",
-                        List.of(new ActionSpec("CLINICAL_EXAM_WRITE", "Toàn quyền", "Xem & tải ảnh lâm sàng trước/sau", ""))
+                        List.of(new ActionSpec("CLINICAL_PHOTOS", "Toàn quyền", "Xem & tải ảnh lâm sàng trước/sau", ""))
+                ),
+                new GroupSpec(
+                        "GRP_CLINICAL_XRAY",
+                        "Phim X-quang NanoPix",
+                        "Trình xem ảnh X-quang nha khoa tích hợp máy chụp Eighteeth NanoPix (FT12).",
+                        "Phim X-quang NanoPix",
+                        "bi-radioactive",
+                        List.of(new ActionSpec("CLINICAL_XRAY", "Toàn quyền", "Xem & đối chiếu ảnh X-quang NanoPix", ""))
                 ),
                 new GroupSpec(
                         "GRP_CLINICAL_LABO",
-                        "Xét nghiệm & Labo",
-                        "Quản lý phiếu đặt xưởng răng sứ, theo dõi tiến độ gia công phục hình và mẫu xét nghiệm (FT13, FT15).",
-                        "Xét nghiệm & Labo",
-                        "bi-droplet-half",
-                        List.of(new ActionSpec("TREATMENT_PLAN_MANAGE", "Toàn quyền", "Quản lý phiếu xưởng Labo & xét nghiệm", ""))
+                        "Quản lý labo",
+                        "Quản lý phiếu gửi mẫu Labo chế tác răng sứ và phục hình ngoài (FT13, FT15).",
+                        "Quản lý labo",
+                        "bi-box-seam-fill",
+                        List.of(new ActionSpec("CLINICAL_LABO", "Toàn quyền", "Quản lý phiếu xưởng Labo & xét nghiệm", ""))
                 ),
                 new GroupSpec(
                         "GRP_CLINICAL_PATIENT_RECORDS",
@@ -546,18 +548,15 @@ public class RoleManagementController {
                         "Bảng điều khiển tổng quan viện phí, công nợ và tình hình thanh toán của bệnh nhân (SCR-22.1).",
                         "Dashboard Bệnh nhân",
                         "bi-speedometer2",
-                        List.of(new ActionSpec("INVOICE_VIEW", "Toàn quyền", "Xem Dashboard tài chính bệnh nhân", ""))
+                        List.of(new ActionSpec("FINANCE_DASHBOARD", "Toàn quyền", "Xem Dashboard tài chính bệnh nhân", ""))
                 ),
                 new GroupSpec(
                         "GRP_FINANCE_INVOICE",
-                        "Quản lý Hóa đơn",
+                        "Quản lý hoá đơn",
                         "Lập hóa đơn viện phí mới, áp dụng voucher khuyến mãi và in hóa đơn thanh toán (SCR-21.2).",
-                        "Quản lý Hóa đơn",
+                        "Quản lý hoá đơn",
                         "bi-receipt",
-                        List.of(
-                                new ActionSpec("INVOICE_VIEW", "Xem", "Xem danh sách hóa đơn", ""),
-                                new ActionSpec("INVOICE_CREATE", "Lập hóa đơn", "Tạo hóa đơn viện phí mới", "INVOICE_VIEW")
-                        )
+                        List.of(new ActionSpec("INVOICE_CREATE", "Toàn quyền", "Tạo và quản lý hóa đơn viện phí", ""))
                 ),
                 new GroupSpec(
                         "GRP_FINANCE_PAYMENT",
@@ -573,7 +572,7 @@ public class RoleManagementController {
                         "Theo dõi số dư nợ viện phí, lịch sử trả góp và quản lý công nợ khách hàng.",
                         "Công nợ bệnh nhân",
                         "bi-cash-stack",
-                        List.of(new ActionSpec("INVOICE_VIEW", "Toàn quyền", "Theo dõi công nợ bệnh nhân", ""))
+                        List.of(new ActionSpec("FINANCE_DEBT", "Toàn quyền", "Theo dõi công nợ bệnh nhân", ""))
                 ),
                 new GroupSpec(
                         "GRP_FINANCE_REFUND",
@@ -593,10 +592,7 @@ public class RoleManagementController {
                         "Tra cứu tồn kho vật tư tiêu hao, lập phiếu nhập kho, xuất kho và cảnh báo tồn tối thiểu.",
                         "Quản lý kho vật tư",
                         "bi-box-seam",
-                        List.of(
-                                new ActionSpec("INVENTORY_VIEW", "Xem tồn kho", "Tra cứu tồn kho vật tư", ""),
-                                new ActionSpec("INVENTORY_MANAGE", "Nhập/Xuất kho", "Lập phiếu nhập & xuất kho vật tư", "INVENTORY_VIEW")
-                        )
+                        List.of(new ActionSpec("INVENTORY_STOCK", "Toàn quyền", "Quản lý tồn kho, nhập & xuất kho vật tư", ""))
                 ),
                 new GroupSpec(
                         "GRP_INVENTORY_SUPPLIER",
@@ -613,10 +609,26 @@ public class RoleManagementController {
                 new GroupSpec(
                         "GRP_HR_MY_SCHEDULE",
                         "Lịch trực & Chấm công",
-                        "Xem lịch làm việc cá nhân hàng tuần và thực hiện check-in/check-out chấm công.",
+                        "Xem lịch làm việc cá nhân hàng tuần (SCR-33.3).",
                         "Lịch trực & Chấm công",
                         "bi-calendar-check",
-                        List.of(new ActionSpec("SCHEDULE_MY", "Toàn quyền", "Xem lịch làm việc & chấm công cá nhân", ""))
+                        List.of(new ActionSpec("SCHEDULE_MY", "Toàn quyền", "Xem lịch làm việc cá nhân", ""))
+                ),
+                new GroupSpec(
+                        "GRP_HR_MY_ATTENDANCE",
+                        "Chấm công",
+                        "Check-in / Check-out chấm công hàng ngày và tra cứu lịch sử công (SCR-33.2, 33.4).",
+                        "Chấm công",
+                        "bi-fingerprint",
+                        List.of(new ActionSpec("HR_MY_ATTENDANCE", "Toàn quyền", "Check-in & xem lịch sử chấm công", ""))
+                ),
+                new GroupSpec(
+                        "GRP_HR_LEAVE_REQUESTS",
+                        "Yêu cầu nghỉ / Khóa lịch",
+                        "Gửi đơn xin nghỉ phép và khóa lịch nhận khám của Bác sĩ.",
+                        "Yêu cầu nghỉ / Khóa lịch",
+                        "bi-calendar-x",
+                        List.of(new ActionSpec("HR_LEAVE_REQUESTS", "Toàn quyền", "Gửi đơn nghỉ phép & Khóa lịch", ""))
                 ),
                 new GroupSpec(
                         "GRP_HR_BRANCH_SCHEDULE",
@@ -632,7 +644,7 @@ public class RoleManagementController {
                         "Theo dõi và quản lý bảng tổng hợp chấm công thực tế của nhân viên toàn chi nhánh.",
                         "Chấm công chi nhánh",
                         "bi-fingerprint",
-                        List.of(new ActionSpec("SCHEDULE_MANAGE", "Toàn quyền", "Theo dõi bảng chấm công chi nhánh", ""))
+                        List.of(new ActionSpec("HR_BRANCH_ATTENDANCE", "Toàn quyền", "Theo dõi bảng chấm công chi nhánh", ""))
                 ),
                 new GroupSpec(
                         "GRP_HR_STAFF",
@@ -676,7 +688,7 @@ public class RoleManagementController {
                         "Quản lý danh mục dịch vụ nha khoa, đơn giá và bảng giá niêm yết (FT02).",
                         "Dịch vụ & Bảng giá",
                         "bi-tags",
-                        List.of(new ActionSpec("CATALOG_MANAGE", "Toàn quyền", "Quản lý danh mục dịch vụ & bảng giá", ""))
+                        List.of(new ActionSpec("CATALOG_SERVICES", "Toàn quyền", "Quản lý danh mục dịch vụ & bảng giá", ""))
                 ),
                 new GroupSpec(
                         "GRP_SYSTEM_MEDICATIONS",
@@ -684,7 +696,7 @@ public class RoleManagementController {
                         "Quản lý danh mục thuốc điều trị, biệt dược và hướng dẫn liều dùng.",
                         "Danh mục thuốc",
                         "bi-capsule",
-                        List.of(new ActionSpec("CATALOG_MANAGE", "Toàn quyền", "Quản lý danh mục thuốc", ""))
+                        List.of(new ActionSpec("CATALOG_MEDICATIONS", "Toàn quyền", "Quản lý danh mục thuốc", ""))
                 ),
                 new GroupSpec(
                         "GRP_SYSTEM_ICD10",
@@ -692,7 +704,7 @@ public class RoleManagementController {
                         "Quản lý bảng mã bệnh quốc tế ICD-10 phục vụ chẩn đoán lâm sàng.",
                         "Danh mục ICD-10",
                         "bi-clipboard2-pulse",
-                        List.of(new ActionSpec("CATALOG_MANAGE", "Toàn quyền", "Quản lý danh mục mã bệnh ICD-10", ""))
+                        List.of(new ActionSpec("CATALOG_ICD10", "Toàn quyền", "Quản lý danh mục mã bệnh ICD-10", ""))
                 ),
                 new GroupSpec(
                         "GRP_SYSTEM_MEMBERSHIP_TIERS",
@@ -700,7 +712,7 @@ public class RoleManagementController {
                         "Quản lý các hạng thành viên (Bạc, Vàng, Kim Cương) và quy tắc tích lũy điểm thưởng (FT19).",
                         "Hạng thẻ & Tích điểm",
                         "bi-award",
-                        List.of(new ActionSpec("CATALOG_MANAGE", "Toàn quyền", "Quản lý hạng thành viên & tích điểm", ""))
+                        List.of(new ActionSpec("CATALOG_MEMBERSHIP_TIERS", "Toàn quyền", "Quản lý hạng thành viên & tích điểm", ""))
                 ),
                 new GroupSpec(
                         "GRP_SYSTEM_PROMOTIONS",
@@ -708,7 +720,39 @@ public class RoleManagementController {
                         "Quản lý các chương trình ưu đãi, giảm giá và mã voucher viện phí (FT20).",
                         "Khuyến mãi & Voucher",
                         "bi-ticket-perforated",
-                        List.of(new ActionSpec("CATALOG_MANAGE", "Toàn quyền", "Quản lý khuyến mãi & voucher", ""))
+                        List.of(new ActionSpec("CATALOG_PROMOTIONS", "Toàn quyền", "Quản lý khuyến mãi & voucher", ""))
+                ),
+                new GroupSpec(
+                        "GRP_SYSTEM_NEWS",
+                        "Quản lý tin tức",
+                        "Đăng tải bài viết tin tức, thông báo và quản lý chuyên mục kiến thức nha khoa.",
+                        "Quản lý tin tức",
+                        "bi-file-earmark-richtext",
+                        List.of(new ActionSpec("CATALOG_NEWS", "Toàn quyền", "Quản lý tin tức & bài viết", ""))
+                ),
+                new GroupSpec(
+                        "GRP_SYSTEM_BANS",
+                        "Tài khoản bị ban",
+                        "Quản lý danh sách tài khoản vi phạm bị cấm bình luận hoặc khóa tạm thời.",
+                        "Tài khoản bị ban",
+                        "bi-person-slash",
+                        List.of(new ActionSpec("SYSTEM_BANS", "Toàn quyền", "Quản lý tài khoản bị ban", ""))
+                ),
+                new GroupSpec(
+                        "GRP_SYSTEM_REPORTS",
+                        "Báo cáo & Thống kê",
+                        "Báo cáo tài chính viện phí, doanh thu điều hành và phân tích hiệu suất.",
+                        "Báo cáo & Thống kê",
+                        "bi-graph-up",
+                        List.of(new ActionSpec("FINANCE_REPORTS", "Toàn quyền", "Xem báo cáo doanh thu & viện phí", ""))
+                ),
+                new GroupSpec(
+                        "GRP_SYSTEM_AUDIT",
+                        "Nhật ký thao tác",
+                        "Theo dõi nhật ký kiểm toán thao tác người dùng và thay đổi dữ liệu (Audit Log).",
+                        "Nhật ký thao tác",
+                        "bi-journal-text",
+                        List.of(new ActionSpec("SYSTEM_AUDIT", "Toàn quyền", "Xem nhật ký kiểm toán hệ thống", ""))
                 )
         ));
 
