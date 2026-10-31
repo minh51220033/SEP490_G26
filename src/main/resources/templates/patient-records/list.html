@@ -47,5 +47,17 @@
         <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
+<script>
+(function() {
+    const kwInput = document.getElementById('query');
+    const form = kwInput ? kwInput.closest('form') : null;
+    if (!form || !kwInput) return;
+    let debounceTimer = null;
+    kwInput.addEventListener('input', function() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { form.submit(); }, 350);
+    });
+})();
+</script>
 </body>
 </html>

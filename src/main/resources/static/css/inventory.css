@@ -597,3 +597,224 @@
     .form-action-group { width: 100%; }
     .form-action-group .button { flex: 1; }
 }
+
+
+/* =========================================================================
+   MODULE A ENHANCEMENTS: INVOICE UPLOAD, PAYMENT SUMMARY, SIGNATURE PAD, PDF
+   ========================================================================= */
+
+.invoice-upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.invoice-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.invoice-preview-thumb {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    cursor: zoom-in;
+    background: #fff;
+}
+
+.invoice-thumb-small {
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    cursor: zoom-in;
+    vertical-align: middle;
+}
+
+.receipt-payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 14px;
+}
+
+.receipt-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+
+.receipt-summary-pill {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13.5px;
+    color: #334155;
+}
+
+.receipt-summary-pill strong {
+    font-size: 15px;
+    margin-left: 6px;
+}
+
+.signature-inline-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+}
+
+.signature-preview-thumb {
+    max-height: 46px;
+    max-width: 140px;
+    object-fit: contain;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+.signature-pad-container {
+    background: #ffffff;
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    padding: 6px;
+    margin: 12px 0;
+    text-align: center;
+    touch-action: none;
+}
+
+#signatureCanvas {
+    width: 100%;
+    max-width: 540px;
+    height: 210px;
+    background: #ffffff;
+    border-radius: 6px;
+    cursor: crosshair;
+    touch-action: none;
+    display: block;
+    margin: 0 auto;
+}
+
+.detail-attachments-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 14px 0;
+}
+
+.detail-attachment-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.detail-attachment-card h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+}
+
+.detail-invoice-img {
+    max-height: 120px;
+    max-width: 220px;
+    object-fit: contain;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: zoom-in;
+}
+
+.detail-signature-img {
+    max-height: 95px;
+    max-width: 220px;
+    object-fit: contain;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    padding: 4px;
+}
+
+.lightbox-modal-card {
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    padding: 16px;
+    text-align: center;
+}
+
+.lightbox-img {
+    max-width: 84vw;
+    max-height: 76vh;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.mat-picker-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mat-search-input {
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+}
+
+.payment-debt-banner {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.payment-debt-banner div span {
+    display: block;
+    font-size: 11px;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+.payment-debt-banner div strong {
+    font-size: 14px;
+    color: #0f172a;
+}
+
+@media (max-width: 800px) {
+    .receipt-payment-grid,
+    .detail-attachments-grid,
+    .payment-debt-banner {
+        grid-template-columns: 1fr;
+    }
+}

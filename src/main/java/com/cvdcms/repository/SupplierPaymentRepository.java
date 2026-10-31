@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 public interface SupplierPaymentRepository extends JpaRepository<SupplierPayment, Long> {
 
@@ -72,9 +75,46 @@ public interface SupplierPaymentRepository extends JpaRepository<SupplierPayment
     );
 
     @Query("""
+        SELECT sp.supplier.supplierId, COALESCE(SUM(sp.amount), 0)
+        FROM SupplierPayment sp
+        WHERE sp.branch.branchId = :branchId
+          AND sp.supplier.supplierId IN :supplierIds
+        GROUP BY sp.supplier.supplierId
+        """)
+    List<Object[]> aggregatePaidByBranchAndSuppliers(
+            @Param("branchId") Long branchId,
+            @Param("supplierIds") Collection<Long> supplierIds
+    );
+
+    @Query("""
         SELECT COALESCE(SUM(sp.amount), 0)
         FROM SupplierPayment sp
         WHERE sp.receipt.receiptId = :receiptId
         """)
     BigDecimal sumPaidAmountByReceipt(@Param("receiptId") Long receiptId);
+
+    @Query("""
+        SELECT sp.receipt.receiptId, COALESCE(SUM(sp.amount), 0)
+        FROM SupplierPayment sp
+        WHERE sp.receipt.receiptId IN :receiptIds
+        GROUP BY sp.receipt.receiptId
+        """)
+    List<Object[]> sumPaidAmountByReceipts(@Param("receiptIds") Collection<Long> receiptIds);
+
+    @Query("""
+        SELECT COUNT(sp) > 0
+        FROM SupplierPayment sp
+        WHERE sp.branch.branchId = :branchId
+          AND sp.supplier.supplierId = :supplierId
+          AND ((:receiptId IS NULL AND sp.receipt IS NULL) OR sp.receipt.receiptId = :receiptId)
+          AND sp.amount = :amount
+          AND sp.createdAt >= :since
+        """)
+    boolean existsRecentDuplicatePayment(
+            @Param("branchId") Long branchId,
+            @Param("supplierId") Long supplierId,
+            @Param("receiptId") Long receiptId,
+            @Param("amount") BigDecimal amount,
+            @Param("since") LocalDateTime since
+    );
 }

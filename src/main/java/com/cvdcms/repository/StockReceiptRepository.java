@@ -1,19 +1,26 @@
 package com.cvdcms.repository;
 
 import com.cvdcms.entity.StockReceipt;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface StockReceiptRepository extends JpaRepository<StockReceipt, Long> {
     boolean existsByReceiptCode(String receiptCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM StockReceipt r WHERE r.receiptId = :receiptId")
+    Optional<StockReceipt> findByIdForUpdate(@Param("receiptId") Long receiptId);
 
     @Query(
             value = """
@@ -95,6 +102,22 @@ public interface StockReceiptRepository extends JpaRepository<StockReceipt, Long
     long countReceiptsByBranchAndSupplier(
             @Param("branchId") Long branchId,
             @Param("supplierId") Long supplierId
+    );
+
+    /**
+     * Tổng hợp nhanh số phiếu nhập và tổng tiền nhập theo danh sách nhà cung cấp tại một chi nhánh (chống N+1 query).
+     * Trả về: [supplierId, countReceipts, sumTotalAmount]
+     */
+    @Query("""
+        SELECT r.supplier.supplierId, COUNT(r), COALESCE(SUM(r.totalAmount), 0)
+        FROM StockReceipt r
+        WHERE r.branch.branchId = :branchId
+          AND r.supplier.supplierId IN :supplierIds
+        GROUP BY r.supplier.supplierId
+        """)
+    List<Object[]> aggregateReceiptsByBranchAndSuppliers(
+            @Param("branchId") Long branchId,
+            @Param("supplierIds") Collection<Long> supplierIds
     );
 
     /**

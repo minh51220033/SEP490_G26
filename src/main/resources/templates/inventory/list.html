@@ -7,9 +7,6 @@
 <!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
 <link rel="stylesheet" th:href="@{/css/inventory.css}">
 
-<!-- Header công khai: logo, menu dịch vụ, tin tức -->
-<header th:replace="~{fragments/header :: siteHeader}"></header>
-
 <div class="app-shell">
 
     <!-- Sidebar và Backdrop -->
@@ -47,7 +44,7 @@
                 </div>
                 <div class="field search-field">
                     <label for="keyword">Tìm nhanh (Mã vật tư / Tên vật tư / Số lô / Mã phiếu / Nhà cung cấp)</label>
-                    <input id="keyword" type="search" placeholder="Nhập từ khóa tìm kiếm và nhấn Enter...">
+                    <input id="keyword" type="search" placeholder="Nhập từ khóa tìm kiếm (tự động lọc sau 350ms)...">
                 </div>
                 <div class="filter-actions">
                     <button type="button" class="button button-primary" id="searchBtn">Tìm kiếm</button>
@@ -227,7 +224,7 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Lập phiếu nhập kho từ Nhà cung cấp</h2>
-                        <p>Khi lưu phiếu, hệ thống tự động cộng tồn kho tổng hợp và thêm/cập nhật lô vật tư trong một giao dịch nguyên tử.</p>
+                        <p>Bắt buộc tải lên ảnh/chứng từ hóa đơn hợp lệ. Hệ thống tự động cộng tồn kho, ghi nhận thanh toán ban đầu và tính công nợ NCC.</p>
                     </div>
                 </div>
                 <form id="receiptForm">
@@ -247,8 +244,20 @@
                             <input id="receiptDate" type="date" required>
                         </div>
                         <div class="field">
-                            <label for="attachmentUrl">Đường dẫn ảnh/chứng từ hóa đơn (nếu có)</label>
-                            <input id="attachmentUrl" maxlength="500" placeholder="VD: /uploads/hoa-don-01.pdf">
+                            <label for="invoiceFileInput">Tải ảnh / chứng từ hóa đơn <span class="required">*</span> <small>(.png, .jpg, .jpeg, .webp, .pdf ≤ 5MB)</small></label>
+                            <div class="invoice-upload-box">
+                                <input id="invoiceFileInput" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf">
+                                <input id="attachmentUrl" type="hidden">
+                                <div id="invoicePreviewCard" class="invoice-preview-card" hidden>
+                                    <img id="invoicePreviewImg" class="invoice-preview-thumb" alt="Ảnh hóa đơn" hidden>
+                                    <div style="flex:1; min-width:0;">
+                                        <div id="invoicePreviewName" style="font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                                        <small id="invoicePreviewStatus" style="color:#15803d;">Đã tải lên thành công</small>
+                                    </div>
+                                    <button type="button" id="zoomUploadedInvoiceBtn" class="button button-secondary button-sm" hidden>Phóng to</button>
+                                    <button type="button" id="clearUploadedInvoiceBtn" class="button button-danger-outline button-sm">Xóa file</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="field full-width">
                             <label for="receiptNotes">Ghi chú phiếu nhập</label>
@@ -256,31 +265,70 @@
                         </div>
                     </div>
                     <div class="receipt-items-heading">
-                        <h3>Chi tiết vật tư nhập kho</h3>
+                        <div>
+                            <h3>Chi tiết vật tư nhập kho</h3>
+                            <small style="color:#64748b;">Gõ từ khóa vào ô lọc nhanh trong từng dòng để tìm vật tư theo mã hoặc tên.</small>
+                        </div>
                         <button type="button" id="addReceiptItem" class="button button-secondary">+ Thêm dòng vật tư</button>
                     </div>
                     <div class="table-wrap">
                         <table class="receipt-table">
                             <thead>
                             <tr>
-                                <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:85px">Đơn vị</th>
-                                <th style="min-width:130px">Số lô <span class="required">*</span></th>
-                                <th style="min-width:145px">Hạn sử dụng <span class="required">*</span></th>
-                                <th style="min-width:115px">Số lượng <span class="required">*</span></th>
-                                <th style="min-width:140px">Đơn giá (VNĐ) <span class="required">*</span></th>
-                                <th style="min-width:130px">Thành tiền</th>
-                                <th style="width:48px"></th>
+                                <th style="min-width:260px">Vật tư <span class="required">*</span></th>
+                                <th style="min-width:75px">Đơn vị</th>
+                                <th style="min-width:125px">Số lô <span class="required">*</span></th>
+                                <th style="min-width:140px">Hạn sử dụng <span class="required">*</span></th>
+                                <th style="min-width:105px">Số lượng <span class="required">*</span></th>
+                                <th style="min-width:135px">Đơn giá (VNĐ) <span class="required">*</span></th>
+                                <th style="min-width:125px">Thành tiền</th>
+                                <th style="width:44px"></th>
                             </tr>
                             </thead>
                             <tbody id="receiptItems"></tbody>
                         </table>
                     </div>
+
+                    <!-- A2: Thanh toán ngay khi nhập kho -->
+                    <div class="receipt-payment-grid">
+                        <div class="field">
+                            <label for="receiptPaidAmount">Số tiền đã thanh toán khi nhập (VNĐ)</label>
+                            <div style="display:flex; gap:6px;">
+                                <input id="receiptPaidAmount" type="number" min="0" step="1" inputmode="numeric" value="0" style="flex:1;">
+                                <button type="button" id="payFullReceiptBtn" class="button button-secondary button-sm" title="Điền 100% tổng tiền phiếu nhập">Trả đủ</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="receiptPaymentMethod">Hình thức thanh toán</label>
+                            <select id="receiptPaymentMethod">
+                                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                                <option value="CASH">Tiền mặt</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="receiptPaymentRefNo">Số chứng từ thanh toán / UNC</label>
+                            <input id="receiptPaymentRefNo" maxlength="100" pattern="[A-Za-z0-9._/-]{1,100}" placeholder="VD: UNC-NHAPKHO-01">
+                        </div>
+                    </div>
+
+                    <!-- A4: Ký điện tử khi lập phiếu nhập -->
+                    <div class="signature-inline-bar">
+                        <input type="hidden" id="receiptSignatureData">
+                        <button type="button" id="openReceiptSignBtn" class="button button-secondary">Ký điện tử người lập phiếu nhập</button>
+                        <span id="receiptSignStatus" style="font-size:13px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
+                        <img id="receiptSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu nhập" hidden>
+                        <button type="button" id="clearReceiptSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                    </div>
+
                     <div class="receipt-footer">
-                        <div class="total-label">Tổng cộng tiền phiếu nhập <strong id="receiptTotal">0 ₫</strong></div>
+                        <div class="receipt-summary-bar">
+                            <div class="receipt-summary-pill">Tổng tiền nhập: <strong id="receiptTotal">0 ₫</strong></div>
+                            <div class="receipt-summary-pill">Đã thanh toán: <strong id="receiptPaidDisplay" class="stock-good">0 ₫</strong></div>
+                            <div class="receipt-summary-pill">Công nợ còn lại: <strong id="receiptRemainingDebtDisplay" class="stock-low">0 ₫</strong></div>
+                        </div>
                         <div class="form-action-group">
                             <button type="button" id="resetReceiptBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitReceipt" class="button button-primary">✓ Xác nhận &amp; Lưu phiếu nhập</button>
+                            <button type="submit" id="submitReceipt" class="button button-primary">Xác nhận &amp; Lưu phiếu nhập</button>
                         </div>
                     </div>
                 </form>
@@ -291,7 +339,7 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Lịch sử phiếu nhập kho</h2>
-                        <p>Danh sách các phiếu đã nhập tại chi nhánh hiện tại.</p>
+                        <p>Danh sách các phiếu đã nhập tại chi nhánh hiện tại (bấm vào ảnh hóa đơn để phóng to hoặc xuất PDF).</p>
                     </div>
                     <div class="date-filters">
                         <div class="field">
@@ -318,11 +366,11 @@
                             <th>Mã phiếu</th>
                             <th>Ngày nhập</th>
                             <th>Nhà cung cấp</th>
-                            <th>Số HĐ NCC</th>
-                            <th>Người nhận</th>
+                            <th>Hóa đơn đính kèm</th>
                             <th>Tổng tiền</th>
                             <th>Đã trả</th>
                             <th>Còn nợ</th>
+                            <th>Chữ ký</th>
                             <th>Thao tác</th>
                         </tr>
                         </thead>
@@ -376,22 +424,32 @@
                         <table class="receipt-table">
                             <thead>
                             <tr>
-                                <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:260px">Lô xuất (Mặc định tự động FEFO)</th>
-                                <th style="min-width:110px">Tồn khả dụng</th>
-                                <th style="min-width:120px">Số lượng xuất <span class="required">*</span></th>
-                                <th style="min-width:160px">Ghi chú dòng</th>
-                                <th style="width:48px"></th>
+                                <th style="min-width:250px">Vật tư <span class="required">*</span></th>
+                                <th style="min-width:250px">Lô xuất (Mặc định tự động FEFO)</th>
+                                <th style="min-width:105px">Tồn khả dụng</th>
+                                <th style="min-width:115px">Số lượng xuất <span class="required">*</span></th>
+                                <th style="min-width:150px">Ghi chú dòng</th>
+                                <th style="width:44px"></th>
                             </tr>
                             </thead>
                             <tbody id="issueItems"></tbody>
                         </table>
                     </div>
+
+                    <!-- A4: Ký điện tử khi lập phiếu xuất -->
+                    <div class="signature-inline-bar">
+                        <input type="hidden" id="issueSignatureData">
+                        <button type="button" id="openIssueSignBtn" class="button button-secondary">Ký điện tử người lập phiếu xuất</button>
+                        <span id="issueSignStatus" style="font-size:13px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
+                        <img id="issueSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu xuất" hidden>
+                        <button type="button" id="clearIssueSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                    </div>
+
                     <div class="receipt-footer">
-                        <div class="form-hint">Mẹo: Để trống ô chọn lô để hệ thống tự động trừ từ lô có hạn sử dụng gần nhất trước (FEFO).</div>
+                        <div class="form-hint">Để trống ô chọn lô để hệ thống tự động trừ từ lô có hạn sử dụng gần nhất trước (FEFO).</div>
                         <div class="form-action-group">
                             <button type="button" id="resetIssueBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitIssue" class="button button-primary">✓ Xác nhận xuất kho</button>
+                            <button type="submit" id="submitIssue" class="button button-primary">Xác nhận xuất kho</button>
                         </div>
                     </div>
                 </form>
@@ -431,9 +489,9 @@
                             <th>Ngày xuất</th>
                             <th>Loại xuất</th>
                             <th>Người lập phiếu</th>
-                            <th>Số dòng lô</th>
                             <th>Tổng SL xuất</th>
                             <th>Giá trị vốn</th>
+                            <th>Chữ ký</th>
                             <th>Ghi chú</th>
                             <th>Thao tác</th>
                         </tr>
@@ -487,22 +545,31 @@
                         <table class="receipt-table">
                             <thead>
                             <tr>
-                                <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:260px">Lô điều chuyển (Tự động FEFO hoặc chọn lô)</th>
-                                <th style="min-width:110px">Tồn khả dụng</th>
-                                <th style="min-width:120px">SL chuyển <span class="required">*</span></th>
-                                <th style="min-width:160px">Ghi chú dòng</th>
-                                <th style="width:48px"></th>
+                                <th style="min-width:250px">Vật tư <span class="required">*</span></th>
+                                <th style="min-width:250px">Lô điều chuyển (Tự động FEFO hoặc chọn lô)</th>
+                                <th style="min-width:105px">Tồn khả dụng</th>
+                                <th style="min-width:115px">SL chuyển <span class="required">*</span></th>
+                                <th style="min-width:150px">Ghi chú dòng</th>
+                                <th style="width:44px"></th>
                             </tr>
                             </thead>
                             <tbody id="transferItems"></tbody>
                         </table>
                     </div>
+
+                    <div class="signature-inline-bar">
+                        <input type="hidden" id="transferSignatureData">
+                        <button type="button" id="openTransferSignBtn" class="button button-secondary">Ký điện tử người lập phiếu điều chuyển</button>
+                        <span id="transferSignStatus" style="font-size:13px; color:#64748b;">Chưa ký</span>
+                        <img id="transferSignPreview" class="signature-preview-thumb" alt="Chữ ký điều chuyển" hidden>
+                        <button type="button" id="clearTransferSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                    </div>
+
                     <div class="receipt-footer">
                         <div class="form-hint">Lưu ý: Chỉ các lô còn hạn sử dụng mới được phép điều chuyển sang chi nhánh khác.</div>
                         <div class="form-action-group">
                             <button type="button" id="resetTransferBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitTransfer" class="button button-primary">⇄ Xác nhận điều chuyển</button>
+                            <button type="submit" id="submitTransfer" class="button button-primary">Xác nhận điều chuyển</button>
                         </div>
                     </div>
                 </form>
@@ -661,7 +728,7 @@
                             <th>Mã số thuế</th>
                             <th>Số điện thoại</th>
                             <th>Số phiếu nhập</th>
-                            <th>Tổng phải trả</th>
+                            <th>Tổng tiền nhập</th>
                             <th>Đã thanh toán</th>
                             <th>Còn nợ</th>
                             <th>Trạng thái</th>
@@ -729,8 +796,6 @@
             </section>
         </main>
 
-        <!-- Footer -->
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
@@ -797,6 +862,20 @@
         </div>
         <form id="paymentForm">
             <div class="form-grid">
+                <div id="paymentDebtBanner" class="payment-debt-banner" hidden>
+                    <div>
+                        <span>Tổng tiền đã nhập</span>
+                        <strong id="payBannerTotalImport">0 ₫</strong>
+                    </div>
+                    <div>
+                        <span>Đã thanh toán</span>
+                        <strong id="payBannerTotalPaid" class="stock-good">0 ₫</strong>
+                    </div>
+                    <div>
+                        <span>Công nợ còn lại tối đa</span>
+                        <strong id="payBannerRemainingDebt" class="stock-low">0 ₫</strong>
+                    </div>
+                </div>
                 <div class="field">
                     <label for="paySupplierId">Nhà cung cấp <span class="required">*</span></label>
                     <select id="paySupplierId" required>
@@ -822,7 +901,7 @@
                 </div>
                 <div class="field">
                     <label for="payAmount">Số tiền thanh toán (VNĐ) <span class="required">*</span></label>
-                    <input id="payAmount" type="number" min="1" step="1" inputmode="numeric" required placeholder="Nhập số tiền...">
+                    <input id="payAmount" type="number" min="1" step="1" inputmode="numeric" required placeholder="Nhập số tiền (hỗ trợ trả từng phần)...">
                 </div>
                 <div class="field">
                     <label for="payRefNo">Số chứng từ / Mã giao dịch</label>
@@ -830,7 +909,7 @@
                 </div>
                 <div class="field full-width">
                     <label for="payNotes">Ghi chú thanh toán</label>
-                    <textarea id="payNotes" rows="2" maxlength="255" placeholder="Nội dung thanh toán công nợ..."></textarea>
+                    <textarea id="payNotes" rows="2" maxlength="255" placeholder="Nội dung thanh toán công nợ (trả đợt 1, đợt 2, tất toán...)..."></textarea>
                 </div>
             </div>
             <div class="modal-actions">
@@ -892,8 +971,54 @@
             <button type="button" class="close-btn" id="closeDetailModalBtn">×</button>
         </div>
         <div id="detailModalBody" class="detail-modal-body"></div>
-        <div class="modal-actions">
+        <div class="modal-actions" id="detailModalActions">
             <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL 5: BẢNG KÝ ĐIỆN TỬ (HTML5 CANVAS)
+     ========================================== -->
+<div id="signatureModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="signatureModalTitle">
+        <div class="modal-header">
+            <h3 id="signatureModalTitle">Ký điện tử xác nhận phiếu kho</h3>
+            <button type="button" class="close-btn" id="closeSignatureModalBtn">×</button>
+        </div>
+        <div>
+            <p id="signatureModalDesc" style="font-size:13px; color:#475569; margin-bottom:8px;">
+                Vui lòng vẽ chữ ký bằng chuột, màn hình cảm ứng hoặc bút cảm ứng vào khung bên dưới. Họ tên người ký được ghi nhận tự động theo tài khoản đang đăng nhập.
+            </p>
+            <div class="signature-pad-container">
+                <canvas id="signatureCanvas" width="540" height="210"></canvas>
+            </div>
+        </div>
+        <div class="modal-actions" style="justify-content:space-between;">
+            <button type="button" class="button button-secondary" id="clearSignatureCanvasBtn">Xóa ký lại</button>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="button button-secondary" id="cancelSignatureModalBtn">Hủy</button>
+                <button type="button" class="button button-primary" id="confirmSignatureBtn">Xác nhận chữ ký</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL 6: XEM ẢNH LỚN / PHÓNG TO HÓA ĐƠN
+     ========================================== -->
+<div id="imageLightboxModal" class="modal-backdrop" hidden>
+    <div class="modal-card lightbox-modal-card" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+        <div class="modal-header">
+            <h3 id="lightboxTitle">Chứng từ / Hóa đơn đính kèm</h3>
+            <button type="button" class="close-btn" id="closeLightboxBtn">×</button>
+        </div>
+        <div style="padding: 10px 0;">
+            <img id="lightboxImage" class="lightbox-img" src="" alt="Ảnh phóng to">
+        </div>
+        <div class="modal-actions">
+            <a id="lightboxDownloadLink" href="#" target="_blank" rel="noopener" class="button button-secondary">Mở tab gốc / Tải về</a>
+            <button type="button" class="button button-primary" id="closeLightboxFooterBtn">Đóng</button>
         </div>
     </div>
 </div>

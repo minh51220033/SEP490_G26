@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +24,10 @@ public class StockIssueResponseDTO {
     private String destinationBranchName;
     private String issuerName;
     private String notes;
+    private String signatureUrl;
+    private Long signedByUserId;
+    private String signedByName;
+    private LocalDateTime signedAt;
     private int itemCount;
     private BigDecimal totalQuantity = BigDecimal.ZERO;
     private BigDecimal totalEstimatedValue = BigDecimal.ZERO;
