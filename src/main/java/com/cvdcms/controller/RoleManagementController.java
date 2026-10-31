@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.text.Normalizer;
@@ -144,6 +145,19 @@ public class RoleManagementController {
             if (r.getRoleId() != null) {
                 List<User> usersWithRole = userRepository.findByRole_RoleId(r.getRoleId().intValue());
                 userCountByRoleId.put(r.getRoleId(), usersWithRole.size());
+            }
+        }
+
+        // Tự động đồng bộ: Tài khoản thuộc vai trò đang tạm ngưng thì chuyển sang Đã khóa (isActive = false)
+        for (Role r : roles) {
+            if (r.getRoleId() != null && Boolean.FALSE.equals(r.getIsActive()) && !isAdminRole(r)) {
+                List<User> usersWithRole = userRepository.findByRole_RoleId(r.getRoleId().intValue());
+                for (User u : usersWithRole) {
+                    if (Boolean.TRUE.equals(u.getIsActive())) {
+                        u.setIsActive(false);
+                        userRepository.save(u);
+                    }
+                }
             }
         }
 
@@ -351,22 +365,28 @@ public class RoleManagementController {
             }
 
             boolean currentlyActive = Boolean.TRUE.equals(role.getIsActive());
-            role.setIsActive(!currentlyActive);
+            boolean nextActiveState = !currentlyActive;
+            role.setIsActive(nextActiveState);
             roleRepository.save(role);
 
+            // Đồng bộ trạng thái Đã khóa / Hoạt động cho toàn bộ tài khoản thuộc vai trò này:
             List<User> assignedUsers = userRepository.findByRole_RoleId(roleId.intValue());
+            for (User u : assignedUsers) {
+                u.setIsActive(nextActiveState);
+                userRepository.save(u);
+            }
             int userCount = assignedUsers.size();
 
             String roleDisplay = role.getDisplayName() != null ? role.getDisplayName() : role.getRoleName();
-            String statusText = Boolean.TRUE.equals(role.getIsActive()) ? "Kích hoạt lại" : "Ngừng hoạt động";
+            String statusText = nextActiveState ? "Kích hoạt lại" : "Ngừng hoạt động";
             String extraMsg = "";
-            if (!currentlyActive) {
+            if (nextActiveState) {
                 if (userCount > 0) {
-                    extraMsg = " " + userCount + " tài khoản thuộc vai trò này đã có thể đăng nhập bình thường.";
+                    extraMsg = " Toàn bộ " + userCount + " tài khoản thuộc vai trò này đã được Mở khóa (Hoạt động).";
                 }
             } else {
                 if (userCount > 0) {
-                    extraMsg = " Toàn bộ " + userCount + " tài khoản thuộc vai trò này đã bị chặn đăng nhập vào hệ thống.";
+                    extraMsg = " Toàn bộ " + userCount + " tài khoản thuộc vai trò này đã được chuyển sang trạng thái Đã khóa.";
                 }
             }
 
@@ -381,6 +401,59 @@ public class RoleManagementController {
             return "redirect:/accounts/roles?editRoleId=" + roleId;
         }
     }
+    @PostMapping("/{roleId}/delete")
+    @Transactional
+    public String deleteRole(
+            @PathVariable Long roleId,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        requireAdmin(session);
+
+        try {
+            Role role = roleRepository.findById(roleId.intValue())
+                    .orElseThrow(() -> new IllegalArgumentException("Vai trò không tồn tại."));
+
+            if (Boolean.TRUE.equals(role.getIsSystem()) || isAdminRole(role) || isPatientRole(role)) {
+                throw new IllegalArgumentException(
+                        "Vai trò cốt lõi của hệ thống (" + role.getRoleName() + ") được bảo vệ, không thể xóa."
+                );
+            }
+
+            List<User> assignedUsers = userRepository.findByRole_RoleId(roleId.intValue());
+            if (!assignedUsers.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Không thể xóa vì đang có " + assignedUsers.size() + " tài khoản đảm nhiệm vai trò này. Vui lòng chuyển đổi vai trò cho các tài khoản trước."
+                );
+            }
+
+            String roleDisplay = role.getDisplayName() != null ? role.getDisplayName() : role.getRoleName();
+
+            // Xóa liên kết quyền trong bảng trung gian role_permissions
+            role.getPermissions().clear();
+            roleRepository.save(role);
+
+            // Xóa vai trò
+            roleRepository.delete(role);
+
+            redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    "Đã xóa vĩnh viễn vai trò '" + roleDisplay + "' khỏi hệ thống thành công."
+            );
+            return "redirect:/accounts/roles";
+
+        } catch (DataIntegrityViolationException ex) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage",
+                    "Không thể xóa vai trò này vì đã phát sinh dữ liệu liên kết trong hệ thống (lịch trực, phân công...). Bạn có thể chuyển sang 'Tạm ngưng' thay vì xóa."
+            );
+            return "redirect:/accounts/roles?editRoleId=" + roleId;
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+            return "redirect:/accounts/roles?editRoleId=" + roleId;
+        }
+    }
+
 
     /**
      * Đảm bảo nguyên tắc "Quản lý/Thao tác bao hàm quyền Xem" (Write implies Read) ở tầng Backend:

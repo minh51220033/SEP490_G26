@@ -78,6 +78,11 @@ public class StaffController {
             @RequestParam(required = false) String specialty,
             @RequestParam(required = false) StaffStatus status,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String positionTitle,
+            @RequestParam(required = false) String hasLicense,
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false, defaultValue = "staffCode") String sort,
+            @RequestParam(required = false, defaultValue = "asc") String direction,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Model model,
@@ -89,7 +94,8 @@ public class StaffController {
         }
         addLayoutAttributes(session, model);
 
-        List<StaffProfile> all = staffService.searchStaff(keyword, specialty, status, branchId);
+        List<StaffProfile> all = staffService.searchStaff(
+                keyword, specialty, status, branchId, positionTitle, hasLicense, roleId, sort, direction);
 
         int pageSize = (size == 25 || size == 50 || size == 100) ? size : 10;
         int totalPages = Math.max(1, (int) Math.ceil(all.size() / (double) pageSize));
@@ -111,8 +117,15 @@ public class StaffController {
         model.addAttribute("selectedSpecialty", specialty);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("selectedPositionTitle", positionTitle);
+        model.addAttribute("selectedHasLicense", hasLicense);
+        model.addAttribute("selectedRoleId", roleId);
+        model.addAttribute("sort", sort);
+        model.addAttribute("direction", direction);
 
         model.addAttribute("specialties", staffService.getSpecialties());
+        model.addAttribute("positionTitles", staffService.getPositionTitles());
+        model.addAttribute("roles", staffService.getAssignableRoles());
         model.addAttribute("statuses", StaffStatus.values());
         model.addAttribute("branches", branchService.getAllBranches());
 

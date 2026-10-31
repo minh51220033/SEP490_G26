@@ -28,11 +28,13 @@ public class StaffScheduleController {
     private final StaffScheduleService scheduleService;
     private final BranchService branchService;
     private final com.cvdcms.repository.UserRepository userRepository;
+    private final com.cvdcms.repository.AttendanceRecordRepository attendanceRepository;
 
-    public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
+    public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository, com.cvdcms.repository.AttendanceRecordRepository attendanceRepository) {
         this.scheduleService = scheduleService;
         this.branchService = branchService;
         this.userRepository = userRepository;
+        this.attendanceRepository = attendanceRepository;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -78,6 +80,14 @@ public class StaffScheduleController {
         model.addAttribute("nextWeek", monday.plusWeeks(1));
         model.addAttribute("today", LocalDate.now());
 
+        // Đảm bảo branchId hợp lệ thuộc danh sách chi nhánh đang hoạt động
+        if (branchId != null) {
+            Long targetBranchId = branchId;
+            if (branches.stream().noneMatch(b -> b.getBranchId().equals(targetBranchId))) {
+                branchId = null;
+            }
+        }
+
         if (branchId == null && !branches.isEmpty()) {
             branchId = branches.get(0).getBranchId();
         }
@@ -88,6 +98,17 @@ public class StaffScheduleController {
             model.addAttribute("shifts", shifts);
             model.addAttribute("matrix", scheduleService.buildWeekMatrix(branchId, monday, shifts));
             model.addAttribute("assignableStaff", scheduleService.getAssignableStaff(branchId));
+
+            // Danh sách nhân viên đã chấm công hôm nay tại chi nhánh (staffId -> giờ check-in HH:mm)
+            java.util.Map<Long, String> checkedInStaffTimesToday = new java.util.HashMap<>();
+            LocalDate today = LocalDate.now();
+            for (com.cvdcms.entity.AttendanceRecord a : attendanceRepository.findByBranchAndRange(branchId, today, today)) {
+                if (a.getCheckInAt() != null) {
+                    checkedInStaffTimesToday.put(a.getStaff().getStaffId(),
+                            a.getCheckInAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
+                }
+            }
+            model.addAttribute("checkedInStaffTimesToday", checkedInStaffTimesToday);
         }
         return "schedule/weekly";
     }
@@ -122,8 +143,12 @@ public class StaffScheduleController {
         }
         requireAdmin(session);
         try {
-            scheduleService.remove(id);
-            ra.addFlashAttribute("successMessage", "Đã gỡ nhân viên khỏi ca.");
+            boolean hadAttendance = scheduleService.remove(id);
+            if (hadAttendance) {
+                ra.addFlashAttribute("successMessage", "Đã gỡ nhân viên khỏi ca trực và tự động hủy lượt chấm công nhầm hôm nay.");
+            } else {
+                ra.addFlashAttribute("successMessage", "Đã gỡ nhân viên khỏi ca trực.");
+            }
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }

@@ -98,18 +98,44 @@
                                            th:classappend="${selectedRole != null and selectedRole.roleId == r.roleId} ? 'btn-primary' : 'btn-outline-primary'">
                                             <i class="bi bi-sliders me-1"></i>Cấu hình
                                         </a>
-                                        <form th:if="${!r.isSystem}"
-                                              th:action="@{/accounts/roles/{id}/toggle-status(id=${r.roleId})}"
-                                              method="post"
-                                              th:attr="data-role-name=${r.displayName != null ? r.displayName : r.roleName},
-                                                       data-is-active=${r.isActive},
-                                                       data-user-count=${userCountByRoleId[r.roleId] != null ? userCountByRoleId[r.roleId] : 0}"
-                                              onsubmit="return confirmToggleRole(this);">
-                                            <button type="submit" class="btn btn-sm w-100"
-                                                    th:classappend="${r.isActive} ? 'btn-outline-danger' : 'btn-outline-success'">
-                                                <span th:text="${r.isActive} ? 'Tạm ngưng' : 'Kích hoạt'">Tạm ngưng</span>
-                                            </button>
-                                        </form>
+                                        <th:block th:if="${!r.isSystem}">
+                                            <!-- Nút Tạm ngưng: CHỈ HIỆN KHI VAI TRÒ ĐANG CÓ TÀI KHOẢN (userCount > 0) -->
+                                            <form th:if="${userCountByRoleId[r.roleId] != null and userCountByRoleId[r.roleId] > 0 and r.isActive}"
+                                                  th:action="@{/accounts/roles/{id}/toggle-status(id=${r.roleId})}"
+                                                  method="post"
+                                                  th:attr="data-role-name=${r.displayName != null ? r.displayName : r.roleName},
+                                                           data-is-active=${r.isActive},
+                                                           data-user-count=${userCountByRoleId[r.roleId]}"
+                                                  onsubmit="return confirmToggleRole(this);">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning w-100" title="Tạm ngưng vai trò này">
+                                                    Tạm ngưng
+                                                </button>
+                                            </form>
+
+                                            <!-- Nút Kích hoạt: HIỆN KHI VAI TRÒ ĐANG BỊ TẠM NGƯNG -->
+                                            <form th:if="${!r.isActive}"
+                                                  th:action="@{/accounts/roles/{id}/toggle-status(id=${r.roleId})}"
+                                                  method="post"
+                                                  th:attr="data-role-name=${r.displayName != null ? r.displayName : r.roleName},
+                                                           data-is-active=${r.isActive},
+                                                           data-user-count=${userCountByRoleId[r.roleId] != null ? userCountByRoleId[r.roleId] : 0}"
+                                                  onsubmit="return confirmToggleRole(this);">
+                                                <button type="submit" class="btn btn-sm btn-outline-success w-100" title="Kích hoạt lại vai trò này">
+                                                    Kích hoạt
+                                                </button>
+                                            </form>
+
+                                            <!-- Nút Xóa: CHỈ HIỆN KHI VAI TRÒ CHƯA CÓ TÀI KHOẢN NÀO (0 tài khoản) -->
+                                            <form th:if="${userCountByRoleId[r.roleId] == null or userCountByRoleId[r.roleId] == 0}"
+                                                  th:action="@{/accounts/roles/{id}/delete(id=${r.roleId})}"
+                                                  method="post"
+                                                  th:attr="data-role-name=${r.displayName != null ? r.displayName : r.roleName}"
+                                                  onsubmit="return confirmDeleteRole(this);">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger w-100" title="Xóa vĩnh viễn vai trò này khỏi hệ thống">
+                                                    <i class="bi bi-trash3 me-1"></i>Xóa
+                                                </button>
+                                            </form>
+                                        </th:block>
                                     </div>
                                 </div>
                             </div>
@@ -138,28 +164,30 @@
                                     Bật / tắt quyền truy cập trực tiếp theo từng mục chức năng trên <strong>Menu Sidebar</strong>.
                                 </p>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <span id="mainSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1"
+                            <div class="d-flex align-items-center gap-2 flex-nowrap">
+                                <span id="mainSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 text-nowrap"
                                       th:attr="data-total-perms=${totalPermissionsCount}"
                                       th:text="|${isAdminRole ? totalPermissionsCount : selectedPermissionIds.size()} / ${totalPermissionsCount} quyền|">0 / 41 quyền</span>
                                 <th:block th:if="${selectedRoleEditable}">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleContainerPermissions('mainRoleMatrixContainer', true)">
+                                    <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" onclick="toggleContainerPermissions('mainRoleMatrixContainer', true)">
                                         <i class="bi bi-check2-all me-1"></i>Cho phép tất cả
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleContainerPermissions('mainRoleMatrixContainer', false)">
-                                        Bỏ chọn hết
+                                    <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" onclick="toggleContainerPermissions('mainRoleMatrixContainer', false)">
+                                        Bỏ chọn
                                     </button>
                                 </th:block>
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="toggleAllModules('mainRoleMatrixContainer', false)"
-                                        title="Thu gọn tất cả các phân hệ">
-                                    <i class="bi bi-arrows-collapse me-1"></i>Thu gọn tất cả
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="toggleAllModules('mainRoleMatrixContainer', true)"
-                                        title="Xổ toạc tất cả các phân hệ">
-                                    <i class="bi bi-arrows-expand me-1"></i>Xổ toạc tất cả
-                                </button>
+                                <div class="btn-group btn-group-sm text-nowrap" role="group">
+                                    <button type="button" class="btn btn-outline-secondary"
+                                            onclick="toggleAllModules('mainRoleMatrixContainer', false)"
+                                            title="Thu gọn tất cả phân hệ">
+                                        <i class="bi bi-arrows-collapse me-1"></i>Thu gọn
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary"
+                                            onclick="toggleAllModules('mainRoleMatrixContainer', true)"
+                                            title="Mở rộng tất cả phân hệ">
+                                        <i class="bi bi-arrows-expand me-1"></i>Mở rộng
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -645,6 +673,14 @@
         refreshAllMisaStates(document.getElementById('modalRoleMatrixContainer'));
 
     /**
+     * Xác nhận khi xóa vĩnh viễn vai trò
+     */
+    function confirmDeleteRole(form) {
+        var roleName = form.getAttribute('data-role-name') || 'vai trò này';
+        return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN vai trò "' + roleName + '" khỏi hệ thống?\n\nHành động này không thể hoàn tác!');
+    }
+
+    /**
      * Xác nhận khi chuyển trạng thái Tạm ngưng / Kích hoạt vai trò
      */
     function confirmToggleRole(form) {
@@ -653,12 +689,12 @@
         var count = parseInt(form.getAttribute('data-user-count') || '0', 10);
         if (isActive) {
             if (count > 0) {
-                return confirm('Vai trò "' + roleName + '" hiện đang có ' + count + ' tài khoản đảm nhiệm.\n\nKhi tạm ngưng, TẤT CẢ ' + count + ' tài khoản này sẽ bị CHẶN ĐĂNG NHẬP vào hệ thống.\n\nBạn có chắc chắn muốn tạm ngưng không?');
+                return confirm('Vai trò "' + roleName + '" hiện đang có ' + count + ' tài khoản đảm nhiệm.\n\nKhi tạm ngưng, TẤT CẢ ' + count + ' tài khoản này sẽ tự động chuyển sang trạng thái ĐÃ KHÓA và bị chặn đăng nhập.\n\nBạn có chắc chắn muốn tạm ngưng không?');
             }
             return confirm('Bạn có chắc chắn muốn tạm ngưng vai trò "' + roleName + '"?');
         } else {
             if (count > 0) {
-                return confirm('Kích hoạt lại vai trò "' + roleName + '"?\n\n' + count + ' tài khoản thuộc vai trò này sẽ được phép đăng nhập lại bình thường.');
+                return confirm('Kích hoạt lại vai trò "' + roleName + '"?\n\n' + count + ' tài khoản thuộc vai trò này sẽ tự động được MỞ KHÓA (Hoạt động) trở lại.');
             }
             return confirm('Bạn có chắc chắn muốn kích hoạt lại vai trò "' + roleName + '"?');
         }

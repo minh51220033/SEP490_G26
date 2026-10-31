@@ -100,6 +100,9 @@ public class AttendanceService {
         }
 
         Branch branch = target.getBranch();
+        if (Boolean.FALSE.equals(branch.getIsActive())) {
+            throw new IllegalArgumentException("Chi nhánh \"" + branch.getBranchName() + "\" hiện đang ngừng hoạt động. Không thể thực hiện chấm công tại đây.");
+        }
         requireValidNetwork(branch, clientIp);
 
         AttendanceRecord record = new AttendanceRecord();
