@@ -175,11 +175,11 @@
                     <div class="row g-2 mb-3">
                         <div class="col-md-4">
                             <label for="dDistributable" class="form-label fw-bold">Lợi nhuận có thể chia <span class="text-danger">*</span></label>
-                            <input type="number" id="dDistributable" name="distributableAmount" class="form-control" min="0" step="1000000" required placeholder="VNĐ" oninput="calculateTotal()">
+                            <input type="number" id="dDistributable" name="distributableAmount" class="form-control" min="0" step="1" required placeholder="VNĐ" oninput="calculateTotal()">
                         </div>
                         <div class="col-md-4">
                             <label for="dRetained" class="form-label fw-bold">Giữ lại tái đầu tư</label>
-                            <input type="number" id="dRetained" name="retainedAmount" class="form-control" min="0" step="1000000" value="0" placeholder="VNĐ">
+                            <input type="number" id="dRetained" name="retainedAmount" class="form-control" min="0" step="1" value="0" placeholder="VNĐ">
                         </div>
                         <div class="col-md-4">
                             <label for="dTotalDistributed" class="form-label fw-bold">Tổng phân bổ</label>
@@ -212,7 +212,7 @@
                                     <input type="number" name="items[0].percentage" class="form-control" min="0" max="100" step="0.1" placeholder="Tỷ lệ %">
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" name="items[0].amount" class="form-control item-amount" min="0" step="1000000" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()">
+                                    <input type="number" name="items[0].amount" class="form-control item-amount" min="0" step="1" placeholder="Số tiền (VNĐ)" oninput="calculateTotal()">
                                 </div>
                                 <div class="col-md-1 d-flex align-items-center">
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button>
@@ -288,7 +288,7 @@
         div.innerHTML = `
             <div class="col-md-5">${staffSelectHtml}</div>
             <div class="col-md-2"><input type="number" name="items[${rowIndex}].percentage" class="form-control" min="0" max="100" step="0.1" placeholder="Tỷ lệ %"></div>
-            <div class="col-md-4"><input type="number" name="items[${rowIndex}].amount" class="form-control item-amount" min="0" step="1000000" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()"></div>
+            <div class="col-md-4"><input type="number" name="items[${rowIndex}].amount" class="form-control item-amount" min="0" step="1" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()"></div>
             <div class="col-md-1 d-flex align-items-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></div>
         `;
         container.appendChild(div);
