@@ -342,12 +342,6 @@
                        title="Bảng điều phối ghế &amp; hàng chờ">
                         <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
                     </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_PHOTOS'))}"
-                       th:href="@{/doctor/clinical-photos}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'clinical-photos'} ? 'is-active' : ''"
-                       title="Kho ảnh lâm sàng Before / After">
-                        <i class="bi bi-images" aria-hidden="true"></i><span class="side-link__label">Kho ảnh lâm sàng</span>
-                    </a>
                 </div>
             </div>
         </div>
