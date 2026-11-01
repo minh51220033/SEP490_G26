@@ -122,15 +122,38 @@
 <!-- ===================================================================== -->
 <!-- MODAL & IN PHIẾU DẶN DÒ: ĐẶT NGOÀI APP-SHELL ĐỂ TRÁNH BACKDROP CHE KHUẤT -->
 <!-- ===================================================================== -->
-<div th:fragment="instructionsModals">
+<th:block th:fragment="instructionsModals">
+
+    <!-- CSS CƯỠNG CHẾ Z-INDEX CHO MODAL LỜI DẶN ĐỂ KHÔNG BỊ BẤT KỲ FILE/THẺ NÀO ĐÈ LÊN -->
+    <style>
+        #doctorInstructionModal {
+            z-index: 2050 !important;
+            pointer-events: auto !important;
+        }
+        #doctorInstructionModal .modal-dialog {
+            z-index: 2051 !important;
+            position: relative !important;
+            pointer-events: auto !important;
+        }
+        #doctorInstructionModal .modal-content {
+            z-index: 2052 !important;
+            position: relative !important;
+            background-color: #ffffff !important;
+            pointer-events: auto !important;
+        }
+        body.modal-open .modal-backdrop {
+            z-index: 2040 !important;
+        }
+    </style>
 
     <!-- ===================================================================== -->
     <!-- MODAL SOẠN / CẬP NHẬT LỜI DẶN CỦA BÁC SĨ                              -->
     <!-- ===================================================================== -->
     <div class="modal fade" id="doctorInstructionModal" tabindex="-1" aria-labelledby="doctorInstructionModalLabel" aria-hidden="true"
+         style="z-index: 2050 !important;"
          th:data-visit-id="${visit != null ? visit.visitId : ''}">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
                 <div class="modal-header py-3 px-4 bg-light border-bottom">
                     <div class="d-flex align-items-center gap-2.5">
                         <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
@@ -148,7 +171,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 bg-white" style="background: #ffffff !important;">
                     <!-- Mẫu dặn dò nhanh theo thủ thuật -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1.5 d-block text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
@@ -189,7 +212,7 @@
                         </label>
                         <textarea class="form-control rounded-3" id="doctorInstructionTextarea" rows="6"
                                   placeholder="Nhập nội dung dặn dò, chế độ dùng thuốc, kiêng cữ thức ăn và theo dõi vết thương..."
-                                  style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6;"></textarea>
+                                  style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6; background: #ffffff !important;"></textarea>
                         <div class="form-text text-muted small mt-1" style="font-size: 11.5px;">
                             Bác sĩ có thể bấm các nút mẫu nhanh ở trên để chèn nhanh, sau đó bổ sung dặn dò riêng theo tình trạng thực tế của bệnh nhân.
                         </div>
@@ -298,12 +321,24 @@
 
             const modalEl = document.getElementById('doctorInstructionModal');
             if (modalEl) {
-                // Di chuyển modal ra thẳng thẻ body để triệt tiêu stacking context, tránh backdrop che phủ không bấm được
+                // Đảm bảo modal luôn là con trực tiếp của thẻ body
                 if (modalEl.parentElement !== document.body) {
                     document.body.appendChild(modalEl);
                 }
+                
+                // Đảm bảo z-index luôn cao nhất
+                modalEl.style.zIndex = '2050';
+                
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.show();
+
+                // Đảm bảo backdrop luôn nằm ngay dưới modal (z-index 2040)
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(b => {
+                        b.style.zIndex = '2040';
+                    });
+                }, 50);
             }
         }
 
@@ -412,7 +447,7 @@
             }, 300);
         }
     </script>
-</div>
+</th:block>
 
 </body>
 </html>

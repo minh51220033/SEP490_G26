@@ -16,7 +16,7 @@
         <header th:replace="~{fragments/header :: appTopbar('Khám & Điều trị')}"></header>
 
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-            <link rel="stylesheet" th:href="@{/css/diagnosis.css}">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101b)}">
 
             <!-- ========================================================= -->
             <!-- 1. UNIFIED PATIENT & RECORD HEADER (GỘP THỐNG NHẤT, GỌN GÀNG) -->
@@ -460,7 +460,7 @@
 <!-- ===================================================================== -->
 <!-- MODAL: LỜI DẶN DÒ BÁC SĨ (SCR-18.x)                                   -->
 <!-- ===================================================================== -->
-<div th:replace="~{doctor/fragments/instructions-tab :: instructionsModals}"></div>
+<th:block th:replace="~{doctor/fragments/instructions-tab :: instructionsModals}"></th:block>
 
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
