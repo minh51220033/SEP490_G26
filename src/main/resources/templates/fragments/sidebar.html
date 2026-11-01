@@ -342,22 +342,6 @@
                        title="Bảng điều phối ghế &amp; hàng chờ">
                         <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
                     </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'PRESCRIPTION_WRITE'))}"
-                       th:href="@{/doctor/diagnoses#prescriptionsSection}" class="side-link side-sublink"
-                       data-scroll-target="prescriptionsSection" data-scroll-path="/doctor/examination/"
-                       th:classappend="${activeMenu == 'prescriptions'} ? 'is-active' : ''"
-                       title="Kê đơn thuốc, dặn dò &amp; in đơn (SCR-18.3, 18.4, 18.5)">
-                        <i class="bi bi-capsule-pill" aria-hidden="true"></i><span class="side-link__label">Đơn thuốc &amp; Dặn dò</span>
-                        <span class="side-badge side-badge--success">FT18</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE'))}"
-                       th:href="@{/doctor/diagnoses#treatmentPlanSection}" class="side-link side-sublink"
-                       data-scroll-target="treatmentPlanSection" data-scroll-path="/doctor/examination/"
-                       th:classappend="${activeMenu == 'treatment-plans'} ? 'is-active' : ''"
-                       title="Kế hoạch điều trị nhiều giai đoạn &amp; Trợ lý AI (FT15)">
-                        <i class="bi bi-diagram-3" aria-hidden="true"></i><span class="side-link__label">Kế hoạch điều trị</span>
-                        <span class="side-badge side-badge--success">FT15</span>
-                    </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_PHOTOS'))}"
                        th:href="@{/doctor/clinical-photos}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'clinical-photos'} ? 'is-active' : ''"
