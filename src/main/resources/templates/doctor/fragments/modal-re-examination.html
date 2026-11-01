@@ -5,12 +5,30 @@
 <!-- ===================================================================== -->
 <!-- FRAGMENT: MODAL HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)          -->
 <!-- ===================================================================== -->
-<div th:fragment="reExamModal">
-    <div class="modal fade" id="reExamBookingModal" tabindex="-1" aria-labelledby="reExamBookingModalLabel" aria-hidden="true"
+<th:block th:fragment="reExamModal">
+    <!-- CSS CƯỠNG CHẾ Z-INDEX CHO MODAL HẸN TÁI KHÁM ĐẢM BẢO LUÔN NỔI TRÊN BACKDROP -->
+    <style>
+        #reExamBookingModal {
+            z-index: 2050 !important;
+            pointer-events: auto !important;
+        }
+        #reExamBookingModal .modal-dialog {
+            z-index: 2051 !important;
+            position: relative !important;
+            pointer-events: auto !important;
+        }
+        #reExamBookingModal .modal-content {
+            z-index: 2052 !important;
+            position: relative !important;
+            background-color: #ffffff !important;
+            pointer-events: auto !important;
+        }
+    </style>
+    <div class="modal fade" id="reExamBookingModal" tabindex="-1" aria-labelledby="reExamBookingModalLabel" aria-hidden="true" style="z-index: 2050 !important;"
          th:data-patient-id="${patient != null ? patient.profileId : ''}"
          th:data-visit-id="${visit != null ? visit.visitId : ''}">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
                 <!-- Modal Header -->
                 <div class="modal-header py-3 px-4" style="background: #ffffff; border-bottom: 1px solid #f1f5f9;">
                     <div class="d-flex align-items-center gap-2.5">
@@ -134,7 +152,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-headset text-primary fs-5"></i>
                             <div>
-                                <span class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1 ngày (FT44)</span>
+                                <span class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1 ngày</span>
                                 <div class="text-muted" style="font-size: 11.5px;">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
                             </div>
                         </div>
@@ -224,8 +242,22 @@
             loadPatientReExams();
             const modalEl = document.getElementById('reExamBookingModal');
             if (modalEl) {
+                // Đảm bảo modal luôn là con trực tiếp của thẻ body để triệt tiêu stacking context
+                if (modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                modalEl.style.zIndex = '2050';
+
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.show();
+
+                // Đảm bảo backdrop luôn nằm ngay dưới modal (z-index 2040)
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(b => {
+                        b.style.zIndex = '2040';
+                    });
+                }, 50);
             }
         }
 
@@ -316,46 +348,113 @@
 
         function renderExistingReExams(list) {
             const tbody = document.getElementById('reExamExistingTableBody');
-            if (!tbody) return;
+            if (tbody) {
+                if (!list || list.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center py-2 text-muted">Bệnh nhân chưa có lịch hẹn tái khám nào.</td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = list.map(item => {
+                        const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
+                        const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Bất kỳ' };
+                        const sessionName = sessionMap[item.preferredSession] || item.preferredSession;
 
-            if (!list || list.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center py-2 text-muted">Bệnh nhân chưa có lịch hẹn tái khám nào.</td>
-                    </tr>
-                `;
-                return;
+                        let statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
+                        if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border">Đã khám</span>`;
+                        else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
+                        else if (item.daysUntil < 0) statusBadge = `<span class="badge bg-danger-subtle text-danger border">Quá hạn</span>`;
+
+                        return `
+                            <tr>
+                                <td><strong class="text-primary font-monospace">${item.appointmentCode || ('TK-' + item.appointmentId)}</strong></td>
+                                <td class="fw-bold text-dark">${dateStr}</td>
+                                <td>${sessionName}</td>
+                                <td>${item.doctorName || 'BS. Điều trị'}</td>
+                                <td class="text-truncate" style="max-width: 200px;" title="${item.initialSymptoms || ''}">${item.initialSymptoms || 'Tái khám'}</td>
+                                <td class="text-center">${statusBadge}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill small"
+                                            onclick="cancelPatientReExam(${item.appointmentId})" title="Hủy lịch hẹn này">
+                                        Hủy
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
             }
 
-            tbody.innerHTML = list.map(item => {
-                const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
-                const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Bất kỳ' };
-                const sessionName = sessionMap[item.preferredSession] || item.preferredSession;
+            // Đồng bộ bảng chính trên tab Lịch hẹn & Kế hoạch tái khám
+            const mainTbody = document.getElementById('reExaminationsTableBody');
+            if (mainTbody) {
+                if (!list || list.length === 0) {
+                    mainTbody.innerHTML = `
+                        <tr id="emptyReExamRow">
+                            <td colspan="8" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
+                                <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
+                                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                         style="width: 88px; height: 88px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 2px dashed #c084fc; box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12);">
+                                        <i class="bi bi-calendar2-check-fill" style="font-size: 42px; color: #7c3aed;"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
+                                        Bệnh nhân chưa có Lịch hẹn tái khám nào
+                                    </h4>
+                                    <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
+                                        Hẹn lịch tái khám giúp theo dõi tiến trình hồi phục vết thương, kiểm tra định kỳ hoặc phân bổ các công đoạn trong phác đồ điều trị kế tiếp.
+                                    </p>
+                                    <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                            style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); border: none; font-size: 15px;"
+                                            onclick="openReExamModal()">
+                                        <i class="bi bi-calendar2-plus-fill fs-6"></i>
+                                        <span>Đặt hẹn tái khám mới</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    mainTbody.innerHTML = list.map(item => {
+                        const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
+                        const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Cả ngày' };
+                        const sessionName = sessionMap[item.preferredSession] || item.preferredSession || 'Sáng';
+                        let statusBadge = `<span class="badge bg-warning-subtle text-dark border border-warning">Chờ khám</span>`;
+                        if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle">Đã khám</span>`;
+                        else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
+                        else if (item.status === 'CONFIRMED') statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
 
-                let statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
-                if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border">Đã khám</span>`;
-                else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
-                else if (item.daysUntil < 0) statusBadge = `<span class="badge bg-danger-subtle text-danger border">Quá hạn</span>`;
-
-                return `
-                    <tr>
-                        <td><strong class="text-primary font-monospace">${item.appointmentCode || ('TK-' + item.appointmentId)}</strong></td>
-                        <td class="fw-bold text-dark">${dateStr}</td>
-                        <td>${sessionName}</td>
-                        <td>${item.doctorName || 'BS. Điều trị'}</td>
-                        <td class="text-truncate" style="max-width: 200px;" title="${item.initialSymptoms || ''}">${item.initialSymptoms || 'Tái khám'}</td>
-                        <td class="text-center">${statusBadge}</td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill small"
-                                    onclick="cancelPatientReExam(${item.appointmentId})" title="Hủy lịch hẹn này">
-                                Hủy
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+                        return `
+                            <tr>
+                                <td><span class="badge bg-light text-dark border fw-bold">${item.appointmentCode || ('TK-' + item.appointmentId)}</span></td>
+                                <td>
+                                    <strong class="text-dark">${dateStr}</strong>
+                                    <div class="small text-muted">${item.expectedTime ? item.expectedTime.substring(0,5) : '09:00'}</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary-subtle text-primary border">${sessionName}</span>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">${item.doctorName || 'BS. Điều trị'}</div>
+                                </td>
+                                <td>
+                                    <strong class="text-dark">${item.serviceName || item.followupReason || 'Tái khám & Kiểm tra'}</strong>
+                                </td>
+                                <td>
+                                    <span class="small text-secondary">${item.followupReason || item.initialSymptoms || 'Tái khám định kỳ sau điều trị'}</span>
+                                </td>
+                                <td class="text-center">${statusBadge}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn" onclick="openReExamModal()">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
         }
-
         function formatDateStr(dateVal) {
             if (!dateVal) return '---';
             if (typeof dateVal === 'string') {
@@ -449,7 +548,7 @@
             }
         }
     </script>
-</div>
+</th:block>
 
 </body>
 </html>

@@ -336,12 +336,6 @@
                        title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
                         <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy trình kỹ thuật</span>
                     </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DISPATCH'))}"
-                       th:href="@{/reception/dispatch}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'dispatch'} ? 'is-active' : ''"
-                       title="Bảng điều phối ghế &amp; hàng chờ">
-                        <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
-                    </a>
                 </div>
             </div>
         </div>
@@ -407,7 +401,7 @@
                     <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
                        th:href="@{/customer-care}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
-                       title="Chăm sóc khách hàng &amp; nhắc hẹn tái khám (FT44)">
+                       title="Chăm sóc khách hàng &amp; nhắc hẹn tái khám">
                         <i class="bi bi-headset" aria-hidden="true"></i><span class="side-link__label">Chăm sóc khách hàng</span>
                     </a>
                 </div>

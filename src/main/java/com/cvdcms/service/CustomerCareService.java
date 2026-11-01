@@ -98,4 +98,10 @@ public interface CustomerCareService {
      * phục vụ nhân viên CSKH tra cứu khi chăm sóc sau điều trị (chỉ đọc dữ liệu, tuân thủ phân quyền cơ sở).
      */
     Map<String, Object> getVisitExaminationSummary(Long visitId, Long userId);
+
+    /**
+     * Ghi nhận tương tác / cuộc gọi CSKH trực tiếp cho một ca khám lâm sàng (dành cho Bác sĩ hoặc Lễ tân).
+     * Tự động gắn vào task CSKH đang mở của ca khám/bệnh nhân, hoặc tạo mới task nếu chưa có.
+     */
+    CustomerCareTaskDTO recordVisitInteraction(Long visitId, CustomerCareInteractionCreateDTO dto, Long userId);
 }
