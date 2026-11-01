@@ -19,6 +19,10 @@ public class DispatchController {
 
     @GetMapping
     public String board(@RequestParam(required = false) Long branchId, HttpSession session, Model model) {
+        Object loggedIn = session == null ? null : session.getAttribute("loggedInUser");
+        if (!(loggedIn instanceof com.cvdcms.entity.User)) {
+            return "redirect:/login";
+        }
         model.addAttribute("board", service.board(session, branchId));
         return "reception/dispatch";
     }
@@ -49,6 +53,10 @@ public class DispatchController {
 
     @GetMapping("/tickets/{id}")
     public String print(@PathVariable Long id, HttpSession session, Model model) {
+        Object loggedIn = session == null ? null : session.getAttribute("loggedInUser");
+        if (!(loggedIn instanceof com.cvdcms.entity.User)) {
+            return "redirect:/login";
+        }
         model.addAttribute("ticket", service.ticket(session, id));
         return "reception/exam-ticket";
     }

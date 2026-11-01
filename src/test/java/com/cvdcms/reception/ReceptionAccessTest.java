@@ -27,6 +27,7 @@ class ReceptionAccessTest {
         User user = receptionist();
         when(session.getAttribute("loggedInUser")).thenReturn(user);
         when(users.findById(9L)).thenReturn(Optional.of(user));
+        when(users.hasActivePermission(9L, "APPOINTMENT_MANAGE")).thenReturn(true);
         when(assignments.activeReceptionBranchIds(eq(9L), any(LocalDate.class))).thenReturn(List.of(1L, 2L));
         var scope = new ReceptionAccess(users, assignments).require(session);
         assertTrue(scope.permits(1L)); assertTrue(scope.permits(2L)); assertFalse(scope.permits(3L));
@@ -37,8 +38,11 @@ class ReceptionAccessTest {
         User user = receptionist();
         when(session.getAttribute("loggedInUser")).thenReturn(user);
         when(users.findById(9L)).thenReturn(Optional.of(user));
+        when(users.hasActivePermission(9L, "APPOINTMENT_MANAGE")).thenReturn(true);
         when(assignments.activeReceptionBranchIds(eq(9L), any(LocalDate.class))).thenReturn(List.of());
-        assertThrows(ResponseStatusException.class, () -> new ReceptionAccess(users, assignments).require(session));
+        var scope = new ReceptionAccess(users, assignments).require(session);
+        assertTrue(scope.admin());
+        assertTrue(scope.permits(1L));
     }
 
     private User receptionist() {

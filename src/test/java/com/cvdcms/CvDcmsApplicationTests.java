@@ -52,6 +52,18 @@ class CvDcmsApplicationTests {
     }
 
     @Test
+    @DisplayName("GET /home renders the sidebar after login when isAdmin is not set by the controller")
+    void testGetHomeRendersSidebarWithoutIsAdminModelAttribute() throws Exception {
+        User adminUser = userRepository.findByUsername("admin").orElseThrow();
+
+        mockMvc.perform(get("/home")
+                        .sessionAttr("loggedInUser", adminUser)
+                        .sessionAttr("displayName", "Admin User"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/home"));
+    }
+
+    @Test
     @org.springframework.transaction.annotation.Transactional
     @DisplayName("Database Integration: Verify InvoiceType, InvoiceItemType, StockIssue and FEFO locking query against real MySQL DB")
     void testDatabaseSchemaAndRepositoryIntegration() {
