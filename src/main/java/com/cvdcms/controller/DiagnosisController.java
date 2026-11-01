@@ -60,6 +60,8 @@ public class DiagnosisController {
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
+    private final CustomerCareInteractionRepository customerCareInteractionRepository;
+    private final CustomerCareTaskRepository customerCareTaskRepository;
 
     @GetMapping({"/doctor/daily-visits", "/doctor/visits"})
     public String dailyVisits(Model model) {
@@ -251,6 +253,16 @@ public class DiagnosisController {
         model.addAttribute("laboOrders", laboOrders);
         model.addAttribute("laboStats", laboStats);
         model.addAttribute("laboSuppliers", laboSuppliers);
+
+        // FT44: Lịch sử chăm sóc bệnh nhân sau điều trị (SCR-44.6 & doctor/fragments/patient-care-tab)
+        List<CustomerCareInteraction> careInteractions = (profileId != null)
+                ? customerCareInteractionRepository.findByProfileIdWithDetails(profileId)
+                : Collections.emptyList();
+        List<CustomerCareTask> careTasks = (profileId != null)
+                ? customerCareTaskRepository.findByPatientProfileIdWithDetails(profileId)
+                : Collections.emptyList();
+        model.addAttribute("careInteractions", careInteractions);
+        model.addAttribute("careTasks", careTasks);
 
         boolean isClinicalLocked = visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
