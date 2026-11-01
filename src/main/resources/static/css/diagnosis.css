@@ -1,4 +1,4 @@
-﻿/* =====================================================================
+/* =====================================================================
    CV-DCMS - Phân hệ Khám & Điều trị (Theo chuẩn DentalFlow)
    FT14: Chẩn đoán bệnh lý theo ICD-10 (SCR-14.1)
 ===================================================================== */
@@ -2691,11 +2691,17 @@ html {
 
 
 /* FIX: MODAL LỜI DẶN BÁC SĨ (TAB INSTRUCTIONS) LUÔN NẰM TRÊN BACKDROP */
-#doctorInstructionModal {
-    z-index: 1060 !important;
+#doctorInstructionModal,
+#doctorCareModal {
+    z-index: 2050 !important;
 }
-#doctorInstructionModal .modal-dialog {
-    z-index: 1061 !important;
+#doctorInstructionModal .modal-dialog,
+#doctorCareModal .modal-dialog {
+    z-index: 2051 !important;
+}
+#doctorInstructionModal .modal-content,
+#doctorCareModal .modal-content {
+    z-index: 2052 !important;
 }
 
 /* =========================================================================
@@ -2721,4 +2727,49 @@ html {
 .modal-backdrop,
 body.modal-open .modal-backdrop {
     z-index: 2040 !important;
+}
+
+/* =========================================================================
+   CUSTOM CARE TABLE & CRM TIMELINE STYLING (FT44 - BENCHMARK DENTALFLOW / VTTECH)
+   ========================================================================= */
+.custom-care-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.custom-care-table thead th {
+    background-color: #f8fafc !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    color: #475569 !important;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 13px 14px;
+}
+.custom-care-table tbody td {
+    padding: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.custom-care-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+.custom-care-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.care-task-card {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid #e2e8f0;
+}
+.care-task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    border-color: #cbd5e1;
+}
+.care-speech-bubble {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    position: relative;
 }
