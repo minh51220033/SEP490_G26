@@ -10,6 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Entity
 @Table(
@@ -130,7 +131,8 @@ public class PatientProfile {
     @PrePersist
     public void prePersist() {
         if (this.patientCode == null || this.patientCode.isEmpty()) {
-            this.patientCode = "BN" + System.currentTimeMillis();
+            this.patientCode = "BN" + System.currentTimeMillis()
+                    + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
         }
     }
 }

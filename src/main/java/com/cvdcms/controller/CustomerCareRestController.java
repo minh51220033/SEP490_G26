@@ -134,6 +134,20 @@ public class CustomerCareRestController {
         return customerCareService.recordInteraction(taskId, dto, user.getUserId());
     }
 
+    @PostMapping("/visits/{visitId}/interactions")
+    public ResponseEntity<Map<String, Object>> recordVisitInteraction(
+            @PathVariable Long visitId,
+            @RequestBody CustomerCareInteractionCreateDTO dto,
+            HttpSession session) {
+        User user = requireUser(session);
+        CustomerCareTaskDTO taskDTO = customerCareService.recordVisitInteraction(visitId, dto, user.getUserId());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã lưu lịch sử cuộc gọi / tương tác CSKH thành công!",
+                "task", taskDTO
+        ));
+    }
+
     @PostMapping("/tasks/{taskId}/escalate")
     public CustomerCareTaskDTO escalateToDoctor(
             @PathVariable Long taskId,

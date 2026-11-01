@@ -85,7 +85,7 @@
                                         <span class="mega-item__desc">Danh mục dịch vụ, giá và chương trình khuyến mãi.</span>
                                     </span>
                                 </a>
-<a th:if="${session.roleNames != null and #lists.contains(session.roleNames, 'ADMIN')}"
+                                <a th:if="${session.roleNames != null and #lists.contains(session.roleNames, 'ADMIN')}"
                                    th:href="@{/accounts}" href="#" class="mega-item" role="menuitem">
                                     <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
                                     <span>
@@ -322,7 +322,15 @@
                     </div>
 
                     <a th:href="@{/profile}" href="#" class="dropdown-item-link">
-                        <i class="bi bi-person" aria-hidden="true"></i> Thông tin cá nhân
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i> Thông tin cá nhân
+                    </a>
+
+                    <a th:href="@{/profile/edit}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-pencil-square" aria-hidden="true"></i> Cập nhật tài khoản
+                    </a>
+
+                    <a th:href="@{/profile/change-password}" href="#" class="dropdown-item-link">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i> Đổi mật khẩu
                     </a>
 
                     <form th:action="@{/logout}" method="post" class="m-0">
