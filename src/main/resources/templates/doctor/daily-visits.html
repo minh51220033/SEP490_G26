@@ -971,7 +971,111 @@
                         box-shadow: 0 10px 24px rgba(2, 132, 199, 0.1);
                         transform: translateY(-2px);
                     }
-                </style>
+                
+        /* ========================================================================= */
+        /* ========================================================================= */
+        /* INTEGRATED TABLE FOOTER PAGINATION (LIỀN ĐÁY BẢNG, KHÔNG TÁCH Ô)          */
+        /* ========================================================================= */
+        .dv-pagination-container {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            border-radius: 0 0 12px 12px;
+            padding: 10px 20px;
+            padding-right: 90px; /* Tránh nút chat tròn */
+            margin-top: 0;
+            margin-bottom: 0;
+            box-shadow: none;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .modern-pagination-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .modern-pagination-nav .pg-btn {
+            min-width: 32px;
+            height: 32px;
+            padding: 0 9px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+        .modern-pagination-nav .pg-btn:hover:not(.is-disabled):not(.is-active) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0284c7;
+        }
+        .modern-pagination-nav .pg-btn.is-active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-color: transparent;
+            color: #ffffff;
+            box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
+            font-weight: 700;
+        }
+        .modern-pagination-nav .pg-btn.is-disabled {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+        .modern-pagination-nav .pg-dots {
+            min-width: 22px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 700;
+            user-select: none;
+        }
+        .modern-pagination-nav .pg-btn:hover:not(.is-disabled):not(.is-active) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0284c7;
+            transform: translateY(-1px);
+        }
+        .modern-pagination-nav .pg-btn.is-active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-color: transparent;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+            font-weight: 700;
+        }
+        .modern-pagination-nav .pg-btn.is-disabled {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .modern-pagination-nav .pg-dots {
+            min-width: 24px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 700;
+            user-select: none;
+        }
+
+    </style>
 
                 <!-- ========================================================================= -->
                 <!-- 1. TIÊU ĐỀ TRANG & NÚT ĐIỀU HƯỚNG NHANH                                   -->
@@ -1368,8 +1472,26 @@
                         </table>
                     </div>
 
-                    <!-- CHẾ ĐỘ 2: XEM DẠNG THẺ (CARD VIEW) -->
+<!-- CHẾ ĐỘ 2: XEM DẠNG THẺ (CARD VIEW) -->
                     <div class="dv-card-grid" id="dvCardContainer" style="display: none;"></div>
+
+                    <!-- THANH PHÂN TRANG ĐƠN GIẢN (PAGINATION) -->
+                    <!-- THANH PHÂN TRANG HIỆN ĐẠI (ANT DESIGN STYLE) -->
+                    <div id="dvPaginationBar" class="dv-pagination-container">
+                        <div class="d-flex align-items-center flex-wrap gap-2.5">
+                            
+                            <span class="text-secondary small fw-semibold">
+                                Hiển thị <strong id="dvPageRangeText" class="text-dark">1 - 10</strong>
+                            </span>
+                            
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            <div id="dvPaginationNav" class="modern-pagination-nav">
+                                <!-- Rendered by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- ===================================================================== -->
                     <!-- TRẠNG THÁI TRỐNG (EMPTY STATE): MINH HỌA SVG THÂN THIỆN, ẨN BẢNG TRỐNG -->
@@ -1439,6 +1561,8 @@
 
         let columnConfig = loadColumnConfig();
         let currentViewMode = 'TABLE'; // TABLE | CARD
+        let dvCurrentPage = 1;         // Phân trang đơn giản
+        let dvPageSize = 10;
         let rawServerVisits = [];      // Dữ liệu gốc tải từ API
         let filteredVisits = [];       // Dữ liệu sau khi áp dụng các toán tử lọc nâng cao
         let searchTimer = null;
@@ -1878,6 +2002,8 @@
             // Cập nhật Badge số lượng filter đang áp dụng (Chớp đỏ) & Active Filter Chips
             updateActiveFilterBadgeAndChips();
 
+            // Reset về trang 1 khi thay đổi điều kiện lọc
+            dvCurrentPage = 1;
             // Render bảng hoặc Empty State
             renderMainView();
         }
@@ -2004,32 +2130,120 @@
         // RENDER BẢNG DỮ LIỆU CHUẨN MISA AMIS (STICKY PINNED COLUMNS + HOVER ACTIONS)
         // =========================================================================
         function renderMainView() {
+            const total = filteredVisits.length;
             const countEl = document.getElementById('visibleCountText');
-            if (countEl) countEl.textContent = filteredVisits.length;
+            if (countEl) countEl.textContent = total;
 
             const tableContainer = document.getElementById('dvTableContainer');
             const cardContainer = document.getElementById('dvCardContainer');
             const emptyState = document.getElementById('dvEmptyState');
+            const paginationBar = document.getElementById('dvPaginationBar');
 
             // KHI KHÔNG CÓ DỮ LIỆU -> ẨN HOÀN TOÀN BẢNG TRỐNG, HIỆN EMPTY STATE MINH HỌA
-            if (filteredVisits.length === 0) {
+            if (total === 0) {
                 tableContainer.style.display = 'none';
                 cardContainer.style.display = 'none';
                 emptyState.style.display = 'block';
+                if (paginationBar) paginationBar.style.display = 'none';
                 return;
             }
 
             emptyState.style.display = 'none';
+            if (paginationBar) paginationBar.style.display = 'flex';
+
+            const totalPages = Math.ceil(total / dvPageSize) || 1;
+            if (dvCurrentPage > totalPages) dvCurrentPage = totalPages;
+            if (dvCurrentPage < 1) dvCurrentPage = 1;
+
+            const startIdx = (dvCurrentPage - 1) * dvPageSize;
+            const endIdx = Math.min(startIdx + dvPageSize, total);
+            const pageVisits = filteredVisits.slice(startIdx, endIdx);
 
             if (currentViewMode === 'TABLE') {
                 tableContainer.style.display = 'block';
                 cardContainer.style.display = 'none';
-                renderAmisDataTable(filteredVisits);
+                renderAmisDataTable(pageVisits);
             } else {
                 tableContainer.style.display = 'none';
                 cardContainer.style.display = 'grid';
-                renderCardGrid(filteredVisits);
+                renderCardGrid(pageVisits);
             }
+
+            renderDvPagination(total, totalPages, startIdx, endIdx);
+        }
+
+        function renderDvPagination(total, totalPages, startIdx, endIdx) {
+            const rangeText = document.getElementById('dvPageRangeText');
+            const totalText = document.getElementById('dvTotalCountText');
+            const nav = document.getElementById('dvPaginationNav');
+            if (rangeText) rangeText.textContent = `${startIdx + 1} - ${endIdx}`;
+            if (totalText) totalText.textContent = total;
+            if (!nav) return;
+
+            let html = '';
+
+            // Nút Đầu (<<)
+            const disablePrev = dvCurrentPage === 1 ? 'is-disabled' : '';
+            html += `<button type="button" class="pg-btn ${disablePrev}" ${dvCurrentPage === 1 ? 'disabled' : ''} onclick="goToDvPage(1)" title="Trang đầu">
+                <i class="bi bi-chevron-double-left"></i>
+            </button>`;
+
+            // Nút Trước (<)
+            html += `<button type="button" class="pg-btn ${disablePrev}" ${dvCurrentPage === 1 ? 'disabled' : ''} onclick="goToDvPage(${dvCurrentPage - 1})" title="Trang trước">
+                <i class="bi bi-chevron-left"></i>
+            </button>`;
+
+            // Tính dải số trang (tối đa 5 nút hiển thị)
+            let startPage = Math.max(1, dvCurrentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            if (startPage > 1) {
+                html += `<button type="button" class="pg-btn" onclick="goToDvPage(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span class="pg-dots">&bull;&bull;&bull;</span>`;
+                }
+            }
+
+            for (let p = startPage; p <= endPage; p++) {
+                const active = p === dvCurrentPage ? 'is-active' : '';
+                html += `<button type="button" class="pg-btn ${active}" onclick="goToDvPage(${p})">${p}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<span class="pg-dots">&bull;&bull;&bull;</span>`;
+                }
+                html += `<button type="button" class="pg-btn" onclick="goToDvPage(${totalPages})">${totalPages}</button>`;
+            }
+
+            // Nút Tiếp (>)
+            const disableNext = dvCurrentPage === totalPages ? 'is-disabled' : '';
+            html += `<button type="button" class="pg-btn ${disableNext}" ${dvCurrentPage === totalPages ? 'disabled' : ''} onclick="goToDvPage(${dvCurrentPage + 1})" title="Trang kế">
+                <i class="bi bi-chevron-right"></i>
+            </button>`;
+
+            // Nút Cuối (>>)
+            html += `<button type="button" class="pg-btn ${disableNext}" ${dvCurrentPage === totalPages ? 'disabled' : ''} onclick="goToDvPage(${totalPages})" title="Trang cuối">
+                <i class="bi bi-chevron-double-right"></i>
+            </button>`;
+
+            nav.innerHTML = html;
+        }
+
+        function goToDvPage(page) {
+            dvCurrentPage = page;
+            renderMainView();
+            const container = document.getElementById('dvTableContainer');
+            if (container) container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function changeDvPageSize(size) {
+            dvPageSize = parseInt(size, 10) || 10;
+            dvCurrentPage = 1;
+            renderMainView();
         }
 
         function renderAmisDataTable(visits) {

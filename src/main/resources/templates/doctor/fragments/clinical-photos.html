@@ -26,33 +26,129 @@
 
     <div class="df-foldable-content" id="content-photos" style="display: block;">
         <div class="p-3 p-md-4 bg-white border-bottom" id="clinicalPhotosSection" style="min-height: calc(85vh - 120px); border-radius: 0 0 14px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
-            <!-- TOOLBAR LỌC ẢNH (SCR-17.1) -->
-            <div class="df-photo-toolbar">
-                <div class="df-photo-pill-group">
+            <!-- TOOLBAR LỌC ẢNH CHUẨN DENTALSOFT / PHẦN MỀM NHA KHOA HIỆN ĐẠI (SCR-17.1) -->
+            <style>
+                .df-photo-unified-toolbar {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 10px 14px;
+                    padding: 8px 12px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    margin-bottom: 20px;
+                }
+                .df-photo-stage-segmented {
+                    display: inline-flex;
+                    align-items: center;
+                    background: #e2e8f0;
+                    padding: 3px;
+                    border-radius: 10px;
+                    gap: 2px;
+                }
+                .df-photo-stage-segmented .df-photo-pill {
+                    border: none;
+                    background: transparent;
+                    color: #475569;
+                    padding: 5px 12px;
+                    border-radius: 7px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    cursor: pointer;
+                    transition: all 0.16s ease;
+                    text-decoration: none;
+                    white-space: nowrap;
+                }
+                .df-photo-stage-segmented .df-photo-pill:hover {
+                    color: #0f172a;
+                    background: rgba(255, 255, 255, 0.6);
+                }
+                .df-photo-stage-segmented .df-photo-pill.active {
+                    background: #ffffff;
+                    color: #0284c7;
+                    font-weight: 700;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                }
+                .df-photo-stage-segmented .df-photo-pill .badge-count {
+                    font-size: 11px;
+                    padding: 2px 7px;
+                    border-radius: 6px;
+                    background: #f1f5f9;
+                    color: #64748b;
+                    font-weight: 600;
+                    min-width: 18px;
+                    text-align: center;
+                }
+                .df-photo-stage-segmented .df-photo-pill.active .badge-count {
+                    background: #e0f2fe;
+                    color: #0284c7;
+                    font-weight: 700;
+                }
+                .df-photo-stage-dot {
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    display: inline-block;
+                }
+                .df-grid-toggle-btn.active {
+                    background-color: #0284c7 !important;
+                    color: #ffffff !important;
+                }
+                .df-grid-toggle-btn.active i {
+                    color: #ffffff !important;
+                }
+            </style>
+
+            <div class="df-photo-unified-toolbar">
+                <!-- CỤM TRÁI: SEGMENTED TABS GIAI ĐOẠN ĐIỀU TRỊ (GỌN GÀNG, KHÔNG RỚT DÒNG) -->
+                <div class="df-photo-stage-segmented df-photo-pill-group" id="clinicalPhotoStageControl">
                     <button type="button" class="df-photo-pill active" onclick="filterPhotosStage('ALL', this)">
-                        <i class="bi bi-grid-fill"></i> Tất cả (<span id="countPillAll" th:text="${photoStats != null ? photoStats.get('total') : '0'}">0</span>)
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Tất cả</span>
+                        <span class="badge-count" id="countPillAll" th:text="${photoStats != null ? photoStats.get('total') : '0'}">0</span>
                     </button>
                     <button type="button" class="df-photo-pill" onclick="filterPhotosStage('BEFORE', this)">
-                        <span class="badge bg-warning text-dark p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
-                        Trước điều trị (<span id="countPillBefore" th:text="${photoStats != null ? photoStats.get('before') : '0'}">0</span>)
+                        <span class="df-photo-stage-dot bg-warning"></span>
+                        <span>Trước điều trị</span>
+                        <span class="badge-count" id="countPillBefore" th:text="${photoStats != null ? photoStats.get('before') : '0'}">0</span>
                     </button>
                     <button type="button" class="df-photo-pill" onclick="filterPhotosStage('DURING', this)">
-                        <span class="badge bg-info p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
-                        Trong quá trình (<span id="countPillDuring" th:text="${photoStats != null ? photoStats.get('during') : '0'}">0</span>)
+                        <span class="df-photo-stage-dot bg-info"></span>
+                        <span>Trong quá trình</span>
+                        <span class="badge-count" id="countPillDuring" th:text="${photoStats != null ? photoStats.get('during') : '0'}">0</span>
                     </button>
                     <button type="button" class="df-photo-pill" onclick="filterPhotosStage('AFTER', this)">
-                        <span class="badge bg-success p-1 rounded-circle" style="width: 8px; height: 8px; display: inline-block;"></span>
-                        Sau điều trị (<span id="countPillAfter" th:text="${photoStats != null ? photoStats.get('after') : '0'}">0</span>)
-                    </button>
-                    <button type="button" class="df-photo-pill" onclick="filterPhotosVisit(this)">
-                        <i class="bi bi-calendar-check"></i> Ca khám này
+                        <span class="df-photo-stage-dot bg-success"></span>
+                        <span>Sau điều trị</span>
+                        <span class="badge-count" id="countPillAfter" th:text="${photoStats != null ? photoStats.get('after') : '0'}">0</span>
                     </button>
                 </div>
 
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="small text-muted fw-semibold">Góc chụp:</label>
-                        <select class="form-select form-select-sm" id="photoCategorySelect" style="width: 170px;" onchange="filterPhotosCategory(this.value)">
+                <!-- CỤM PHẢI: BỘ LỌC PHỤ (CA KHÁM, GÓC CHỤP) & TOGGLE LƯỚI & SO SÁNH -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Toggle Ca khám này -->
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 fw-semibold"
+                            id="btnFilterVisit" onclick="filterPhotosVisit(this)"
+                            style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 13px;"
+                            title="Chỉ hiển thị ảnh chụp của ca khám hiện tại">
+                        <i class="bi bi-calendar2-check text-primary"></i>
+                        <span>Ca khám này</span>
+                    </button>
+
+                    <!-- Dropdown Góc chụp gọn gàng có icon máy ảnh -->
+                    <div class="input-group input-group-sm" style="width: 175px;">
+                        <span class="input-group-text bg-white border-end-0 text-muted ps-2.5 pe-1" style="border-radius: 8px 0 0 8px; border-color: #cbd5e1;">
+                            <i class="bi bi-camera"></i>
+                        </span>
+                        <select class="form-select form-select-sm border-start-0 text-dark fw-medium"
+                                id="photoCategorySelect"
+                                style="border-radius: 0 8px 8px 0; border-color: #cbd5e1; height: 34px; font-size: 13px;"
+                                onchange="filterPhotosCategory(this.value)">
                             <option value="ALL">Tất cả góc chụp</option>
                             <option value="SMILE">Nụ cười (Smile)</option>
                             <option value="INTRAORAL">Trong miệng (Intraoral)</option>
@@ -62,14 +158,25 @@
                         </select>
                     </div>
 
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Kích thước hiển thị ảnh">
-                        <button type="button" class="btn btn-outline-secondary active fw-semibold" id="btnGridLarge" onclick="setPhotoGridSize('large')" title="Hiển thị ảnh lớn rộng rãi">
-                            <i class="bi bi-grid-fill me-1"></i> Ảnh lớn
+                    <!-- Chế độ xem lưới ảnh: 2 icon cực gọn -->
+                    <div class="btn-group btn-group-sm bg-white border rounded-2 p-0.5" role="group" aria-label="Kích thước hiển thị ảnh" style="border-color: #cbd5e1 !important; height: 34px;">
+                        <button type="button" class="btn btn-sm btn-light border-0 active fw-semibold d-inline-flex align-items-center justify-content-center px-2.5 df-grid-toggle-btn"
+                                id="btnGridLarge" onclick="setPhotoGridSize('large')" title="Hiển thị ảnh lớn (Rộng rãi)">
+                            <i class="bi bi-grid-fill text-secondary"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary fw-semibold" id="btnGridMedium" onclick="setPhotoGridSize('medium')" title="Hiển thị ảnh vừa">
-                            <i class="bi bi-grid-3x3-gap-fill me-1"></i> Ảnh vừa
+                        <button type="button" class="btn btn-sm btn-light border-0 fw-semibold d-inline-flex align-items-center justify-content-center px-2.5 df-grid-toggle-btn"
+                                id="btnGridMedium" onclick="setPhotoGridSize('medium')" title="Hiển thị ảnh vừa (Nhiều ảnh)">
+                            <i class="bi bi-grid-3x3-gap-fill text-secondary"></i>
                         </button>
                     </div>
+
+                    <!-- Nút So sánh Before/After trực tiếp -->
+                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                            style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 13px;"
+                            onclick="openPhotoCompareModal(null, null)" title="Mở bộ so sánh đối chiếu ảnh Trước &amp; Sau điều trị">
+                        <i class="bi bi-intersect"></i>
+                        <span>So sánh B/A</span>
+                    </button>
                 </div>
             </div>
 
@@ -410,8 +517,8 @@
     // Lọc theo Giai đoạn (ALL, BEFORE, DURING, AFTER)
     function filterPhotosStage(stage, btn) {
         currentPhotoFilterStage = stage;
-        document.querySelectorAll('.df-photo-pill-group .df-photo-pill').forEach(p => {
-            if (!p.innerText.includes('Ca khám')) p.classList.remove('active');
+        document.querySelectorAll('#clinicalPhotoStageControl .df-photo-pill').forEach(p => {
+            p.classList.remove('active');
         });
         if (btn) btn.classList.add('active');
         applyPhotoFilters();
@@ -428,6 +535,13 @@
         isPhotoOnlyCurrentVisit = !isPhotoOnlyCurrentVisit;
         if (btn) {
             btn.classList.toggle('active', isPhotoOnlyCurrentVisit);
+            if (isPhotoOnlyCurrentVisit) {
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-primary', 'text-white');
+            } else {
+                btn.classList.remove('btn-primary', 'text-white');
+                btn.classList.add('btn-outline-secondary');
+            }
         }
         applyPhotoFilters();
     }

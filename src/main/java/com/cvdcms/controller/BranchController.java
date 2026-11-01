@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 // FT40 - Quản lý Chi nhánh, Phòng khám & Ghế nha (SCR-40.1, 40.2, 40.3).
 @Controller
@@ -62,16 +64,36 @@ public class BranchController {
         List<Branch> branches = branchService.getAllBranches();
         Map<Long, Integer> roomCounts = new HashMap<>();
         Map<Long, Integer> chairCounts = new HashMap<>();
+        Map<Long, Boolean> canDeleteMap = new HashMap<>();
         for (Branch b : branches) {
             roomCounts.put(b.getBranchId(), roomService.getRoomsByBranch(b.getBranchId()).size());
             chairCounts.put(b.getBranchId(), chairService.getChairsByBranch(b.getBranchId()).size());
+            canDeleteMap.put(b.getBranchId(), branchService.canDeleteBranch(b.getBranchId()));
         }
 
         model.addAttribute("branches", branches);
         model.addAttribute("roomCounts", roomCounts);
         model.addAttribute("chairCounts", chairCounts);
+        model.addAttribute("canDeleteMap", canDeleteMap);
         model.addAttribute("managers", branchService.getPotentialManagers());
         model.addAttribute("managerDisplayMap", branchService.getManagerDisplayMap());
+
+        // Trích xuất danh sách địa phương / khu vực thực tế từ dữ liệu chi nhánh (hoàn toàn động, không fix cứng)
+        Set<String> locations = new LinkedHashSet<>();
+        for (Branch b : branches) {
+            String addr = b.getAddress();
+            if (addr != null && !addr.isBlank()) {
+                String loc = addr.trim();
+                int lastComma = loc.lastIndexOf(',');
+                if (lastComma >= 0 && lastComma < loc.length() - 1) {
+                    loc = loc.substring(lastComma + 1).trim();
+                }
+                if (!loc.isBlank()) {
+                    locations.add(loc);
+                }
+            }
+        }
+        model.addAttribute("locations", locations);
 
         // Tạo đối tượng rỗng để Thymeleaf liên kết dữ liệu biểu mẫu.
         model.addAttribute("branchForm", new Branch());
@@ -196,6 +218,18 @@ public class BranchController {
         try {
             branchService.activateBranch(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã kích hoạt chi nhánh.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/branches";
+    }
+
+    // POST /admin/branches/{id}/delete - Xóa chi nhánh tạo nhầm (chỉ cho phép khi chưa có dữ liệu).
+    @PostMapping("/{id}/delete")
+    public String deleteBranch(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            branchService.deleteBranch(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xóa chi nhánh thành công.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

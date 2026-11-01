@@ -95,7 +95,7 @@
                             <div class="p-3 bg-light rounded-3 text-dark small mb-3 border" style="background: #f8fafc !important; border-color: #e2e8f0 !important; line-height: 1.6;">
                                 <i class="bi bi-quote fs-3 text-primary opacity-50 d-block mb-1"></i>
                                 <span id="displayDoctorAdviceText" class="fw-medium"
-                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
+                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
                                     Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút "Tạo / Soạn lời dặn" ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.
                                 </span>
                             </div>
@@ -117,14 +117,43 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL & IN PHIẾU DẶN DÒ: ĐẶT NGOÀI APP-SHELL ĐỂ TRÁNH BACKDROP CHE KHUẤT -->
+<!-- ===================================================================== -->
+<th:block th:fragment="instructionsModals">
+
+    <!-- CSS CƯỠNG CHẾ Z-INDEX CHO MODAL LỜI DẶN ĐỂ KHÔNG BỊ BẤT KỲ FILE/THẺ NÀO ĐÈ LÊN -->
+    <style>
+        #doctorInstructionModal {
+            z-index: 2050 !important;
+            pointer-events: auto !important;
+        }
+        #doctorInstructionModal .modal-dialog {
+            z-index: 2051 !important;
+            position: relative !important;
+            pointer-events: auto !important;
+        }
+        #doctorInstructionModal .modal-content {
+            z-index: 2052 !important;
+            position: relative !important;
+            background-color: #ffffff !important;
+            pointer-events: auto !important;
+        }
+        body.modal-open .modal-backdrop {
+            z-index: 2040 !important;
+        }
+    </style>
 
     <!-- ===================================================================== -->
     <!-- MODAL SOẠN / CẬP NHẬT LỜI DẶN CỦA BÁC SĨ                              -->
     <!-- ===================================================================== -->
     <div class="modal fade" id="doctorInstructionModal" tabindex="-1" aria-labelledby="doctorInstructionModalLabel" aria-hidden="true"
+         style="z-index: 2050 !important;"
          th:data-visit-id="${visit != null ? visit.visitId : ''}">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
                 <div class="modal-header py-3 px-4 bg-light border-bottom">
                     <div class="d-flex align-items-center gap-2.5">
                         <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
@@ -142,7 +171,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 bg-white" style="background: #ffffff !important;">
                     <!-- Mẫu dặn dò nhanh theo thủ thuật -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1.5 d-block text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
@@ -183,7 +212,7 @@
                         </label>
                         <textarea class="form-control rounded-3" id="doctorInstructionTextarea" rows="6"
                                   placeholder="Nhập nội dung dặn dò, chế độ dùng thuốc, kiêng cữ thức ăn và theo dõi vết thương..."
-                                  style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6;"></textarea>
+                                  style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6; background: #ffffff !important;"></textarea>
                         <div class="form-text text-muted small mt-1" style="font-size: 11.5px;">
                             Bác sĩ có thể bấm các nút mẫu nhanh ở trên để chèn nhanh, sau đó bổ sung dặn dò riêng theo tình trạng thực tế của bệnh nhân.
                         </div>
@@ -209,11 +238,11 @@
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 18px;">
                 <div>
                     <h2 style="margin: 0; color: #0284c7; font-size: 20px; font-weight: bold;">HỆ THỐNG NHA KHOA DENTALFLOW</h2>
-                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Cơ sở: <span th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám Chuyên khoa Răng Hàm Mặt'}">Chi nhánh</span> &bull; Hotline: 1900 6868</div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Cơ sở: <span th:text="${visit != null and visit.branch != null ? visit.branch.branchName : 'Phòng khám Chuyên khoa Răng Hàm Mặt'}">Chi nhánh</span> &bull; Hotline: 1900 6868</div>
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 16px; font-weight: bold; color: #0f172a;">PHIẾU DẶN DÒ SAU ĐIỀU TRỊ</div>
-                    <div style="font-size: 12px; color: #64748b;" th:text="${'Mã ca khám: #' + visit.visitId}">Mã ca khám</div>
+                    <div style="font-size: 12px; color: #64748b;" th:text="${visit != null ? 'Mã ca khám: #' + visit.visitId : ''}">Mã ca khám</div>
                 </div>
             </div>
 
@@ -225,8 +254,8 @@
                     <div>SĐT: <strong th:text="${patient != null ? patient.phoneNumber : '---'}">0912345678</strong></div>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                    <div>Bác sĩ điều trị: <strong th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Lê Hoàng Nam</strong></div>
-                    <div>Ngày khám: <strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">28/10/2026</strong></div>
+                    <div>Bác sĩ điều trị: <strong th:text="${visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Lê Hoàng Nam</strong></div>
+                    <div>Ngày khám: <strong th:text="${visit != null and visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm') : ''}">28/10/2026</strong></div>
                 </div>
             </div>
 
@@ -234,7 +263,7 @@
             <div style="border: 1.5px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; background: #f0f9ff;">
                 <h4 style="margin: 0 0 8px 0; color: #0284c7; font-size: 14px; text-transform: uppercase;">Lời dặn riêng của Bác sĩ điều trị:</h4>
                 <div id="printDoctorAdviceText" style="font-size: 13.5px; line-height: 1.6; color: #0f172a; white-space: pre-wrap;"
-                     th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty()) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null) ? prescriptions[0].adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.')}">
+                     th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null) ? prescriptions[0].adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.')}">
                     Uống thuốc đúng giờ theo đơn...
                 </div>
             </div>
@@ -258,7 +287,7 @@
                     <div style="font-size: 12px; color: #64748b;">Hà Nội, ngày ... tháng ... năm 20...</div>
                     <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">BÁC SĨ ĐIỀU TRỊ</div>
                     <div style="height: 50px;"></div>
-                    <div style="font-size: 13px; font-weight: bold;" th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ'}">BS. Lê Hoàng Nam</div>
+                    <div style="font-size: 13px; font-weight: bold;" th:text="${visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ'}">BS. Lê Hoàng Nam</div>
                 </div>
             </div>
         </div>
@@ -278,7 +307,10 @@
         function openDoctorInstructionModal() {
             const currentTextEl = document.getElementById('displayDoctorAdviceText');
             let currentText = currentTextEl ? currentTextEl.innerText.trim() : '';
-            if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng')) {
+            if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng') ||
+                currentText.includes('BR-EMR-02') ||
+                currentText.includes('hoàn tất khám lâm sàng') ||
+                currentText.includes('Mở lại ca khám')) {
                 currentText = '';
             }
 
@@ -289,8 +321,24 @@
 
             const modalEl = document.getElementById('doctorInstructionModal');
             if (modalEl) {
+                // Đảm bảo modal luôn là con trực tiếp của thẻ body
+                if (modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                
+                // Đảm bảo z-index luôn cao nhất
+                modalEl.style.zIndex = '2050';
+                
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.show();
+
+                // Đảm bảo backdrop luôn nằm ngay dưới modal (z-index 2040)
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(b => {
+                        b.style.zIndex = '2040';
+                    });
+                }, 50);
             }
         }
 
@@ -313,7 +361,9 @@
             const adviceNotes = textarea ? textarea.value.trim() : '';
 
             const modalEl = document.getElementById('doctorInstructionModal');
-            const currentVisitId = modalEl?.getAttribute('data-visit-id') || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+            const currentVisitId = modalEl?.getAttribute('data-visit-id')
+                || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null)
+                || (typeof getCurrentVisitId === 'function' ? getCurrentVisitId() : null);
             if (!currentVisitId) {
                 alert('Không tìm thấy mã ca khám hiện tại!');
                 return;
@@ -351,7 +401,7 @@
                         printEl.innerText = adviceNotes.length > 0 ? adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.';
                     }
 
-                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
                     if (modal) modal.hide();
                 } else {
                     const err = await res.json();
@@ -397,7 +447,7 @@
             }, 300);
         }
     </script>
-</div>
+</th:block>
 
 </body>
 </html>

@@ -309,7 +309,7 @@
                             <!-- DANH SÁCH HÀNG DỮ LIỆU ĐÃ CÓ TỪ DATABASE -->
                             <tr th:each="d : ${diagnoses}" th:id="'diag-row-' + ${d.diagnosisId}">
                                 <td>
-                                    <strong class="text-dark" th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</strong>
+                                    <strong class="text-dark" th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : (d.icd10Code != null and d.icd10Code.startsWith('K01') ? 'R-18, 28, 38, 48' : 'Toàn hàm')}">Toàn hàm</strong>
                                 </td>
                                 <td>
                                     <span class="df-list-code" th:text="${d.icd10Code}">K02.1</span>
@@ -1239,16 +1239,31 @@
             if (hintEl) hintEl.innerText = 'Đã bỏ chọn tất cả răng';
             return;
         }
-        const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
-                       '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
-        if (type === 'ALL') {
+
+        const curIcd = (document.getElementById('selectedIcd10Code')?.value || '').trim();
+        const isWisdom = curIcd.startsWith('K01');
+
+        if (type === 'WISDOM' || (type === 'ALL' && isWisdom)) {
+            // Với bệnh RĂNG KHÔN: Tối đa 4 răng số 8, tuyệt đối không chọn 32 răng
+            ['18', '28', '38', '48'].forEach(t => selectedTeeth.add(t));
+        } else if (type === 'ALL') {
+            const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+                           '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
             all32.forEach(t => selectedTeeth.add(t));
         } else if (type === 'UPPER') {
-            const uppers = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'];
-            uppers.forEach(t => selectedTeeth.add(t));
+            if (isWisdom) {
+                ['18', '28'].forEach(t => selectedTeeth.add(t));
+            } else {
+                const uppers = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'];
+                uppers.forEach(t => selectedTeeth.add(t));
+            }
         } else if (type === 'LOWER') {
-            const lowers = ['48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
-            lowers.forEach(t => selectedTeeth.add(t));
+            if (isWisdom) {
+                ['38', '48'].forEach(t => selectedTeeth.add(t));
+            } else {
+                const lowers = ['48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+                lowers.forEach(t => selectedTeeth.add(t));
+            }
         }
         syncActiveTeethUI();
         updateToothInputFromSet();
@@ -1272,7 +1287,19 @@
         const badgeColor = curType === 'MAIN' ? 'bg-danger text-white' : (curType === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
         const typeText = curType === 'MAIN' ? 'Chính' : (curType === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
 
-        if (selectedTeeth.size === 32) {
+        const curIcd = (document.getElementById('selectedIcd10Code')?.value || '').trim();
+        const isWisdom = curIcd.startsWith('K01');
+
+        if (isWisdom) {
+            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
+            if (sorted.length > 0) {
+                if (inputEl) inputEl.value = sorted.join(', ');
+                if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+            } else {
+                if (inputEl) inputEl.value = '';
+                if (hintEl) hintEl.innerText = 'Chưa chọn răng khôn (18, 28, 38, 48)';
+            }
+        } else if (selectedTeeth.size === 32) {
             if (inputEl) inputEl.value = 'Toàn hàm (32 răng)';
             if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
         } else if (selectedTeeth.size > 0) {
@@ -1352,8 +1379,17 @@
             const type = r.getAttribute('data-type') || 'SECONDARY';
             const matches = toothAttr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
             const isFull = !toothAttr || toothAttr === '' || toothAttr.toLowerCase().includes('toàn hàm') || toothAttr.toLowerCase().includes('all') || !matches || matches.length === 0;
+            const icdCode = (r.getAttribute('data-icd') || '').trim();
 
-            if (isFull) {
+            if (icdCode.startsWith('K01')) {
+                // RĂNG KHÔN: Tối đa 4 răng số 8, tuyệt đối KHÔNG highlight cả 32 răng
+                const wisdoms = (matches && matches.length > 0) ? matches.filter(t => ['18','28','38','48'].includes(t)) : ['18', '28', '38', '48'];
+                (wisdoms.length > 0 ? wisdoms : ['18', '28', '38', '48']).forEach(m => {
+                    if (!toothTypeMap.has(m) || type === 'MAIN') {
+                        toothTypeMap.set(m, type);
+                    }
+                });
+            } else if (isFull) {
                 all32.forEach(m => {
                     if (!toothTypeMap.has(m) || type === 'MAIN') {
                         toothTypeMap.set(m, type);
@@ -1536,7 +1572,11 @@
         const matches = teethStr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g) || [];
         const isFullMouth = !teethStr || teethStr === '' || teethStr.toLowerCase().includes('toàn hàm') || teethStr.toLowerCase().includes('all') || matches.length === 0;
 
-        if (isFullMouth) {
+        if (icd.startsWith('K01')) {
+            // RĂNG KHÔN: Tối đa 4 răng số 8, tuyệt đối KHÔNG highlight cả 32 răng
+            const wisdoms = matches.filter(t => ['18','28','38','48'].includes(t));
+            (wisdoms.length > 0 ? wisdoms : ['18', '28', '38', '48']).forEach(t => selectedTeeth.add(t));
+        } else if (isFullMouth) {
             all32.forEach(t => selectedTeeth.add(t));
         } else {
             matches.forEach(t => selectedTeeth.add(t));
@@ -1551,10 +1591,17 @@
         const typeText = type === 'MAIN' ? 'Chính' : (type === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
 
         if (inputEl) {
-            inputEl.value = isFullMouth ? 'Toàn hàm (32 răng)' : matches.join(', ');
+            if (icd.startsWith('K01')) {
+                inputEl.value = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b)).join(', ');
+            } else {
+                inputEl.value = isFullMouth ? 'Toàn hàm (32 răng)' : matches.join(', ');
+            }
         }
         if (hintEl) {
-            if (isFullMouth) {
+            if (icd.startsWith('K01')) {
+                const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+            } else if (isFullMouth) {
                 hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
             } else {
                 hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang xem ${typeText}: ${matches.map(t => 'R' + t).join(', ')}</span>`;
@@ -1647,7 +1694,14 @@
         // Chuẩn hóa vị trí răng & mặt răng MODBL
         let rawTooth = document.getElementById('toothNumbersInput')?.value.trim() || '';
         let toothNumbers = '';
-        if (rawTooth.toLowerCase().includes('toàn hàm') || selectedTeeth.size === 32) {
+        if (finalCode.startsWith('K01')) {
+            // RĂNG KHÔN: Tuyệt đối không lưu "Toàn hàm", nếu chọn cả hàm hoặc để trống thì gán 18, 28, 38, 48
+            if (rawTooth.toLowerCase().includes('toàn hàm') || !rawTooth || selectedTeeth.size === 32 || selectedTeeth.size === 4) {
+                toothNumbers = '18, 28, 38, 48';
+            } else {
+                toothNumbers = rawTooth;
+            }
+        } else if (rawTooth.toLowerCase().includes('toàn hàm') || selectedTeeth.size === 32) {
             toothNumbers = 'Toàn hàm';
         } else {
             toothNumbers = rawTooth;
@@ -1789,7 +1843,12 @@
             badgeHtml = '<span class="badge-diff"><i class="bi bi-question-circle me-1"></i>Phân biệt</span>';
         }
 
-        const toothDisplay = d.toothNumbers ? ('R-' + d.toothNumbers) : 'Toàn hàm';
+        let toothDisplay = d.toothNumbers;
+        if (!toothDisplay || toothDisplay.trim() === '') {
+            toothDisplay = (d.icd10Code && d.icd10Code.startsWith('K01')) ? 'R-18, 28, 38, 48' : 'Toàn hàm';
+        } else if (!toothDisplay.includes('Toàn hàm') && !toothDisplay.startsWith('R-')) {
+            toothDisplay = 'R-' + toothDisplay;
+        }
         const notesDisplay = d.notes ? d.notes : '-';
 
         const tbody = document.getElementById('diagnosisTableBody');
@@ -2168,7 +2227,7 @@
         tr.id = `ps-row-${ps.performedId}`;
 
         const toothBadge = ps.toothNumbers ? 
-            `<span class="badge bg-primary text-white px-2 py-1" style="font-size: 11px; border-radius: 6px;">R${ps.toothNumbers}</span>` : '';
+            `<span class="badge bg-primary text-white px-2 py-1" style="font-size: 11px; border-radius: 6px;">${String(ps.toothNumbers).includes("Toàn hàm") ? ps.toothNumbers : ("R-" + ps.toothNumbers)}</span>` : '';
         const categoryTag = ps.categoryName ? `<span class="df-service-category-tag">${ps.categoryName}</span>` : '';
         const planBadge = ps.planName ? `
             <span class="badge bg-info-subtle text-info border border-info px-2 py-0.5 rounded-pill fw-semibold" style="font-size: 11px;">

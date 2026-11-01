@@ -9,6 +9,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.UserRepository;
+import com.cvdcms.repository.WorkShiftRepository;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,15 +26,18 @@ public class BranchService {
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final WorkShiftRepository workShiftRepository;
 
     // Constructor injection: Spring tự truyền Repository vào Service.
     public BranchService(
             BranchRepository branchRepository,
             UserRepository userRepository,
-            StaffProfileRepository staffProfileRepository) {
+            StaffProfileRepository staffProfileRepository,
+            WorkShiftRepository workShiftRepository) {
         this.branchRepository = branchRepository;
         this.userRepository = userRepository;
         this.staffProfileRepository = staffProfileRepository;
+        this.workShiftRepository = workShiftRepository;
     }
 
     // Danh sách tài khoản có thể đảm nhiệm vai trò Quản lý / Trưởng chi nhánh kèm Họ tên & Chức danh.
@@ -315,4 +319,36 @@ public class BranchService {
         return branchRepository.findAccessibleBranchesByUserId(userId);
     }
 
+
+    /**
+     * Kiểm tra xem chi nhánh có thể xóa an toàn khi tạo nhầm hay không.
+     * Chỉ cho phép xóa khi chưa phát sinh bất kỳ bản ghi nghiệp vụ nào.
+     */
+    @Transactional(readOnly = true)
+    public boolean canDeleteBranch(Long branchId) {
+        if (branchId == null) {
+            return false;
+        }
+        return branchRepository.countOperationalReferences(branchId) == 0;
+    }
+
+    /**
+     * Xóa chi nhánh tạo nhầm (chỉ cho phép khi chưa có bất kỳ dữ liệu nghiệp vụ nào).
+     */
+    @Transactional
+    public void deleteBranch(Long branchId) {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh cần xóa."));
+
+        long refs = branchRepository.countOperationalReferences(branchId);
+        if (refs > 0) {
+            throw new IllegalArgumentException("Không thể xóa chi nhánh vì đã phát sinh dữ liệu (nhân sự, phòng khám, lịch hẹn, doanh thu...). Vui lòng chọn 'Ngừng hoạt động' để bảo toàn dữ liệu y tế.");
+        }
+
+        // Xóa các ca làm việc mặc định của chi nhánh này (nếu có sinh ra)
+        workShiftRepository.deleteByBranchBranchId(branchId);
+
+        // Xóa chi nhánh
+        branchRepository.delete(branch);
+    }
 }

@@ -20,6 +20,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -114,6 +115,15 @@ public class UserController {
 
         if (user == null || !Boolean.TRUE.equals(user.getIsActive())) {
             session.invalidate();
+            return "redirect:/login";
+        }
+
+        // Kiểm tra vai trò của tài khoản có đang hoạt động hay không
+        boolean hasActiveRole = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> r != null && Boolean.TRUE.equals(r.getIsActive()));
+        if (!hasActiveRole && !isAdmin(user)) {
+            session.invalidate();
+            session.setAttribute("notification", "Vai trò của bạn đã bị tạm ngưng hoạt động. Vui lòng liên hệ Quản trị viên.");
             return "redirect:/login";
         }
 
@@ -291,6 +301,33 @@ public class UserController {
                     "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
             );
 
+            return "/user/login";
+        }
+
+        // ---------------------------------------------
+        // CHECK ROLE ACTIVE (Chặn tài khoản thuộc vai trò đã bị ngừng hoạt động)
+        // ---------------------------------------------
+        boolean hasActiveRole = false;
+        String inactiveRoleName = null;
+
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            for (Role r : user.getRoles()) {
+                if (r != null) {
+                    if (Boolean.TRUE.equals(r.getIsActive())) {
+                        hasActiveRole = true;
+                        break;
+                    } else if (inactiveRoleName == null) {
+                        inactiveRoleName = r.getDisplayName() != null ? r.getDisplayName() : r.getRoleName();
+                    }
+                }
+            }
+        }
+
+        if (!hasActiveRole && !isAdmin(user)) {
+            String roleMsg = (inactiveRoleName != null)
+                    ? "Vai trò của bạn (" + inactiveRoleName + ") đã bị tạm ngưng hoạt động trên toàn hệ thống. Vui lòng liên hệ Quản trị viên."
+                    : "Tài khoản của bạn chưa được kích hoạt vai trò hợp lệ. Vui lòng liên hệ Quản trị viên.";
+            model.addAttribute("error", roleMsg);
             return "/user/login";
         }
 
@@ -1086,4 +1123,15 @@ public class UserController {
 
         return "redirect:/login";
     }
+    private boolean isAdmin(User user) {
+        if (user == null || user.getRoles() == null) {
+            return false;
+        }
+        return user.getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(Role::getRoleName)
+                .filter(Objects::nonNull)
+                .anyMatch(n -> n.equalsIgnoreCase("ADMIN") || n.equalsIgnoreCase("ROLE_ADMIN"));
+    }
+
 }
