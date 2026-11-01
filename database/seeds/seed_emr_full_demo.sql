@@ -147,6 +147,16 @@ ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), dob = VALUES(dob), gender
     medical_history_completed = 1, status = 'ACTIVE';
 
 -- Bệnh nhân có tài khoản thật để bắt đầu luồng đặt lịch/tiếp đón.
+-- Cùng tài khoản demo có thể ký hồ sơ BNEMR1001 sau khi bác sĩ khóa phiên bản.
+UPDATE patient_profiles p JOIN users u ON u.username = 'emr_demo_patient'
+SET p.user_id = u.user_id
+WHERE p.patient_code = 'BNEMR1001';
+INSERT INTO account_patient_profiles (account_id, profile_id, access_type, created_at)
+SELECT u.user_id, p.profile_id, 'SELF', NOW()
+FROM users u JOIN patient_profiles p ON p.patient_code = 'BNEMR1001'
+WHERE u.username = 'emr_demo_patient'
+  AND NOT EXISTS (SELECT 1 FROM account_patient_profiles app WHERE app.profile_id = p.profile_id);
+
 INSERT INTO patient_profiles
     (user_id, patient_code, full_name, dob, gender, phone_number, address, id_card_number,
      medical_history_completed, preferred_branch_id, is_default, deposit_balance, status, created_at)
@@ -311,6 +321,53 @@ JOIN staff_profiles s ON s.staff_code = 'BSEMR01'
 WHERE p.patient_code = 'BNEMR1001'
 ON DUPLICATE KEY UPDATE plan_name = VALUES(plan_name), notes = VALUES(notes), status = 'IN_PROGRESS';
 
+-- Tệp thật được run_full_demo.ps1 sao chép vào uploads; nhãn minh họa tránh nhầm ảnh bệnh nhân.
+INSERT INTO clinical_photos (profile_id, visit_id, photo_stage, photo_category, image_url, caption, captured_at)
+SELECT v.profile_id, v.visit_id, 'BEFORE', 'OTHER',
+       '/uploads/clinical_photos/emr-demo-odontogram.png',
+       'Sơ đồ răng minh họa cho kiểm thử đính kèm EMR', NOW()
+FROM visits v WHERE v.visit_code = 'VISEMR1001'
+  AND NOT EXISTS (SELECT 1 FROM clinical_photos cp WHERE cp.visit_id = v.visit_id
+    AND cp.image_url = '/uploads/clinical_photos/emr-demo-odontogram.png');
+
+-- 4.1) Phiếu labo có thật cho các lượt demo.
+-- Màn Khám & Điều trị luôn tải tab Labo khi mở hồ sơ. Seed các dòng này để
+-- không kích hoạt đường tự sinh demo của FT15 trong lúc render trang, đồng thời
+-- bác sĩ có dữ liệu đủ để thử tab Đặt xưởng mà không đụng tới code FT15.
+INSERT INTO suppliers (supplier_code, supplier_name, phone_number, address, is_active)
+SELECT 'LBEMR01', 'Labo demo EMR', '02838220011', 'Quận 1, TP. Hồ Chí Minh', 1
+WHERE NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_code = 'LBEMR01');
+
+INSERT INTO labo_orders
+    (labo_code, visit_id, profile_id, branch_id, doctor_id, supplier_id, order_type,
+     tooth_positions, material_type, shade_color, quantity, unit_price, cost_to_clinic,
+     sent_date, try_in_date, try_in_time, expected_date, received_date, status, notes)
+SELECT src.labo_code, v.visit_id, v.profile_id, v.branch_id, s.staff_id, supplier.supplier_id,
+       'NEW', src.tooth, src.material, src.shade, 1, src.price, src.price,
+       CURDATE(), DATE_ADD(CURDATE(), INTERVAL 2 DAY), '09:30',
+       DATE_ADD(CURDATE(), INTERVAL 4 DAY), NULL, src.status, src.notes
+FROM (
+    SELECT 'LABEMR1001' labo_code, 'VISEMR1001' visit_code, '16' tooth,
+           'Mão sứ Zirconia thử màu' material, 'A2' shade, 1500000.00 price, 'PROCESSING' status,
+           'Phiếu labo demo cho ca tạo bệnh án mới.' notes
+    UNION ALL SELECT 'LABEMR1002', 'VISEMR1002', '26',
+           'Mão sứ toàn sứ e.max' , 'A1', 1800000.00, 'SENT',
+           'Phiếu labo demo cho ca làm mới snapshot.'
+    UNION ALL SELECT 'LABEMR1003', 'VISEMR1003', '38',
+           'Mẫu xét nghiệm đông máu' , 'N/A', 350000.00, 'DELIVERED',
+           'Kết quả labo đã nhận trước khi ký bệnh án.'
+    UNION ALL SELECT 'LABEMR1004', 'VISEMR1004', '16',
+           'Mão tạm PMMA' , 'A2', 500000.00, 'SENT',
+           'Ca thiếu dữ liệu lâm sàng để kiểm thử validation.'
+    UNION ALL SELECT 'LABEMR1005', 'VISEMR1005', '36',
+           'Máng hướng dẫn vệ sinh nha chu' , 'Trong suốt', 400000.00, 'PROCESSING',
+           'Ca thiếu chẩn đoán chính để kiểm thử validation.'
+) src
+JOIN visits v ON v.visit_code = src.visit_code
+JOIN staff_profiles s ON s.staff_code = 'BSEMR01'
+JOIN suppliers supplier ON supplier.supplier_code = 'LBEMR01'
+WHERE NOT EXISTS (SELECT 1 FROM labo_orders lo WHERE lo.labo_code = src.labo_code);
+
 -- 5) Hai bệnh án đã có sẵn: một bản nháp snapshot cũ và một bản đã ký thử để sửa đổi.
 INSERT INTO emr_records
     (record_code, visit_id, profile_id, branch_id, status, current_version_no, created_by, created_at, updated_at, row_version)
@@ -343,12 +400,21 @@ SELECT @draft_version_id, x.code, x.title, x.doc_type, 1, x.sort_order, @draft_s
 FROM (
     SELECT 'COVER' code, 'Bìa hồ sơ bệnh án' title, 'COVER' doc_type, 10 sort_order
     UNION ALL SELECT 'OUTPATIENT_DENTAL', 'Bệnh án ngoại trú Răng Hàm Mặt', 'MEDICAL_RECORD', 20
-    UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết quá trình khám và điều trị', 'SUMMARY', 30
+    UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết bệnh án ngoại trú', 'SUMMARY', 30
     UNION ALL SELECT 'ATTACHMENT_INDEX', 'Danh mục tài liệu đính kèm', 'ATTACHMENT_INDEX', 40
     UNION ALL SELECT 'VERIFICATION', 'Thông tin xác thực hồ sơ', 'VERIFICATION', 50
 ) x
 WHERE @draft_version_id IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM emr_documents d WHERE d.version_id = @draft_version_id AND d.document_code = x.code);
+-- Bản nháp cố ý mới có tình trạng sau khám, còn thiếu hướng điều trị để demo rule chặn khóa.
+UPDATE emr_documents
+SET content_json = JSON_OBJECT('source', @draft_source,
+        'manual', JSON_OBJECT('dischargeCondition', 'Tỉnh táo, ổn định sau khám; còn đau âm ỉ răng 26.')),
+    document_hash = SHA2(CONCAT('TREATMENT_SUMMARY|', CAST(@draft_source AS CHAR),
+        '|Tỉnh táo, ổn định sau khám; còn đau âm ỉ răng 26.'), 256),
+    title = 'Tổng kết bệnh án ngoại trú'
+WHERE version_id = @draft_version_id AND document_code = 'TREATMENT_SUMMARY'
+  AND JSON_EXTRACT(content_json, '$.manual') IS NULL;
 INSERT INTO emr_audit_events (record_id, version_id, actor_user_id, action, details, created_at)
 SELECT @draft_record_id, @draft_version_id, @draft_user_id, 'SEED_STALE_DRAFT',
        'Bản nháp cố ý có snapshot cũ để kiểm thử làm mới dữ liệu.', NOW()
@@ -391,18 +457,12 @@ SELECT @signed_version_id, x.code, x.title, x.doc_type, 1, x.sort_order, @signed
 FROM (
     SELECT 'COVER' code, 'Bìa hồ sơ bệnh án' title, 'COVER' doc_type, 10 sort_order
     UNION ALL SELECT 'OUTPATIENT_DENTAL', 'Bệnh án ngoại trú Răng Hàm Mặt', 'MEDICAL_RECORD', 20
-    UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết quá trình khám và điều trị', 'SUMMARY', 30
+    UNION ALL SELECT 'TREATMENT_SUMMARY', 'Tổng kết bệnh án ngoại trú', 'SUMMARY', 30
     UNION ALL SELECT 'ATTACHMENT_INDEX', 'Danh mục tài liệu đính kèm', 'ATTACHMENT_INDEX', 40
     UNION ALL SELECT 'VERIFICATION', 'Thông tin xác thực hồ sơ', 'VERIFICATION', 50
 ) x
 WHERE @signed_version_id IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM emr_documents d WHERE d.version_id = @signed_version_id AND d.document_code = x.code);
-INSERT INTO emr_signatures
-    (version_id, signer_type, signer_name, signer_user_id, provider, external_transaction_id, status, signature_hash, created_at, signed_at)
-SELECT @signed_version_id, 'PATIENT', 'Lê Quốc Bảo - Bệnh án đã ký', NULL, 'LOCAL_TEST_ONLY', 'seed-patient-emr1003', 'SIGNED',
-       SHA2(CONCAT(@signed_hash, '|PATIENT'), 256), DATE_SUB(NOW(), INTERVAL 22 HOUR), DATE_SUB(NOW(), INTERVAL 22 HOUR)
-WHERE @signed_version_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM emr_signatures s WHERE s.version_id = @signed_version_id AND s.signer_type = 'PATIENT');
 INSERT INTO emr_signatures
     (version_id, signer_type, signer_name, signer_user_id, provider, external_transaction_id, status, signature_hash, created_at, signed_at)
 SELECT @signed_version_id, 'DOCTOR', 'BS. Nguyễn Minh Khôi', @draft_user_id, 'LOCAL_TEST_ONLY', 'seed-doctor-emr1003', 'SIGNED',

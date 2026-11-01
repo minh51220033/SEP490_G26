@@ -23,12 +23,9 @@ public final class EmrStatePolicy {
         return status == EmrRecordStatus.READY_TO_LOCK;
     }
 
-    public static boolean canPatientSign(EmrRecordStatus status) {
-        return status == EmrRecordStatus.PATIENT_SIGNATURE_PENDING;
-    }
-
     public static boolean canDoctorSign(EmrRecordStatus status) {
-        return status == EmrRecordStatus.DOCTOR_SIGNATURE_PENDING;
+        return status == EmrRecordStatus.DOCTOR_SIGNATURE_PENDING
+                || status == EmrRecordStatus.PATIENT_SIGNATURE_PENDING;
     }
 
     public static boolean canAmend(EmrRecordStatus status) {

@@ -46,15 +46,10 @@ public class EmrRestController {
         service.lock(session, recordId);
     }
 
-    @PostMapping("/{recordId}/test-signatures/patient")
-    public void patientSign(HttpSession session, @PathVariable Long recordId,
-            @RequestBody(required = false) PatientSignRequest request) {
-        service.patientSignForTest(session, recordId, request == null ? null : request.signerName());
-    }
-
     @PostMapping("/{recordId}/test-signatures/doctor")
-    public void doctorSign(HttpSession session, @PathVariable Long recordId) {
-        service.doctorSignForTest(session, recordId);
+    public void doctorSign(HttpSession session, @PathVariable Long recordId,
+            @RequestBody TestSignRequest request) {
+        service.doctorSignForTest(session, recordId, request != null && request.confirmed());
     }
 
     @PostMapping("/{recordId}/amendments")
@@ -64,7 +59,7 @@ public class EmrRestController {
     }
 
     public record CreateRequest(Long visitId) {}
-    public record PatientSignRequest(String signerName) {}
+    public record TestSignRequest(boolean confirmed) {}
     public record AmendmentRequest(String reason) {}
     public record IdResponse(Long id) {}
 }

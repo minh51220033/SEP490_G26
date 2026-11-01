@@ -61,7 +61,7 @@ Seed đã chuẩn bị sẵn đúng các liên kết trên: bệnh nhân **Đỗ
 
 | Lượt khám | Tình trạng | Mục đích |
 | --- | --- | --- |
-| `VISEMR1001` | Đủ phiếu khám + chẩn đoán chính + thủ thuật + đơn thuốc, chưa có EMR | Tạo và ký một bệnh án mới |
+| `VISEMR1001` | Đủ phiếu khám + chẩn đoán chính + thủ thuật + đơn thuốc; chưa có EMR sau khi reset demo | Tạo và ký một bệnh án mới |
 | `VISEMR1002` | Đã có `EMR-DEMO-DRAFT` với snapshot cũ | Bấm **Làm mới dữ liệu** rồi kiểm tra/khóa |
 | `VISEMR1003` | Đã có `EMR-DEMO-SIGNED` | Tạo **phiên bản sửa đổi** |
 | `VISEMR1004` | Thiếu phiếu khám, bác sĩ, chẩn đoán | Minh họa chặn tạo/khóa |
@@ -70,9 +70,9 @@ Seed đã chuẩn bị sẵn đúng các liên kết trên: bệnh nhân **Đỗ
 ### 5. Tạo, kiểm tra và ký bệnh án điện tử
 
 - Mở **Hồ sơ & Tái khám → Bệnh án điện tử**.
-- Tại `VISEMR1001`, bấm **Tạo bản nháp**.
+- Sau khi chạy `-ResetEmrDemo`, tại `VISEMR1001` bấm **Tạo bản nháp**.
 - Mở bệnh án → **Kiểm tra hồ sơ** → **Khóa phiên bản**.
-- Bấm **Người bệnh ký thử**, sau đó **Bác sĩ ký thử**. Cả hai là `LOCAL_TEST_ONLY`, chỉ phục vụ demo state-machine; không phải chữ ký số pháp lý.
+- Bác sĩ khám tích ô xác nhận rồi bấm **Ký thử và hoàn tất**. Đây là `LOCAL_TEST_ONLY`, chỉ phục vụ demo state machine.
 - Mở `EMR-DEMO-DRAFT` để minh họa cảnh báo snapshot cũ và thao tác **Làm mới dữ liệu**.
 - Mở `EMR-DEMO-SIGNED`, nhập lý do rồi tạo **phiên bản sửa đổi**.
 
@@ -85,7 +85,21 @@ Seed đã chuẩn bị sẵn đúng các liên kết trên: bệnh nhân **Đỗ
 
 ## Xác nhận sau khi demo
 
-- Bệnh án mới có 3 tài liệu: bìa, bệnh án ngoại trú Răng Hàm Mặt, tổng kết điều trị.
-- Sau ký thử, trạng thái là `SIGNED`, có 2 chữ ký và audit log.
+- Bệnh án mới có 5 thành phần: bìa, bệnh án ngoại trú Răng Hàm Mặt, tổng kết bệnh án ngoại trú, danh mục đính kèm và thông tin xác thực.
+- Sau ký thử, trạng thái là `SIGNED`, có chữ ký thử của bác sĩ và audit log.
 - Bệnh án đã ký không bị sửa trực tiếp; thao tác sửa tạo một version mới.
 - Chạy lại `run_full_demo.ps1 -ResetEmrDemo` để khôi phục các kịch bản EMR về trạng thái ban đầu.
+# Kiểm thử màn bệnh án ngoại trú sau khi bổ sung rule và timeline
+
+Chạy `./database/seeds/run_full_demo.ps1` trong PowerShell sau khi ứng dụng đã tạo schema. Nếu cần đưa riêng bộ EMR demo về trạng thái ban đầu, dùng `-ResetEmrDemo` (thao tác này xóa các bản ghi demo EMR trước khi nạp lại). Đăng nhập `emr_demo_doctor / Hieu1811`.
+
+1. Vào **Bệnh án điện tử**. Danh sách bệnh án có phân trang 10 hồ sơ/trang; lọc và chuyển trang giữ nguyên điều kiện tìm kiếm.
+2. Mở **EMR-DEMO-DRAFT**. Bản nháp được seed với snapshot cũ. Bấm **Làm mới dữ liệu**, xem lại bệnh án ngoại trú và phần tổng kết. Tình trạng sau khám đã có, hướng theo dõi vẫn thiếu nên **Kiểm tra hồ sơ** phải báo chặn khóa. Điền hướng theo dõi ở chế độ **Chỉnh sửa** của **Tổng kết bệnh án ngoại trú** rồi kiểm tra lại.
+3. Mở một lượt khám `VISEMR1001` chưa có EMR và bấm **Tạo bản nháp**. Kiểm tra dữ liệu khám, chẩn đoán, dịch vụ và đơn thuốc đã chuyển sang bệnh án. Nếu nguồn thiếu trường, mục **Điều kiện khóa** chỉ ra nội dung chặn; mục **Nhắc bổ sung** nêu trường nên hoàn thiện. Nút **Mở phiếu khám để bổ sung** quay về FT11. Sau khi sửa tại FT11, bấm **Làm mới dữ liệu** trong EMR.
+4. Trong tờ **Tổng kết bệnh án ngoại trú**, xem các lượt khám trước nếu bệnh nhân có lịch sử, rồi điền tình trạng khi kết thúc và hướng điều trị tiếp theo. Tờ **Danh mục tài liệu đính kèm** hiển thị ảnh nguồn khi còn là bản nháp; sau khi khóa, ảnh được sao lưu riêng và có hash nội dung.
+   Riêng `VISEMR1001` có tệp **sơ đồ răng minh họa** do script sao chép vào `uploads/clinical_photos`. Sau khi hồ sơ đủ dữ liệu và được khóa, mở tờ đính kèm lần nữa: ảnh được tải qua đường dẫn EMR có kiểm tra quyền, hiển thị kích thước và SHA-256 của bytes đã lưu riêng. Đây là ảnh minh họa kiểm thử, không phải ảnh bệnh nhân.
+   Bảng bên dưới cũng liệt kê các phiếu labo của lượt khám. Nếu FT12 đã liên kết ảnh X-quang với lượt khám hoặc phiếu labo có ảnh nội bộ, ảnh đó sẽ được đưa vào cùng gói đính kèm khi khóa. URL ảnh ngoài hoặc tệp nguồn bị thiếu sẽ làm thao tác khóa báo lỗi; bác sĩ cần đưa ảnh vào kho nội bộ trước.
+5. Mở **EMR-DEMO-SIGNED** để xem bản đã ký thử, lịch sử phiên bản và trang xác thực. Nhãn `LOCAL_TEST_ONLY` cho biết chữ ký demo chưa phải chữ ký số của nhà cung cấp.
+6. Với hồ sơ `BNEMR1001`, sau khi đủ dữ liệu, khóa phiên bản rồi tích ô xác nhận để bác sĩ `emr_demo_doctor` ký thử. Không có bước người bệnh ký bệnh án. Thử gửi POST thiếu `confirmed=true`: server phải từ chối.
+
+Không dùng ca demo đã ký để kiểm chứng quy tắc khóa mới: bản này được seed sẵn nhằm thử hiển thị lịch sử và trạng thái. Các ca tạo mới phải đi qua kiểm tra phía server trước khi khóa.
