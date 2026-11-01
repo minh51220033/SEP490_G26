@@ -10,29 +10,36 @@
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <div class="patient-page-heading">
-                <div><h1>Hồ sơ bệnh nhân</h1><p>Tìm kiếm và xem hồ sơ trong phạm vi chi nhánh được phân công.</p></div>
+                <div><h1>Hồ sơ bệnh nhân</h1></div>
                 <a th:if="${canManageAdministrative}" class="btn btn-primary"
                    th:href="${recordBasePath + '/new'}"><i class="bi bi-plus-lg"></i> Thêm bệnh nhân</a>
             </div>
-            <section class="panel">
-                <form class="patient-filter" method="get" th:action="${recordBasePath}">
-                    <div><label for="query">Mã, họ tên hoặc số điện thoại</label><input id="query" class="form-control" name="query" th:value="${query}" placeholder="Tìm hồ sơ"></div>
+            <section class="panel patient-list-panel" data-record-list>
+                <div class="patient-list-toolbar"><strong data-list-count th:text="|${patients.totalElements} hồ sơ bệnh nhân|">Danh sách hồ sơ</strong><span>Chọn hồ sơ để xem lịch sử khám và bệnh án</span></div>
+                <form class="patient-filter" method="get" th:action="${recordBasePath}" data-live-search>
+                    <div class="patient-filter-search"><label for="query">Tìm bệnh nhân</label><input id="query" class="form-control" name="query" th:value="${query}" placeholder="Họ tên, mã bệnh nhân hoặc số điện thoại"></div>
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
+                    <a class="btn btn-outline-secondary" th:href="${recordBasePath}">Xóa lọc</a>
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#patientAdvancedFilters" aria-expanded="false" aria-controls="patientAdvancedFilters"><i class="bi bi-sliders"></i> Lọc nâng cao</button>
+                    <div class="collapse patient-filter-advanced" id="patientAdvancedFilters" th:classappend="${dob != null or status != null and !status.isBlank() or branchId != null} ? ' show' : ''">
                     <div><label for="dob">Ngày sinh</label><input id="dob" class="form-control" type="date" name="dob" th:value="${dob}"></div>
                     <div th:if="${#lists.size(branches) > 1}"><label for="branchId">Chi nhánh</label><select id="branchId" class="form-select" name="branchId"><option value="">Tất cả</option><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}">Chi nhánh</option></select></div>
                     <div><label for="status">Trạng thái</label><select id="status" class="form-select" name="status"><option value="">Tất cả</option><option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hoạt động</option><option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option></select></div>
-                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                    </div>
                 </form>
+                <div class="patient-active-filters" data-filter-chips th:if="${query != null and !query.isBlank() or dob != null or status != null and !status.isBlank() or branchId != null}"><span>Đang lọc:</span><strong th:if="${query != null and !query.isBlank()}" th:text="|Từ khóa: ${query}|">Từ khóa</strong><strong th:if="${dob != null}" th:text="|Ngày sinh: ${#temporals.format(dob, 'dd/MM/yyyy')}|">Ngày sinh</strong><strong th:if="${status != null and !status.isBlank()}" th:text="${@emrViewText.label(status)}">Trạng thái</strong><strong th:if="${branchId != null}">Chi nhánh đã chọn</strong></div>
+                <div data-list-results>
                 <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-                    <thead><tr><th>Mã hồ sơ</th><th>Bệnh nhân</th><th>Ngày sinh</th><th>Số điện thoại</th><th>Chi nhánh</th><th>Trạng thái</th><th></th></tr></thead>
+                    <thead><tr><th>Bệnh nhân</th><th>Ngày sinh</th><th>Liên hệ</th><th>Chi nhánh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                     <tbody>
                     <tr th:each="patient : ${patients.content}">
-                        <td class="fw-semibold" th:text="${patient.code}">BN001</td><td th:text="${patient.fullName}">Họ tên</td>
+                        <td class="patient-name-cell"><strong th:text="${patient.fullName}">Họ tên</strong><small th:text="${patient.code}">BN001</small></td>
                         <td th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : '—'}">—</td>
-                        <td th:text="${patient.phoneNumber}">—</td><td th:text="${patient.branchName}">—</td>
+                        <td th:text="${patient.phoneNumber ?: 'Chưa cập nhật'}">—</td><td th:text="${patient.branchName}">—</td>
                         <td><span class="badge" th:classappend="${patient.status == 'ACTIVE'} ? 'bg-success' : 'bg-secondary'" th:text="${patient.status == 'ACTIVE'} ? 'Đang hoạt động' : 'Ngừng hoạt động'">—</span></td>
                         <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="${recordBasePath + '/' + patient.id}">Xem hồ sơ</a></td>
                     </tr>
-                    <tr th:if="${patients.empty}"><td colspan="7" class="text-center text-muted py-5">Không tìm thấy hồ sơ phù hợp.</td></tr>
+                    <tr th:if="${patients.empty}"><td colspan="6" class="text-center text-muted py-5">Không tìm thấy hồ sơ phù hợp. Hãy đổi hoặc xóa bộ lọc.</td></tr>
                     </tbody>
                 </table></div>
                 <div class="patient-pagination" th:if="${patients.totalPages > 1}">
@@ -42,22 +49,12 @@
                         <a class="btn btn-outline-secondary" th:if="${patients.hasNext()}" th:href="@{${recordBasePath}(page=${patients.number + 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Sau</a>
                     </div>
                 </div>
+                </div>
             </section>
         </main>
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
-<script>
-(function() {
-    const kwInput = document.getElementById('query');
-    const form = kwInput ? kwInput.closest('form') : null;
-    if (!form || !kwInput) return;
-    let debounceTimer = null;
-    kwInput.addEventListener('input', function() {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(function() { form.submit(); }, 350);
-    });
-})();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/record-list-search.js}"></script>
 </body>
 </html>
