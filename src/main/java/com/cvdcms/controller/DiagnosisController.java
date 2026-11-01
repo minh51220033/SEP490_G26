@@ -77,7 +77,8 @@ public class DiagnosisController {
         model.addAttribute("branches", branchRepository.findAll());
         model.addAttribute("stats", reExaminationService.getRecallsStatistics());
         model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị (SCR-18.2) - DentalFlow");
-        return "doctor/recalls";
+        // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn (FT44 - UC-26)
+        return "redirect:/customer-care";
     }
 
     @GetMapping({"/doctor/diagnoses", "/doctor/treatment"})
