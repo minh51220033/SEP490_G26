@@ -21,4 +21,9 @@ public class InvoiceCalculationPreviewDTO {
     private Integer pointsEarnable = 0;
     private String promoName;
     private String tierName;
+
+    // Bổ sung kiểm soát giới hạn điểm đổi
+    private Integer pointsRedeemed = 0;       // Số điểm thực tế sẽ được dùng (đã khống chế không vượt trần)
+    private Integer maxPointsAllowed = 0;     // Số điểm tối đa được phép đổi cho hóa đơn này
+    private BigDecimal pointValue = BigDecimal.ZERO; // Giá trị quy đổi: 1 điểm = ... đ
 }

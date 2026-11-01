@@ -2,14 +2,21 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="'Phiếu thu ' + ${payment.paymentCode} + ' | CV-DCMS'">Phiếu thu tiền</title>
+    <title th:text="'Phiếu thu tiền ' + ${payment.paymentCode} + ' | CV-DCMS'">Phiếu thu tiền</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <style>
         @media print {
             .no-print { display: none !important; }
-            body { background: #fff !important; }
+            body { background: #fff !important; font-size: 13px; }
             .print-a4 { border: none !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+        }
+        .table-receipt th, .table-receipt td {
+            font-size: 12px;
+            vertical-align: middle;
+            padding: 5px 8px;
         }
     </style>
 </head>
@@ -27,7 +34,7 @@
 </div>
 
 <div class="print-container">
-    <div class="print-a4" style="max-width: 700px;">
+    <div class="print-a4" style="max-width: 780px;">
         <!-- Header -->
         <div class="print-header">
             <div class="print-clinic-info">
@@ -38,7 +45,8 @@
             <div class="text-end">
                 <div class="fs-6 fw-bold text-dark">MÃ PHIẾU THU</div>
                 <div class="fs-5 fw-bold text-success" th:text="${payment.paymentCode}">TT10001</div>
-                <div class="small text-muted" th:text="'Ngày: ' + ${#temporals.format(payment.paidAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 14:00</div>
+                <div class="small text-muted" th:text="'Thời gian: ' + ${#temporals.format(payment.paidAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 14:00</div>
+                <div class="small text-muted" th:text="'Cơ sở thu: ' + ${payment.branch.branchName}">Cơ sở Quận 1</div>
             </div>
         </div>
 
@@ -46,14 +54,14 @@
         <div class="print-title">
             <h1 class="text-success">PHIẾU THU TIỀN VIỆN PHÍ</h1>
             <p class="text-muted small">
-                <span th:if="${payment.paymentType.name() == 'PAYMENT'}">Thanh toán hóa đơn điều trị nha khoa</span>
-                <span th:if="${payment.paymentType.name() == 'ADVANCE_DEPOSIT'}">Nộp tiền tạm ứng / Đặt cọc điều trị</span>
+                <span th:if="${payment.paymentType != null and payment.paymentType.name() == 'PAYMENT'}">Xác nhận thanh toán viện phí dịch vụ &amp; đơn thuốc nha khoa</span>
+                <span th:if="${payment.paymentType != null and payment.paymentType.name() == 'ADVANCE_DEPOSIT'}">Xác nhận nộp tiền ví tạm ứng khám chữa bệnh</span>
             </p>
         </div>
 
         <!-- Payment details -->
-        <div class="p-4 bg-light rounded border border-light-subtle mb-4">
-            <div class="row g-3">
+        <div class="p-3 bg-light rounded border border-light-subtle mb-3">
+            <div class="row g-2">
                 <div class="col-12">
                     <strong>Họ và tên người nộp tiền:</strong>
                     <span class="fs-6 text-uppercase fw-bold ms-1" th:text="${payment.patientProfile.fullName}">Nguyễn Văn An</span>
@@ -68,24 +76,30 @@
                 <div class="col-12" th:if="${payment.invoice != null}">
                     <strong>Hóa đơn thanh toán:</strong>
                     <span class="text-primary fw-bold ms-1" th:text="${payment.invoice.invoiceCode}">HD123456</span>
-                    <span class="text-muted small ms-2" th:text="'(Tổng HĐ: ' + ${#numbers.formatDecimal(payment.invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ)'"></span>
+                    <span class="text-muted small ms-2" th:text="'(Tổng tiền HĐ: ' + ${#numbers.formatDecimal(payment.invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ)'"></span>
                 </div>
                 <div class="col-12">
-                    <strong>Lý do nộp:</strong>
-                    <span th:text="${payment.notes != null and !payment.notes.isEmpty() ? payment.notes : (payment.paymentType.name() == 'PAYMENT' ? 'Thanh toán viện phí dịch vụ nha khoa' : 'Nộp tiền tạm ứng khám chữa bệnh')}"></span>
+                    <strong>Lý do nộp tiền:</strong>
+                    <span th:text="${payment.notes != null and !payment.notes.isEmpty() ? payment.notes : (payment.paymentType != null and payment.paymentType.name() == 'PAYMENT' ? 'Thanh toán viện phí dịch vụ nha khoa' : 'Nộp tiền tạm ứng khám chữa bệnh')}"></span>
                 </div>
                 <div class="col-6">
-                    <strong>Phương thức thanh toán:</strong>
-                    <span class="badge bg-light text-dark border ms-1" th:text="${payment.paymentMethod}">CASH</span>
+                    <strong>Hình thức thanh toán:</strong>
+                    <span class="badge bg-white text-dark border ms-1" th:switch="${payment.paymentMethod != null ? payment.paymentMethod.name() : ''}">
+                        <span th:case="'CASH'">Tiền mặt</span>
+                        <span th:case="'BANK_TRANSFER'">Chuyển khoản ngân hàng</span>
+                        <span th:case="'DEPOSIT_WALLET'">Ví tạm ứng</span>
+                        <span th:case="'POS_CARD'">Thẻ POS / Thẻ tín dụng</span>
+                        <span th:case="*" th:text="${payment.paymentMethod}"></span>
+                    </span>
                     <span th:if="${payment.transactionRef != null and !payment.transactionRef.isEmpty()}"
                           class="small text-muted ms-1" th:text="'(Mã GD: ' + ${payment.transactionRef} + ')'"></span>
                 </div>
                 <div class="col-6 text-end">
-                    <strong>Số tiền đã thu:</strong>
-                    <span class="fs-4 fw-bold text-success ms-2" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</span>
+                    <strong>Số tiền thu lần này:</strong>
+                    <span class="fs-5 fw-bold text-success ms-2" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</span>
                 </div>
-                <div class="col-12" th:if="${payment.paymentMethod.name() == 'BANK_TRANSFER' and payment.bankAccountNumber != null}">
-                    <div class="p-2 mt-2 bg-white rounded border small text-muted">
+                <div class="col-12" th:if="${payment.paymentMethod != null and payment.paymentMethod.name() == 'BANK_TRANSFER' and payment.bankAccountNumber != null}">
+                    <div class="p-2 mt-1 bg-white rounded border small text-muted">
                         <span class="d-block fw-semibold text-dark"><i class="bi bi-bank me-1 text-primary"></i> Tài khoản nhận tiền:</span>
                         <span>Ngân hàng: <strong th:text="${payment.bankName}"></strong> | STK: <strong class="font-monospace" th:text="${payment.bankAccountNumber}"></strong> | Chủ TK: <strong th:text="${payment.bankAccountHolder}"></strong></span>
                         <span class="d-block mt-1" th:if="${payment.expectedTransferContent != null}">Nội dung CK: <strong class="text-danger font-monospace" th:text="${payment.expectedTransferContent}"></strong></span>
@@ -94,22 +108,91 @@
             </div>
         </div>
 
+        <!-- BẢNG CHI TIẾT THANH TOÁN LẦN NÀY (ITEMIZED ALLOCATIONS) -->
+        <div th:if="${hasAllocations != null and hasAllocations and allocations != null and !#lists.isEmpty(allocations)}" class="mb-3">
+            <h6 class="fw-bold text-dark mb-2">CHI TIẾT PHÂN BỔ THANH TOÁN LẦN NÀY:</h6>
+            <table class="table table-bordered table-sm table-receipt mb-0">
+                <thead class="table-light text-center">
+                <tr>
+                    <th style="width: 40px;">STT</th>
+                    <th>Khoản thanh toán</th>
+                    <th style="width: 100px;">Phân loại</th>
+                    <th class="text-end" style="width: 130px;">Số tiền phân bổ</th>
+                    <th class="text-end" style="width: 130px;">Còn nợ sau thu</th>
+                    <th style="width: 110px;">Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="al, iter : ${allocations}">
+                    <td class="text-center" th:text="${iter.count}">1</td>
+                    <td>
+                        <span class="fw-bold" th:text="${al.itemName}">Nhổ răng khôn</span>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${al.itemType == 'SERVICE'}" class="badge bg-primary-subtle text-primary border">Dịch vụ</span>
+                        <span th:if="${al.itemType == 'MEDICINE'}" class="badge bg-info-subtle text-info border">Thuốc</span>
+                        <span th:if="${al.itemType == 'SURCHARGE'}" class="badge bg-secondary-subtle text-secondary border">Phụ thu</span>
+                    </td>
+                    <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(al.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">200.000 đ</td>
+                    <td class="text-end fw-bold" th:classappend="${al.remainingDebtAfter > 0 ? 'text-danger' : 'text-success'}"
+                        th:text="${#numbers.formatDecimal(al.remainingDebtAfter, 0, 'COMMA', 0, 'POINT')} + ' đ'">100.000 đ</td>
+                    <td class="text-center">
+                        <span th:if="${al.statusAfter == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả hết</span>
+                        <span th:if="${al.statusAfter == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border">Trả 1 phần</span>
+                        <span th:if="${al.statusAfter == 'UNPAID'}" class="badge bg-danger-subtle text-danger border">Chưa trả</span>
+                    </td>
+                </tr>
+                </tbody>
+                <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="3" class="text-end">TỔNG CỘNG THU LẦN NÀY:</td>
+                    <td class="text-end text-success fs-6" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                    <td colspan="2"></td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Thông tin công nợ hóa đơn sau thu -->
+        <div th:if="${payment.invoice != null}" class="p-2 mb-3 bg-white rounded border d-flex justify-content-between align-items-center">
+            <span class="small text-muted">
+                Tổng nợ hóa đơn hiện tại:
+                <strong class="text-dark" th:text="${#numbers.formatDecimal(payment.invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong>
+                | Đã thanh toán lũy kế:
+                <strong class="text-success" th:text="${#numbers.formatDecimal(payment.invoice.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong>
+            </span>
+            <span>
+                <span class="fw-bold small text-muted">Công nợ hóa đơn còn lại: </span>
+                <strong class="fs-6" th:classappend="${payment.invoice.remainingDebt > 0 ? 'text-danger' : 'text-success'}"
+                        th:text="${#numbers.formatDecimal(payment.invoice.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+            </span>
+        </div>
+
+        <div th:if="${(hasAllocations == null or !hasAllocations or allocations == null or #lists.isEmpty(allocations)) and payment.paymentType != null and payment.paymentType.name() == 'PAYMENT'}" class="alert alert-light border small text-muted mb-3">
+            <i class="bi bi-info-circle me-1"></i> Khoản thu này ghi nhận theo tổng hóa đơn (Hóa đơn lập trước thời điểm phân bổ từng dòng).
+        </div>
+
         <!-- Signatures -->
-        <div class="row text-center mt-5">
+        <div class="row text-center mt-4">
             <div class="col-6">
                 <h6 class="fw-bold m-0">NGƯỜI NỘP TIỀN</h6>
                 <p class="small text-muted fst-italic mb-5">(Ký, ghi rõ họ tên)</p>
-                <div class="fw-bold" th:text="${payment.patientProfile.fullName}">Nguyễn Văn An</div>
+                <div class="fw-bold" th:text="${payment.patientProfile != null ? payment.patientProfile.fullName : ''}">Nguyễn Văn An</div>
             </div>
             <div class="col-6">
                 <h6 class="fw-bold m-0">NGƯỜI THU TIỀN (THU NGÂN)</h6>
                 <p class="small text-muted fst-italic mb-5">(Ký, ghi rõ họ tên)</p>
-                <div class="fw-bold" th:text="${payment.cashier.fullName}">Nguyễn Thu Ngân</div>
+                <div class="fw-bold" th:text="${payment.cashier != null ? payment.cashier.fullName : ''}">Nguyễn Thu Ngân</div>
             </div>
         </div>
 
         <div class="mt-4 pt-3 border-top text-center text-muted small">
-            <em>Phiếu thu có giá trị xác nhận bệnh nhân đã hoàn tất thanh toán số tiền nêu trên.</em>
+            <em th:if="${payment.invoice != null and payment.invoice.remainingDebt != null and payment.invoice.remainingDebt > 0}">
+                Phiếu thu xác nhận bệnh nhân đã nộp số tiền nêu trên đợt này. Hóa đơn vẫn còn nợ số tiền tương ứng chưa thanh toán.
+            </em>
+            <em th:if="${payment.invoice == null or payment.invoice.remainingDebt == null or payment.invoice.remainingDebt == 0}">
+                Phiếu thu có giá trị xác nhận bệnh nhân đã hoàn tất thanh toán số tiền nêu trên.
+            </em>
         </div>
     </div>
 </div>

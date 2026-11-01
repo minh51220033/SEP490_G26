@@ -116,9 +116,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(payments)}">
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                Chưa có phiếu thu nào phù hợp với điều kiện tìm kiếm.
+                            <td colspan="10" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-cash-stack empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; phi&#7871;u thu n&#224;o</h6>
+                                    <p>Ch&#432;a c&#243; phi&#7871;u thu vi&#7879;n ph&#237; ho&#7863;c n&#7895;p t&#7841;m &#7913;ng n&#224;o ph&#249; h&#7887;p v&#7899;i &#273;i&#7873;u ki&#7879;n l&#7885;c.</p>
+                                    <a th:href="@{/payments/create}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-plus-lg me-1"></i>Thu ti&#7873;n vi&#7879;n ph&#237;
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="p : ${payments}">
@@ -156,8 +162,8 @@
                             <td data-column-key="cashier" th:text="${p.cashier.fullName}">Nguyễn Thu Ngân</td>
                             <td data-column-key="actions" data-column-action="true" class="text-center">
                                 <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
-                                   class="btn btn-sm btn-outline-secondary" title="In phiếu thu viện phí">
-                                    <i class="bi bi-printer"></i> In phiếu
+                                   class="fin-table-btn fin-table-btn-print" title="In phi&#7871;u thu vi&#7879;n ph&#237;">
+                                    <i class="bi bi-printer"></i> <span>In phi&#7871;u</span>
                                 </a>
                             </td>
                         </tr>

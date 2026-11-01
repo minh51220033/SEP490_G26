@@ -51,6 +51,8 @@ public class PaymentPageController {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.TreatmentPlanRepository treatmentPlanRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentPageController(
@@ -480,6 +482,12 @@ public class PaymentPageController {
         Payment payment = paymentService.getPaymentById(id);
         resolveBranchId(payment.getBranch().getBranchId(), currentUserId);
         model.addAttribute("payment", payment);
+        List<com.cvdcms.DTO.PaymentAllocationDTO> allocations = java.util.Collections.emptyList();
+        if (paymentAllocationService != null) {
+            allocations = paymentAllocationService.getAllocationsByPaymentId(id);
+        }
+        model.addAttribute("allocations", allocations);
+        model.addAttribute("hasAllocations", allocations != null && !allocations.isEmpty());
         return "finance/payments/receipt";
     }
 

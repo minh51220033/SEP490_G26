@@ -79,11 +79,18 @@
                 <div class="mb-3">
                     <i class="bi bi-person-bounding-box text-primary" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="fw-bold text-dark">Chưa chọn hồ sơ bệnh nhân</h4>
+                <h4 class="fw-bold text-dark">Ch&#432;a ch&#7885;n h&#7891; s&#417; b&#7879;nh nh&#226;n</h4>
                 <p class="text-muted mx-auto" style="max-width: 560px;">
-                    Vui lòng sử dụng ô <strong>Tìm kiếm bệnh nhân</strong> phía trên (theo tên, số điện thoại hoặc mã bệnh nhân) để tra cứu tài chính, hoặc chọn trực tiếp bệnh nhân từ
-                    <a th:href="@{/payments/debts}" class="fw-bold text-decoration-none">Danh sách công nợ viện phí</a>.
+                    Vui l&#242;ng s&#7911; d&#7909;ng &#244; <strong>T&#236;m ki&#7871;m b&#7879;nh nh&#226;n</strong> ph&#237;a tr&#234;n (theo t&#234;n, s&#7889; &#273;i&#7879;n tho&#7841;i ho&#7863;c m&#227; b&#7879;nh nh&#226;n) &#273;&#7875; tra c&#7913;u t&#224;i ch&#237;nh, ho&#7863;c ch&#7885;n tr&#7921;c ti&#7871;p b&#7879;nh nh&#226;n t&#7915; danh s&#225;ch c&#244;ng n&#7907;.
                 </p>
+                <div class="mt-3 d-flex gap-2 justify-content-center">
+                    <a th:href="@{/payments/debts}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-cash-stack me-1"></i> Xem danh s&#225;ch c&#244;ng n&#7907;
+                    </a>
+                    <a th:href="@{/invoices}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-receipt me-1"></i> Xem danh s&#225;ch h&#243;a &#273;&#417;n
+                    </a>
+                </div>
             </div>
             <div th:if="${patient != null}">
                 <!-- Patient Profile Summary Card -->
@@ -275,18 +282,18 @@
                                                   class="fin-badge fin-badge-unpaid">Chưa trả</span>
                                         </td>
                                         <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
+                                            <div class="fin-table-actions">
                                                 <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}"
-                                                   class="btn btn-outline-primary" title="Xem chi tiết"><i
+                                                   class="fin-table-btn fin-table-btn-view fin-table-btn-icon" title="Xem chi ti&#7871;t"><i
                                                         class="bi bi-eye"></i></a>
                                                 <button th:if="${inv.remainingDebt > 0}" type="button"
-                                                        class="btn btn-success"
+                                                        class="fin-table-btn fin-table-btn-pay"
                                                         th:data-invoice-id="${inv.invoiceId}"
                                                         th:data-code="${inv.invoiceCode}"
                                                         th:data-debt="${inv.remainingDebt}"
                                                         th:data-patient="${patient.fullName}"
-                                                        onclick="openInvoicePayModal(this)" title="Thu tiền">
-                                                    <i class="bi bi-cash"></i>
+                                                        onclick="openInvoicePayModal(this)" title="Thu ti&#7873;n">
+                                                    <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -687,7 +694,35 @@
                         <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này
                             (VNĐ):</label>
                         <input type="number" id="modalPayAmount" name="amount" class="form-control" required
-                               min="1000" step="1000">
+                               min="1000" step="1000" oninput="triggerAllocationPreview()">
+                    </div>
+                    <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (REQUIREMENT 2) -->
+                    <div id="quickPayAllocationPreviewBox" class="mb-3" style="display: none;">
+                        <div class="card border border-primary-subtle shadow-sm bg-white">
+                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                <span class="small fw-bold text-primary"><i class="bi bi-diagram-3-fill me-1"></i> Dự kiến phân bổ khoản thu (FIFO):</span>
+                                <span id="previewRemainingDebtBadge" class="badge bg-danger">Còn nợ: 0 đ</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 200px;">
+                                    <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 11.5px;">
+                                        <thead class="table-light">
+                                            <tr class="text-center">
+                                                <th style="width: 28px;">#</th>
+                                                <th>Khoản thu</th>
+                                                <th style="width: 70px;">Loại</th>
+                                                <th class="text-end" style="width: 85px;">Phải trả</th>
+                                                <th class="text-end" style="width: 75px;">Đã trả</th>
+                                                <th class="text-end text-success" style="width: 85px;">Thu đợt này</th>
+                                                <th class="text-end text-danger" style="width: 80px;">Còn nợ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="quickPayAllocationPreviewTbody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="modalPayMethod" class="form-label fw-bold">Phương thức thanh
@@ -958,6 +993,75 @@
     function formatMoney(num) {
         return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
     }
+    let allocationDebounceTimer = null;
+    function triggerAllocationPreview() {
+        clearTimeout(allocationDebounceTimer);
+        allocationDebounceTimer = setTimeout(fetchAllocationPreview, 200);
+    }
+
+    function fetchAllocationPreview() {
+        const invSelect = document.getElementById('modalInvoiceSelect');
+        const invoiceId = invSelect ? invSelect.value : null;
+        const amountInput = document.getElementById('modalPayAmount');
+        const amount = amountInput ? parseFloat(amountInput.value) : 0;
+        const box = document.getElementById('quickPayAllocationPreviewBox');
+        const tbody = document.getElementById('quickPayAllocationPreviewTbody');
+        const badge = document.getElementById('previewRemainingDebtBadge');
+
+        if (!box || !tbody) return;
+        if (!invoiceId || !amount || amount <= 0) {
+            box.style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/payments/allocation-preview?invoiceId=${invoiceId}&amount=${amount}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Không thể tải preview phân bổ');
+                return res.json();
+            })
+            .then(data => {
+                if (!data.lines || data.lines.length === 0) {
+                    box.style.display = 'none';
+                    return;
+                }
+                box.style.display = 'block';
+                if (badge) {
+                    badge.textContent = 'Còn nợ sau thu: ' + formatMoney(data.remainingInvoiceDebtAfter);
+                }
+                let html = '';
+                data.lines.forEach(l => {
+                    let typeBadge = '';
+                    if (l.itemType === 'SERVICE') {
+                        typeBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Dịch vụ</span>';
+                    } else if (l.itemType === 'MEDICINE') {
+                        typeBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle">Thuốc</span>';
+                    } else {
+                        typeBadge = '<span class="badge bg-secondary-subtle text-secondary border">Phụ thu</span>';
+                    }
+                    const allocText = l.allocatedAmount > 0 
+                        ? `<span class="fw-bold text-success">+${formatMoney(l.allocatedAmount)}</span>`
+                        : '<span class="text-muted">0 đ</span>';
+                    const debtClass = l.remainingDebtAfter > 0 ? 'text-danger fw-bold' : 'text-success';
+                    html += `
+                        <tr>
+                            <td class="text-center">${l.order}</td>
+                            <td>${l.itemName}</td>
+                            <td class="text-center">${typeBadge}</td>
+                            <td class="text-end">${formatMoney(l.payableAmount)}</td>
+                            <td class="text-end text-muted">${formatMoney(l.previouslyPaid)}</td>
+                            <td class="text-end">${allocText}</td>
+                            <td class="text-end ${debtClass}">${formatMoney(l.remainingDebtAfter)}</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            })
+            .catch(err => {
+                console.error('Error fetching preview:', err);
+                box.style.display = 'none';
+            });
+    }
+
     function onModalInvoiceChange(select) {
         if (!select || select.selectedIndex < 0) return;
         const option = select.options[select.selectedIndex];
@@ -966,6 +1070,7 @@
         document.getElementById('modalDebtDisplay').value = formatMoney(debt);
         document.getElementById('modalPayAmount').value = debt;
         document.getElementById('modalPayAmount').max = debt;
+        triggerAllocationPreview();
     }
     function onRefundSourceChange(select) {
         const group = document.getElementById('reduceInvoiceTotalGroup');
@@ -1010,6 +1115,10 @@
             quickModal.addEventListener('hidden.bs.modal', function () {
                 const payKey = document.getElementById('quickPayIdempotencyKey');
                 if (payKey) payKey.value = '';
+                const box = document.getElementById('quickPayAllocationPreviewBox');
+                if (box) box.style.display = 'none';
+                const tbody = document.getElementById('quickPayAllocationPreviewTbody');
+                if (tbody) tbody.innerHTML = '';
             });
         }
         const depModal = document.getElementById('depositModal');

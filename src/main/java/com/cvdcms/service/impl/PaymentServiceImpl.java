@@ -37,6 +37,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final com.cvdcms.service.LoyaltyService loyaltyService;
     private final com.cvdcms.service.InvoiceService invoiceService;
     private final BranchBankAccountRepository branchBankAccountRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -150,6 +152,10 @@ public class PaymentServiceImpl implements PaymentService {
                 patientProfileRepository, branchRepository, staffProfileRepository,
                 staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
                 pointTransactionRepository, membershipTierRepository, userRepository, null, null, branchBankAccountRepository);
+    }
+
+    public void setPaymentAllocationService(com.cvdcms.service.PaymentAllocationService paymentAllocationService) {
+        this.paymentAllocationService = paymentAllocationService;
     }
 
     /**
@@ -336,6 +342,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         Payment savedPayment = paymentRepository.save(payment);
+
+        // 8.1. Phân bổ chi tiết số tiền thanh toán vào từng dòng hóa đơn (dịch vụ, thuốc, phụ thu)
+        if (paymentAllocationService != null) {
+            paymentAllocationService.allocatePayment(savedPayment, request.getAmount());
+        }
 
         // 9. Cập nhật hóa đơn
         BigDecimal oldPaid = invoice.getPaidAmount();

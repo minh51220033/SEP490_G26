@@ -33,6 +33,7 @@
                       th:action="@{${categoryEditingId == null ? '/admin/services/categories' : '/admin/services/categories/' + categoryEditingId + '/update'}}"
                       method="post"
                       class="p-3">
+                    <input type="hidden" name="source" value="standalone">
 
                     <!-- LỖI NGHIỆP VỤ DO SERVICE TRẢ VỀ -->
                     <div class="alert alert-danger"

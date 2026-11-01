@@ -113,4 +113,8 @@ public class User {
             fetch = FetchType.LAZY
     )
     private Set<PatientProfile> patientProfiles = new HashSet<>();
+
+    public String getFullName() {
+        return this.username;
+    }
 }

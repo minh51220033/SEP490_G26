@@ -61,8 +61,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${distributions.content.isEmpty()}">
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                Chưa có đợt phân chia lợi nhuận nào được tạo.
+                            <td colspan="9" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-pie-chart empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; &#273;&#7883;t ph&#226;n chia l&#7883;i nhu&#7853;n</h6>
+                                    <p>L&#7853;p &#273;&#7873; xu&#7845;t ph&#226;n chia l&#7883;i nhu&#7853;n/c&#7893; t&#7913;c cho c&#225;c ch&#7911; s&#785 sá»Ÿ h&#7919;u ph&#242;ng kh&#225;m theo k&#7923;.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createDistributionModal">
+                                        <i class="bi bi-plus-circle me-1"></i>L&#7853;p &#273;&#7873; xu&#7845;t ph&#226;n chia
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="d : ${distributions.content}">
