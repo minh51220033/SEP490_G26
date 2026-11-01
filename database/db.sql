@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     voucher_id BIGINT NULL,
     total_service_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     total_medicine_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    surcharge_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    surcharge_description VARCHAR(500) NULL,
     discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     promotion_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     point_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
@@ -48,18 +50,28 @@ CREATE TABLE IF NOT EXISTS invoices (
 -- 2. CHI TIẾT DỊCH VỤ TRÊN HÓA ĐƠN (INVOICE_ITEMS - FT21)
 CREATE TABLE IF NOT EXISTS invoice_items (
                                              item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                             item_type VARCHAR(20) NOT NULL DEFAULT 'SERVICE',
                                              invoice_id BIGINT NOT NULL,
                                              performed_id BIGINT NULL,
-                                             service_id BIGINT NOT NULL,
+                                             prescription_item_id BIGINT NULL,
+                                             service_id BIGINT NULL,
+                                             medication_id BIGINT NULL,
+                                             batch_id BIGINT NULL,
                                              item_name VARCHAR(200) NOT NULL,
     quantity DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    unit VARCHAR(30) NULL,
+    usage_instruction VARCHAR(255) NULL,
     unit_price DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     final_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     INDEX idx_item_invoice (invoice_id),
     INDEX idx_item_performed (performed_id),
+    INDEX idx_item_type (item_type),
     CONSTRAINT fk_item_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
     CONSTRAINT fk_item_performed FOREIGN KEY (performed_id) REFERENCES performed_services(performed_id),
-    CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services(service_id)
+    CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services(service_id),
+    CONSTRAINT fk_item_prescription_item FOREIGN KEY (prescription_item_id) REFERENCES prescription_items(item_id) ON DELETE SET NULL,
+    CONSTRAINT fk_item_medication FOREIGN KEY (medication_id) REFERENCES medications(medication_id) ON DELETE SET NULL,
+    CONSTRAINT fk_item_batch FOREIGN KEY (batch_id) REFERENCES material_batches(batch_id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. NHẬT KÝ ĐIỀU CHỈNH & HỦY HÓA ĐƠN (INVOICE_AUDIT_LOGS - SCR-21.4)

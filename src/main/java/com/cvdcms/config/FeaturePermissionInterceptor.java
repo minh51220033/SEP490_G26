@@ -1,4 +1,4 @@
-package com.cvdcms.config;
+﻿package com.cvdcms.config;
 
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.UserRepository;
@@ -131,25 +131,25 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/doctor/daily-visits")
                 || uri.startsWith("/doctor/visits")
                 || uri.startsWith("/api/doctor/patients/daily-visits")) {
-            return List.of("CLINICAL_DAILY_VISITS");
+            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "RECEPTION_CHECKIN", "RECEPTION_DISPATCH", "PATIENT_PROFILE_MANAGE", "CUSTOMER_CARE_MANAGE");
         }
         if (uri.startsWith("/doctor/workflows") || uri.startsWith("/api/doctor/workflows")) {
             return List.of("CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/api/doctor/prescriptions")) {
-            return List.of("PRESCRIPTION_WRITE");
+            return List.of("PRESCRIPTION_WRITE", "CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/doctor/labo") || uri.startsWith("/api/doctor/labo-orders")) {
             return List.of("CLINICAL_LABO");
         }
         if (uri.startsWith("/api/doctor/treatment-plans")) {
-            return List.of("TREATMENT_PLAN_MANAGE");
+            return List.of("TREATMENT_PLAN_MANAGE", "CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "RECEPTION_CHECKIN", "RECEPTION_DISPATCH");
         }
         if (uri.startsWith("/doctor/patient-records") || uri.startsWith("/api/doctor/patients")) {
-            return List.of("MEDICAL_RECORD_VIEW");
+            return List.of("MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE", "RECEPTION_CHECKIN", "RECEPTION_DISPATCH");
         }
         if (uri.startsWith("/records")) {
-            return List.of("MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            return List.of("MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE", "RECEPTION_CHECKIN");
         }
         if (uri.startsWith("/xray") || uri.startsWith("/api/xray")) {
             return List.of("CLINICAL_XRAY");
@@ -164,7 +164,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/api/doctor/diagnoses")
                 || uri.startsWith("/api/doctor/performed-services")
                 || uri.startsWith("/api/doctor/paraclinical")) {
-            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
+            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "RECEPTION_CHECKIN", "RECEPTION_DISPATCH", "PATIENT_PROFILE_MANAGE", "CUSTOMER_CARE_MANAGE", "MEDICAL_RECORD_VIEW");
         }
 
         // =====================================================================

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Lịch hẹn tuần tháng')}"></head>
 <body class="app-body"><div class="app-shell">
@@ -20,6 +20,6 @@
                     <strong id="calendarTitle"></strong><button id="calendarNext" type="button" class="btn btn-outline-secondary">Sau →</button></div>
                 <div id="calendarGrid" class="appointment-calendar" aria-live="polite"></div>
             </section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+        </main>
     </div>
 </div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>

@@ -1,29 +1,57 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Chi tiết lịch hẹn')}"></head>
 <body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div><div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Chi tiết lịch hẹn')}"></header>
         <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
-            <div class="patient-page-heading"><div><a th:href="@{/reception/appointments}">← Quản lý lịch hẹn</a><h1>Chi tiết lịch hẹn</h1><p id="appointmentCode">Đang tải…</p></div></div>
-            <div id="pageError" class="alert alert-danger" hidden role="alert"></div><div id="successMessage" class="alert alert-success" hidden role="status"></div>
-            <section id="appointmentDetail" class="panel patient-detail" th:attr="data-appointment-id=${appointmentId}">
-                <div id="doctorWarning" class="alert alert-warning" hidden>Bác sĩ đích danh không còn khả dụng. Hãy sửa yêu cầu bác sĩ trước khi xác nhận.</div>
-                <div id="appointmentFacts" class="patient-facts"></div>
-                <div id="appointmentActions" class="patient-form-actions mt-3" hidden>
-                    <a id="editLink" class="btn btn-outline-primary" href="#">Sửa / đổi lịch</a>
-                    <button id="confirmButton" class="btn btn-primary" type="button" hidden>Xác nhận lịch</button>
-                    <button id="cancelButton" class="btn btn-outline-danger" type="button">Hủy lịch</button>
+            <div class="patient-page-heading">
+                <div>
+                    <a th:href="@{/reception/appointments}" class="text-decoration-none small text-muted"><i class="bi bi-arrow-left me-1"></i> Quay lại Quản lý lịch hẹn</a>
+                    <h1 class="h3 fw-bold text-dark mt-1">Chi tiết lịch hẹn</h1>
+                    <p id="appointmentCode" class="font-monospace text-primary fw-bold mb-0">Đang tải mã lịch…</p>
                 </div>
-                <div id="confirmBox" class="appointment-action-box" hidden><p>Xác nhận lịch này cho bệnh nhân. Bác sĩ yêu cầu vẫn cần trực và còn khả năng tiếp nhận.</p>
-                    <label for="confirmDoctor">Bác sĩ bệnh nhân yêu cầu</label><select id="confirmDoctor" class="form-select"><option value="">Không yêu cầu đích danh</option></select>
-                    <button id="confirmSubmit" type="button" class="btn btn-primary mt-3">Xác nhận</button></div>
-                <form id="cancelForm" class="appointment-action-box" hidden><label for="cancelReason">Lý do hủy *</label>
-                    <select id="cancelReason" class="form-select" required><option value="">Chọn lý do</option><option value="Bệnh nhân đổi kế hoạch">Bệnh nhân đổi kế hoạch</option><option value="Bệnh nhân không còn nhu cầu">Bệnh nhân không còn nhu cầu</option><option value="Trùng lịch">Trùng lịch</option><option value="Bác sĩ không khả dụng">Bác sĩ không khả dụng</option><option value="Khác">Khác</option></select>
-                    <label for="cancelNote">Ghi chú thêm</label><input id="cancelNote" class="form-control" maxlength="180">
-                    <button type="submit" class="btn btn-danger mt-3">Xác nhận hủy</button></form>
+            </div>
+            <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
+            <div id="successMessage" class="alert alert-success" hidden role="status"></div>
+            <section id="appointmentDetail" class="panel appointment-panel" th:attr="data-appointment-id=${appointmentId}">
+                <div id="doctorWarning" class="alert alert-warning" hidden>
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Bác sĩ đích danh không còn khả dụng. Hãy sửa yêu cầu bác sĩ trước khi xác nhận.
+                </div>
+                <div id="appointmentFacts" class="patient-facts"></div>
+                <div id="appointmentActions" class="patient-form-actions mt-3 pt-3 border-top d-flex gap-2" hidden>
+                    <a id="editLink" class="btn btn-outline-primary" href="#"><i class="bi bi-pencil me-1"></i> Sửa / đổi lịch</a>
+                    <button id="confirmButton" class="btn btn-primary" type="button" hidden><i class="bi bi-check-circle me-1"></i> Xác nhận lịch</button>
+                    <button id="cancelButton" class="btn btn-outline-danger" type="button"><i class="bi bi-x-circle me-1"></i> Hủy lịch</button>
+                </div>
+                <div id="confirmBox" class="appointment-action-box" hidden>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-check2-circle text-primary me-1"></i> Xác nhận lịch hẹn</h6>
+                    <p class="small text-muted mb-2">Xác nhận lịch này cho bệnh nhân. Bác sĩ yêu cầu vẫn còn trực và còn khả năng tiếp nhận.</p>
+                    <label for="confirmDoctor">Bác sĩ tiếp nhận</label>
+                    <select id="confirmDoctor" class="form-select"><option value="">Không yêu cầu đích danh</option></select>
+                    <button id="confirmSubmit" type="button" class="btn btn-primary mt-3 px-3"><i class="bi bi-check-lg me-1"></i> Hoàn tất xác nhận</button>
+                </div>
+                <form id="cancelForm" class="appointment-action-box" hidden>
+                    <h6 class="fw-bold text-danger mb-1"><i class="bi bi-x-octagon text-danger me-1"></i> Xác nhận hủy lịch hẹn</h6>
+                    <label for="cancelReason">Lý do hủy *</label>
+                    <select id="cancelReason" class="form-select" required>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Bệnh nhân đổi kế hoạch">Bệnh nhân đổi kế hoạch</option>
+                        <option value="Bệnh nhân không còn nhu cầu">Bệnh nhân không còn nhu cầu</option>
+                        <option value="Trùng lịch">Trùng lịch</option>
+                        <option value="Bác sĩ không khả dụng">Bác sĩ không khả dụng</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                    <label for="cancelNote" class="mt-2">Ghi chú thêm</label>
+                    <input id="cancelNote" class="form-control" maxlength="180" placeholder="Chi tiết lý do hủy (nếu có)...">
+                    <button type="submit" class="btn btn-danger mt-3 px-3"><i class="bi bi-trash3 me-1"></i> Xác nhận hủy</button>
+                </form>
             </section>
-            <section class="panel appointment-panel mt-3"><h2 class="h5">Lịch sử thay đổi</h2><ol id="appointmentHistory" class="appointment-history"></ol></section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+            <section class="panel appointment-panel mt-3">
+                <h2 class="h5 fw-bold text-dark mb-1"><i class="bi bi-clock-history text-primary me-1.5"></i> Lịch sử thay đổi &amp; tiến trình</h2>
+                <p class="text-muted small mb-3">Toàn bộ vết thay đổi, chuyển đổi trạng thái và ghi chú theo thời gian thực.</p>
+                <ul id="appointmentHistory" class="appointment-history p-0"></ul>
+            </section>
+        </main>
     </div>
 </div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>

@@ -1,8 +1,121 @@
-.appointment-panel { padding: 1.5rem; }
-.appointment-filter { max-width: 24rem; }
-.appointment-availability { margin: 1.25rem 0; padding: .75rem 1rem; border-radius: .6rem; background: #eef5ff; color: #173a73; }
-.appointment-availability.is-error { background: #fff1f0; color: #a12222; }
-.appointment-availability.is-success { background: #eaf8f0; color: #17633b; }
-.appointment-form small { display: block; margin-top: .4rem; color: #64748b; }
-.appointment-history { margin: 1rem 0 0; padding-left: 1.3rem; }
-.appointment-history li { padding: .3rem 0; }
+/* DentalFlow FT06 Lịch Hẹn Của Tôi Stylesheet */
+
+.appointment-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.appointment-filter {
+    max-width: 26rem;
+}
+
+.appointment-availability {
+    margin: 1.25rem 0;
+    padding: 0.85rem 1.15rem;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    font-size: 0.92rem;
+}
+
+.appointment-availability.is-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.appointment-availability.is-success {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.appointment-form small {
+    display: block;
+    margin-top: 0.4rem;
+    color: #64748b;
+}
+
+/* Modern Timeline for Appointment History */
+.appointment-history {
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+}
+
+.timeline-entry {
+    position: relative;
+    padding-left: 28px;
+    padding-bottom: 1.25rem;
+    border-left: 2px solid #e2e8f0;
+}
+
+.timeline-entry:last-child {
+    padding-bottom: 0;
+    border-left-color: transparent;
+}
+
+.timeline-entry::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.timeline-entry:nth-child(2)::before {
+    background: #8b5cf6;
+    box-shadow: 0 0 0 2px #ddd6fe;
+}
+
+.timeline-snapshot {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    margin-top: 0.45rem;
+}
+
+.timeline-reason {
+    color: #475569;
+    font-size: 0.88rem;
+}
+
+/* Patient Facts Card Grid */
+.patient-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.patient-facts > div {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+}
+
+.patient-facts span {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.patient-facts strong {
+    font-size: 0.98rem;
+    color: #0f172a;
+    font-weight: 600;
+}

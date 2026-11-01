@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Tạo sửa lịch hẹn')}"></head>
 <body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
@@ -25,6 +25,6 @@
                 <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="@{/reception/appointments}">Quay lại</a>
                     <button id="submitAppointment" class="btn btn-primary" type="submit" disabled>Lưu lịch hẹn</button></div>
             </form>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+        </main>
     </div>
 </div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>

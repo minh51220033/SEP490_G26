@@ -12,7 +12,7 @@ import java.util.Set;
 /** Central state rules shared by reception and the later dispatch/queue features. */
 public final class ReceptionTransitionPolicy {
     private static final Map<AppointmentStatus, Set<AppointmentStatus>> APPOINTMENTS = Map.of(
-            AppointmentStatus.PENDING, Set.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW),
+            AppointmentStatus.PENDING, Set.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED),
             AppointmentStatus.CONFIRMED, Set.of(AppointmentStatus.CHECKED_IN, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW),
             AppointmentStatus.CHECKED_IN, Set.of(AppointmentStatus.COMPLETED),
             AppointmentStatus.COMPLETED, Set.of(), AppointmentStatus.CANCELLED, Set.of(), AppointmentStatus.NO_SHOW, Set.of());

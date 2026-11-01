@@ -2,7 +2,11 @@ package com.cvdcms.reception;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
+import com.cvdcms.repository.AppointmentBookingLockRepository;
+import com.cvdcms.repository.AppointmentHistoryRepository;
 import com.cvdcms.repository.BranchRepository;
+import com.cvdcms.service.AppointmentLifecycleService;
+import com.cvdcms.service.impl.AppointmentLifecycleServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,11 +16,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -30,7 +36,11 @@ class ReceptionServiceTest {
     @Mock ReceptionCheckInKeyRepository keys;
     @Mock ReceptionAuditRepository audits;
     @Mock BranchRepository branches;
+    @Mock AppointmentBookingLockRepository lockedBranches;
+    @Mock AppointmentHistoryRepository histories;
     @Mock HttpSession session;
+
+    AppointmentLifecycleService lifecycle = new AppointmentLifecycleServiceImpl();
     ReceptionService service;
     Branch branch;
     PatientProfile patient;
@@ -39,16 +49,20 @@ class ReceptionServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new ReceptionService(access, profiles, appointments, visits, keys, audits, branches, new ObjectMapper());
+        service = new ReceptionService(access, profiles, appointments, visits, keys, audits, branches,
+                new ObjectMapper(), lockedBranches, lifecycle, histories);
         today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         branch = new Branch(); branch.setBranchId(1L); branch.setBranchName("CN01"); branch.setIsActive(true);
         patient = new PatientProfile(); patient.setProfileId(7L); patient.setFullName("Bệnh nhân A"); patient.setStatus("ACTIVE");
         user = new User(); user.setUserId(9L);
     }
+
     private void permitted() {
         when(access.require(session)).thenReturn(new ReceptionAccess.Scope(user, false, List.of(1L)));
         when(branches.findById(1L)).thenReturn(Optional.of(branch));
+        lenient().when(lockedBranches.findByIdForBooking(1L)).thenReturn(Optional.of(branch));
     }
+
     private Appointment appointment(AppointmentStatus state, LocalDate date) {
         Appointment a = new Appointment(); a.setAppointmentId(20L); a.setPatientProfile(patient); a.setBranch(branch);
         a.setAppointmentDate(date); a.setStatus(state); a.setInitialSymptoms("Đau răng"); return a;
@@ -66,6 +80,44 @@ class ReceptionServiceTest {
         ArgumentCaptor<Visit> captured = ArgumentCaptor.forClass(Visit.class); verify(visits).saveAndFlush(captured.capture());
         assertEquals(VisitType.APPOINTMENT, captured.getValue().getVisitType()); assertEquals(20L, captured.getValue().getAppointmentId());
         assertEquals("Đau tăng khi nhai", captured.getValue().getInitialSymptoms()); verify(keys).save(any()); verify(audits).save(any());
+        verify(histories).save(any());
+    }
+
+    @Test
+    void pendingAppointmentCannotBeDirectlyCheckedIn() {
+        permitted(); Appointment a = appointment(AppointmentStatus.PENDING, today);
+        when(appointments.findById(20L)).thenReturn(Optional.of(a));
+        when(appointments.lockById(20L)).thenReturn(Optional.of(a));
+        when(profiles.lockById(7L)).thenReturn(Optional.of(patient));
+        when(visits.findByAppointmentId(20L)).thenReturn(Optional.empty());
+        when(keys.findByRequestKey(anyString())).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () ->
+                service.checkInAppointment(session, 20L, "Đau răng", UUID.randomUUID().toString()));
+        verify(visits, never()).saveAndFlush(any());
+        assertEquals(AppointmentStatus.PENDING, a.getStatus());
+    }
+
+    @Test
+    void confirmAndCheckInAtomicallyTransitionsPendingToConfirmedThenCheckedIn() {
+        permitted(); Appointment a = appointment(AppointmentStatus.PENDING, today);
+        when(appointments.findById(20L)).thenReturn(Optional.of(a));
+        when(appointments.lockById(20L)).thenReturn(Optional.of(a));
+        when(profiles.lockById(7L)).thenReturn(Optional.of(patient));
+        when(visits.findByAppointmentId(20L)).thenReturn(Optional.empty());
+        when(keys.findByRequestKey(anyString())).thenReturn(Optional.empty());
+        when(visits.activeForProfile(eq(7L), anySet())).thenReturn(List.of());
+        when(visits.saveAndFlush(any())).thenAnswer(invocation -> { Visit v = invocation.getArgument(0); v.setVisitId(105L); return v; });
+
+        var result = service.confirmAndCheckIn(session, 20L, "Khám tổng quát", UUID.randomUUID().toString());
+
+        assertEquals(105L, result.id());
+        assertEquals(VisitStatus.WAITING, result.status());
+        assertEquals(AppointmentStatus.CHECKED_IN, a.getStatus());
+        // Verify 2 history records: one for CONFIRM, one for CHECK_IN
+        verify(histories, times(2)).save(any());
+        verify(visits).saveAndFlush(any());
+        verify(audits).save(any());
     }
 
     @Test

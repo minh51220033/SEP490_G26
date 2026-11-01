@@ -42,8 +42,8 @@ public class LaboOrder {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "doctor_id", nullable = false)
     private StaffProfile doctor;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

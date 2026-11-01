@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Khách không đến cần nhắc')}"></head>
 <body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
@@ -13,6 +13,6 @@
                 <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Ngày / buổi</th><th>Mã lịch</th><th>Bệnh nhân</th><th>Số điện thoại</th><th>Chi nhánh</th><th></th></tr></thead>
                     <tbody id="noShowRows"><tr><td colspan="6" class="text-center py-4">Đang tải danh sách…</td></tr></tbody></table></div>
             </section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+        </main>
     </div>
 </div><script th:src="@{/js/reception-appointments.js}" defer></script></body></html>

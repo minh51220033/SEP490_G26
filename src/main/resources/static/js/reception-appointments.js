@@ -1,7 +1,7 @@
 (() => {
     const api = '/reception/appointments/api';
     const $ = id => document.getElementById(id);
-    const sessionName = {MORNING: 'Sáng', AFTERNOON: 'Chiều', EVENING: 'Tối', ANY: 'Chưa chốt'};
+    const sessionName = {MORNING: 'Buổi sáng', AFTERNOON: 'Buổi chiều', EVENING: 'Buổi tối', ANY: 'Chưa chốt'};
     const statusName = {PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã đến',
         COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Không đến'};
     const statusStyle = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-info text-dark',
@@ -12,7 +12,37 @@
     const addDays = (date, count) => { const next = new Date(date); next.setUTCDate(next.getUTCDate() + count); return next; };
     const dateLabel = value => value ? value.split('-').reverse().join('/') : '—';
     const option = (value, label) => { const el = document.createElement('option'); el.value = value; el.textContent = label; return el; };
-    const cell = (row, value) => { const el = document.createElement('td'); el.textContent = value == null || value === '' ? '—' : value; row.appendChild(el); return el; };
+    const cell = (row, value) => {
+        const el = document.createElement('td');
+        if (value !== undefined && value !== null && value !== '') {
+            el.textContent = value;
+        }
+        row.appendChild(el);
+        return el;
+    };
+
+    function formatSnapshot(raw) {
+        if (!raw) return null;
+        const parts = raw.split('|');
+        if (parts.length < 2) return null;
+        const date = dateLabel(parts[0]);
+        const session = sessionName[parts[1]] || parts[1];
+        let doctorText = 'Không chỉ định bác sĩ';
+        let statusText = '';
+        for (let i = 2; i < parts.length; i++) {
+            const p = parts[i];
+            if (p.startsWith('doctor=')) {
+                const docVal = p.substring(7);
+                if (docVal && docVal !== 'null' && docVal !== 'none') {
+                    doctorText = 'Bác sĩ chỉ định';
+                }
+            } else if (p.startsWith('status=')) {
+                const statVal = p.substring(7);
+                statusText = statusName[statVal] || statVal;
+            }
+        }
+        return { date, session, doctorText, statusText };
+    }
 
     async function request(path, config = {}) {
         const response = await fetch(api + path, {credentials: 'same-origin',
@@ -34,17 +64,19 @@
         if (options.branches.length === 1) select.value = String(options.branches[0].id);
     }
     function badge(a, target) {
-        const el = document.createElement('span'); el.className = `badge ${statusStyle[a.status] || 'bg-secondary'}`;
+        const el = document.createElement('span'); el.className = `badge rounded-pill ${statusStyle[a.status] || 'bg-secondary'}`;
+        el.style.padding = '6px 12px';
         el.textContent = statusName[a.status] || a.status; target.appendChild(el);
     }
     function detailLink(a, target) {
         const link = document.createElement('a'); link.href = `/reception/appointments/${a.id}`;
-        link.className = 'btn btn-sm btn-outline-primary'; link.textContent = 'Chi tiết'; target.appendChild(link);
+        link.className = 'btn btn-sm btn-outline-primary fw-medium';
+        link.innerHTML = '<i class="bi bi-eye me-1"></i>Chi tiết'; target.appendChild(link);
     }
 
     async function dashboardPage() {
         const options = await request('/options');
-        const date = $('filterDate'), branch = $('filterBranch'), doctor = $('filterDoctor');
+        const date = $('filterDate'), branch = $('filterBranch'), doctor = $('filterDoctor'), type = $('filterType');
         date.value = new URLSearchParams(location.search).get('date') || today();
         branches(branch, options, true);
         const branchParam = new URLSearchParams(location.search).get('branchId');
@@ -62,28 +94,116 @@
             if (branch.value) params.set('branchId', branch.value);
             if (doctor.value) params.set('doctorId', doctor.value);
             const data = await request(`/dashboard?${params}`);
-            const metrics = [['Tổng lịch', data.total], ['Chờ xác nhận', data.pending],
-                ['Đã xác nhận', data.confirmed], ['Đã đến', data.checkedIn], ['Không đến', data.noShow]];
-            $('appointmentKpis').replaceChildren(...metrics.map(([label, value]) => {
-                const box = document.createElement('div'), name = document.createElement('span'), count = document.createElement('strong');
-                box.className = 'appointment-kpi'; name.textContent = label; count.textContent = value;
-                box.append(name, count); return box;
+            const metrics = [
+                ['Tổng lịch', data.total, 'bi-calendar-check', '#0284c7'],
+                ['Chờ xác nhận', data.pending, 'bi-hourglass-split', '#d97706'],
+                ['Đã xác nhận', data.confirmed, 'bi-check2-circle', '#2563eb'],
+                ['Đã đến', data.checkedIn, 'bi-person-check', '#059669'],
+                ['Không đến', data.noShow, 'bi-x-circle', '#dc2626']
+            ];
+            $('appointmentKpis').replaceChildren(...metrics.map(([label, value, icon, color]) => {
+                const box = document.createElement('div');
+                box.className = 'appointment-kpi';
+                box.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-secondary small fw-semibold">${label}</span>
+                        <i class="bi ${icon}" style="color: ${color}; font-size: 1.1rem;"></i>
+                    </div>
+                    <strong style="color: ${color}; font-size: 1.6rem;">${value}</strong>
+                `;
+                return box;
             }));
             const rows = $('appointmentRows'); rows.replaceChildren();
-            if (!data.appointments.length) {
-                const row = document.createElement('tr'); cell(row, 'Không có lịch hẹn trong ngày này.').colSpan = 7; rows.appendChild(row); return;
+            let appointments = data.appointments;
+            if (type && type.value === 'LH') {
+                appointments = appointments.filter(a => !a.code.startsWith('TK'));
+            } else if (type && type.value === 'TK') {
+                appointments = appointments.filter(a => a.code.startsWith('TK'));
             }
-            data.appointments.forEach(a => {
-                const row = document.createElement('tr'); cell(row, a.code);
-                cell(row, `${a.patientName} · ${a.patientCode}`); cell(row, sessionName[a.session] || a.session);
-                cell(row, a.doctorName ? `${a.doctorName}${a.doctorUnavailable ? ' ⚠' : ''}` : 'Không yêu cầu');
-                cell(row, a.source === 'ONLINE' ? 'Trực tuyến' : 'Lễ tân');
-                badge(a, cell(row, '')); detailLink(a, cell(row, '')); rows.appendChild(row);
+            if (!appointments.length) {
+                const row = document.createElement('tr'); cell(row, 'Không có lịch hẹn trong ngày hoặc phù hợp bộ lọc.').colSpan = 7; rows.appendChild(row); return;
+            }
+            appointments.forEach(a => {
+                const row = document.createElement('tr');
+                if (a.doctorUnavailable || a.conflictNotes) {
+                    row.style.background = '#fffbeb';
+                }
+
+                // Column 1: Mã lịch
+                const codeTd = cell(row);
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'fw-bold text-dark font-monospace';
+                codeSpan.textContent = a.code;
+                codeTd.appendChild(codeSpan);
+                if (a.code.startsWith('TK')) {
+                    const tkBadge = document.createElement('span');
+                    tkBadge.className = 'badge ms-1.5';
+                    tkBadge.style.cssText = 'background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; font-size: 11px;';
+                    tkBadge.textContent = 'Tái khám (FT18)';
+                    tkBadge.title = 'Lịch hẹn tái khám sau điều trị (FT18)';
+                    codeTd.appendChild(tkBadge);
+                }
+
+                // Column 2: Bệnh nhân
+                const patientTd = cell(row);
+                patientTd.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="patient-card-avatar" style="width: 32px; height: 32px; font-size: 13px;">${(a.patientName || 'B').trim().charAt(0).toUpperCase()}</div>
+                        <div>
+                            <strong class="text-dark d-block">${a.patientName}</strong>
+                            <span class="badge bg-light text-secondary border font-monospace" style="font-size: 10.5px;">${a.patientCode}</span>
+                        </div>
+                    </div>
+                `;
+
+                // Column 3: Buổi
+                const sessionTd = cell(row);
+                sessionTd.innerHTML = `<span class="badge bg-light text-dark border px-2 py-1">${sessionName[a.session] || a.session}</span>`;
+
+                // Column 4: Bác sĩ yêu cầu
+                const doctorCell = cell(row);
+                if (a.doctorName) {
+                    doctorCell.innerHTML = `<div><i class="bi bi-person-fill text-primary me-1"></i><span class="fw-medium">${a.doctorName}</span>${a.doctorUnavailable ? ' <span class="badge bg-danger text-white ms-1">Vắng</span>' : ''}</div>`;
+                } else {
+                    doctorCell.innerHTML = `<span class="text-muted fst-italic">Không yêu cầu</span>${a.doctorUnavailable ? ' <span class="badge bg-danger text-white ms-1">Đầy chỗ</span>' : ''}`;
+                }
+                if (a.conflictNotes) {
+                    doctorCell.title = a.conflictNotes;
+                    doctorCell.innerHTML += `<small class="text-danger d-block mt-0.5"><i class="bi bi-exclamation-triangle-fill me-0.5"></i>${a.conflictNotes}</small>`;
+                }
+
+                // Column 5: Nguồn
+                const sourceTd = cell(row);
+                if (a.code.startsWith('TK')) {
+                    sourceTd.innerHTML = '<span class="badge" style="background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe;"><i class="bi bi-stethoscope me-1"></i>BS (Tái khám)</span>';
+                } else if (a.source === 'ONLINE') {
+                    sourceTd.innerHTML = '<span class="badge bg-light text-primary border"><i class="bi bi-globe me-1"></i>Portal</span>';
+                } else {
+                    sourceTd.innerHTML = '<span class="badge bg-light text-secondary border"><i class="bi bi-person-badge me-1"></i>Lễ tân</span>';
+                }
+
+                // Column 6: Trạng thái
+                badge(a, cell(row));
+
+                // Column 7: Thao tác
+                const actionCell = cell(row);
+                actionCell.className = 'text-end';
+                detailLink(a, actionCell);
+                if (a.doctorUnavailable || a.conflictNotes) {
+                    const fixLink = document.createElement('a');
+                    fixLink.href = `/reception/appointments/${a.id}/edit`;
+                    fixLink.className = 'btn btn-sm btn-warning text-dark ms-1.5 fw-semibold';
+                    fixLink.title = `Khắc phục xung đột: ${a.conflictNotes || 'Bác sĩ không khả dụng'}`;
+                    fixLink.innerHTML = '<i class="bi bi-tools me-1"></i>Khắc phục';
+                    actionCell.appendChild(fixLink);
+                }
+                rows.appendChild(row);
             });
         }
         branch.addEventListener('change', async () => { try { await loadDoctors(); await load(); } catch (e) { error(e.message); } });
         date.addEventListener('change', async () => { try { await loadDoctors(); await load(); } catch (e) { error(e.message); } });
         doctor.addEventListener('change', () => load().catch(e => error(e.message)));
+        if (type) type.addEventListener('change', () => load().catch(e => error(e.message)));
         await loadDoctors(); await load();
     }
 
@@ -100,45 +220,49 @@
             if (branch.value) params.set('branchId', branch.value);
             const list = await request(`/calendar?${params}`);
             const counts = new Map();
-            list.forEach(a => { const value = counts.get(a.date) || {total: 0, pending: 0};
-                value.total++; if (a.status === 'PENDING') value.pending++; counts.set(a.date, value); });
-            $('calendarTitle').textContent = month ? `Tháng ${reference.getUTCMonth() + 1}/${reference.getUTCFullYear()}`
-                : `${dateLabel(iso(first))} – ${dateLabel(iso(last))}`;
-            const grid = $('calendarGrid'); grid.replaceChildren();
-            ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].forEach(label => {
-                const el = document.createElement('div'); el.className = 'appointment-calendar-header'; el.textContent = label; grid.appendChild(el);
+            list.forEach(a => {
+                const value = counts.get(a.date) || {total: 0, pending: 0, tk: 0};
+                value.total++;
+                if (a.status === 'PENDING') value.pending++;
+                if (a.code && a.code.startsWith('TK')) value.tk++;
+                counts.set(a.date, value);
             });
-            for (let i = 0; i < (month ? 42 : 7); i++) {
-                const current = addDays(first, i), key = iso(current), count = counts.get(key);
-                const link = document.createElement('a'); link.className = 'appointment-day';
-                if (month && current.getUTCMonth() !== reference.getUTCMonth()) link.classList.add('is-outside');
-                if (key === today()) link.classList.add('is-today');
-                link.href = `/reception/appointments?date=${key}${branch.value ? '&branchId=' + encodeURIComponent(branch.value) : ''}`;
-                const day = document.createElement('strong'); day.textContent = current.getUTCDate(); link.appendChild(day);
-                const summary = document.createElement('span'); summary.textContent = count ? `${count.total} lịch · ${count.pending} chờ` : 'Chưa có lịch';
-                link.appendChild(summary); grid.appendChild(link);
+            const grid = $('calendarGrid'); grid.replaceChildren();
+            let current = new Date(first);
+            while (current <= last) {
+                const dayIso = iso(current);
+                const dayLink = document.createElement('a');
+                dayLink.className = 'appointment-day';
+                dayLink.href = `/reception/appointments?date=${dayIso}${branch.value ? '&branchId=' + branch.value : ''}`;
+                if (month && current.getUTCMonth() !== reference.getUTCMonth()) dayLink.classList.add('is-outside');
+                if (dayIso === today()) dayLink.classList.add('is-today');
+                const dayNumber = document.createElement('strong'); dayNumber.textContent = String(current.getUTCDate());
+                const dayInfo = document.createElement('span');
+                const count = counts.get(dayIso);
+                if (count) {
+                    dayInfo.innerHTML = `<strong>${count.total}</strong> lịch${count.pending ? ` <small class="text-warning">(${count.pending} chờ)</small>` : ''}${count.tk ? ` <small style="color:#7c3aed;">(${count.tk} TK)</small>` : ''}`;
+                } else {
+                    dayInfo.textContent = '0 lịch';
+                }
+                dayLink.append(dayNumber, dayInfo);
+                grid.appendChild(dayLink);
+                current = addDays(current, 1);
             }
         }
-        $('calendarPrevious').addEventListener('click', () => { const d = fromDate(date.value);
-            if (view.value === 'month') { d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); }
-            else d.setUTCDate(d.getUTCDate() - 7);
-            date.value = iso(d); load().catch(e => error(e.message)); });
-        $('calendarNext').addEventListener('click', () => { const d = fromDate(date.value);
-            if (view.value === 'month') { d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1); }
-            else d.setUTCDate(d.getUTCDate() + 7);
-            date.value = iso(d); load().catch(e => error(e.message)); });
-        [branch, view, date].forEach(el => el.addEventListener('change', () => load().catch(e => error(e.message))));
+        branch.addEventListener('change', () => load().catch(e => error(e.message)));
+        view.addEventListener('change', () => load().catch(e => error(e.message)));
+        date.addEventListener('change', () => load().catch(e => error(e.message)));
         await load();
     }
 
     async function formPage() {
-        const form = $('appointmentForm'), id = form.dataset.appointmentId || '', editing = Boolean(id);
+        const form = $('appointmentForm');
+        const id = form.dataset.appointmentId || '';
+        const editing = Boolean(id);
         const options = await request('/options');
         branches($('branchId'), options);
-        $('serviceId').replaceChildren(option('', 'Chưa chọn dịch vụ'));
-        options.services.forEach(s => $('serviceId').appendChild(option(s.id, s.name)));
+        setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ', s => s.name);
         $('appointmentDate').min = today();
-        $('appointmentDate').max = iso(addDays(fromDate(today()), 90));
         let current = null;
         if (editing) {
             current = (await request(`/${id}`)).appointment;
@@ -207,11 +331,11 @@
         });
     }
 
-    function readableSnapshot(value) {
-        if (!value) return '';
-        const [date, session, doctor, status] = value.split('|');
-        return `${dateLabel(date)} · ${sessionName[session] || session} · ${doctor || ''} · ${status || ''}`;
+    function setSelect(select, entries, placeholder, label) {
+        select.replaceChildren(option('', placeholder));
+        entries.forEach(entry => select.appendChild(option(entry.id, label(entry))));
     }
+
     async function detailPage() {
         const id = $('appointmentDetail').dataset.appointmentId;
         const detail = await request(`/${id}`), a = detail.appointment;
@@ -221,19 +345,87 @@
             : saved === 'cancelled' ? 'Đã hủy lịch hẹn.' : saved === 'updated' ? 'Đã lưu thay đổi.' : 'Đã tạo lịch hẹn.';
             $('successMessage').hidden = false; }
         $('doctorWarning').hidden = !a.doctorUnavailable;
-        const facts = [['Mã lịch', a.code], ['Bệnh nhân', `${a.patientName} (${a.patientCode})`],
+        if (a.conflictNotes) {
+            $('doctorWarning').innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Lưu ý xung đột lịch:</strong> ${a.conflictNotes}. <a href="/reception/appointments/${id}/edit" class="alert-link ms-2">Khắc phục ngay</a>`;
+        }
+        const facts = [
+            ['Mã lịch', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám sau điều trị - FT18)' : '')],
+            ['Bệnh nhân', `${a.patientName} (${a.patientCode})`],
             ['Số điện thoại', a.patientPhone], ['Chi nhánh', a.branchName], ['Ngày khám', dateLabel(a.date)],
             ['Buổi khám', sessionName[a.session] || a.session], ['Bác sĩ yêu cầu', a.doctorName || 'Không yêu cầu đích danh'],
-            ['Dịch vụ quan tâm', a.serviceName || 'Chưa chọn'], ['Tình trạng ban đầu', a.symptoms || 'Chưa khai báo'],
-            ['Nguồn', a.source === 'ONLINE' ? 'Trực tuyến' : 'Lễ tân'], ['Trạng thái', statusName[a.status] || a.status],
-            ['Số lần đổi lịch', a.rescheduleCount], ['Lý do hủy', a.cancelReason || '—']];
-        facts.forEach(([name, value]) => { const box = document.createElement('div'), label = document.createElement('span'), content = document.createElement('strong');
-            label.textContent = name; content.textContent = value; box.append(label, content); $('appointmentFacts').appendChild(box); });
-        detail.history.forEach(h => { const item = document.createElement('li');
-            const action = {CREATE: 'Tạo lịch', UPDATE: 'Sửa lịch', RESCHEDULE: 'Đổi lịch', CONFIRM: 'Xác nhận', CANCEL: 'Hủy lịch'}[h.action] || h.action;
-            item.textContent = `${action} · ${readableSnapshot(h.newValue)}${h.reason ? ' · ' + h.reason : ''}`;
-            $('appointmentHistory').appendChild(item); });
-        if (!detail.history.length) { const item = document.createElement('li'); item.textContent = 'Chưa có thay đổi.'; $('appointmentHistory').appendChild(item); }
+            ['Dịch vụ quan tâm', a.serviceName || (a.code.startsWith('TK') ? 'Tái khám theo dõi chuyên khoa' : 'Chưa chọn')],
+            [a.code.startsWith('TK') ? 'Nội dung dặn dò tái khám' : 'Tình trạng ban đầu', a.symptoms || 'Chưa khai báo'],
+            ['Nguồn', a.code.startsWith('TK') ? 'Bác sĩ hẹn tái khám (FT18)' : (a.source === 'ONLINE' ? 'Trực tuyến (Portal)' : 'Lễ tân')],
+            ['Trạng thái', statusName[a.status] || a.status],
+            ['Số lần đổi lịch', String(a.rescheduleCount)], ['Lý do hủy', a.cancelReason || '—']];
+        if (a.conflictNotes) {
+            facts.splice(4, 0, ['Cảnh báo xung đột', a.conflictNotes]);
+        }
+        $('appointmentFacts').replaceChildren();
+        facts.forEach(([name, value]) => {
+            const box = document.createElement('div'), label = document.createElement('span'), content = document.createElement('strong');
+            label.textContent = name; content.textContent = value; box.append(label, content); $('appointmentFacts').appendChild(box);
+        });
+
+        // Timeline rendering for Appointment History (Replaces ugly raw database strings)
+        const history = $('appointmentHistory');
+        history.replaceChildren();
+        if (!detail.history || !detail.history.length) {
+            const empty = document.createElement('li');
+            empty.className = 'text-muted small py-2';
+            empty.textContent = 'Chưa có lịch sử thay đổi.';
+            history.appendChild(empty);
+        } else {
+            const actionInfo = {
+                CREATE: { label: 'Tạo lịch hẹn', badge: 'bg-primary-subtle text-primary border-primary-subtle', icon: 'bi-calendar-plus' },
+                UPDATE: { label: 'Cập nhật lịch', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-pencil-square' },
+                RESCHEDULE: { label: 'Đổi ngày / buổi khám', badge: 'bg-warning-subtle text-warning border-warning-subtle', icon: 'bi-arrow-repeat' },
+                CONFIRM: { label: 'Lễ tân xác nhận', badge: 'bg-success-subtle text-success border-success-subtle', icon: 'bi-check-circle' },
+                CANCEL: { label: 'Hủy lịch hẹn', badge: 'bg-danger-subtle text-danger border-danger-subtle', icon: 'bi-x-circle' },
+                COMPLETE: { label: 'Hoàn tất lượt khám', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-check2-all' }
+            };
+
+            detail.history.forEach((h, idx) => {
+                const item = document.createElement('li');
+                item.className = 'timeline-entry mb-3';
+                item.style.listStyle = 'none';
+
+                const act = actionInfo[h.action] || { label: h.action, badge: 'bg-secondary-subtle text-secondary border', icon: 'bi-clock-history' };
+                const snap = formatSnapshot(h.newValue);
+
+                let snapText = '';
+                if (snap) {
+                    snapText = `<div class="small mt-1 text-secondary">
+                        <span><i class="bi bi-calendar3 me-1"></i>Ngày hẹn: <strong>${snap.date}</strong> (${snap.session})</span>
+                        <span class="mx-1.5 text-muted">·</span>
+                        <span><i class="bi bi-person-badge me-1"></i>${snap.doctorText}</span>
+                        ${snap.statusText ? `<span class="mx-1.5 text-muted">·</span><span class="badge bg-light text-dark border">${snap.statusText}</span>` : ''}
+                    </div>`;
+                } else if (h.newValue) {
+                    snapText = `<div class="small mt-1 text-muted">${h.newValue}</div>`;
+                }
+
+                let reasonText = '';
+                if (h.reason) {
+                    reasonText = `<div class="small text-muted fst-italic mt-1 ps-2 border-start border-2 border-primary-subtle">
+                        <i class="bi bi-chat-quote me-1"></i>${h.reason}
+                    </div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${act.badge} py-1 px-2 fw-semibold">
+                            <i class="bi ${act.icon} me-1"></i>${act.label}
+                        </span>
+                        <span class="text-muted small fw-medium">Lần #${idx + 1}</span>
+                    </div>
+                    ${snapText}
+                    ${reasonText}
+                `;
+                history.appendChild(item);
+            });
+        }
+
         if (a.status !== 'PENDING' && a.status !== 'CONFIRMED') return;
         $('appointmentActions').hidden = false; $('editLink').href = `/reception/appointments/${id}/edit`;
         if (a.status === 'PENDING') $('confirmButton').hidden = false;
@@ -267,7 +459,7 @@
             if (!list.length) { const row = document.createElement('tr'); cell(row, 'Không có khách không đến trong 7 ngày gần đây.').colSpan = 6; rows.appendChild(row); return; }
             list.forEach(a => { const row = document.createElement('tr'); cell(row, `${dateLabel(a.date)} · ${sessionName[a.session] || a.session}`);
                 cell(row, a.code); cell(row, a.patientName); cell(row, a.patientPhone); cell(row, a.branchName);
-                detailLink(a, cell(row, '')); rows.appendChild(row); });
+                detailLink(a, cell(row)); rows.appendChild(row); });
         }
         branch.addEventListener('change', () => load().catch(e => error(e.message))); await load();
     }

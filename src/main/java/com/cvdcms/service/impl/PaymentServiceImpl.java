@@ -4,6 +4,7 @@ import com.cvdcms.DTO.PaymentRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
+import com.cvdcms.service.AppointmentLifecycleService;
 import com.cvdcms.service.PaymentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final com.cvdcms.service.LoyaltyService loyaltyService;
     private final com.cvdcms.service.InvoiceService invoiceService;
+    private final VisitRepository visitRepository;
+    private final AppointmentLifecycleService appointmentLifecycleService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -51,7 +54,9 @@ public class PaymentServiceImpl implements PaymentService {
             MembershipTierRepository membershipTierRepository,
             UserRepository userRepository,
             com.cvdcms.service.LoyaltyService loyaltyService,
-            @org.springframework.context.annotation.Lazy com.cvdcms.service.InvoiceService invoiceService
+            @org.springframework.context.annotation.Lazy com.cvdcms.service.InvoiceService invoiceService,
+            VisitRepository visitRepository,
+            AppointmentLifecycleService appointmentLifecycleService
     ) {
         this.paymentRepository = paymentRepository;
         this.invoiceRepository = invoiceRepository;
@@ -66,6 +71,8 @@ public class PaymentServiceImpl implements PaymentService {
         this.userRepository = userRepository;
         this.loyaltyService = loyaltyService;
         this.invoiceService = invoiceService;
+        this.visitRepository = visitRepository;
+        this.appointmentLifecycleService = appointmentLifecycleService;
     }
 
     public PaymentServiceImpl(
@@ -85,7 +92,8 @@ public class PaymentServiceImpl implements PaymentService {
         this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
                 patientProfileRepository, branchRepository, staffProfileRepository,
                 staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
-                pointTransactionRepository, membershipTierRepository, userRepository, loyaltyService, null);
+                pointTransactionRepository, membershipTierRepository, userRepository, loyaltyService,
+                null, null, null);
     }
 
     public PaymentServiceImpl(
@@ -104,7 +112,8 @@ public class PaymentServiceImpl implements PaymentService {
         this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
                 patientProfileRepository, branchRepository, staffProfileRepository,
                 staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
-                pointTransactionRepository, membershipTierRepository, userRepository, null, null);
+                pointTransactionRepository, membershipTierRepository, userRepository, null,
+                null, null, null);
     }
 
     /**
@@ -262,6 +271,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (invoiceService != null) {
                 invoiceService.finalizeInvoiceBenefits(invoice);
             }
+            completeVisit(invoice, cashierUserId);
         } else {
             invoice.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
         }
@@ -288,6 +298,25 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         return savedPayment;
+    }
+
+    private void completeVisit(Invoice invoice, Long actorUserId) {
+        if (invoice.getVisit() == null || visitRepository == null || appointmentLifecycleService == null) {
+            return;
+        }
+        Visit visit = visitRepository.lockById(invoice.getVisit().getVisitId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy lượt khám của hóa đơn."));
+        if (visit.getStatus() == VisitStatus.COMPLETED) {
+            appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
+            return;
+        }
+        if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
+            throw new IllegalStateException("Chỉ hoàn tất lượt khám đang chờ thanh toán.");
+        }
+        visit.setStatus(VisitStatus.COMPLETED);
+        visit.setCompletedAt(LocalDateTime.now());
+        visitRepository.saveAndFlush(visit);
+        appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
     }
 
     private void updateLoyaltyAndTier(PatientProfile patient, BigDecimal amount, Invoice invoice) {
