@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
@@ -117,6 +117,12 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- MODAL & IN PHIẾU DẶN DÒ: ĐẶT NGOÀI APP-SHELL ĐỂ TRÁNH BACKDROP CHE KHUẤT -->
+<!-- ===================================================================== -->
+<div th:fragment="instructionsModals">
 
     <!-- ===================================================================== -->
     <!-- MODAL SOẠN / CẬP NHẬT LỜI DẶN CỦA BÁC SĨ                              -->
@@ -209,11 +215,11 @@
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 18px;">
                 <div>
                     <h2 style="margin: 0; color: #0284c7; font-size: 20px; font-weight: bold;">HỆ THỐNG NHA KHOA DENTALFLOW</h2>
-                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Cơ sở: <span th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám Chuyên khoa Răng Hàm Mặt'}">Chi nhánh</span> &bull; Hotline: 1900 6868</div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Cơ sở: <span th:text="${visit != null and visit.branch != null ? visit.branch.branchName : 'Phòng khám Chuyên khoa Răng Hàm Mặt'}">Chi nhánh</span> &bull; Hotline: 1900 6868</div>
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 16px; font-weight: bold; color: #0f172a;">PHIẾU DẶN DÒ SAU ĐIỀU TRỊ</div>
-                    <div style="font-size: 12px; color: #64748b;" th:text="${'Mã ca khám: #' + visit.visitId}">Mã ca khám</div>
+                    <div style="font-size: 12px; color: #64748b;" th:text="${visit != null ? 'Mã ca khám: #' + visit.visitId : ''}">Mã ca khám</div>
                 </div>
             </div>
 
@@ -225,8 +231,8 @@
                     <div>SĐT: <strong th:text="${patient != null ? patient.phoneNumber : '---'}">0912345678</strong></div>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                    <div>Bác sĩ điều trị: <strong th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Lê Hoàng Nam</strong></div>
-                    <div>Ngày khám: <strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">28/10/2026</strong></div>
+                    <div>Bác sĩ điều trị: <strong th:text="${visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Điều trị'}">BS. Lê Hoàng Nam</strong></div>
+                    <div>Ngày khám: <strong th:text="${visit != null and visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm') : ''}">28/10/2026</strong></div>
                 </div>
             </div>
 
@@ -258,7 +264,7 @@
                     <div style="font-size: 12px; color: #64748b;">Hà Nội, ngày ... tháng ... năm 20...</div>
                     <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">BÁC SĨ ĐIỀU TRỊ</div>
                     <div style="height: 50px;"></div>
-                    <div style="font-size: 13px; font-weight: bold;" th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ'}">BS. Lê Hoàng Nam</div>
+                    <div style="font-size: 13px; font-weight: bold;" th:text="${visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ'}">BS. Lê Hoàng Nam</div>
                 </div>
             </div>
         </div>
@@ -292,6 +298,10 @@
 
             const modalEl = document.getElementById('doctorInstructionModal');
             if (modalEl) {
+                // Di chuyển modal ra thẳng thẻ body để triệt tiêu stacking context, tránh backdrop che phủ không bấm được
+                if (modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.show();
             }
@@ -316,7 +326,9 @@
             const adviceNotes = textarea ? textarea.value.trim() : '';
 
             const modalEl = document.getElementById('doctorInstructionModal');
-            const currentVisitId = modalEl?.getAttribute('data-visit-id') || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
+            const currentVisitId = modalEl?.getAttribute('data-visit-id')
+                || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null)
+                || (typeof getCurrentVisitId === 'function' ? getCurrentVisitId() : null);
             if (!currentVisitId) {
                 alert('Không tìm thấy mã ca khám hiện tại!');
                 return;
@@ -354,7 +366,7 @@
                         printEl.innerText = adviceNotes.length > 0 ? adviceNotes : 'Bệnh nhân tuân thủ chế độ dùng thuốc và chăm sóc răng miệng tiêu chuẩn.';
                     }
 
-                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
                     if (modal) modal.hide();
                 } else {
                     const err = await res.json();

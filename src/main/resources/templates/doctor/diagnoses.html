@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head th:replace="~{fragments/head :: head('Chẩn đoán bệnh lý ICD-10 - DentalFlow')}"></head>
@@ -456,6 +456,11 @@
 <!-- MODALS CHO BAR 4: FILM ẢNH & THEO DÕI LÂM SÀNG (FRAGMENT)            -->
 <!-- ===================================================================== -->
 <div th:replace="~{doctor/fragments/clinical-photos :: clinicalPhotosModals}"></div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: LỜI DẶN DÒ BÁC SĨ (SCR-18.x)                                   -->
+<!-- ===================================================================== -->
+<div th:replace="~{doctor/fragments/instructions-tab :: instructionsModals}"></div>
 
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
