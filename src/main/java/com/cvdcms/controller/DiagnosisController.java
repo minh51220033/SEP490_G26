@@ -317,12 +317,14 @@ public class DiagnosisController {
             return branchRepository.save(b);
         });
 
-        User user = userRepository.findAll().stream().findFirst().orElseGet(() -> {
+        User user = userRepository.findByUsername("mau1_demo").orElseGet(() -> {
             User u = new User();
             u.setUsername("mau1_demo");
             u.setPassword("$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe");
             u.setEmail("mau1@dentalclinic.com");
             u.setPhoneNumber("0900000001");
+            u.setUserType(com.cvdcms.entity.enums.UserType.PATIENT);
+            u.setIsActive(true);
             return userRepository.save(u);
         });
 

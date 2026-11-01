@@ -405,7 +405,6 @@
                     </a>
                     <!-- FT44: CSKH -->
                     <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
-
                        th:href="@{/customer-care}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
                        title="Chăm sóc khách hàng &amp; nhắc hẹn tái khám (FT44)">
@@ -417,8 +416,7 @@
 
         <!-- CÁ NHÂN -->
         <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'SCHEDULE_MY') or #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')))}"
-             th:classappend="${activeMenu == 'my-schedule' or activeMenu == 'my-attendance' or activeMenu == 'leave-requests'} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',profile,change-password,my-schedule,my-attendance,leave-requests,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgPersonal">
                 <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="side-group__label">Cá nhân</span>
@@ -426,26 +424,32 @@
             </button>
             <div class="side-group__panel" id="sgPersonal">
                 <div class="side-group__inner">
-                    <!-- Lịch trực & Chấm công -->
+                    <!-- Thông tin tài khoản & hồ sơ cá nhân (SCR-01.5) -->
+                    <a th:href="@{/profile}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'profile'} ? 'is-active' : ''"
+                       title="Xem/Cập nhật thông tin tài khoản &amp; Hồ sơ cá nhân (SCR-01.5)">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Thông tin tài khoản</span>
+                    </a>
+                    <!-- Lịch làm việc cá nhân (SCR-33.3) -->
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
                        th:href="@{/schedules/my}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'my-schedule'} ? 'is-active' : ''"
                        title="Lịch làm việc cá nhân hàng tuần (SCR-33.3)">
-                        <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch trực &amp; Chấm công</span>
+                        <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch làm việc của tôi</span>
                     </a>
-                    <!-- Check-in / Check-out chấm công -->
+                    <!-- Check-in / Check-out chấm công (SCR-33.2, SCR-33.4) -->
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE'))}"
                        th:href="@{/attendance/my}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'my-attendance'} ? 'is-active' : ''"
                        title="Check-in / Check-out &amp; lịch sử chấm công (SCR-33.2, SCR-33.4)">
-                        <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công</span>
+                        <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công vào/ra</span>
                     </a>
-                    <!-- Đơn xin nghỉ / Khóa lịch -->
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
+                    <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
+                    <a th:if="${roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'ROLE_BAC_SI')) and (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
                        th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'leave-requests'} ? 'is-active' : ''"
                        title="Gửi yêu cầu nghỉ phép &amp; Khóa lịch">
-                        <i class="bi bi-calendar-x" aria-hidden="true"></i><span class="side-link__label">Yêu cầu nghỉ / Khóa lịch</span>
+                        <i class="bi bi-calendar-x" aria-hidden="true"></i><span class="side-link__label">Đơn xin nghỉ phép</span>
                     </a>
                 </div>
             </div>

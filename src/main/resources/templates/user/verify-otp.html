@@ -21,6 +21,10 @@
             </p>
 
             <div class="auth-alerts" role="status">
+                <div th:if="${otpDevHint}" class="auth-alert auth-alert--warning">
+                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+                    <span th:text="${otpDevHint}">Gợi ý OTP</span>
+                </div>
                 <div th:if="${error}" class="auth-alert auth-alert--error">
                     <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
                     <span th:text="${error}">Thông báo lỗi</span>
