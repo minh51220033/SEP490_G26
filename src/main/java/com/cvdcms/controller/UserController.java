@@ -142,6 +142,9 @@ public class UserController {
         session.setAttribute("permissionCodes", permissionCodes);
         model.addAttribute("roleNames", roleNames);
         model.addAttribute("permissionCodes", permissionCodes);
+        boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
+        session.setAttribute("isAdmin", isAdmin);
+        model.addAttribute("isAdmin", isAdmin);
 
         // 4. Tên hiển thị mặc định là username
         model.addAttribute("displayName", user.getUsername());
@@ -372,6 +375,10 @@ public class UserController {
         session.setAttribute(
                 "permissionCodes",
                 userRepository.findActivePermissionCodesByUserId(user.getUserId())
+        );
+        session.setAttribute(
+                "isAdmin",
+                userRepository.hasActiveAdminRole(user.getUserId())
         );
 
         // Hồ sơ bệnh nhân chỉ là điều kiện vào portal của tài khoản bệnh nhân.

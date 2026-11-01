@@ -23,8 +23,12 @@ import java.util.List;
 @RequestMapping("/reception/patients")
 public class PatientPageController {
     private final PatientService service;
+    private final com.cvdcms.repository.InvoiceRepository invoiceRepository;
 
-    public PatientPageController(PatientService service) { this.service = service; }
+    public PatientPageController(PatientService service, com.cvdcms.repository.InvoiceRepository invoiceRepository) {
+        this.service = service;
+        this.invoiceRepository = invoiceRepository;
+    }
 
     @ModelAttribute("roleNames")
     public List<String> roleNames(HttpSession session) {
@@ -71,6 +75,7 @@ public class PatientPageController {
         model.addAttribute("documents", service.documents(session, id));
         model.addAttribute("photos", List.of());
         model.addAttribute("plans", List.of());
+        model.addAttribute("invoices", invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id));
         shared(model, "/reception/patients", "patients", true, false);
         return "patient-records/detail";
     }

@@ -211,13 +211,7 @@ public class PaymentPageController {
         List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Long targetProfileId = profileId != null ? profileId : patientId;
-        if (targetProfileId == null) {
-            // Nếu chưa chọn bệnh nhân, lấy bệnh nhân đầu tiên có phát sinh tài chính hoặc hiển thị tìm kiếm
-            List<PatientProfile> topPatients = patientProfileRepository.findTop15ByOrderByProfileIdDesc();
-            if (!topPatients.isEmpty()) {
-                targetProfileId = topPatients.get(0).getProfileId();
-            }
-        }
+        model.addAttribute("branches", allowedBranches);
 
         // Kiểm tra hợp lệ khoảng ngày cho bộ lọc Hóa đơn
         final boolean invoiceDateRangeInvalid = (invoiceFromDate != null && invoiceToDate != null && invoiceFromDate.isAfter(invoiceToDate));

@@ -78,11 +78,18 @@
                     <strong>Phương thức thanh toán:</strong>
                     <span class="badge bg-light text-dark border ms-1" th:text="${payment.paymentMethod}">CASH</span>
                     <span th:if="${payment.transactionRef != null and !payment.transactionRef.isEmpty()}"
-                          class="small text-muted ms-1" th:text="'(Ref: ' + ${payment.transactionRef} + ')'"></span>
+                          class="small text-muted ms-1" th:text="'(Mã GD: ' + ${payment.transactionRef} + ')'"></span>
                 </div>
                 <div class="col-6 text-end">
                     <strong>Số tiền đã thu:</strong>
                     <span class="fs-4 fw-bold text-success ms-2" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</span>
+                </div>
+                <div class="col-12" th:if="${payment.paymentMethod.name() == 'BANK_TRANSFER' and payment.bankAccountNumber != null}">
+                    <div class="p-2 mt-2 bg-white rounded border small text-muted">
+                        <span class="d-block fw-semibold text-dark"><i class="bi bi-bank me-1 text-primary"></i> Tài khoản nhận tiền:</span>
+                        <span>Ngân hàng: <strong th:text="${payment.bankName}"></strong> | STK: <strong class="font-monospace" th:text="${payment.bankAccountNumber}"></strong> | Chủ TK: <strong th:text="${payment.bankAccountHolder}"></strong></span>
+                        <span class="d-block mt-1" th:if="${payment.expectedTransferContent != null}">Nội dung CK: <strong class="text-danger font-monospace" th:text="${payment.expectedTransferContent}"></strong></span>
+                    </div>
                 </div>
             </div>
         </div>

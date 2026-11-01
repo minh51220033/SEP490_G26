@@ -45,9 +45,18 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         // Luôn đồng bộ danh sách mã quyền hiệu lực mới nhất từ DB vào session ở mỗi request
         List<String> activePermissionCodes = userRepository.findActivePermissionCodesByUserId(userId);
         session.setAttribute("permissionCodes", activePermissionCodes);
+        request.setAttribute("permissionCodes", activePermissionCodes);
+
+        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
+        session.setAttribute("isAdmin", isAdmin);
+        request.setAttribute("isAdmin", isAdmin);
+
+        List<String> roleNames = userRepository.findActiveRoleNamesByUserId(userId);
+        session.setAttribute("roleNames", roleNames);
+        request.setAttribute("roleNames", roleNames);
 
         // Quản trị viên hệ thống (ADMIN) có toàn quyền
-        if (userRepository.hasActiveAdminRole(userId)) {
+        if (isAdmin) {
             return true;
         }
 
@@ -185,6 +194,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/payments") || uri.startsWith("/api/payments")) {
             return List.of("PAYMENT_COLLECT");
         }
+        if (uri.startsWith("/api/finance")) {
+            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD");
+        }
 
         // =====================================================================
         // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY - 2 chức năng độc lập 1:1)
@@ -234,6 +246,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
         if (uri.startsWith("/admin/branches")) {
             return List.of("BRANCH_MANAGE");
+        }
+        if (uri.startsWith("/admin/bank-accounts")) {
+            return List.of("BRANCH_MANAGE", "ACCOUNT_MANAGE");
         }
         if (uri.startsWith("/admin/reports")) {
             return List.of("FINANCE_REPORTS");

@@ -52,7 +52,7 @@ class CvDcmsApplicationTests {
     }
 
     @Test
-    @DisplayName("GET /home renders the sidebar after login when isAdmin is not set by the controller")
+    @DisplayName("GET /home renders the sidebar for admin user with 'Quản trị hệ thống'")
     void testGetHomeRendersSidebarWithoutIsAdminModelAttribute() throws Exception {
         User adminUser = userRepository.findByUsername("admin").orElseThrow();
 
@@ -60,7 +60,48 @@ class CvDcmsApplicationTests {
                         .sessionAttr("loggedInUser", adminUser)
                         .sessionAttr("displayName", "Admin User"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("user/home"));
+                .andExpect(view().name("user/home"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("isAdmin", true))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Quản trị hệ thống")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Quản lý tài khoản")));
+    }
+
+    @Test
+    @DisplayName("GET /admin/medications renders the sidebar for admin user")
+    void testGetMedicationsRendersSidebarForAdmin() throws Exception {
+        User adminUser = userRepository.findByUsername("admin").orElseThrow();
+
+        mockMvc.perform(get("/admin/medications")
+                        .sessionAttr("loggedInUser", adminUser)
+                        .sessionAttr("displayName", "Admin User"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Quản trị hệ thống")));
+    }
+
+    @Test
+    @DisplayName("Unauthenticated guest GET /home redirects to /login without EL1001E null exception")
+    void testGuestGetHomeRedirectsSafely() throws Exception {
+        mockMvc.perform(get("/home"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
+    }
+
+    @Test
+    @DisplayName("Non-admin user on /home does not see 'Quản trị hệ thống'")
+    void testNonAdminUserDoesNotSeeAdminGroup() throws Exception {
+        var nonAdminOpt = userRepository.findAll().stream()
+                .filter(u -> !userRepository.hasActiveAdminRole(u.getUserId()) && Boolean.TRUE.equals(u.getIsActive()))
+                .findFirst();
+
+        if (nonAdminOpt.isPresent()) {
+            User nonAdmin = nonAdminOpt.get();
+            mockMvc.perform(get("/home")
+                            .sessionAttr("loggedInUser", nonAdmin)
+                            .sessionAttr("displayName", nonAdmin.getUsername()))
+                    .andExpect(status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("isAdmin", false))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Quản trị hệ thống"))));
+        }
     }
 
     @Test
