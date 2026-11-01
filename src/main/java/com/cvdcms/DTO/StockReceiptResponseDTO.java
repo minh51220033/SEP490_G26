@@ -131,6 +131,15 @@ public class StockReceiptResponseDTO {
     public void setSignedByName(String signedByName) { this.signedByName = signedByName; }
     public LocalDateTime getSignedAt() { return signedAt; }
     public void setSignedAt(LocalDateTime signedAt) { this.signedAt = signedAt; }
+    public BigDecimal getTotalQuantity() {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(ItemDetail::getQuantity)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
     public int getItemCount() { return itemCount; }
     public void setItemCount(int itemCount) { this.itemCount = itemCount; }
     public List<ItemDetail> getItems() { return items; }

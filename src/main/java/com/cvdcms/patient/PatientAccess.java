@@ -39,8 +39,7 @@ public class PatientAccess {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không hoạt động.");
         }
         boolean admin = hasRole(user, "ADMIN") || users.hasActiveAdminRole(user.getUserId());
-        boolean hasReceptionPermission = users.hasActivePermission(user.getUserId(), "APPOINTMENT_VIEW")
-                || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
+        boolean hasReceptionPermission = users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
                 || users.hasActivePermission(user.getUserId(), "PATIENT_PROFILE_MANAGE");
         if (!admin && !hasReceptionPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn không được cấp quyền truy cập chức năng này.");

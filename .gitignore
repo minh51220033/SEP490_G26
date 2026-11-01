@@ -42,3 +42,7 @@ target/
 *.pyc
 __pycache__/
 *.jsonl
+
+# Project docs stored locally
+/docs/*
+!/docs/UC-08_Specification.docx

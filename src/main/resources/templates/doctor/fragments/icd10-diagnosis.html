@@ -49,6 +49,7 @@
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('ALL')">Toàn hàm (32 răng)</button>
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('UPPER')">Hàm trên (18-28)</button>
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('LOWER')">Hàm dưới (48-38)</button>
+                        <button type="button" class="quick-btn d-none" id="btnQuickWisdom" style="display: none;" onclick="selectQuickTeeth('WISDOM')">4 Răng khôn (18, 28, 38, 48)</button>
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('CLEAR')" style="color: var(--df-danger, #ef4444); border-color: #fecaca;">Bỏ chọn tất cả</button>
                     </div>
 
@@ -499,7 +500,7 @@
                             title="Bấm để xem chi tiết, tô màu răng trên sơ đồ &amp; chỉnh sửa">
                             <td style="padding: 16px 20px;">
                                 <span class="badge rounded-pill px-3 py-2" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 800;"
-                                      th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : 'Toàn hàm'}">Toàn hàm</span>
+                                      th:text="${d.toothNumbers != null and !d.toothNumbers.isEmpty() ? ('R-' + d.toothNumbers) : (d.icd10Code != null and d.icd10Code.startsWith('K01') ? 'R-18, 28, 38, 48' : 'Toàn hàm')}">Toàn hàm</span>
                             </td>
                             <td style="padding: 16px;">
                                 <span class="df-list-code" style="font-size: 13.5px; padding: 5px 12px;" th:text="${d.icd10Code}">K02.1</span>

@@ -2,6 +2,9 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.WorkShift;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,4 +19,8 @@ public interface WorkShiftRepository extends JpaRepository<WorkShift, Long> {
     List<WorkShift> findByBranchIsNullAndIsActiveTrueOrderByStartTimeAsc();
 
     long countByBranchBranchId(Long branchId);
+
+    @Modifying
+    @Query("DELETE FROM WorkShift w WHERE w.branch.branchId = :branchId")
+    void deleteByBranchBranchId(@Param("branchId") Long branchId);
 }

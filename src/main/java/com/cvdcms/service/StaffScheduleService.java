@@ -12,6 +12,9 @@ import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.StaffScheduleRepository;
+import com.cvdcms.repository.AttendanceRecordRepository;
+import com.cvdcms.entity.AttendanceRecord;
+import java.util.Optional;
 import com.cvdcms.repository.WorkShiftRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +39,20 @@ public class StaffScheduleService {
     private final StaffBranchAssignmentRepository assignmentRepository;
     private final StaffProfileRepository staffRepository;
     private final BranchRepository branchRepository;
+    private final AttendanceRecordRepository attendanceRepository;
 
     public StaffScheduleService(WorkShiftRepository shiftRepository,
                                 StaffScheduleRepository scheduleRepository,
                                 StaffBranchAssignmentRepository assignmentRepository,
                                 StaffProfileRepository staffRepository,
-                                BranchRepository branchRepository) {
+                                BranchRepository branchRepository,
+                                AttendanceRecordRepository attendanceRepository) {
         this.shiftRepository = shiftRepository;
         this.scheduleRepository = scheduleRepository;
         this.assignmentRepository = assignmentRepository;
         this.staffRepository = staffRepository;
         this.branchRepository = branchRepository;
+        this.attendanceRepository = attendanceRepository;
     }
 
     // Thứ Hai của tuần chứa ngày được chọn.
@@ -188,13 +194,23 @@ public class StaffScheduleService {
     }
 
     @Transactional
-    public void remove(Long scheduleId) {
+    public boolean remove(Long scheduleId) {
         StaffSchedule s = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch phân ca."));
         if (s.getWorkDate().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Không thể xóa ca đã qua.");
         }
+        boolean removedAttendance = false;
+        // Nếu nhân viên đã chấm công (check-in) hôm nay, tự động xóa luôn bản ghi chấm công nhầm cùng ca trực
+        Optional<AttendanceRecord> attendanceOpt = attendanceRepository.findByStaffStaffIdAndWorkDate(
+                s.getStaff().getStaffId(), s.getWorkDate());
+        if (attendanceOpt.isPresent()) {
+            attendanceRepository.delete(attendanceOpt.get());
+            removedAttendance = true;
+        }
+
         scheduleRepository.delete(s);
+        return removedAttendance;
     }
 
     // Sao chép lịch tuần trước sang tuần đang xem; bỏ qua ca trùng và nhân viên không còn hiệu lực.
