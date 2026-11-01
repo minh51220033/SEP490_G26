@@ -433,12 +433,28 @@
         if (disabled) event.preventDefault();
     });
 
-    // Link có data-scroll-target: nếu đang ở đúng trang thì cuộn mượt tới section
+    // Link có data-scroll-target: nếu đang ở đúng trang thì chuyển tab / cuộn mượt tới section
     $all("[data-scroll-target]").forEach(function (link) {
         link.addEventListener("click", function (event) {
             var path = link.getAttribute("data-scroll-path");
             if (path && window.location.pathname.indexOf(path) === -1) return;
-            var section = document.getElementById(link.getAttribute("data-scroll-target"));
+            var targetId = link.getAttribute("data-scroll-target");
+
+            // 1. Nếu trang hiện tại có hệ thống tab khám bệnh (như trang Ca khám của Bác sĩ)
+            if (typeof window.switchMainTab === "function") {
+                event.preventDefault();
+                var tabId = targetId;
+                if (targetId === "treatmentPlanSection" || targetId === "tab-treatment-plan") {
+                    tabId = "tab-treatment-plan";
+                } else if (targetId === "prescriptionsSection" || targetId === "tab-prescriptions") {
+                    tabId = "tab-prescriptions";
+                }
+                window.switchMainTab(tabId);
+                return;
+            }
+
+            // 2. Trường hợp thông thường: cuộn mượt tới section
+            var section = document.getElementById(targetId);
             if (!section) return;
             event.preventDefault();
             section.scrollIntoView({ behavior: REDUCED_MOTION.matches ? "auto" : "smooth", block: "start" });
