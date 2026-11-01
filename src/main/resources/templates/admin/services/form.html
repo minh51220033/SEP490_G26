@@ -49,6 +49,7 @@
             <form th:object="${serviceForm}"
                   th:action="@{${isEdit ? '/admin/services/' + serviceId + '/update' : '/admin/services'}}"
                   method="post">
+                <input type="hidden" name="source" value="standalone">
 
                 <!-- LỖI NGHIỆP VỤ -->
                 <div class="alert alert-danger"

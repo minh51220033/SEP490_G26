@@ -139,17 +139,17 @@
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="btn btn-outline-primary" title="Xem chi tiết">
+                                            <div class="fin-table-actions">
+                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fin-table-btn fin-table-btn-view fin-table-btn-icon" title="Xem chi ti&#7871;t">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="btn btn-outline-secondary" title="In hóa đơn">
+                                                <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="fin-table-btn fin-table-btn-print fin-table-btn-icon" title="In h&#243;a &#273;&#417;n">
                                                     <i class="bi bi-printer"></i>
                                                 </a>
                                                 <a th:if="${inv.status != null and inv.status.name() != 'CANCELLED' and inv.paymentStatus != null and inv.paymentStatus.name() != 'PAID'}"
                                                    th:href="@{/payments/dashboard(patientId=${patient.id})}"
-                                                   class="btn btn-outline-success" title="Thu tiền trên Dashboard">
-                                                    <i class="bi bi-cash"></i>
+                                                   class="fin-table-btn fin-table-btn-pay" title="Thu ti&#7873;n tr&#234;n Dashboard">
+                                                    <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
                                                 </a>
                                             </div>
                                         </td>
