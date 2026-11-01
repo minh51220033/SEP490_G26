@@ -993,3 +993,42 @@
         }
     }
 }
+
+
+/* ==========================================================================
+   Quick Pay Modal & VietQR Responsive Layout Fixes
+   ========================================================================== */
+#quickPayModal .fin-modal-card {
+    width: 100%;
+    max-width: 660px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+
+#quickPayModal .fin-modal-card > div.p-4 {
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.vietqr-box {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.vietqr-box .vietqr-col-qr {
+    flex: 0 0 200px;
+    max-width: 200px;
+}
+
+.vietqr-box .vietqr-col-info {
+    flex: 1 1 270px;
+    min-width: 250px;
+}
+
+@media (max-width: 575.98px) {
+    .vietqr-box .vietqr-col-qr {
+        margin: 0 auto;
+    }
+}

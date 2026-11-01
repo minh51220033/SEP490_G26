@@ -95,7 +95,7 @@ public class PatientFinancialDashboardUnitTest {
 
         lenient().when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
         lenient().when(branchRepository.findAll()).thenReturn(List.of(mockBranch));
-        when(patientProfileRepository.findById(100L)).thenReturn(Optional.of(mockPatient));
+        lenient().when(patientProfileRepository.findById(100L)).thenReturn(Optional.of(mockPatient));
 
         PatientDebtSummaryDTO summary = new PatientDebtSummaryDTO();
         summary.setTotalBilled(BigDecimal.valueOf(10000000));
@@ -104,7 +104,7 @@ public class PatientFinancialDashboardUnitTest {
         summary.setDepositBalance(BigDecimal.valueOf(2000000));
         summary.setUnpaidInvoicesCount(3);
         summary.setLastInvoiceDate(LocalDateTime.now());
-        when(debtService.getPatientDebtDetail(eq(100L), any())).thenReturn(summary);
+        lenient().when(debtService.getPatientDebtDetail(eq(100L), any())).thenReturn(summary);
     }
 
     @Test
@@ -456,5 +456,23 @@ public class PatientFinancialDashboardUnitTest {
                 isNull(),
                 any(Pageable.class)
         );
+    }
+
+    @Test
+    @DisplayName("11. Vào dashboard không truyền ID bệnh nhân: Trả về trang dashboard mà không tự động chọn bệnh nhân ngẫu nhiên")
+    void testDashboard_WhenNoPatientSpecified_ReturnsDashboardWithNullPatient() {
+        Model model = new ConcurrentModel();
+
+        String view = controller.patientFinancialDashboard(
+                null, null,
+                0, 0,
+                null, null,
+                null, null,
+                model, session
+        );
+
+        assertEquals("finance/payments/dashboard", view);
+        assertNull(model.getAttribute("patient"));
+        assertNotNull(model.getAttribute("branches"));
     }
 }

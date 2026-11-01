@@ -210,6 +210,8 @@
                                             th:data-code="${inv.invoiceCode}"
                                             th:data-debt="${inv.remainingDebt}"
                                             th:data-patient="${inv.patientProfile.fullName}"
+                                            th:data-branch-id="${inv.branch.branchId}"
+                                            th:data-profile-id="${inv.patientProfile.profileId}"
                                             onclick="openQuickPayModal(this)"
                                             title="Ghi nhận thanh toán (SCR-22.2)">
                                         <i class="bi bi-cash"></i> Thu tiền
@@ -271,13 +273,24 @@
                 <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
                 <select id="qpMethod" class="form-select">
                     <option value="CASH">💵 Tiền mặt</option>
-                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (QR)</option>
+                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (VietQR)</option>
                     <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
                     <option value="DEPOSIT_WALLET">👛 Trừ vào ví tiền cọc / tạm ứng</option>
                 </select>
             </div>
+
+            <!-- Hidden inputs cho VietQR -->
+            <input type="hidden" id="qpBranchId">
+            <input type="hidden" id="qpProfileId">
+            <input type="hidden" id="qpBankAccountId">
+            <input type="hidden" id="qpExpectedTransferContent">
+            <input type="hidden" id="qpIdempotencyKey">
+
+            <!-- Container VietQR -->
+            <div id="qpVietQrContainer" class="mb-3" style="display: none;"></div>
+
             <div class="mb-3">
-                <label for="qpRef" class="form-label small text-muted">Mã giao dịch / Mã chuẩn chi ngân hàng (nếu có)</label>
+                <label for="qpRef" class="form-label small text-muted">Mã giao dịch ngân hàng thực tế (nếu có)</label>
                 <input type="text" id="qpRef" class="form-control" placeholder="VD: VCB12345678, POS-9988">
             </div>
             <div class="mb-3">
@@ -314,24 +327,54 @@
     </div>
 </div>
 
+<script th:src="@{/js/vietqr-payment.js}"></script>
 <script th:inline="javascript">
+    let qpQrBox = null;
+
     function openQuickPayModal(btn) {
         const invId = btn.getAttribute('data-invoice-id');
         const code = btn.getAttribute('data-code');
         const debt = parseFloat(btn.getAttribute('data-debt'));
         const patient = btn.getAttribute('data-patient');
+        const branchId = btn.getAttribute('data-branch-id');
+        const profileId = btn.getAttribute('data-profile-id');
 
         document.getElementById('qpInvoiceId').value = invId;
+        document.getElementById('qpBranchId').value = branchId || '';
+        document.getElementById('qpProfileId').value = profileId || '';
         document.getElementById('qpInvoiceCode').textContent = code;
         document.getElementById('qpPatientName').textContent = patient;
         document.getElementById('qpRemainingDebt').textContent = new Intl.NumberFormat('vi-VN').format(debt) + ' đ';
         document.getElementById('qpAmount').value = debt;
         document.getElementById('qpError').style.display = 'none';
+        document.getElementById('qpRef').value = '';
+        document.getElementById('qpNotes').value = '';
+        document.getElementById('qpBankAccountId').value = '';
+        document.getElementById('qpExpectedTransferContent').value = '';
+        document.getElementById('qpIdempotencyKey').value = 'QP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        if (!qpQrBox) {
+            qpQrBox = new VietQrPaymentBox({
+                container: 'qpVietQrContainer',
+                methodSelect: 'qpMethod',
+                amountInput: 'qpAmount',
+                branchId: () => document.getElementById('qpBranchId').value,
+                invoiceId: () => document.getElementById('qpInvoiceId').value,
+                profileId: () => document.getElementById('qpProfileId').value,
+                bankAccountIdInput: 'qpBankAccountId',
+                expectedContentInput: 'qpExpectedTransferContent'
+            });
+        } else {
+            qpQrBox.refresh(true);
+        }
 
         document.getElementById('quickPayModal').style.display = 'flex';
     }
 
     function closeQuickPayModal() {
+        if (qpQrBox) qpQrBox.reset();
+        document.getElementById('qpBankAccountId').value = '';
+        document.getElementById('qpExpectedTransferContent').value = '';
         document.getElementById('quickPayModal').style.display = 'none';
     }
 
@@ -341,6 +384,9 @@
         const method = document.getElementById('qpMethod').value;
         const ref = document.getElementById('qpRef').value;
         const notes = document.getElementById('qpNotes').value;
+        const bankAccountId = document.getElementById('qpBankAccountId').value;
+        const expectedTransferContent = document.getElementById('qpExpectedTransferContent').value;
+        const idempotencyKey = document.getElementById('qpIdempotencyKey').value;
         const errorEl = document.getElementById('qpError');
         const btnSubmit = document.getElementById('btnSubmitQp');
 
@@ -361,7 +407,10 @@
                     amount: amount,
                     paymentMethod: method,
                     transactionRef: ref,
-                    notes: notes
+                    notes: notes,
+                    bankAccountId: bankAccountId ? parseInt(bankAccountId) : null,
+                    expectedTransferContent: expectedTransferContent,
+                    idempotencyKey: idempotencyKey
                 })
             });
             const data = await resp.json();
@@ -372,7 +421,7 @@
                 document.getElementById('paymentSuccessToast').hidden = false;
                 setTimeout(() => {
                     window.location.reload();
-                }, 2400);
+                }, 2000);
             } else {
                 errorEl.textContent = data.error || 'Có lỗi xảy ra khi xử lý thanh toán.';
                 errorEl.style.display = 'block';

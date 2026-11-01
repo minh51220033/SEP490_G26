@@ -18,8 +18,12 @@ import java.util.List;
 @RequestMapping("/doctor/patient-records")
 public class DoctorRecordPageController {
     private final DoctorRecordService records;
+    private final com.cvdcms.repository.InvoiceRepository invoiceRepository;
 
-    public DoctorRecordPageController(DoctorRecordService records) { this.records = records; }
+    public DoctorRecordPageController(DoctorRecordService records, com.cvdcms.repository.InvoiceRepository invoiceRepository) {
+        this.records = records;
+        this.invoiceRepository = invoiceRepository;
+    }
 
     @ModelAttribute("roleNames")
     public List<String> roleNames() { return List.of("BAC_SI"); }
@@ -49,6 +53,7 @@ public class DoctorRecordPageController {
         model.addAttribute("plans", records.plans(session, id));
         model.addAttribute("documents", records.documents(session, id));
         model.addAttribute("emrRecords", records.emrRecords(session, id));
+        model.addAttribute("invoices", invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id));
         shared(model);
         return "patient-records/detail";
     }

@@ -35,6 +35,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         JOIN FETCH p.branch b
         JOIN FETCH p.cashier c
         LEFT JOIN FETCH p.invoice inv
+        LEFT JOIN FETCH p.bankAccount ba
         WHERE p.paymentId = :paymentId
     """)
     Optional<Payment> findWithDetailsById(@Param("paymentId") Long paymentId);
@@ -173,4 +174,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    boolean existsByBankAccount_AccountId(Long accountId);
+
+    long countByBankAccount_AccountId(Long accountId);
 }

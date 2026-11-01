@@ -89,8 +89,8 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
                 activeBranchIds = List.of(dbUser.getBranch().getBranchId());
             }
             if (activeBranchIds == null || activeBranchIds.isEmpty()) {
-                request.setAttribute("isFinanceAdmin", Boolean.TRUE);
-                return true;
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
+                return false;
             }
             request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
@@ -117,6 +117,18 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
                 } catch (NumberFormatException ignored) {
                     // Để controller validate định dạng
                 }
+            }
+
+            // Kiểm tra branchId trên Path variable dạng /branches/{branchId}
+            java.util.regex.Matcher branchPathMatcher = java.util.regex.Pattern.compile(".*/branches/(\\d+).*").matcher(uri);
+            if (branchPathMatcher.matches()) {
+                try {
+                    Long pathBranchId = Long.parseLong(branchPathMatcher.group(1));
+                    if (!activeBranchIds.contains(pathBranchId)) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập dữ liệu tại chi nhánh ID: " + pathBranchId);
+                        return false;
+                    }
+                } catch (NumberFormatException ignored) {}
             }
         }
 
