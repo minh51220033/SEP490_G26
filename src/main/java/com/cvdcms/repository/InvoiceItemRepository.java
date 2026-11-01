@@ -14,14 +14,21 @@ public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> 
 
     List<InvoiceItem> findByInvoice_InvoiceId(Long invoiceId);
 
+    List<InvoiceItem> findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(Long invoiceId);
+
     @Query("""
         SELECT ii FROM InvoiceItem ii
         LEFT JOIN FETCH ii.service s
         LEFT JOIN FETCH ii.performedService ps
+        LEFT JOIN FETCH ps.planItem pli
+        LEFT JOIN FETCH pli.stage stg
+        LEFT JOIN FETCH ps.doctor doc
+        LEFT JOIN FETCH ps.branch psb
         LEFT JOIN FETCH ii.prescriptionItem pi
         LEFT JOIN FETCH ii.medication m
         LEFT JOIN FETCH ii.batch b
         WHERE ii.invoice.invoiceId = :invoiceId
+        ORDER BY ii.lineOrder ASC, ii.itemId ASC
     """)
     List<InvoiceItem> findWithDetailsByInvoiceId(@Param("invoiceId") Long invoiceId);
 

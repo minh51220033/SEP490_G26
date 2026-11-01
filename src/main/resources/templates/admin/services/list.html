@@ -40,11 +40,13 @@
             </p>
           </div>
 
-          <a th:href="@{/admin/services/create}"
-             class="btn btn-primary">
+          <button type="button"
+             class="btn btn-primary"
+             data-bs-toggle="modal"
+             data-bs-target="#createServiceModal">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm dịch vụ
-          </a>
+            ThÃªm dá»‹ch vá»¥
+          </button>
         </div>
 
         <!-- LỌC THEO NHÓM -->
@@ -213,9 +215,16 @@
             </tr>
 
             <tr th:if="${#lists.isEmpty(services)}">
-              <td colspan="7"
-                  class="text-center text-muted py-4">
-                Không có dịch vụ trong danh sách hiện tại.
+              <td colspan="7" class="text-center py-4">
+                <div class="empty-state-box">
+                  <i class="bi bi-tools empty-icon"></i>
+                  <h6>Ch&#432;a c&#243; d&#7883;ch v&#7903; n&#224;o</h6>
+                  <p>Hi&#7879;n ch&#432;a c&#243; d&#7883;ch v&#7903; n&#224;o trong danh s&#225;ch. B&#7855;t &#273;&#7847;u b&#7857;ng c&#225;ch th&#234;m d&#7883;ch v&#7903; m&#7899;i.</p>
+                  <button type="button" class="btn btn-sm btn-primary"
+                          data-bs-toggle="modal" data-bs-target="#createServiceModal">
+                    <i class="bi bi-plus-lg me-1"></i>Th&#234;m d&#7883;ch v&#7903; m&#7899;i
+                  </button>
+                </div>
               </td>
             </tr>
 
@@ -235,11 +244,13 @@
             </p>
           </div>
 
-          <a th:href="@{/admin/services/categories/create}"
-             class="btn btn-primary">
+          <button type="button"
+             class="btn btn-primary"
+             data-bs-toggle="modal"
+             data-bs-target="#createCategoryModal">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm nhóm
-          </a>
+            ThÃªm nhÃ³m
+          </button>
         </div>
 
         <div class="table-responsive">
@@ -329,9 +340,16 @@
             </tr>
 
             <tr th:if="${#lists.isEmpty(categories)}">
-              <td colspan="6"
-                  class="text-center text-muted py-4">
-                Chưa có nhóm dịch vụ.
+              <td colspan="6" class="text-center py-4">
+                <div class="empty-state-box">
+                  <i class="bi bi-folder2-open empty-icon"></i>
+                  <h6>Ch&#432;a c&#243; nh&#243;m d&#7883;ch v&#7903; n&#224;o</h6>
+                  <p>T&#7841;o nh&#243;m danh m&#7903;c &#273;&#7875; ph&#226;n lo&#7841;i c&#225;c d&#7883;ch v&#7903; k&#7929; thu&#7853;t v&#224; th&#7911; thu&#7853;t &#273;i&#7873;u tr&#7883;.</p>
+                  <button type="button" class="btn btn-sm btn-primary"
+                          data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                    <i class="bi bi-plus-lg me-1"></i>Th&#234;m nh&#243;m d&#7883;ch v&#7903;
+                  </button>
+                </div>
               </td>
             </tr>
 
@@ -342,7 +360,7 @@
 
     </main>
 
-    <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
 
   </div>
 </div>
@@ -364,5 +382,293 @@
   });
 </script>
 
+<!-- Modal Them Dich Vu Moi -->
+<div class="modal fade" id="createServiceModal" tabindex="-1" aria-labelledby="createServiceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+      <form th:action="@{/admin/services}" method="post" id="createServiceForm">
+        <div class="modal-header border-bottom py-3 px-4">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createServiceModalLabel">
+            <i class="bi bi-tools text-primary me-2 fs-5"></i>
+            <span>Th&#234;m d&#7883;ch v&#7903; m&#7899;i</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <!-- Ma dich vu -->
+            <div class="col-md-4">
+              <label for="modalServiceCode" class="form-label fw-semibold text-dark small">
+                M&#227; d&#7883;ch v&#7903; <span class="text-danger">*</span>
+              </label>
+              <input id="modalServiceCode" type="text" name="serviceCode" class="form-control"
+                     th:value="${serviceForm?.serviceCode}"
+                     minlength="2" maxlength="30" pattern="[A-Za-z0-9_\-]{2,30}"
+                     title="Nh&#7853;p 2&#8211;30 k&#253; t&#7921;: ch&#7919; kh&#244;ng d&#7845;u, s&#7889;, d&#7845;u - ho&#7863;c _."
+                     placeholder="VD: DV_CAO_VOI" required>
+              <div class="form-text text-muted small">2&#8211;30 k&#253; t&#7921; (ch&#7919;, s&#7889;, -, _)</div>
+            </div>
+
+            <!-- Ten dich vu -->
+            <div class="col-md-8">
+              <label for="modalServiceName" class="form-label fw-semibold text-dark small">
+                T&#234;n d&#7883;ch v&#7903; <span class="text-danger">*</span>
+              </label>
+              <input id="modalServiceName" type="text" name="serviceName" class="form-control"
+                     th:value="${serviceForm?.serviceName}"
+                     maxlength="200" placeholder="VD: C&#7841;o v&#244;i r&#259;ng &amp; &#272;&#225;nh b&#243;ng" required>
+            </div>
+
+            <!-- Nhom dich vu -->
+            <div class="col-md-6">
+              <label for="modalServiceCategory" class="form-label fw-semibold text-dark small">
+                Nh&#243;m d&#7883;ch v&#7903; <span class="text-danger">*</span>
+              </label>
+              <select id="modalServiceCategory" name="categoryId" class="form-select" required>
+                <option value="">-- Ch&#7885;n nh&#243;m d&#7883;ch v&#7903; --</option>
+                <option th:each="category : ${categories}"
+                        th:if="${category.isActive == true}"
+                        th:value="${category.categoryId}"
+                        th:data-type="${category.categoryType.name()}"
+                        th:selected="${serviceForm != null and serviceForm.categoryId == category.categoryId}"
+                        th:text="${category.categoryName}">
+                </option>
+              </select>
+            </div>
+
+            <!-- Loai dich vu -->
+            <div class="col-md-6">
+              <label for="modalServiceType" class="form-label fw-semibold text-dark small">
+                Lo&#7841;i d&#7883;ch v&#7903; <span class="text-danger">*</span>
+              </label>
+              <select id="modalServiceType" name="serviceType" class="form-select" required>
+                <option value="">-- Ch&#7885;n lo&#7841;i --</option>
+                <option value="PROCEDURE" th:selected="${serviceForm?.serviceType?.name() == 'PROCEDURE'}">Th&#7911; thu&#7853;t nha khoa</option>
+                <option value="LAB" th:selected="${serviceForm?.serviceType?.name() == 'LAB'}">X&#233;t nghi&#7879;m</option>
+                <option value="XRAY" th:selected="${serviceForm?.serviceType?.name() == 'XRAY'}">X-Ray</option>
+                <option value="CONSULTATION" th:selected="${serviceForm?.serviceType?.name() == 'CONSULTATION'}">Kh&#225;m / T&#432; v&#7845;n</option>
+              </select>
+              <div class="form-text text-muted small">T&#7921; &#273;&#7891;ng ch&#7885;n theo nh&#243;m d&#7883;ch v&#7903;</div>
+            </div>
+
+            <!-- Don vi tinh -->
+            <div class="col-md-4">
+              <label for="modalServiceUnit" class="form-label fw-semibold text-dark small">
+                &#272;&#417;n v&#7883; t&#237;nh <span class="text-danger">*</span>
+              </label>
+              <input id="modalServiceUnit" type="text" name="unit" class="form-control"
+                     th:value="${serviceForm?.unit != null ? serviceForm.unit : 'L&#7847;n'}"
+                     maxlength="30" placeholder="VD: L&#7847;n, R&#259;ng, Phim" required>
+            </div>
+
+            <!-- Don gia chuan -->
+            <div class="col-md-4">
+              <label for="modalServiceBasePrice" class="form-label fw-semibold text-dark small">
+                &#272;&#417;n gi&#225; chu&#7849;n (VN&#272;) <span class="text-danger">*</span>
+              </label>
+              <input id="modalServiceBasePrice" type="number" name="basePrice" class="form-control"
+                     th:value="${serviceForm?.basePrice != null ? serviceForm.basePrice : 0}"
+                     min="0" step="0.01" required>
+            </div>
+
+            <!-- Phu phi -->
+            <div class="col-md-4">
+              <label for="modalServiceSurcharge" class="form-label fw-semibold text-dark small">
+                Ph&#7909; ph&#237; (VN&#272;) <span class="text-danger">*</span>
+              </label>
+              <input id="modalServiceSurcharge" type="number" name="surchargeAmount" class="form-control"
+                     th:value="${serviceForm?.surchargeAmount != null ? serviceForm.surchargeAmount : 0}"
+                     min="0" step="0.01" required>
+            </div>
+
+            <!-- Trang thai -->
+            <div class="col-md-6">
+              <label for="modalServiceStatus" class="form-label fw-semibold text-dark small">
+                Tr&#7841;ng th&#225;i <span class="text-danger">*</span>
+              </label>
+              <select id="modalServiceStatus" name="status" class="form-select" required>
+                <option value="ACTIVE" th:selected="${serviceForm?.status?.name() == 'ACTIVE'}">&#272;ang s&#7911; d&#7909;ng</option>
+                <option value="INACTIVE" th:selected="${serviceForm?.status?.name() == 'INACTIVE'}">Ng&#7915;ng s&#7911; d&#7909;ng</option>
+              </select>
+            </div>
+
+            <!-- Thoi han bao hanh -->
+            <div class="col-md-6">
+              <label for="modalServiceWarranty" class="form-label fw-semibold text-dark small">
+                Th&#7801;i h&#7841;n b&#7843;o h&#224;nh (th&#225;ng)
+              </label>
+              <input id="modalServiceWarranty" type="number" name="warrantyMonths" class="form-control"
+                     th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (th&#225;ng)">
+            </div>
+
+            <!-- Checkbox dieu kien su dung -->
+            <div class="col-12">
+              <div class="p-3 bg-light rounded border d-flex flex-wrap gap-4">
+                <div class="form-check mb-0">
+                  <input type="hidden" name="_requiresTooth" value="on">
+                  <input id="modalRequiresTooth" type="checkbox" name="requiresTooth" value="true"
+                         class="form-check-input"
+                         th:checked="${serviceForm?.requiresTooth == true}">
+                  <label for="modalRequiresTooth" class="form-check-label text-dark small fw-semibold">
+                    B&#7855;t bu&#7895;c ch&#7885;n v&#7883; tr&#237; r&#259;ng
+                  </label>
+                </div>
+                <div class="form-check mb-0">
+                  <input type="hidden" name="_isBookableOnline" value="on">
+                  <input id="modalIsBookableOnline" type="checkbox" name="isBookableOnline" value="true"
+                         class="form-check-input"
+                         th:checked="${serviceForm?.isBookableOnline == true}">
+                  <label for="modalIsBookableOnline" class="form-check-label text-dark small fw-semibold">
+                    Cho ph&#233;p &#273;&#7863;t l&#7883;ch tr&#7921;c tuy&#7871;n
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mo ta -->
+            <div class="col-12">
+              <label for="modalServiceDesc" class="form-label fw-semibold text-dark small">
+                M&#244; t&#7843; d&#7883;ch v&#7903;
+              </label>
+              <textarea id="modalServiceDesc" name="description" class="form-control" rows="2"
+                        placeholder="N&#7897;i dung gi&#7899;i thi&#7879;u chi ti&#7871;t v&#7873; d&#7883;ch v&#7903;..."
+                        th:text="${serviceForm?.description}"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top py-2 px-4 bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&#272;&#243;ng</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Th&#234;m d&#7883;ch v&#7903;
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Them Nhom Dich Vu Moi -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+      <form th:action="@{/admin/services/categories}" method="post" id="createCategoryForm">
+        <div class="modal-header border-bottom py-3 px-4">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createCategoryModalLabel">
+            <i class="bi bi-folder-plus text-primary me-2 fs-5"></i>
+            <span>Th&#234;m nh&#243;m d&#7883;ch v&#7903; m&#7899;i</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <!-- Ma nhom -->
+            <div class="col-md-5">
+              <label for="modalCategoryCode" class="form-label fw-semibold text-dark small">
+                M&#227; nh&#243;m <span class="text-danger">*</span>
+              </label>
+              <input id="modalCategoryCode" type="text" name="categoryCode" class="form-control"
+                     th:value="${categoryForm?.categoryCode}"
+                     minlength="2" maxlength="30" pattern="[A-Za-z0-9_\-]{2,30}"
+                     title="Nh&#7853;p 2&#8211;30 k&#253; t&#7921;: ch&#7919; kh&#244;ng d&#7845;u, s&#7889;, d&#7845;u - ho&#7863;c _."
+                     placeholder="VD: NHA_CHU" required>
+            </div>
+
+            <!-- Ten nhom -->
+            <div class="col-md-7">
+              <label for="modalCategoryName" class="form-label fw-semibold text-dark small">
+                T&#234;n nh&#243;m <span class="text-danger">*</span>
+              </label>
+              <input id="modalCategoryName" type="text" name="categoryName" class="form-control"
+                     th:value="${categoryForm?.categoryName}"
+                     maxlength="150" placeholder="VD: Nha chu &amp; &#272;i&#7873;u tr&#7883; n&#432;&#7899;u" required>
+            </div>
+
+            <!-- Loai nhom -->
+            <div class="col-md-12">
+              <label for="modalCategoryType" class="form-label fw-semibold text-dark small">
+                Lo&#7841;i nh&#243;m <span class="text-danger">*</span>
+              </label>
+              <select id="modalCategoryType" name="categoryType" class="form-select" required>
+                <option value="">-- Ch&#7885;n lo&#7841;i nh&#243;m --</option>
+                <option value="PROCEDURE" th:selected="${categoryForm?.categoryType?.name() == 'PROCEDURE'}">Th&#7911; thu&#7853;t nha khoa</option>
+                <option value="LAB" th:selected="${categoryForm?.categoryType?.name() == 'LAB'}">X&#233;t nghi&#7879;m</option>
+                <option value="XRAY" th:selected="${categoryForm?.categoryType?.name() == 'XRAY'}">X-Ray</option>
+                <option value="CONSULTATION" th:selected="${categoryForm?.categoryType?.name() == 'CONSULTATION'}">Kh&#225;m / T&#432; v&#7845;n</option>
+              </select>
+            </div>
+
+            <!-- Thu tu hien thi -->
+            <div class="col-md-6">
+              <label for="modalDisplayOrder" class="form-label fw-semibold text-dark small">
+                Th&#7913; t&#7921; hi&#7875;n th&#7883; <span class="text-danger">*</span>
+              </label>
+              <input id="modalDisplayOrder" type="number" name="displayOrder" class="form-control"
+                     th:value="${categoryForm?.displayOrder != null ? categoryForm.displayOrder : 0}"
+                     min="0" step="1" required>
+            </div>
+
+            <!-- Trang thai -->
+            <div class="col-md-6">
+              <label for="modalIsActive" class="form-label fw-semibold text-dark small">
+                Tr&#7841;ng th&#225;i <span class="text-danger">*</span>
+              </label>
+              <select id="modalIsActive" name="isActive" class="form-select" required>
+                <option value="true" th:selected="${categoryForm?.isActive != false}">&#272;ang s&#7911; d&#7909;ng</option>
+                <option value="false" th:selected="${categoryForm?.isActive == false}">Ng&#7915;ng s&#7911; d&#7909;ng</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top py-2 px-4 bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&#272;&#243;ng</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Th&#234;m nh&#243;m
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Tu dong dong bo Loai dich vu theo Nhom dich vu duoc chon
+    var catSelect = document.getElementById("modalServiceCategory");
+    var typeSelect = document.getElementById("modalServiceType");
+    if (catSelect && typeSelect) {
+      catSelect.addEventListener("change", function () {
+        var opt = catSelect.options[catSelect.selectedIndex];
+        if (opt && opt.dataset.type) {
+          typeSelect.value = opt.dataset.type;
+        }
+      });
+    }
+
+    // Tu dong mo lai modal neu co loi validation tu Controller
+    /*[# th:if="${openServiceModal}"]*/
+    var svcModalEl = document.getElementById("createServiceModal");
+    if (svcModalEl) {
+      new bootstrap.Modal(svcModalEl).show();
+    }
+    /*[/]*/
+
+    /*[# th:if="${openCategoryModal}"]*/
+    var catModalEl = document.getElementById("createCategoryModal");
+    if (catModalEl) {
+      new bootstrap.Modal(catModalEl).show();
+    }
+    /*[/]*/
+
+    // Ho tro mo modal qua query parameter ?create=service hoac ?create=category
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("action") === "create-service" || urlParams.get("create") === "service") {
+      var svcModal = document.getElementById("createServiceModal");
+      if (svcModal) new bootstrap.Modal(svcModal).show();
+    } else if (urlParams.get("action") === "create-category" || urlParams.get("create") === "category") {
+      var catModal = document.getElementById("createCategoryModal");
+      if (catModal) new bootstrap.Modal(catModal).show();
+    }
+  });
+</script>
 </body>
 </html>

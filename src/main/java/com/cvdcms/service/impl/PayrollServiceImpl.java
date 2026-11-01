@@ -236,7 +236,7 @@ public class PayrollServiceImpl implements PayrollService {
                         .count();
                 item.setActualWorkDays(BigDecimal.valueOf(workedDays));
             } else {
-                item.setActualWorkDays(null); // Không có dữ liệu, KHÔNG hard-code 26.00
+                item.setActualWorkDays(BigDecimal.ZERO); // Không có dữ liệu, KHÔNG hard-code 26.00
             }
 
             // Giữ lại các khoản nhập tay của kế toán khi tính toán lại

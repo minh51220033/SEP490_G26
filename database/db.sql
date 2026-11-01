@@ -83,16 +83,42 @@ CREATE TABLE IF NOT EXISTS invoice_audit_logs (
     CONSTRAINT fk_inv_audit_staff FOREIGN KEY (performed_by) REFERENCES staff_profiles(staff_id) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. GIAO DỊCH THANH TOÁN & TẠM ỨNG (PAYMENTS - FT22)
+-- 4. TÀI KHOẢN NGÂN HÀNG NHẬN TIỀN THEO CHI NHÁNH (BRANCH_BANK_ACCOUNTS - FT22)
+CREATE TABLE IF NOT EXISTS branch_bank_accounts (
+    account_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id BIGINT NOT NULL,
+    bank_bin VARCHAR(20) NOT NULL,
+    bank_name VARCHAR(100) NOT NULL,
+    bank_short_name VARCHAR(50) NULL,
+    account_number VARCHAR(50) NOT NULL,
+    account_holder_name VARCHAR(150) NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    default_branch_id BIGINT GENERATED ALWAYS AS (CASE WHEN is_default = 1 THEN branch_id ELSE NULL END) STORED,
+    INDEX idx_bba_branch_active (branch_id, is_active),
+    UNIQUE KEY uk_bba_default_branch (default_branch_id),
+    CONSTRAINT fk_bba_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. GIAO DỊCH THANH TOÁN & TẠM ỨNG (PAYMENTS - FT22)
 CREATE TABLE IF NOT EXISTS payments (
-                                        payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                        payment_code VARCHAR(50) NOT NULL UNIQUE,
+    payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    payment_code VARCHAR(50) NOT NULL UNIQUE,
     invoice_id BIGINT NULL,
     profile_id BIGINT NOT NULL,
     branch_id BIGINT NOT NULL,
     cashier_id BIGINT NOT NULL,
     payment_type VARCHAR(20) NOT NULL DEFAULT 'PAYMENT',
     payment_method VARCHAR(30) NOT NULL DEFAULT 'CASH',
+    bank_account_id BIGINT NULL,
+    bank_bin VARCHAR(20) NULL,
+    bank_name VARCHAR(100) NULL,
+    bank_account_number VARCHAR(50) NULL,
+    bank_account_holder VARCHAR(150) NULL,
+    expected_transfer_content VARCHAR(100) NULL,
     amount DECIMAL(15,2) NOT NULL,
     transaction_ref VARCHAR(100) NULL,
     idempotency_key VARCHAR(100) NULL UNIQUE,
@@ -102,11 +128,13 @@ CREATE TABLE IF NOT EXISTS payments (
     INDEX idx_pmt_profile (profile_id),
     INDEX idx_pmt_date (paid_at),
     INDEX idx_pmt_transaction_ref (transaction_ref),
+    INDEX idx_pmt_bank_account (bank_account_id),
     UNIQUE INDEX uk_pmt_idempotency (idempotency_key),
     CONSTRAINT fk_pmt_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id),
     CONSTRAINT fk_pmt_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id),
     CONSTRAINT fk_pmt_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id),
-    CONSTRAINT fk_pmt_cashier FOREIGN KEY (cashier_id) REFERENCES staff_profiles(staff_id)
+    CONSTRAINT fk_pmt_cashier FOREIGN KEY (cashier_id) REFERENCES staff_profiles(staff_id),
+    CONSTRAINT fk_pmt_bank_account FOREIGN KEY (bank_account_id) REFERENCES branch_bank_accounts(account_id) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. HOÀN TIỀN DỊCH VỤ (REFUNDS - FT22)
