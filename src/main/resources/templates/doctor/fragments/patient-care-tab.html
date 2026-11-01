@@ -18,59 +18,132 @@
                     <span class="text-secondary small">Nhật ký gọi điện hỏi thăm, tình trạng hồi phục &amp; khảo sát độ hài lòng</span>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('Chức năng thêm lịch sử chăm sóc.');">
-                <i class="bi bi-telephone-plus me-1"></i>+ Ghi nhận cuộc gọi / CSKH
-            </button>
+            <div class="d-flex align-items-center gap-2">
+                <a th:href="@{/doctor/recalls}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold">
+                    <i class="bi bi-list-check me-1"></i>DS Tái khám &amp; CSKH Bác sĩ
+                </a>
+            </div>
         </div>
 
         <div class="card-body p-4 bg-white">
             <div class="row g-3">
+                <!-- Cột trái: Danh sách công việc chăm sóc của bệnh nhân -->
                 <div class="col-md-4">
                     <div class="border rounded-3 p-3 bg-light-subtle h-100">
-                        <div class="d-flex align-items-center gap-2 text-primary fw-bold mb-2">
-                            <i class="bi bi-clock-history fs-5"></i>
-                            <span>Nhắc việc chăm sóc</span>
+                        <div class="d-flex align-items-center justify-content-between text-primary fw-bold mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-clock-history fs-5"></i>
+                                <span>Nhắc việc chăm sóc</span>
+                            </div>
+                            <span class="badge bg-primary rounded-pill" th:text="${careTasks != null ? careTasks.size() : 0}">0</span>
                         </div>
-                        <ul class="list-unstyled small d-flex flex-column gap-2 mb-0">
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success"></i>
-                                <span>Gọi điện hỏi thăm sau nhổ răng (Ngày 1)</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-hourglass-split text-warning"></i>
-                                <span>Nhắc bệnh nhân tái khám cắt chỉ (Ngày 7)</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-chat-dots text-secondary"></i>
-                                <span>Khảo sát độ hài lòng dịch vụ (Zalo / SMS)</span>
+                        
+                        <!-- Khi chưa có việc nào -->
+                        <div th:if="${careTasks == null or #lists.isEmpty(careTasks)}" class="text-muted small py-3 text-center">
+                            <i class="bi bi-inbox fs-4 d-block text-secondary mb-1"></i>
+                            Chưa có công việc CSKH nào cho bệnh nhân này.
+                        </div>
+
+                        <!-- Danh sách công việc CSKH động -->
+                        <ul th:if="${careTasks != null and !#lists.isEmpty(careTasks)}" class="list-unstyled small d-flex flex-column gap-2 mb-0">
+                            <li th:each="t : ${careTasks}" class="p-2 rounded bg-white border d-flex flex-column gap-1">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-dark" th:text="${t.taskCode}">CSKH123</span>
+                                    <span th:if="${t.status != null and t.status.name() == 'COMPLETED'}" class="badge bg-success-subtle text-success border border-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Hoàn thành
+                                    </span>
+                                    <span th:if="${t.status != null and t.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning border border-warning">
+                                        <i class="bi bi-hourglass-split me-1"></i>Chờ xử lý
+                                    </span>
+                                    <span th:if="${t.status != null and t.status.name() == 'IN_PROGRESS'}" class="badge bg-info-subtle text-info border border-info">
+                                        <i class="bi bi-telephone-outbound me-1"></i>Đang liên hệ
+                                    </span>
+                                    <span th:if="${t.status != null and t.status.name() == 'FAILED'}" class="badge bg-danger-subtle text-danger border border-danger">
+                                        <i class="bi bi-x-circle me-1"></i>Thất bại
+                                    </span>
+                                    <span th:if="${t.status != null and t.status.name() == 'CANCELLED'}" class="badge bg-secondary text-white">
+                                        Đã hủy
+                                    </span>
+                                </div>
+                                <div class="text-secondary small">
+                                    <span th:if="${t.taskType != null and t.taskType.name() == 'APPOINTMENT_REMINDER'}">Nhắc lịch hẹn tái khám</span>
+                                    <span th:if="${t.taskType != null and t.taskType.name() == 'POST_OP_CARE'}">Hỏi thăm sau điều trị</span>
+                                    <span th:if="${t.taskType != null and t.taskType.name() == 'MEDICATION_FOLLOW_UP'}">Theo dõi dùng thuốc</span>
+                                    <span th:if="${t.taskType != null and t.taskType.name() == 'PERIODIC_CHECKUP'}">Nhắc khám định kỳ</span>
+                                    <span th:if="${t.dueDate != null}" class="text-muted" th:text="' - Hạn: ' + ${#temporals.format(t.dueDate, 'dd/MM/yyyy')}"></span>
+                                </div>
+                                <div th:if="${t.assignedStaff != null}" class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-person me-1"></i>Phụ trách: <strong th:text="${t.assignedStaff.fullName}">BS Nam</strong>
+                                </div>
                             </li>
                         </ul>
                     </div>
                 </div>
 
+                <!-- Cột phải: Lịch sử tương tác & phản hồi của bệnh nhân -->
                 <div class="col-md-8">
                     <div class="border rounded-3 p-3 bg-white h-100">
-                        <h6 class="fw-bold text-dark mb-3">
-                            <i class="bi bi-journal-text text-primary me-1"></i>Lịch sử liên hệ &amp; Phản hồi của bệnh nhân
-                        </h6>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold text-dark mb-0">
+                                <i class="bi bi-journal-text text-primary me-1"></i>Lịch sử liên hệ &amp; Phản hồi của bệnh nhân
+                            </h6>
+                            <span class="badge bg-secondary-subtle text-secondary border" th:text="'Tổng ' + (${careInteractions != null ? careInteractions.size() : 0}) + ' cuộc gọi / tương tác'">Tổng 0 cuộc gọi</span>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
                                 <thead class="table-light">
                                 <tr>
                                     <th>Thời gian</th>
                                     <th>Hình thức</th>
-                                    <th>Nhân viên CSKH</th>
+                                    <th>Người thực hiện</th>
                                     <th>Nội dung trao đổi</th>
-                                    <th>Trạng thái</th>
+                                    <th>Kết quả</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <tr>
-                                    <td>21/10/2026 14:00</td>
-                                    <td><span class="badge bg-success-subtle text-success border border-success">Gọi điện</span></td>
-                                    <td>Lễ tân CSKH</td>
-                                    <td>Hỏi thăm tình trạng sưng đau sau điều trị. Bệnh nhân phản hồi đỡ đau, đã dùng thuốc theo đơn.</td>
-                                    <td><span class="badge bg-light text-dark border">Đã liên hệ</span></td>
+                                <!-- Trạng thái rỗng -->
+                                <tr th:if="${careInteractions == null or #lists.isEmpty(careInteractions)}">
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="bi bi-chat-square-quote fs-4 d-block text-secondary mb-1"></i>
+                                        Chưa có nhật ký cuộc gọi / tương tác CSKH nào cho bệnh nhân này.
+                                    </td>
+                                </tr>
+
+                                <!-- Danh sách tương tác động từ CSDL -->
+                                <tr th:each="ci : ${careInteractions}">
+                                    <td class="fw-semibold text-dark text-nowrap" th:text="${ci.createdAt != null ? #temporals.format(ci.createdAt, 'dd/MM/yyyy HH:mm') : '--'}">01/11/2026 17:05</td>
+                                    <td>
+                                        <span th:if="${ci.channel != null and ci.channel.name() == 'PHONE_CALL'}" class="badge bg-success-subtle text-success border border-success text-nowrap">
+                                            <i class="bi bi-telephone-fill me-1"></i>Gọi điện
+                                        </span>
+                                        <span th:if="${ci.channel != null and ci.channel.name() == 'ZALO'}" class="badge bg-info-subtle text-info border border-info text-nowrap">
+                                            <i class="bi bi-chat-dots-fill me-1"></i>Zalo
+                                        </span>
+                                        <span th:if="${ci.channel != null and ci.channel.name() == 'SMS'}" class="badge bg-secondary-subtle text-secondary border border-secondary text-nowrap">
+                                            <i class="bi bi-chat-text-fill me-1"></i>SMS
+                                        </span>
+                                        <span th:if="${ci.channel != null and ci.channel.name() == 'IN_PERSON'}" class="badge bg-primary-subtle text-primary border border-primary text-nowrap">
+                                            <i class="bi bi-person-fill me-1"></i>Trực tiếp
+                                        </span>
+                                        <span th:if="${ci.channel == null}" class="badge bg-light text-dark border">Khác</span>
+                                    </td>
+                                    <td class="text-nowrap" th:text="${ci.staff != null ? ci.staff.fullName : (ci.task != null and ci.task.assignedStaff != null ? ci.task.assignedStaff.fullName : '--')}">BS. CK1 Lê Hoàng Nam</td>
+                                    <td th:text="${ci.notes != null ? ci.notes : '--'}">khách khỏe</td>
+                                    <td>
+                                        <span th:if="${ci.contactResult != null and ci.contactResult.name() == 'CONNECTED'}" class="badge bg-success-subtle text-success border border-success text-nowrap">
+                                            <i class="bi bi-check-circle me-1"></i>Đã kết nối
+                                        </span>
+                                        <span th:if="${ci.contactResult != null and ci.contactResult.name() == 'NO_ANSWER'}" class="badge bg-warning-subtle text-warning border border-warning text-nowrap">
+                                            <i class="bi bi-telephone-x me-1"></i>Không nghe máy
+                                        </span>
+                                        <span th:if="${ci.contactResult != null and ci.contactResult.name() == 'BUSY'}" class="badge bg-danger-subtle text-danger border border-danger text-nowrap">
+                                            <i class="bi bi-telephone-minus me-1"></i>Máy bận
+                                        </span>
+                                        <span th:if="${ci.contactResult != null and ci.contactResult.name() == 'SCHEDULED_APPOINTMENT'}" class="badge bg-primary-subtle text-primary border border-primary text-nowrap">
+                                            <i class="bi bi-calendar-check me-1"></i>Đã đặt hẹn
+                                        </span>
+                                        <span th:if="${ci.contactResult == null}" class="badge bg-light text-dark border">Đã liên hệ</span>
+                                    </td>
                                 </tr>
                                 </tbody>
                             </table>
