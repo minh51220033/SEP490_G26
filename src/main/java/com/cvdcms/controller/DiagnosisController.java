@@ -27,7 +27,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -142,7 +144,13 @@ public class DiagnosisController {
             @PathVariable("visitId") Long visitId,
             Model model
     ) {
-        Visit visit = diagnosisService.getVisitOrThrow(visitId);
+        Visit visit;
+        try {
+            visit = diagnosisService.getVisitOrThrow(visitId);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Không tìm thấy ca khám ID={}: {}. Tự động chuyển hướng về trang ca khám.", visitId, ex.getMessage());
+            return "redirect:/doctor/diagnoses";
+        }
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<Icd10DiseaseDTO> commonDiseases = icd10DiseaseService.getCommonDentalDiseases();
         List<Visit> otherVisits = visitRepository.findAll();
@@ -271,7 +279,13 @@ public class DiagnosisController {
             @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
             Model model
     ) {
-        Visit visit = diagnosisService.getVisitOrThrow(visitId);
+        Visit visit;
+        try {
+            visit = diagnosisService.getVisitOrThrow(visitId);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Không tìm thấy ca khám ID={}: {}. Tự động chuyển hướng về trang ca khám.", visitId, ex.getMessage());
+            return "redirect:/doctor/diagnoses";
+        }
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
         List<StaffProfile> doctors = performedServiceService.getAvailableDoctors();
@@ -363,5 +377,11 @@ public class DiagnosisController {
         visit.setCheckInAt(LocalDateTime.now());
         return visitRepository.save(visit);
     }
-}
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public String handleVisitNotFound(IllegalArgumentException ex, RedirectAttributes redirectAttributes) {
+        log.warn("Lỗi ca khám không tồn tại trong DiagnosisController: {}", ex.getMessage());
+        redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        return "redirect:/doctor/daily-visits";
+    }
+}
