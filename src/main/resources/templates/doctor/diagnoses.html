@@ -16,7 +16,31 @@
         <header th:replace="~{fragments/header :: appTopbar('Khám & Điều trị')}"></header>
 
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101b)}">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101c)}">
+            <style>
+                /* GLOBAL MODAL & BACKDROP Z-INDEX FIX: CƯỠNG CHẾ TẤT CẢ MODAL NỔI TRÊN BACKDROP */
+                .modal {
+                    z-index: 2050 !important;
+                    pointer-events: auto !important;
+                }
+                .modal.fade .modal-dialog,
+                .modal .modal-dialog {
+                    z-index: 2051 !important;
+                    position: relative !important;
+                    pointer-events: auto !important;
+                }
+                .modal.fade .modal-content,
+                .modal .modal-content {
+                    z-index: 2052 !important;
+                    position: relative !important;
+                    background-color: #ffffff !important;
+                    pointer-events: auto !important;
+                }
+                .modal-backdrop,
+                body.modal-open .modal-backdrop {
+                    z-index: 2040 !important;
+                }
+            </style>
 
             <!-- ========================================================= -->
             <!-- 1. UNIFIED PATIENT & RECORD HEADER (GỘP THỐNG NHẤT, GỌN GÀNG) -->
@@ -449,7 +473,7 @@
 <!-- ===================================================================== -->
 <!-- MODAL: HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)                    -->
 <!-- ===================================================================== -->
-<div th:replace="~{doctor/fragments/modal-re-examination :: reExamModal}"></div>
+<th:block th:replace="~{doctor/fragments/modal-re-examination :: reExamModal}"></th:block>
 
 <!-- ===================================================================== -->
 <!-- ===================================================================== -->
