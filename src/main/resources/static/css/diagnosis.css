@@ -2689,3 +2689,11 @@ html {
     color: #0f172a;
 }
 
+
+/* FIX: MODAL LỜI DẶN BÁC SĨ (TAB INSTRUCTIONS) LUÔN NẰM TRÊN BACKDROP */
+#doctorInstructionModal {
+    z-index: 1060 !important;
+}
+#doctorInstructionModal .modal-dialog {
+    z-index: 1061 !important;
+}
