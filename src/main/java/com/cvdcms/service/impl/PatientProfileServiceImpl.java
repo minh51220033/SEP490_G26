@@ -1,13 +1,13 @@
-
 package com.cvdcms.service.impl;
 
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.User;
+import com.cvdcms.patientportal.AccountPatientProfile;
+import com.cvdcms.patientportal.AccountPatientProfileRepository;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
-
 import com.cvdcms.service.PatientProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +20,17 @@ public class PatientProfileServiceImpl implements PatientProfileService {
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
+    private final AccountPatientProfileRepository accountPatientProfileRepository;
 
     public PatientProfileServiceImpl(
             PatientProfileRepository patientProfileRepository,
             BranchRepository branchRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AccountPatientProfileRepository accountPatientProfileRepository) {
         this.patientProfileRepository = patientProfileRepository;
         this.branchRepository = branchRepository;
         this.userRepository = userRepository;
+        this.accountPatientProfileRepository = accountPatientProfileRepository;
     }
 
     // Đồng bộ cơ sở khám đã chọn thành chi nhánh của tài khoản (chỉ khi tài khoản chưa có chi nhánh),
@@ -36,6 +39,22 @@ public class PatientProfileServiceImpl implements PatientProfileService {
         if (user.getBranch() == null && branch != null) {
             user.setBranch(branch);
             userRepository.save(user);
+        }
+    }
+
+    // Đồng bộ bảng liên kết account_patient_profiles để luồng /profile và /portal/records thống nhất 100%.
+    private void ensureAccountProfileLink(User user, PatientProfile savedProfile, boolean isSelf) {
+        if (user == null || savedProfile == null || savedProfile.getProfileId() == null) {
+            return;
+        }
+        if (accountPatientProfileRepository.findByProfile_ProfileId(savedProfile.getProfileId()).isEmpty()) {
+            AccountPatientProfile link = new AccountPatientProfile();
+            link.setAccount(user);
+            link.setProfile(savedProfile);
+            link.setAccessType(isSelf
+                    ? AccountPatientProfile.AccessType.SELF
+                    : AccountPatientProfile.AccessType.DEPENDENT);
+            accountPatientProfileRepository.save(link);
         }
     }
 
@@ -90,7 +109,9 @@ public class PatientProfileServiceImpl implements PatientProfileService {
 
         syncAccountBranch(user, branch);
 
-        return patientProfileRepository.save(profile);
+        PatientProfile saved = patientProfileRepository.save(profile);
+        ensureAccountProfileLink(user, saved, true);
+        return saved;
     }
 
     /**
@@ -139,9 +160,9 @@ public class PatientProfileServiceImpl implements PatientProfileService {
                     "Vui lòng nhập thông tin bệnh nền.");
         }
 
-        if (diseaseDetails.length() > 2000) {
+        if (diseaseDetails.length() > 1000) {
             throw new IllegalArgumentException(
-                    "Thông tin bệnh nền không được vượt quá 2000 ký tự.");
+                    "Thông tin bệnh nền không được vượt quá 1000 ký tự.");
         }
 
         Branch branch = getActiveBranch(branchId);
@@ -173,7 +194,9 @@ public class PatientProfileServiceImpl implements PatientProfileService {
             syncAccountBranch(user, branch);
         }
 
-        return patientProfileRepository.save(profile);
+        PatientProfile saved = patientProfileRepository.save(profile);
+        ensureAccountProfileLink(user, saved, firstProfile);
+        return saved;
     }
 
     /**
