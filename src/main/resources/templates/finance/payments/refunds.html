@@ -100,9 +100,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(refunds)}">
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                Chưa có giao dịch hoàn tiền nào.
+                            <td colspan="10" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-arrow-counterclockwise empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; giao d&#7883;ch ho&#224;n ti&#7873;n n&#224;o</h6>
+                                    <p>L&#7853;p phi&#7871;u ho&#224;n tr&#7843; ti&#7873;n cho b&#7879;nh nh&#226;n khi h&#7911;y d&#7883;ch v&#7903; ho&#7863;c thay &#273;&#7893;i k&#7871; ho&#7841;ch &#273;i&#7873;u tr&#7883;.</p>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="toggleRefundModal()">
+                                        <i class="bi bi-plus-lg me-1"></i>L&#7853;p phi&#7871;u ho&#224;n ti&#7873;n
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="rf : ${refunds}">

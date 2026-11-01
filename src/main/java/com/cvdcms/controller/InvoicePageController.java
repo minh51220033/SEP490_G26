@@ -53,6 +53,8 @@ public class InvoicePageController {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final TreatmentPlanRepository treatmentPlanRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
 
     public InvoicePageController(
             InvoiceService invoiceService,
@@ -353,6 +355,13 @@ public class InvoicePageController {
         model.addAttribute("payments", payments);
         model.addAttribute("refunds", refunds);
         model.addAttribute("auditLogs", auditLogs);
+        if (paymentAllocationService != null) {
+            model.addAttribute("hasAllocations", paymentAllocationService.hasAllocations(id));
+            model.addAttribute("allocations", paymentAllocationService.getAllocationsByInvoiceId(id));
+        } else {
+            model.addAttribute("hasAllocations", false);
+            model.addAttribute("allocations", java.util.List.of());
+        }
 
         return "finance/invoices/detail";
     }
@@ -375,6 +384,13 @@ public class InvoicePageController {
         model.addAttribute("invoice", invoice);
         model.addAttribute("payments", payments);
         model.addAttribute("printFormat", format); // A4, A5, POS
+        if (paymentAllocationService != null) {
+            model.addAttribute("hasAllocations", paymentAllocationService.hasAllocations(id));
+            model.addAttribute("allocations", paymentAllocationService.getAllocationsByInvoiceId(id));
+        } else {
+            model.addAttribute("hasAllocations", false);
+            model.addAttribute("allocations", java.util.List.of());
+        }
 
         return "finance/invoices/print";
     }

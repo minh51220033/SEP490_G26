@@ -19,6 +19,10 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     // Lấy các chi nhánh đang hoạt động để phục vụ đặt lịch.
     List<Branch> findByIsActiveTrueOrderByBranchNameAsc();
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Branch b WHERE b.branchId = :branchId")
+    java.util.Optional<Branch> findByIdForUpdate(@Param("branchId") Long branchId);
+
     /**
      * Lấy danh sách chi nhánh đang hoạt động mà tài khoản được phép truy cập.
      *

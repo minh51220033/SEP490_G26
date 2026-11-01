@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Cấu hình tài khoản ngân hàng nhận tiền - CV-DCMS')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        .bank-badge-default {
+            background-color: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fde68a;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bank-bin-tag {
+            font-family: monospace;
+            background: #e2e8f0;
+            color: #334155;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .account-num-text {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #1e293b;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('bank-accounts')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Cấu hình Tài khoản Ngân hàng Nhận tiền')}"></header>
+
+        <main class="app-content finance-page">
+            <!-- Thông báo thành công / lỗi -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Header tiêu đề -->
+            <div class="fin-header">
+                <div>
+                    <h1><i class="bi bi-bank text-primary"></i> Quản lý Tài khoản Ngân hàng theo Chi nhánh</h1>
+                    <p>Cấu hình tài khoản nhận tiền chuyển khoản (VietQR). Mỗi chi nhánh có thể có nhiều tài khoản hoạt động nhưng tối đa một tài khoản mặc định.</p>
+                </div>
+                <div>
+                    <button type="button" class="fin-btn fin-btn-success" data-bs-toggle="modal" data-bs-target="#createAccountModal" onclick="prepareCreateModal()">
+                        <i class="bi bi-plus-lg"></i> Thêm tài khoản mới
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bộ lọc theo chi nhánh -->
+            <div class="fin-card mb-4 p-3">
+                <form th:action="@{/admin/bank-accounts}" method="get" class="row g-3 align-items-center">
+                    <div class="col-md-5">
+                        <label for="branchFilter" class="form-label small fw-bold text-muted">LỌC THEO CHI NHÁNH:</label>
+                        <select id="branchFilter" name="branchId" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- Tất cả chi nhánh trong hệ thống --</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.branchId}"
+                                    th:text="${b.branchName} + ' (' + ${b.branchCode} + ')'"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-7 text-md-end pt-md-4">
+                        <span class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Tổng số tài khoản: <strong th:text="${#lists.size(accounts)}">0</strong>
+                        </span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bảng danh sách tài khoản -->
+            <div class="fin-card">
+                <div class="table-responsive">
+                    <table class="fin-table">
+                        <thead>
+                        <tr>
+                            <th>Chi nhánh</th>
+                            <th>Ngân hàng</th>
+                            <th>Số tài khoản &amp; Chủ TK</th>
+                            <th>Mặc định</th>
+                            <th>Trạng thái</th>
+                            <th>Ghi chú</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(accounts)}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="empty-state-box py-3 text-center">
+                                    <i class="bi bi-bank fs-1 d-block mb-3 text-secondary opacity-75"></i>
+                                    <h6 class="fw-bold text-dark mb-1">Chưa có tài khoản ngân hàng nào</h6>
+                                    <p class="text-muted small mb-3">Chưa có tài khoản ngân hàng nào được cấu hình cho chi nhánh này.</p>
+                                    <button type="button" class="btn btn-primary px-3 py-2 shadow-sm"
+                                            data-bs-toggle="modal" data-bs-target="#createAccountModal"
+                                            onclick="prepareCreateModal()">
+                                        <i class="bi bi-plus-lg me-1"></i> Thêm tài khoản ngân hàng
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:each="acc : ${accounts}">
+                            <td>
+                                <strong class="text-dark" th:text="${acc.branchName}">Chi nhánh Quận 1</strong>
+                                <span class="d-block small text-muted" th:text="'Mã CS: ' + ${acc.branchCode}">CN01</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary" th:text="${acc.bankName}">Vietcombank</div>
+                                <div class="mt-1">
+                                    <span class="bank-bin-tag" th:text="'BIN: ' + ${acc.bankBin}">BIN: 970436</span>
+                                    <span th:if="${acc.bankShortName}" class="badge bg-light text-secondary border ms-1" th:text="${acc.bankShortName}">VCB</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="account-num-text" th:text="${acc.accountNumber}">0011004328888</div>
+                                <div class="small fw-semibold text-secondary text-uppercase" th:text="${acc.accountHolderName}">CONG TY NHA KHOA KY THUAT CAO</div>
+                            </td>
+                            <td>
+                                <span th:if="${acc.isDefault}" class="bank-badge-default">
+                                    <i class="bi bi-star-fill text-warning"></i> Mặc định
+                                </span>
+                                <span th:unless="${acc.isDefault}" class="text-muted small">-</span>
+                            </td>
+                            <td>
+                                <span th:if="${acc.isActive}" class="fin-badge fin-badge-paid">
+                                    <i class="bi bi-check-circle-fill"></i> Hoạt động
+                                </span>
+                                <span th:unless="${acc.isActive}" class="fin-badge fin-badge-cancelled">
+                                    <i class="bi bi-slash-circle"></i> Ngừng sử dụng
+                                </span>
+                            </td>
+                            <td>
+                                <span class="small text-muted" th:text="${acc.notes != null ? acc.notes : '-'}">-</span>
+                                <span th:if="${acc.hasTransactions}" class="d-block badge bg-info-subtle text-info mt-1" style="font-size: 0.7rem;">
+                                    <i class="bi bi-receipt"></i> Đã có giao dịch
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Đặt làm mặc định -->
+                                    <form th:if="${!acc.isDefault and acc.isActive}"
+                                          th:action="@{/admin/bank-accounts/{id}/set-default(id=${acc.accountId})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Đặt tài khoản này làm tài khoản nhận tiền mặc định cho chi nhánh?')">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit" class="btn btn-outline-warning" title="Đặt làm mặc định">
+                                            <i class="bi bi-star"></i> Mặc định
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Sửa -->
+                                    <button type="button" class="btn btn-outline-primary"
+                                            th:data-account-id="${acc.accountId}"
+                                            th:data-branch-id="${acc.branchId}"
+                                            th:data-bank-bin="${acc.bankBin}"
+                                            th:data-bank-name="${acc.bankName}"
+                                            th:data-bank-short="${acc.bankShortName}"
+                                            th:data-account-num="${acc.accountNumber}"
+                                            th:data-holder="${acc.accountHolderName}"
+                                            th:data-is-default="${acc.isDefault}"
+                                            th:data-is-active="${acc.isActive}"
+                                            th:data-notes="${acc.notes}"
+                                            th:data-has-tx="${acc.hasTransactions}"
+                                            onclick="openEditModal(this)"
+                                            title="Chỉnh sửa tài khoản">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <!-- Bật / Ngừng sử dụng -->
+                                    <form th:action="@{/admin/bank-accounts/{id}/toggle-status(id=${acc.accountId})}"
+                                          method="post" class="d-inline">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <input type="hidden" name="active" th:value="${!acc.isActive}">
+                                        <button th:if="${acc.isActive}" type="submit" class="btn btn-outline-secondary"
+                                                onclick="return confirm('Bạn có chắc chắn muốn NGỪNG SỬ DỤNG tài khoản này?')"
+                                                title="Ngừng sử dụng">
+                                            <i class="bi bi-pause-circle"></i>
+                                        </button>
+                                        <button th:unless="${acc.isActive}" type="submit" class="btn btn-outline-success"
+                                                title="Kích hoạt lại">
+                                            <i class="bi bi-play-circle"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Xóa (chỉ khi chưa có giao dịch) -->
+                                    <form th:if="${!acc.hasTransactions}"
+                                          th:action="@{/admin/bank-accounts/{id}/delete(id=${acc.accountId})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản chưa sử dụng này?')">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit" class="btn btn-outline-danger" title="Xóa tài khoản tạo nhầm">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL THÊM TÀI KHOẢN MỚI -->
+<div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form th:action="@{/admin/bank-accounts/create}" method="post">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createModalLabel"><i class="bi bi-bank me-2"></i>Thêm tài khoản ngân hàng nhận tiền</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="createBranchId" class="form-label fw-bold">Chi nhánh áp dụng <span class="text-danger">*</span></label>
+                        <select id="createBranchId" name="branchId" class="form-select" required>
+                            <option value="">-- Chọn chi nhánh tiếp nhận --</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.branchId}"
+                                    th:text="${b.branchName} + ' (' + ${b.branchCode} + ')'"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quickSelectBank" class="form-label fw-bold text-muted small">CHỌN NHANH NGÂN HÀNG HỖ TRỢ VIETQR:</label>
+                        <select id="quickSelectBank" class="form-select" onchange="onPopularBankSelected(this, 'create')">
+                            <option value="">-- Chọn ngân hàng để tự điền Mã BIN &amp; Tên ngân hàng --</option>
+                            <option th:each="pb : ${popularBanks}"
+                                    th:value="${pb.bin}"
+                                    th:data-name="${pb.name}"
+                                    th:data-short="${pb.shortName}"
+                                    th:text="${pb.name} + ' [BIN: ' + ${pb.bin} + ']'"></option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="createBankBin" class="form-label fw-bold">Mã BIN ngân hàng <span class="text-danger">*</span></label>
+                            <input type="text" id="createBankBin" name="bankBin" class="form-control" placeholder="VD: 970436" required pattern="[0-9]{6}" maxlength="6" title="Mã BIN ngân hàng phải gồm đúng 6 chữ số">
+                            <small class="text-muted">Mã 6 chữ số chuẩn Napas/VietQR</small>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="createBankName" class="form-label fw-bold">Tên ngân hàng <span class="text-danger">*</span></label>
+                            <input type="text" id="createBankName" name="bankName" class="form-control" placeholder="VD: Vietcombank" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="createBankShort" class="form-label">Tên viết tắt</label>
+                            <input type="text" id="createBankShort" name="bankShortName" class="form-control" placeholder="VD: VCB">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="createAccountNum" class="form-label fw-bold">Số tài khoản ngân hàng <span class="text-danger">*</span></label>
+                            <input type="text" id="createAccountNum" name="accountNumber" class="form-control fw-bold" placeholder="VD: 0011004328888" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="createHolder" class="form-label fw-bold">Tên chủ tài khoản <span class="text-danger">*</span></label>
+                            <input type="text" id="createHolder" name="accountHolderName" class="form-control text-uppercase" placeholder="VD: NHA KHOA KY THUAT CAO CV DCMS" required>
+                            <small class="text-muted">In hoa, không dấu theo chuẩn VietQR</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="createNotes" class="form-label">Ghi chú</label>
+                        <input type="text" id="createNotes" name="notes" class="form-control" placeholder="Ghi chú nội bộ...">
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input type="hidden" name="_isDefault" value="on">
+                        <input class="form-check-input" type="checkbox" id="createIsDefault" name="isDefault" value="true">
+                        <label class="form-check-label fw-bold text-dark" for="createIsDefault">
+                            Đặt làm tài khoản nhận tiền mặc định của chi nhánh này
+                        </label>
+                        <div class="text-muted small">Khi thu ngân thu tiền chuyển khoản, hệ thống sẽ tự động chọn tài khoản mặc định này.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Lưu tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SỬA TÀI KHOẢN -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editAccountForm" method="post">
+                <input type="hidden" id="editBranchIdHidden" name="branchId">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="editModalLabel"><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa tài khoản ngân hàng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Cảnh báo nếu đã có giao dịch -->
+                    <div id="editTxWarning" class="alert alert-warning py-2 small mb-3" style="display: none;">
+                        <i class="bi bi-shield-lock-fill me-1"></i>
+                        <strong>Lưu ý:</strong> Tài khoản này đã phát sinh giao dịch trong quá khứ. Nhằm bảo toàn tính toàn vẹn dữ liệu, <strong>Số tài khoản, Mã ngân hàng và Chi nhánh</strong> không thể chỉnh sửa. Nếu muốn thay đổi số tài khoản, vui lòng tạo tài khoản mới và ngừng sử dụng tài khoản này.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editBranchId" class="form-label fw-bold">Chi nhánh áp dụng</label>
+                        <select id="editBranchId" class="form-select" required>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.branchId}"
+                                    th:text="${b.branchName} + ' (' + ${b.branchCode} + ')'"></option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="editBankBin" class="form-label fw-bold">Mã BIN ngân hàng</label>
+                            <input type="text" id="editBankBin" name="bankBin" class="form-control" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="editBankName" class="form-label fw-bold">Tên ngân hàng</label>
+                            <input type="text" id="editBankName" name="bankName" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="editBankShort" class="form-label">Tên viết tắt</label>
+                            <input type="text" id="editBankShort" name="bankShortName" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="editAccountNum" class="form-label fw-bold">Số tài khoản</label>
+                            <input type="text" id="editAccountNum" name="accountNumber" class="form-control fw-bold" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editHolder" class="form-label fw-bold">Tên chủ tài khoản</label>
+                            <input type="text" id="editHolder" name="accountHolderName" class="form-control text-uppercase" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editNotes" class="form-label">Ghi chú</label>
+                        <input type="text" id="editNotes" name="notes" class="form-control">
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input type="hidden" name="_isDefault" value="on">
+                        <input class="form-check-input" type="checkbox" id="editIsDefault" name="isDefault" value="true">
+                        <label class="form-check-label fw-bold" for="editIsDefault">
+                            Đặt làm tài khoản mặc định của chi nhánh
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input type="hidden" name="_isActive" value="on">
+                        <input class="form-check-input" type="checkbox" id="editIsActive" name="isActive" value="true">
+                        <label class="form-check-label fw-bold" for="editIsActive">
+                            Kích hoạt tài khoản này (Đang hoạt động)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Lưu cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    function prepareCreateModal() {
+        const filterBranch = document.getElementById('branchFilter');
+        if (filterBranch && filterBranch.value) {
+            const createBranch = document.getElementById('createBranchId');
+            if (createBranch) {
+                createBranch.value = filterBranch.value;
+            }
+        }
+    }
+    function onPopularBankSelected(selectEl, prefix) {
+        const option = selectEl.options[selectEl.selectedIndex];
+        if (!option.value) return;
+
+        const bin = option.value;
+        const name = option.getAttribute('data-name');
+        const shortName = option.getAttribute('data-short');
+
+        if (prefix === 'create') {
+            document.getElementById('createBankBin').value = bin;
+            document.getElementById('createBankName').value = name;
+            document.getElementById('createBankShort').value = shortName || '';
+        }
+    }
+
+    function openEditModal(btn) {
+        const accId = btn.getAttribute('data-account-id');
+        const branchId = btn.getAttribute('data-branch-id');
+        const bin = btn.getAttribute('data-bank-bin');
+        const bankName = btn.getAttribute('data-bank-name');
+        const bankShort = btn.getAttribute('data-bank-short');
+        const accNum = btn.getAttribute('data-account-num');
+        const holder = btn.getAttribute('data-holder');
+        const isDefault = btn.getAttribute('data-is-default') === 'true';
+        const isActive = btn.getAttribute('data-is-active') === 'true';
+        const notes = btn.getAttribute('data-notes') || '';
+        const hasTx = btn.getAttribute('data-has-tx') === 'true';
+
+        document.getElementById('editAccountForm').action = '/admin/bank-accounts/' + accId + '/update';
+        document.getElementById('editBranchId').value = branchId;
+        document.getElementById('editBranchIdHidden').value = branchId;
+        document.getElementById('editBankBin').value = bin;
+        document.getElementById('editBankName').value = bankName;
+        document.getElementById('editBankShort').value = bankShort || '';
+        document.getElementById('editAccountNum').value = accNum;
+        document.getElementById('editHolder').value = holder;
+        document.getElementById('editNotes').value = notes;
+
+        const defaultCheckbox = document.getElementById('editIsDefault');
+        const activeCheckbox = document.getElementById('editIsActive');
+        activeCheckbox.checked = isActive;
+        defaultCheckbox.checked = isDefault;
+
+        if (!isActive) {
+            defaultCheckbox.checked = false;
+            defaultCheckbox.disabled = true;
+        } else {
+            defaultCheckbox.disabled = false;
+        }
+
+        const warningEl = document.getElementById('editTxWarning');
+        const branchSelect = document.getElementById('editBranchId');
+        const binInput = document.getElementById('editBankBin');
+        const accNumInput = document.getElementById('editAccountNum');
+        const bankNameInput = document.getElementById('editBankName');
+
+        if (hasTx) {
+            warningEl.style.display = 'block';
+            branchSelect.setAttribute('disabled', 'disabled');
+            binInput.setAttribute('readonly', 'readonly');
+            accNumInput.setAttribute('readonly', 'readonly');
+            bankNameInput.setAttribute('readonly', 'readonly');
+        } else {
+            warningEl.style.display = 'none';
+            branchSelect.removeAttribute('disabled');
+            binInput.removeAttribute('readonly');
+            accNumInput.removeAttribute('readonly');
+            bankNameInput.removeAttribute('readonly');
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('editAccountModal'));
+        modal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const editForm = document.getElementById('editAccountForm');
+        if (editForm) {
+            editForm.addEventListener('submit', function() {
+                const branchSel = document.getElementById('editBranchId');
+                if (branchSel && branchSel.value) {
+                    document.getElementById('editBranchIdHidden').value = branchSel.value;
+                }
+            });
+        }
+
+        const activeCheckbox = document.getElementById('editIsActive');
+        const defaultCheckbox = document.getElementById('editIsDefault');
+        if (activeCheckbox && defaultCheckbox) {
+            activeCheckbox.addEventListener('change', function() {
+                if (!this.checked) {
+                    defaultCheckbox.checked = false;
+                    defaultCheckbox.disabled = true;
+                } else {
+                    defaultCheckbox.disabled = false;
+                }
+            });
+            defaultCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    activeCheckbox.checked = true;
+                    defaultCheckbox.disabled = false;
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

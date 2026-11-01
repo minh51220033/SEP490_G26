@@ -1,5 +1,6 @@
 package com.cvdcms.patientportal;
 
+import com.cvdcms.repository.InvoiceRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -17,10 +18,14 @@ public class PortalPatientPageController {
     private final PortalPatientService patients;
     private final PatientTransferService transfers;
     private final PortalAccess access;
+    private final InvoiceRepository invoiceRepository;
 
     public PortalPatientPageController(PortalPatientService patients, PatientTransferService transfers,
-                                       PortalAccess access) {
-        this.patients = patients; this.transfers = transfers; this.access = access;
+                                       PortalAccess access, InvoiceRepository invoiceRepository) {
+        this.patients = patients;
+        this.transfers = transfers;
+        this.access = access;
+        this.invoiceRepository = invoiceRepository;
     }
 
     @ModelAttribute("roleNames")
@@ -56,6 +61,7 @@ public class PortalPatientPageController {
         model.addAttribute("visits", patients.visits(session, id));
         model.addAttribute("photos", patients.photos(session, id));
         model.addAttribute("plans", patients.plans(session, id));
+        model.addAttribute("invoices", invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id));
         return "portal/records/detail";
     }
 

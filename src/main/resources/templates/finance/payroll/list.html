@@ -28,10 +28,13 @@
                     <h1>Quản lý Bảng Lương & Hoa Hồng (SCR-32.1)</h1>
                     <p>Tính toán bảng lương hàng tháng theo cơ chế lương cố định + phụ cấp, khấu trừ tạm ứng, tính hoa hồng và chi trả.</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#createPeriodModal">
                         <i class="bi bi-plus-circle"></i> Khởi tạo kỳ lương mới
                     </button>
+                    <a th:href="@{/admin/staffs}" class="fin-btn fin-btn-outline" title="Thi&#7871;t l&#7853;p m&#7913;c l&#432;&#417;ng c&#417; b&#7843;n &amp; ph&#7909; c&#7845;p cho t&#7915;ng nh&#226;n s&#7921;">
+                        <i class="bi bi-person-gear"></i> Thi&#7871;t l&#7853;p l&#432;&#417;ng nh&#226;n s&#7921;
+                    </a>
                     <a th:href="@{/payroll/advances}" class="fin-btn fin-btn-outline">
                         <i class="bi bi-cash-coin"></i> Phiếu tạm ứng lương
                     </a>
@@ -104,9 +107,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${periods.content.isEmpty()}">
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                                Chưa có kỳ lương nào phù hợp điều kiện lọc. Nhấn <b>"Khởi tạo kỳ lương mới"</b> để bắt đầu.
+                            <td colspan="9" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-calculator empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; k&#7923; l&#432;&#417;ng n&#224;o</h6>
+                                    <p>Kh&#7853;i t&#7841;o k&#7923; l&#432;&#417;ng h&#224;ng th&#225;ng &#273;&#7875; t&#237;nh l&#432;&#417;ng c&#417; b&#7843;n, hoa h&#7891;ng v&#224; kh&#7845;u tr&#7915; t&#7841;m &#7913;ng.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createPeriodModal">
+                                        <i class="bi bi-plus-circle me-1"></i>Kh&#7853;i t&#7841;o k&#7923; l&#432;&#417;ng m&#7899;i
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="p : ${periods.content}">
@@ -134,9 +143,14 @@
                                 <span th:if="${p.approvedBy == null and p.submittedBy == null}">-</span>
                             </td>
                             <td data-column-key="actions" class="text-center">
-                                <a th:href="@{/payroll/{id}(id=${p.periodId})}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-file-earmark-text"></i> Xem chi tiết
-                                </a>
+                                <div class="d-inline-flex gap-1">
+                                    <a th:href="@{/payroll/{id}(id=${p.periodId})}" class="btn btn-sm btn-outline-primary" title="Xem chi ti&#7871;t b&#7843;ng l&#432;&#417;ng">
+                                        <i class="bi bi-file-earmark-text"></i> Chi ti&#7871;t
+                                    </a>
+                                    <a th:href="@{/payroll/{id}/export(id=${p.periodId})}" class="btn btn-sm btn-outline-success" title="Xu&#7845;t file Excel">
+                                        <i class="bi bi-file-earmark-excel"></i> Xu&#7845;t Excel
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         </tbody>
@@ -203,6 +217,9 @@
                                placeholder="Ví dụ: Bảng lương nhân sự tháng 10/2026">
                     </div>
                     <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i> H&#7879; th&#7889;ng s&#7869; t&#7921; &#273;&#7897;ng qu&#233;t nh&#226;n s&#7921; &#273;ang ho&#7841;t &#273;&#7897;ng t&#7841;i chi nh&#225;nh, &#225;p d&#7909;ng <strong>m&#7913;c l&#432;&#417;ng c&#417; b&#7843;n &amp; ph&#7909; c&#7845;p</strong> &#273;&#227; c&#224;i &#273;&#7863;t trong <a th:href="@{/admin/staffs}" target="_blank" class="fw-bold text-decoration-underline text-primary">H&#7891; s&#417; nh&#226;n s&#7921;</a>.
+                    </div>
+                    <div class="d-none">
                         <i class="bi bi-info-circle me-1"></i> Hệ thống sẽ tự động quét nhân sự đang hoạt động tại chi nhánh, áp dụng mức lương cơ bản và phụ cấp để tạo các dòng lương.
                     </div>
                 </div>

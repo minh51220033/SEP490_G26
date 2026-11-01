@@ -993,3 +993,117 @@
         }
     }
 }
+
+
+/* ==========================================================================
+   Quick Pay Modal & VietQR Responsive Layout Fixes
+   ========================================================================== */
+#quickPayModal .fin-modal-card {
+    width: 100%;
+    max-width: 660px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+
+#quickPayModal .fin-modal-card > div.p-4 {
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.vietqr-box {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.vietqr-box .vietqr-col-qr {
+    flex: 0 0 200px;
+    max-width: 200px;
+}
+
+.vietqr-box .vietqr-col-info {
+    flex: 1 1 270px;
+    min-width: 250px;
+}
+
+@media (max-width: 575.98px) {
+    .vietqr-box .vietqr-col-qr {
+        margin: 0 auto;
+    }
+}
+
+
+/* ==========================================================================
+   Fin Table Actions: Cụm nút thao tác hàng bảng chuẩn MISA AMIS / Clean UI
+   ========================================================================== */
+.fin-table-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+.fin-table-btn {
+    height: 28px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    line-height: 1;
+    border: 1px solid transparent;
+    transition: all 0.12s ease;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+/* Nút icon vuông 28x28px */
+.fin-table-btn.fin-table-btn-icon {
+    width: 28px;
+    min-width: 28px;
+    padding: 0;
+}
+
+/* 1. Nút Xem chi tiết */
+.fin-table-btn-view {
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+.fin-table-btn-view:hover {
+    color: #ffffff;
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+/* 2. Nút In hóa đơn / phiếu thu */
+.fin-table-btn-print {
+    color: #475569;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+.fin-table-btn-print:hover {
+    color: #ffffff;
+    background: #475569;
+    border-color: #475569;
+}
+
+/* 3. Nút Thu tiền (Nổi bật, tinh tế) */
+.fin-table-btn-pay {
+    color: #065f46;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    font-weight: 600;
+}
+.fin-table-btn-pay:hover {
+    color: #ffffff;
+    background: #059669;
+    border-color: #059669;
+}

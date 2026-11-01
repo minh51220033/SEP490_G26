@@ -96,6 +96,11 @@
                                 </select>
                             </div>
 
+                            <input type="hidden" id="depositBankAccountId" name="bankAccountId">
+                            <input type="hidden" id="depositExpectedTransferContent" name="expectedTransferContent">
+                            <input type="hidden" id="depositIdempotencyKey" name="idempotencyKey">
+                            <div id="advanceDepositQrContainer" class="mb-3" style="display: none;"></div>
+
                             <div class="mb-3">
                                 <label for="depositRef" class="form-label">Mã giao dịch ngân hàng / POS</label>
                                 <input type="text" id="depositRef" name="transactionRef" class="form-control" placeholder="Mã giao dịch...">
@@ -173,6 +178,39 @@
             resultsEl.innerHTML = '<div class="p-3 text-center text-danger">Lỗi tìm kiếm: ' + e.message + '</div>';
         }
     }
+</script>
+<script th:src="@{/js/vietqr-payment.js}"></script>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const idKeyEl = document.getElementById('depositIdempotencyKey');
+        if (idKeyEl && !idKeyEl.value) {
+            idKeyEl.value = 'DEP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        const depBranchEl = document.getElementById('depositBranchId');
+        let depositQr = null;
+
+        if (document.getElementById('advanceDepositQrContainer')) {
+            depositQr = new VietQrPaymentBox({
+                container: 'advanceDepositQrContainer',
+                methodSelect: 'depositMethod',
+                amountInput: 'depositAmount',
+                branchId: () => {
+                    const sel = document.getElementById('depositBranchId');
+                    return sel ? sel.value : null;
+                },
+                profileId: () => /*[[${selectedPatient != null ? selectedPatient.profileId : null}]]*/ null,
+                bankAccountIdInput: 'depositBankAccountId',
+                expectedContentInput: 'depositExpectedTransferContent'
+            });
+
+            if (depBranchEl) {
+                depBranchEl.addEventListener('change', function () {
+                    depositQr.refresh(true);
+                });
+            }
+        }
+    });
 </script>
 </body>
 </html>

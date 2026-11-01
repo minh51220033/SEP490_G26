@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 public class FinanceWorkflowUnitTest {
 
     @Mock
@@ -112,6 +113,7 @@ public class FinanceWorkflowUnitTest {
                 prescriptionRepository, prescriptionItemRepository, materialBatchRepository,
                 branchInventoryRepository, medicationRepository, stockIssueRepository
         );
+        invoiceService.setMembershipTierRepository(membershipTierRepository);
 
         paymentService = new PaymentServiceImpl(
                 paymentRepository, invoiceRepository, invoiceAuditLogRepository,
@@ -2135,5 +2137,136 @@ public class FinanceWorkflowUnitTest {
         invoiceService.cancelInvoice(999L, "Khách hủy ca", 1L);
         assertEquals(200, wallet.getCurrentPoints()); // Đã hoàn lại đủ 100 điểm về 200
     }
-}
+    @Test
+    @DisplayName("Test 41: Đổi điểm Loyalty không bao giờ vượt quá số tiền hóa đơn, chỉ trừ đúng số điểm cần thiết")
+    void test41_pointsRedeemedNeverExceedsInvoicePayableAmount() {
+        // Dịch vụ 50.000 VNĐ
+        PerformedService ps50 = new PerformedService();
+        ps50.setPerformedId(280L);
+        ps50.setVisit(mockVisit);
+        ps50.setPatientProfile(mockPatient);
+        ps50.setBranch(mockBranch);
+        ps50.setService(mockService);
+        ps50.setQuantity(BigDecimal.ONE);
+        ps50.setUnitPrice(new BigDecimal("50000.00"));
+        ps50.setFinalPrice(new BigDecimal("50000.00"));
+        ps50.setStatus(PerformedServiceStatus.COMPLETED);
 
+        when(performedServiceRepository.findById(280L)).thenReturn(Optional.of(ps50));
+        when(performedServiceRepository.findByIdForUpdate(280L)).thenReturn(Optional.of(ps50));
+        when(invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(280L)).thenReturn(false);
+        when(visitRepository.findById(10L)).thenReturn(Optional.of(mockVisit));
+
+        // Hạng thành viên: 1 điểm = 1.000 VNĐ (100 điểm = 100.000 VNĐ)
+        MembershipTier tier1000 = new MembershipTier();
+        tier1000.setTierId(999L);
+        tier1000.setTierName("Hạng 1000đ");
+        tier1000.setDiscountPercent(BigDecimal.ZERO);
+        tier1000.setPointValue(new BigDecimal("1000.00"));
+        mockPatient.setMembershipTier(tier1000);
+
+        // Khách hàng có 100 điểm trong ví
+        PatientLoyaltyWallet wallet = new PatientLoyaltyWallet();
+        wallet.setWalletId(88L);
+        wallet.setPatientProfile(mockPatient);
+        wallet.setCurrentPoints(100);
+
+        when(patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(1L)).thenReturn(Optional.of(wallet));
+        when(patientLoyaltyWalletRepository.findByProfileIdForUpdate(1L)).thenReturn(Optional.of(wallet));
+
+        InvoiceCreateRequestDTO req = new InvoiceCreateRequestDTO();
+        req.setVisitId(10L);
+        req.setProfileId(1L);
+        req.setBranchId(1L);
+        req.setPointsToRedeem(100); // Khách muốn đổi hết 100 điểm (100k) nhưng HĐ chỉ có 50k
+        InvoiceItemRequestDTO item = new InvoiceItemRequestDTO();
+        item.setPerformedId(280L);
+        req.setItems(List.of(item));
+
+        // 1. Preview: Hóa đơn 50k -> Chỉ cho đổi tối đa 50 điểm
+        InvoiceCalculationPreviewDTO preview = invoiceService.calculatePreview(req);
+        assertEquals(new BigDecimal("50000.00"), preview.getPointDiscountAmount());
+        assertEquals(new BigDecimal("0.00"), preview.getTotalAmount());
+        assertEquals(50, preview.getMaxPointsAllowed(), "Tối đa chỉ được đổi 50 điểm");
+        assertEquals(50, preview.getPointsRedeemed(), "Chỉ dùng 50 điểm");
+
+        // 2. Tạo hóa đơn
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Invoice invoice = invoiceService.createInvoice(req, 1L);
+        invoice.setInvoiceId(8888L);
+        invoice.setInvoiceCode("HD-TEST-PT-CAP");
+        assertEquals(new BigDecimal("50000.00"), invoice.getPointDiscount());
+        assertEquals(50, invoice.getPointsRedeemed());
+        assertEquals(new BigDecimal("0.00"), invoice.getTotalAmount());
+        assertEquals(InvoicePaymentStatus.PAID, invoice.getPaymentStatus());
+
+        // 3. Vì hóa đơn có số tiền còn lại = 0đ (PAID), createInvoice đã tự động finalizeBenefits:
+        // Điểm chỉ bị trừ 50 điểm, bệnh nhân còn lại 50 điểm trong ví!
+        assertEquals(50, wallet.getCurrentPoints(), "Chỉ trừ 50 điểm, bệnh nhân còn lại đúng 50 điểm!");
+
+        // 4. Kiểm tra tính idempotent: Đã trừ một lần thì gọi lại finalizeInvoiceBenefits không bị trừ lần 2
+        when(pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionType(any(), eq(PointTransactionType.REDEEM))).thenReturn(true);
+        invoiceService.finalizeInvoiceBenefits(invoice);
+        assertEquals(50, wallet.getCurrentPoints(), "Không bị trừ lần hai, số dư ví vẫn là 50 điểm!");
+    }
+
+    // =========================================================================
+    // 42. In phiếu thu viện phí (receipt.html) an toàn, luôn gán hasAllocations
+    // =========================================================================
+    @Test
+    @DisplayName("Test 42: PaymentPageController printReceipt populates hasAllocations and handles null/empty allocations safely")
+    void test42_printReceipt_populatesHasAllocations() {
+        com.cvdcms.controller.PaymentPageController controller = new com.cvdcms.controller.PaymentPageController(
+                paymentService,
+                mock(com.cvdcms.service.RefundService.class),
+                mock(com.cvdcms.service.DebtService.class),
+                branchRepository,
+                invoiceRepository,
+                patientProfileRepository,
+                paymentRepository,
+                userRepository,
+                staffBranchAssignmentRepository
+        );
+        com.cvdcms.service.PaymentAllocationService mockAllocationService = mock(com.cvdcms.service.PaymentAllocationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "paymentAllocationService", mockAllocationService);
+
+        Payment p = new Payment();
+        p.setPaymentId(101L);
+        p.setPaymentCode("TT-101");
+        p.setAmount(new BigDecimal("100000"));
+        p.setPaymentType(PaymentType.PAYMENT);
+        p.setPaymentMethod(PaymentMethod.CASH);
+        p.setBranch(mockBranch);
+        p.setPatientProfile(mockPatient);
+        p.setCashier(mockAccountantStaff);
+
+        when(paymentRepository.findWithDetailsById(101L)).thenReturn(Optional.of(p));
+        when(userRepository.hasActiveAdminRole(anyLong())).thenReturn(true);
+
+        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", mockAccountantUser);
+
+        // Case 1: Allocations is empty -> hasAllocations = false
+        when(mockAllocationService.getAllocationsByPaymentId(101L)).thenReturn(Collections.emptyList());
+        String view = controller.printReceipt(101L, model, session);
+        assertEquals("finance/payments/receipt", view);
+        assertEquals(Boolean.FALSE, model.get("hasAllocations"));
+        assertNotNull(model.get("allocations"));
+
+        // Case 2: Allocations has items -> hasAllocations = true
+        PaymentAllocationDTO alDto = new PaymentAllocationDTO();
+        alDto.setItemName("Dịch vụ hàn răng");
+        alDto.setAmount(new BigDecimal("100000"));
+        when(mockAllocationService.getAllocationsByPaymentId(101L)).thenReturn(List.of(alDto));
+
+        org.springframework.ui.ExtendedModelMap model2 = new org.springframework.ui.ExtendedModelMap();
+        String view2 = controller.printReceipt(101L, model2, session);
+        assertEquals("finance/payments/receipt", view2);
+        assertEquals(Boolean.TRUE, model2.get("hasAllocations"));
+    }
+}

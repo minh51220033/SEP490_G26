@@ -374,9 +374,12 @@
                                 <div class="input-group">
                                     <input type="number" id="pointsToRedeem" name="pointsToRedeem" class="form-control"
                                            value="0" min="0" th:max="${loyaltyWallet != null ? loyaltyWallet.currentPoints : 0}"
-                                           onchange="triggerRecalculate()">
+                                           oninput="onPointsInputChanged(this)" onchange="triggerRecalculate()">
                                     <span class="input-group-text small">điểm</span>
                                 </div>
+                                <small id="pointDiscountHint" class="text-muted d-block mt-1">
+                                    <i class="bi bi-shield-check text-success me-1"></i>Điểm dùng không bao giờ vượt quá số tiền phải trả của hóa đơn.
+                                </small>
                             </div>
 
                             <!-- Giảm giá trực tiếp khác -->
@@ -682,9 +685,23 @@
     }
 
     // Tính toán xem trước bằng backend Preview API
+    function onPointsInputChanged(input) {
+        const val = parseInt(input.value) || 0;
+        const max = parseInt(input.max);
+        if (!isNaN(max) && val > max) {
+            input.value = max;
+        }
+        triggerRecalculate();
+    }
+
     async function triggerRecalculate() {
-        const profileId = document.getElementById('hiddenProfileId').value;
-        const visitId = document.getElementById('hiddenVisitId').value;
+        const profileId = document.getElementById('profileId').value;
+        const visitId = document.getElementById('visitId').value;
+        const prescInput = document.getElementById('prescriptionId');
+        const prescriptionId = prescInput ? prescInput.value : null;
+        const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
+        const buyMedicine = chkBuyMed && chkBuyMed.checked;
+
         const promoId = document.getElementById('promotionId').value;
         const voucherId = document.getElementById('voucherId').value;
         const points = parseInt(document.getElementById('pointsToRedeem').value) || 0;
@@ -694,29 +711,23 @@
         document.querySelectorAll('.item-row').forEach(row => {
             const cb = row.querySelector('.item-checkbox');
             if (cb && cb.checked) {
-                const serviceId = row.querySelector('.prop-service-id').value;
-                const performedId = row.querySelector('.prop-performed-id').value;
-                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
-                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const psId = cb.value;
+                const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+                const qty = parseFloat(row.querySelector('.item-quantity').value) || 1;
                 items.push({
-                    performedId: performedId ? parseInt(performedId) : null,
-                    serviceId: serviceId ? parseInt(serviceId) : null,
-                    quantity: qty,
-                    unitPrice: price
+                    performedServiceId: parseInt(psId),
+                    unitPrice: unitPrice,
+                    quantity: qty
                 });
             }
         });
 
-        const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
-        const buyMedicine = chkBuyMed && chkBuyMed.checked;
         const medicineItems = [];
-        const prescriptionId = document.getElementById('hiddenPrescriptionId').value;
-
         if (buyMedicine) {
             document.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 if (cb && cb.checked) {
-                    const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
+                    const prescItemId = cb.value;
                     const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
                     medicineItems.push({
                         prescriptionItemId: parseInt(prescItemId),
@@ -734,6 +745,8 @@
             document.getElementById('lblPointDiscount').textContent = '-0 đ';
             document.getElementById('lblFinalPay').textContent = '0 đ';
             document.getElementById('lblPointsEarnable').textContent = '+0 điểm';
+            const hint = document.getElementById('pointDiscountHint');
+            if (hint) hint.textContent = 'Điểm dùng không bao giờ vượt quá số tiền phải trả của hóa đơn.';
             return;
         }
 
@@ -763,6 +776,24 @@
                 document.getElementById('lblPointDiscount').textContent = '-' + formatMoney(data.pointDiscountAmount);
                 document.getElementById('lblFinalPay').textContent = formatMoney(data.totalAmount);
                 document.getElementById('lblPointsEarnable').textContent = '+' + (data.pointsEarnable || 0) + ' điểm';
+
+                if (data.maxPointsAllowed !== undefined) {
+                    const pInput = document.getElementById('pointsToRedeem');
+                    if (pInput) {
+                        pInput.max = data.maxPointsAllowed;
+                        if (parseInt(pInput.value) > data.maxPointsAllowed) {
+                            pInput.value = data.maxPointsAllowed;
+                        }
+                        const hintEl = document.getElementById('pointDiscountHint');
+                        if (hintEl) {
+                            if (data.maxPointsAllowed <= 0) {
+                                hintEl.innerHTML = '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Hóa đơn đã được giảm hết 100% hoặc không có điểm khả dụng.</span>';
+                            } else {
+                                hintEl.innerHTML = `<span class="text-primary fw-semibold"><i class="bi bi-check-circle me-1"></i>Tối đa được đổi: <strong>${data.maxPointsAllowed}</strong> điểm (1 điểm = ${formatMoney(data.pointValue)}, giảm tối đa = số tiền còn lại của HĐ)</span>`;
+                            }
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error('Calculation preview error:', e);

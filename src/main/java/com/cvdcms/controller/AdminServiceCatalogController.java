@@ -93,14 +93,25 @@ public class AdminServiceCatalogController {
         @PostMapping("/categories")
         public String createCategory(
                         @Valid @ModelAttribute("categoryForm") ServiceCategoryDTO dto,
-
                         BindingResult bindingResult,
+                        @RequestParam(value = "source", required = false) String source,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
                 if (bindingResult.hasErrors()) {
-                        prepareCategoryFormPage(model, session, null);
-                        return CATEGORY_FORM_VIEW;
+                        if ("standalone".equals(source)) {
+                                prepareCategoryFormPage(model, session, null);
+                                return CATEGORY_FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute(
+                                        "org.springframework.validation.BindingResult.categoryForm",
+                                        bindingResult);
+                        redirectAttributes.addFlashAttribute("categoryForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
+                                        bindingResult.getAllErrors().get(0).getDefaultMessage());
+                        redirectAttributes.addFlashAttribute("openCategoryModal", true);
+                        return REDIRECT_LIST;
                 }
 
                 try {
@@ -108,16 +119,23 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Thêm nhóm dịch vụ thành công.");
+                                        "Th\u00EAm nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                         return REDIRECT_LIST;
                 } catch (IllegalArgumentException ex) {
-                        bindingResult.reject(
-                                        "category.create.failed",
+                        if ("standalone".equals(source)) {
+                                bindingResult.reject(
+                                                "category.create.failed",
+                                                ex.getMessage());
+                                prepareCategoryFormPage(model, session, null);
+                                return CATEGORY_FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute("categoryForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
                                         ex.getMessage());
-
-                        prepareCategoryFormPage(model, session, null);
-                        return CATEGORY_FORM_VIEW;
+                        redirectAttributes.addFlashAttribute("openCategoryModal", true);
+                        return REDIRECT_LIST;
                 }
         }
 
@@ -190,7 +208,7 @@ public class AdminServiceCatalogController {
 
                                 redirectAttributes.addFlashAttribute(
                                                 "successMessage",
-                                                "Cập nhật nhóm dịch vụ thành công.");
+                                                "C\u1EADp nh\u1EADt nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                                 return REDIRECT_LIST;
                         } catch (IllegalArgumentException ex) {
@@ -219,7 +237,7 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Đã thay đổi trạng thái nhóm dịch vụ.");
+                                        "\u0110\u00E3 thay \u0111\u1ED5i tr\u1EA1ng th\u00E1i nh\u00F3m d\u1ECBch v\u1EE5.");
                 } catch (IllegalArgumentException ex) {
                         redirectAttributes.addFlashAttribute(
                                         "errorMessage",
@@ -272,14 +290,25 @@ public class AdminServiceCatalogController {
         @PostMapping
         public String createService(
                         @Valid @ModelAttribute("serviceForm") ServiceCreateDTO dto,
-
                         BindingResult bindingResult,
+                        @RequestParam(value = "source", required = false) String source,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
                 if (bindingResult.hasErrors()) {
-                        prepareServiceFormPage(model, session, null);
-                        return FORM_VIEW;
+                        if ("standalone".equals(source)) {
+                                prepareServiceFormPage(model, session, null);
+                                return FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute(
+                                        "org.springframework.validation.BindingResult.serviceForm",
+                                        bindingResult);
+                        redirectAttributes.addFlashAttribute("serviceForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
+                                        bindingResult.getAllErrors().get(0).getDefaultMessage());
+                        redirectAttributes.addFlashAttribute("openServiceModal", true);
+                        return REDIRECT_LIST;
                 }
 
                 try {
@@ -287,17 +316,23 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Thêm dịch vụ thành công.");
+                                        "Th\u00EAm d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                         return REDIRECT_LIST;
                 } catch (IllegalArgumentException ex) {
-                        bindingResult.reject(
-                                        "service.create.failed",
+                        if ("standalone".equals(source)) {
+                                bindingResult.reject(
+                                                "service.create.failed",
+                                                ex.getMessage());
+                                prepareServiceFormPage(model, session, null);
+                                return FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute("serviceForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
                                         ex.getMessage());
-
-                        prepareServiceFormPage(model, session, null);
-
-                        return FORM_VIEW;
+                        redirectAttributes.addFlashAttribute("openServiceModal", true);
+                        return REDIRECT_LIST;
                 }
         }
 
@@ -370,7 +405,7 @@ public class AdminServiceCatalogController {
 
                                 redirectAttributes.addFlashAttribute(
                                                 "successMessage",
-                                                "Cập nhật dịch vụ thành công.");
+                                                "C\u1EADp nh\u1EADt d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                                 return REDIRECT_LIST;
                         } catch (IllegalArgumentException ex) {
@@ -557,6 +592,13 @@ public class AdminServiceCatalogController {
                 model.addAttribute("selectedCategoryId", categoryId);
                 model.addAttribute("serviceTypes", ServiceType.values());
                 model.addAttribute("serviceStatuses", ServiceStatus.values());
+
+                if (!model.containsAttribute("serviceForm")) {
+                        model.addAttribute("serviceForm", new ServiceCreateDTO());
+                }
+                if (!model.containsAttribute("categoryForm")) {
+                        model.addAttribute("categoryForm", new ServiceCategoryDTO());
+                }
 
         }
 

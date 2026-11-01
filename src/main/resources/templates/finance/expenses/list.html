@@ -145,9 +145,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${expenses.content.isEmpty()}">
-                            <td colspan="10" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                                Không tìm thấy khoản chi phí vận hành nào phù hợp điều kiện lọc.
+                            <td colspan="10" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-wallet2 empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; phi&#7871;u chi n&#224;o</h6>
+                                    <p>Kh&#244;ng t&#236;m th&#7845;y kho&#7843;n chi ph&#237; v&#7853;n h&#224;nh n&#224;o ph&#249; h&#7887;p v&#7899;i &#273;i&#7873;u ki&#7879;n l&#7885;c.</p>
+                                    <a th:href="@{/expenses/create}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle me-1"></i>L&#7853;p phi&#7871;u chi m&#7899;i
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="exp : ${expenses.content}">
@@ -186,6 +192,8 @@
                                         th:data-description="${exp.description != null ? exp.description : ''}"
                                         th:data-is-cancelled="${exp.isCancelled}"
                                         th:data-cancel-reason="${exp.cancelledReason != null ? exp.cancelledReason : ''}"
+                                        th:data-payroll-period-id="${exp.payrollPeriod != null ? exp.payrollPeriod.periodId : ''}"
+                                        th:data-payroll-period-name="${exp.payrollPeriod != null ? exp.payrollPeriod.periodName : ''}"
                                         onclick="handleViewExpenseDetail(this)">
                                     <i class="bi bi-eye"></i> Chi tiết
                                 </button>
@@ -259,6 +267,42 @@
                     <label class="fw-bold">Nội dung chi tiết:</label>
                     <div id="mDescription" class="p-2 bg-light rounded border text-muted small mt-1" style="white-space: pre-wrap;"></div>
                 </div>
+                                <!-- Chi tiet bang luong nhan su neu la phieu chi Bang luong -->
+                <div id="mPayrollSection" class="mt-3 pt-3 border-top d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                        <label class="fw-bold text-primary mb-0">
+                            <i class="bi bi-people-fill me-1"></i>Chi ti&#7871;t ti&#7873;n l&#432;&#417;ng t&#7915;ng nh&#226;n s&#7921;:
+                        </label>
+                        <div class="d-flex gap-2">
+                            <a id="mPayrollViewBtn" href="#" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Xem b&#7843;ng l&#432;&#417;ng
+                            </a>
+                            <a id="mPayrollExcelBtn" href="#" class="btn btn-sm btn-success">
+                                <i class="bi bi-file-earmark-excel me-1"></i>Xu&#7845;t file Excel
+                            </a>
+                        </div>
+                    </div>
+                    <div class="table-responsive border rounded" style="max-height: 240px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0 small">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>M&#227; NV</th>
+                                    <th>H&#7885; v&#224; t&#234;n</th>
+                                    <th>V&#7883; tr&#237;</th>
+                                    <th class="text-end">L&#432;&#417;ng c&#417; b&#7843;n</th>
+                                    <th class="text-end">Th&#432;&#7887;ng / HH</th>
+                                    <th class="text-end">Tr&#7915; t&#7841;m &#7913;ng</th>
+                                    <th class="text-end text-success fw-bold">Th&#7921;c nh&#7853;n</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mPayrollTableBody">
+                            </tbody>
+                            <tfoot id="mPayrollTableFoot" class="table-light fw-bold">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
                 <div id="mCancelAlert" class="alert alert-danger py-2 small d-none">
                     <strong>Lý do hủy:</strong> <span id="mCancelReason" style="white-space: pre-wrap;"></span>
                 </div>
@@ -317,7 +361,9 @@
             ds.source,
             ds.description,
             isCancelled,
-            ds.cancelReason
+            ds.cancelReason,
+            ds.payrollPeriodId,
+            ds.payrollPeriodName
         );
     }
 
@@ -328,7 +374,7 @@
         openCancelModal(id, code);
     }
 
-    function viewExpenseDetail(id, code, branch, category, amount, date, recipient, method, source, desc, isCancelled, cancelReason) {
+function viewExpenseDetail(id, code, branch, category, amount, date, recipient, method, source, desc, isCancelled, cancelReason, payrollPeriodId, payrollPeriodName) {
         document.getElementById('mExpenseCode').textContent = code || '';
         document.getElementById('mBranch').textContent = branch || '';
         document.getElementById('mDate').textContent = date || '';
@@ -346,6 +392,72 @@
             document.getElementById('mCancelReason').textContent = cancelReason || 'Không có lý do chi tiết';
         } else {
             cancelBox.classList.add('d-none');
+        }
+
+        const modalDialog = document.querySelector('#expenseDetailModal .modal-dialog');
+        const payrollSection = document.getElementById('mPayrollSection');
+        if (payrollPeriodId) {
+            if (modalDialog) modalDialog.classList.add('modal-lg');
+            if (payrollSection) {
+                payrollSection.classList.remove('d-none');
+                document.getElementById('mPayrollViewBtn').href = '/payroll/' + payrollPeriodId;
+                document.getElementById('mPayrollExcelBtn').href = '/payroll/' + payrollPeriodId + '/export';
+
+                const tbody = document.getElementById('mPayrollTableBody');
+                const tfoot = document.getElementById('mPayrollTableFoot');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>\u0110ang t\u1EA3i danh s\u00E1ch nh\u00E2n s\u1EF1...</td></tr>';
+                tfoot.innerHTML = '';
+
+                fetch('/payroll/' + payrollPeriodId + '/items-json')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data || data.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u l\u01B0\u01A1ng nh\u00E2n vi\u00EAn trong k\u1EF3 n\u00E0y.</td></tr>';
+                            return;
+                        }
+                        let html = '';
+                        let totalRemaining = 0;
+                        let totalBase = 0;
+                        let totalBonusComm = 0;
+                        let totalAdv = 0;
+
+                        data.forEach(it => {
+                            const rem = Number(it.remainingPayable || 0);
+                            const base = Number(it.actualBaseSalary || 0);
+                            const bonusComm = Number(it.bonusAmount || 0) + Number(it.totalCommission || 0);
+                            const adv = Number(it.advanceAllocatedAmount || 0);
+
+                            totalRemaining += rem;
+                            totalBase += base;
+                            totalBonusComm += bonusComm;
+                            totalAdv += adv;
+
+                            html += `<tr>
+                                <td><strong>${it.staffCode || ''}</strong></td>
+                                <td>${it.staffName || ''}</td>
+                                <td><span class="badge bg-light text-dark border">${it.positionTitle || 'Nh\u00E2n s\u1EF1'}</span></td>
+                                <td class="text-end">${base.toLocaleString('vi-VN')} \u0111</td>
+                                <td class="text-end text-primary">+${bonusComm.toLocaleString('vi-VN')} \u0111</td>
+                                <td class="text-end text-warning">-${adv.toLocaleString('vi-VN')} \u0111</td>
+                                <td class="text-end fw-bold text-success">${rem.toLocaleString('vi-VN')} \u0111</td>
+                            </tr>`;
+                        });
+                        tbody.innerHTML = html;
+                        tfoot.innerHTML = `<tr>
+                            <td colspan="3" class="text-uppercase text-center">T\u1ED5ng c\u1ED9ng (${data.length} nh\u00E2n s\u1EF1)</td>
+                            <td class="text-end">${totalBase.toLocaleString('vi-VN')} \u0111</td>
+                            <td class="text-end text-primary">+${totalBonusComm.toLocaleString('vi-VN')} \u0111</td>
+                            <td class="text-end text-warning">-${totalAdv.toLocaleString('vi-VN')} \u0111</td>
+                            <td class="text-end text-success">${totalRemaining.toLocaleString('vi-VN')} \u0111</td>
+                        </tr>`;
+                    })
+                    .catch(err => {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Kh\u00F4ng th\u1EC3 t\u1EA3i danh s\u00E1ch nh\u00E2n s\u1EF1. B\u1EA5m "Xem b\u1EA3ng l\u01B0\u01A1ng" \u0111\u1EC3 ki\u1EC3m tra.</td></tr>';
+                    });
+            }
+        } else {
+            if (modalDialog) modalDialog.classList.remove('modal-lg');
+            if (payrollSection) payrollSection.classList.add('d-none');
         }
 
         new bootstrap.Modal(document.getElementById('expenseDetailModal')).show();

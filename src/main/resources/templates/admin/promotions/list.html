@@ -180,9 +180,15 @@
                             </td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(promotions)}">
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-ticket-detailed fs-1 d-block mb-2 text-muted"></i>
-                                Không có chương trình khuyến mãi nào phù hợp với bộ lọc.
+                            <td colspan="8" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-ticket-detailed empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; ch&#432;&#417;ng tr&#236;nh khuy&#7871;n m&#227;i n&#224;o</h6>
+                                    <p>T&#7841;o c&#225;c ch&#432;&#417;ng tr&#236;nh &#432;u &#273;&#227;i, gi&#7843;m gi&#225; d&#7883;ch v&#7903; ho&#7863;c voucher cho b&#7879;nh nh&#226;n.</p>
+                                    <a th:href="@{/admin/promotions/create}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-lg me-1"></i>T&#7841;o ch&#432;&#417;ng tr&#236;nh khuy&#7871;n m&#227;i
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         </tbody>

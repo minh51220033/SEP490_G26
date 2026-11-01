@@ -83,6 +83,14 @@ public class Invoice {
     @Column(name = "surcharge_description", length = 500)
     private String surchargeDescription;
 
+    @Column(name = "surcharge_paid_amount", nullable = false, precision = 15, scale = 2)
+    @org.hibernate.annotations.ColumnDefault("0")
+    private BigDecimal surchargePaidAmount = BigDecimal.ZERO;
+
+    @Column(name = "surcharge_remaining_debt", nullable = false, precision = 15, scale = 2)
+    @org.hibernate.annotations.ColumnDefault("0")
+    private BigDecimal surchargeRemainingDebt = BigDecimal.ZERO;
+
     @Column(name = "discount_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
@@ -91,6 +99,9 @@ public class Invoice {
 
     @Column(name = "point_discount", nullable = false, precision = 15, scale = 2)
     private BigDecimal pointDiscount = BigDecimal.ZERO;
+
+    @Column(name = "points_redeemed")
+    private Integer pointsRedeemed = 0;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;

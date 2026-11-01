@@ -24,6 +24,10 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.math.BigDecimal;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -633,5 +637,227 @@ public class PayrollPageController {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
         }
         return "redirect:/payroll/owner-distributions";
+    }
+
+    @GetMapping("/{id:[0-9]+}/items-json")
+    @ResponseBody
+    public List<PayrollItemSummaryDTO> getPeriodItemsJson(
+            @PathVariable Long id,
+            HttpSession session
+    ) {
+        Long currentUserId = getCurrentUserId(session);
+        List<PayrollItem> items = payrollService.getPeriodItems(id, currentUserId);
+        return items.stream().map(it -> new PayrollItemSummaryDTO(
+                it.getItemId(),
+                it.getStaff() != null ? it.getStaff().getStaffCode() : "",
+                it.getStaff() != null ? it.getStaff().getFullName() : "",
+                it.getStaff() != null ? (it.getStaff().getPositionTitle() != null ? it.getStaff().getPositionTitle() : (it.getStaff().getSpecialty() != null ? it.getStaff().getSpecialty() : "NhÃ¢n sá»±")) : "",
+                it.getActualWorkDays(),
+                it.getActualBaseSalary(),
+                it.getTotalAllowance(),
+                it.getBonusAmount(),
+                it.getTotalCommission(),
+                it.getDeductionAmount(),
+                it.getNetSalary(),
+                it.getAdvanceAllocatedAmount(),
+                it.getRemainingPayable(),
+                it.getNote()
+        )).toList();
+    }
+
+    @GetMapping("/{id:[0-9]+}/export")
+    public ResponseEntity<byte[]> exportPayrollPeriodExcel(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "xls") String format,
+            HttpSession session
+    ) {
+        Long currentUserId = getCurrentUserId(session);
+        PayrollPeriod period = payrollService.getPeriodDetail(id, currentUserId);
+        List<PayrollItem> items = payrollService.getPeriodItems(id, currentUserId);
+
+        byte[] contentBytes;
+        String fileName;
+        String contentType;
+
+        String safePeriodName = period.getPeriodName()
+                .replaceAll("[^a-zA-Z0-9_\\-\\.]", "_");
+
+        if ("csv".equalsIgnoreCase(format)) {
+            contentBytes = generatePayrollCsv(period, items);
+            fileName = "Bang_Luong_" + safePeriodName + ".csv";
+            contentType = "text/csv; charset=UTF-8";
+        } else {
+            contentBytes = generatePayrollExcelHtml(period, items);
+            fileName = "Bang_Luong_" + safePeriodName + ".xls";
+            contentType = "application/vnd.ms-excel; charset=UTF-8";
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(contentBytes);
+    }
+
+    private byte[] generatePayrollExcelHtml(PayrollPeriod period, List<PayrollItem> items) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">\n");
+        sb.append("<head>\n");
+        sb.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n");
+        sb.append("<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Bảng Lương</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->\n");
+        sb.append("<style>\n");
+        sb.append("  body { font-family: 'Times New Roman', Arial, sans-serif; font-size: 11pt; }\n");
+        sb.append("  table { border-collapse: collapse; width: 100%; }\n");
+        sb.append("  th { background-color: #0f766e; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #0d9488; padding: 8px 6px; }\n");
+        sb.append("  td { border: 1px solid #cbd5e1; padding: 6px 6px; }\n");
+        sb.append("  .text-center { text-align: center; }\n");
+        sb.append("  .text-start { text-align: left; }\n");
+        sb.append("  .text-end { text-align: right; }\n");
+        sb.append("  .num { mso-number-format:\"\\#\\,\\#\\#0\"; text-align: right; }\n");
+        sb.append("  .total-row td { background-color: #ccfbf1; font-weight: bold; border-top: 2px solid #0f766e; }\n");
+        sb.append("  .title { font-size: 16pt; font-weight: bold; text-align: center; color: #0f766e; margin-bottom: 4px; }\n");
+        sb.append("  .subtitle { font-size: 12pt; font-style: italic; text-align: center; color: #475569; margin-bottom: 12px; }\n");
+        sb.append("</style>\n");
+        sb.append("</head>\n<body>\n");
+
+        sb.append("<div class=\"title\">NHA KHOA CƯỜNG VIỆT (CV-DCMS)</div>\n");
+        sb.append("<div class=\"subtitle\">BẢNG LƯƠNG NHÂN SỰ CHI TIẾT - ").append(escapeXml(period.getPeriodName())).append("</div>\n");
+        sb.append("<p><b>Cơ sở:</b> ").append(escapeXml(period.getBranch() != null ? period.getBranch().getBranchName() : "")).append(" | ");
+        sb.append("<b>Kỳ tính:</b> Tháng ").append(period.getMonth()).append("/").append(period.getYear()).append(" | ");
+        sb.append("<b>Trạng thái:</b> ").append(period.getStatus() != null ? period.getStatus().name() : "").append("</p>\n");
+
+        sb.append("<table>\n");
+        sb.append("<thead><tr>\n");
+        sb.append("<th>STT</th>\n");
+        sb.append("<th>Mã NV</th>\n");
+        sb.append("<th>Họ và tên</th>\n");
+        sb.append("<th>Vị trí / Chức vụ</th>\n");
+        sb.append("<th>Ngày công</th>\n");
+        sb.append("<th>Lương cơ bản (VNĐ)</th>\n");
+        sb.append("<th>Phụ cấp (VNĐ)</th>\n");
+        sb.append("<th>Thưởng (VNĐ)</th>\n");
+        sb.append("<th>Hoa hồng (VNĐ)</th>\n");
+        sb.append("<th>Giảm trừ (VNĐ)</th>\n");
+        sb.append("<th>Lương Net (VNĐ)</th>\n");
+        sb.append("<th>Đã trừ tạm ứng (VNĐ)</th>\n");
+        sb.append("<th>Thực nhận (VNĐ)</th>\n");
+        sb.append("<th>Ghi chú</th>\n");
+        sb.append("</tr></thead>\n");
+        sb.append("<tbody>\n");
+
+        int stt = 1;
+        BigDecimal sumBase = BigDecimal.ZERO;
+        BigDecimal sumAllow = BigDecimal.ZERO;
+        BigDecimal sumBonus = BigDecimal.ZERO;
+        BigDecimal sumComm = BigDecimal.ZERO;
+        BigDecimal sumDeduct = BigDecimal.ZERO;
+        BigDecimal sumNet = BigDecimal.ZERO;
+        BigDecimal sumAdv = BigDecimal.ZERO;
+        BigDecimal sumRem = BigDecimal.ZERO;
+
+        for (PayrollItem it : items) {
+            String staffCode = it.getStaff() != null ? it.getStaff().getStaffCode() : "";
+            String staffName = it.getStaff() != null ? it.getStaff().getFullName() : "";
+            String pos = it.getStaff() != null ? (it.getStaff().getPositionTitle() != null ? it.getStaff().getPositionTitle() : (it.getStaff().getSpecialty() != null ? it.getStaff().getSpecialty() : "Nhân sự")) : "";
+
+            BigDecimal base = it.getActualBaseSalary() != null ? it.getActualBaseSalary() : BigDecimal.ZERO;
+            BigDecimal allow = it.getTotalAllowance() != null ? it.getTotalAllowance() : BigDecimal.ZERO;
+            BigDecimal bonus = it.getBonusAmount() != null ? it.getBonusAmount() : BigDecimal.ZERO;
+            BigDecimal comm = it.getTotalCommission() != null ? it.getTotalCommission() : BigDecimal.ZERO;
+            BigDecimal deduct = it.getDeductionAmount() != null ? it.getDeductionAmount() : BigDecimal.ZERO;
+            BigDecimal net = it.getNetSalary() != null ? it.getNetSalary() : BigDecimal.ZERO;
+            BigDecimal adv = it.getAdvanceAllocatedAmount() != null ? it.getAdvanceAllocatedAmount() : BigDecimal.ZERO;
+            BigDecimal rem = it.getRemainingPayable() != null ? it.getRemainingPayable() : BigDecimal.ZERO;
+
+            sumBase = sumBase.add(base);
+            sumAllow = sumAllow.add(allow);
+            sumBonus = sumBonus.add(bonus);
+            sumComm = sumComm.add(comm);
+            sumDeduct = sumDeduct.add(deduct);
+            sumNet = sumNet.add(net);
+            sumAdv = sumAdv.add(adv);
+            sumRem = sumRem.add(rem);
+
+            sb.append("<tr>\n");
+            sb.append("<td class=\"text-center\">").append(stt++).append("</td>\n");
+            sb.append("<td class=\"text-center\" style=\"mso-number-format:'\\@';\">").append(escapeXml(staffCode)).append("</td>\n");
+            sb.append("<td class=\"text-start\"><b>").append(escapeXml(staffName)).append("</b></td>\n");
+            sb.append("<td class=\"text-start\">").append(escapeXml(pos)).append("</td>\n");
+            sb.append("<td class=\"text-center\">").append(it.getActualWorkDays() != null ? it.getActualWorkDays() : "-").append("</td>\n");
+            sb.append("<td class=\"num\">").append(base.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(allow.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(bonus.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(comm.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(deduct.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"font-weight:bold;\">").append(net.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"color:#b45309;\">").append(adv.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"font-weight:bold;color:#047857;\">").append(rem.longValue()).append("</td>\n");
+            sb.append("<td class=\"text-start\">").append(escapeXml(it.getNote() != null ? it.getNote() : "")).append("</td>\n");
+            sb.append("</tr>\n");
+        }
+
+        sb.append("</tbody>\n");
+        sb.append("<tfoot>\n<tr class=\"total-row\">\n");
+        sb.append("<td colspan=\"5\" class=\"text-center\">TỔNG CỘNG (").append(items.size()).append(" NHÂN SỰ)</td>\n");
+        sb.append("<td class=\"num\">").append(sumBase.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumAllow.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumBonus.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumComm.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumDeduct.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumNet.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumAdv.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumRem.longValue()).append("</td>\n");
+        sb.append("<td></td>\n");
+        sb.append("</tr>\n</tfoot>\n");
+        sb.append("</table>\n");
+        sb.append("</body>\n</html>");
+
+        byte[] htmlBytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] bom = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+        byte[] result = new byte[bom.length + htmlBytes.length];
+        System.arraycopy(bom, 0, result, 0, bom.length);
+        System.arraycopy(htmlBytes, 0, result, bom.length, htmlBytes.length);
+        return result;
+    }
+
+    private byte[] generatePayrollCsv(PayrollPeriod period, List<PayrollItem> items) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("STT,Mã nhân viên,Họ và tên,Vị trí / Chức vụ,Ngày công,Lương cơ bản,Phụ cấp,Thưởng,Hoa hồng,Giảm trừ,Lương Net,Khấu trừ tạm ứng,Thực nhận,Ghi chú\n");
+        int stt = 1;
+        for (PayrollItem it : items) {
+            sb.append(stt++).append(",");
+            sb.append(escapeCsv(it.getStaff() != null ? it.getStaff().getStaffCode() : "")).append(",");
+            sb.append(escapeCsv(it.getStaff() != null ? it.getStaff().getFullName() : "")).append(",");
+            sb.append(escapeCsv(it.getStaff() != null ? (it.getStaff().getPositionTitle() != null ? it.getStaff().getPositionTitle() : (it.getStaff().getSpecialty() != null ? it.getStaff().getSpecialty() : "Nhân sự")) : "")).append(",");
+            sb.append(it.getActualWorkDays() != null ? it.getActualWorkDays() : "").append(",");
+            sb.append(it.getActualBaseSalary() != null ? it.getActualBaseSalary().longValue() : 0).append(",");
+            sb.append(it.getTotalAllowance() != null ? it.getTotalAllowance().longValue() : 0).append(",");
+            sb.append(it.getBonusAmount() != null ? it.getBonusAmount().longValue() : 0).append(",");
+            sb.append(it.getTotalCommission() != null ? it.getTotalCommission().longValue() : 0).append(",");
+            sb.append(it.getDeductionAmount() != null ? it.getDeductionAmount().longValue() : 0).append(",");
+            sb.append(it.getNetSalary() != null ? it.getNetSalary().longValue() : 0).append(",");
+            sb.append(it.getAdvanceAllocatedAmount() != null ? it.getAdvanceAllocatedAmount().longValue() : 0).append(",");
+            sb.append(it.getRemainingPayable() != null ? it.getRemainingPayable().longValue() : 0).append(",");
+            sb.append(escapeCsv(it.getNote() != null ? it.getNote() : "")).append("\n");
+        }
+
+        byte[] csvBytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] bom = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+        byte[] result = new byte[bom.length + csvBytes.length];
+        System.arraycopy(bom, 0, result, 0, bom.length);
+        System.arraycopy(csvBytes, 0, result, bom.length, csvBytes.length);
+        return result;
+    }
+
+    private String escapeXml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    private String escapeCsv(String text) {
+        if (text == null) return "\"\"";
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 }

@@ -260,6 +260,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean hasActiveAdminRole(@Param("userId") Long userId);
 
     /**
+     * Lấy danh sách tên vai trò đang hoạt động của tài khoản.
+     */
+    @Query("""
+    SELECT DISTINCT r.roleName
+    FROM User u
+    JOIN u.roles r
+    WHERE u.userId = :userId
+      AND u.isActive = TRUE
+      AND r.isActive = TRUE
+    """)
+    List<String> findActiveRoleNamesByUserId(@Param("userId") Long userId);
+
+    /**
      * Kiểm tra tài khoản có vai trò Tài chính (ADMIN, KE_TOAN hoặc Role mở rộng có quyền FINANCE) đang hoạt động hay không.
      */
     @Query("""

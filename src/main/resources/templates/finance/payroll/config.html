@@ -28,7 +28,6 @@
                     <h1>Cấu Hình Chính Sách Hoa Hồng Bác Sĩ (SCR-32.3)</h1>
                     <p>Mặc định tính năng tính hoa hồng ở trạng thái <strong>TẮT (OFF)</strong>. Chỉ kích hoạt khi phòng khám có chính sách chia thưởng theo ca khám/thực hiện dịch vụ.</p>
                 </div>
-                </div>
                 <div class="d-flex gap-2 align-items-center">
                     <button th:if="${isAdmin}" type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#createPolicyModal">
                         <i class="bi bi-plus-circle"></i> Thêm chính sách hoa hồng
@@ -64,8 +63,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${policies.isEmpty()}">
-                            <td colspan="8" class="text-center py-4 text-muted">
-                                Chưa có chính sách hoa hồng nào được thiết lập. (Tính năng hoa hồng đang TẮT hoàn toàn).
+                            <td colspan="8" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-sliders empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; ch&#237;nh s&#225;ch hoa h&#7891;ng</h6>
+                                    <p>Thi&#7871;t l&#7853;p t&#7927; l&#7879; ho&#7863;c m&#7913;c hoa h&#7891;ng cho b&#225;c s&#297; theo t&#7915;ng d&#7883;ch v&#7903; &#273;i&#7873;u tr&#7883; khi k&#237;ch ho&#7841;t ch&#237;nh s&#225;ch.</p>
+                                    <button th:if="${isAdmin}" type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createPolicyModal">
+                                        <i class="bi bi-plus-circle me-1"></i>Th&#234;m ch&#237;nh s&#225;ch hoa h&#7891;ng
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="pol : ${policies}">

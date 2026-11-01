@@ -2,14 +2,21 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="'Xem trước & In Hóa đơn (SCR-21.3) ' + ${invoice.invoiceCode} + ' | CV-DCMS'">In Hóa đơn (SCR-21.3)</title>
+    <title th:text="'Bảng kê chi phí & In Hóa đơn ' + ${invoice.invoiceCode} + ' | CV-DCMS'">In Hóa đơn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <style>
         @media print {
             .no-print { display: none !important; }
-            body { background: #fff !important; }
+            body { background: #fff !important; font-size: 12px; }
             .print-a4 { border: none !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+        }
+        .table-itemized th, .table-itemized td {
+            font-size: 11.5px;
+            vertical-align: middle;
+            padding: 4px 6px;
         }
     </style>
 </head>
@@ -19,7 +26,7 @@
 <div class="container text-center mb-4 no-print">
     <div class="d-inline-flex gap-2 p-2 bg-white rounded shadow-sm border">
         <button onclick="window.print()" class="btn btn-primary btn-sm px-4 fw-bold">
-            🖨️ In Hóa đơn
+            🖨️ In Bảng kê &amp; Hóa đơn
         </button>
         <button onclick="window.close()" class="btn btn-outline-secondary btn-sm px-3">
             Đóng cửa sổ
@@ -40,25 +47,31 @@
             <div class="text-end">
                 <div class="fs-6 fw-bold text-dark">MÃ HÓA ĐƠN</div>
                 <div class="fs-5 fw-bold text-primary" th:text="${invoice.invoiceCode}">HD12345678</div>
-                <div class="small text-muted" th:text="'Ngày: ' + ${#temporals.format(invoice.issuedAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 14:00</div>
+                <div class="small text-muted" th:text="'Ngày lập: ' + ${#temporals.format(invoice.issuedAt, 'dd/MM/yyyy HH:mm')}">24/10/2026 14:00</div>
+                <div class="mt-1">
+                    <span th:if="${invoice.status.name() == 'PAID'}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đã thanh toán đủ</span>
+                    <span th:if="${invoice.status.name() == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Thanh toán một phần</span>
+                    <span th:if="${invoice.status.name() == 'ISSUED'}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Chưa thanh toán</span>
+                    <span th:if="${invoice.status.name() == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">Đã hủy</span>
+                </div>
             </div>
         </div>
 
         <!-- Title -->
         <div class="print-title">
-            <h1 th:if="${invoice.invoiceType != null and invoice.invoiceType.name() == 'MIXED'}">HÓA ĐƠN THU TIỀN DỊCH VỤ &amp; THUỐC ĐIỀU TRỊ</h1>
-            <h1 th:if="${invoice.invoiceType != null and invoice.invoiceType.name() == 'MEDICINE'}">HÓA ĐƠN THU TIỀN THUỐC ĐIỀU TRỊ</h1>
-            <h1 th:if="${invoice.invoiceType == null or invoice.invoiceType.name() == 'SERVICE'}">HÓA ĐƠN THU TIỀN DỊCH VỤ NHA KHOA</h1>
-            <p class="text-muted small">Liên 1: Lưu nội bộ phòng khám / Liên 2: Giao cho khách hàng</p>
+            <h1 th:if="${invoice.invoiceType != null and invoice.invoiceType.name() == 'MIXED'}">BẢNG KÊ CHI PHÍ DỊCH VỤ &amp; THUỐC ĐIỀU TRỊ</h1>
+            <h1 th:if="${invoice.invoiceType != null and invoice.invoiceType.name() == 'MEDICINE'}">BẢNG KÊ TIỀN THUỐC ĐIỀU TRỊ</h1>
+            <h1 th:if="${invoice.invoiceType == null or invoice.invoiceType.name() == 'SERVICE'}">BẢNG KÊ CHI PHÍ DỊCH VỤ NHA KHOA</h1>
+            <p class="text-muted small">Chi tiết thanh toán và công nợ từng danh mục kỹ thuật / đơn thuốc</p>
         </div>
 
         <!-- Patient Info -->
-        <div class="row g-2 mb-4 p-3 bg-light rounded border border-light-subtle">
+        <div class="row g-2 mb-3 p-3 bg-light rounded border border-light-subtle">
             <div class="col-6">
                 <strong>Họ tên bệnh nhân:</strong> <span class="text-uppercase fw-bold" th:text="${invoice.patientProfile.fullName}">Nguyễn Văn A</span>
             </div>
             <div class="col-6">
-                <strong>Mã bệnh nhân:</strong> <span th:text="${invoice.patientProfile.patientCode}">BN000101</span>
+                <strong>Mã bệnh nhân:</strong> <span class="fw-bold" th:text="${invoice.patientProfile.patientCode}">BN000101</span>
             </div>
             <div class="col-6">
                 <strong>Điện thoại:</strong> <span th:text="${invoice.patientProfile.phoneNumber}">0987654321</span>
@@ -79,62 +92,97 @@
             <div class="col-6" th:if="${invoice.visit != null and invoice.visit.primaryDoctor != null}">
                 <strong>Bác sĩ điều trị:</strong> <span th:text="${invoice.visit.primaryDoctor.fullName}">BS Lê Hoàng Nam</span>
             </div>
+            <div class="col-6">
+                <strong>Cơ sở điều trị:</strong> <span th:text="${invoice.branch.branchName}">Cơ sở Quận 1</span>
+            </div>
         </div>
 
-        <!-- BẢNG 1: DỊCH VỤ ĐÃ THỰC HIỆN (Chỉ hiển thị khi có dịch vụ) -->
-        <div th:if="${invoice.items != null and #lists.size(invoice.items.?[itemType == null or itemType.name() == 'SERVICE']) > 0}" class="mb-4">
-            <h5 class="fw-bold text-dark mb-2">1. DỊCH VỤ ĐÃ THỰC HIỆN</h5>
-            <table class="table table-bordered table-sm mb-0">
-                <thead class="table-light">
-                <tr class="text-center">
-                    <th style="width: 40px;">STT</th>
-                    <th>Tên dịch vụ / Thủ thuật điều trị</th>
-                    <th style="width: 70px;">Răng</th>
-                    <th style="width: 60px;">ĐVT</th>
-                    <th style="width: 60px;">SL</th>
-                    <th class="text-end" style="width: 130px;">Đơn giá (đ)</th>
-                    <th class="text-end" style="width: 140px;">Thành tiền (đ)</th>
+        <!-- BẢNG 1: DỊCH VỤ ĐÃ THỰC HIỆN -->
+        <div th:if="${invoice.items != null and #lists.size(invoice.items.?[itemType == null or itemType.name() == 'SERVICE']) > 0}" class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-dark m-0">1. CHI TIẾT DỊCH VỤ &amp; THỦ THUẬT ĐIỀU TRỊ</h6>
+                <span class="small text-muted" th:if="${hasAllocations}">Đã chốt thứ tự phân bổ thanh toán</span>
+                <span class="small text-muted fst-italic" th:unless="${hasAllocations}">(Hóa đơn chưa lưu phân bổ chi tiết)</span>
+            </div>
+            <table class="table table-bordered table-sm table-itemized mb-0">
+                <thead class="table-light text-center">
+                <tr>
+                    <th style="width: 30px;">#</th>
+                    <th>Tên dịch vụ / Thủ thuật</th>
+                    <th style="width: 60px;">Răng</th>
+                    <th style="width: 45px;">ĐVT</th>
+                    <th style="width: 40px;">SL</th>
+                    <th class="text-end" style="width: 85px;">Đơn giá</th>
+                    <th class="text-end" style="width: 75px;">Giảm trừ</th>
+                    <th class="text-end" style="width: 90px;">Phải trả</th>
+                    <th class="text-end text-success" style="width: 90px;">Đã trả</th>
+                    <th class="text-end text-danger" style="width: 90px;">Còn nợ</th>
+                    <th style="width: 80px;">Trạng thái</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="it, iter : ${invoice.items.?[itemType == null or itemType.name() == 'SERVICE']}">
-                    <td class="text-center" th:text="${iter.count}">1</td>
+                <tr th:each="it : ${invoice.items.?[itemType == null or itemType.name() == 'SERVICE']}">
+                    <td class="text-center" th:text="${it.lineOrder != null ? it.lineOrder : '-'}">1</td>
                     <td>
-                        <span class="fw-bold" th:text="${it.itemName}">Trám răng thẩm mỹ</span>
+                        <span class="fw-bold" th:text="${it.itemName}">Trám răng</span>
+                        <small class="d-block text-muted" th:if="${it.treatmentPlanItem != null and it.treatmentPlanItem.treatmentStage != null}"
+                               th:text="'(Giai đoạn: ' + ${it.treatmentPlanItem.treatmentStage.stageName} + ')'"></small>
                     </td>
                     <td class="text-center" th:text="${it.performedService != null and it.performedService.toothNumbers != null ? it.performedService.toothNumbers : '-'}">-</td>
                     <td class="text-center" th:text="${it.unit != null ? it.unit : (it.service != null ? it.service.unit : 'Lần')}">Lần</td>
                     <td class="text-center" th:text="${it.quantity}">1</td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(it.unitPrice, 0, 'COMMA', 0, 'POINT')}">500.000</td>
-                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.finalAmount, 0, 'COMMA', 0, 'POINT')}">500.000</td>
+                    <td class="text-end text-success" th:text="${it.discountAmount != null and it.discountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '-' + #numbers.formatDecimal(it.discountAmount, 0, 'COMMA', 0, 'POINT') : '0'}">0</td>
+                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.payableAmount != null ? it.payableAmount : it.finalAmount, 0, 'COMMA', 0, 'POINT')}">500.000</td>
+                    <td class="text-end fw-bold text-success" th:text="${hasAllocations ? #numbers.formatDecimal(it.paidAmount != null ? it.paidAmount : 0, 0, 'COMMA', 0, 'POINT') : (invoice.status.name() == 'PAID' ? #numbers.formatDecimal(it.payableAmount != null ? it.payableAmount : it.finalAmount, 0, 'COMMA', 0, 'POINT') : '-')}">0</td>
+                    <td class="text-end fw-bold text-danger" th:text="${hasAllocations ? #numbers.formatDecimal(it.remainingDebt != null ? it.remainingDebt : 0, 0, 'COMMA', 0, 'POINT') : (invoice.status.name() == 'PAID' ? '0' : '-')}">0</td>
+                    <td class="text-center">
+                        <span th:if="${hasAllocations}">
+                            <span th:if="${it.paymentStatus != null and it.paymentStatus.name() == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả</span>
+                            <span th:if="${it.paymentStatus != null and it.paymentStatus.name() == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border">Trả 1 phần</span>
+                            <span th:if="${it.paymentStatus == null or it.paymentStatus.name() == 'UNPAID'}" class="badge bg-danger-subtle text-danger border">Chưa trả</span>
+                        </span>
+                        <span th:unless="${hasAllocations}">
+                            <span th:if="${invoice.status.name() == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả</span>
+                            <span th:unless="${invoice.status.name() == 'PAID'}" class="badge bg-secondary-subtle text-secondary border">Chưa phân bổ</span>
+                        </span>
+                    </td>
                 </tr>
                 </tbody>
                 <tfoot>
-                <tr class="table-light">
-                    <td colspan="6" class="text-end fw-bold">Tổng tiền dịch vụ:</td>
-                    <td class="text-end fw-bold text-dark" th:text="${#numbers.formatDecimal(invoice.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                <tr class="table-light fw-bold">
+                    <td colspan="7" class="text-end">Tổng cộng dịch vụ:</td>
+                    <td class="text-end text-primary" th:text="${#numbers.formatDecimal(invoice.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
+                    <td colspan="3"></td>
                 </tr>
                 </tfoot>
             </table>
         </div>
 
-        <!-- BẢNG 2: THUỐC MUA TẠI PHÒNG KHÁM (Chỉ hiển thị khi có thuốc) -->
-        <div th:if="${invoice.items != null and #lists.size(invoice.items.?[itemType != null and itemType.name() == 'MEDICINE']) > 0}" class="mb-4">
-            <h5 class="fw-bold text-dark mb-2">2. THUỐC MUA TẠI PHÒNG KHÁM</h5>
-            <table class="table table-bordered table-sm mb-0">
-                <thead class="table-light">
-                <tr class="text-center">
-                    <th style="width: 40px;">STT</th>
+        <!-- BẢNG 2: THUỐC MUA TẠI PHÒNG KHÁM -->
+        <div th:if="${invoice.items != null and #lists.size(invoice.items.?[itemType != null and itemType.name() == 'MEDICINE']) > 0}" class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-dark m-0">2. CHI TIẾT THUỐC ĐIỀU TRỊ</h6>
+                <span class="small text-muted" th:if="${invoice.prescription != null}" th:text="'Đơn thuốc: ' + ${invoice.prescription.prescriptionCode}"></span>
+            </div>
+            <table class="table table-bordered table-sm table-itemized mb-0">
+                <thead class="table-light text-center">
+                <tr>
+                    <th style="width: 30px;">#</th>
                     <th>Tên thuốc &amp; Cách dùng</th>
-                    <th style="width: 60px;">ĐVT</th>
-                    <th style="width: 60px;">SL</th>
-                    <th class="text-end" style="width: 130px;">Đơn giá (đ)</th>
-                    <th class="text-end" style="width: 140px;">Thành tiền (đ)</th>
+                    <th style="width: 45px;">ĐVT</th>
+                    <th style="width: 40px;">SL</th>
+                    <th class="text-end" style="width: 85px;">Đơn giá</th>
+                    <th class="text-end" style="width: 75px;">Giảm trừ</th>
+                    <th class="text-end" style="width: 90px;">Phải trả</th>
+                    <th class="text-end text-success" style="width: 90px;">Đã trả</th>
+                    <th class="text-end text-danger" style="width: 90px;">Còn nợ</th>
+                    <th style="width: 80px;">Trạng thái</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="it, iter : ${invoice.items.?[itemType != null and itemType.name() == 'MEDICINE']}">
-                    <td class="text-center" th:text="${iter.count}">1</td>
+                <tr th:each="it : ${invoice.items.?[itemType != null and itemType.name() == 'MEDICINE']}">
+                    <td class="text-center" th:text="${it.lineOrder != null ? it.lineOrder : '-'}">1</td>
                     <td>
                         <span class="fw-bold" th:text="${it.itemName}">Paracetamol 500mg</span>
                         <small class="d-block text-muted" th:if="${it.usageInstruction != null and !it.usageInstruction.isEmpty()}" th:text="${it.usageInstruction}"></small>
@@ -145,35 +193,64 @@
                     <td class="text-center" th:text="${it.unit != null ? it.unit : 'Viên'}">Viên</td>
                     <td class="text-center" th:text="${it.quantity}">1</td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(it.unitPrice, 0, 'COMMA', 0, 'POINT')}">5.000</td>
-                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.finalAmount, 0, 'COMMA', 0, 'POINT')}">50.000</td>
+                    <td class="text-end text-muted">0</td>
+                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(it.payableAmount != null ? it.payableAmount : it.finalAmount, 0, 'COMMA', 0, 'POINT')}">50.000</td>
+                    <td class="text-end fw-bold text-success" th:text="${hasAllocations ? #numbers.formatDecimal(it.paidAmount != null ? it.paidAmount : 0, 0, 'COMMA', 0, 'POINT') : (invoice.status.name() == 'PAID' ? #numbers.formatDecimal(it.payableAmount != null ? it.payableAmount : it.finalAmount, 0, 'COMMA', 0, 'POINT') : '-')}">0</td>
+                    <td class="text-end fw-bold text-danger" th:text="${hasAllocations ? #numbers.formatDecimal(it.remainingDebt != null ? it.remainingDebt : 0, 0, 'COMMA', 0, 'POINT') : (invoice.status.name() == 'PAID' ? '0' : '-')}">0</td>
+                    <td class="text-center">
+                        <span th:if="${hasAllocations}">
+                            <span th:if="${it.paymentStatus != null and it.paymentStatus.name() == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả</span>
+                            <span th:if="${it.paymentStatus != null and it.paymentStatus.name() == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border">Trả 1 phần</span>
+                            <span th:if="${it.paymentStatus == null or it.paymentStatus.name() == 'UNPAID'}" class="badge bg-danger-subtle text-danger border">Chưa trả</span>
+                        </span>
+                        <span th:unless="${hasAllocations}">
+                            <span th:if="${invoice.status.name() == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả</span>
+                            <span th:unless="${invoice.status.name() == 'PAID'}" class="badge bg-secondary-subtle text-secondary border">Chưa phân bổ</span>
+                        </span>
+                    </td>
                 </tr>
                 </tbody>
                 <tfoot>
-                <tr class="table-light">
-                    <td colspan="5" class="text-end fw-bold">Tổng tiền thuốc:</td>
-                    <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(invoice.totalMedicineAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</td>
+                <tr class="table-light fw-bold">
+                    <td colspan="6" class="text-end">Tổng cộng tiền thuốc:</td>
+                    <td class="text-end text-primary" th:text="${#numbers.formatDecimal(invoice.totalMedicineAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</td>
+                    <td colspan="3"></td>
                 </tr>
                 </tfoot>
             </table>
         </div>
 
+        <!-- PHỤ THU NẾU CÓ -->
+        <div th:if="${invoice.surchargeAmount != null and invoice.surchargeAmount > 0}" class="mb-3 p-2 bg-light rounded border">
+            <div class="row align-items-center">
+                <div class="col-6">
+                    <span class="fw-bold">Phụ thu phát sinh:</span>
+                    <span th:text="${invoice.surchargeDescription != null ? invoice.surchargeDescription : 'Chi phí vật tư ngoài / phụ thu'}"></span>
+                </div>
+                <div class="col-6 text-end">
+                    <span>Phải trả: <strong th:text="${#numbers.formatDecimal(invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong></span>
+                    <span class="ms-3 text-success">Đã trả: <strong th:text="${#numbers.formatDecimal(invoice.surchargePaidAmount != null ? invoice.surchargePaidAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong></span>
+                    <span class="ms-3 text-danger">Còn nợ: <strong th:text="${#numbers.formatDecimal(invoice.surchargeRemainingDebt != null ? invoice.surchargeRemainingDebt : invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong></span>
+                </div>
+            </div>
+        </div>
+
         <!-- BẢNG TỔNG HỢP THANH TOÁN -->
-        <table class="table table-bordered table-sm mb-4">
+        <table class="table table-bordered table-sm mb-3">
             <tbody>
             <tr th:if="${invoice.totalServiceAmount != null and invoice.totalServiceAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                 <td class="text-end fw-bold" style="width: 75%;">Tổng tiền dịch vụ:</td>
                 <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(invoice.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</td>
             </tr>
             <tr th:if="${invoice.totalMedicineAmount != null and invoice.totalMedicineAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
-                <td class="text-end fw-bold" style="width: 75%;">Tổng tiền thuốc mua tại phòng khám:</td>
-                <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(invoice.totalMedicineAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</td>
+                <td class="text-end fw-bold" style="width: 75%;">Tổng tiền thuốc điều trị:</td>
+                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(invoice.totalMedicineAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</td>
             </tr>
             <tr th:if="${invoice.surchargeAmount != null and invoice.surchargeAmount > 0}">
                 <td class="text-end">
                     Phụ thu: <span th:text="${invoice.surchargeDescription}"></span>
                 </td>
-                <td class="text-end fw-bold"
-                    th:text="${#numbers.formatDecimal(invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(invoice.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
             </tr>
             <tr th:if="${invoice.totalDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                 <td class="text-end text-success">Tổng giảm trừ ưu đãi (Thẻ VIP/Khuyến mãi/Voucher/Điểm):</td>
@@ -185,37 +262,43 @@
                 <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(invoice.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.050.000 đ</td>
             </tr>
             <tr>
-                <td class="text-end text-success fw-bold">Đã thanh toán:</td>
+                <td class="text-end text-success fw-bold">Tổng số tiền đã thanh toán:</td>
                 <td class="text-end text-success fw-bold" th:text="${#numbers.formatDecimal(invoice.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
             </tr>
             <tr th:if="${invoice.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
-                <td class="text-end text-danger fw-bold">Công nợ còn lại:</td>
+                <td class="text-end text-danger fw-bold">Công nợ còn lại của hóa đơn:</td>
                 <td class="text-end text-danger fw-bold" th:text="${#numbers.formatDecimal(invoice.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">550.000 đ</td>
+            </tr>
+            <tr th:if="${invoice.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) == 0}">
+                <td class="text-end text-success fw-bold">Công nợ còn lại:</td>
+                <td class="text-end text-success fw-bold">0 đ (Đã thanh toán đủ)</td>
             </tr>
             </tbody>
         </table>
 
         <!-- Signatures -->
-        <div class="print-signatures">
+        <div class="print-signatures mt-4">
             <div class="print-sig-col">
                 <h5>BỆNH NHÂN / NGƯỜI NHÀ</h5>
-                <p>(Ký, ghi rõ họ tên)</p>
+                <p class="small text-muted fst-italic">(Ký, ghi rõ họ tên)</p>
+                <div class="fw-bold mt-4" th:text="${invoice.patientProfile.fullName}">Nguyễn Văn A</div>
             </div>
             <div class="print-sig-col">
                 <h5>BÁC SĨ ĐIỀU TRỊ</h5>
-                <p>(Ký, ghi rõ họ tên)</p>
-                <div class="fw-bold" th:if="${invoice.visit != null and invoice.visit.primaryDoctor != null}"
+                <p class="small text-muted fst-italic">(Ký, ghi rõ họ tên)</p>
+                <div class="fw-bold mt-4" th:if="${invoice.visit != null and invoice.visit.primaryDoctor != null}"
                      th:text="${invoice.visit.primaryDoctor.fullName}">BS Lê Hoàng Nam</div>
+                <div class="fw-bold mt-4" th:unless="${invoice.visit != null and invoice.visit.primaryDoctor != null}">-</div>
             </div>
             <div class="print-sig-col">
                 <h5>NGƯỜI LẬP / THU NGÂN</h5>
-                <p>(Ký, ghi rõ họ tên)</p>
-                <div class="fw-bold" th:text="${invoice.cashier != null ? invoice.cashier.fullName : 'Thu ngân'}">Nguyễn Thu Ngân</div>
+                <p class="small text-muted fst-italic">(Ký, ghi rõ họ tên)</p>
+                <div class="fw-bold mt-4" th:text="${invoice.cashier != null ? invoice.cashier.fullName : 'Thu ngân'}">Nguyễn Thu Ngân</div>
             </div>
         </div>
 
         <div class="mt-4 pt-3 border-top text-center text-muted small">
-            <em>Cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ tại Hệ thống Nha khoa CV-DCMS!</em>
+            <em>Cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ tại Hệ thống Nha khoa Kỹ thuật cao CV-DCMS!</em>
         </div>
     </div>
 </div>

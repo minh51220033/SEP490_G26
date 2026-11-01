@@ -150,9 +150,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(invoices)}">
-                            <td colspan="13" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                Chưa có hóa đơn nào phù hợp với điều kiện tìm kiếm.
+                            <td colspan="13" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-receipt empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; h&#243;a &#273;&#417;n n&#224;o</h6>
+                                    <p>Ch&#432;a c&#243; h&#243;a &#273;&#417;n d&#7883;ch v&#7903; ho&#7863;c &#273;&#417;n thu&#7889;c ph&#249; h&#7887;p v&#7899;i &#273;i&#7873;u ki&#7879;n t&#236;m ki&#7871;m.</p>
+                                    <a th:href="@{/invoices/create}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-lg me-1"></i>L&#7853;p h&#243;a &#273;&#417;n m&#7899;i
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="inv : ${invoices}" th:id="'row-' + ${inv.invoiceId}">
@@ -197,22 +203,29 @@
                                 <span th:if="${inv.paymentStatus.name() == 'CANCELLED'}" class="fin-badge fin-badge-cancelled"><i class="bi bi-x-circle"></i> Đã hủy</span>
                             </td>
                             <td data-column-key="actions" data-column-action="true" class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="btn btn-outline-primary" title="Xem chi tiết (SCR-21.1)">
+                                <div class="fin-table-actions">
+                                    <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}"
+                                       class="fin-table-btn fin-table-btn-view fin-table-btn-icon"
+                                       title="Xem chi ti&#7871;t h&#243;a &#273;&#417;n">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="btn btn-outline-secondary" title="In hóa đơn (SCR-21.3)">
+                                    <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank"
+                                       class="fin-table-btn fin-table-btn-print fin-table-btn-icon"
+                                       title="In h&#243;a &#273;&#417;n">
                                         <i class="bi bi-printer"></i>
                                     </a>
                                     <button th:if="${inv.status.name() != 'CANCELLED' and inv.paymentStatus.name() != 'PAID'}"
-                                            type="button" class="btn btn-success"
+                                            type="button"
+                                            class="fin-table-btn fin-table-btn-pay"
                                             th:data-invoice-id="${inv.invoiceId}"
                                             th:data-code="${inv.invoiceCode}"
                                             th:data-debt="${inv.remainingDebt}"
                                             th:data-patient="${inv.patientProfile.fullName}"
+                                            th:data-branch-id="${inv.branch.branchId}"
+                                            th:data-profile-id="${inv.patientProfile.profileId}"
                                             onclick="openQuickPayModal(this)"
-                                            title="Ghi nhận thanh toán (SCR-22.2)">
-                                        <i class="bi bi-cash"></i> Thu tiền
+                                            title="Thu ti&#7873;n h&#243;a &#273;&#417;n">
+                                        <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
                                     </button>
                                 </div>
                             </td>
@@ -271,13 +284,24 @@
                 <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
                 <select id="qpMethod" class="form-select">
                     <option value="CASH">💵 Tiền mặt</option>
-                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (QR)</option>
+                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (VietQR)</option>
                     <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
                     <option value="DEPOSIT_WALLET">👛 Trừ vào ví tiền cọc / tạm ứng</option>
                 </select>
             </div>
+
+            <!-- Hidden inputs cho VietQR -->
+            <input type="hidden" id="qpBranchId">
+            <input type="hidden" id="qpProfileId">
+            <input type="hidden" id="qpBankAccountId">
+            <input type="hidden" id="qpExpectedTransferContent">
+            <input type="hidden" id="qpIdempotencyKey">
+
+            <!-- Container VietQR -->
+            <div id="qpVietQrContainer" class="mb-3" style="display: none;"></div>
+
             <div class="mb-3">
-                <label for="qpRef" class="form-label small text-muted">Mã giao dịch / Mã chuẩn chi ngân hàng (nếu có)</label>
+                <label for="qpRef" class="form-label small text-muted">Mã giao dịch ngân hàng thực tế (nếu có)</label>
                 <input type="text" id="qpRef" class="form-control" placeholder="VD: VCB12345678, POS-9988">
             </div>
             <div class="mb-3">
@@ -314,24 +338,54 @@
     </div>
 </div>
 
+<script th:src="@{/js/vietqr-payment.js}"></script>
 <script th:inline="javascript">
+    let qpQrBox = null;
+
     function openQuickPayModal(btn) {
         const invId = btn.getAttribute('data-invoice-id');
         const code = btn.getAttribute('data-code');
         const debt = parseFloat(btn.getAttribute('data-debt'));
         const patient = btn.getAttribute('data-patient');
+        const branchId = btn.getAttribute('data-branch-id');
+        const profileId = btn.getAttribute('data-profile-id');
 
         document.getElementById('qpInvoiceId').value = invId;
+        document.getElementById('qpBranchId').value = branchId || '';
+        document.getElementById('qpProfileId').value = profileId || '';
         document.getElementById('qpInvoiceCode').textContent = code;
         document.getElementById('qpPatientName').textContent = patient;
         document.getElementById('qpRemainingDebt').textContent = new Intl.NumberFormat('vi-VN').format(debt) + ' đ';
         document.getElementById('qpAmount').value = debt;
         document.getElementById('qpError').style.display = 'none';
+        document.getElementById('qpRef').value = '';
+        document.getElementById('qpNotes').value = '';
+        document.getElementById('qpBankAccountId').value = '';
+        document.getElementById('qpExpectedTransferContent').value = '';
+        document.getElementById('qpIdempotencyKey').value = 'QP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        if (!qpQrBox) {
+            qpQrBox = new VietQrPaymentBox({
+                container: 'qpVietQrContainer',
+                methodSelect: 'qpMethod',
+                amountInput: 'qpAmount',
+                branchId: () => document.getElementById('qpBranchId').value,
+                invoiceId: () => document.getElementById('qpInvoiceId').value,
+                profileId: () => document.getElementById('qpProfileId').value,
+                bankAccountIdInput: 'qpBankAccountId',
+                expectedContentInput: 'qpExpectedTransferContent'
+            });
+        } else {
+            qpQrBox.refresh(true);
+        }
 
         document.getElementById('quickPayModal').style.display = 'flex';
     }
 
     function closeQuickPayModal() {
+        if (qpQrBox) qpQrBox.reset();
+        document.getElementById('qpBankAccountId').value = '';
+        document.getElementById('qpExpectedTransferContent').value = '';
         document.getElementById('quickPayModal').style.display = 'none';
     }
 
@@ -341,6 +395,9 @@
         const method = document.getElementById('qpMethod').value;
         const ref = document.getElementById('qpRef').value;
         const notes = document.getElementById('qpNotes').value;
+        const bankAccountId = document.getElementById('qpBankAccountId').value;
+        const expectedTransferContent = document.getElementById('qpExpectedTransferContent').value;
+        const idempotencyKey = document.getElementById('qpIdempotencyKey').value;
         const errorEl = document.getElementById('qpError');
         const btnSubmit = document.getElementById('btnSubmitQp');
 
@@ -361,7 +418,10 @@
                     amount: amount,
                     paymentMethod: method,
                     transactionRef: ref,
-                    notes: notes
+                    notes: notes,
+                    bankAccountId: bankAccountId ? parseInt(bankAccountId) : null,
+                    expectedTransferContent: expectedTransferContent,
+                    idempotencyKey: idempotencyKey
                 })
             });
             const data = await resp.json();
@@ -372,7 +432,7 @@
                 document.getElementById('paymentSuccessToast').hidden = false;
                 setTimeout(() => {
                     window.location.reload();
-                }, 2400);
+                }, 2000);
             } else {
                 errorEl.textContent = data.error || 'Có lỗi xảy ra khi xử lý thanh toán.';
                 errorEl.style.display = 'block';
