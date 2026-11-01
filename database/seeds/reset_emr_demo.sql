@@ -50,6 +50,12 @@ DELETE FROM prescriptions WHERE prescription_code LIKE 'RXEMR%';
 DELETE ps FROM performed_services ps JOIN visits v ON v.visit_id = ps.visit_id
 JOIN patient_profiles p ON p.profile_id = v.profile_id
 WHERE p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';
+-- Phiếu labo là dữ liệu seed của module EMR để màn Khám & Điều trị không phải
+-- tự sinh demo data trong lúc render. Phải xóa trước lượt khám vì labo_orders
+-- có khóa ngoại bắt buộc tới visit/profile/branch/doctor.
+DELETE lo FROM labo_orders lo JOIN visits v ON v.visit_id = lo.visit_id
+JOIN patient_profiles p ON p.profile_id = v.profile_id
+WHERE p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';
 DELETE d FROM examination_diagnoses d JOIN visits v ON v.visit_id = d.visit_id
 JOIN patient_profiles p ON p.profile_id = v.profile_id
 WHERE p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';

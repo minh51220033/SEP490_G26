@@ -311,6 +311,44 @@ JOIN staff_profiles s ON s.staff_code = 'BSEMR01'
 WHERE p.patient_code = 'BNEMR1001'
 ON DUPLICATE KEY UPDATE plan_name = VALUES(plan_name), notes = VALUES(notes), status = 'IN_PROGRESS';
 
+-- 4.1) Phiếu labo có thật cho các lượt demo.
+-- Màn Khám & Điều trị luôn tải tab Labo khi mở hồ sơ. Seed các dòng này để
+-- không kích hoạt đường tự sinh demo của FT15 trong lúc render trang, đồng thời
+-- bác sĩ có dữ liệu đủ để thử tab Đặt xưởng mà không đụng tới code FT15.
+INSERT INTO suppliers (supplier_code, supplier_name, phone_number, address, is_active)
+SELECT 'LBEMR01', 'Labo demo EMR', '02838220011', 'Quận 1, TP. Hồ Chí Minh', 1
+WHERE NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_code = 'LBEMR01');
+
+INSERT INTO labo_orders
+    (labo_code, visit_id, profile_id, branch_id, doctor_id, supplier_id, order_type,
+     tooth_positions, material_type, shade_color, quantity, unit_price, cost_to_clinic,
+     sent_date, try_in_date, try_in_time, expected_date, received_date, status, notes)
+SELECT src.labo_code, v.visit_id, v.profile_id, v.branch_id, s.staff_id, supplier.supplier_id,
+       'NEW', src.tooth, src.material, src.shade, 1, src.price, src.price,
+       CURDATE(), DATE_ADD(CURDATE(), INTERVAL 2 DAY), '09:30',
+       DATE_ADD(CURDATE(), INTERVAL 4 DAY), NULL, src.status, src.notes
+FROM (
+    SELECT 'LABEMR1001' labo_code, 'VISEMR1001' visit_code, '16' tooth,
+           'Mão sứ Zirconia thử màu' material, 'A2' shade, 1500000.00 price, 'PROCESSING' status,
+           'Phiếu labo demo cho ca tạo bệnh án mới.' notes
+    UNION ALL SELECT 'LABEMR1002', 'VISEMR1002', '26',
+           'Mão sứ toàn sứ e.max' , 'A1', 1800000.00, 'SENT',
+           'Phiếu labo demo cho ca làm mới snapshot.'
+    UNION ALL SELECT 'LABEMR1003', 'VISEMR1003', '38',
+           'Mẫu xét nghiệm đông máu' , 'N/A', 350000.00, 'DELIVERED',
+           'Kết quả labo đã nhận trước khi ký bệnh án.'
+    UNION ALL SELECT 'LABEMR1004', 'VISEMR1004', '16',
+           'Mão tạm PMMA' , 'A2', 500000.00, 'SENT',
+           'Ca thiếu dữ liệu lâm sàng để kiểm thử validation.'
+    UNION ALL SELECT 'LABEMR1005', 'VISEMR1005', '36',
+           'Máng hướng dẫn vệ sinh nha chu' , 'Trong suốt', 400000.00, 'PROCESSING',
+           'Ca thiếu chẩn đoán chính để kiểm thử validation.'
+) src
+JOIN visits v ON v.visit_code = src.visit_code
+JOIN staff_profiles s ON s.staff_code = 'BSEMR01'
+JOIN suppliers supplier ON supplier.supplier_code = 'LBEMR01'
+WHERE NOT EXISTS (SELECT 1 FROM labo_orders lo WHERE lo.labo_code = src.labo_code);
+
 -- 5) Hai bệnh án đã có sẵn: một bản nháp snapshot cũ và một bản đã ký thử để sửa đổi.
 INSERT INTO emr_records
     (record_code, visit_id, profile_id, branch_id, status, current_version_no, created_by, created_at, updated_at, row_version)
