@@ -40,6 +40,11 @@ public class EmrModuleService {
     private final PerformedServiceRepository performedServices;
     private final PrescriptionRepository prescriptions;
     private final ClinicalPhotoRepository photos;
+    private final NanopixXraySyncLogRepository xrays;
+    private final LaboOrderRepository laboOrders;
+    private final EmrAttachmentRepository attachments;
+    private final EmrAttachmentStorage attachmentStorage;
+    private final TreatmentPlanRepository treatmentPlans;
     private final StaffProfileRepository staffProfiles;
     private final ObjectMapper mapper;
 
@@ -48,6 +53,9 @@ public class EmrModuleService {
             VisitRepository visits, ClinicalExaminationRepository examinations,
             ExaminationDiagnosisRepository diagnoses, PerformedServiceRepository performedServices,
             PrescriptionRepository prescriptions, ClinicalPhotoRepository photos,
+            NanopixXraySyncLogRepository xrays, LaboOrderRepository laboOrders,
+            TreatmentPlanRepository treatmentPlans,
+            EmrAttachmentRepository attachments, EmrAttachmentStorage attachmentStorage,
             StaffProfileRepository staffProfiles, ObjectMapper mapper) {
         this.access = access;
         this.records = records;
@@ -59,16 +67,32 @@ public class EmrModuleService {
         this.performedServices = performedServices;
         this.prescriptions = prescriptions;
         this.photos = photos;
+        this.xrays = xrays;
+        this.laboOrders = laboOrders;
+        this.attachments = attachments;
+        this.attachmentStorage = attachmentStorage;
+        this.treatmentPlans = treatmentPlans;
         this.staffProfiles = staffProfiles;
         this.mapper = mapper;
     }
 
     public Dashboard dashboard(HttpSession session, String query, EmrRecordStatus status) {
+        return dashboard(session, query, status, null, null, null, null);
+    }
+
+    public Dashboard dashboard(HttpSession session, String query, EmrRecordStatus status,
+            java.time.LocalDate fromDate, java.time.LocalDate toDate, String doctor, String branch) {
         EmrAccess.Scope scope = access.require(session);
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         List<RecordRow> recordRows = records.findAllWithDetails().stream()
                 .filter(r -> scope.permits(r.getBranch().getBranchId()))
                 .filter(r -> status == null || r.getStatus() == status)
+                .filter(r -> fromDate == null || !r.getVisit().getCheckInAt().toLocalDate().isBefore(fromDate))
+                .filter(r -> toDate == null || !r.getVisit().getCheckInAt().toLocalDate().isAfter(toDate))
+                .filter(r -> doctor == null || doctor.isBlank() || r.getVisit().getPrimaryDoctor() != null
+                        && r.getVisit().getPrimaryDoctor().getFullName().toLowerCase(Locale.ROOT).contains(doctor.trim().toLowerCase(Locale.ROOT)))
+                .filter(r -> branch == null || branch.isBlank() || r.getBranch().getBranchName()
+                        .toLowerCase(Locale.ROOT).contains(branch.trim().toLowerCase(Locale.ROOT)))
                 .filter(r -> normalized.isBlank() || matches(r, normalized))
                 .map(this::row)
                 .toList();
@@ -96,7 +120,8 @@ public class EmrModuleService {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
         EmrRecordVersion current = currentVersion(record);
-        List<String> missing = validateSource(record.getVisit());
+        List<String> missing = validateRecord(record.getVisit(), current);
+        List<String> warnings = warningsFor(record.getVisit());
         String currentSourceHash = EmrHashing.sha256(toJson(buildSource(record.getVisit())));
         boolean stale = current.getSnapshot() == null
                 || !currentSourceHash.equals(current.getSnapshot().getSourceHash());
@@ -109,8 +134,11 @@ public class EmrModuleService {
                         v.getLockedAt(), v.getSignedAt(), v.getAmendmentReason(), v.getContentHash()))
                 .toList();
         List<SignatureRow> signatureRows = current.getSignatures().stream()
-                .map(s -> new SignatureRow(s.getSignerType(), s.getSignerName(), s.getProvider(),
+                .map(s -> new SignatureRow(s.getSignatureId(), s.getSignerType(), s.getSignerName(), s.getProvider(),
                         s.getStatus(), s.getSignedAt(), s.getExternalTransactionId())).toList();
+        List<AttachmentRow> attachmentRows = attachments.findByVersion_VersionIdOrderByIdAsc(current.getVersionId())
+                .stream().map(a -> new AttachmentRow(a.getId(), a.getCaption(), a.getOriginalName(),
+                        a.getMimeType(), a.getByteSize(), a.getSha256(), a.getCapturedAt())).toList();
         List<DocumentRow> documentRows = current.getDocuments().stream()
                 .map(d -> new DocumentRow(d.getDocumentCode(), d.getTitle(), d.getDocumentType(),
                         d.getSortOrder(), d.getDocumentHash(), documentManualFields(d))).toList();
@@ -121,11 +149,12 @@ public class EmrModuleService {
                         a.getActorUser() == null ? "Hệ thống" : a.getActorUser().getUsername(), a.getCreatedAt()))
                 .toList();
         return new RecordDetail(row(record), current.getVersionNumber(), current.getStatus(), current.getContentHash(),
-                parseJson(current.getSnapshot().getSourceJson()), stale, missing,
-                documentRows, documentFields, signatureRows, versionRows, auditRows,
+                parseJson(current.getSnapshot().getSourceJson()), stale, missing, warnings,
+                documentRows, documentFields, attachmentRows, signatureRows, versionRows, auditRows,
                 EmrStatePolicy.canRefresh(record.getStatus()), EmrStatePolicy.canValidate(record.getStatus()),
-                EmrStatePolicy.canLock(record.getStatus()), EmrStatePolicy.canPatientSign(record.getStatus()),
-                EmrStatePolicy.canDoctorSign(record.getStatus()), EmrStatePolicy.canAmend(record.getStatus()));
+                EmrStatePolicy.canLock(record.getStatus()),
+                EmrStatePolicy.canDoctorSign(record.getStatus()),
+                EmrStatePolicy.canAmend(record.getStatus()));
     }
 
     @Transactional
@@ -181,7 +210,7 @@ public class EmrModuleService {
         EmrRecord record = requireRecord(recordId, scope);
         if (!EmrStatePolicy.canValidate(record.getStatus())) conflict("Trạng thái hiện tại không cho phép kiểm tra.");
         EmrRecordVersion version = currentVersion(record);
-        List<String> missing = validateSource(record.getVisit());
+        List<String> missing = validateRecord(record.getVisit(), version);
         String currentHash = EmrHashing.sha256(toJson(buildSource(record.getVisit())));
         if (!currentHash.equals(version.getSnapshot().getSourceHash())) {
             missing = new ArrayList<>(missing);
@@ -192,6 +221,11 @@ public class EmrModuleService {
             version.setStatus(EmrVersionStatus.READY_TO_LOCK);
             audit(record, version, scope.user(), "VALIDATE_READY", "Bệnh án đủ điều kiện khóa.");
         } else {
+            if (record.getStatus() == EmrRecordStatus.READY_TO_LOCK) {
+                record.setStatus(version.getVersionNumber() > 1
+                        ? EmrRecordStatus.AMENDMENT_DRAFT : EmrRecordStatus.DRAFT);
+                version.setStatus(EmrVersionStatus.DRAFT);
+            }
             audit(record, version, scope.user(), "VALIDATE_FAILED", String.join("; ", missing));
         }
         return new ValidationResult(missing.isEmpty(), missing);
@@ -203,39 +237,47 @@ public class EmrModuleService {
         EmrRecord record = requireRecord(recordId, scope);
         if (!EmrStatePolicy.canLock(record.getStatus())) conflict("Bệnh án phải được kiểm tra hợp lệ trước khi khóa.");
         EmrRecordVersion version = currentVersion(record);
-        List<String> missing = validateSource(record.getVisit());
+        List<String> missing = validateRecord(record.getVisit(), version);
         String currentHash = EmrHashing.sha256(toJson(buildSource(record.getVisit())));
         if (!currentHash.equals(version.getSnapshot().getSourceHash())) missing.add("Snapshot đã cũ.");
         if (!missing.isEmpty()) conflict(String.join("; ", missing));
+        List<ClinicalPhoto> sourcePhotos = photos.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(
+                record.getPatientProfile().getProfileId()).stream()
+                .filter(photo -> photo.getVisit() != null
+                        && Objects.equals(photo.getVisit().getVisitId(), record.getVisit().getVisitId()))
+                .toList();
+        List<EmrAttachment> archived = new ArrayList<>();
+        for (ClinicalPhoto photo : sourcePhotos) archived.add(attachmentStorage.archive(version, photo));
+        for (NanopixXraySyncLog xray : xrays.findByMatchedVisit_VisitIdOrderByCapturedAtDesc(record.getVisit().getVisitId()))
+            archived.add(attachmentStorage.archive(version, xray.getImageUrl(), "X-quang · " + xray.getExternalStudyUid()));
+        for (LaboOrder labo : laboOrders.findByVisit_VisitIdOrderBySentDateDesc(record.getVisit().getVisitId()))
+            if (labo.getImageUrl() != null && !labo.getImageUrl().isBlank())
+                archived.add(attachmentStorage.archive(version, labo.getImageUrl(), "Labo · " + labo.getLaboCode()));
+        attachments.saveAll(archived);
         String documentMaterial = version.getDocuments().stream()
                 .sorted(Comparator.comparing(EmrDocument::getSortOrder))
                 .map(EmrDocument::getDocumentHash).reduce("", (a, b) -> a + b);
-        version.setContentHash(EmrHashing.sha256(version.getSnapshot().getSourceHash() + documentMaterial));
+        String attachmentMaterial = archived.stream().map(a -> a.getOriginalName() + ":" + a.getSha256())
+                .sorted().reduce("", String::concat);
+        version.setContentHash(EmrHashing.sha256(version.getSnapshot().getSourceHash()
+                + documentMaterial + attachmentMaterial));
         version.setStatus(EmrVersionStatus.LOCKED);
         version.setLockedAt(LocalDateTime.now());
-        record.setStatus(EmrRecordStatus.PATIENT_SIGNATURE_PENDING);
+        record.setStatus(EmrRecordStatus.DOCTOR_SIGNATURE_PENDING);
         audit(record, version, scope.user(), "LOCK", "Khóa phiên bản và chốt content hash.");
     }
 
     @Transactional
-    public void patientSignForTest(HttpSession session, Long recordId, String signerName) {
+    public void doctorSignForTest(HttpSession session, Long recordId, boolean confirmed) {
+        if (!confirmed) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Bác sĩ cần tích xác nhận đã kiểm tra hồ sơ trước khi ký thử.");
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
-        if (!EmrStatePolicy.canPatientSign(record.getStatus())) conflict("Bệnh án chưa ở bước người bệnh ký.");
-        String name = signerName == null || signerName.isBlank()
-                ? record.getPatientProfile().getFullName() : signerName.trim();
-        EmrRecordVersion version = currentVersion(record);
-        createTestSignature(version, EmrSignerType.PATIENT, name, null);
-        record.setStatus(EmrRecordStatus.DOCTOR_SIGNATURE_PENDING);
-        audit(record, version, scope.user(), "PATIENT_SIGN_TEST",
-                "Người bệnh xác nhận bằng bộ ký thử nghiệm nội bộ.");
-    }
-
-    @Transactional
-    public void doctorSignForTest(HttpSession session, Long recordId) {
-        EmrAccess.Scope scope = access.require(session);
-        EmrRecord record = requireRecord(recordId, scope);
-        if (!EmrStatePolicy.canDoctorSign(record.getStatus())) conflict("Bệnh án chưa ở bước bác sĩ ký.");
+        if (!EmrStatePolicy.canDoctorSign(record.getStatus()))
+            conflict("Bệnh án chưa ở bước bác sĩ ký.");
+        if (record.getVisit().getPrimaryDoctor() == null || !Objects.equals(
+                record.getVisit().getPrimaryDoctor().getUser().getUserId(), scope.user().getUserId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ bác sĩ khám được ký hồ sơ này.");
         EmrRecordVersion version = currentVersion(record);
         String doctorName = staffProfiles.findByUser_UserId(scope.user().getUserId())
                 .map(StaffProfile::getFullName).orElse(scope.user().getUsername());
@@ -335,11 +377,26 @@ public class EmrModuleService {
                 "code", document.getDocumentCode(), "title", document.getTitle(),
                 "type", document.getDocumentType(), "hash", document.getDocumentHash(),
                 "manualFields", documentManualFields(document))).toList());
+        result.put("attachments", attachments.findByVersion_VersionIdOrderByIdAsc(version.getVersionId())
+                .stream().map(a -> mapOf("id", a.getId(), "name", a.getOriginalName(),
+                        "mimeType", a.getMimeType(), "byteSize", a.getByteSize(),
+                        "sha256", a.getSha256())).toList());
         result.put("signatures", version.getSignatures().stream().map(signature -> mapOf(
                 "signerType", signature.getSignerType(), "signerName", signature.getSignerName(),
                 "provider", signature.getProvider(), "status", signature.getStatus(),
                 "signedAt", text(signature.getSignedAt()), "signatureHash", signature.getSignatureHash())).toList());
         return prettyJson(result);
+    }
+
+    public AttachmentDownload downloadAttachment(HttpSession session, Long recordId, Long attachmentId) {
+        EmrAccess.Scope scope = access.require(session);
+        requireRecord(recordId, scope);
+        EmrAttachment attachment = attachments.findById(attachmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tệp EMR."));
+        if (!Objects.equals(attachment.getVersion().getRecord().getRecordId(), recordId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tệp EMR.");
+        return new AttachmentDownload(attachmentStorage.read(attachment), attachment.getMimeType(),
+                attachment.getOriginalName());
     }
 
     private void capture(EmrRecordVersion version, Visit visit) {
@@ -356,7 +413,7 @@ public class EmrModuleService {
         upsertDocument(version, "OUTPATIENT_DENTAL",
                 "Bệnh án ngoại trú Răng Hàm Mặt", "MEDICAL_RECORD", 20, json);
         upsertDocument(version, "TREATMENT_SUMMARY",
-                "Tổng kết quá trình khám và điều trị", "SUMMARY", 30, json);
+                "Tổng kết bệnh án ngoại trú", "SUMMARY", 30, json);
         upsertDocument(version, "ATTACHMENT_INDEX",
                 "Danh mục tài liệu đính kèm", "ATTACHMENT_INDEX", 40, json);
         upsertDocument(version, "VERIFICATION",
@@ -477,8 +534,60 @@ public class EmrModuleService {
                         "usageInstruction", i.getUsageInstruction())).toList())).toList());
         root.put("photos", photoRows.stream().map(p -> mapOf("stage", text(p.getPhotoStage()),
                 "category", text(p.getPhotoCategory()), "imageUrl", p.getImageUrl(),
-                "caption", p.getCaption(), "capturedAt", text(p.getCapturedAt()))).toList());
+                "caption", p.getCaption(), "capturedAt", text(p.getCapturedAt()),
+                "sourceId", p.getPhotoId())).toList());
+        root.put("xrays", xrays.findByMatchedVisit_VisitIdOrderByCapturedAtDesc(visit.getVisitId()).stream()
+                .map(x -> mapOf("studyUid", x.getExternalStudyUid(), "imageUrl", x.getImageUrl(),
+                        "toothNumbers", x.getToothNumbers(), "capturedAt", text(x.getCapturedAt()))).toList());
+        root.put("laboOrders", laboOrders.findByVisit_VisitIdOrderBySentDateDesc(visit.getVisitId()).stream()
+                .map(l -> mapOf("code", l.getLaboCode(), "material", l.getMaterialType(),
+                        "toothPositions", l.getToothPositions(), "status", text(l.getStatus()),
+                        "imageUrl", l.getImageUrl(), "notes", l.getNotes())).toList());
+        root.put("visitHistory", visits.findByPatientProfile_ProfileIdOrderByCheckInAtDesc(patient.getProfileId())
+                .stream().filter(previous -> !Objects.equals(previous.getVisitId(), visit.getVisitId())
+                        && !previous.getCheckInAt().isAfter(visit.getCheckInAt()))
+                .limit(30).map(previous -> mapOf("visitCode", previous.getVisitCode(),
+                        "checkInAt", text(previous.getCheckInAt()),
+                        "symptoms", previous.getInitialSymptoms(),
+                        "doctorName", previous.getPrimaryDoctor() == null ? null : previous.getPrimaryDoctor().getFullName(),
+                        "diagnoses", diagnoses.findByVisitIdWithDetails(previous.getVisitId()).stream()
+                                .map(ExaminationDiagnosis::getDiagnosisText).toList(),
+                        "services", performedServices.findByVisitIdWithDetails(previous.getVisitId()).stream()
+                                .map(service -> service.getService().getServiceName()).toList())).toList());
+        root.put("treatmentPlans", treatmentPlans.findByProfileIdWithDetails(patient.getProfileId()).stream()
+                .map(plan -> mapOf("code", plan.getPlanCode(), "name", plan.getPlanName(),
+                        "status", text(plan.getStatus()), "notes", plan.getNotes(),
+                        "stages", plan.getStages().stream().map(stage -> mapOf(
+                                "name", stage.getStageName(), "status", text(stage.getStatus()),
+                                "expectedEndDate", text(stage.getExpectedEndDate()))).toList())).toList());
         return root;
+    }
+
+    private List<String> validateRecord(Visit visit, EmrRecordVersion version) {
+        List<String> missing = validateSource(visit);
+        if (version == null) return missing;
+        Map<String, String> summary = version.getDocuments().stream()
+                .filter(document -> "TREATMENT_SUMMARY".equals(document.getDocumentCode()))
+                .findFirst().map(this::documentManualFields).orElse(Map.of());
+        if (blank(summary.get("dischargeCondition")))
+            missing.add("Thiếu tình trạng người bệnh khi kết thúc lượt khám (Tổng kết bệnh án ngoại trú).");
+        if (blank(summary.get("followupInstructions")))
+            missing.add("Thiếu hướng theo dõi hoặc kế hoạch điều trị tiếp theo (Tổng kết bệnh án ngoại trú).");
+        return missing;
+    }
+
+    private boolean blank(String value) { return value == null || value.isBlank(); }
+
+    private List<String> warningsFor(Visit visit) {
+        ClinicalExamination exam = examinations.findByVisit_VisitId(visit.getVisitId()).orElse(null);
+        List<String> warnings = new ArrayList<>();
+        if (exam == null) return warnings;
+        if (blank(exam.getHistoryIllness())) warnings.add("Chưa ghi diễn biến bệnh sử; khai thác thêm ở lần khám tiếp theo.");
+        if (blank(exam.getVitalSignsJson())) warnings.add("Chưa ghi dấu hiệu sinh tồn.");
+        if (blank(exam.getExtraoralExam())) warnings.add("Chưa ghi khám ngoài miệng / khớp thái dương hàm.");
+        if (blank(exam.getIntraoralExam())) warnings.add("Chưa ghi khám trong miệng.");
+        if (blank(exam.getOdontogramChartJson())) warnings.add("Chưa có sơ đồ răng trong phiếu khám.");
+        return warnings;
     }
 
     private List<String> validateSource(Visit visit) {
@@ -493,6 +602,10 @@ public class EmrModuleService {
                 .filter(d -> d.getDiagnosisType() == DiagnosisType.MAIN).findFirst();
         if (main.isEmpty()) missing.add("Thiếu chẩn đoán chính.");
         else if (main.get().getIcd10Disease() == null) missing.add("Chẩn đoán chính chưa có mã ICD-10.");
+        if (exam != null && blank(exam.getSummaryAssessment()))
+            missing.add("Thiếu kết luận khám lâm sàng.");
+        if (visit.getPrimaryDoctor() != null && blank(visit.getPrimaryDoctor().getPracticeLicenseNo()))
+            missing.add("Bác sĩ khám chưa có số giấy phép hành nghề.");
         return missing;
     }
 
@@ -575,15 +688,19 @@ public class EmrModuleService {
                                    boolean ready, List<String> missing) {}
     public record RecordDetail(RecordRow record, Integer currentVersion, EmrVersionStatus versionStatus,
                                String contentHash,
-                               Map<String, Object> snapshot, boolean stale, List<String> missing,
+                               Map<String, Object> snapshot, boolean stale, List<String> missing, List<String> warnings,
                                List<DocumentRow> documents, Map<String, Map<String, String>> documentFields,
+                               List<AttachmentRow> attachments,
                                List<SignatureRow> signatures,
                                List<VersionRow> versions, List<AuditRow> audits,
                                boolean canRefresh, boolean canValidate, boolean canLock,
-                               boolean canPatientSign, boolean canDoctorSign, boolean canAmend) {}
+                               boolean canDoctorSign, boolean canAmend) {}
     public record DocumentRow(String code, String title, String type, Integer sortOrder, String hash,
                               Map<String, String> fields) {}
-    public record SignatureRow(EmrSignerType type, String signerName, String provider,
+    public record AttachmentRow(Long id, String caption, String name, String mimeType,
+                                Long byteSize, String sha256, LocalDateTime capturedAt) {}
+    public record AttachmentDownload(byte[] bytes, String mimeType, String name) {}
+    public record SignatureRow(Long id, EmrSignerType type, String signerName, String provider,
                                EmrSignatureStatus status, LocalDateTime signedAt, String transactionId) {}
     public record VersionRow(Integer number, EmrVersionStatus status, LocalDateTime createdAt,
                              LocalDateTime lockedAt, LocalDateTime signedAt, String reason, String hash) {}
