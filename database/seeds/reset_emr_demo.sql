@@ -3,6 +3,13 @@
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 START TRANSACTION;
 
+DELETE file
+FROM emr_attachments file
+JOIN emr_record_versions rv ON rv.version_id = file.version_id
+JOIN emr_records r ON r.record_id = rv.record_id
+JOIN patient_profiles p ON p.profile_id = r.profile_id
+WHERE r.record_code LIKE 'EMR-DEMO-%' OR p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';
+
 DELETE s
 FROM emr_signatures s
 JOIN emr_record_versions rv ON rv.version_id = s.version_id
@@ -47,6 +54,10 @@ JOIN prescriptions p ON p.prescription_id = pi.prescription_id
 WHERE p.prescription_code LIKE 'RXEMR%';
 
 DELETE FROM prescriptions WHERE prescription_code LIKE 'RXEMR%';
+DELETE cp FROM clinical_photos cp JOIN visits v ON v.visit_id = cp.visit_id
+JOIN patient_profiles p ON p.profile_id = v.profile_id
+WHERE cp.image_url = '/uploads/clinical_photos/emr-demo-odontogram.png'
+  AND (p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001');
 DELETE ps FROM performed_services ps JOIN visits v ON v.visit_id = ps.visit_id
 JOIN patient_profiles p ON p.profile_id = v.profile_id
 WHERE p.patient_code LIKE 'BNEMR%' OR p.patient_code = 'BNFLOW1001';
