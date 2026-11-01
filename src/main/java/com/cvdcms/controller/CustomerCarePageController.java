@@ -42,7 +42,7 @@ public class CustomerCarePageController {
     /**
      * Mở trang Quản lý Chăm sóc khách hàng (/customer-care hoặc /cskh).
      */
-    @GetMapping({"/customer-care", "/cskh"})
+    @GetMapping({"/customer-care", "/customer-care/tasks", "/cskh"})
     public String customerCarePage(
             HttpSession session,
             HttpServletResponse response,

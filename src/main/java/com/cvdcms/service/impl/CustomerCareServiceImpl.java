@@ -1343,6 +1343,56 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return summary;
     }
 
+    @Override
+    @Transactional
+    public CustomerCareTaskDTO recordVisitInteraction(Long visitId, CustomerCareInteractionCreateDTO dto, Long userId) {
+        if (visitId == null || visitId <= 0) {
+            bad("Mã ca khám không hợp lệ.");
+        }
+        if (dto == null) {
+            bad("Dữ liệu kết quả liên hệ không được để trống.");
+        }
+
+        Visit visit = visitRepository.findWithDetailsById(visitId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám ID: " + visitId));
+
+        if (visit.getPatientProfile() == null) {
+            bad("Ca khám không có thông tin hồ sơ bệnh nhân tương ứng.");
+        }
+
+        // 1. Tìm task CSKH đang mở gắn trực tiếp với ca khám này
+        List<CustomerCareTask> visitTasks = taskRepository.findByVisit_VisitId(visitId);
+        CustomerCareTask task = visitTasks.stream()
+                .filter(t -> t.getStatus() != CustomerCareTaskStatus.COMPLETED && t.getStatus() != CustomerCareTaskStatus.CANCELLED)
+                .findFirst().orElse(null);
+
+        // 2. Nếu không có task gắn visitId, tìm task đang mở gần nhất của bệnh nhân
+        if (task == null) {
+            List<CustomerCareTask> pTasks = taskRepository.findByPatientProfileIdWithDetails(visit.getPatientProfile().getProfileId());
+            task = pTasks.stream()
+                    .filter(t -> t.getStatus() != CustomerCareTaskStatus.COMPLETED && t.getStatus() != CustomerCareTaskStatus.CANCELLED)
+                    .findFirst().orElse(null);
+        }
+
+        // 3. Nếu vẫn chưa có task nào, tự động khởi tạo 1 task sau điều trị gắn với ca khám này
+        if (task == null) {
+            task = new CustomerCareTask();
+            task.setTaskCode("CSKH" + (System.currentTimeMillis() % 10000000L));
+            task.setPatientProfile(visit.getPatientProfile());
+            task.setBranch(visit.getBranch());
+            task.setVisit(visit);
+            task.setTaskType(CustomerCareTaskType.POST_TREATMENT_FOLLOWUP);
+            task.setDueDate(LocalDate.now());
+            task.setStatus(CustomerCareTaskStatus.IN_PROGRESS);
+            task.setNotes("Tương tác CSKH trực tiếp tại ca khám " + (visit.getVisitCode() != null ? visit.getVisitCode() : "#" + visit.getVisitId()));
+            task.setAssignedStaff(visit.getPrimaryDoctor());
+            task = taskRepository.save(task);
+        }
+
+        // 4. Ghi nhận tương tác thông qua hàm recordInteraction chuẩn
+        return recordInteraction(task.getTaskId(), dto, userId);
+    }
+
     // =========================================================================
     // CÁC HÀM BỔ TRỢ NGHIỆP VỤ & CHUYỂN ĐỔI DTO
     // =========================================================================
