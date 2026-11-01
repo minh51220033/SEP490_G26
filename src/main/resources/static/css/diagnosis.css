@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    CV-DCMS - Phân hệ Khám & Điều trị (Theo chuẩn DentalFlow)
    FT14: Chẩn đoán bệnh lý theo ICD-10 (SCR-14.1)
 ===================================================================== */
@@ -2696,4 +2696,29 @@ html {
 }
 #doctorInstructionModal .modal-dialog {
     z-index: 1061 !important;
+}
+
+/* =========================================================================
+   GLOBAL MODALS & BACKDROP Z-INDEX FIX (LUÔN NỔI TRÊN BACKDROP 2040)
+   ========================================================================= */
+.modal {
+    z-index: 2050 !important;
+    pointer-events: auto !important;
+}
+.modal.fade .modal-dialog,
+.modal .modal-dialog {
+    z-index: 2051 !important;
+    position: relative !important;
+    pointer-events: auto !important;
+}
+.modal.fade .modal-content,
+.modal .modal-content {
+    z-index: 2052 !important;
+    position: relative !important;
+    background-color: #ffffff !important;
+    pointer-events: auto !important;
+}
+.modal-backdrop,
+body.modal-open .modal-backdrop {
+    z-index: 2040 !important;
 }
