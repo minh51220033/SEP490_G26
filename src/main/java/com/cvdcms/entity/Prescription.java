@@ -56,7 +56,7 @@ public class Prescription {
     @Column(name = "followup_date")
     private LocalDate followupDate;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = com.cvdcms.entity.converter.PrescriptionStatusConverter.class)
     @Column(name = "status", nullable = false, length = 30)
     private com.cvdcms.entity.enums.PrescriptionStatus status = com.cvdcms.entity.enums.PrescriptionStatus.PENDING;
 

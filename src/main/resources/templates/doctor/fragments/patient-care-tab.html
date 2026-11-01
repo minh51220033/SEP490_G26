@@ -1,86 +1,792 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <body>
 
-<!-- ===================================================================== -->
-<!-- TAB: CHĂM SÓC KHÁCH HÀNG (CUSTOMER CARE & POST-OP FOLLOW-UP)           -->
-<!-- Frontend Fragment: doctor/fragments/patient-care-tab.html             -->
-<!-- ===================================================================== -->
-<div th:fragment="patientCareTab">
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-chat-heart-fill fs-5"></i>
-                </div>
-                <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Chăm sóc bệnh nhân sau điều trị (CSKH)</h4>
-                    <span class="text-secondary small">Nhật ký gọi điện hỏi thăm, tình trạng hồi phục &amp; khảo sát độ hài lòng</span>
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="showToast('Chức năng thêm lịch sử chăm sóc.');">
-                <i class="bi bi-telephone-plus me-1"></i>+ Ghi nhận cuộc gọi / CSKH
-            </button>
-        </div>
-
-        <div class="card-body p-4 bg-white">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="border rounded-3 p-3 bg-light-subtle h-100">
-                        <div class="d-flex align-items-center gap-2 text-primary fw-bold mb-2">
-                            <i class="bi bi-clock-history fs-5"></i>
-                            <span>Nhắc việc chăm sóc</span>
+    <!-- ===================================================================== -->
+    <!-- TAB: CHĂM SÓC KHÁCH HÀNG (CUSTOMER CARE & POST-OP FOLLOW-UP - FT44)  -->
+    <!-- Frontend Fragment: doctor/fragments/patient-care-tab.html             -->
+    <!-- Thiết kế theo tiêu chuẩn Dental SaaS CRM & EMR hàng đầu              -->
+    <!-- ===================================================================== -->
+    <div th:fragment="patientCareTab">
+        <div class="card border-0 shadow-sm rounded-4 mb-4" id="doctorCareTabCard"
+            style="border: 1px solid #e2e8f0; background: #ffffff;">
+            <!-- Header Panel -->
+            <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 p-3.5 border-bottom"
+                style="border-color: #f1f5f9 !important;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2.5 rounded-3 text-white d-flex align-items-center justify-content-center shadow-sm"
+                        style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                        <i class="bi bi-heart-pulse-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 fw-bold text-dark fs-6" style="letter-spacing: -0.01em;">Chăm sóc bệnh nhân sau điều trị (CSKH)</h5>
+                            <span
+                                class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5"
+                                style="font-size: 11px;">Hậu phẫu &amp; Tái khám</span>
                         </div>
-                        <ul class="list-unstyled small d-flex flex-column gap-2 mb-0">
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success"></i>
-                                <span>Gọi điện hỏi thăm sau nhổ răng (Ngày 1)</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-hourglass-split text-warning"></i>
-                                <span>Nhắc bệnh nhân tái khám cắt chỉ (Ngày 7)</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-chat-dots text-secondary"></i>
-                                <span>Khảo sát độ hài lòng dịch vụ (Zalo / SMS)</span>
-                            </li>
-                        </ul>
+                        <span class="text-secondary small" style="font-size: 12.5px;">Nhật ký gọi điện hỏi thăm, tình
+                            trạng hồi phục vết thương, tuân thủ dùng thuốc &amp; phản hồi chuyên môn</span>
                     </div>
                 </div>
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <!-- NÚT GHI NHẬN CUỘC GỌI / CSKH HOÀN CHỈNH -->
+                    <button type="button"
+                        class="btn btn-sm btn-primary rounded-pill px-3.5 py-2 fw-bold text-white shadow-sm d-flex align-items-center gap-1.5"
+                        onclick="openDoctorCareModal()"
+                        title="Mở form ghi nhận nhật ký cuộc gọi / tương tác CSKH cho ca khám này">
+                        <i class="bi bi-telephone-plus-fill"></i>
+                        <span>+ Ghi nhận cuộc gọi / CSKH</span>
+                    </button>
 
-                <div class="col-md-8">
-                    <div class="border rounded-3 p-3 bg-white h-100">
-                        <h6 class="fw-bold text-dark mb-3">
-                            <i class="bi bi-journal-text text-primary me-1"></i>Lịch sử liên hệ &amp; Phản hồi của bệnh nhân
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
-                                <thead class="table-light">
-                                <tr>
-                                    <th>Thời gian</th>
-                                    <th>Hình thức</th>
-                                    <th>Nhân viên CSKH</th>
-                                    <th>Nội dung trao đổi</th>
-                                    <th>Trạng thái</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr>
-                                    <td>21/10/2026 14:00</td>
-                                    <td><span class="badge bg-success-subtle text-success border border-success">Gọi điện</span></td>
-                                    <td>Lễ tân CSKH</td>
-                                    <td>Hỏi thăm tình trạng sưng đau sau điều trị. Bệnh nhân phản hồi đỡ đau, đã dùng thuốc theo đơn.</td>
-                                    <td><span class="badge bg-light text-dark border">Đã liên hệ</span></td>
-                                </tr>
-                                </tbody>
-                            </table>
+                    <a th:href="@{/doctor/recalls}"
+                        class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-1.5"
+                        title="Xem danh sách nhắc hẹn tái khám và công việc CSKH của Bác sĩ">
+                        <i class="bi bi-list-check"></i>
+                        <span>DS Tái khám &amp; CSKH Bác sĩ</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body p-3 p-md-4 bg-white">
+                <div class="row g-4">
+                    <!-- ============================================================= -->
+                    <!-- CỘT TRÁI: DANH SÁCH NHẮC VIỆC CHĂM SÓC (CARE TASKS)           -->
+                    <!-- ============================================================= -->
+                    <div class="col-lg-4">
+                        <div class="rounded-4 p-3 bg-light-subtle h-100 d-flex flex-column"
+                            style="border: 1px solid #e2e8f0;">
+                            <div class="d-flex align-items-center justify-content-between text-dark fw-bold mb-3 pb-2.5 border-bottom"
+                                style="border-color: #cbd5e1 !important;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-bell-fill text-primary fs-5"></i>
+                                    <span style="font-size: 14.5px;">Nhắc việc chăm sóc</span>
+                                </div>
+                                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1"
+                                    th:text="${careTasks != null ? careTasks.size() : 0}"
+                                    id="doctorCareTaskCountBadge">0</span>
+                            </div>
+
+                            <!-- Trạng thái chưa có việc -->
+                            <div th:if="${careTasks == null or #lists.isEmpty(careTasks)}"
+                                class="text-muted small py-4 text-center my-auto">
+                                <div class="p-3 rounded-circle bg-white d-inline-flex align-items-center justify-content-center shadow-xs mb-2 border"
+                                    style="width: 54px; height: 54px;">
+                                    <i class="bi bi-calendar2-check text-secondary opacity-50"
+                                        style="font-size: 1.6rem;"></i>
+                                </div>
+                                <div class="fw-semibold text-secondary">Chưa có công việc CSKH nào</div>
+                                <div class="text-muted mt-1 px-3" style="font-size: 11.5px;">Bác sĩ có thể bấm
+                                    <strong>"+ Ghi nhận cuộc gọi / CSKH"</strong> ở góc trên để lưu nhật ký tương tác
+                                    với bệnh nhân.</div>
+                            </div>
+
+                            <!-- Danh sách công việc động từ DB -->
+                            <div th:if="${careTasks != null and !#lists.isEmpty(careTasks)}"
+                                class="d-flex flex-column gap-2.5 overflow-auto pe-1" style="max-height: 520px;">
+                                <div th:each="t : ${careTasks}"
+                                    class="p-3 rounded-3 bg-white border shadow-xs d-flex flex-column gap-2 care-task-card">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span
+                                            class="font-monospace fw-bold text-dark px-2 py-0.5 rounded border bg-light small"
+                                            style="font-size: 11.5px;" th:text="${t.taskCode}">CSKH10001</span>
+
+                                        <span th:if="${t.status != null and t.status.name() == 'COMPLETED'}"
+                                            class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1"
+                                            style="font-size: 11.5px;">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Hoàn thành
+                                        </span>
+                                        <span th:if="${t.status != null and t.status.name() == 'PENDING'}"
+                                            class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1"
+                                            style="font-size: 11.5px;">
+                                            <i class="bi bi-hourglass-split me-1"></i>Chờ liên hệ
+                                        </span>
+                                        <span th:if="${t.status != null and t.status.name() == 'IN_PROGRESS'}"
+                                            class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1"
+                                            style="font-size: 11.5px;">
+                                            <i class="bi bi-telephone-outbound-fill me-1"></i>Đang liên hệ
+                                        </span>
+                                        <span th:if="${t.status != null and t.status.name() == 'ESCALATED_TO_DOCTOR'}"
+                                            class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1"
+                                            style="font-size: 11.5px;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Chờ BS phản hồi
+                                        </span>
+                                        <span th:if="${t.status != null and t.status.name() == 'CANCELLED'}"
+                                            class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1"
+                                            style="font-size: 11.5px;">
+                                            Đã hủy
+                                        </span>
+                                    </div>
+
+                                    <div class="small fw-bold">
+                                        <span
+                                            th:if="${t.taskType != null and t.taskType.name() == 'APPOINTMENT_REMINDER'}"
+                                            class="text-primary d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-calendar2-check-fill"></i>Nhắc lịch hẹn tái khám
+                                        </span>
+                                        <span
+                                            th:if="${t.taskType != null and (t.taskType.name() == 'AFTER_TREATMENT' or t.taskType.name() == 'POST_TREATMENT_FOLLOWUP')}"
+                                            class="text-danger d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-heart-pulse-fill"></i>Hỏi thăm sau điều trị
+                                        </span>
+                                        <span
+                                            th:if="${t.taskType != null and t.taskType.name() == 'MEDICATION_REMINDER'}"
+                                            class="text-warning-emphasis d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-capsule-fill"></i>Nhắc dùng thuốc theo đơn
+                                        </span>
+                                        <span th:if="${t.taskType != null and t.taskType.name() == 'NO_SHOW_RECALL'}"
+                                            class="text-secondary d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-telephone-x-fill"></i>Liên hệ khách lỡ hẹn
+                                        </span>
+                                        <span th:if="${t.taskType == null}" class="text-secondary"
+                                            th:text="${t.taskCode}">CSKH</span>
+                                    </div>
+
+                                    <div class="d-flex align-items-center justify-content-between text-muted"
+                                        style="font-size: 11.5px;">
+                                        <span th:if="${t.dueDate != null}">
+                                            <i class="bi bi-calendar-event me-1 text-secondary"></i>Hạn: <strong
+                                                class="text-dark"
+                                                th:text="${#temporals.format(t.dueDate, 'dd/MM/yyyy')}">22/10/2026</strong>
+                                        </span>
+                                        <span th:if="${t.assignedStaff != null}">
+                                            <i class="bi bi-person-fill me-1 text-secondary"></i><span
+                                                class="text-dark fw-medium" th:text="${t.assignedStaff.fullName}">BS
+                                                Hoàng</span>
+                                        </span>
+                                    </div>
+
+                                    <div th:if="${t.notes != null and !#strings.isEmpty(t.notes)}"
+                                        class="p-2 rounded bg-light border-start border-3 border-primary text-secondary small"
+                                        style="font-size: 12px; line-height: 1.45;" th:title="${t.notes}"
+                                        th:text="${t.notes}">
+                                        Ghi chú nhiệm vụ CSKH...
+                                    </div>
+
+                                    <div th:if="${t.doctorResponse != null and !#strings.isEmpty(t.doctorResponse)}"
+                                        class="p-2 rounded bg-success-subtle border-start border-3 border-success text-success small"
+                                        style="font-size: 12px; line-height: 1.45;">
+                                        <i class="bi bi-chat-quote-fill me-1"></i><strong>Ý kiến BS:</strong> <span
+                                            th:text="${t.doctorResponse}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================= -->
+                    <!-- CỘT PHẢI: LỊCH SỬ LIÊN HỆ & PHẢN HỒI (INTERACTIONS TABLE)     -->
+                    <!-- ============================================================= -->
+                    <div class="col-lg-8">
+                        <div class="rounded-4 p-3 bg-white h-100 d-flex flex-column" style="border: 1px solid #e2e8f0;">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2.5 border-bottom"
+                                style="border-color: #f1f5f9 !important;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-1.5 rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center"
+                                        style="width: 32px; height: 32px;">
+                                        <i class="bi bi-journal-medical fs-5"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-0" style="font-size: 15px;">
+                                        Lịch sử liên hệ &amp; Phản hồi của bệnh nhân
+                                    </h6>
+                                </div>
+                                <span
+                                    class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-semibold"
+                                    id="doctorCareInterCountBadge"
+                                    th:text="'Tổng ' + (${careInteractions != null ? careInteractions.size() : 0}) + ' lần liên hệ'">
+                                    Tổng 0 lần liên hệ
+                                </span>
+                            </div>
+
+                            <!-- Table Card Container -->
+                            <div class="table-responsive flex-grow-1 rounded-3 border"
+                                style="border-color: #e2e8f0; overflow: hidden;">
+                                <table class="table table-hover align-middle mb-0 custom-care-table"
+                                    id="doctorCareInteractionsTable">
+                                    <thead style="background: #f8fafc;">
+                                        <tr>
+                                            <th style="width: 135px;">
+                                                <i class="bi bi-clock-history text-primary me-1"></i>Thời gian
+                                            </th>
+                                            <th style="width: 115px;">
+                                                <i class="bi bi-broadcast text-primary me-1"></i>Hình thức
+                                            </th>
+                                            <th style="width: 175px;">
+                                                <i class="bi bi-person-circle text-primary me-1"></i>Người liên hệ
+                                            </th>
+                                            <th>
+                                                <i class="bi bi-chat-left-quote text-primary me-1"></i>Nội dung trao đổi
+                                                &amp; Phản hồi
+                                            </th>
+                                            <th style="width: 135px; text-align: center;">
+                                                <i class="bi bi-check2-circle text-primary me-1"></i>Kết quả
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="doctorCareInteractionsTbody">
+                                        <!-- Trạng thái rỗng -->
+                                        <tr th:if="${careInteractions == null or #lists.isEmpty(careInteractions)}"
+                                            id="doctorCareEmptyRow">
+                                            <td colspan="5" class="text-center text-muted py-5 bg-white">
+                                                <div class="p-3 rounded-circle bg-light d-inline-flex align-items-center justify-content-center shadow-xs mb-2 border"
+                                                    style="width: 58px; height: 58px;">
+                                                    <i class="bi bi-chat-square-quote text-secondary opacity-50"
+                                                        style="font-size: 1.8rem;"></i>
+                                                </div>
+                                                <div class="fw-semibold text-secondary fs-6">Chưa có nhật ký cuộc gọi /
+                                                    tương tác nào cho bệnh nhân này</div>
+                                                <div class="text-muted small mt-1">Bấm <strong>"+ Ghi nhận cuộc gọi /
+                                                        CSKH"</strong> ở góc trên bên phải để ghi lại cuộc gọi hoặc trao
+                                                    đổi với bệnh nhân.</div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Danh sách tương tác động từ CSDL -->
+                                        <tr th:each="ci : ${careInteractions}">
+                                            <!-- Cột 1: Thời gian -->
+                                            <td style="white-space: nowrap;">
+                                                <div class="fw-bold text-dark" style="font-size: 13px;"
+                                                    th:text="${ci.createdAt != null ? #temporals.format(ci.createdAt, 'HH:mm') : '--:--'}">
+                                                    17:11</div>
+                                                <div class="text-secondary small" style="font-size: 11.5px;"
+                                                    th:text="${ci.createdAt != null ? #temporals.format(ci.createdAt, 'dd/MM/yyyy') : '--'}">
+                                                    01/11/2026</div>
+                                            </td>
+
+                                            <!-- Cột 2: Hình thức -->
+                                            <td style="white-space: nowrap;">
+                                                <span
+                                                    th:if="${ci.channel != null and ci.channel.name() == 'PHONE_CALL'}"
+                                                    class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-telephone-fill me-1"></i>Gọi điện
+                                                </span>
+                                                <span th:if="${ci.channel != null and ci.channel.name() == 'ZALO'}"
+                                                    class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-chat-dots-fill me-1"></i>Zalo
+                                                </span>
+                                                <span th:if="${ci.channel != null and ci.channel.name() == 'SMS'}"
+                                                    class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-chat-text-fill me-1"></i>SMS
+                                                </span>
+                                                <span th:if="${ci.channel != null and ci.channel.name() == 'IN_PERSON'}"
+                                                    class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-person-fill me-1"></i>Trực tiếp
+                                                </span>
+                                                <span th:if="${ci.channel == null}"
+                                                    class="badge bg-light text-dark border rounded-pill px-2.5 py-1">Khác</span>
+                                            </td>
+
+                                            <!-- Cột 3: Người liên hệ (Avatar + Họ tên + Vai trò) -->
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="avatar-sm rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center border border-primary-subtle shadow-xs"
+                                                        style="width: 32px; height: 32px; font-size: 11.5px; flex-shrink: 0;"
+                                                        th:text="${ci.staff != null and ci.staff.fullName != null and !ci.staff.fullName.isEmpty() ? #strings.substring(ci.staff.fullName, 0, 1) : (ci.task != null and ci.task.assignedStaff != null and ci.task.assignedStaff.fullName != null and !ci.task.assignedStaff.fullName.isEmpty() ? #strings.substring(ci.task.assignedStaff.fullName, 0, 1) : 'NV')}">
+                                                        NV
+                                                    </div>
+                                                    <div class="text-truncate">
+                                                        <span class="fw-bold text-dark d-block text-truncate"
+                                                            style="font-size: 12.5px; max-width: 135px;"
+                                                            th:text="${ci.staff != null ? ci.staff.fullName : (ci.task != null and ci.task.assignedStaff != null ? ci.task.assignedStaff.fullName : 'BS / Nhân viên')}"
+                                                            th:title="${ci.staff != null ? ci.staff.fullName : (ci.task != null and ci.task.assignedStaff != null ? ci.task.assignedStaff.fullName : 'BS / Nhân viên')}">
+                                                            BS. CK1 Lê Hoàng Nam
+                                                        </span>
+                                                        <span
+                                                            class="text-secondary small d-flex align-items-center gap-1"
+                                                            style="font-size: 11px;">
+                                                            <i class="bi bi-shield-check text-success"></i>Người phụ
+                                                            trách
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <!-- Cột 4: Nội dung trao đổi & Phản hồi -->
+                                            <td>
+                                                <div class="care-speech-bubble"
+                                                    style="font-size: 13px; line-height: 1.5; color: #1e293b;">
+                                                    <i class="bi bi-chat-quote-fill text-muted opacity-50 me-1"></i>
+                                                    <span th:text="${ci.notes != null ? ci.notes : '--'}">Nội dung trao
+                                                        đổi...</span>
+                                                </div>
+                                                <div th:if="${ci.nextRetryAt != null}"
+                                                    class="mt-1.5 d-inline-flex align-items-center gap-1.5 px-2.5 py-0.5 rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle small fw-semibold"
+                                                    style="font-size: 11.5px;">
+                                                    <i class="bi bi-alarm-fill text-warning"></i>
+                                                    <span>Hẹn gọi lại: <strong
+                                                            th:text="${#temporals.format(ci.nextRetryAt, 'dd/MM/yyyy HH:mm')}">22/10/2026
+                                                            10:00</strong></span>
+                                                </div>
+                                            </td>
+
+                                            <!-- Cột 5: Kết quả liên hệ -->
+                                            <td style="text-align: center; white-space: nowrap;">
+                                                <span
+                                                    th:if="${ci.contactResult != null and ci.contactResult.name() == 'CONNECTED'}"
+                                                    class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Đã kết nối
+                                                </span>
+                                                <span
+                                                    th:if="${ci.contactResult != null and ci.contactResult.name() == 'NO_ANSWER'}"
+                                                    class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-telephone-x-fill me-1"></i>Không nghe
+                                                </span>
+                                                <span
+                                                    th:if="${ci.contactResult != null and ci.contactResult.name() == 'BUSY'}"
+                                                    class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-telephone-minus-fill me-1"></i>Máy bận
+                                                </span>
+                                                <span
+                                                    th:if="${ci.contactResult != null and ci.contactResult.name() == 'SCHEDULED_APPOINTMENT'}"
+                                                    class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-calendar2-check-fill me-1"></i>Đã đặt hẹn
+                                                </span>
+                                                <span
+                                                    th:if="${ci.contactResult != null and ci.contactResult.name() == 'FAILED'}"
+                                                    class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Sai số / Lỗi
+                                                </span>
+                                                <span th:if="${ci.contactResult == null}"
+                                                    class="badge bg-light text-dark border rounded-pill px-2.5 py-1">Đã
+                                                    liên hệ</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- ===================================================================== -->
+        <!-- MODAL: GHI NHẬN CUỘC GỌI & TƯƠNG TÁC CSKH (SCR-44.4 - POPUP THẬT)    -->
+        <!-- Đặt style z-index cao và hỗ trợ tự động append vào document.body       -->
+        <!-- ===================================================================== -->
+        <div class="modal fade" id="doctorCareModal" tabindex="-1" aria-labelledby="doctorCareModalLabel"
+            aria-hidden="true" style="z-index: 2050 !important;"
+            th:data-visit-id="${visit != null ? visit.visitId : ''}"
+            th:data-profile-id="${patient != null ? patient.profileId : ''}">
+            <div class="modal-dialog modal-lg modal-dialog-centered"
+                style="z-index: 2051 !important; position: relative;">
+                <div class="modal-content border-0 shadow-lg"
+                    style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
+
+                    <!-- Modal Header -->
+                    <div class="modal-header py-3 px-4 bg-white border-bottom"
+                        style="border-color: #f1f5f9 !important;">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="p-2 rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center shadow-xs"
+                                style="width: 38px; height: 38px;">
+                                <i class="bi bi-telephone-plus-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="doctorCareModalLabel"
+                                    style="font-size: 1.15rem; letter-spacing: -0.01em;">
+                                    Ghi nhận cuộc gọi &amp; Tương tác CSKH (SCR-44.4)
+                                </h5>
+                                <div class="text-muted small" style="font-size: 12.5px;">
+                                    Lưu nhật ký hỏi thăm sức khỏe, phản hồi của bệnh nhân sau điều trị &amp; cập nhật
+                                    tiến độ
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="modal-body p-4 pt-3">
+
+                        <!-- 1. Patient Summary Banner -->
+                        <div class="p-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2"
+                            style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width: 42px; height: 42px; border-radius: 50%; background: #e0f2fe; color: #0284c7; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+                                    th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
+                                    BN
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size: 15px;"
+                                        th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">
+                                        Bệnh nhân
+                                    </div>
+                                    <div class="small text-secondary d-flex align-items-center flex-wrap gap-1.5 mt-0.5"
+                                        style="font-size: 12px;">
+                                        <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace"
+                                            th:text="${patient != null ? patient.patientCode : 'BN----'}">Mã KH</span>
+                                        <span>•</span>
+                                        <span>SĐT:</span>
+                                        <a th:if="${patient != null and patient.phoneNumber != null}"
+                                            th:href="'tel:' + ${patient.phoneNumber}"
+                                            class="fw-bold text-primary text-decoration-none d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-telephone-outbound-fill" style="font-size: 11px;"></i>
+                                            <span th:text="${patient.phoneNumber}">0900000000</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end small" style="font-size: 12px;">
+                                <div>Ca khám: <strong class="text-primary font-monospace"
+                                        th:text="${visit != null and visit.visitCode != null ? visit.visitCode : ('Ca #' + (visit != null ? visit.visitId : '---'))}">VIS-001</strong>
+                                </div>
+                                <div class="text-secondary mt-0.5"
+                                    th:text="${'Bác sĩ: ' + (visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Phụ trách')}">
+                                    BS. Phụ trách</div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Hàng chọn Kênh liên hệ & Kết quả liên hệ -->
+                        <div class="row g-3 mb-3">
+                            <!-- Cột: Kênh liên hệ -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1.5">
+                                    Kênh liên hệ: <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <label class="btn btn-sm btn-primary text-white rounded-pill px-3 py-1.5 active"
+                                        id="dcChannelPhoneLbl" style="font-size: 13px;">
+                                        <input type="radio" name="dcChannelRadio" value="PHONE_CALL" checked
+                                            class="d-none" onchange="onDcChannelChange('PHONE_CALL')">
+                                        <i class="bi bi-telephone-fill me-1"></i>Gọi điện
+                                    </label>
+                                    <label class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5"
+                                        id="dcChannelZaloLbl" style="font-size: 13px;">
+                                        <input type="radio" name="dcChannelRadio" value="ZALO" class="d-none"
+                                            onchange="onDcChannelChange('ZALO')">
+                                        <i class="bi bi-chat-dots-fill text-info me-1"></i>Zalo
+                                    </label>
+                                    <label class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5"
+                                        id="dcChannelSmsLbl" style="font-size: 13px;">
+                                        <input type="radio" name="dcChannelRadio" value="SMS" class="d-none"
+                                            onchange="onDcChannelChange('SMS')">
+                                        <i class="bi bi-chat-text-fill text-secondary me-1"></i>SMS
+                                    </label>
+                                    <label class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5"
+                                        id="dcChannelInPersonLbl" style="font-size: 13px;">
+                                        <input type="radio" name="dcChannelRadio" value="IN_PERSON" class="d-none"
+                                            onchange="onDcChannelChange('IN_PERSON')">
+                                        <i class="bi bi-person-fill text-primary me-1"></i>Trực tiếp
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Cột: Kết quả liên hệ -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1.5">
+                                    Kết quả liên hệ: <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select rounded-3" id="dcContactResultSelect"
+                                    onchange="onDcResultChange(this.value)"
+                                    style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                                    <option value="CONNECTED" selected>🟢 Đã kết nối / Nghe máy</option>
+                                    <option value="NO_ANSWER">🟡 Không nghe máy (Hẹn gọi lại)</option>
+                                    <option value="BUSY">🔴 Máy bận / Thuê bao (Hẹn gọi lại)</option>
+                                    <option value="SCHEDULED_APPOINTMENT">🔵 Đã hẹn lịch tái khám</option>
+                                    <option value="FAILED">⚪ Không liên lạc được / Sai số</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 3. Hàng Hẹn gọi lại (Chỉ hiện khi NO_ANSWER hoặc BUSY) -->
+                        <div class="p-2.5 px-3 rounded-3 mb-3 bg-warning-subtle border border-warning-subtle"
+                            id="dcRetryAtContainer" style="display: none;">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-5">
+                                    <span class="fw-bold text-dark small d-flex align-items-center gap-1.5">
+                                        <i class="bi bi-alarm-fill text-warning"></i>
+                                        <span>Thời gian hẹn gọi lại: <span class="text-danger">*</span></span>
+                                    </span>
+                                    <div class="text-muted" style="font-size: 11px;">Bắt buộc khi không nghe máy hoặc
+                                        bận</div>
+                                </div>
+                                <div class="col-md-7">
+                                    <input type="datetime-local" class="form-control form-control-sm rounded-3"
+                                        id="dcNextRetryAtInput" style="font-size: 13px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Gợi ý mẫu phản hồi nhanh (Quick Tags) -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-secondary mb-1">
+                                Gợi ý mẫu phản hồi nhanh (Bấm để chèn nhanh vào lời nhắn):
+                            </label>
+                            <div class="d-flex flex-wrap gap-1.5">
+                                <button type="button"
+                                    class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary"
+                                    style="font-size: 11.5px;"
+                                    onclick="appendDcQuickNote('Vết thương đã cầm máu hoàn toàn, má chỉ sưng nhẹ, đã dặn chườm lạnh 24h đầu.')">
+                                    🩹 Ổ răng cầm máu tốt
+                                </button>
+                                <button type="button"
+                                    class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary"
+                                    style="font-size: 11.5px;"
+                                    onclick="appendDcQuickNote('Bệnh nhân phản hồi đỡ đau nhiều, đã ăn được cháo nguội và uống thuốc đúng liều theo đơn.')">
+                                    💊 Đỡ đau, đã uống thuốc
+                                </button>
+                                <button type="button"
+                                    class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary"
+                                    style="font-size: 11.5px;"
+                                    onclick="appendDcQuickNote('Bệnh nhân báo còn cảm giác ê buốt nhẹ khi ăn, dặn kiêng đồ cứng và tiếp tục theo dõi.')">
+                                    🦷 Ê buốt nhẹ khi nhai
+                                </button>
+                                <button type="button"
+                                    class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary"
+                                    style="font-size: 11.5px;"
+                                    onclick="appendDcQuickNote('Bệnh nhân xác nhận tình trạng ổn định và sẽ đến tái khám đúng lịch hẹn đã đặt.')">
+                                    📅 Xác nhận đến tái khám
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 5. Nội dung trao đổi & Phản hồi thực tế của bệnh nhân -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                Nội dung trao đổi &amp; Tình trạng bệnh nhân: <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control rounded-3" id="dcNotesTextarea" rows="4"
+                                placeholder="Ghi nhận chi tiết phản hồi của bệnh nhân: mức độ lành thương, tình trạng sưng đau, có uống thuốc theo đơn không, các dặn dò thêm của Bác sĩ..."
+                                style="font-size: 13.5px; border-color: #cbd5e1;"></textarea>
+                            <div class="form-text text-muted" style="font-size: 11.5px;">Tối thiểu 3 ký tự. Toàn bộ nội
+                                dung sẽ được lưu vào Hồ sơ bệnh án và đồng bộ sang danh sách CSKH của Lễ tân.</div>
+                        </div>
+
+                        <!-- 6. Trạng thái sau tương tác -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">Trạng thái công việc sau
+                                    tương tác:</label>
+                                <select class="form-select form-select-sm rounded-3" id="dcNextStatusSelect"
+                                    style="font-size: 13px;">
+                                    <option value="COMPLETED" selected>✅ Hoàn thành tương tác (COMPLETED)</option>
+                                    <option value="IN_PROGRESS">⏳ Đang tiếp tục theo dõi (IN_PROGRESS)</option>
+                                    <option value="ESCALATED_TO_DOCTOR">⚠️ Chuyển ý kiến Bác sĩ khác (ESCALATED)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer py-2.5 px-4 bg-light d-flex align-items-center justify-content-between">
+                        <span class="text-muted small" style="font-size: 11.5px;">
+                            <i class="bi bi-shield-check text-success me-1"></i>Dữ liệu lưu bất biến vào bảng
+                            customer_care_interactions
+                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button"
+                                class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold"
+                                data-bs-dismiss="modal">
+                                Hủy bỏ
+                            </button>
+                            <button type="button"
+                                class="btn btn-sm btn-primary rounded-pill px-4 py-1.5 fw-bold text-white shadow-sm d-flex align-items-center gap-1.5"
+                                id="dcSubmitBtn" onclick="submitDoctorCareInteraction()">
+                                <i class="bi bi-check2-circle fs-6"></i>
+                                <span>Lưu kết quả liên hệ</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- JAVASCRIPT: LOGIC ĐIỀU KHIỂN GHI NHẬN TƯƠNG TÁC CSKH BÁC SĨ (AJAX)   -->
+        <!-- ===================================================================== -->
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            let currentDcChannel = 'PHONE_CALL';
+
+            function openDoctorCareModal() {
+                const modalEl = document.getElementById('doctorCareModal');
+                if (!modalEl) {
+                    alert('Không tìm thấy form Ghi nhận CSKH.');
+                    return;
+                }
+
+                // Đảm bảo modal luôn là con trực tiếp của thẻ body để tránh backdrop đè lên modal
+                if (modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                modalEl.style.zIndex = '2050';
+
+                // Reset form
+                currentDcChannel = 'PHONE_CALL';
+                updateDcChannelPills('PHONE_CALL');
+                document.getElementById('dcContactResultSelect').value = 'CONNECTED';
+                document.getElementById('dcNextRetryAtInput').value = '';
+                document.getElementById('dcRetryAtContainer').style.display = 'none';
+                document.getElementById('dcNotesTextarea').value = '';
+                document.getElementById('dcNextStatusSelect').value = 'COMPLETED';
+
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+
+                // Đảm bảo backdrop luôn nằm dưới modal (z-index 2040)
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(b => {
+                        b.style.zIndex = '2040';
+                    });
+                }, 50);
+            }
+
+            function onDcChannelChange(val) {
+                currentDcChannel = val;
+                updateDcChannelPills(val);
+            }
+
+            function updateDcChannelPills(val) {
+                const lblMap = {
+                    'PHONE_CALL': 'dcChannelPhoneLbl',
+                    'ZALO': 'dcChannelZaloLbl',
+                    'SMS': 'dcChannelSmsLbl',
+                    'IN_PERSON': 'dcChannelInPersonLbl'
+                };
+                for (const [k, lblId] of Object.entries(lblMap)) {
+                    const el = document.getElementById(lblId);
+                    if (el) {
+                        if (k === val) {
+                            el.classList.add('active', 'btn-primary', 'text-white');
+                            el.classList.remove('btn-outline-secondary');
+                        } else {
+                            el.classList.remove('active', 'btn-primary', 'text-white');
+                            el.classList.add('btn-outline-secondary');
+                        }
+                    }
+                }
+            }
+
+            function onDcResultChange(val) {
+                const retryBox = document.getElementById('dcRetryAtContainer');
+                const retryInput = document.getElementById('dcNextRetryAtInput');
+                const statusSelect = document.getElementById('dcNextStatusSelect');
+
+                if (val === 'NO_ANSWER' || val === 'BUSY') {
+                    retryBox.style.display = 'block';
+                    // Gợi ý giờ gọi lại: sau 2 giờ
+                    const now = new Date();
+                    now.setHours(now.getHours() + 2);
+                    now.setMinutes(0);
+                    const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                    retryInput.value = localIso;
+                    statusSelect.value = 'IN_PROGRESS';
+                } else {
+                    retryBox.style.display = 'none';
+                    retryInput.value = '';
+                    if (val === 'CONNECTED' || val === 'SCHEDULED_APPOINTMENT') {
+                        statusSelect.value = 'COMPLETED';
+                    }
+                }
+            }
+
+            function appendDcQuickNote(text) {
+                const textarea = document.getElementById('dcNotesTextarea');
+                if (!textarea) return;
+                if (textarea.value.trim().length > 0) {
+                    textarea.value = textarea.value.trim() + '\n- ' + text;
+                } else {
+                    textarea.value = text;
+                }
+                textarea.focus();
+            }
+
+            function submitDoctorCareInteraction() {
+                const modalEl = document.getElementById('doctorCareModal');
+                const visitId = modalEl.getAttribute('data-visit-id')
+                    || (typeof currentVisitId !== 'undefined' ? currentVisitId : null)
+                    || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null)
+                    || (typeof getCurrentVisitId === 'function' ? getCurrentVisitId() : null);
+
+                const resultSelect = document.getElementById('dcContactResultSelect');
+                const resultVal = resultSelect.value;
+                const retryInput = document.getElementById('dcNextRetryAtInput');
+                const notesText = document.getElementById('dcNotesTextarea').value.trim();
+                const nextStatus = document.getElementById('dcNextStatusSelect').value;
+                const submitBtn = document.getElementById('dcSubmitBtn');
+
+                if (!visitId) {
+                    alert('Không xác định được mã ca khám (visitId). Vui lòng thử lại.');
+                    return;
+                }
+
+                if (!notesText || notesText.length < 3) {
+                    alert('Vui lòng nhập nội dung trao đổi / phản hồi của bệnh nhân (tối thiểu 3 ký tự).');
+                    document.getElementById('dcNotesTextarea').focus();
+                    return;
+                }
+
+                if ((resultVal === 'NO_ANSWER' || resultVal === 'BUSY') && !retryInput.value) {
+                    alert('Khi không nghe máy hoặc máy bận, bắt buộc phải chọn Thời gian hẹn gọi lại cho bệnh nhân.');
+                    retryInput.focus();
+                    return;
+                }
+
+                let nextRetryAt = null;
+                if (retryInput.value) {
+                    nextRetryAt = retryInput.value + ':00';
+                }
+
+                const payload = {
+                    channel: currentDcChannel,
+                    contactResult: resultVal,
+                    notes: notesText,
+                    nextRetryAt: nextRetryAt,
+                    nextStatus: nextStatus
+                };
+
+                // Loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Đang lưu...';
+
+                fetch('/api/customer-care/visits/' + visitId + '/interactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.json().then(err => { throw new Error(err.message || 'Lỗi khi lưu kết quả liên hệ.'); });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        // Đóng modal
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+
+                        // Hiển thị thông báo thành công
+                        if (typeof showToast === 'function') {
+                            showToast('Đã lưu nhật ký cuộc gọi / CSKH thành công!');
+                        } else {
+                            alert('Đã lưu nhật ký cuộc gọi / CSKH thành công!');
+                        }
+
+                        // Tải lại trang giữ nguyên tab CSKH để cập nhật dữ liệu mới nhất
+                        setTimeout(() => {
+                            const currentUrl = window.location.href.split('#')[0];
+                            window.location.href = currentUrl + '#tab-customer-care';
+                            window.location.reload();
+                        }, 400);
+                    })
+                    .catch(err => {
+                        alert('Lỗi: ' + err.message);
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-check2-circle fs-6"></i><span>Lưu kết quả liên hệ</span>';
+                    });
+            }
+            /*]]>*/
+        </script>
     </div>
-</div>
 
 </body>
+
 </html>
