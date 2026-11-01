@@ -1,0 +1,130 @@
+/* DentalFlow FT07 Tiếp đón & Check-in Stylesheet */
+
+.checkin-header-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.checkin-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.9rem;
+}
+
+.checkin-chip-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.appointment-scroll-container {
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.appointment-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+.appointment-scroll-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+.appointment-scroll-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+}
+.appointment-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.patient-card-block {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.patient-card-block:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.patient-card-block.is-reexam {
+    border-left: 4px solid #7c3aed;
+    background: linear-gradient(to right, #faf5ff, #ffffff 15%);
+}
+
+.patient-card-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #e0e7ff;
+    color: #3730a3;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.patient-profile-card-selected {
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    border-radius: 12px;
+    padding: 1.1rem;
+}
+
+.walkin-candidate-card {
+    cursor: pointer;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+    transition: all 0.15s ease;
+}
+
+.walkin-candidate-card:hover {
+    border-color: #0284c7;
+    background: #f0f9ff;
+}
+
+.walkin-candidate-card input[type="radio"]:checked + .candidate-body {
+    color: #0369a1;
+}
+
+.badge-purple {
+    background-color: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid #c4b5fd;
+}
+
+.action-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.32rem 0.65rem;
+    border-radius: 7px;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+

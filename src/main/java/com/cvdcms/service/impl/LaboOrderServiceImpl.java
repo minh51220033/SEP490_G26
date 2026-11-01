@@ -40,17 +40,10 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     private String uploadDir;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<LaboOrderResponseDTO> getOrdersByVisit(Long visitId) {
         if (visitId == null) return Collections.emptyList();
         List<LaboOrder> list = laboOrderRepository.findByVisit_VisitIdOrderBySentDateDesc(visitId);
-        if (list.isEmpty()) {
-            Visit visit = visitRepository.findById(visitId).orElse(null);
-            if (visit != null) {
-                seedDemoOrdersForVisit(visit);
-                list = laboOrderRepository.findByVisit_VisitIdOrderBySentDateDesc(visitId);
-            }
-        }
         return list.stream().map(LaboOrderResponseDTO::fromEntity).collect(Collectors.toList());
     }
 
@@ -142,6 +135,11 @@ public class LaboOrderServiceImpl implements LaboOrderService {
 
         if (order.getDoctor() == null && dto.getDoctorId() != null) {
             order.setDoctor(staffProfileRepository.findById(dto.getDoctorId()).orElse(null));
+        }
+
+        // Bắt buộc kiểm tra có bác sĩ phụ trách trước khi lưu phiếu Labo (doctor_id NOT NULL trong DB)
+        if (order.getDoctor() == null) {
+            throw new IllegalArgumentException("Không thể tạo phiếu đặt xưởng khi ca khám chưa có bác sĩ phụ trách. Vui lòng chọn bác sĩ chỉ định hoặc phân công bác sĩ cho ca khám trước!");
         }
 
         // 5. Details
@@ -323,7 +321,8 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     }
 
     private void seedDemoOrdersForVisit(Visit visit) {
-        if (visit == null || visit.getVisitId() == null || visit.getPatientProfile() == null) {
+        if (visit == null || visit.getVisitId() == null || visit.getPatientProfile() == null || visit.getPrimaryDoctor() == null) {
+            log.info("Bỏ qua tạo dữ liệu labo mẫu cho ca khám: ca khám chưa được gán bác sĩ phụ trách.");
             return;
         }
         try {
@@ -409,14 +408,22 @@ public class LaboOrderServiceImpl implements LaboOrderService {
 
             log.info("Seeded demo labo & blood test orders for visit: {}", visit.getVisitId());
         } catch (Exception e) {
-            log.warn("Could not seed demo labo orders: {}", e.getMessage());
+            log.error("Lỗi khi tạo dữ liệu labo mẫu cho visit {}: {}", visit.getVisitId(), e.getMessage(), e);
+            throw new RuntimeException("Lỗi khi khởi tạo phiếu labo mẫu: " + e.getMessage(), e);
         }
     }
 
     private void seedGlobalDemoOrders() {
         List<Visit> visits = visitRepository.findAll();
-        if (!visits.isEmpty()) {
-            seedDemoOrdersForVisit(visits.get(0));
+        for (Visit v : visits) {
+            if (v.getPrimaryDoctor() != null && v.getPatientProfile() != null) {
+                try {
+                    seedDemoOrdersForVisit(v);
+                    break;
+                } catch (Exception ex) {
+                    log.warn("Không thể tạo labo mẫu cho visit {}: {}", v.getVisitId(), ex.getMessage());
+                }
+            }
         }
     }
 }

@@ -2,6 +2,8 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.VisitStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface VisitRepository extends JpaRepository<Visit, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM Visit v WHERE v.visitId = :visitId")
+    Optional<Visit> lockById(@Param("visitId") Long visitId);
 
     Optional<Visit> findByVisitCode(String visitCode);
 
