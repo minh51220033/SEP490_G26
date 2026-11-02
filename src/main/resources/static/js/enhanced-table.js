@@ -78,6 +78,7 @@
                 parent.style.border = 'none';
                 parent.style.background = 'transparent';
                 parent.style.padding = '0';
+
             }
         }
 
@@ -113,7 +114,9 @@
                 const isRequired = th.getAttribute('data-column-required') === 'true' || 
                                    th.getAttribute('data-column-no-hide') === 'true' || 
                                    isAction ||
+
                                    idx === 0;
+
 
                 const isDefaultPinned = !isAction && (th.getAttribute('data-column-pinned') === 'true' || idx === 0);
 
@@ -503,9 +506,82 @@
             // Luôn trả về false vì cột Thao tác đã luôn hiển thị ở mép phải bảng (sticky right)
             return false;
         }
+            if (!row || this.isResizing) return false;
+            if (row.querySelector('td[colspan]')) return false;
+
+            // Điều kiện 0: Nếu ô thao tác đã được cố định ở mép phải (sticky right),
+            // nó luôn luôn hiển thị trọn vẹn ở mép phải bảng, không bao giờ cần hiện thanh nổi!
+            const actionCell = this.getActionCell(row);
+            if (!actionCell) return false;
+
+            const compStyle = window.getComputedStyle(actionCell);
+            if (compStyle.position === 'sticky') {
+                return false;
+            }
+
+            // Điều kiện 1: Bảng phải có cuộn ngang
+            const wrapper = this.wrapper;
+            const hasHorizontalScroll = wrapper.scrollWidth > wrapper.clientWidth + 2;
+            if (!hasHorizontalScroll) {
+                // Bảng vừa khung nhìn -> KHÔNG HIỆN thanh nổi
+                return false;
+            }
+
+            // Điều kiện 3: Có ít nhất một hành động hợp lệ theo quyền / trạng thái bản ghi
+            const actionElements = this.getRowActionElements(actionCell);
+            if (actionElements.length === 0) {
+                return false;
+            }
+
+            // Điều kiện 4: Kiểm tra tọa độ thực tế của nhóm nút so với khung nhìn thấy của wrapper
+            const wrapperRect = wrapper.getBoundingClientRect();
+
+            // Tính toán vùng bị che khuất bởi các cột đang ghim bên trái
+            let leftPinnedBoundary = wrapperRect.left;
+            const pinnedThList = this.table.querySelectorAll('thead th.enhanced-col-pinned');
+            pinnedThList.forEach(th => {
+                const colKey = th.getAttribute('data-column-key');
+                const colDef = this.columns.find(c => c.key === colKey);
+                // Nếu chính cột thao tác được ghim, nó không phải là vật cản che chính nó
+                if (colDef && colDef.isAction) return;
+
+                const thRect = th.getBoundingClientRect();
+                if (thRect.right > leftPinnedBoundary) {
+                    leftPinnedBoundary = thRect.right;
+                }
+            });
+
+            const rightBoundary = wrapperRect.right;
+
+            // Kiểm tra xem tất cả các nút gốc có nằm TRỌN VẸN trong vùng nhìn thấy [leftPinnedBoundary, rightBoundary] không
+            let allButtonsFullyVisible = true;
+            for (const btn of actionElements) {
+                const r = btn.getBoundingClientRect();
+                if (r.width === 0 && r.height === 0) continue;
+
+                // Nút bị khuất/bị cắt mép trái (bởi cột ghim) hoặc mép phải (do cuộn ngang)
+                const isCutLeft = (r.left < leftPinnedBoundary - 2);
+                const isCutRight = (r.right > rightBoundary + 2);
+
+                if (isCutLeft || isCutRight) {
+                    allButtonsFullyVisible = false;
+                    break;
+                }
+            }
+
+            // Nếu toàn bộ nút gốc đã nhìn thấy đầy đủ -> KHÔNG HIỆN thanh nổi (tránh trùng lặp)
+            if (allButtonsFullyVisible) {
+                return false;
+            }
+
+            // Có ít nhất 1 nút bị che khuất -> CẦN HIỆN thanh nổi
+            return true;
+        }
 
         checkAndSyncFloatingActionBar(row) {
+
             this.hideFloatingActionBar();
+
         }
 
         hideFloatingActionBar() {
