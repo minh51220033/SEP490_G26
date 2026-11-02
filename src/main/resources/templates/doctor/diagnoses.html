@@ -16,64 +16,211 @@
         <header th:replace="~{fragments/header :: appTopbar('Khám & Điều trị')}"></header>
 
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-            <link rel="stylesheet" th:href="@{/css/diagnosis.css}">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101c)}">
+            <style>
+                /* GLOBAL MODAL & BACKDROP Z-INDEX FIX: CƯỠNG CHẾ TẤT CẢ MODAL NỔI TRÊN BACKDROP */
+                .modal {
+                    z-index: 2050 !important;
+                    pointer-events: auto !important;
+                }
+                .modal.fade .modal-dialog,
+                .modal .modal-dialog {
+                    z-index: 2051 !important;
+                    position: relative !important;
+                    pointer-events: auto !important;
+                }
+                .modal.fade .modal-content,
+                .modal .modal-content {
+                    z-index: 2052 !important;
+                    position: relative !important;
+                    background-color: #ffffff !important;
+                    pointer-events: auto !important;
+                }
+                .modal-backdrop,
+                body.modal-open .modal-backdrop {
+                    z-index: 2040 !important;
+                }
+                /* CLINIC TOOLBAR THEO CHUẨN GIAO DIỆN HÌNH ẢNH (DEMO) */
+                .df-clinic-toolbar {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .df-tb-input {
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    height: 38px;
+                    padding: 6px 12px;
+                    font-size: 13.5px;
+                    color: #1f2937;
+                    background: #ffffff;
+                    outline: none;
+                    transition: all 0.2s ease;
+                    width: 100%;
+                }
+                .df-tb-input:focus {
+                    border-color: #2b50aa;
+                    box-shadow: 0 0 0 3px rgba(43, 80, 170, 0.12);
+                }
+                .df-tb-search-icon {
+                    position: absolute;
+                    left: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #9ca3af;
+                    font-size: 13.5px;
+                    pointer-events: none;
+                }
+                .df-tb-search-input {
+                    padding-left: 34px !important;
+                }
+                .df-tb-clear {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    color: #9ca3af;
+                    cursor: pointer;
+                    padding: 0;
+                }
+                .df-tb-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    height: 38px;
+                    padding: 6px 14px;
+                    border-radius: 8px;
+                    font-size: 13.5px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                }
+                .df-tb-btn-secondary {
+                    background: #ffffff;
+                    border: 1px solid #d1d5db;
+                    color: #374151;
+                }
+                .df-tb-btn-secondary:hover {
+                    background: #f9fafb;
+                    border-color: #9ca3af;
+                }
+                .df-tb-btn-primary {
+                    background-color: #2b50aa;
+                    border: 1px solid #2b50aa;
+                    color: #ffffff;
+                    font-weight: 600;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+                }
+                .df-tb-btn-primary:hover {
+                    background-color: #1e3a8a;
+                    border-color: #1e3a8a;
+                    color: #ffffff;
+                }
+                .df-tb-select {
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    height: 38px;
+                    padding: 6px 30px 6px 14px;
+                    font-size: 13.5px;
+                    font-weight: 600;
+                    color: #1e293b;
+                    background-color: #ffffff;
+                    cursor: pointer;
+                    outline: none;
+                    transition: all 0.2s ease;
+                    min-width: 110px;
+                    appearance: none;
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23374151' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 10px center;
+                }
+                .df-tb-select:focus {
+                    border-color: #2b50aa;
+                    box-shadow: 0 0 0 3px rgba(43, 80, 170, 0.12);
+                }
+            </style>
 
             <!-- ========================================================= -->
             <!-- 1. UNIFIED PATIENT & RECORD HEADER (GỘP THỐNG NHẤT, GỌN GÀNG) -->
             <!-- ========================================================= -->
             <div class="df-unified-header">
                 <!-- HÀNG 1: BREADCRUMB & THANH TÌM KIẾM BỆNH NHÂN -->
-                <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-                    <div class="df-breadcrumb-nav mb-0">
-                        <a th:href="@{/doctor/daily-visits}">DS Khám Trong Ngày</a>
-                        <span class="mx-1 text-muted">&gt;</span>
-                        <span class="text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
-                        <span class="mx-1 text-muted">&gt;</span>
-                        <span class="text-dark fw-semibold">Khám &amp; Điều trị</span>
+                                <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ (DEMO) THEO CHUẨN MẪU -->
+                <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-white">
+                    <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5">
+                        <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
+                        <span class="text-muted small">&gt;</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
+                        <span class="text-muted small">&gt;</span>
+                        <span class="text-dark fw-bold small">Bàn khám bệnh</span>
                     </div>
 
-                    <!-- THANH TÌM KIẾM BỆNH NHÂN THỜI GIAN THỰC & NÚT DANH SÁCH CA KHÁM -->
-                    <div class="d-flex align-items-center gap-2">
-                        <a th:href="@{/doctor/daily-visits}" class="btn btn-outline-primary btn-sm px-3 py-1.5 fw-bold rounded-pill d-flex align-items-center gap-1.5 shadow-sm"
-                           title="Xem toàn màn hình danh sách ca khám trong ngày">
-                            <i class="bi bi-grid-3x3-gap-fill text-primary"></i>
-                            <span>DS Khám Trong Ngày</span>
-                            <span class="badge bg-primary text-white rounded-pill ms-1" id="topbarDailyVisitsBadge">...</span>
-                        </a>
-
-                        <div class="df-patient-search-wrapper position-relative" style="width: 380px; z-index: 1040;">
-                            <div class="input-group input-group-sm shadow-sm" style="border-radius: 20px; overflow: hidden; border: 1.5px solid #0284c7; background: #ffffff;">
-                                <span class="input-group-text bg-white border-0 text-primary ps-3">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" id="patientSearchInput" class="form-control border-0 ps-1 py-1"
-                                       placeholder="🔍 Tìm bệnh nhân (Tên, Mã BN, SĐT)..."
-                                       autocomplete="off"
-                                       onfocus="openPatientSearchDropdown()"
-                                       oninput="handlePatientSearchInput(this.value)">
-                                <button class="btn btn-white border-0 text-muted px-2" type="button" id="clearPatientSearchBtn"
-                                        style="display: none;" onclick="clearPatientSearch()">
-                                    <i class="bi bi-x-circle-fill text-secondary"></i>
-                                </button>
-                                <button class="btn btn-primary px-3 fw-bold d-flex align-items-center gap-1" type="button" onclick="openDailyVisitsDrawer()" title="Danh sách ca khám & Đổi bệnh nhân">
-                                    <i class="bi bi-person-bounding-box"></i>
-                                    <span>Đổi BN</span>
-                                </button>
-                            </div>
+                    <!-- THANH CÔNG CỤ CHUẨN ĐÚNG HÌNH ẢNH MẪU YÊU CẦU:
+                         [Tìm tên, SĐT, mã số...] [16/10/2026] [Bộ lọc] [Hiển thị 12/28] [+ Thêm bệnh nhân] [DEMO v] -->
+                    <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2">
+                        <!-- 1. Ô Tìm kiếm: Tìm tên, SĐT, mã số... -->
+                        <div class="df-tb-search position-relative" style="min-width: 240px; max-width: 320px;">
+                            <i class="bi bi-search df-tb-search-icon"></i>
+                            <input type="text" id="patientSearchInput" class="df-tb-input df-tb-search-input"
+                                   placeholder="Tìm tên, SĐT, mã số..." autocomplete="off"
+                                   onfocus="openPatientSearchDropdown()"
+                                   oninput="handlePatientSearchInput(this.value)">
+                            <button class="df-tb-clear" type="button" id="clearPatientSearchBtn" style="display: none;" onclick="clearPatientSearch()">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
 
                             <!-- DROPDOWN KẾT QUẢ TÌM KIẾM BỆNH NHÂN -->
                             <div id="patientSearchDropdown" class="shadow-lg p-0 border"
-                                 style="display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 100%; max-height: 440px; overflow-y: auto; border-radius: 12px; background: #ffffff; z-index: 1060; border-color: #cbd5e1 !important;">
+                                 style="display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 380px; max-height: 440px; overflow-y: auto; border-radius: 10px; background: #ffffff; z-index: 1070; border-color: #cbd5e1 !important;">
                                 <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
                                     <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px;">
                                         <i class="bi bi-people-fill text-primary"></i> Danh sách bệnh nhân
                                     </span>
                                     <span class="badge bg-primary rounded-pill" id="patientSearchCountBadge">0 kết quả</span>
                                 </div>
-                                <div id="patientSearchResultsList">
-                                    <!-- Dynamic patient cards -->
-                                </div>
+                                <div id="patientSearchResultsList"></div>
                             </div>
+                        </div>
+
+                        <!-- 2. Ô Ngày: 16/10/2026 -->
+                        <div class="df-tb-date-wrapper position-relative" style="width: 130px;">
+                            <input type="text" id="dfTbDateDisplay" class="df-tb-input text-center fw-semibold"
+                                   placeholder="16/10/2026" readonly onclick="triggerDatePick()" title="Bấm để chọn ngày lọc ca khám">
+                            <input type="date" id="dfTbDateNative" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;" onchange="onToolbarDateChange(this.value)">
+                        </div>
+
+                        <!-- 3. Nút Bộ lọc -->
+                        <button type="button" class="df-tb-btn df-tb-btn-secondary" onclick="openDailyVisitsDrawer()" title="Mở danh sách & bộ lọc ca khám">
+                            <i class="bi bi-funnel"></i>
+                            <span>Bộ lọc</span>
+                        </button>
+
+                        <!-- 4. Nút Hiển thị 12/28 -->
+                        <button type="button" class="df-tb-btn df-tb-btn-secondary" onclick="openDailyVisitsDrawer()" title="Số ca khám hiển thị / Tổng số ca khám của cơ sở">
+                            <i class="bi bi-eye"></i>
+                            <span>Hiển thị <strong id="topbarDisplayRatio">0/0</strong></span>
+                        </button>
+
+                        <!-- 5. Nút + Thêm bệnh nhân -->
+                        <button type="button" class="df-tb-btn df-tb-btn-primary" onclick="openQuickAddPatientModal()" title="Thêm hồ sơ bệnh nhân mới & bắt đầu khám ngay">
+                            <i class="bi bi-plus-lg"></i>
+                            <span>Thêm bệnh nhân</span>
+                        </button>
+
+                        <!-- 6. Dropdown Cơ sở: DEMO v (Phân theo cơ sở) -->
+                        <div class="df-tb-branch-wrapper position-relative">
+                            <select id="toolbarBranchSelect" class="df-tb-select fw-bold"
+                                    onchange="handleToolbarBranchChange(this.value)" title="Chọn cơ sở khám chữa bệnh (DEMO)">
+                                <option th:each="b : ${branches}"
+                                        th:value="${b.branchId}"
+                                        th:text="${b.branchCode != null and !b.branchCode.isEmpty() ? b.branchCode : b.branchName}"
+                                        th:selected="${b.branchId == selectedBranchId}">DEMO</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -327,6 +474,62 @@
 <!-- ===================================================================== -->
 <div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersModal}"></div>
 <div th:replace="~{doctor/fragments/clinical-treatment :: clinicalTreatmentModals}"></div>
+<!-- MODAL THÊM BỆNH NHÂN & TIẾP NHẬN VÀO KHÁM NGAY (THEO CƠ SỞ) -->
+<div class="modal fade" id="quickAddPatientModal" tabindex="-1" aria-labelledby="quickAddPatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #1e3a8a, #2b50aa);">
+                <h5 class="modal-title fw-bold" id="quickAddPatientModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Thêm bệnh nhân vào khám ngay
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="quickAddPatientForm" onsubmit="handleQuickAddPatient(event)">
+                <div class="modal-body p-4">
+                    <div class="alert alert-primary py-2 px-3 small d-flex align-items-center gap-2 mb-3 rounded-3">
+                        <i class="bi bi-buildings-fill fs-5"></i>
+                        <div>
+                            Tiếp nhận bệnh nhân tại: <strong id="quickAddBranchNameDisplay" th:text="${selectedBranch != null ? (selectedBranch.branchCode != null ? selectedBranch.branchCode : selectedBranch.branchName) : 'DEMO'}">DEMO</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Họ và tên bệnh nhân <span class="text-danger">*</span></label>
+                        <input type="text" id="qaFullName" class="form-control rounded-3" placeholder="Ví dụ: Nguyễn Văn An" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label small fw-bold text-dark">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" id="qaPhone" class="form-control rounded-3" placeholder="Ví dụ: 0912345678" pattern="[0-9]{9,11}" required>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small fw-bold text-dark">Giới tính</label>
+                            <select id="qaGender" class="form-select rounded-3">
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Ngày sinh / Năm sinh</label>
+                        <input type="date" id="qaDob" class="form-control rounded-3">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-dark">Lý do đến khám / Triệu chứng</label>
+                        <input type="text" id="qaSymptoms" class="form-control rounded-3" placeholder="Ví dụ: Đau nhức răng hàm dưới, khám định kỳ..." value="Khám & điều trị tại ghế">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top p-3">
+                    <button type="button" class="btn btn-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold d-inline-flex align-items-center gap-2" style="background-color: #2b50aa; border: none;" id="btnSubmitQuickAdd">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Tiếp nhận & Vào khám ngay</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- ========================================================= -->
 <!-- MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY -->
@@ -449,13 +652,18 @@
 <!-- ===================================================================== -->
 <!-- MODAL: HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)                    -->
 <!-- ===================================================================== -->
-<div th:replace="~{doctor/fragments/modal-re-examination :: reExamModal}"></div>
+<th:block th:replace="~{doctor/fragments/modal-re-examination :: reExamModal}"></th:block>
 
 <!-- ===================================================================== -->
 <!-- ===================================================================== -->
 <!-- MODALS CHO BAR 4: FILM ẢNH & THEO DÕI LÂM SÀNG (FRAGMENT)            -->
 <!-- ===================================================================== -->
 <div th:replace="~{doctor/fragments/clinical-photos :: clinicalPhotosModals}"></div>
+
+<!-- ===================================================================== -->
+<!-- MODAL: LỜI DẶN DÒ BÁC SĨ (SCR-18.x)                                   -->
+<!-- ===================================================================== -->
+<th:block th:replace="~{doctor/fragments/instructions-tab :: instructionsModals}"></th:block>
 
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
@@ -561,6 +769,7 @@
             location.hash = '#' + tabId;
         }
     }
+    window.switchMainTab = switchMainTab;
 
     // Tự động khôi phục tab đang mở từ URL Hash khi tải trang
     document.addEventListener('DOMContentLoaded', function() {
@@ -630,6 +839,110 @@
 
     // MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY CONTROLLER
     // =========================================================================
+        // =========================================================================
+    // DENTAL CLINIC TOOLBAR (DEMO BRANCH & DATE & DISPLAY RATIO)
+    // =========================================================================
+    function getSelectedBranchId() {
+        const sel = document.getElementById('toolbarBranchSelect');
+        if (sel && sel.value) return sel.value;
+        const stored = localStorage.getItem('doctorSelectedBranchId');
+        if (stored) return stored;
+        /*[# th:if="${selectedBranchId != null}"]*/
+        return '[[${selectedBranchId}]]';
+        /*[/]*/
+        return '';
+    }
+
+    function handleToolbarBranchChange(branchId) {
+        if (!branchId) return;
+        localStorage.setItem('doctorSelectedBranchId', branchId);
+        window.location.href = /doctor/examination?branchId= + branchId;
+    }
+
+    function triggerDatePick() {
+        const picker = document.getElementById('dfTbDateNative');
+        if (picker) {
+            if (picker.showPicker) {
+                picker.showPicker();
+            } else {
+                picker.focus();
+                picker.click();
+            }
+        }
+    }
+
+    function onToolbarDateChange(val) {
+        if (!val) return;
+        const parts = val.split('-');
+        if (parts.length === 3) {
+            const displayStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+            const disp = document.getElementById('dfTbDateDisplay');
+            if (disp) disp.value = displayStr;
+        }
+        if (typeof dvdState !== 'undefined') {
+            dvdState.datePreset = 'CUSTOM';
+            dvdState.dateValue = val;
+            dvdState.startDate = null;
+            dvdState.endDate = null;
+            loadDailyVisits();
+        }
+    }
+
+    function openQuickAddPatientModal() {
+        const branchSel = document.getElementById('toolbarBranchSelect');
+        const branchNameEl = document.getElementById('quickAddBranchNameDisplay');
+        if (branchSel && branchNameEl) {
+            branchNameEl.textContent = branchSel.options[branchSel.selectedIndex]?.text || 'DEMO';
+        }
+        const modalEl = document.getElementById('quickAddPatientModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+
+    async function handleQuickAddPatient(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitQuickAdd');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tiếp nhận...';
+
+        try {
+            const branchId = getSelectedBranchId();
+            const payload = {
+                fullName: document.getElementById('qaFullName').value,
+                phoneNumber: document.getElementById('qaPhone').value,
+                gender: document.getElementById('qaGender').value,
+                dob: document.getElementById('qaDob').value,
+                symptoms: document.getElementById('qaSymptoms').value,
+                branchId: branchId
+            };
+
+            const res = await fetch('/api/doctor/patients/quick-create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || 'Lỗi khi tiếp nhận bệnh nhân');
+            }
+
+            const data = await res.json();
+            if (data.redirectUrl) {
+                window.location.href = data.redirectUrl;
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            alert('Lỗi: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
     let dvdState = {
         dateMode: 'THIS_WEEK',
         dateValue: null,
@@ -843,6 +1156,8 @@
             }
             if (dvdState.search) params.append('search', dvdState.search);
             if (currentVid) params.append('currentVisitId', currentVid);
+            const curBranch = getSelectedBranchId();
+            if (curBranch) params.append('branchId', curBranch);
 
             const res = await fetch(`/api/doctor/patients/daily-visits?${params.toString()}`);
             if (!res.ok) throw new Error('Không thể tải danh sách ca khám');
@@ -907,6 +1222,8 @@
 
         const countTxt = document.getElementById('dvdFilteredCountText');
         if (countTxt) countTxt.textContent = `Hiển thị: ${filtered.length} ca`;
+        const topRatio = document.getElementById('topbarDisplayRatio');
+        if (topRatio && dvdState.allFetchedVisits) topRatio.textContent = filtered.length + '/' + dvdState.allFetchedVisits.length;
 
         const totalBadge = document.getElementById('dvdTotalCountBadge');
         if (totalBadge) totalBadge.textContent = `${filtered.length} ca`;
@@ -1032,6 +1349,14 @@
 
     // Khởi tạo drawer khi trang tải xong
     window.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        const curDd = String(now.getDate()).padStart(2, '0');
+        const curMm = String(now.getMonth() + 1).padStart(2, '0');
+        const curYyyy = now.getFullYear();
+        const dateDisp = document.getElementById('dfTbDateDisplay');
+        if (dateDisp) dateDisp.value = curDd + '/' + curMm + '/' + curYyyy;
+        const nativeDate = document.getElementById('dfTbDateNative');
+        if (nativeDate) nativeDate.value = curYyyy + '-' + curMm + '-' + curDd;
         // Tải danh sách ca khám tuần này để hiển thị đầy đủ
         setDvdDateFilter('THIS_WEEK');
 

@@ -26,6 +26,8 @@ public class DailyVisitDTO {
     private String statusBadgeClass;  // "bg-warning", "bg-primary"...
     private String initialSymptoms;
     private String doctorName;
+    private Long branchId;
+    private String branchCode;
     private String branchName;
     private String chairName;
     private boolean isCurrentVisit;

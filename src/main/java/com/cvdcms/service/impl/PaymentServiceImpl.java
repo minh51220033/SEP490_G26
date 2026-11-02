@@ -39,6 +39,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final com.cvdcms.service.InvoiceService invoiceService;
     private final VisitRepository visitRepository;
     private final AppointmentLifecycleService appointmentLifecycleService;
+    private final BranchBankAccountRepository branchBankAccountRepository;
+    private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -56,7 +58,9 @@ public class PaymentServiceImpl implements PaymentService {
             com.cvdcms.service.LoyaltyService loyaltyService,
             @org.springframework.context.annotation.Lazy com.cvdcms.service.InvoiceService invoiceService,
             VisitRepository visitRepository,
-            AppointmentLifecycleService appointmentLifecycleService
+            AppointmentLifecycleService appointmentLifecycleService,
+            BranchBankAccountRepository branchBankAccountRepository,
+            com.cvdcms.service.PaymentAllocationService paymentAllocationService
     ) {
         this.paymentRepository = paymentRepository;
         this.invoiceRepository = invoiceRepository;
@@ -73,6 +77,57 @@ public class PaymentServiceImpl implements PaymentService {
         this.invoiceService = invoiceService;
         this.visitRepository = visitRepository;
         this.appointmentLifecycleService = appointmentLifecycleService;
+        this.branchBankAccountRepository = branchBankAccountRepository;
+        this.paymentAllocationService = paymentAllocationService;
+    }
+
+    /** Constructor compatibility for existing finance tests and callers. */
+    public PaymentServiceImpl(
+            PaymentRepository paymentRepository,
+            InvoiceRepository invoiceRepository,
+            InvoiceAuditLogRepository invoiceAuditLogRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            PatientLoyaltyWalletRepository patientLoyaltyWalletRepository,
+            PointTransactionRepository pointTransactionRepository,
+            MembershipTierRepository membershipTierRepository,
+            UserRepository userRepository,
+            com.cvdcms.service.LoyaltyService loyaltyService,
+            com.cvdcms.service.InvoiceService invoiceService,
+            BranchBankAccountRepository branchBankAccountRepository
+    ) {
+        this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
+                patientProfileRepository, branchRepository, staffProfileRepository,
+                staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
+                pointTransactionRepository, membershipTierRepository, userRepository,
+                loyaltyService, invoiceService, null, null, branchBankAccountRepository, null);
+    }
+
+    /** Appointment Core compatibility constructor. */
+    public PaymentServiceImpl(
+            PaymentRepository paymentRepository,
+            InvoiceRepository invoiceRepository,
+            InvoiceAuditLogRepository invoiceAuditLogRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            PatientLoyaltyWalletRepository patientLoyaltyWalletRepository,
+            PointTransactionRepository pointTransactionRepository,
+            MembershipTierRepository membershipTierRepository,
+            UserRepository userRepository,
+            com.cvdcms.service.LoyaltyService loyaltyService,
+            com.cvdcms.service.InvoiceService invoiceService,
+            VisitRepository visitRepository,
+            AppointmentLifecycleService appointmentLifecycleService
+    ) {
+        this(paymentRepository, invoiceRepository, invoiceAuditLogRepository,
+                patientProfileRepository, branchRepository, staffProfileRepository,
+                staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
+                pointTransactionRepository, membershipTierRepository, userRepository,
+                loyaltyService, invoiceService, visitRepository, appointmentLifecycleService, null, null);
     }
 
     public PaymentServiceImpl(
@@ -93,7 +148,7 @@ public class PaymentServiceImpl implements PaymentService {
                 patientProfileRepository, branchRepository, staffProfileRepository,
                 staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
                 pointTransactionRepository, membershipTierRepository, userRepository, loyaltyService,
-                null, null, null);
+                null, null, null, null, null);
     }
 
     public PaymentServiceImpl(
@@ -113,7 +168,11 @@ public class PaymentServiceImpl implements PaymentService {
                 patientProfileRepository, branchRepository, staffProfileRepository,
                 staffBranchAssignmentRepository, patientLoyaltyWalletRepository,
                 pointTransactionRepository, membershipTierRepository, userRepository, null,
-                null, null, null);
+                null, null, null, null, null);
+    }
+
+    public void setPaymentAllocationService(com.cvdcms.service.PaymentAllocationService paymentAllocationService) {
+        this.paymentAllocationService = paymentAllocationService;
     }
 
     /**
@@ -255,7 +314,14 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.getNotes());
 
+        attachBankTransferSnapshot(payment, request, branch,
+                (invoice != null ? invoice.getInvoiceCode() : "HD") + " TT");
+
         Payment savedPayment = paymentRepository.save(payment);
+
+        if (paymentAllocationService != null) {
+            paymentAllocationService.allocatePayment(savedPayment, request.getAmount());
+        }
 
         // 9. Cập nhật hóa đơn
         BigDecimal oldPaid = invoice.getPaidAmount();
@@ -301,7 +367,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void completeVisit(Invoice invoice, Long actorUserId) {
-        if (invoice.getVisit() == null || visitRepository == null || appointmentLifecycleService == null) {
+        if (invoice.getVisit() == null) {
             return;
         }
         Visit visit = visitRepository.lockById(invoice.getVisit().getVisitId())
@@ -317,6 +383,55 @@ public class PaymentServiceImpl implements PaymentService {
         visit.setCompletedAt(LocalDateTime.now());
         visitRepository.saveAndFlush(visit);
         appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
+    }
+
+    private void attachBankTransferSnapshot(Payment payment, PaymentRequestDTO request,
+                                            Branch branch, String expectedContentPrefix) {
+        if (payment.getPaymentMethod() != PaymentMethod.BANK_TRANSFER || branchBankAccountRepository == null) {
+            return;
+        }
+
+        BranchBankAccount chosenAccount = null;
+        Long requestedAccountId = request.getBankAccountId();
+        if (requestedAccountId != null) {
+            BranchBankAccount account = branchBankAccountRepository.findById(requestedAccountId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Không tìm thấy tài khoản ngân hàng ID: " + requestedAccountId));
+            if (branch != null && account.getBranch() != null
+                    && !account.getBranch().getBranchId().equals(branch.getBranchId())) {
+                throw new IllegalArgumentException("Tài khoản nhận tiền không thuộc chi nhánh giao dịch.");
+            }
+            if (!Boolean.TRUE.equals(account.getIsActive())) {
+                throw new IllegalStateException("Tài khoản ngân hàng nhận tiền đã ngừng sử dụng.");
+            }
+            chosenAccount = account;
+        } else if (branch != null) {
+            chosenAccount = branchBankAccountRepository
+                    .findByBranch_BranchIdAndIsDefaultTrueAndIsActiveTrue(branch.getBranchId())
+                    .orElseGet(() -> branchBankAccountRepository
+                            .findByBranch_BranchIdAndIsActiveTrueOrderByIsDefaultDescCreatedAtDesc(branch.getBranchId())
+                            .stream().findFirst().orElse(null));
+        }
+
+        if (chosenAccount == null) {
+            throw new IllegalStateException("Chi nhánh chưa có tài khoản ngân hàng hoạt động để nhận chuyển khoản.");
+        }
+
+        payment.setBankAccount(chosenAccount);
+        payment.setBankBin(chosenAccount.getBankBin());
+        payment.setBankName(chosenAccount.getBankName());
+        payment.setBankAccountNumber(chosenAccount.getAccountNumber());
+        payment.setBankAccountHolder(chosenAccount.getAccountHolderName());
+
+        String expectedContent = request.getExpectedTransferContent();
+        if (expectedContent == null || expectedContent.isBlank()) {
+            String idempotencyKey = request.getIdempotencyKey();
+            String refPart = idempotencyKey != null && idempotencyKey.length() >= 4
+                    ? idempotencyKey.substring(Math.max(0, idempotencyKey.length() - 6))
+                    : UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+            expectedContent = expectedContentPrefix + refPart;
+        }
+        payment.setExpectedTransferContent(expectedContent.trim().toUpperCase());
     }
 
     private void updateLoyaltyAndTier(PatientProfile patient, BigDecimal amount, Invoice invoice) {
@@ -454,6 +569,9 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setTransactionRef(request.getTransactionRef());
         payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.getNotes() != null ? request.getNotes() : "Nạp tiền tạm ứng điều trị");
+
+        attachBankTransferSnapshot(payment, request, branch,
+                "TU" + patient.getProfileId() + " REF");
 
         Payment saved = paymentRepository.save(payment);
 

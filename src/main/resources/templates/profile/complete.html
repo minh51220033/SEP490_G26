@@ -1,679 +1,240 @@
-
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hoàn thiện hồ sơ bệnh nhân | CV-DCMS</title>
+<head th:replace="~{fragments/head :: head('Hoàn thiện hồ sơ bệnh nhân')}"></head>
+<body class="app-body">
+<div class="app-shell">
 
-    <style>
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            color: #1e293b;
-            background: #f1f5f9;
+<style>
+    .cm-wrap {
+        max-width: 1020px;
+        margin: 0 auto;
+    }
+    .cm-banner {
+        background: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);
+        color: #ffffff;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+    }
+    .cm-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        padding: 22px;
+        margin-bottom: 18px;
+    }
+    .cm-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    @media (max-width: 768px) {
+        .cm-grid-2 {
+            grid-template-columns: 1fr;
         }
+    }
+</style>
 
-        .page {
-            max-width: 920px;
-            margin: 32px auto;
-            padding: 0 16px 40px;
-        }
+<aside th:replace="~{fragments/sidebar :: sidebar('profile')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-        .header {
-            background: linear-gradient(135deg, #1d4ed8, #0f766e);
-            color: white;
-            border-radius: 18px;
-            padding: 28px;
-            margin-bottom: 22px;
-        }
+<div class="app-main">
+    <header th:replace="~{fragments/header :: appTopbar('Hoàn thiện hồ sơ bệnh nhân')}"></header>
 
-        .header h1 { margin: 0 0 10px; }
-        .header p { margin: 5px 0; line-height: 1.5; }
+    <main class="app-content">
+        <div class="cm-wrap">
 
-        .profile-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 18px;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
-        }
+            <div class="cm-banner">
+                <h2 class="h5 fw-bold mb-1">
+                    <i class="bi bi-stars me-1"></i>Chào mừng bạn đến với Hệ thống Nha khoa CV-DCMS!
+                </h2>
+                <p class="mb-0 small opacity-75">
+                    Vui lòng hoàn thiện thông tin hồ sơ bệnh nhân mặc định của bạn (và có thể thêm hồ sơ người thân nếu muốn) để bắt đầu đặt lịch khám.
+                </p>
+            </div>
 
-        .card-heading {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 22px;
-        }
+            <div th:if="${error != null}" class="alert alert-danger d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert" style="border-radius:10px;">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <span th:text="${error}">Đã xảy ra lỗi.</span>
+            </div>
 
-        .card-heading h2 { margin: 0; font-size: 20px; }
+            <form th:action="@{/profile/complete}"
+                  method="post"
+                  enctype="multipart/form-data"
+                  id="completeForm">
 
-        .number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            margin-right: 8px;
-            border-radius: 10px;
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
+                <div id="profilesContainer">
+                    <div class="cm-card profile-block" data-index="0">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
+                            <h3 class="h6 fw-bold text-primary mb-0 profile-heading">
+                                <i class="bi bi-person-check-fill me-1"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)
+                            </h3>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger remove-profile-btn"
+                                    style="display:none;"
+                                    onclick="removeProfileBlock(this)">
+                                <i class="bi bi-trash me-1"></i>Xóa hồ sơ này
+                            </button>
+                        </div>
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .field { margin-bottom: 18px; }
-        .full { grid-column: 1 / -1; }
-
-        label, legend {
-            display: block;
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        input[type="text"],
-        input[type="date"],
-        input[type="file"],
-        select, textarea {
-            display: block;
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 9px;
-            padding: 12px;
-            font: inherit;
-            background: white;
-        }
-
-        textarea {
-            min-height: 90px;
-            resize: vertical;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: 2px solid #bfdbfe;
-            border-color: #2563eb;
-        }
-
-        .hint {
-            margin: 7px 0 0;
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.5;
-        }
-
-        .health-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 18px;
-            margin-top: 4px;
-        }
-
-        .radio-row {
-            display: flex;
-            gap: 22px;
-            flex-wrap: wrap;
-        }
-
-        .radio-row label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 400;
-            margin: 0;
-        }
-
-        .radio-row input { width: auto; }
-
-        .avatar-preview {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            object-fit: cover;
-            display: none;
-            margin-top: 12px;
-            border: 2px solid #e2e8f0;
-        }
-
-        .error {
-            padding: 14px;
-            margin-bottom: 18px;
-            color: #991b1b;
-            background: #fee2e2;
-            border-radius: 10px;
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin: 20px 0;
-        }
-
-        button, .link-button {
-            border: 0;
-            border-radius: 10px;
-            padding: 13px 18px;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .add-button {
-            color: #1d4ed8;
-            background: #dbeafe;
-        }
-
-        .remove-button {
-            padding: 9px 12px;
-            color: #b91c1c;
-            background: #fee2e2;
-            font-size: 13px;
-        }
-
-        .save-button {
-            color: white;
-            background: #2563eb;
-        }
-
-        .cancel-button {
-            color: #334155;
-            background: #e2e8f0;
-        }
-
-        .footer {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
-
-        .counter {
-            color: #475569;
-            font-size: 14px;
-            margin: 8px 0 16px;
-        }
-
-        @media (max-width: 640px) {
-            .grid { grid-template-columns: 1fr; }
-            .full { grid-column: auto; }
-            .profile-card { padding: 17px; }
-            .header { padding: 22px; }
-            .footer button, .footer a { width: 100%; }
-        }
-    </style>
-</head>
-
-<body>
-<main class="page">
-    <section class="header">
-        <h1>Hoàn thiện hồ sơ bệnh nhân</h1>
-        <p>
-            Xin chào
-            <strong th:text="${user.username}">bạn</strong>!
-        </p>
-        <p>
-            Bạn có thể tạo hồ sơ cho bản thân và người thân.
-            Email, số điện thoại liên hệ sẽ được dùng chung từ tài khoản.
-        </p>
-    </section>
-
-    <div class="error" th:if="${error}" th:text="${error}"></div>
-
-    <form th:action="@{/profile/complete}"
-          th:object="${completeProfilesDTO}"
-          method="post"
-          enctype="multipart/form-data"
-          id="profilesForm">
-
-        <div id="profilesContainer">
-            <section class="profile-card" data-profile-card>
-                <div class="card-heading">
-                    <h2><span class="number">1</span> Hồ sơ bệnh nhân</h2>
-                </div>
-
-                <div class="grid">
-                    <div class="field">
-                        <label>Họ và tên *</label>
-                        <input type="text"
-                               name="profiles[0].fullName"
-                               maxlength="100"
-                               required>
-                    </div>
-
-                    <div class="field">
-                        <label>Ngày sinh</label>
-                        <input type="date" name="profiles[0].dob">
-                    </div>
-
-                    <div class="field">
-                        <label>Giới tính *</label>
-                        <select name="profiles[0].gender" required>
-                            <option value="">-- Chọn giới tính --</option>
-                            <option value="Nam">Nam</option>
-                            <option value="Nữ">Nữ</option>
-                            <option value="Khác">Khác</option>
-                        </select>
-                    </div>
-
-                    <div class="field branch-field">
-                        <label>Chi nhánh ưu tiên *</label>
-
-                        <select name="profiles[0].branchId" required>
-                            <option value="">-- Chọn chi nhánh --</option>
-                            <option th:each="branch : ${branches}"
-                                    th:value="${branch.branchId}"
-                                    th:text="${branch.branchName + ' - ' + branch.address}">
-                            </option>
-                        </select>
-
-                        <p class="branch-note" hidden>
-                            Hồ sơ này sử dụng chi nhánh đã chọn ở hồ sơ chính.
-                        </p>
-                    </div>
-
-                    <div class="field full">
-                        <label>Địa chỉ *</label>
-                        <textarea name="profiles[0].address"
-                                  maxlength="255"
-                                  required></textarea>
-                    </div>
-
-                    <div class="field full">
-                        <div class="health-box">
-                            <fieldset style="border:0;padding:0;margin:0">
-                                <legend>Bệnh nhân có bệnh nền không? *</legend>
-                                <div class="radio-row">
-                                    <label>
-                                        <input type="radio"
-                                               name="profiles[0].hasUnderlyingDisease"
-                                               value="true"
-                                               required>
-                                        Có
-                                    </label>
-                                    <label>
-                                        <input type="radio"
-                                               name="profiles[0].hasUnderlyingDisease"
-                                               value="false"
-                                               required>
-                                        Không
-                                    </label>
-                                </div>
-                            </fieldset>
-
-                            <div class="field disease-details"
-                                 style="margin:18px 0 0" hidden>
-                                <label>Mô tả bệnh nền *</label>
-                                <textarea
-                                        name="profiles[0].underlyingDiseaseDetails"
-                                        maxlength="2000"
-                                        placeholder="Nhập thông tin bệnh nền"></textarea>
+                        <div class="cm-grid-2 mb-3">
+                            <div>
+                                <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" name="profiles[0].fullName" class="form-control" maxlength="100" required>
+                            </div>
+                            <div>
+                                <label class="form-label fw-semibold">Ngày sinh</label>
+                                <input type="date" name="profiles[0].dob" class="form-control">
+                            </div>
+                            <div>
+                                <label class="form-label fw-semibold">Giới tính <span class="text-danger">*</span></label>
+                                <select name="profiles[0].gender" class="form-select" required>
+                                    <option value="">-- Chọn giới tính --</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label fw-semibold">Cơ sở khám ưu tiên <span class="text-danger">*</span></label>
+                                <select name="profiles[0].branchId" class="form-select" required>
+                                    <option value="">-- Chọn cơ sở khám --</option>
+                                    <option th:each="b : ${branches}"
+                                            th:value="${b.branchId}"
+                                            th:text="${b.branchName}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <label class="form-label fw-semibold">Địa chỉ <span class="text-danger">*</span></label>
+                                <input type="text" name="profiles[0].address" class="form-control" maxlength="255" required>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="field full">
-                        <label>Ảnh đại diện (không bắt buộc)</label>
-                        <input type="file"
-                               name="profiles[0].avatar"
-                               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                        <p class="hint">JPG, PNG hoặc WebP; tối đa 5 MB.</p>
-                        <img class="avatar-preview" alt="Xem trước ảnh đại diện">
+                        <div class="mb-3 p-3 bg-light rounded-3 border">
+                            <label class="form-label fw-semibold mb-2">Tiền sử bệnh nền <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-4 mb-2">
+                                <label class="d-inline-flex align-items-center gap-2">
+                                    <input type="radio"
+                                           name="profiles[0].hasUnderlyingDisease"
+                                           value="false"
+                                           checked
+                                           onchange="toggleDiseaseField(this, false)">
+                                    <span>Không</span>
+                                </label>
+                                <label class="d-inline-flex align-items-center gap-2">
+                                    <input type="radio"
+                                           name="profiles[0].hasUnderlyingDisease"
+                                           value="true"
+                                           onchange="toggleDiseaseField(this, true)">
+                                    <span class="text-danger fw-semibold">Có bệnh nền</span>
+                                </label>
+                            </div>
+                            <div class="disease-details-wrap" style="display:none;">
+                                <label class="form-label fw-semibold">Mô tả chi tiết bệnh nền <span class="text-danger">*</span></label>
+                                <textarea name="profiles[0].underlyingDiseaseDetails"
+                                          rows="2"
+                                          maxlength="1000"
+                                          class="form-control"
+                                          placeholder="Nhập thông tin bệnh nền hoặc dị ứng thuốc..."></textarea>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold">Ảnh đại diện (Tùy chọn — JPG, PNG, WebP tối đa 5MB)</label>
+                            <input type="file" name="profiles[0].avatar" accept="image/jpeg,image/png,image/webp" class="form-control">
+                        </div>
                     </div>
                 </div>
-            </section>
+
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-primary fw-semibold" onclick="addProfileBlock()">
+                        <i class="bi bi-person-plus me-1"></i> Thêm hồ sơ người thân khác
+                    </button>
+
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                        <i class="bi bi-check2-circle me-1"></i> Hoàn tất &amp; Lưu hồ sơ
+                    </button>
+                </div>
+            </form>
+
         </div>
+    </main>
 
-        <p class="counter">
-            Số hồ sơ đang điền: <strong id="profileCount">1</strong>
-        </p>
-
-        <div class="toolbar">
-            <button type="button" class="add-button" id="addProfile">
-                + Thêm hồ sơ bệnh nhân
-            </button>
-        </div>
-
-        <div class="footer">
-            <a class="link-button cancel-button" th:href="@{/home}">
-                Để sau
-            </a>
-            <button type="submit" class="save-button">
-                Lưu tất cả hồ sơ
-            </button>
-        </div>
-    </form>
-</main>
-
+    <footer th:replace="~{fragments/footer :: appFooter}"></footer>
+</div>
+</div>
 
 <script>
-    const container = document.getElementById("profilesContainer");
-    const countLabel = document.getElementById("profileCount");
-    const addButton = document.getElementById("addProfile");
-    const form = document.getElementById("profilesForm");
-
-    // Lấy danh sách hồ sơ hiện tại.
-    function getCards() {
-        return [...container.querySelectorAll("[data-profile-card]")];
+    function toggleDiseaseField(radio, show) {
+        var card = radio.closest('.profile-block');
+        var wrap = card.querySelector('.disease-details-wrap');
+        var textarea = wrap.querySelector('textarea');
+        if (show) {
+            wrap.style.display = 'block';
+            textarea.required = true;
+        } else {
+            wrap.style.display = 'none';
+            textarea.required = false;
+            textarea.value = '';
+        }
     }
 
-    // Đồng bộ tên field để mỗi hồ sơ có một nhóm radio riêng.
-    function renumberProfiles() {
-        const cards = getCards();
+    function addProfileBlock() {
+        var container = document.getElementById('profilesContainer');
+        var blocks = container.querySelectorAll('.profile-block');
+        var first = blocks[0];
+        var clone = first.cloneNode(true);
 
-        cards.forEach((card, index) => {
-            card.querySelector(".number").textContent = index + 1;
+        clone.querySelectorAll('input[type="text"], input[type="date"], input[type="file"], textarea').forEach(function (el) {
+            el.value = '';
+            el.required = false;
+        });
+        clone.querySelectorAll('input[name$=".fullName"], input[name$=".address"], select').forEach(function (el) {
+            el.required = true;
+        });
+        clone.querySelectorAll('select').forEach(function (el) {
+            el.selectedIndex = 0;
+        });
 
-            card.querySelectorAll("[name]").forEach(input => {
-                // Chỉ thay chỉ số profiles[n], giữ nguyên tên field.
-                input.name = input.name.replace(
-                    /profiles\[\d+\]/g,
-                    `profiles[${index}]`
-                );
+        var radios = clone.querySelectorAll('input[type="radio"]');
+        radios.forEach(function (r) {
+            r.checked = (r.value === 'false');
+        });
+        var wrap = clone.querySelector('.disease-details-wrap');
+        if (wrap) wrap.style.display = 'none';
+
+        container.appendChild(clone);
+        reindexBlocks();
+    }
+
+    function removeProfileBlock(btn) {
+        var container = document.getElementById('profilesContainer');
+        if (container.querySelectorAll('.profile-block').length <= 1) return;
+        btn.closest('.profile-block').remove();
+        reindexBlocks();
+    }
+
+    function reindexBlocks() {
+        var blocks = document.querySelectorAll('#profilesContainer .profile-block');
+        blocks.forEach(function (block, idx) {
+            block.setAttribute('data-index', idx);
+            var heading = block.querySelector('.profile-heading');
+            if (heading) {
+                heading.innerHTML = idx === 0
+                    ? '<i class="bi bi-person-check-fill me-1"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)'
+                    : '<i class="bi bi-person-plus-fill me-1"></i>Hồ sơ ' + (idx + 1) + ' (Người thân)';
+            }
+            var removeBtn = block.querySelector('.remove-profile-btn');
+            if (removeBtn) {
+                removeBtn.style.display = idx === 0 ? 'none' : 'inline-flex';
+            }
+            block.querySelectorAll('[name]').forEach(function (el) {
+                el.name = el.name.replace(/profiles\[\d+\]/, 'profiles[' + idx + ']');
             });
-
-            const removeButton = card.querySelector(".remove-button");
-            if (removeButton) {
-                removeButton.hidden = cards.length === 1;
-            }
-        });
-
-        countLabel.textContent = cards.length;
-
-        syncBranchFields();
-    }
-
-    // Chỉ hồ sơ đầu tiên được chọn chi nhánh.
-    // Các hồ sơ khác gửi cùng branchId thông qua hidden input.
-    function syncBranchFields() {
-        const cards = getCards();
-
-        if (cards.length === 0) return;
-
-        const mainSelect = cards[0].querySelector(
-            '.branch-field select'
-        );
-
-        const mainBranchId = mainSelect ? mainSelect.value : "";
-
-        cards.forEach((card, index) => {
-            const branchField = card.querySelector(".branch-field");
-            if (!branchField) return;
-
-            let select = branchField.querySelector("select");
-            let hidden = branchField.querySelector(
-                'input[type="hidden"][data-branch-hidden]'
-            );
-            let note = branchField.querySelector(".branch-note");
-
-            if (index === 0) {
-                // Hồ sơ chính: giữ trường chọn chi nhánh.
-                if (hidden) hidden.remove();
-
-                if (select) {
-                    select.hidden = false;
-                    select.disabled = false;
-                    select.required = true;
-                    select.name = "profiles[0].branchId";
-                }
-
-                if (note) note.hidden = true;
-            } else {
-                // Hồ sơ phụ: không cho chọn chi nhánh riêng.
-                if (select) {
-                    select.hidden = true;
-                    select.disabled = true;
-                    select.required = false;
-                }
-
-                if (!hidden) {
-                    hidden = document.createElement("input");
-                    hidden.type = "hidden";
-                    hidden.dataset.branchHidden = "true";
-                    branchField.appendChild(hidden);
-                }
-
-                hidden.name = `profiles[${index}].branchId`;
-                hidden.value = mainBranchId;
-
-                if (note) note.hidden = false;
-
-                // Hiển thị tên chi nhánh được kế thừa.
-                let branchDisplay = branchField.querySelector(
-                    ".branch-inherited"
-                );
-
-                if (!branchDisplay) {
-                    branchDisplay = document.createElement("p");
-                    branchDisplay.className = "branch-inherited";
-                    branchField.appendChild(branchDisplay);
-                }
-
-                const selectedOption = mainSelect
-                    ? mainSelect.options[mainSelect.selectedIndex]
-                    : null;
-
-                branchDisplay.textContent =
-                    mainBranchId && selectedOption
-                        ? selectedOption.textContent
-                        : "Vui lòng chọn chi nhánh ở hồ sơ chính.";
-
-                branchDisplay.hidden = false;
-            }
         });
     }
-
-    // Xử lý câu hỏi bệnh nền và ảnh đại diện của từng hồ sơ.
-    function bindCard(card) {
-        const yes = card.querySelector(
-            'input[type="radio"][value="true"]'
-        );
-        const no = card.querySelector(
-            'input[type="radio"][value="false"]'
-        );
-
-        const detailsGroup = card.querySelector(".disease-details");
-        const details = detailsGroup.querySelector("textarea");
-
-        function updateDisease() {
-            const hasDisease = yes.checked;
-
-            detailsGroup.hidden = !hasDisease;
-            details.required = hasDisease;
-
-            if (!hasDisease) {
-                details.value = "";
-            }
-        }
-
-        yes.addEventListener("change", updateDisease);
-        no.addEventListener("change", updateDisease);
-        updateDisease();
-
-        const fileInput = card.querySelector('input[type="file"]');
-        const preview = card.querySelector(".avatar-preview");
-
-        fileInput.addEventListener("change", () => {
-            const file = fileInput.files[0];
-
-            if (!file) {
-                preview.style.display = "none";
-                preview.removeAttribute("src");
-                return;
-            }
-
-            const allowedTypes = [
-                "image/jpeg",
-                "image/png",
-                "image/webp"
-            ];
-
-            if (
-                !allowedTypes.includes(file.type) ||
-                file.size > 5 * 1024 * 1024
-            ) {
-                alert("Ảnh phải là JPG, PNG hoặc WebP và không quá 5 MB.");
-                fileInput.value = "";
-                preview.style.display = "none";
-                preview.removeAttribute("src");
-                return;
-            }
-
-            if (preview.dataset.objectUrl) {
-                URL.revokeObjectURL(preview.dataset.objectUrl);
-            }
-
-            const objectUrl = URL.createObjectURL(file);
-            preview.dataset.objectUrl = objectUrl;
-            preview.src = objectUrl;
-            preview.style.display = "block";
-        });
-    }
-
-    // Tạo hồ sơ mới bằng cách nhân bản hồ sơ đầu tiên.
-    function createProfileCard() {
-        const firstCard = container.querySelector("[data-profile-card]");
-        const card = firstCard.cloneNode(true);
-
-        // Xóa dữ liệu của hồ sơ được nhân bản.
-        card.querySelectorAll("input, textarea").forEach(input => {
-            if (input.type === "radio") {
-                input.checked = false;
-            } else if (input.type === "file") {
-                input.value = "";
-            } else {
-                input.value = "";
-            }
-        });
-
-        card.querySelectorAll("select").forEach(select => {
-            select.selectedIndex = 0;
-        });
-
-        const preview = card.querySelector(".avatar-preview");
-        preview.style.display = "none";
-        preview.removeAttribute("src");
-        delete preview.dataset.objectUrl;
-
-        // Xóa các thành phần được JavaScript thêm từ lần trước,
-        // tránh nhân bản hidden input hoặc nội dung chi nhánh cũ.
-        card.querySelectorAll(
-            '[data-branch-hidden], .branch-inherited'
-        ).forEach(element => element.remove());
-
-        const note = card.querySelector(".branch-note");
-        if (note) note.hidden = true;
-
-        // Thêm nút xóa cho hồ sơ mới.
-        const heading = card.querySelector(".card-heading");
-
-        if (!card.querySelector(".remove-button")) {
-            const removeButton = document.createElement("button");
-            removeButton.type = "button";
-            removeButton.className = "remove-button";
-            removeButton.textContent = "Xóa hồ sơ này";
-
-            removeButton.addEventListener("click", () => {
-                const objectUrl = card.querySelector(
-                    ".avatar-preview"
-                ).dataset.objectUrl;
-
-                if (objectUrl) URL.revokeObjectURL(objectUrl);
-
-                card.remove();
-                renumberProfiles();
-            });
-
-            heading.appendChild(removeButton);
-        }
-
-        container.appendChild(card);
-
-        // Gắn xử lý riêng cho radio và ảnh của hồ sơ mới.
-        bindCard(card);
-
-        // Đặt lại chỉ số name trước khi người dùng thao tác.
-        renumberProfiles();
-    }
-
-    // Nếu đổi chi nhánh chính, cập nhật tất cả hồ sơ phụ.
-    const mainBranchSelect = container.querySelector(
-        '.branch-field select'
-    );
-
-    mainBranchSelect.addEventListener("change", syncBranchFields);
-
-    // Khởi tạo hồ sơ đầu tiên.
-    bindCard(container.querySelector("[data-profile-card]"));
-    renumberProfiles();
-
-    addButton.addEventListener("click", createProfileCard);
-
-    // Kiểm tra dữ liệu trước khi gửi form.
-    form.addEventListener("submit", event => {
-        const cards = getCards();
-
-        if (cards.length === 0) {
-            event.preventDefault();
-            alert("Vui lòng tạo ít nhất một hồ sơ bệnh nhân.");
-            return;
-        }
-
-        const mainBranch = cards[0].querySelector(
-            '.branch-field select'
-        );
-
-        if (!mainBranch || !mainBranch.value) {
-            event.preventDefault();
-            alert("Vui lòng chọn chi nhánh ở hồ sơ chính.");
-            mainBranch?.focus();
-            return;
-        }
-
-        for (const card of cards) {
-            const yes = card.querySelector(
-                'input[type="radio"][value="true"]'
-            );
-            const no = card.querySelector(
-                'input[type="radio"][value="false"]'
-            );
-            const details = card.querySelector(
-                ".disease-details textarea"
-            );
-
-            if (!yes.checked && !no.checked) {
-                event.preventDefault();
-                alert("Vui lòng trả lời câu hỏi bệnh nền ở tất cả hồ sơ.");
-                card.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
-                return;
-            }
-
-            if (yes.checked && !details.value.trim()) {
-                event.preventDefault();
-                alert("Vui lòng mô tả bệnh nền ở tất cả hồ sơ đã chọn Có.");
-                details.focus();
-                return;
-            }
-        }
-    });
 </script>
-
 </body>
 </html>

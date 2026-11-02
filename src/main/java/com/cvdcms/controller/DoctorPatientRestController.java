@@ -68,7 +68,7 @@ public class DoctorPatientRestController {
 
     @PostMapping("/{profileId}/open-visit")
     @Transactional
-    public ResponseEntity<Map<String, Object>> openOrCreateVisitForPatient(@PathVariable Long profileId) {
+    public ResponseEntity<Map<String, Object>> openOrCreateVisitForPatient(@PathVariable Long profileId, @RequestParam(value = "branchId", required = false) Long branchId) {
         PatientProfile patient = patientProfileRepository.findById(profileId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân với ID: " + profileId));
 
@@ -93,7 +93,10 @@ public class DoctorPatientRestController {
         newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
 
         // Gán cơ sở
-        Branch branch = patient.getPreferredBranch();
+        Branch branch = branchId != null ? branchRepository.findById(branchId).orElse(null) : null;
+        if (branch == null) {
+            branch = patient.getPreferredBranch();
+        }
         if (branch == null) {
             branch = branchRepository.findAll().stream().findFirst().orElse(null);
         }
@@ -186,7 +189,7 @@ public class DoctorPatientRestController {
             @RequestParam(value = "endDate", required = false) String endDateStr,
             @RequestParam(value = "status", required = false) String statusStr,
             @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "currentVisitId", required = false) Long currentVisitId) {
+            @RequestParam(value = "currentVisitId", required = false) Long currentVisitId, @RequestParam(value = "branchId", required = false) Long branchId) {
 
         LocalDateTime start = null;
         LocalDateTime end = null;
@@ -234,11 +237,11 @@ public class DoctorPatientRestController {
 
         String searchPattern = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
 
-        List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, searchPattern);
+        List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, branchId, searchPattern);
 
         // Fallback: nếu không có ca khám nào và người dùng chưa chọn bộ lọc ngày cụ thể, hiển thị danh sách gần nhất
         if (visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
-            visits = visitRepository.findAll().stream()
+            visits = visitRepository.findAll().stream().filter(v -> branchId == null || (v.getBranch() != null && branchId.equals(v.getBranch().getBranchId())))
                     .sorted((a, b) -> b.getCheckInAt().compareTo(a.getCheckInAt()))
                     .limit(20)
                     .collect(Collectors.toList());
@@ -329,10 +332,100 @@ public class DoctorPatientRestController {
                 .statusDisplayName(statusDisplay)
                 .statusBadgeClass(badgeClass)
                 .initialSymptoms(v.getInitialSymptoms() != null ? v.getInitialSymptoms() : "Khám theo yêu cầu")
+                .branchId(v.getBranch() != null ? v.getBranch().getBranchId() : null)
+                .branchCode(v.getBranch() != null ? v.getBranch().getBranchCode() : null)
                 .doctorName(doctorName)
                 .branchName(branchName)
                 .chairName(chairName)
                 .isCurrentVisit(isCurrent)
                 .build();
+    }
+
+    @PostMapping("/quick-create")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> quickCreatePatientAndVisit(
+            @RequestBody Map<String, String> payload) {
+        String fullName = payload.get("fullName");
+        String phoneNumber = payload.get("phoneNumber");
+        String gender = payload.getOrDefault("gender", "Nam");
+        String dobStr = payload.get("dob");
+        String symptoms = payload.getOrDefault("symptoms", "Khám & Điều trị tại ghế");
+        String branchIdStr = payload.get("branchId");
+
+        if (fullName == null || fullName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Họ tên bệnh nhân không được để trống"));
+        }
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Số điện thoại không được để trống"));
+        }
+
+        Long branchId = null;
+        if (branchIdStr != null && !branchIdStr.trim().isEmpty()) {
+            try {
+                branchId = Long.parseLong(branchIdStr.trim());
+            } catch (Exception ignored) {}
+        }
+
+        Branch branch = null;
+        if (branchId != null) {
+            branch = branchRepository.findById(branchId).orElse(null);
+        }
+        if (branch == null) {
+            branch = branchRepository.findAll().stream().findFirst().orElse(null);
+        }
+
+        LocalDate dob = null;
+        if (dobStr != null && !dobStr.trim().isEmpty()) {
+            try {
+                dob = LocalDate.parse(dobStr.trim());
+            } catch (Exception ignored) {}
+        }
+
+        PatientProfile patient = new PatientProfile();
+        patient.setFullName(fullName.trim());
+        patient.setPhoneNumber(phoneNumber.trim());
+        patient.setGender(gender);
+        patient.setDob(dob);
+        patient.setPreferredBranch(branch);
+        patient.setStatus("ACTIVE");
+        patient.setDepositBalance(java.math.BigDecimal.ZERO);
+
+        long pCount = patientProfileRepository.count() + 1;
+        patient.setPatientCode("BN" + String.format("%05d", pCount));
+        patient = patientProfileRepository.save(patient);
+
+        Visit visit = new Visit();
+        visit.setPatientProfile(patient);
+        visit.setCheckInAt(LocalDateTime.now());
+        visit.setStatus(VisitStatus.IN_EXAM);
+        visit.setVisitType(VisitType.WALK_IN);
+        visit.setInitialSymptoms(symptoms);
+        visit.setBranch(branch);
+
+        StaffProfile doctor = staffProfileRepository.findAll().stream()
+                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
+                .findFirst().orElse(null);
+        visit.setPrimaryDoctor(doctor);
+
+        long vCount = visitRepository.count() + 1;
+        String vCode = "VIS" + (10000 + vCount);
+        if (visitRepository.findByVisitCode(vCode).isPresent()) {
+            vCode = "VIS" + System.currentTimeMillis();
+        }
+        visit.setVisitCode(vCode);
+        visit = visitRepository.save(visit);
+
+        String redirectUrl = "/doctor/examination/" + visit.getVisitId() + "/diagnoses";
+        if (branch != null) {
+            redirectUrl += "?branchId=" + branch.getBranchId();
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "profileId", patient.getProfileId(),
+                "patientCode", patient.getPatientCode(),
+                "visitId", visit.getVisitId(),
+                "visitCode", visit.getVisitCode(),
+                "redirectUrl", redirectUrl
+        ));
     }
 }
