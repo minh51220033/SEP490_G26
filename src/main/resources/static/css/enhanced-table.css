@@ -1,11 +1,20 @@
-﻿/**
+/**
  * ============================================================================
  * CV-DCMS ENHANCED TABLE SYSTEM (Thư viện bảng tương tác cao cấp)
- * Phạm vi: Chỉ kích hoạt trên các bảng có thuộc tính [data-enhanced-table]
- * Hỗ trợ: Thanh thao tác nhanh nổi, Ghim cột trái/phải, Ẩn/Hiện cột, Đổi thứ tự,
+ * Phạm vi: Kích hoạt trên các bảng có thuộc tính [data-enhanced-table]
+ * Hỗ trợ: Ghim cột trái (Mã), Ghim cột phải (Thao tác), Ẩn/Hiện cột, Đổi thứ tự,
  *         Co giãn chiều rộng (resize), Lưu cấu hình LocalStorage, In ấn chuẩn.
  * ============================================================================
  */
+
+/* KHỬ XUNG ĐỘT CUỘN KÉP KHI NẰM TRONG .table-responsive HOẶC .fin-table-wrapper */
+.table-responsive:has(table[data-enhanced-table]),
+.fin-table-wrapper:has(table[data-enhanced-table]) {
+    overflow: visible !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
 
 /* KHUNG CHỨA TOÀN BỘ BẢNG VÀ THANH CÔNG CỤ TÙY CHỈNH */
 .enhanced-table-container {
@@ -209,7 +218,7 @@ table[data-enhanced-table] th.text-end {
 }
 
 /* ============================================================================
- * C. GHIM CỘT (STICKY LEFT PINNING)
+ * C. GHIM CỘT (STICKY LEFT & RIGHT PINNING)
  * ============================================================================ */
 table[data-enhanced-table] th.enhanced-col-pinned {
     position: sticky !important;
@@ -227,234 +236,56 @@ table[data-enhanced-table] tbody tr:hover td.enhanced-col-pinned {
     background-color: #f0f9ff !important;
 }
 
-/* CỘT GHIM CUỐI CÙNG BÊN PHẢI CÓ ĐƯỜNG PHÂN CÁCH & BÓNG */
+/* CỘT GHIM CUỐI CÙNG BÊN PHẢI CỦA NHÓM BÊN TRÁI CÓ ĐƯỜNG PHÂN CÁCH & BÓNG */
 table[data-enhanced-table] th.enhanced-col-pinned-last,
 table[data-enhanced-table] td.enhanced-col-pinned-last {
     border-right: 2px solid #60a5fa !important;
     box-shadow: 4px 0 10px -2px rgba(15, 23, 42, 0.12);
 }
 
-/* ============================================================================
- * C2. GHIM CỘT THAO TÁC CỐ ĐỊNH BÊN PHẢI (STICKY RIGHT ACTION PINNING)
- * Đảm bảo cột Thao tác luôn nằm cố định ở mép phải màn hình, không trôi lệch,
- * không đè chữ nội dung và luôn sẵn sàng thao tác khi cuộn bảng.
- * ============================================================================ */
+
+/* CỘT THAO TÁC CỐ ĐỊNH BÊN PHẢI (STICKY RIGHT ACTION COLUMN) */
+table[data-enhanced-table] th.enhanced-col-action,
 table[data-enhanced-table] th[data-column-action="true"],
-table[data-enhanced-table] th[data-column-key="actions"],
-table[data-enhanced-table] th[data-column-key="action"],
-table[data-enhanced-table] td[data-column-action="true"]:not([colspan]),
-table[data-enhanced-table] td[data-column-key="actions"]:not([colspan]),
-table[data-enhanced-table] td[data-column-key="action"]:not([colspan]) {
+table[data-enhanced-table] th[data-column-key="actions"] {
     position: sticky !important;
     right: 0 !important;
-    z-index: 15 !important;
-    background-color: #ffffff !important;
-    border-left: 1px solid #e2e8f0 !important;
-    box-shadow: -4px 0 10px -2px rgba(15, 23, 42, 0.08);
+    z-index: 22 !important;
+    background-color: #f8fafc !important;
+    border-left: 2px solid #cbd5e1 !important;
+    box-shadow: -4px 0 10px -2px rgba(15, 23, 42, 0.08) !important;
     white-space: nowrap !important;
 }
 
-table[data-enhanced-table] thead th[data-column-action="true"],
-table[data-enhanced-table] thead th[data-column-key="actions"],
-table[data-enhanced-table] thead th[data-column-key="action"] {
-    background-color: #f8fafc !important;
-    z-index: 24 !important;
-    border-left: 1px solid #cbd5e1 !important;
+table[data-enhanced-table] td.enhanced-col-action,
+table[data-enhanced-table] td[data-column-action="true"],
+table[data-enhanced-table] td[data-column-key="actions"] {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 14 !important;
+    background-color: #ffffff !important;
+    border-left: 2px solid #cbd5e1 !important;
+    box-shadow: -4px 0 10px -2px rgba(15, 23, 42, 0.08) !important;
+    white-space: nowrap !important;
 }
 
-table[data-enhanced-table] tbody tr:hover td[data-column-action="true"]:not([colspan]),
-table[data-enhanced-table] tbody tr:hover td[data-column-key="actions"]:not([colspan]),
-table[data-enhanced-table] tbody tr:hover td[data-column-key="action"]:not([colspan]) {
+table[data-enhanced-table] tbody tr:hover td.enhanced-col-action,
+table[data-enhanced-table] tbody tr:hover td[data-column-action="true"],
+table[data-enhanced-table] tbody tr:hover td[data-column-key="actions"] {
     background-color: #f0f9ff !important;
 }
 
-/* Khử cuộn kép giữa các thẻ bọc ngoài (Bootstrap .table-responsive / .fin-table-wrapper) */
-.table-responsive:has(.enhanced-table-wrapper),
-.fin-table-wrapper:has(.enhanced-table-wrapper) {
-    overflow-x: visible !important;
-    overflow-y: visible !important;
-    border: none !important;
-    background: transparent !important;
-}
-
-/* Căn chỉnh các nút bấm bên trong cột Thao tác chuẩn */
-table[data-enhanced-table] td[data-column-action="true"] .btn,
-table[data-enhanced-table] td[data-column-action="true"] .fin-btn,
-table[data-enhanced-table] td[data-column-key="actions"] .btn,
-table[data-enhanced-table] td[data-column-key="actions"] .fin-btn {
-    white-space: nowrap !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    vertical-align: middle;
-}
-
 /* ============================================================================
- * B. THANH THAO TÁC NHANH NỔI (QUICK ACTION FLOATING BAR DỰ PHÒNG)
+ * B. KHỬ HOÀN TOÀN THANH THAO TÁC NỔI (ĐÃ ĐƯỢC THAY BẰNG STICKY RIGHT GỌN GÀNG)
  * ============================================================================ */
 .enhanced-floating-actions {
-    position: absolute;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.18), 0 2px 6px -1px rgba(15, 23, 42, 0.08) !important;
-    z-index: 50;
-    pointer-events: auto;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(2px);
-    transition: opacity 0.14s ease, visibility 0.14s ease, transform 0.14s ease;
-    white-space: nowrap;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
-.enhanced-floating-actions.is-visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.enhanced-floating-actions::before {
-    display: none;
-}
-
-.enhanced-floating-actions .btn,
-.enhanced-floating-actions button,
-.enhanced-floating-actions a,
-.enhanced-floating-actions .fin-table-btn,
-.enhanced-floating-actions .fin-btn {
-    height: 28px !important;
-    padding: 0 10px !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 5px !important;
-    line-height: 1 !important;
-    border: 1px solid transparent !important;
-    transition: all 0.15s ease !important;
-    cursor: pointer !important;
-    text-decoration: none !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-    white-space: nowrap !important;
-}
-
-/* Nút chỉ có icon -> hình vuông 28x28px */
-.enhanced-floating-actions .btn:not(:has(span)):has(i:only-child),
-.enhanced-floating-actions button:not(:has(span)):has(i:only-child),
-.enhanced-floating-actions .fin-table-btn-icon {
-    width: 28px !important;
-    min-width: 28px !important;
-    padding: 0 !important;
-}
-
-/* Nút xem chi tiết (Primary/Blue) */
-.enhanced-floating-actions .btn-outline-primary,
-.enhanced-floating-actions .btn-primary,
-.enhanced-floating-actions .fin-table-btn-view,
-.enhanced-floating-actions .fin-btn-outline {
-    color: #2563eb !important;
-    background: #eff6ff !important;
-    border: 1px solid #bfdbfe !important;
-}
-.enhanced-floating-actions .btn-outline-primary:hover,
-.enhanced-floating-actions .btn-primary:hover,
-.enhanced-floating-actions .fin-table-btn-view:hover,
-.enhanced-floating-actions .fin-btn-outline:hover {
-    color: #ffffff !important;
-    background: #2563eb !important;
-    border-color: #2563eb !important;
-}
-
-/* Nút xem thông tin / chi tiết (Info/Cyan) */
-.enhanced-floating-actions .btn-outline-info,
-.enhanced-floating-actions .btn-info {
-    color: #0284c7 !important;
-    background: #f0f9ff !important;
-    border: 1px solid #bae6fd !important;
-}
-.enhanced-floating-actions .btn-outline-info:hover,
-.enhanced-floating-actions .btn-info:hover {
-    color: #ffffff !important;
-    background: #0284c7 !important;
-    border-color: #0284c7 !important;
-}
-
-/* Nút in / tài liệu (Secondary/Gray) */
-.enhanced-floating-actions .btn-outline-secondary,
-.enhanced-floating-actions .btn-secondary,
-.enhanced-floating-actions .fin-table-btn-print {
-    color: #475569 !important;
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-}
-.enhanced-floating-actions .btn-outline-secondary:hover,
-.enhanced-floating-actions .btn-secondary:hover,
-.enhanced-floating-actions .fin-table-btn-print:hover {
-    color: #ffffff !important;
-    background: #475569 !important;
-    border-color: #475569 !important;
-}
-
-/* Nút thu tiền / thành công / xuất Excel (Success/Green) */
-.enhanced-floating-actions .btn-success,
-.enhanced-floating-actions .btn-outline-success,
-.enhanced-floating-actions .fin-table-btn-pay {
-    color: #065f46 !important;
-    background: #ecfdf5 !important;
-    border: 1px solid #a7f3d0 !important;
-    font-weight: 600 !important;
-}
-.enhanced-floating-actions .btn-success:hover,
-.enhanced-floating-actions .btn-outline-success:hover,
-.enhanced-floating-actions .fin-table-btn-pay:hover {
-    color: #ffffff !important;
-    background: #059669 !important;
-    border-color: #059669 !important;
-}
-
-/* Nút sửa / cảnh báo (Warning/Amber) */
-.enhanced-floating-actions .btn-outline-warning,
-.enhanced-floating-actions .btn-warning {
-    color: #b45309 !important;
-    background: #fffbeb !important;
-    border: 1px solid #fde68a !important;
-}
-.enhanced-floating-actions .btn-outline-warning:hover,
-.enhanced-floating-actions .btn-warning:hover {
-    color: #ffffff !important;
-    background: #d97706 !important;
-    border-color: #d97706 !important;
-}
-
-/* Nút xóa / hủy / ngừng (Danger/Red) */
-.enhanced-floating-actions .btn-outline-danger,
-.enhanced-floating-actions .btn-danger,
-.enhanced-floating-actions .fin-btn-danger {
-    color: #dc2626 !important;
-    background: #fef2f2 !important;
-    border: 1px solid #fecaca !important;
-}
-.enhanced-floating-actions .btn-outline-danger:hover,
-.enhanced-floating-actions .btn-danger:hover,
-.enhanced-floating-actions .fin-btn-danger:hover {
-    color: #ffffff !important;
-    background: #dc2626 !important;
-    border-color: #dc2626 !important;
-}
-
-.enhanced-floating-actions .btn:hover,
-.enhanced-floating-actions button:hover,
-.enhanced-floating-actions a:hover {
-    transform: translateY(-1px);
-}
-
-/* NÃšT THAO TÃC Cáº¢M á»¨NG Dá»° PHÃ’NG CHO MOBILE / TABLET */
+/* NÚT THAO TÁC CẢM ỨNG DỰ PHÒNG CHO MOBILE / TABLET */
 .enhanced-touch-trigger {
     display: none;
     background: #f1f5f9;
@@ -480,14 +311,13 @@ table[data-enhanced-table] td[data-column-key="actions"] .fin-btn {
  * ============================================================================ */
 .enhanced-customizer-popover {
     position: fixed;
-    /* Tọa độ left, top/bottom, width, max-height được tính toán động theo getBoundingClientRect() */
     width: 320px;
     max-width: calc(100vw - 24px);
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 12px;
     box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(15, 23, 42, 0.08);
-    z-index: 1045; /* Nổi trên header/table sticky (z-index 20-30), nhưng dưới Bootstrap Modal (1055) */
+    z-index: 1045;
     padding: 0;
     overflow: hidden;
     display: none;

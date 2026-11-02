@@ -22,7 +22,7 @@
             this.table = tableElement;
             this.tableId = this.table.getAttribute('data-enhanced-table') || 'enhanced_table';
             this.userId = this.table.getAttribute('data-user-id') || getCurrentUserId();
-            this.version = this.table.getAttribute('data-config-version') || '1.0';
+            this.version = this.table.getAttribute('data-config-version') || '1.1';
             this.storageKey = `cvdcms_table_pref_${this.userId}_${this.tableId}_v${this.version}`;
 
             // Trạng thái cấu hình cột
@@ -74,10 +74,11 @@
             // Khử xung đột cuộn kép khi bảng nằm trong .fin-table-wrapper hoặc .table-responsive
             const parent = this.container.parentElement;
             if (parent && (parent.classList.contains('fin-table-wrapper') || parent.classList.contains('table-responsive'))) {
-                parent.style.overflowX = 'visible';
-                parent.style.overflowY = 'visible';
+                parent.style.overflow = 'visible';
                 parent.style.border = 'none';
                 parent.style.background = 'transparent';
+                parent.style.padding = '0';
+
             }
         }
 
@@ -95,7 +96,6 @@
             thList.forEach((th, idx) => {
                 let key = th.getAttribute('data-column-key');
                 if (!key) {
-                    // Tự sinh key nếu chưa có dựa trên tiêu đề hoặc vị trí
                     const cleanText = th.innerText.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
                     key = cleanText ? `col_${cleanText}` : `col_${idx}`;
                     th.setAttribute('data-column-key', key);
@@ -104,24 +104,30 @@
                 const title = th.innerText.trim() || `Cột ${idx + 1}`;
                 const isAction = th.getAttribute('data-column-action') === 'true' || 
                                  key === 'actions' || key === 'action' || 
-                                 idx === thList.length - 1 && (title.includes('Thao tác') || title.includes('Hành động') || title === '');
+                                 (idx === thList.length - 1 && (title.includes('Thao tác') || title.includes('Hành động') || title === ''));
                 if (isAction) {
                     th.setAttribute('data-column-action', 'true');
+                    key = 'actions';
+                    th.setAttribute('data-column-key', 'actions');
                 }
 
                 const isRequired = th.getAttribute('data-column-required') === 'true' || 
                                    th.getAttribute('data-column-no-hide') === 'true' || 
                                    isAction ||
-                                   idx === 0; // Cột đầu thường là mã/định danh
 
-                const isDefaultPinned = th.getAttribute('data-column-pinned') === 'true' || 
-                                       (idx === 0 && !isAction);
+                                   idx === 0;
 
-                const defaultWidth = th.offsetWidth || 120;
+
+                const isDefaultPinned = !isAction && (th.getAttribute('data-column-pinned') === 'true' || idx === 0);
+
+                // Ưu tiên đọc minWidth từ inline style để tránh tính toán sai khi bảng giãn rộng
+                const minW = parseInt(th.style.minWidth, 10) || 0;
+                const naturalW = th.offsetWidth || 120;
+                const defaultWidth = minW > 0 ? minW : Math.min(Math.max(naturalW, 80), 240);
 
                 const colDef = {
                     key: key,
-                    title: title || 'Thao tác',
+                    title: title || (isAction ? 'Thao tác' : `Cột ${idx + 1}`),
                     visible: true,
                     pinned: isDefaultPinned,
                     width: defaultWidth,
@@ -132,28 +138,27 @@
                 this.columns.push(colDef);
 
                 // Gắn data-column-key cho tất cả các ô td tương ứng trong tbody
-                this.syncCellColumnKeys(idx, key);
+                this.syncCellColumnKeys(idx, key, isAction);
             });
 
             // Lưu snapshot mặc định ban đầu
             this.initialDefaults = JSON.parse(JSON.stringify(this.columns));
         }
 
-        syncCellColumnKeys(colIndex, key) {
-            const col = this.columns[colIndex];
+        syncCellColumnKeys(colIndex, key, isAction) {
             const rows = this.table.querySelectorAll('tbody tr');
             rows.forEach(tr => {
                 const cells = tr.children;
                 if (cells && cells.length > colIndex && !tr.querySelector('td[colspan]')) {
                     cells[colIndex].setAttribute('data-column-key', key);
-                    if (col && col.isAction) {
+                    if (isAction) {
                         cells[colIndex].setAttribute('data-column-action', 'true');
                     }
                 }
             });
         }
 
-        /* 3. Đọc cấu hình từ LocalStorage (với kiểm tra hợp lệ và di chuyển cấu trúc) */
+        /* 3. Đọc cấu hình từ LocalStorage */
         loadPreferences() {
             try {
                 const savedRaw = localStorage.getItem(this.storageKey);
@@ -167,26 +172,27 @@
 
                 const mergedColumns = [];
 
-                // Áp dụng thứ tự và thuộc tính từ cấu hình lưu
                 savedData.columns.forEach(savedCol => {
                     if (existingKeyMap.has(savedCol.key)) {
                         const original = existingKeyMap.get(savedCol.key);
+                        let colWidth = savedCol.width && savedCol.width >= 60 ? savedCol.width : original.width;
+                        if (colWidth > 350 && !['reason', 'description', 'notes'].includes(savedCol.key)) {
+                            colWidth = Math.min(colWidth, 260);
+                        }
                         mergedColumns.push({
                             ...original,
-                            visible: original.required ? true : (savedCol.visible !== false),
-                            pinned: !!savedCol.pinned,
-                            width: savedCol.width && savedCol.width >= 60 ? savedCol.width : original.width
+                            visible: (original.required || original.isAction) ? true : (savedCol.visible !== false),
+                            pinned: original.isAction ? false : !!savedCol.pinned,
+                            width: colWidth
                         });
                         existingKeyMap.delete(savedCol.key);
                     }
                 });
 
-                // Bổ sung các cột mới trong code chưa có trong LocalStorage
                 existingKeyMap.forEach(col => {
                     mergedColumns.push(col);
                 });
 
-                // Đảm bảo không bị ẩn toàn bộ cột
                 const hasVisible = mergedColumns.some(c => c.visible);
                 if (!hasVisible && mergedColumns.length > 0) {
                     mergedColumns[0].visible = true;
@@ -198,7 +204,7 @@
             }
         }
 
-        /* Lưu cấu hình an toàn vào LocalStorage (chỉ lưu UI, không lưu dữ liệu nhạy cảm) */
+        /* Lưu cấu hình an toàn vào LocalStorage */
         savePreferences() {
             try {
                 const payload = {
@@ -222,6 +228,13 @@
             const theadTr = this.table.querySelector('thead tr');
             if (!theadTr) return;
 
+            // Đảm bảo cột Thao tác luôn ở cuối cùng
+            const actionIndex = this.columns.findIndex(c => c.isAction);
+            if (actionIndex !== -1 && actionIndex !== this.columns.length - 1) {
+                const actionCol = this.columns.splice(actionIndex, 1)[0];
+                this.columns.push(actionCol);
+            }
+
             // 1. Sắp xếp lại thứ tự các th và td
             this.columns.forEach(col => {
                 const th = theadTr.querySelector(`th[data-column-key="${col.key}"]`);
@@ -230,7 +243,6 @@
 
             const bodyRows = this.table.querySelectorAll('tbody tr');
             bodyRows.forEach(tr => {
-                // Bỏ qua hàng có colspan (hàng rỗng hoặc thông báo)
                 if (tr.querySelector('td[colspan]')) return;
 
                 this.columns.forEach(col => {
@@ -269,30 +281,26 @@
                 td.colSpan = Math.max(1, visibleCount);
             });
 
-            // 3. Tính toán và áp dụng Ghim cột bên trái
+            // 3. Tính toán và áp dụng Ghim cột bên trái & Ghim cột Thao tác bên phải
             this.updatePinnedOffsets();
-
-            // 4. Đồng bộ lại thanh thao tác nhanh nếu đang có dòng hover
-            if (this.activeHoverRow) {
-                this.checkAndSyncFloatingActionBar(this.activeHoverRow);
-            }
         }
 
-        /* Tính toán vị trí sticky left cho các cột ghim */
+        /* Tính toán vị trí sticky left cho các cột ghim bên trái & sticky right cho Thao tác */
         updatePinnedOffsets() {
             const theadTr = this.table.querySelector('thead tr');
             if (!theadTr) return;
 
             // Reset trạng thái ghim cũ
-            this.table.querySelectorAll('.enhanced-col-pinned, .enhanced-col-pinned-last').forEach(el => {
-                el.classList.remove('enhanced-col-pinned', 'enhanced-col-pinned-last');
+            this.table.querySelectorAll('.enhanced-col-pinned, .enhanced-col-pinned-last, .enhanced-col-action').forEach(el => {
+                el.classList.remove('enhanced-col-pinned', 'enhanced-col-pinned-last', 'enhanced-col-action');
                 el.style.left = '';
             });
 
-            const pinnedVisibleCols = this.columns.filter(c => c.visible && c.pinned);
+            // Chỉ ghim các cột dữ liệu về bên trái (loại trừ Thao tác)
+            const pinnedVisibleCols = this.columns.filter(c => c.visible && c.pinned && !c.isAction);
             let currentOffset = 0;
             const wrapperWidth = this.wrapper.clientWidth || 1000;
-            const maxPinnedWidth = wrapperWidth * 0.6; // Không cho phép cột ghim chiếm quá 60% chiều rộng hiển thị
+            const maxPinnedWidth = wrapperWidth * 0.45; // Cột ghim bên trái không vượt quá 45% màn hình
 
             pinnedVisibleCols.forEach((col, idx) => {
                 const th = theadTr.querySelector(`th[data-column-key="${col.key}"]`);
@@ -300,7 +308,6 @@
 
                 const thWidth = th.offsetWidth;
                 if (currentOffset + thWidth > maxPinnedWidth && idx > 0) {
-                    // Quá giới hạn màn hình hẹp, ngừng ghim các cột tiếp theo để đảm bảo tính khả dụng
                     return;
                 }
 
@@ -313,7 +320,6 @@
                     td.style.left = currentOffset + 'px';
                 });
 
-                // Đánh dấu cột ghim cuối cùng để vẽ bóng / viền phân tách
                 if (idx === pinnedVisibleCols.length - 1) {
                     th.classList.add('enhanced-col-pinned-last');
                     tds.forEach(td => td.classList.add('enhanced-col-pinned-last'));
@@ -321,6 +327,17 @@
 
                 currentOffset += thWidth;
             });
+
+            // Cố định cột Thao tác ở mép phải (sticky right)
+            const actionCol = this.columns.find(c => c.isAction);
+            if (actionCol) {
+                const actionTh = theadTr.querySelector(`th[data-column-key="${actionCol.key}"]`);
+                if (actionTh) {
+                    actionTh.classList.add('enhanced-col-action');
+                }
+                const actionTds = this.table.querySelectorAll(`tbody td[data-column-key="${actionCol.key}"]`);
+                actionTds.forEach(td => td.classList.add('enhanced-col-action'));
+            }
         }
 
         /* 5. Tạo thanh công cụ trên bảng với nút "Tùy chỉnh cột" */
@@ -333,7 +350,6 @@
             }
             this.toolbar = toolbar;
 
-            // Kiểm tra xem đã có nút tùy chỉnh chưa
             let customBtn = this.toolbar.querySelector('.enhanced-custom-toggle-btn');
             if (!customBtn) {
                 customBtn = document.createElement('button');
@@ -345,7 +361,7 @@
             }
             this.customBtn = customBtn;
 
-            // Thêm các nút ghim nhanh trên từng tiêu đề cột th
+            // Thêm các nút ghim nhanh trên từng tiêu đề cột th (trừ cột Thao tác)
             const thList = this.table.querySelectorAll('thead th');
             thList.forEach(th => {
                 const colKey = th.getAttribute('data-column-key');
@@ -359,7 +375,7 @@
                     pinBtn.className = 'enhanced-pin-btn' + (colDef.pinned ? ' is-pinned' : '');
                     pinBtn.title = colDef.pinned ? 'Bỏ ghim cột' : 'Ghim cột này về bên trái';
                     pinBtn.innerHTML = colDef.pinned ? '<i class="bi bi-pin-angle-fill"></i>' : '<i class="bi bi-pin-angle"></i>';
-                    
+
                     pinBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.togglePinColumn(colKey);
@@ -372,11 +388,10 @@
 
         togglePinColumn(colKey) {
             const col = this.columns.find(c => c.key === colKey);
-            if (!col) return;
+            if (!col || col.isAction) return;
 
             col.pinned = !col.pinned;
 
-            // Cập nhật icon trên th
             const th = this.table.querySelector(`thead th[data-column-key="${colKey}"]`);
             if (th) {
                 const pinBtn = th.querySelector('.enhanced-pin-btn');
@@ -396,6 +411,10 @@
         setupResizers() {
             const thList = this.table.querySelectorAll('thead th');
             thList.forEach(th => {
+                const colKey = th.getAttribute('data-column-key');
+                const colDef = this.columns.find(c => c.key === colKey);
+                if (colDef && colDef.isAction) return; // Không cần resizer cho cột Thao tác
+
                 let resizer = th.querySelector('.enhanced-col-resizer');
                 if (!resizer) {
                     resizer = document.createElement('div');
@@ -426,7 +445,7 @@
             const onMouseMove = (moveEvent) => {
                 if (!this.isResizing) return;
                 const diff = moveEvent.pageX - startX;
-                const newWidth = Math.max(70, startWidth + diff);
+                const newWidth = Math.max(70, Math.min(500, startWidth + diff));
 
                 th.style.width = newWidth + 'px';
                 th.style.minWidth = newWidth + 'px';
@@ -449,63 +468,17 @@
                 document.removeEventListener('mouseup', onMouseUp);
 
                 this.savePreferences();
-                if (this.activeHoverRow) {
-                    this.checkAndSyncFloatingActionBar(this.activeHoverRow);
-                }
             };
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         }
 
-        /* 7. Thanh thao tác nhanh nổi sát mép phải nhìn thấy (Requirement B) */
+        /* 7. Không sử dụng floating action bar vì cột Thao tác đã ghim cố định ở mép phải */
         setupQuickActionBar() {
-            let floatingBar = this.wrapper.querySelector('.enhanced-floating-actions');
-            if (!floatingBar) {
-                floatingBar = document.createElement('div');
-                floatingBar.className = 'enhanced-floating-actions';
-                floatingBar.setAttribute('role', 'toolbar');
-                floatingBar.setAttribute('aria-label', 'Thao tác nhanh cho dòng hiện tại');
-                this.wrapper.appendChild(floatingBar);
-            }
-            this.floatingBar = floatingBar;
-
-            // Xử lý hover vào hàng trong tbody
-            const tbody = this.table.querySelector('tbody');
-            if (!tbody) return;
-
-            tbody.addEventListener('mouseover', (e) => {
-                const tr = e.target.closest('tr');
-                if (!tr || tr.querySelector('td[colspan]')) return;
-                this.checkAndSyncFloatingActionBar(tr);
-            });
-
-            tbody.addEventListener('mouseout', (e) => {
-                const related = e.relatedTarget;
-                if (related && (this.floatingBar.contains(related) || (this.activeHoverRow && this.activeHoverRow.contains(related)))) {
-                    return;
-                }
-                this.hideFloatingActionBarWithDelay();
-            });
-
-            // Khi chuột di vào thanh nút nổi: không bị ẩn
-            this.floatingBar.addEventListener('mouseenter', () => {
-                if (this.hoverHideTimeout) {
-                    clearTimeout(this.hoverHideTimeout);
-                    this.hoverHideTimeout = null;
-                }
-            });
-
-            this.floatingBar.addEventListener('mouseleave', (e) => {
-                const related = e.relatedTarget;
-                if (related && this.activeHoverRow && this.activeHoverRow.contains(related)) {
-                    return;
-                }
-                this.hideFloatingActionBarWithDelay();
-            });
+            // Thanh nổi đã được thay thế bằng sticky right cho cột Thao tác
         }
 
-        /* Tìm ô chứa thao tác gốc của một dòng */
         getActionCell(row) {
             if (!row) return null;
             let cell = row.querySelector('td[data-column-action="true"]');
@@ -524,52 +497,15 @@
             return nonColspanCells.length > 0 ? nonColspanCells[nonColspanCells.length - 1] : null;
         }
 
-        /* Lấy danh sách các nút/link thao tác hợp lệ, loại trừ nhân đôi (form lặp với button con) */
         getRowActionElements(actionCell) {
             if (!actionCell) return [];
-
-            // Chọn các nút bấm, thẻ liên kết thực tế (không chọn thẻ <form> vì sẽ gây trùng với <button> bên trong)
-            const candidates = Array.from(actionCell.querySelectorAll(
-                'button:not([type="hidden"]), a[href], a.btn, a[onclick], a[data-bs-toggle], input[type="submit"]'
-            ));
-
-            // Nếu có form không có button con (rất hiếm), bổ sung form đó
-            const formsWithoutSubmit = Array.from(actionCell.querySelectorAll('form')).filter(f => !f.querySelector('button, input[type="submit"]'));
-            formsWithoutSubmit.forEach(f => candidates.push(f));
-
-            const uniqueElements = [];
-            const seen = new Set();
-
-            for (const el of candidates) {
-                // Tuyệt đối không lấy các phần tử từ thanh nổi hoặc popover
-                if (el.closest('.enhanced-floating-actions') || el.closest('.enhanced-customizer-popover')) {
-                    continue;
-                }
-
-                // Bỏ qua phần tử ẩn
-                if (el.type === 'hidden' || el.style.display === 'none' || el.hasAttribute('hidden') || el.closest('[style*="display: none"]')) {
-                    continue;
-                }
-
-                if (seen.has(el)) continue;
-
-                // Kiểm tra có nội dung chữ, icon hoặc tooltip
-                const hasText = el.innerText.trim().length > 0;
-                const hasIcon = el.querySelector('i, svg') !== null;
-                const hasTitle = (el.title || el.getAttribute('aria-label') || '').trim().length > 0;
-                if (!hasText && !hasIcon && !hasTitle) {
-                    continue;
-                }
-
-                seen.add(el);
-                uniqueElements.push(el);
-            }
-
-            return uniqueElements;
+            return Array.from(actionCell.querySelectorAll('button:not([type="hidden"]), a[href], a.btn, a[onclick], a[data-bs-toggle]'));
         }
 
-        /* Kiểm tra điều kiện thực tế để hiển thị thanh thao tác nhanh */
         shouldShowFloatingBar(row) {
+            // Luôn trả về false vì cột Thao tác đã luôn hiển thị ở mép phải bảng (sticky right)
+            return false;
+        }
             if (!row || this.isResizing) return false;
             if (row.querySelector('td[colspan]')) return false;
 
@@ -642,100 +578,10 @@
             return true;
         }
 
-        /* Đồng bộ hiển thị / ẩn thanh nổi linh hoạt theo trạng thái cuộn và vị trí */
         checkAndSyncFloatingActionBar(row) {
-            if (!row) {
-                this.hideFloatingActionBar();
-                return;
-            }
 
-            if (this.hoverHideTimeout) {
-                clearTimeout(this.hoverHideTimeout);
-                this.hoverHideTimeout = null;
-            }
+            this.hideFloatingActionBar();
 
-            this.activeHoverRow = row;
-
-            if (this.shouldShowFloatingBar(row)) {
-                this.renderFloatingActionBarContent(row);
-                this.updateFloatingBarPosition();
-                this.floatingBar.classList.add('is-visible');
-            } else {
-                this.hideFloatingActionBar();
-            }
-        }
-
-        /* Dựng danh sách nút bấm nổi duy nhất (không nhân bản ID, không lặp sự kiện) */
-        renderFloatingActionBarContent(row) {
-            const actionCell = this.getActionCell(row);
-            if (!actionCell) return;
-
-            const actionElements = this.getRowActionElements(actionCell);
-            this.floatingBar.innerHTML = '';
-
-            actionElements.forEach(elem => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = elem.className || 'btn btn-sm btn-outline-primary';
-                btn.innerHTML = elem.innerHTML;
-                btn.title = elem.title || elem.getAttribute('aria-label') || elem.innerText.trim();
-
-                // Chuyển tiếp click trực tiếp về phần tử gốc duy nhất
-                btn.addEventListener('click', (ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-
-                    if (elem.tagName === 'A' && elem.href && !elem.onclick && !elem.getAttribute('data-bs-toggle')) {
-                        if (elem.target === '_blank') {
-                            window.open(elem.href, '_blank');
-                        } else {
-                            window.location.href = elem.href;
-                        }
-                    } else {
-                        // Kích hoạt click trực tiếp lên nút gốc (đảm bảo chạy đúng confirm, modal, và CSRF)
-                        elem.click();
-                    }
-                });
-
-                this.floatingBar.appendChild(btn);
-            });
-        }
-
-        updateFloatingBarPosition() {
-            if (!this.activeHoverRow || !this.floatingBar) return;
-
-            const row = this.activeHoverRow;
-            const rowTop = row.offsetTop;
-            const rowHeight = row.offsetHeight;
-            const barHeight = this.floatingBar.offsetHeight || 38;
-
-            // Vị trí dọc: Căn giữa dòng đang hover
-            const topPos = rowTop + (rowHeight - barHeight) / 2;
-            this.floatingBar.style.top = `${topPos}px`;
-
-            // Vị trí ngang: Luôn nằm sát mép phải PHẦN BẢNG ĐANG NHÌN THẤY
-            const scrollLeft = this.wrapper.scrollLeft;
-            const visibleWidth = this.wrapper.clientWidth;
-            const barRect = this.floatingBar.getBoundingClientRect();
-            const barWidth = barRect.width > 0 ? barRect.width : (this.floatingBar.offsetWidth || 180);
-
-            // Tính toán mép phải cột ghim bên trái để không bao giờ đè lên
-            let leftPinnedOffset = 0;
-            const lastPinnedTh = this.table.querySelector('thead th.enhanced-col-pinned-last');
-            if (lastPinnedTh) {
-                leftPinnedOffset = lastPinnedTh.offsetLeft + lastPinnedTh.offsetWidth;
-            }
-
-            const maxLeft = scrollLeft + visibleWidth - barWidth - 12;
-            const leftPos = Math.max(leftPinnedOffset + 10, maxLeft);
-            this.floatingBar.style.left = `${Math.max(0, leftPos)}px`;
-        }
-
-        hideFloatingActionBarWithDelay() {
-            if (this.hoverHideTimeout) clearTimeout(this.hoverHideTimeout);
-            this.hoverHideTimeout = setTimeout(() => {
-                this.hideFloatingActionBar();
-            }, 120);
         }
 
         hideFloatingActionBar() {
@@ -745,7 +591,7 @@
             this.activeHoverRow = null;
         }
 
-        /* 8. Popover Tùy chỉnh cột (Requirement D) - Portal ra body & định vị động */
+        /* 8. Popover Tùy chỉnh cột */
         setupCustomizerPopover() {
             let popover = document.body.querySelector(`.enhanced-customizer-popover[data-table-id="${this.tableId}"]`);
             if (!popover) {
@@ -761,7 +607,6 @@
                         <button type="button" class="enhanced-customizer-close" aria-label="Đóng">&times;</button>
                     </div>
                     <div class="enhanced-customizer-body">
-                        <!-- Danh sách cột render động tại đây -->
                     </div>
                     <div class="enhanced-customizer-foot">
                         <button type="button" class="enhanced-reset-btn"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục mặc định</button>
@@ -772,32 +617,27 @@
             }
             this.popover = popover;
 
-            // Nút mở/đóng menu
             this.customBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleCustomizer();
             });
 
-            // Nút đóng X
             this.popover.querySelector('.enhanced-customizer-close').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.closeCustomizer();
             });
 
-            // Nút Xong
             this.popover.querySelector('.enhanced-done-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.closeCustomizer();
             });
 
-            // Nút Khôi phục mặc định
             this.popover.querySelector('.enhanced-reset-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.resetToDefaults();
             });
 
-            // Ngăn chặn sự kiện click bên trong popover nổi bọt ra document
             this.popover.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
@@ -816,26 +656,18 @@
         openCustomizer() {
             if (!this.popover || !this.customBtn) return;
 
-            // Đóng bất kỳ popover nào khác đang mở
             document.querySelectorAll('.enhanced-customizer-popover.is-open').forEach(p => {
-                if (p !== this.popover) {
-                    p.classList.remove('is-open');
-                }
+                if (p !== this.popover) p.classList.remove('is-open');
             });
             document.querySelectorAll('.enhanced-custom-toggle-btn.active').forEach(b => {
-                if (b !== this.customBtn) {
-                    b.classList.remove('active');
-                }
+                if (b !== this.customBtn) b.classList.remove('active');
             });
 
             this.updateCustomizerList();
             this.popover.classList.add('is-open');
             this.customBtn.classList.add('active');
 
-            // Định vị chính xác popover theo tọa độ thực tế của nút
             this.updateCustomizerPosition();
-
-            // Đăng ký các sự kiện theo dõi vị trí và đóng tự động
             this.bindPopoverDismissEvents();
         }
 
@@ -855,20 +687,15 @@
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            // Nếu nút đã cuộn hoàn toàn khỏi khung nhìn (viewport), tự đóng popover
             if (btnRect.bottom < 0 || btnRect.top > viewportHeight || btnRect.right < 0 || btnRect.left > viewportWidth) {
                 this.closeCustomizer();
                 return;
             }
 
-            // Chiều rộng popover (tối đa bằng chiều rộng màn hình trừ lề 24px)
             const popoverWidth = Math.min(320, viewportWidth - 24);
             this.popover.style.width = `${popoverWidth}px`;
 
-            // Mặc định căn lề mép phải theo nút "Tùy chỉnh cột":
             let left = btnRect.right - popoverWidth;
-
-            // Giới hạn trong viewport, cách lề tối thiểu 12px
             if (left + popoverWidth > viewportWidth - 12) {
                 left = viewportWidth - 12 - popoverWidth;
             }
@@ -876,12 +703,10 @@
                 left = 12;
             }
 
-            // Tính toán khoảng trống phía dưới và phía trên
             const gap = 6;
             const spaceBelow = viewportHeight - btnRect.bottom - gap - 12;
             const spaceAbove = btnRect.top - gap - 12;
 
-            // Kiểm tra hướng mở: mở dưới nếu còn đủ chỗ (>= 250px hoặc rộng hơn phía trên)
             if (spaceBelow >= 250 || spaceBelow >= spaceAbove) {
                 this.popover.setAttribute('data-placement', 'bottom');
                 this.popover.style.left = `${Math.round(left)}px`;
@@ -889,7 +714,6 @@
                 this.popover.style.bottom = 'auto';
                 this.popover.style.maxHeight = `${Math.round(Math.max(160, spaceBelow))}px`;
             } else {
-                // Tự động mở lên trên nếu thiếu chỗ phía dưới
                 this.popover.setAttribute('data-placement', 'top');
                 this.popover.style.left = `${Math.round(left)}px`;
                 this.popover.style.top = 'auto';
@@ -901,14 +725,12 @@
         bindPopoverDismissEvents() {
             this.unbindPopoverDismissEvents();
 
-            // 1. Cập nhật vị trí khi cuộn trang, cuộn bảng hoặc thay đổi kích thước cửa sổ
             this.onScrollOrResizeBound = () => {
                 this.updateCustomizerPosition();
             };
             window.addEventListener('resize', this.onScrollOrResizeBound, { passive: true });
             window.addEventListener('scroll', this.onScrollOrResizeBound, { passive: true, capture: true });
 
-            // 2. Đóng khi click ra ngoài (Outside Click)
             this.onOutsideClickBound = (e) => {
                 if (this.popover && !this.popover.contains(e.target) && this.customBtn && !this.customBtn.contains(e.target)) {
                     this.closeCustomizer();
@@ -918,7 +740,6 @@
                 document.addEventListener('click', this.onOutsideClickBound);
             }, 0);
 
-            // 3. Đóng khi bấm phím Escape
             this.onKeyDownBound = (e) => {
                 if (e.key === 'Escape' || e.key === 'Esc') {
                     this.closeCustomizer();
@@ -926,7 +747,6 @@
             };
             document.addEventListener('keydown', this.onKeyDownBound);
 
-            // 4. Đóng khi có Bootstrap Modal mở lên để không bị đè lên modal
             this.onModalShowBound = () => {
                 this.closeCustomizer();
             };
@@ -964,23 +784,25 @@
                 const item = document.createElement('div');
                 item.className = 'enhanced-customizer-item';
                 item.setAttribute('data-col-key', col.key);
-                item.draggable = true;
+                item.draggable = !col.isAction;
 
                 const isOnlyVisible = col.visible && visibleCount <= 1;
-                const disableCheckbox = col.required || isOnlyVisible;
+                const disableCheckbox = col.required || col.isAction || isOnlyVisible;
 
                 item.innerHTML = `
-                    <span class="enhanced-customizer-drag" title="Kéo để đổi thứ tự"><i class="bi bi-grip-vertical"></i></span>
+                    <span class="enhanced-customizer-drag" title="${col.isAction ? 'Cột cố định không thể kéo thả' : 'Kéo để đổi thứ tự'}">
+                        <i class="bi ${col.isAction ? 'bi-lock-fill text-muted' : 'bi-grip-vertical'}"></i>
+                    </span>
                     <input type="checkbox" class="enhanced-customizer-checkbox" ${col.visible ? 'checked' : ''} ${disableCheckbox ? 'disabled' : ''} title="${disableCheckbox ? 'Không thể ẩn cột này' : 'Bật/tắt hiển thị'}">
-                    <span class="enhanced-customizer-label" title="${col.title}">${col.title} ${col.required ? '<small class="text-muted">(Bắt buộc)</small>' : ''}</span>
+                    <span class="enhanced-customizer-label" title="${col.title}">${col.title} ${col.isAction ? '<small class="text-primary fw-semibold">(Cố định phải)</small>' : (col.required ? '<small class="text-muted">(Bắt buộc)</small>' : '')}</span>
                     <div class="enhanced-customizer-actions">
+                        ${!col.isAction ? `
                         <button type="button" class="enhanced-customizer-action-btn enhanced-move-up-btn" title="Di chuyển lên trên" ${index === 0 ? 'disabled style="opacity: 0.3;"' : ''}>
                             <i class="bi bi-chevron-up"></i>
                         </button>
-                        <button type="button" class="enhanced-customizer-action-btn enhanced-move-down-btn" title="Di chuyển xuống dưới" ${index === this.columns.length - 1 ? 'disabled style="opacity: 0.3;"' : ''}>
+                        <button type="button" class="enhanced-customizer-action-btn enhanced-move-down-btn" title="Di chuyển xuống dưới" ${index >= this.columns.length - 2 ? 'disabled style="opacity: 0.3;"' : ''}>
                             <i class="bi bi-chevron-down"></i>
                         </button>
-                        ${!col.isAction ? `
                         <button type="button" class="enhanced-customizer-action-btn enhanced-pin-col-btn ${col.pinned ? 'active text-primary' : ''}" title="${col.pinned ? 'Bỏ ghim' : 'Ghim bên trái'}">
                             <i class="bi ${col.pinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
                         </button>` : ''}
@@ -1011,7 +833,6 @@
                     });
                 }
 
-                // Nút ghim trong popover
                 const pinBtn = item.querySelector('.enhanced-pin-col-btn');
                 if (pinBtn) {
                     pinBtn.addEventListener('click', () => {
@@ -1019,15 +840,18 @@
                     });
                 }
 
-                // Xử lý kéo thả HTML5 Drag and Drop
-                this.setupDragAndDrop(item, index);
+                if (!col.isAction) {
+                    this.setupDragAndDrop(item, index);
+                }
 
                 body.appendChild(item);
             });
         }
 
         moveColumn(fromIndex, toIndex) {
-            if (toIndex < 0 || toIndex >= this.columns.length) return;
+            const lastDataIndex = this.columns.some(c => c.isAction) ? this.columns.length - 2 : this.columns.length - 1;
+            if (toIndex < 0 || toIndex > lastDataIndex || fromIndex > lastDataIndex) return;
+
             const movedCol = this.columns.splice(fromIndex, 1)[0];
             this.columns.splice(toIndex, 0, movedCol);
 
@@ -1078,38 +902,14 @@
 
         /* 9. Đồng bộ khi cuộn ngang/dọc và thay đổi kích thước cửa sổ */
         setupScrollAndResizeSync() {
-            const onScrollOrResize = () => {
-                if (this.activeHoverRow) {
-                    this.checkAndSyncFloatingActionBar(this.activeHoverRow);
-                }
-            };
-
-            this.wrapper.addEventListener('scroll', onScrollOrResize, { passive: true });
             window.addEventListener('resize', () => {
                 this.updatePinnedOffsets();
-                onScrollOrResize();
             }, { passive: true });
         }
 
         /* 10. Trợ năng bàn phím và thiết bị cảm ứng */
         setupTouchAndKeyboardAccessibility() {
-            // Khi bàn phím focus vào bất kỳ nút nào trong dòng
-            this.table.addEventListener('focusin', (e) => {
-                const tr = e.target.closest('tr');
-                if (tr && !tr.querySelector('td[colspan]')) {
-                    this.checkAndSyncFloatingActionBar(tr);
-                }
-            });
-
-            // Hỗ trợ thiết bị cảm ứng (touch tap vào dòng)
-            this.table.addEventListener('click', (e) => {
-                if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                    const tr = e.target.closest('tbody tr');
-                    if (tr && !tr.querySelector('td[colspan]')) {
-                        this.checkAndSyncFloatingActionBar(tr);
-                    }
-                }
-            });
+            // Cột Thao tác đã cố định ở mép phải (sticky right) nên luôn trực quan cho cả phím và cảm ứng
         }
     }
 

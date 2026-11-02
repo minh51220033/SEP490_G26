@@ -52,7 +52,7 @@ public class PatientAccess {
             }
         }
         if (!admin && branchId == null) {
-            return new Scope(user, null, true);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được phân công chi nhánh hoạt động.");
         }
         return new Scope(user, branchId, admin);
     }

@@ -28,6 +28,15 @@ public interface ExaminationDiagnosisRepository extends JpaRepository<Examinatio
 
     List<ExaminationDiagnosis> findByVisit_VisitId(Long visitId);
 
+    @Query("""
+        SELECT ed FROM ExaminationDiagnosis ed
+        LEFT JOIN FETCH ed.icd10Disease
+        LEFT JOIN FETCH ed.visit v
+        WHERE v.patientProfile.profileId = :profileId
+        ORDER BY v.checkInAt DESC, ed.diagnosisId ASC
+    """)
+    List<ExaminationDiagnosis> findByProfileIdWithDetails(@Param("profileId") Long profileId);
+
     List<ExaminationDiagnosis> findByClinicalExamination_ExamId(Long examId);
 
     boolean existsByVisit_VisitIdAndDiagnosisType(Long visitId, DiagnosisType diagnosisType);
