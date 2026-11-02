@@ -161,7 +161,7 @@
                 <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5">
                         <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
                         <span class="text-muted small">&gt;</span>
-                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
                         <span class="text-muted small">&gt;</span>
                         <span class="text-dark fw-bold small">Bàn khám bệnh</span>
                     </div>
@@ -232,6 +232,29 @@
                     </div>
                 </div>
 
+                <!-- MÀN HÌNH RỖNG KHI CƠ SỞ CHƯA CÓ CA KHÁM NÀO -->
+                <div th:if="${visit == null}" class="p-5 my-5 text-center">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                             style="width: 80px; height: 80px; background: #f8fafc; color: #94a3b8; font-size: 38px; border: 2px dashed #cbd5e1;">
+                            <i class="bi bi-inbox"></i>
+                        </div>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">Chưa có ca khám nào tại cơ sở này</h5>
+                    <p class="text-secondary small mb-4" style="max-width: 480px; margin: 0 auto;">
+                        Cơ sở hiện tại chưa có ca khám nào. Bác sĩ có thể tiếp nhận bệnh nhân mới vào khám ngay, hoặc chuyển sang cơ sở khác trên thanh công cụ.
+                    </p>
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <button type="button" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm" onclick="openQuickAddPatientModal()">
+                            <i class="bi bi-plus-lg me-1"></i> Tiếp nhận bệnh nhân mới
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3.5 py-2 rounded-3" onclick="openDailyVisitsDrawer()">
+                            <i class="bi bi-list-task me-1"></i> Xem danh sách ca khám
+                        </button>
+                    </div>
+                </div>
+
+                <th:block th:if="${visit != null}">
                 <!-- HÀNG 2: THÔNG TIN HỒ SƠ BỆNH NHÂN & TÀI CHÍNH -->
                 <div class="p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div class="d-flex align-items-center gap-3">
@@ -246,7 +269,7 @@
                                     Nguyễn Văn An
                                 </h4>
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle"
-                                      th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001')}">DEMO0001</span>
+                                      th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : '---')}">---</span>
                                 <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}"
                                       class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill">
                                     <i class="bi bi-hourglass-split me-1"></i>Chờ thanh toán (Khóa BR-EMR-02)
@@ -471,6 +494,7 @@
                 </div>
 
             </div>
+            </th:block>
 
         </main>
         </div>
@@ -479,8 +503,10 @@
 <!-- ===================================================================== -->
 <!-- MODALS CHO BAR 2 & BAR 3: CẬN LÂM SÀNG, CHẨN ĐOÁN & ĐIỀU TRỊ         -->
 <!-- ===================================================================== -->
+<th:block th:if="${visit != null}">
 <div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersModal}"></div>
 <div th:replace="~{doctor/fragments/clinical-treatment :: clinicalTreatmentModals}"></div>
+</th:block>
 <!-- MODAL THÊM BỆNH NHÂN & TIẾP NHẬN VÀO KHÁM NGAY (THEO CƠ SỞ) -->
 <div class="modal fade" id="quickAddPatientModal" tabindex="-1" aria-labelledby="quickAddPatientModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -496,7 +522,7 @@
                     <div class="alert alert-primary py-2 px-3 small d-flex align-items-center gap-2 mb-3 rounded-3">
                         <i class="bi bi-buildings-fill fs-5"></i>
                         <div>
-                            Tiếp nhận bệnh nhân tại: <strong id="quickAddBranchNameDisplay" th:text="${selectedBranch != null ? (selectedBranch.branchCode != null ? selectedBranch.branchCode : selectedBranch.branchName) : 'DEMO'}">DEMO</strong>
+                            Tiếp nhận bệnh nhân tại: <strong id="quickAddBranchNameDisplay" th:text="${selectedBranch != null ? (selectedBranch.branchCode != null ? selectedBranch.branchCode : selectedBranch.branchName) : ''}"></strong>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -659,18 +685,11 @@
 <!-- ===================================================================== -->
 <!-- MODAL: HẸN TÁI KHÁM SAU ĐIỀU TRỊ (SCR-18.1 / FT18)                    -->
 <!-- ===================================================================== -->
+<th:block th:if="${visit != null}">
 <th:block th:replace="~{doctor/fragments/modal-re-examination :: reExamModal}"></th:block>
-
-<!-- ===================================================================== -->
-<!-- ===================================================================== -->
-<!-- MODALS CHO BAR 4: FILM ẢNH & THEO DÕI LÂM SÀNG (FRAGMENT)            -->
-<!-- ===================================================================== -->
 <div th:replace="~{doctor/fragments/clinical-photos :: clinicalPhotosModals}"></div>
-
-<!-- ===================================================================== -->
-<!-- MODAL: LỜI DẶN DÒ BÁC SĨ (SCR-18.x)                                   -->
-<!-- ===================================================================== -->
 <th:block th:replace="~{doctor/fragments/instructions-tab :: instructionsModals}"></th:block>
+</th:block>
 
 <!-- TOAST THÔNG BÁO -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
@@ -929,7 +948,7 @@
         const branchSel = document.getElementById('toolbarBranchSelect');
         const branchNameEl = document.getElementById('quickAddBranchNameDisplay');
         if (branchSel && branchNameEl) {
-            branchNameEl.textContent = branchSel.options[branchSel.selectedIndex]?.text || 'DEMO';
+            branchNameEl.textContent = branchSel.options[branchSel.selectedIndex]?.text || '';
         }
         const modalEl = document.getElementById('quickAddPatientModal');
         if (modalEl) {
@@ -1552,6 +1571,7 @@
 <!-- ===================================================================== -->
 <!-- FRONTEND SCRIPTS TỪ CÁC FRAGMENT                                      -->
 <!-- ===================================================================== -->
+<th:block th:if="${visit != null}">
 <!-- BAR 1: Scripts Khám tổng quát & Tiền sử -->
 <th:block th:replace="~{doctor/fragments/general-examination :: generalExamScript}"></th:block>
 
@@ -1569,6 +1589,7 @@
 
 <!-- BAR 5: Scripts Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài FT15/FT13 -->
 <th:block th:replace="~{doctor/fragments/labo-tab :: laboTabScript}"></th:block>
+</th:block>
 
     <!-- MODAL CẢNH BÁO GIỚI HẠN PHÂN QUYỀN CƠ SỞ CHO BÁC SĨ -->
     <div class="modal fade" id="branchWarningModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
