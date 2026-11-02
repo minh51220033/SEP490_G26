@@ -100,8 +100,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${advances.content.isEmpty()}">
-                            <td colspan="10" class="text-center py-4 text-muted">
-                                Không tìm thấy phiếu tạm ứng nào phù hợp điều kiện lọc.
+                            <td colspan="10" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-cash-coin empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; phi&#7871;u t&#7841;m &#7913;ng n&#224;o</h6>
+                                    <p>T&#7841;o v&#224; qu&#7843;n l&#253; c&#225;c y&#234;u c&#7847;u t&#7841;m &#7913;ng l&#432;&#417;ng tr&#432;&#7899;c k&#7923; chi tr&#7843; c&#7911;a nh&#226;n vi&#234;n.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createAdvanceModal">
+                                        <i class="bi bi-plus-circle me-1"></i>T&#7841;o y&#234;u c&#7847;u t&#7841;m &#7913;ng
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="a : ${advances.content}">

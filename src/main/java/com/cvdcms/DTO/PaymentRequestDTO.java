@@ -18,6 +18,8 @@ public class PaymentRequestDTO {
     private PaymentType paymentType = PaymentType.PAYMENT;
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
     private BigDecimal amount = BigDecimal.ZERO;
+    private Long bankAccountId;
+    private String expectedTransferContent;
     private String transactionRef;
     private String idempotencyKey;
     private String notes;
