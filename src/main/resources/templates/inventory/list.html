@@ -2,9 +2,9 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý kho vật tư')}"></head>
 
-<body class="app-body">
+<body class="app-body viewport-locked-page">
 
-<!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
+<!-- CSS riêng của trang kho -->
 <link rel="stylesheet" th:href="@{/css/inventory.css}">
 
 <div class="app-shell">
@@ -15,55 +15,55 @@
 
     <div class="app-main">
 
-        <!-- Topbar / Header -->
+        <!-- Topbar tiêu đề hệ thống Navy 56px chuẩn -->
         <header th:replace="~{fragments/header :: appTopbar('Quản lý kho vật tư')}"></header>
 
-        <main class="app-content inventory-page">
-            <div class="page-heading">
-                <div>
-                    <p class="eyebrow">CV-DCMS · QUẢN LÝ KHO VẬT TƯ NHA KHOA</p>
-                    <h1>Quản lý kho vật tư</h1>
-                    <p class="subtitle">Theo dõi tồn kho, lô hạn dùng, nhập/xuất kho, điều chuyển chi nhánh, danh mục vật tư và công nợ nhà cung cấp.</p>
+        <main class="inventory-app-view">
+
+            <!-- 1. TOOLBAR CHÍNH -->
+            <div class="table-toolbar-card">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="table-toolbar-title">
+                        <p class="eyebrow">CV-DCMS · QUẢN LÝ KHO VẬT TƯ NHA KHOA</p>
+                        <h1>Quản lý kho vật tư</h1>
+                    </div>
+                    <div class="branch-select-wrap ms-md-2">
+                        <label for="branchId"><i class="bi bi-geo-alt-fill text-primary me-1"></i>Kho:</label>
+                        <select id="branchId" disabled class="form-select form-select-sm">
+                            <option value="">Đang tải chi nhánh...</option>
+                        </select>
+                        <div id="fixedBranch" class="fixed-branch" hidden>
+                            Chi nhánh: <strong id="fixedBranchName"></strong>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1 ms-md-2" style="min-width: 260px; max-width: 400px;">
+                        <input id="keyword" type="search" placeholder="Tìm kiếm nhanh mã VT, tên VT, số lô, mã phiếu..." class="form-control form-control-sm">
+                        <button type="button" class="btn-primary-custom py-1 px-2" id="searchBtn" title="Tìm kiếm"><i class="bi bi-search"></i></button>
+                        <button type="button" class="btn-secondary-custom py-1 px-2" id="clearSearchBtn" title="Xóa từ khóa"><i class="bi bi-x-circle"></i></button>
+                    </div>
                 </div>
-                <div class="heading-actions">
-                    <a th:href="@{/suppliers}" class="button button-secondary">Danh mục NCC riêng</a>
-                    <button type="button" class="button button-secondary" id="refreshBtn">↻ Làm mới</button>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a th:href="@{/suppliers}" class="btn-secondary-custom">
+                        <i class="bi bi-truck me-1"></i>Danh mục NCC riêng
+                    </a>
+                    <button type="button" class="btn-secondary-custom" id="refreshBtn" title="Làm mới dữ liệu kho">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </button>
+                    <button type="button" class="btn-gear-customizer" id="openInvColumnDrawerBtn" title="Tùy chỉnh cột hiển thị" onclick="openInvColumnDrawer()">
+                        <i class="bi bi-gear-fill"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- Thanh chọn chi nhánh (1 chi nhánh = 1 kho duy nhất) và tìm kiếm nhanh -->
-            <section class="filter-card">
-                <div class="field branch-field">
-                    <label for="branchId">Kho chi nhánh</label>
-                    <select id="branchId" disabled>
-                        <option value="">Đang tải chi nhánh...</option>
-                    </select>
-                    <div id="fixedBranch" class="fixed-branch" hidden>
-                        Chi nhánh được phân công: <strong id="fixedBranchName"></strong>
-                    </div>
-                </div>
-                <div class="field search-field">
-                    <label for="keyword">Tìm nhanh (Mã vật tư / Tên vật tư / Số lô / Mã phiếu / Nhà cung cấp)</label>
-                    <input id="keyword" type="search" placeholder="Nhập từ khóa tìm kiếm (tự động lọc sau 350ms)...">
-                </div>
-                <div class="filter-actions">
-                    <button type="button" class="button button-primary" id="searchBtn">Tìm kiếm</button>
-                    <button type="button" class="button button-secondary" id="clearSearchBtn" title="Xóa từ khóa tìm kiếm">Xóa lọc</button>
-                </div>
-            </section>
-
-            <!-- 4 Thẻ KPI Tổng quan kho (Dashboard Summary Cards) đồng bộ phong cách home.html -->
+            <!-- 2. 4 THẺ KPI TỔNG QUAN KHO (COMPACT THEO CHUẨN) -->
             <section class="stats-grid" id="summaryStats" aria-label="Chỉ số tổng quan kho chi nhánh">
                 <article class="stat-card stat-card-primary is-loading" id="kpiCardTotalItems" data-kpi-target="inventory-all" role="button" tabindex="0" title="Nhấn để xem toàn bộ mặt hàng tồn kho">
                     <div class="stat-card-top">
                         <span class="stat-label">Mặt hàng trong kho</span>
                         <span class="stat-icon stat-icon-primary" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                        <line x1="12" y1="22.08" x2="12" y2="12"/>
-                    </svg>
-                </span>
+                            <i class="bi bi-box-seam"></i>
+                        </span>
                     </div>
                     <strong class="stat-value" id="statTotalItems" aria-live="polite">—</strong>
                     <span class="stat-meta" id="statTotalItemsSub">Đang tải dữ liệu...</span>
@@ -71,14 +71,10 @@
 
                 <article class="stat-card stat-card-warning is-loading" id="kpiCardLowStock" data-kpi-target="inventory-low" role="button" tabindex="0" title="Nhấn để lọc các mặt hàng sắp hết / chạm ngưỡng">
                     <div class="stat-card-top">
-                        <span class="stat-label">Cảnh báo sắp hết / chạm ngưỡng</span>
+                        <span class="stat-label">Cảnh báo sắp hết</span>
                         <span class="stat-icon stat-icon-warning" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                </span>
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </span>
                     </div>
                     <strong class="stat-value" id="statLowStock" aria-live="polite">—</strong>
                     <span class="stat-meta" id="statLowStockSub">Đang tải dữ liệu...</span>
@@ -86,13 +82,10 @@
 
                 <article class="stat-card stat-card-danger is-loading" id="kpiCardExpiring" data-kpi-target="batches-expiring" role="button" tabindex="0" title="Nhấn để xem các lô hết hạn hoặc sắp hết hạn">
                     <div class="stat-card-top">
-                        <span class="stat-label">Lô hết hạn / sắp hết hạn</span>
+                        <span class="stat-label">Lô hết / sắp hết hạn</span>
                         <span class="stat-icon stat-icon-danger" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </span>
+                            <i class="bi bi-calendar-x"></i>
+                        </span>
                     </div>
                     <strong class="stat-value" id="statExpiringBatches" aria-live="polite">—</strong>
                     <span class="stat-meta" id="statExpiringBatchesSub">Đang tải dữ liệu...</span>
@@ -100,13 +93,10 @@
 
                 <article class="stat-card stat-card-info is-loading" id="kpiCardDebt" data-kpi-target="supplier-debt" role="button" tabindex="0" title="Nhấn để xem chi tiết công nợ nhà cung cấp">
                     <div class="stat-card-top">
-                        <span class="stat-label">Tổng công nợ NCC tại chi nhánh</span>
+                        <span class="stat-label">Tổng công nợ NCC</span>
                         <span class="stat-icon stat-icon-info" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="5" width="20" height="14" rx="2"/>
-                        <line x1="2" y1="10" x2="22" y2="10"/>
-                    </svg>
-                </span>
+                            <i class="bi bi-credit-card-2-front"></i>
+                        </span>
                     </div>
                     <strong class="stat-value" id="statTotalDebt" aria-live="polite">—</strong>
                     <span class="stat-meta" id="statTotalDebtSub">Đang tải dữ liệu...</span>
@@ -115,7 +105,7 @@
 
             <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 
-            <!-- 8 Tab chức năng theo chuẩn DentalSoft -->
+            <!-- 3. THANH 8 TABS CHỨC NĂNG QUẢN LÝ KHO -->
             <nav class="tabs" aria-label="Chức năng quản lý kho">
                 <button class="tab active" type="button" data-tab="inventory">1. Tồn kho</button>
                 <button class="tab" type="button" data-tab="batches">2. Lô &amp; Hạn dùng</button>
@@ -124,7 +114,7 @@
                 <button class="tab" type="button" data-tab="transfer">5. Điều chuyển kho</button>
                 <button class="tab" type="button" data-tab="materials">6. Danh mục vật tư</button>
                 <button class="tab" type="button" data-tab="categories">7. Nhóm vật tư</button>
-                <button class="tab" type="button" data-tab="supplier-payments">8. Nhà cung cấp &amp; Công nợ</button>
+                <button class="tab" type="button" data-tab="supplier-payments">8. NCC &amp; Công nợ</button>
             </nav>
 
             <!-- ==========================================
@@ -134,36 +124,47 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Danh sách tồn kho tổng hợp</h2>
-                        <p>Mỗi chi nhánh tương ứng một kho duy nhất. Số lượng tổng hợp luôn đồng bộ với tổng các lô.</p>
+                        <p>Số lượng tổng hợp đồng bộ theo thời gian thực từ các lô vật tư tại chi nhánh.</p>
                     </div>
                     <label class="check-filter"><input id="lowStock" type="checkbox"> Chỉ hiện sắp hết / chạm ngưỡng</label>
                 </div>
-                <div class="table-wrap">
-                    <table>
+                <div class="table-viewport-wrapper">
+                    <table class="cv-table" id="inventoryTableMain">
                         <thead>
-                        <tr>
-                            <th>Mã vật tư</th>
-                            <th>Tên vật tư</th>
-                            <th>Nhóm vật tư</th>
-                            <th>Đơn vị</th>
-                            <th>Tồn hiện tại</th>
-                            <th>Ngưỡng tối thiểu</th>
-                            <th>Cập nhật gần nhất</th>
-                            <th>Trạng thái</th>
-                        </tr>
+                            <tr id="inventoryHeaderRow">
+                                <th style="width:140px;">Mã vật tư <span class="col-resizer"></span></th>
+                                <th style="width:260px;">Tên vật tư <span class="col-resizer"></span></th>
+                                <th style="width:180px;">Nhóm vật tư <span class="col-resizer"></span></th>
+                                <th style="width:100px;">Đơn vị <span class="col-resizer"></span></th>
+                                <th style="width:130px;">Tồn hiện tại <span class="col-resizer"></span></th>
+                                <th style="width:140px;">Ngưỡng tối thiểu <span class="col-resizer"></span></th>
+                                <th style="width:180px;">Cập nhật gần nhất <span class="col-resizer"></span></th>
+                                <th style="width:150px;">Trạng thái <span class="col-resizer"></span></th>
+                            </tr>
                         </thead>
                         <tbody id="inventoryTable">
-                        <tr><td colspan="8" class="empty">Đang tải dữ liệu tồn kho...</td></tr>
+                            <tr><td colspan="8" class="empty">Đang tải dữ liệu tồn kho...</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
-                    <span id="inventoryPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="inventoryPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="inventoryNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                <footer class="table-pagination-footer" id="inventoryPaginationFooter">
+                    <div class="text-secondary small">
+                        Hiển thị <strong id="lblInventoryRange" class="text-dark">0 - 0</strong> của <strong id="lblInventoryTotal" class="text-dark">0</strong> mặt hàng
                     </div>
-                </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold">Số dòng:</span>
+                        <select id="inventoryPageSizeSelect" class="form-select form-select-sm py-1" style="width: 78px;" onchange="onInvPageSizeChange(this.value)">
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    <div class="pagination-btn-group d-flex align-items-center" id="inventoryPaginationControls">
+                        <button id="inventoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                        <span id="inventoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                        <button id="inventoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                    </div>
+                </footer>
             </section>
 
             <!-- ==========================================
@@ -173,217 +174,225 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Quản lý lô vật tư &amp; hạn sử dụng</h2>
-                        <p>Theo dõi chi tiết số lượng còn lại, đơn giá nhập và cảnh báo hạn dùng của từng lô.</p>
+                        <p>Theo dõi số lượng còn lại, đơn giá nhập và cảnh báo hạn dùng của từng lô.</p>
                     </div>
                     <div class="date-filters">
                         <div class="field">
-                            <label for="expiryFrom">Hạn từ ngày</label>
+                            <label for="expiryFrom">Hạn từ:</label>
                             <input id="expiryFrom" type="date">
                         </div>
                         <div class="field">
-                            <label for="expiryTo">Hạn đến ngày</label>
+                            <label for="expiryTo">Đến:</label>
                             <input id="expiryTo" type="date">
                         </div>
-                        <button id="filterBatchesBtn" class="button button-primary" type="button">Lọc hạn</button>
-                        <button id="clearBatchesFilterBtn" class="button button-secondary" type="button">Bỏ lọc hạn</button>
+                        <button id="filterBatchesBtn" class="btn-primary-custom" type="button">Lọc hạn</button>
+                        <button id="clearBatchesFilterBtn" class="btn-secondary-custom" type="button">Bỏ lọc</button>
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table>
+                <div class="table-viewport-wrapper">
+                    <table class="cv-table" id="batchesTableMain">
                         <thead>
-                        <tr>
-                            <th>Mã vật tư</th>
-                            <th>Tên vật tư</th>
-                            <th>Số lô</th>
-                            <th>Hạn sử dụng</th>
-                            <th>Còn lại</th>
-                            <th>Đơn vị</th>
-                            <th>Giá nhập</th>
-                            <th>Nhà cung cấp</th>
-                            <th>Cảnh báo</th>
-                        </tr>
+                            <tr>
+                                <th style="width:130px;">Mã vật tư <span class="col-resizer"></span></th>
+                                <th style="width:240px;">Tên vật tư <span class="col-resizer"></span></th>
+                                <th style="width:140px;">Số lô <span class="col-resizer"></span></th>
+                                <th style="width:130px;">Hạn dùng <span class="col-resizer"></span></th>
+                                <th style="width:110px;">Còn lại <span class="col-resizer"></span></th>
+                                <th style="width:90px;">Đơn vị <span class="col-resizer"></span></th>
+                                <th style="width:130px;">Giá nhập <span class="col-resizer"></span></th>
+                                <th style="width:200px;">Nhà cung cấp <span class="col-resizer"></span></th>
+                                <th style="width:150px;">Cảnh báo <span class="col-resizer"></span></th>
+                            </tr>
                         </thead>
                         <tbody id="batchesTable">
-                        <tr><td colspan="9" class="empty">Đang tải dữ liệu lô vật tư...</td></tr>
+                            <tr><td colspan="9" class="empty">Đang tải dữ liệu lô vật tư...</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
-                    <span id="batchesPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="batchesPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="batchesNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                <footer class="table-pagination-footer" id="batchesPaginationFooter">
+                    <div class="text-secondary small">
+                        Hiển thị danh sách lô vật tư &amp; hạn sử dụng
                     </div>
-                </div>
+                    <div class="pagination-btn-group d-flex align-items-center">
+                        <button id="batchesPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                        <span id="batchesPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                        <button id="batchesNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                    </div>
+                </footer>
             </section>
 
             <!-- ==========================================
                  TAB 3: PHIẾU NHẬP KHO
                  ========================================== -->
             <section id="receiptPanel" class="panel" hidden>
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lập phiếu nhập kho từ Nhà cung cấp</h2>
-                        <p>Bắt buộc tải lên ảnh/chứng từ hóa đơn hợp lệ. Hệ thống tự động cộng tồn kho, ghi nhận thanh toán ban đầu và tính công nợ NCC.</p>
-                    </div>
-                </div>
-                <form id="receiptForm">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label for="supplierId">Nhà cung cấp <span class="required">*</span></label>
-                            <select id="supplierId" required>
-                                <option value="">Đang tải nhà cung cấp...</option>
-                            </select>
+                <div class="form-tab-scroll-container">
+                    <div class="form-box-card">
+                        <div class="panel-heading mb-3">
+                            <div>
+                                <h2>Lập phiếu nhập kho từ Nhà cung cấp</h2>
+                                <p>Tải lên ảnh/hóa đơn chứng từ hợp lệ. Hệ thống tự động cộng tồn kho và tính công nợ NCC.</p>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="supplierInvoiceNo">Số hóa đơn nhà cung cấp</label>
-                            <input id="supplierInvoiceNo" maxlength="50" pattern="[A-Za-z0-9._/-]{1,50}" title="Chỉ gồm chữ, số, dấu chấm (.), gạch dưới (_), gạch chéo (/) hoặc gạch ngang (-), tối đa 50 ký tự" placeholder="VD: HD-NCC-001">
-                        </div>
-                        <div class="field">
-                            <label for="receiptDate">Ngày nhập kho <span class="required">*</span></label>
-                            <input id="receiptDate" type="date" required>
-                        </div>
-                        <div class="field">
-                            <label for="invoiceFileInput">Tải ảnh / chứng từ hóa đơn <span class="required">*</span> <small>(.png, .jpg, .jpeg, .webp, .pdf ≤ 5MB)</small></label>
-                            <div class="invoice-upload-box">
-                                <input id="invoiceFileInput" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf">
-                                <input id="attachmentUrl" type="hidden">
-                                <div id="invoicePreviewCard" class="invoice-preview-card" hidden>
-                                    <img id="invoicePreviewImg" class="invoice-preview-thumb" alt="Ảnh hóa đơn" hidden>
-                                    <div style="flex:1; min-width:0;">
-                                        <div id="invoicePreviewName" style="font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-                                        <small id="invoicePreviewStatus" style="color:#15803d;">Đã tải lên thành công</small>
+                        <form id="receiptForm">
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="supplierId">Nhà cung cấp <span class="required">*</span></label>
+                                    <select id="supplierId" required>
+                                        <option value="">Đang tải nhà cung cấp...</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="supplierInvoiceNo">Số hóa đơn nhà cung cấp</label>
+                                    <input id="supplierInvoiceNo" maxlength="50" pattern="[A-Za-z0-9._/-]{1,50}" title="Chỉ gồm chữ, số, dấu chấm (.), gạch dưới (_), gạch chéo (/) hoặc gạch ngang (-)" placeholder="VD: HD-NCC-001">
+                                </div>
+                                <div class="field">
+                                    <label for="receiptDate">Ngày nhập kho <span class="required">*</span></label>
+                                    <input id="receiptDate" type="date" required>
+                                </div>
+                                <div class="field">
+                                    <label for="invoiceFileInput">Tải ảnh / chứng từ hóa đơn <span class="required">*</span> <small>(≤ 5MB)</small></label>
+                                    <div class="invoice-upload-box">
+                                        <input id="invoiceFileInput" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf">
+                                        <input id="attachmentUrl" type="hidden">
+                                        <div id="invoicePreviewCard" class="invoice-preview-card" hidden>
+                                            <img id="invoicePreviewImg" class="invoice-preview-thumb" alt="Ảnh hóa đơn" hidden>
+                                            <div style="flex:1; min-width:0;">
+                                                <div id="invoicePreviewName" style="font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                                                <small id="invoicePreviewStatus" style="color:#15803d;">Đã tải lên thành công</small>
+                                            </div>
+                                            <button type="button" id="zoomUploadedInvoiceBtn" class="btn-secondary-custom button-sm" hidden>Phóng to</button>
+                                            <button type="button" id="clearUploadedInvoiceBtn" class="button-danger-outline button-sm">Xóa file</button>
+                                        </div>
                                     </div>
-                                    <button type="button" id="zoomUploadedInvoiceBtn" class="button button-secondary button-sm" hidden>Phóng to</button>
-                                    <button type="button" id="clearUploadedInvoiceBtn" class="button button-danger-outline button-sm">Xóa file</button>
+                                </div>
+                                <div class="field full-width">
+                                    <label for="receiptNotes">Ghi chú phiếu nhập</label>
+                                    <textarea id="receiptNotes" rows="2" maxlength="255" placeholder="Thông tin giao nhận, chiết khấu hoặc ghi chú kiểm hàng..."></textarea>
                                 </div>
                             </div>
-                        </div>
-                        <div class="field full-width">
-                            <label for="receiptNotes">Ghi chú phiếu nhập</label>
-                            <textarea id="receiptNotes" rows="2" maxlength="255" placeholder="Thông tin giao nhận, chiết khấu hoặc ghi chú kiểm hàng..."></textarea>
-                        </div>
-                    </div>
-                    <div class="receipt-items-heading">
-                        <div>
-                            <h3>Chi tiết vật tư nhập kho</h3>
-                            <small style="color:#64748b;">Gõ từ khóa vào ô lọc nhanh trong từng dòng để tìm vật tư theo mã hoặc tên.</small>
-                        </div>
-                        <button type="button" id="addReceiptItem" class="button button-secondary">+ Thêm dòng vật tư</button>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="receipt-table">
-                            <thead>
-                            <tr>
-                                <th style="min-width:260px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:75px">Đơn vị</th>
-                                <th style="min-width:125px">Số lô <span class="required">*</span></th>
-                                <th style="min-width:140px">Hạn sử dụng <span class="required">*</span></th>
-                                <th style="min-width:105px">Số lượng <span class="required">*</span></th>
-                                <th style="min-width:135px">Đơn giá (VNĐ) <span class="required">*</span></th>
-                                <th style="min-width:125px">Thành tiền</th>
-                                <th style="width:44px"></th>
-                            </tr>
-                            </thead>
-                            <tbody id="receiptItems"></tbody>
-                        </table>
+                            <div class="receipt-items-heading">
+                                <div>
+                                    <h3 class="fs-6 fw-bold text-dark mb-0">Chi tiết vật tư nhập kho</h3>
+                                    <small style="color:#64748b;">Gõ từ khóa vào ô lọc nhanh trong từng dòng để tìm vật tư theo mã hoặc tên.</small>
+                                </div>
+                                <button type="button" id="addReceiptItem" class="btn-secondary-custom button-sm">+ Thêm dòng vật tư</button>
+                            </div>
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
+                                <table class="receipt-table cv-table">
+                                    <thead>
+                                    <tr>
+                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
+                                        <th style="min-width:75px">Đơn vị</th>
+                                        <th style="min-width:120px">Số lô <span class="required">*</span></th>
+                                        <th style="min-width:130px">Hạn dùng <span class="required">*</span></th>
+                                        <th style="min-width:95px">Số lượng <span class="required">*</span></th>
+                                        <th style="min-width:125px">Đơn giá (VNĐ) <span class="required">*</span></th>
+                                        <th style="min-width:120px">Thành tiền</th>
+                                        <th style="width:40px"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="receiptItems"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Thanh toán ngay khi nhập kho -->
+                            <div class="receipt-payment-grid mb-3">
+                                <div class="field">
+                                    <label for="receiptPaidAmount">Số tiền đã thanh toán khi nhập (VNĐ)</label>
+                                    <div style="display:flex; gap:6px;">
+                                        <input id="receiptPaidAmount" type="number" min="0" step="1" inputmode="numeric" value="0" style="flex:1;">
+                                        <button type="button" id="payFullReceiptBtn" class="btn-secondary-custom button-sm" title="Điền 100% tổng tiền phiếu nhập">Trả đủ</button>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="receiptPaymentMethod">Hình thức thanh toán</label>
+                                    <select id="receiptPaymentMethod">
+                                        <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                                        <option value="CASH">Tiền mặt</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="receiptPaymentRefNo">Số chứng từ thanh toán / UNC</label>
+                                    <input id="receiptPaymentRefNo" maxlength="100" pattern="[A-Za-z0-9._/-]{1,100}" placeholder="VD: UNC-NHAPKHO-01">
+                                </div>
+                            </div>
+
+                            <!-- Ký điện tử khi lập phiếu nhập -->
+                            <div class="signature-inline-bar mb-3">
+                                <input type="hidden" id="receiptSignatureData">
+                                <button type="button" id="openReceiptSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu nhập</button>
+                                <span id="receiptSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
+                                <img id="receiptSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu nhập" hidden>
+                                <button type="button" id="clearReceiptSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                            </div>
+
+                            <div class="receipt-footer">
+                                <div class="receipt-summary-bar">
+                                    <div class="receipt-summary-pill">Tổng tiền nhập: <strong id="receiptTotal">0 ₫</strong></div>
+                                    <div class="receipt-summary-pill">Đã thanh toán: <strong id="receiptPaidDisplay" class="stock-good">0 ₫</strong></div>
+                                    <div class="receipt-summary-pill">Công nợ còn lại: <strong id="receiptRemainingDebtDisplay" class="stock-low">0 ₫</strong></div>
+                                </div>
+                                <div class="form-action-group">
+                                    <button type="button" id="resetReceiptBtn" class="btn-secondary-custom">Đặt lại phiếu</button>
+                                    <button type="submit" id="submitReceipt" class="btn-primary-custom">Xác nhận &amp; Lưu phiếu nhập</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div id="receiptResult" class="receipt-result" hidden></div>
                     </div>
 
-                    <!-- A2: Thanh toán ngay khi nhập kho -->
-                    <div class="receipt-payment-grid">
-                        <div class="field">
-                            <label for="receiptPaidAmount">Số tiền đã thanh toán khi nhập (VNĐ)</label>
-                            <div style="display:flex; gap:6px;">
-                                <input id="receiptPaidAmount" type="number" min="0" step="1" inputmode="numeric" value="0" style="flex:1;">
-                                <button type="button" id="payFullReceiptBtn" class="button button-secondary button-sm" title="Điền 100% tổng tiền phiếu nhập">Trả đủ</button>
+                    <div class="history-box-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Lịch sử phiếu nhập kho</h2>
+                                <p>Danh sách các phiếu đã nhập tại chi nhánh hiện tại (hỗ trợ in A4 trực tiếp, xem chi tiết và ký điện tử).</p>
+                            </div>
+                            <div class="date-filters">
+                                <div class="field">
+                                    <label for="receiptFilterSupplier">Nhà cung cấp:</label>
+                                    <select id="receiptFilterSupplier" class="form-select form-select-sm">
+                                        <option value="">Tất cả NCC</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="receiptFromDate">Từ:</label>
+                                    <input id="receiptFromDate" type="date">
+                                </div>
+                                <div class="field">
+                                    <label for="receiptToDate">Đến:</label>
+                                    <input id="receiptToDate" type="date">
+                                </div>
+                                <button type="button" class="btn-primary-custom button-sm" id="filterReceiptsBtn">Lọc phiếu</button>
                             </div>
                         </div>
-                        <div class="field">
-                            <label for="receiptPaymentMethod">Hình thức thanh toán</label>
-                            <select id="receiptPaymentMethod">
-                                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                                <option value="CASH">Tiền mặt</option>
-                            </select>
+                        <div class="table-viewport-wrapper">
+                            <table class="cv-table">
+                                <thead>
+                                <tr>
+                                    <th style="width:130px;">Mã phiếu <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Ngày nhập <span class="col-resizer"></span></th>
+                                    <th style="width:200px;">Nhà cung cấp <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Hóa đơn <span class="col-resizer"></span></th>
+                                    <th style="width:140px;">Tổng tiền <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Đã trả <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Còn nợ <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Chữ ký <span class="col-resizer"></span></th>
+                                    <th style="width:220px;">Thao tác <span class="col-resizer"></span></th>
+                                </tr>
+                                </thead>
+                                <tbody id="receiptHistoryTable">
+                                <tr><td colspan="9" class="empty">Chưa tải dữ liệu phiếu nhập.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="field">
-                            <label for="receiptPaymentRefNo">Số chứng từ thanh toán / UNC</label>
-                            <input id="receiptPaymentRefNo" maxlength="100" pattern="[A-Za-z0-9._/-]{1,100}" placeholder="VD: UNC-NHAPKHO-01">
-                        </div>
-                    </div>
-
-                    <!-- A4: Ký điện tử khi lập phiếu nhập -->
-                    <div class="signature-inline-bar">
-                        <input type="hidden" id="receiptSignatureData">
-                        <button type="button" id="openReceiptSignBtn" class="button button-secondary">Ký điện tử người lập phiếu nhập</button>
-                        <span id="receiptSignStatus" style="font-size:13px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
-                        <img id="receiptSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu nhập" hidden>
-                        <button type="button" id="clearReceiptSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
-                    </div>
-
-                    <div class="receipt-footer">
-                        <div class="receipt-summary-bar">
-                            <div class="receipt-summary-pill">Tổng tiền nhập: <strong id="receiptTotal">0 ₫</strong></div>
-                            <div class="receipt-summary-pill">Đã thanh toán: <strong id="receiptPaidDisplay" class="stock-good">0 ₫</strong></div>
-                            <div class="receipt-summary-pill">Công nợ còn lại: <strong id="receiptRemainingDebtDisplay" class="stock-low">0 ₫</strong></div>
-                        </div>
-                        <div class="form-action-group">
-                            <button type="button" id="resetReceiptBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitReceipt" class="button button-primary">Xác nhận &amp; Lưu phiếu nhập</button>
-                        </div>
-                    </div>
-                </form>
-                <div id="receiptResult" class="receipt-result" hidden></div>
-
-                <hr class="section-divider">
-
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lịch sử phiếu nhập kho</h2>
-                        <p>Danh sách các phiếu đã nhập tại chi nhánh hiện tại (bấm vào ảnh hóa đơn để phóng to hoặc xuất PDF).</p>
-                    </div>
-                    <div class="date-filters">
-                        <div class="field">
-                            <label for="receiptFilterSupplier">Nhà cung cấp</label>
-                            <select id="receiptFilterSupplier">
-                                <option value="">Tất cả NCC</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="receiptFromDate">Từ ngày</label>
-                            <input id="receiptFromDate" type="date">
-                        </div>
-                        <div class="field">
-                            <label for="receiptToDate">Đến ngày</label>
-                            <input id="receiptToDate" type="date">
-                        </div>
-                        <button type="button" class="button button-secondary" id="filterReceiptsBtn">Lọc phiếu</button>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Mã phiếu</th>
-                            <th>Ngày nhập</th>
-                            <th>Nhà cung cấp</th>
-                            <th>Hóa đơn đính kèm</th>
-                            <th>Tổng tiền</th>
-                            <th>Đã trả</th>
-                            <th>Còn nợ</th>
-                            <th>Chữ ký</th>
-                            <th>Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody id="receiptHistoryTable">
-                        <tr><td colspan="9" class="empty">Chưa tải dữ liệu phiếu nhập.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination">
-                    <span id="receiptHistoryPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="receiptHistoryPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="receiptHistoryNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                        <footer class="table-pagination-footer" style="margin-bottom:0;">
+                            <div class="text-secondary small">Lịch sử phiếu nhập kho chi nhánh</div>
+                            <div class="pagination-btn-group d-flex align-items-center">
+                                <button id="receiptHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                                <span id="receiptHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                                <button id="receiptHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                            </div>
+                        </footer>
                     </div>
                 </div>
             </section>
@@ -392,120 +401,124 @@
                  TAB 4: PHIẾU XUẤT KHO
                  ========================================== -->
             <section id="issuePanel" class="panel" hidden>
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lập phiếu xuất kho</h2>
-                        <p>Hỗ trợ xuất sử dụng nội bộ (FEFO hoặc chọn lô) và xuất hủy vật tư hết hạn. Không cho phép xuất vượt tồn khả dụng.</p>
-                    </div>
-                </div>
-                <form id="issueForm">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label for="issueType">Mục đích xuất kho <span class="required">*</span></label>
-                            <select id="issueType" required>
-                                <option value="INTERNAL_USE">Xuất sử dụng nội bộ (Phòng khám / Điều trị)</option>
-                                <option value="DISCARD_EXPIRED">Xuất hủy vật tư hết hạn / hỏng</option>
-                            </select>
+                <div class="form-tab-scroll-container">
+                    <div class="form-box-card">
+                        <div class="panel-heading mb-3">
+                            <div>
+                                <h2>Lập phiếu xuất kho</h2>
+                                <p>Xuất sử dụng nội bộ (FEFO hoặc chọn lô) và xuất hủy vật tư hết hạn. Không cho phép xuất vượt tồn khả dụng.</p>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="issueDate">Ngày xuất kho <span class="required">*</span></label>
-                            <input id="issueDate" type="date" required>
-                        </div>
-                        <div class="field full-width">
-                            <label for="issueNotes">Ghi chú phiếu xuất</label>
-                            <textarea id="issueNotes" rows="2" maxlength="255" placeholder="VD: Xuất vật tư cho phòng điều trị 1, hoặc biên bản hủy hàng hết hạn..."></textarea>
-                        </div>
-                    </div>
-                    <div class="receipt-items-heading">
-                        <h3>Danh sách vật tư xuất kho</h3>
-                        <button type="button" id="addIssueItem" class="button button-secondary">+ Thêm dòng xuất</button>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="receipt-table">
-                            <thead>
-                            <tr>
-                                <th style="min-width:250px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:250px">Lô xuất (Mặc định tự động FEFO)</th>
-                                <th style="min-width:105px">Tồn khả dụng</th>
-                                <th style="min-width:115px">Số lượng xuất <span class="required">*</span></th>
-                                <th style="min-width:150px">Ghi chú dòng</th>
-                                <th style="width:44px"></th>
-                            </tr>
-                            </thead>
-                            <tbody id="issueItems"></tbody>
-                        </table>
+                        <form id="issueForm">
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="issueType">Mục đích xuất kho <span class="required">*</span></label>
+                                    <select id="issueType" required>
+                                        <option value="INTERNAL_USE">Xuất sử dụng nội bộ (Phòng khám / Điều trị)</option>
+                                        <option value="DISCARD_EXPIRED">Xuất hủy vật tư hết hạn / hỏng</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="issueDate">Ngày xuất kho <span class="required">*</span></label>
+                                    <input id="issueDate" type="date" required>
+                                </div>
+                                <div class="field full-width">
+                                    <label for="issueNotes">Ghi chú phiếu xuất</label>
+                                    <textarea id="issueNotes" rows="2" maxlength="255" placeholder="VD: Xuất vật tư cho phòng điều trị 1, hoặc biên bản hủy hàng hết hạn..."></textarea>
+                                </div>
+                            </div>
+                            <div class="receipt-items-heading">
+                                <h3 class="fs-6 fw-bold text-dark mb-0">Danh sách vật tư xuất kho</h3>
+                                <button type="button" id="addIssueItem" class="btn-secondary-custom button-sm">+ Thêm dòng xuất</button>
+                            </div>
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
+                                <table class="receipt-table cv-table">
+                                    <thead>
+                                    <tr>
+                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
+                                        <th style="min-width:240px">Lô xuất (Mặc định tự động FEFO)</th>
+                                        <th style="min-width:105px">Tồn khả dụng</th>
+                                        <th style="min-width:115px">Số lượng xuất <span class="required">*</span></th>
+                                        <th style="min-width:150px">Ghi chú dòng</th>
+                                        <th style="width:40px"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="issueItems"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="signature-inline-bar mb-3">
+                                <input type="hidden" id="issueSignatureData">
+                                <button type="button" id="openIssueSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu xuất</button>
+                                <span id="issueSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
+                                <img id="issueSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu xuất" hidden>
+                                <button type="button" id="clearIssueSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                            </div>
+
+                            <div class="receipt-footer">
+                                <div class="form-hint">Để trống ô chọn lô để hệ thống tự động trừ từ lô có hạn sử dụng gần nhất trước (FEFO).</div>
+                                <div class="form-action-group">
+                                    <button type="button" id="resetIssueBtn" class="btn-secondary-custom">Đặt lại phiếu</button>
+                                    <button type="submit" id="submitIssue" class="btn-primary-custom">Xác nhận xuất kho</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
-                    <!-- A4: Ký điện tử khi lập phiếu xuất -->
-                    <div class="signature-inline-bar">
-                        <input type="hidden" id="issueSignatureData">
-                        <button type="button" id="openIssueSignBtn" class="button button-secondary">Ký điện tử người lập phiếu xuất</button>
-                        <span id="issueSignStatus" style="font-size:13px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
-                        <img id="issueSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu xuất" hidden>
-                        <button type="button" id="clearIssueSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
-                    </div>
-
-                    <div class="receipt-footer">
-                        <div class="form-hint">Để trống ô chọn lô để hệ thống tự động trừ từ lô có hạn sử dụng gần nhất trước (FEFO).</div>
-                        <div class="form-action-group">
-                            <button type="button" id="resetIssueBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitIssue" class="button button-primary">Xác nhận xuất kho</button>
+                    <div class="history-box-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Lịch sử phiếu xuất kho</h2>
+                                <p>Theo dõi các phiếu xuất sử dụng nội bộ và xuất hủy tại chi nhánh.</p>
+                            </div>
+                            <div class="date-filters">
+                                <div class="field">
+                                    <label for="issueFilterType">Loại:</label>
+                                    <select id="issueFilterType" class="form-select form-select-sm">
+                                        <option value="">Tất cả loại xuất</option>
+                                        <option value="INTERNAL_USE">Xuất nội bộ</option>
+                                        <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="issueFromDate">Từ:</label>
+                                    <input id="issueFromDate" type="date">
+                                </div>
+                                <div class="field">
+                                    <label for="issueToDate">Đến:</label>
+                                    <input id="issueToDate" type="date">
+                                </div>
+                                <button type="button" class="btn-primary-custom button-sm" id="filterIssuesBtn">Lọc phiếu</button>
+                            </div>
                         </div>
-                    </div>
-                </form>
-
-                <hr class="section-divider">
-
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lịch sử phiếu xuất kho</h2>
-                        <p>Theo dõi các phiếu xuất sử dụng nội bộ và xuất hủy tại chi nhánh.</p>
-                    </div>
-                    <div class="date-filters">
-                        <div class="field">
-                            <label for="issueFilterType">Loại phiếu</label>
-                            <select id="issueFilterType">
-                                <option value="">Tất cả loại xuất</option>
-                                <option value="INTERNAL_USE">Xuất nội bộ</option>
-                                <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
-                            </select>
+                        <div class="table-viewport-wrapper">
+                            <table class="cv-table">
+                                <thead>
+                                <tr>
+                                    <th style="width:130px;">Mã phiếu <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Ngày xuất <span class="col-resizer"></span></th>
+                                    <th style="width:150px;">Loại xuất <span class="col-resizer"></span></th>
+                                    <th style="width:160px;">Người lập phiếu <span class="col-resizer"></span></th>
+                                    <th style="width:110px;">Tổng SL <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Giá trị vốn <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Chữ ký <span class="col-resizer"></span></th>
+                                    <th style="width:180px;">Ghi chú <span class="col-resizer"></span></th>
+                                    <th style="width:220px;">Thao tác <span class="col-resizer"></span></th>
+                                </tr>
+                                </thead>
+                                <tbody id="issueHistoryTable">
+                                <tr><td colspan="9" class="empty">Chưa có dữ liệu phiếu xuất.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="field">
-                            <label for="issueFromDate">Từ ngày</label>
-                            <input id="issueFromDate" type="date">
-                        </div>
-                        <div class="field">
-                            <label for="issueToDate">Đến ngày</label>
-                            <input id="issueToDate" type="date">
-                        </div>
-                        <button type="button" class="button button-secondary" id="filterIssuesBtn">Lọc phiếu</button>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Mã phiếu</th>
-                            <th>Ngày xuất</th>
-                            <th>Loại xuất</th>
-                            <th>Người lập phiếu</th>
-                            <th>Tổng SL xuất</th>
-                            <th>Giá trị vốn</th>
-                            <th>Chữ ký</th>
-                            <th>Ghi chú</th>
-                            <th>Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody id="issueHistoryTable">
-                        <tr><td colspan="9" class="empty">Chưa có dữ liệu phiếu xuất.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination">
-                    <span id="issueHistoryPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="issueHistoryPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="issueHistoryNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                        <footer class="table-pagination-footer" style="margin-bottom:0;">
+                            <div class="text-secondary small">Lịch sử phiếu xuất kho</div>
+                            <div class="pagination-btn-group d-flex align-items-center">
+                                <button id="issueHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                                <span id="issueHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                                <button id="issueHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                            </div>
+                        </footer>
                     </div>
                 </div>
             </section>
@@ -514,110 +527,115 @@
                  TAB 5: ĐIỀU CHUYỂN GIỮA CHI NHÁNH
                  ========================================== -->
             <section id="transferPanel" class="panel" hidden>
-                <div class="panel-heading">
-                    <div>
-                        <h2>Điều chuyển vật tư giữa các chi nhánh</h2>
-                        <p>Trừ tồn kho tại chi nhánh nguồn và cộng đồng thời vào chi nhánh đích (giữ nguyên thông tin số lô, hạn dùng và giá vốn).</p>
-                    </div>
-                </div>
-                <form id="transferForm">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label for="destinationBranchId">Chi nhánh đích nhận hàng <span class="required">*</span></label>
-                            <select id="destinationBranchId" required>
-                                <option value="">-- Chọn chi nhánh đích --</option>
-                            </select>
+                <div class="form-tab-scroll-container">
+                    <div class="form-box-card">
+                        <div class="panel-heading mb-3">
+                            <div>
+                                <h2>Điều chuyển vật tư giữa các chi nhánh</h2>
+                                <p>Trừ tồn kho chi nhánh nguồn và cộng đồng thời vào chi nhánh đích (giữ nguyên số lô, hạn dùng và giá vốn).</p>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="transferDate">Ngày điều chuyển <span class="required">*</span></label>
-                            <input id="transferDate" type="date" required>
-                        </div>
-                        <div class="field full-width">
-                            <label for="transferNotes">Lý do / Ghi chú điều chuyển</label>
-                            <textarea id="transferNotes" rows="2" maxlength="255" placeholder="VD: Hỗ trợ vật tư chỉnh nha cho cơ sở 2..."></textarea>
-                        </div>
-                    </div>
-                    <div class="receipt-items-heading">
-                        <h3>Vật tư điều chuyển</h3>
-                        <button type="button" id="addTransferItem" class="button button-secondary">+ Thêm dòng điều chuyển</button>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="receipt-table">
-                            <thead>
-                            <tr>
-                                <th style="min-width:250px">Vật tư <span class="required">*</span></th>
-                                <th style="min-width:250px">Lô điều chuyển (Tự động FEFO hoặc chọn lô)</th>
-                                <th style="min-width:105px">Tồn khả dụng</th>
-                                <th style="min-width:115px">SL chuyển <span class="required">*</span></th>
-                                <th style="min-width:150px">Ghi chú dòng</th>
-                                <th style="width:44px"></th>
-                            </tr>
-                            </thead>
-                            <tbody id="transferItems"></tbody>
-                        </table>
+                        <form id="transferForm">
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="destinationBranchId">Chi nhánh đích nhận hàng <span class="required">*</span></label>
+                                    <select id="destinationBranchId" required>
+                                        <option value="">-- Chọn chi nhánh đích --</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="transferDate">Ngày điều chuyển <span class="required">*</span></label>
+                                    <input id="transferDate" type="date" required>
+                                </div>
+                                <div class="field full-width">
+                                    <label for="transferNotes">Lý do / Ghi chú điều chuyển</label>
+                                    <textarea id="transferNotes" rows="2" maxlength="255" placeholder="VD: Hỗ trợ vật tư chỉnh nha cho cơ sở 2..."></textarea>
+                                </div>
+                            </div>
+                            <div class="receipt-items-heading">
+                                <h3 class="fs-6 fw-bold text-dark mb-0">Vật tư điều chuyển</h3>
+                                <button type="button" id="addTransferItem" class="btn-secondary-custom button-sm">+ Thêm dòng điều chuyển</button>
+                            </div>
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
+                                <table class="receipt-table cv-table">
+                                    <thead>
+                                    <tr>
+                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
+                                        <th style="min-width:240px">Lô điều chuyển (FEFO hoặc chọn lô)</th>
+                                        <th style="min-width:105px">Tồn khả dụng</th>
+                                        <th style="min-width:115px">SL chuyển <span class="required">*</span></th>
+                                        <th style="min-width:150px">Ghi chú dòng</th>
+                                        <th style="width:40px"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="transferItems"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="signature-inline-bar mb-3">
+                                <input type="hidden" id="transferSignatureData">
+                                <button type="button" id="openTransferSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu điều chuyển</button>
+                                <span id="transferSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký</span>
+                                <img id="transferSignPreview" class="signature-preview-thumb" alt="Chữ ký điều chuyển" hidden>
+                                <button type="button" id="clearTransferSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
+                            </div>
+
+                            <div class="receipt-footer">
+                                <div class="form-hint">Chỉ các lô còn hạn sử dụng mới được phép điều chuyển sang chi nhánh khác.</div>
+                                <div class="form-action-group">
+                                    <button type="button" id="resetTransferBtn" class="btn-secondary-custom">Đặt lại phiếu</button>
+                                    <button type="submit" id="submitTransfer" class="btn-primary-custom">Xác nhận điều chuyển</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
-                    <div class="signature-inline-bar">
-                        <input type="hidden" id="transferSignatureData">
-                        <button type="button" id="openTransferSignBtn" class="button button-secondary">Ký điện tử người lập phiếu điều chuyển</button>
-                        <span id="transferSignStatus" style="font-size:13px; color:#64748b;">Chưa ký</span>
-                        <img id="transferSignPreview" class="signature-preview-thumb" alt="Chữ ký điều chuyển" hidden>
-                        <button type="button" id="clearTransferSignBtn" class="button button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
-                    </div>
-
-                    <div class="receipt-footer">
-                        <div class="form-hint">Lưu ý: Chỉ các lô còn hạn sử dụng mới được phép điều chuyển sang chi nhánh khác.</div>
-                        <div class="form-action-group">
-                            <button type="button" id="resetTransferBtn" class="button button-secondary">Đặt lại phiếu</button>
-                            <button type="submit" id="submitTransfer" class="button button-primary">Xác nhận điều chuyển</button>
+                    <div class="history-box-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Lịch sử phiếu điều chuyển (Chuyển đi &amp; Nhận về)</h2>
+                                <p>Hiển thị toàn bộ giao dịch điều chuyển có liên quan đến chi nhánh hiện tại.</p>
+                            </div>
+                            <div class="date-filters">
+                                <div class="field">
+                                    <label for="transferFromDate">Từ:</label>
+                                    <input id="transferFromDate" type="date">
+                                </div>
+                                <div class="field">
+                                    <label for="transferToDate">Đến:</label>
+                                    <input id="transferToDate" type="date">
+                                </div>
+                                <button type="button" class="btn-primary-custom button-sm" id="filterTransfersBtn">Lọc phiếu</button>
+                            </div>
                         </div>
-                    </div>
-                </form>
-
-                <hr class="section-divider">
-
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lịch sử phiếu điều chuyển (Chuyển đi &amp; Nhận về)</h2>
-                        <p>Hiển thị toàn bộ giao dịch điều chuyển có liên quan đến chi nhánh hiện tại.</p>
-                    </div>
-                    <div class="date-filters">
-                        <div class="field">
-                            <label for="transferFromDate">Từ ngày</label>
-                            <input id="transferFromDate" type="date">
+                        <div class="table-viewport-wrapper">
+                            <table class="cv-table">
+                                <thead>
+                                <tr>
+                                    <th style="width:130px;">Mã phiếu <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Ngày chuyển <span class="col-resizer"></span></th>
+                                    <th style="width:160px;">Chi nhánh nguồn <span class="col-resizer"></span></th>
+                                    <th style="width:160px;">Chi nhánh đích <span class="col-resizer"></span></th>
+                                    <th style="width:110px;">Hướng <span class="col-resizer"></span></th>
+                                    <th style="width:140px;">Người lập <span class="col-resizer"></span></th>
+                                    <th style="width:100px;">Tổng SL <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Giá trị vốn <span class="col-resizer"></span></th>
+                                    <th style="width:220px;">Thao tác <span class="col-resizer"></span></th>
+                                </tr>
+                                </thead>
+                                <tbody id="transferHistoryTable">
+                                <tr><td colspan="9" class="empty">Chưa có dữ liệu điều chuyển.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="field">
-                            <label for="transferToDate">Đến ngày</label>
-                            <input id="transferToDate" type="date">
-                        </div>
-                        <button type="button" class="button button-secondary" id="filterTransfersBtn">Lọc phiếu</button>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Mã phiếu</th>
-                            <th>Ngày chuyển</th>
-                            <th>Chi nhánh nguồn</th>
-                            <th>Chi nhánh đích</th>
-                            <th>Hướng</th>
-                            <th>Người thực hiện</th>
-                            <th>Tổng SL</th>
-                            <th>Giá trị vốn</th>
-                            <th>Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody id="transferHistoryTable">
-                        <tr><td colspan="9" class="empty">Chưa có dữ liệu điều chuyển.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination">
-                    <span id="transferHistoryPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="transferHistoryPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="transferHistoryNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                        <footer class="table-pagination-footer" style="margin-bottom:0;">
+                            <div class="text-secondary small">Lịch sử điều chuyển kho</div>
+                            <div class="pagination-btn-group d-flex align-items-center">
+                                <button id="transferHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                                <span id="transferHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                                <button id="transferHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                            </div>
+                        </footer>
                     </div>
                 </div>
             </section>
@@ -629,37 +647,37 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Danh mục vật tư nha khoa</h2>
-                        <p>Quản lý mã, tên, nhóm vật tư, đơn vị tính và ngưỡng cảnh báo tồn tối thiểu áp dụng toàn hệ thống.</p>
+                        <p>Quản lý mã, tên, nhóm vật tư, đơn vị tính và ngưỡng cảnh báo tồn tối thiểu.</p>
                     </div>
                     <div class="date-filters">
                         <div class="field">
-                            <label for="matCategoryFilter">Nhóm vật tư</label>
-                            <select id="matCategoryFilter">
+                            <label for="matCategoryFilter">Nhóm:</label>
+                            <select id="matCategoryFilter" class="form-select form-select-sm">
                                 <option value="">Tất cả nhóm</option>
                             </select>
                         </div>
                         <div class="field">
-                            <label for="matActiveFilter">Trạng thái</label>
-                            <select id="matActiveFilter">
+                            <label for="matActiveFilter">Trạng thái:</label>
+                            <select id="matActiveFilter" class="form-select form-select-sm">
                                 <option value="">Tất cả</option>
                                 <option value="true">Đang sử dụng</option>
                                 <option value="false">Ngừng sử dụng</option>
                             </select>
                         </div>
-                        <button type="button" class="button button-primary" id="openAddMaterialBtn">+ Thêm vật tư mới</button>
+                        <button type="button" class="btn-primary-custom" id="openAddMaterialBtn">+ Thêm vật tư mới</button>
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table>
+                <div class="table-viewport-wrapper">
+                    <table class="cv-table">
                         <thead>
                         <tr>
-                            <th>Mã vật tư</th>
-                            <th>Tên vật tư</th>
-                            <th>Nhóm vật tư</th>
-                            <th>Đơn vị tính</th>
-                            <th>Ngưỡng tối thiểu</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
+                            <th style="width:140px;">Mã vật tư <span class="col-resizer"></span></th>
+                            <th style="width:260px;">Tên vật tư <span class="col-resizer"></span></th>
+                            <th style="width:180px;">Nhóm vật tư <span class="col-resizer"></span></th>
+                            <th style="width:110px;">Đơn vị tính <span class="col-resizer"></span></th>
+                            <th style="width:140px;">Ngưỡng tối thiểu <span class="col-resizer"></span></th>
+                            <th style="width:140px;">Trạng thái <span class="col-resizer"></span></th>
+                            <th style="width:160px;">Thao tác <span class="col-resizer"></span></th>
                         </tr>
                         </thead>
                         <tbody id="materialsTable">
@@ -667,13 +685,14 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
-                    <span id="materialsPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="materialsPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="materialsNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                <footer class="table-pagination-footer" id="materialsPaginationFooter">
+                    <div class="text-secondary small">Danh mục vật tư áp dụng toàn hệ thống</div>
+                    <div class="pagination-btn-group d-flex align-items-center">
+                        <button id="materialsPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                        <span id="materialsPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                        <button id="materialsNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
                     </div>
-                </div>
+                </footer>
             </section>
 
             <!-- ==========================================
@@ -683,19 +702,19 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Danh mục nhóm vật tư</h2>
-                        <p>Thống kê số lượng vật tư theo từng nhóm chuyên môn và chuẩn hóa tên nhóm vật tư.</p>
+                        <p>Thống kê số lượng vật tư theo từng nhóm chuyên môn phòng khám.</p>
                     </div>
-                    <button type="button" class="button button-primary" id="addMaterialFromCategoryBtn">+ Thêm vật tư vào nhóm</button>
+                    <button type="button" class="btn-primary-custom" id="addMaterialFromCategoryBtn">+ Thêm vật tư vào nhóm</button>
                 </div>
-                <div class="table-wrap">
-                    <table>
+                <div class="table-viewport-wrapper">
+                    <table class="cv-table">
                         <thead>
                         <tr>
-                            <th>STT</th>
-                            <th>Tên nhóm vật tư</th>
-                            <th>Tổng số vật tư</th>
-                            <th>Đang hoạt động</th>
-                            <th>Thao tác</th>
+                            <th style="width:80px;">STT <span class="col-resizer"></span></th>
+                            <th style="width:300px;">Tên nhóm vật tư <span class="col-resizer"></span></th>
+                            <th style="width:160px;">Tổng số vật tư <span class="col-resizer"></span></th>
+                            <th style="width:160px;">Đang hoạt động <span class="col-resizer"></span></th>
+                            <th style="width:180px;">Thao tác <span class="col-resizer"></span></th>
                         </tr>
                         </thead>
                         <tbody id="categoriesTable">
@@ -709,93 +728,121 @@
                  TAB 8: NHÀ CUNG CẤP & THANH TOÁN CÔNG NỢ
                  ========================================== -->
             <section id="supplierPaymentsPanel" class="panel" hidden>
-                <div class="panel-heading">
-                    <div>
-                        <h2>Công nợ &amp; Thanh toán Nhà cung cấp</h2>
-                        <p>Theo dõi tổng tiền nhập hàng, số tiền đã thanh toán và dư nợ còn lại của từng nhà cung cấp tại chi nhánh.</p>
+                <div class="form-tab-scroll-container">
+                    <div class="history-box-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Công nợ &amp; Thanh toán Nhà cung cấp</h2>
+                                <p>Theo dõi tổng tiền nhập hàng, số tiền đã thanh toán và dư nợ còn lại của từng NCC tại chi nhánh.</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn-secondary-custom" id="openQuickSupplierBtn">+ Thêm NCC mới</button>
+                                <button type="button" class="btn-primary-custom" id="openPaymentModalBtn">+ Lập phiếu thanh toán</button>
+                            </div>
+                        </div>
+                        <div class="table-viewport-wrapper">
+                            <table class="cv-table">
+                                <thead>
+                                <tr>
+                                    <th style="width:120px;">Mã NCC <span class="col-resizer"></span></th>
+                                    <th style="width:200px;">Tên nhà cung cấp <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Mã số thuế <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Điện thoại <span class="col-resizer"></span></th>
+                                    <th style="width:110px;">Số phiếu <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Tổng tiền <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Đã trả <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Còn nợ <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Trạng thái <span class="col-resizer"></span></th>
+                                    <th style="width:140px;">Thao tác <span class="col-resizer"></span></th>
+                                </tr>
+                                </thead>
+                                <tbody id="supplierDebtTable">
+                                <tr><td colspan="10" class="empty">Đang tải dữ liệu công nợ nhà cung cấp...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="heading-actions">
-                        <button type="button" class="button button-secondary" id="openQuickSupplierBtn">+ Thêm NCC mới</button>
-                        <button type="button" class="button button-primary" id="openPaymentModalBtn">+ Lập phiếu thanh toán NCC</button>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Mã NCC</th>
-                            <th>Tên nhà cung cấp</th>
-                            <th>Mã số thuế</th>
-                            <th>Số điện thoại</th>
-                            <th>Số phiếu nhập</th>
-                            <th>Tổng tiền nhập</th>
-                            <th>Đã thanh toán</th>
-                            <th>Còn nợ</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody id="supplierDebtTable">
-                        <tr><td colspan="10" class="empty">Đang tải dữ liệu công nợ nhà cung cấp...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
 
-                <hr class="section-divider">
-
-                <div class="panel-heading">
-                    <div>
-                        <h2>Lịch sử thanh toán Nhà cung cấp</h2>
-                        <p>Danh sách các phiếu chi thanh toán công nợ nhà cung cấp tại chi nhánh.</p>
-                    </div>
-                    <div class="date-filters">
-                        <div class="field">
-                            <label for="paymentFilterSupplier">Nhà cung cấp</label>
-                            <select id="paymentFilterSupplier">
-                                <option value="">Tất cả NCC</option>
-                            </select>
+                    <div class="history-box-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Lịch sử thanh toán Nhà cung cấp</h2>
+                                <p>Danh sách các phiếu chi thanh toán công nợ tại chi nhánh.</p>
+                            </div>
+                            <div class="date-filters">
+                                <div class="field">
+                                    <label for="paymentFilterSupplier">NCC:</label>
+                                    <select id="paymentFilterSupplier" class="form-select form-select-sm">
+                                        <option value="">Tất cả NCC</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="paymentFromDate">Từ:</label>
+                                    <input id="paymentFromDate" type="date">
+                                </div>
+                                <div class="field">
+                                    <label for="paymentToDate">Đến:</label>
+                                    <input id="paymentToDate" type="date">
+                                </div>
+                                <button type="button" class="btn-primary-custom button-sm" id="filterPaymentsBtn">Lọc lịch sử</button>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="paymentFromDate">Từ ngày</label>
-                            <input id="paymentFromDate" type="date">
+                        <div class="table-viewport-wrapper">
+                            <table class="cv-table">
+                                <thead>
+                                <tr>
+                                    <th style="width:130px;">Mã phiếu chi <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Ngày chi <span class="col-resizer"></span></th>
+                                    <th style="width:180px;">Nhà cung cấp <span class="col-resizer"></span></th>
+                                    <th style="width:140px;">Phiếu nhập <span class="col-resizer"></span></th>
+                                    <th style="width:120px;">Hình thức <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Số tiền <span class="col-resizer"></span></th>
+                                    <th style="width:130px;">Số UNC <span class="col-resizer"></span></th>
+                                    <th style="width:140px;">Người lập <span class="col-resizer"></span></th>
+                                    <th style="width:160px;">Ghi chú <span class="col-resizer"></span></th>
+                                </tr>
+                                </thead>
+                                <tbody id="supplierPaymentHistoryTable">
+                                <tr><td colspan="9" class="empty">Chưa có lịch sử thanh toán.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="field">
-                            <label for="paymentToDate">Đến ngày</label>
-                            <input id="paymentToDate" type="date">
-                        </div>
-                        <button type="button" class="button button-secondary" id="filterPaymentsBtn">Lọc lịch sử</button>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Mã phiếu chi</th>
-                            <th>Ngày thanh toán</th>
-                            <th>Nhà cung cấp</th>
-                            <th>Phiếu nhập đối ứng</th>
-                            <th>Hình thức</th>
-                            <th>Số tiền</th>
-                            <th>Số chứng từ / UNC</th>
-                            <th>Người lập</th>
-                            <th>Ghi chú</th>
-                        </tr>
-                        </thead>
-                        <tbody id="supplierPaymentHistoryTable">
-                        <tr><td colspan="9" class="empty">Chưa có lịch sử thanh toán.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination">
-                    <span id="paymentHistoryPage">Trang 0 / 0</span>
-                    <div>
-                        <button id="paymentHistoryPrev" class="button button-secondary" type="button" disabled>← Trước</button>
-                        <button id="paymentHistoryNext" class="button button-secondary" type="button" disabled>Sau →</button>
+                        <footer class="table-pagination-footer" style="margin-bottom:0;">
+                            <div class="text-secondary small">Lịch sử thanh toán NCC</div>
+                            <div class="pagination-btn-group d-flex align-items-center">
+                                <button id="paymentHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
+                                <span id="paymentHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
+                                <button id="paymentHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                            </div>
+                        </footer>
                     </div>
                 </div>
             </section>
         </main>
 
+    </div>
+</div>
+
+<!-- 4. RIGHT OFFCANVAS DRAWER: TÙY CHỈNH CỘT KHO -->
+<div class="column-drawer-overlay" id="invDrawerOverlay" onclick="closeInvColumnDrawer()"></div>
+<div class="column-drawer" id="invColumnDrawer">
+    <div class="drawer-header">
+        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-sliders text-primary me-2"></i>Tùy chỉnh cột hiển thị (Tồn kho)</h6>
+        <button type="button" class="btn-close" onclick="closeInvColumnDrawer()"></button>
+    </div>
+    <div class="p-3 border-bottom bg-light">
+        <input type="text" id="drawerSearchInvCol" class="form-control form-control-sm" placeholder="Tìm tên cột..." oninput="filterInvDrawerColumns()">
+    </div>
+    <div class="drawer-body" id="drawerInvColsList">
+        <!-- Render danh sách cột bằng JavaScript -->
+    </div>
+    <div class="drawer-footer">
+        <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0" onclick="resetInvDefaultColumns()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Lấy lại mặc định
+        </button>
+        <button type="button" class="btn btn-sm btn-primary px-3 fw-bold rounded-pill" onclick="closeInvColumnDrawer()">
+            Đóng
+        </button>
     </div>
 </div>
 
@@ -844,8 +891,8 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button type="button" class="button button-secondary" id="cancelMaterialModalBtn">Hủy</button>
-                <button type="submit" class="button button-primary" id="saveMaterialBtn">Lưu vật tư</button>
+                <button type="button" class="btn-secondary-custom" id="cancelMaterialModalBtn">Hủy</button>
+                <button type="submit" class="btn-primary-custom" id="saveMaterialBtn">Lưu vật tư</button>
             </div>
         </form>
     </div>
@@ -901,20 +948,20 @@
                 </div>
                 <div class="field">
                     <label for="payAmount">Số tiền thanh toán (VNĐ) <span class="required">*</span></label>
-                    <input id="payAmount" type="number" min="1" step="1" inputmode="numeric" required placeholder="Nhập số tiền (hỗ trợ trả từng phần)...">
+                    <input id="payAmount" type="number" min="1" step="1" inputmode="numeric" required placeholder="Nhập số tiền...">
                 </div>
                 <div class="field">
                     <label for="payRefNo">Số chứng từ / Mã giao dịch</label>
-                    <input id="payRefNo" maxlength="100" pattern="[A-Za-z0-9._/-]{1,100}" title="Chỉ gồm chữ, số, dấu chấm (.), gạch dưới (_), gạch chéo (/) hoặc gạch ngang (-), tối đa 100 ký tự" placeholder="VD: UNC-20261023-01">
+                    <input id="payRefNo" maxlength="100" pattern="[A-Za-z0-9._/-]{1,100}" title="Chỉ gồm chữ, số, dấu chấm (.), gạch dưới (_), gạch chéo (/) hoặc gạch ngang (-)" placeholder="VD: UNC-20261023-01">
                 </div>
                 <div class="field full-width">
                     <label for="payNotes">Ghi chú thanh toán</label>
-                    <textarea id="payNotes" rows="2" maxlength="255" placeholder="Nội dung thanh toán công nợ (trả đợt 1, đợt 2, tất toán...)..."></textarea>
+                    <textarea id="payNotes" rows="2" maxlength="255" placeholder="Nội dung thanh toán công nợ..."></textarea>
                 </div>
             </div>
             <div class="modal-actions">
-                <button type="button" class="button button-secondary" id="cancelPaymentModalBtn">Hủy</button>
-                <button type="submit" class="button button-primary" id="savePaymentBtn">Xác nhận thanh toán</button>
+                <button type="button" class="btn-secondary-custom" id="cancelPaymentModalBtn">Hủy</button>
+                <button type="submit" class="btn-primary-custom" id="savePaymentBtn">Xác nhận thanh toán</button>
             </div>
         </form>
     </div>
@@ -942,11 +989,11 @@
                 </div>
                 <div class="field">
                     <label for="qsTaxCode">Mã số thuế</label>
-                    <input id="qsTaxCode" maxlength="20" pattern="[0-9]{10}(-[0-9]{3})?" title="Mã số thuế gồm 10 chữ số hoặc 10 chữ số kèm -XXX (VD: 0101234567 hoặc 0101234567-001)" placeholder="VD: 0101234567">
+                    <input id="qsTaxCode" maxlength="20" pattern="[0-9]{10}(-[0-9]{3})?" placeholder="VD: 0101234567">
                 </div>
                 <div class="field">
                     <label for="qsPhone">Số điện thoại</label>
-                    <input id="qsPhone" maxlength="20" pattern="0[0-9]{9,10}" title="Số điện thoại bắt đầu bằng số 0 và gồm 10 hoặc 11 chữ số" placeholder="VD: 0901234567">
+                    <input id="qsPhone" maxlength="20" pattern="0[0-9]{9,10}" placeholder="VD: 0901234567">
                 </div>
                 <div class="field full-width">
                     <label for="qsAddress">Địa chỉ</label>
@@ -954,8 +1001,8 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button type="button" class="button button-secondary" id="cancelQuickSupplierBtn">Hủy</button>
-                <button type="submit" class="button button-primary" id="saveQuickSupplierBtn">Lưu nhà cung cấp</button>
+                <button type="button" class="btn-secondary-custom" id="cancelQuickSupplierBtn">Hủy</button>
+                <button type="submit" class="btn-primary-custom" id="saveQuickSupplierBtn">Lưu nhà cung cấp</button>
             </div>
         </form>
     </div>
@@ -972,7 +1019,7 @@
         </div>
         <div id="detailModalBody" class="detail-modal-body"></div>
         <div class="modal-actions" id="detailModalActions">
-            <button type="button" class="button button-secondary" id="closeDetailModalFooterBtn">Đóng</button>
+            <button type="button" class="btn-secondary-custom" id="closeDetailModalFooterBtn">Đóng</button>
         </div>
     </div>
 </div>
@@ -987,18 +1034,18 @@
             <button type="button" class="close-btn" id="closeSignatureModalBtn">×</button>
         </div>
         <div>
-            <p id="signatureModalDesc" style="font-size:13px; color:#475569; margin-bottom:8px;">
+            <p id="signatureModalDesc" style="font-size:12.5px; color:#475569; margin-bottom:8px;">
                 Vui lòng vẽ chữ ký bằng chuột, màn hình cảm ứng hoặc bút cảm ứng vào khung bên dưới. Họ tên người ký được ghi nhận tự động theo tài khoản đang đăng nhập.
             </p>
             <div class="signature-pad-container">
-                <canvas id="signatureCanvas" width="540" height="210"></canvas>
+                <canvas id="signatureCanvas" width="520" height="200"></canvas>
             </div>
         </div>
         <div class="modal-actions" style="justify-content:space-between;">
-            <button type="button" class="button button-secondary" id="clearSignatureCanvasBtn">Xóa ký lại</button>
+            <button type="button" class="btn-secondary-custom" id="clearSignatureCanvasBtn">Xóa ký lại</button>
             <div style="display:flex; gap:8px;">
-                <button type="button" class="button button-secondary" id="cancelSignatureModalBtn">Hủy</button>
-                <button type="button" class="button button-primary" id="confirmSignatureBtn">Xác nhận chữ ký</button>
+                <button type="button" class="btn-secondary-custom" id="cancelSignatureModalBtn">Hủy</button>
+                <button type="button" class="btn-primary-custom" id="confirmSignatureBtn">Xác nhận chữ ký</button>
             </div>
         </div>
     </div>
@@ -1017,8 +1064,8 @@
             <img id="lightboxImage" class="lightbox-img" src="" alt="Ảnh phóng to">
         </div>
         <div class="modal-actions">
-            <a id="lightboxDownloadLink" href="#" target="_blank" rel="noopener" class="button button-secondary">Mở tab gốc / Tải về</a>
-            <button type="button" class="button button-primary" id="closeLightboxFooterBtn">Đóng</button>
+            <a id="lightboxDownloadLink" href="#" target="_blank" rel="noopener" class="btn-secondary-custom">Mở tab gốc / Tải về</a>
+            <button type="button" class="btn-primary-custom" id="closeLightboxFooterBtn">Đóng</button>
         </div>
     </div>
 </div>
