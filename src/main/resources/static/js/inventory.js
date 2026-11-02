@@ -401,10 +401,178 @@
     // 1. TAB TỒN KHO
     // =========================================================================
 
+    // =========================================================================
+    // CẤU HÌNH CỘT BẢNG TỒN KHO & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
+    // =========================================================================
+    const INV_COLUMNS_KEY = "cvdcms_inv_table_columns_v2";
+    const DEFAULT_INV_COLUMNS = [
+        { id: "code", title: "Mã vật tư", width: 140, visible: true, required: true },
+        { id: "name", title: "Tên vật tư", width: 260, visible: true, required: true },
+        { id: "category", title: "Nhóm vật tư", width: 180, visible: true },
+        { id: "unit", title: "Đơn vị", width: 100, visible: true },
+        { id: "stock", title: "Tồn hiện tại", width: 130, visible: true },
+        { id: "minThreshold", title: "Ngưỡng tối thiểu", width: 140, visible: true },
+        { id: "updated", title: "Cập nhật gần nhất", width: 180, visible: true },
+        { id: "status", title: "Trạng thái", width: 150, visible: true }
+    ];
+
+    let invColumns = loadInvColumns();
+
+    function loadInvColumns() {
+        try {
+            const raw = localStorage.getItem(INV_COLUMNS_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length === DEFAULT_INV_COLUMNS.length) {
+                    return parsed;
+                }
+            }
+        } catch (e) {}
+        return JSON.parse(JSON.stringify(DEFAULT_INV_COLUMNS));
+    }
+
+    function saveInvColumns() {
+        try {
+            localStorage.setItem(INV_COLUMNS_KEY, JSON.stringify(invColumns));
+        } catch (e) {}
+    }
+
+    function renderInvTableHeader() {
+        const theadTr = $("inventoryHeaderRow");
+        if (!theadTr) return;
+        theadTr.innerHTML = "";
+
+        invColumns.forEach((col, idx) => {
+            if (!col.visible) return;
+            const th = document.createElement("th");
+            th.style.width = col.width + "px";
+            th.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
+                </div>
+                <span class="col-resizer" data-col-index="${idx}"></span>
+            `;
+            theadTr.appendChild(th);
+        });
+
+        setupInvColResizers();
+    }
+
+    function setupInvColResizers() {
+        const resizers = document.querySelectorAll("#inventoryHeaderRow .col-resizer");
+        resizers.forEach(resizer => {
+            resizer.addEventListener("mousedown", function(e) {
+                e.preventDefault();
+                const colIdx = parseInt(this.getAttribute("data-col-index"), 10);
+                const col = invColumns[colIdx];
+                const startX = e.pageX;
+                const startWidth = col.width;
+                this.classList.add("is-resizing");
+
+                function onMouseMove(moveEvent) {
+                    const diff = moveEvent.pageX - startX;
+                    let newWidth = startWidth + diff;
+                    if (newWidth < 70) newWidth = 70;
+                    if (newWidth > 400) newWidth = 400;
+                    col.width = newWidth;
+                    const th = document.querySelectorAll("#inventoryHeaderRow th")[colIdx];
+                    if (th) th.style.width = newWidth + "px";
+                }
+
+                function onMouseUp() {
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                    resizer.classList.remove("is-resizing");
+                    saveInvColumns();
+                    loadInventory(state.inventoryPage);
+                }
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            });
+        });
+    }
+
+    window.openInvColumnDrawer = function() {
+        renderInvDrawerColumns();
+        if ($("invDrawerOverlay")) $("invDrawerOverlay").style.display = "block";
+        if ($("invColumnDrawer")) $("invColumnDrawer").classList.add("show");
+    };
+
+    window.closeInvColumnDrawer = function() {
+        if ($("invDrawerOverlay")) $("invDrawerOverlay").style.display = "none";
+        if ($("invColumnDrawer")) $("invColumnDrawer").classList.remove("show");
+    };
+
+    window.filterInvDrawerColumns = function() {
+        const kw = ($("drawerSearchInvCol")?.value || "").toLowerCase().trim();
+        const items = document.querySelectorAll("#drawerInvColsList .drawer-item");
+        items.forEach(it => {
+            const txt = it.innerText.toLowerCase();
+            it.style.display = txt.includes(kw) ? "flex" : "none";
+        });
+    };
+
+    window.resetInvDefaultColumns = function() {
+        invColumns = JSON.parse(JSON.stringify(DEFAULT_INV_COLUMNS));
+        saveInvColumns();
+        renderInvTableHeader();
+        renderInvDrawerColumns();
+        loadInventory(state.inventoryPage);
+    };
+
+    function renderInvDrawerColumns() {
+        const list = $("drawerInvColsList");
+        if (!list) return;
+        list.innerHTML = "";
+
+        invColumns.forEach((col, idx) => {
+            const item = document.createElement("div");
+            item.className = "drawer-item";
+            item.draggable = true;
+            item.innerHTML = `
+                <i class="bi bi-grip-vertical text-muted fs-6"></i>
+                <input type="checkbox" class="form-check-input mt-0 me-2" ${col.visible ? "checked" : ""} ${col.required ? "disabled" : ""}>
+                <span class="small fw-bold text-dark flex-grow-1">${col.title} ${col.required ? '<span class="text-danger">*</span>' : ""}</span>
+            `;
+
+            const chk = item.querySelector("input[type=checkbox]");
+            chk.addEventListener("change", (e) => {
+                col.visible = e.target.checked;
+                saveInvColumns();
+                renderInvTableHeader();
+                loadInventory(state.inventoryPage);
+            });
+
+            item.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/plain", idx));
+            item.addEventListener("dragover", (e) => e.preventDefault());
+            item.addEventListener("drop", (e) => {
+                e.preventDefault();
+                const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                const toIdx = idx;
+                const moved = invColumns.splice(fromIdx, 1)[0];
+                invColumns.splice(toIdx, 0, moved);
+                saveInvColumns();
+                renderInvTableHeader();
+                renderInvDrawerColumns();
+                loadInventory(state.inventoryPage);
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    window.onInvPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadInventory(0);
+    };
+
     async function loadInventory(page = state.inventoryPage) {
         if (!requireBranch()) return;
         state.inventoryPage = page;
-        $("inventoryTable").innerHTML = '<tr><td colspan="8" class="empty">Đang tải dữ liệu...</td></tr>';
+        renderInvTableHeader();
+        const visibleCols = invColumns.filter(c => c.visible);
+        $("inventoryTable").innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Đang tải dữ liệu...</td></tr>`;
         const params = new URLSearchParams({
             branchId: state.branchId,
             page,
@@ -420,6 +588,8 @@
             const data = await request(`/api/inventory?${params}`, { signal: getAbortSignal("inventory") });
             const rows = Array.isArray(data?.content) ? data.content : [];
             state.inventoryTotalPages = Number(data?.totalPages || 0);
+            const totalElements = Number(data?.totalElements || rows.length);
+
             $("inventoryTable").innerHTML = rows.length ? rows.map(item => {
                 const current = Number(item.currentStock ?? 0);
                 const threshold = Number(item.minStockThreshold ?? 0);
@@ -427,27 +597,47 @@
                 const low = current <= threshold;
                 const badgeClass = outOfStock ? "status-danger" : (low ? "status-warning" : "status-good");
                 const badgeLabel = outOfStock ? "Hết hàng (0)" : (low ? "Sắp hết" : "Đủ hàng");
-                return `<tr>
-                    <td class="code">${escapeHtml(item.materialCode)}</td>
-                    <td><strong>${escapeHtml(item.materialName)}</strong></td>
-                    <td>${escapeHtml(item.category)}</td>
-                    <td>${escapeHtml(item.unit)}</td>
-                    <td class="${low ? "stock-low" : "stock-good"}">${escapeHtml(fmtQty(item.currentStock))}</td>
-                    <td>${escapeHtml(fmtQty(item.minStockThreshold))}</td>
-                    <td>${escapeHtml(formatDateTime(item.lastUpdated))}</td>
-                    <td><span class="status ${badgeClass}">${badgeLabel}</span></td>
-                </tr>`;
-            }).join("") : '<tr><td colspan="8" class="empty">Không có dữ liệu tồn kho phù hợp.</td></tr>';
+
+                const cells = [];
+                visibleCols.forEach(col => {
+                    if (col.id === "code") {
+                        cells.push(`<td style="width:${col.width}px;"><span class="font-mono-code">${escapeHtml(item.materialCode)}</span></td>`);
+                    } else if (col.id === "name") {
+                        cells.push(`<td style="width:${col.width}px;"><span class="cell-ellipsis" title="${escapeHtml(item.materialName)}"><strong>${escapeHtml(item.materialName)}</strong></span></td>`);
+                    } else if (col.id === "category") {
+                        cells.push(`<td style="width:${col.width}px;"><span class="cell-ellipsis" title="${escapeHtml(item.category)}">${escapeHtml(item.category)}</span></td>`);
+                    } else if (col.id === "unit") {
+                        cells.push(`<td style="width:${col.width}px;">${escapeHtml(item.unit)}</td>`);
+                    } else if (col.id === "stock") {
+                        cells.push(`<td style="width:${col.width}px;" class="${low ? "stock-low" : "stock-good"} fw-bold">${escapeHtml(fmtQty(item.currentStock))}</td>`);
+                    } else if (col.id === "minThreshold") {
+                        cells.push(`<td style="width:${col.width}px;">${escapeHtml(fmtQty(item.minStockThreshold))}</td>`);
+                    } else if (col.id === "updated") {
+                        cells.push(`<td style="width:${col.width}px;"><small class="text-secondary">${escapeHtml(formatDateTime(item.lastUpdated))}</small></td>`);
+                    } else if (col.id === "status") {
+                        cells.push(`<td style="width:${col.width}px;"><span class="status ${badgeClass}">${badgeLabel}</span></td>`);
+                    }
+                });
+                return `<tr>${cells.join("")}</tr>`;
+            }).join("") : `<tr><td colspan="${visibleCols.length}" class="empty">Không có dữ liệu tồn kho phù hợp.</td></tr>`;
+
+            if ($("lblInventoryRange")) {
+                const start = totalElements > 0 ? (page * state.pageSize + 1) : 0;
+                const end = Math.min((page + 1) * state.pageSize, totalElements);
+                $("lblInventoryRange").textContent = totalElements > 0 ? `${start} - ${end}` : "0 - 0";
+            }
+            if ($("lblInventoryTotal")) $("lblInventoryTotal").textContent = totalElements;
+            if ($("inventoryPageSizeSelect")) $("inventoryPageSizeSelect").value = state.pageSize;
+
             $("inventoryPage").textContent = `Trang ${state.inventoryTotalPages ? page + 1 : 0} / ${state.inventoryTotalPages}`;
             $("inventoryPrev").disabled = page <= 0;
             $("inventoryNext").disabled = page + 1 >= state.inventoryTotalPages;
         } catch (error) {
             if (error.name === "AbortError") return;
-            $("inventoryTable").innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
+            $("inventoryTable").innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(error.message)}</td></tr>`;
             showMessage(error.message, "error");
         }
     }
-
     // =========================================================================
     // 2. TAB LÔ & HẠN SỬ DỤNG
     // =========================================================================
@@ -2288,8 +2478,8 @@
         $("transferHistoryNext").addEventListener("click", () => loadTransferHistory(state.transfersPage + 1));
         $("materialsPrev").addEventListener("click", () => loadMaterialsTable(Math.max(0, state.materialsPage - 1)));
         $("materialsNext").addEventListener("click", () => loadMaterialsTable(state.materialsPage + 1));
-        $("paymentHistoryPrev").addEventListener("click", () => loadPaymentHistory(Math.max(0, state.paymentsPage - 1)));
-        $("paymentHistoryNext").addEventListener("click", () => loadPaymentHistory(state.paymentsPage + 1));
+        if ($("paymentHistoryPrev")) $("paymentHistoryPrev").addEventListener("click", () => loadPaymentHistory(Math.max(0, state.paymentsPage - 1)));
+        if ($("paymentHistoryNext")) $("paymentHistoryNext").addEventListener("click", () => loadPaymentHistory(state.paymentsPage + 1));
 
         // Add row, Reset & Form submits
         $("addReceiptItem").addEventListener("click", addReceiptRow);
