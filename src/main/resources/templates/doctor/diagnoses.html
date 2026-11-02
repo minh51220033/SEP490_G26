@@ -152,7 +152,13 @@
                 <!-- HÀNG 1: BREADCRUMB & THANH TÌM KIẾM BỆNH NHÂN -->
                                 <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ (DEMO) THEO CHUẨN MẪU -->
                 <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-white">
-                    <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5">
+                    <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTE -->
+                <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2.5 mb-2 px-3 py-2.5" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+                    <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5">
                         <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
                         <span class="text-muted small">&gt;</span>
                         <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'DEMO0001'}">DEMO0001</span>
@@ -212,13 +218,14 @@
                             <span>Thêm bệnh nhân</span>
                         </button>
 
-                        <!-- 6. Dropdown Cơ sở: DEMO v (Phân theo cơ sở) -->
+                        <!-- 6. Dropdown Cơ sở -->
                         <div class="df-tb-branch-wrapper position-relative">
                             <select id="toolbarBranchSelect" class="df-tb-select fw-bold"
-                                    onchange="handleToolbarBranchChange(this.value)" title="Chọn cơ sở khám chữa bệnh (DEMO)">
+                                    onchange="handleToolbarBranchChange(this.value)"
+                                    th:title="${isDoctorRestricted ? 'Bác sĩ hiện chỉ được tác nghiệp tại ' + doctorAssignedBranchFullName : 'Chọn cơ sở khám chữa bệnh'}">
                                 <option th:each="b : ${branches}"
                                         th:value="${b.branchId}"
-                                        th:text="${b.branchCode != null and !b.branchCode.isEmpty() ? b.branchCode : b.branchName}"
+                                        th:text="${(b.branchCode != null and !b.branchCode.isEmpty() ? b.branchCode : b.branchName) + (doctorAssignedBranchId != null and b.branchId == doctorAssignedBranchId ? ' (Đang làm việc)' : (isDoctorRestricted ? ' (Khác CS)' : ''))}"
                                         th:selected="${b.branchId == selectedBranchId}">DEMO</option>
                             </select>
                         </div>
@@ -842,7 +849,30 @@
         // =========================================================================
     // DENTAL CLINIC TOOLBAR (DEMO BRANCH & DATE & DISPLAY RATIO)
     // =========================================================================
+    const isDoctorRestricted = /*[[${isDoctorRestricted}]]*/ false;
+    const doctorAssignedBranchId = /*[[${doctorAssignedBranchId}]]*/ null;
+    const doctorAssignedBranchFullName = /*[[${doctorAssignedBranchFullName}]]*/ '';
+
+    function showBranchWarningModal(targetBranchName) {
+        const modalEl = document.getElementById('branchWarningModal');
+        const targetEl = document.getElementById('warningTargetBranchText');
+        if (targetEl) {
+            targetEl.textContent = targetBranchName
+                ? `Thao tác trên "${targetBranchName}" đã bị chặn. Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc!`
+                : 'Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc!';
+        }
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+        } else {
+            alert(`⚠️ CẢNH BÁO QUYỀN TRUY CẬP:\nBác sĩ hiện đang làm việc tại: ${doctorAssignedBranchFullName || 'Cơ sở hiện tại'}.\nBạn chỉ có quyền tác nghiệp tại cơ sở này! Thao tác trên cơ sở khác đã bị chặn.`);
+        }
+    }
+
     function getSelectedBranchId() {
+        if (isDoctorRestricted && doctorAssignedBranchId) {
+            return String(doctorAssignedBranchId);
+        }
         const sel = document.getElementById('toolbarBranchSelect');
         if (sel && sel.value) return sel.value;
         const stored = localStorage.getItem('doctorSelectedBranchId');
@@ -855,8 +885,15 @@
 
     function handleToolbarBranchChange(branchId) {
         if (!branchId) return;
+        if (isDoctorRestricted && doctorAssignedBranchId && branchId != doctorAssignedBranchId) {
+            const sel = document.getElementById('toolbarBranchSelect');
+            const targetText = sel ? sel.options[sel.selectedIndex]?.text : 'cơ sở khác';
+            showBranchWarningModal(targetText);
+            if (sel) sel.value = doctorAssignedBranchId;
+            return;
+        }
         localStorage.setItem('doctorSelectedBranchId', branchId);
-        window.location.href = /doctor/examination?branchId= + branchId;
+        window.location.href = '/doctor/examination?branchId=' + branchId;
     }
 
     function triggerDatePick() {
@@ -1267,7 +1304,7 @@
             const ageText = v.age ? ` • ${v.age} tuổi` : '';
 
             html += `
-                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId})">
+                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId}, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
                     <div class="dvd-card-header">
                         <div class="d-flex align-items-center flex-grow-1 me-2">
                             <div class="dvd-avatar">
@@ -1319,8 +1356,12 @@
         container.innerHTML = html;
     }
 
-    function onSelectDailyVisitCard(visitId) {
+    function onSelectDailyVisitCard(visitId, visitBranchId, visitBranchName) {
         if (!visitId) return;
+        if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
+            showBranchWarningModal(visitBranchName || 'cơ sở khác');
+            return;
+        }
         const currentVid = getCurrentExamVisitId();
         if (currentVid && Number(currentVid) === Number(visitId)) {
             closeDailyVisitsDrawer();
@@ -1528,5 +1569,37 @@
 
 <!-- BAR 5: Scripts Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài FT15/FT13 -->
 <th:block th:replace="~{doctor/fragments/labo-tab :: laboTabScript}"></th:block>
+
+    <!-- MODAL CẢNH BÁO GIỚI HẠN PHÂN QUYỀN CƠ SỞ CHO BÁC SĨ -->
+    <div class="modal fade" id="branchWarningModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
+            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <div class="modal-body p-4 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3 shadow-sm"
+                         style="width: 68px; height: 68px; background: #fef3c7; color: #d97706; font-size: 34px;">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2" style="font-size: 17px;">Cảnh báo giới hạn tác nghiệp theo Cơ sở</h5>
+                    <p class="text-secondary small mb-3">
+                        Bác sĩ chỉ có quyền tác nghiệp và xử lý ca khám tại cơ sở đang phân công làm việc:
+                    </p>
+                    <div class="p-2.5 rounded-3 mb-3 fw-bold text-primary border border-primary-subtle" style="background: #e0f2fe; font-size: 15px;">
+                        <i class="bi bi-geo-alt-fill me-1.5 text-primary"></i>
+                        <span id="warningAssignedBranchDisplay" th:text="${doctorAssignedBranchFullName != null and !doctorAssignedBranchFullName.isEmpty() ? doctorAssignedBranchFullName : 'Cơ sở hiện tại'}">CN02 - Cơ sở Đống Đa</span>
+                    </div>
+                    <div class="alert alert-warning py-2.5 px-3 small text-start mb-0 rounded-3 border-0 d-flex align-items-start gap-2" style="background: #fffbeb; color: #92400e;">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-0.5 text-warning flex-shrink-0"></i>
+                        <span id="warningTargetBranchText" style="line-height: 1.45;">Bạn không được phép tác động hoặc vào khám các ca bệnh tại cơ sở khác!</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3 justify-content-center">
+                    <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm" data-bs-dismiss="modal" style="font-size: 14px; background: #0284c7; border: none;">
+                        <i class="bi bi-check2 me-1"></i> Đã hiểu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

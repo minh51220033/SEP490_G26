@@ -1,7 +1,10 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
+import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -14,7 +17,10 @@ import java.util.List;
  * roleNames, permissionCodes hoặc isAdmin vào Model.
  */
 @ControllerAdvice
+@RequiredArgsConstructor
 public class GlobalModelAttributesAdvice {
+
+    private final UserRepository userRepository;
 
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpSession session) {
@@ -57,7 +63,17 @@ public class GlobalModelAttributesAdvice {
             return null;
         }
         Object branchName = session.getAttribute("currentBranchName");
-        return branchName != null ? branchName.toString() : null;
+        if (branchName != null && !branchName.toString().isBlank()) {
+            return branchName.toString();
+        }
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (user.getBranch() != null) {
+                Branch b = user.getBranch();
+                return (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "") + b.getBranchName();
+            }
+        }
+        return null;
     }
 
     @ModelAttribute("systemNotice")
