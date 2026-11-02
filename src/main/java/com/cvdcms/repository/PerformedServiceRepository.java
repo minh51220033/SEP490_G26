@@ -28,6 +28,16 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
 
     List<PerformedService> findByPatientProfile_ProfileIdOrderByCompletedAtDesc(Long profileId);
 
+    @Query("SELECT ps FROM PerformedService ps " +
+           "JOIN FETCH ps.service s " +
+           "LEFT JOIN FETCH s.category " +
+           "JOIN FETCH ps.doctor d " +
+           "LEFT JOIN FETCH ps.visit v " +
+           "LEFT JOIN FETCH ps.planItem pi " +
+           "WHERE ps.patientProfile.profileId = :profileId " +
+           "ORDER BY ps.completedAt DESC, ps.performedId DESC")
+    List<PerformedService> findByProfileIdWithDetails(@Param("profileId") Long profileId);
+
     List<PerformedService> findByVisit_VisitIdAndStatus(Long visitId, PerformedServiceStatus status);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

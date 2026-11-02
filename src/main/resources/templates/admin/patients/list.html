@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Quản lý khách hàng - Admin')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/patient-management.css}">
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Quản trị khách hàng')}"></header>
+        <main class="app-content finance-page patient-management-page">
+            <!-- Thông báo thành công / lỗi -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header chuẩn FT19-25 -->
+            <div class="fin-header mb-3">
+                <div>
+                    <h1><i class="bi bi-people-fill text-primary"></i> Quản lý khách hàng</h1>
+                    <p>Hồ sơ nha khoa tập trung: thông tin hành chính, điều trị, lịch hẹn, chăm sóc và tài chính viện phí.</p>
+                </div>
+            </div>
+
+            <!-- Filter Bar chuẩn FT19-25 kết hợp Toolbar thao tác (DentalSoft Layout) -->
+            <div class="fin-card mb-4">
+                <form method="get" th:action="${recordBasePath}" class="fin-filter-bar patient-list-filter-bar">
+                    <!-- 1. Tìm kiếm -->
+                    <div class="fin-form-group patient-filter-search" style="flex: 1.5; min-width: 220px;">
+                        <label for="query">Từ khóa tìm kiếm</label>
+                        <input id="query" type="text" class="fin-input" name="query" th:value="${query}"
+                               placeholder="Mã BN, họ tên hoặc số điện thoại...">
+                    </div>
+
+                    <!-- 2. Các bộ lọc hiện có -->
+                    <div class="fin-form-group" th:if="${#lists.size(branches) > 1}" style="flex: 1; min-width: 160px;">
+                        <label for="branchId">Cơ sở chi nhánh</label>
+                        <select id="branchId" name="branchId" class="fin-select">
+                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${branchId == b.branchId}">Chi nhánh</option>
+                        </select>
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 0.8; min-width: 140px;">
+                        <label for="dob">Ngày sinh</label>
+                        <input id="dob" type="date" name="dob" class="fin-input" th:value="${dob}">
+                    </div>
+
+                    <div class="fin-form-group" style="flex: 0.8; min-width: 140px;">
+                        <label for="status">Trạng thái</label>
+                        <select id="status" name="status" class="fin-select">
+                            <option value="">-- Tất cả --</option>
+                            <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hoạt động</option>
+                            <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Cụm nút Lọc & Đặt lại -->
+                    <div class="d-flex gap-2 align-items-end">
+                        <button type="submit" class="fin-btn fin-btn-primary">
+                            <i class="bi bi-search"></i> Lọc
+                        </button>
+                        <a th:href="${recordBasePath}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc">
+                            <i class="bi bi-arrow-counterclockwise"></i> Đặt lại
+                        </a>
+                    </div>
+
+                    <!-- 4. Hiển thị x/y & 5. Thêm bệnh nhân -->
+                    <div class="d-flex gap-2.5 align-items-end ms-auto patient-toolbar-tools">
+                        <div class="patient-counter-pill" title="Bệnh nhân hiển thị trên trang hiện tại / Tổng số phù hợp bộ lọc">
+                            Hiển thị <b th:text="${patients.numberOfElements}">0</b>/<span th:text="${patients.totalElements}">0</span>
+                        </div>
+                        <a th:href="@{/reception/patients/new}" class="fin-btn fin-btn-primary text-nowrap">
+                            <i class="bi bi-person-plus-fill"></i> Thêm bệnh nhân
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table Card chuẩn FT19-25 với Tùy chỉnh cột Enhanced Table -->
+            <div class="fin-card p-0">
+                <table class="fin-table" data-enhanced-table="admin-patients">
+                    <thead>
+                    <tr>
+                        <th data-column-key="stt" class="text-center" style="min-width: 60px;">STT</th>
+                        <th data-column-key="code" data-pinned="true" style="min-width: 120px;">Mã BN</th>
+                        <th data-column-key="fullName" style="min-width: 180px;">Họ và tên</th>
+                        <th data-column-key="gender" style="min-width: 90px;">Giới tính</th>
+                        <th data-column-key="dob" style="min-width: 110px;">Ngày sinh</th>
+                        <th data-column-key="phone" style="min-width: 120px;">Số điện thoại</th>
+                        <th data-column-key="branch" style="min-width: 140px;">Cơ sở</th>
+                        <th data-column-key="source" style="min-width: 120px;">Nguồn khách</th>
+                        <th data-column-key="debt" class="text-end" style="min-width: 130px;">Tình trạng nợ</th>
+                        <th data-column-key="actions" class="text-center" style="min-width: 150px;">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${patients.content.isEmpty()}">
+                        <td colspan="10" class="text-center py-4">
+                            <div class="empty-state-box">
+                                <i class="bi bi-people empty-icon"></i>
+                                <h6>Chưa có hồ sơ khách hàng nào</h6>
+                                <p>Không tìm thấy khách hàng nào phù hợp với điều kiện tìm kiếm.</p>
+                                <a th:href="@{/reception/patients/new}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-person-plus-fill me-1"></i>Thêm bệnh nhân
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:each="p, stat : ${patients.content}">
+                        <td data-column-key="stt" class="text-center text-muted small" th:text="${patients.number * patients.size + stat.count}">1</td>
+                        <td data-column-key="code">
+                            <a th:href="${recordBasePath + '/' + p.id}" class="fw-bold text-decoration-none text-primary" th:text="${p.code}">BN0001</a>
+                        </td>
+                        <td data-column-key="fullName">
+                            <a th:href="${recordBasePath + '/' + p.id}" class="fw-semibold text-dark text-decoration-none" th:text="${p.fullName}">Nguyễn Văn A</a>
+                        </td>
+                        <td data-column-key="gender">
+                            <span class="badge bg-light text-dark border" th:text="${p.gender}">Nam</span>
+                        </td>
+                        <td data-column-key="dob" th:text="${p.dob != null ? #temporals.format(p.dob, 'dd/MM/yyyy') : '—'}">01/01/1990</td>
+                        <td data-column-key="phone">
+                            <a th:href="'tel:' + ${p.phoneNumber}" class="text-decoration-none text-secondary" th:text="${p.phoneNumber ?: '—'}">0901234567</a>
+                        </td>
+                        <td data-column-key="branch">
+                            <span th:text="${p.branchName ?: '—'}">Chi nhánh</span>
+                        </td>
+                        <td data-column-key="source">
+                            <span class="badge bg-light text-secondary border" th:text="${p.customerSource}">Trực tiếp</span>
+                        </td>
+                        <td data-column-key="debt" class="text-end">
+                            <span th:if="${p.totalDebt != null and p.totalDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                                  class="fw-bold text-danger"
+                                  th:text="${#numbers.formatDecimal(p.totalDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                            <span th:unless="${p.totalDebt != null and p.totalDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                                  class="badge bg-success-subtle text-success">Hết nợ</span>
+                        </td>
+                        <td data-column-key="actions" class="text-center">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="${recordBasePath + '/' + p.id}" class="btn btn-sm btn-outline-primary" title="Xem hồ sơ chi tiết">
+                                    <i class="bi bi-eye"></i> Chi tiết
+                                </a>
+                                <a th:href="@{/payments/dashboard(patientId=${p.id})}" class="btn btn-sm btn-outline-success" title="Dashboard tài chính">
+                                    <i class="bi bi-wallet2"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination chuẩn FT19-25 -->
+                <div class="fin-pagination p-3 d-flex justify-content-between align-items-center border-top">
+                    <span class="text-muted small">
+                        Hiển thị trang <b th:text="${patients.totalPages > 0 ? patients.number + 1 : 0}">1</b> / <span th:text="${patients.totalPages}">1</span>
+                        (Tổng <span th:text="${patients.totalElements}">0</span> khách hàng)
+                    </span>
+                    <ul class="pagination pagination-sm mb-0" th:if="${patients.totalPages > 1}">
+                        <li class="page-item" th:classappend="${patients.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/admin/patients(branchId=${branchId}, query=${query}, dob=${dob}, status=${status}, page=${patients.number - 1})}">&laquo;</a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, patients.totalPages - 1)}"
+                            th:classappend="${i == patients.number} ? 'active'">
+                            <a class="page-link" th:href="@{/admin/patients(branchId=${branchId}, query=${query}, dob=${dob}, status=${status}, page=${i})}"
+                               th:text="${i + 1}">1</a>
+                        </li>
+                        <li class="page-item" th:classappend="${patients.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/admin/patients(branchId=${branchId}, query=${query}, dob=${dob}, status=${status}, page=${patients.number + 1})}">&raquo;</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
