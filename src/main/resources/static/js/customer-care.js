@@ -454,10 +454,224 @@
         `;
     }
 
+    // =========================================================================
+    // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
+    // =========================================================================
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v2";
+    const DEFAULT_CC_COLUMNS = [
+        { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
+        { id: "patient", title: "Bệnh nhân", width: 220, visible: true, required: true },
+        { id: "careGroup", title: "Phân nhóm & Hồ sơ", width: 220, visible: true },
+        { id: "due", title: "Hạn / Gọi lại", width: 155, visible: true },
+        { id: "notes", title: "Chẩn đoán & Lời dặn", width: 300, visible: true },
+        { id: "staff", title: "Phụ trách", width: 155, visible: true },
+        { id: "interaction", title: "Tương tác gần nhất", width: 175, visible: true },
+        { id: "status", title: "Trạng thái", width: 150, visible: true },
+        { id: "actions", title: "Thao tác", width: 175, visible: true, required: true }
+    ];
+
+    let ccColumns = loadCcColumns();
+
+    function loadCcColumns() {
+        try {
+            const raw = localStorage.getItem(CC_COLUMNS_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
+                    return parsed;
+                }
+            }
+        } catch (e) {}
+        return JSON.parse(JSON.stringify(DEFAULT_CC_COLUMNS));
+    }
+
+    function saveCcColumns() {
+        try {
+            localStorage.setItem(CC_COLUMNS_KEY, JSON.stringify(ccColumns));
+        } catch (e) {}
+    }
+
+    function renderCcTableHeader() {
+        const theadTr = $("ccTasksHeaderRow");
+        if (!theadTr) return;
+        theadTr.innerHTML = "";
+
+        ccColumns.forEach((col, idx) => {
+            if (!col.visible) return;
+            const th = document.createElement("th");
+            th.style.width = col.width + "px";
+            th.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
+                </div>
+                <span class="col-resizer" data-col-index="${idx}"></span>
+            `;
+            theadTr.appendChild(th);
+        });
+
+        setupCcColResizers();
+    }
+
+    function setupCcColResizers() {
+        const resizers = document.querySelectorAll("#ccTasksHeaderRow .col-resizer");
+        resizers.forEach(resizer => {
+            resizer.addEventListener("mousedown", function(e) {
+                e.preventDefault();
+                const colIdx = parseInt(this.getAttribute("data-col-index"), 10);
+                const col = ccColumns[colIdx];
+                const startX = e.pageX;
+                const startWidth = col.width;
+                this.classList.add("is-resizing");
+
+                function onMouseMove(moveEvent) {
+                    const diff = moveEvent.pageX - startX;
+                    let newWidth = startWidth + diff;
+                    if (newWidth < 70) newWidth = 70;
+                    if (newWidth > 400) newWidth = 400;
+                    col.width = newWidth;
+                    const th = document.querySelectorAll("#ccTasksHeaderRow th")[colIdx];
+                    if (th) th.style.width = newWidth + "px";
+                }
+
+                function onMouseUp() {
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                    resizer.classList.remove("is-resizing");
+                    saveCcColumns();
+                    loadTasks(state.page);
+                }
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            });
+        });
+    }
+
+    window.openCcColumnDrawer = function() {
+        renderCcDrawerColumns();
+        if ($("ccDrawerOverlay")) $("ccDrawerOverlay").style.display = "block";
+        if ($("ccColumnDrawer")) $("ccColumnDrawer").classList.add("show");
+    };
+
+    window.closeCcColumnDrawer = function() {
+        if ($("ccDrawerOverlay")) $("ccDrawerOverlay").style.display = "none";
+        if ($("ccColumnDrawer")) $("ccColumnDrawer").classList.remove("show");
+    };
+
+    window.filterCcDrawerColumns = function() {
+        const kw = ($("drawerSearchCcCol")?.value || "").toLowerCase().trim();
+        const items = document.querySelectorAll("#drawerCcColsList .drawer-item");
+        items.forEach(it => {
+            const txt = it.innerText.toLowerCase();
+            it.style.display = txt.includes(kw) ? "flex" : "none";
+        });
+    };
+
+    window.resetCcDefaultColumns = function() {
+        ccColumns = JSON.parse(JSON.stringify(DEFAULT_CC_COLUMNS));
+        saveCcColumns();
+        renderCcTableHeader();
+        renderCcDrawerColumns();
+        loadTasks(state.page);
+    };
+
+    function renderCcDrawerColumns() {
+        const list = $("drawerCcColsList");
+        if (!list) return;
+        list.innerHTML = "";
+
+        ccColumns.forEach((col, idx) => {
+            const item = document.createElement("div");
+            item.className = "drawer-item";
+            item.draggable = true;
+            item.innerHTML = `
+                <i class="bi bi-grip-vertical text-muted fs-6"></i>
+                <input type="checkbox" class="form-check-input mt-0 me-2" ${col.visible ? "checked" : ""} ${col.required ? "disabled" : ""}>
+                <span class="small fw-bold text-dark flex-grow-1">${col.title} ${col.required ? '<span class="text-danger">*</span>' : ""}</span>
+            `;
+
+            const chk = item.querySelector("input[type=checkbox]");
+            chk.addEventListener("change", (e) => {
+                col.visible = e.target.checked;
+                saveCcColumns();
+                renderCcTableHeader();
+                loadTasks(state.page);
+            });
+
+            item.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/plain", idx));
+            item.addEventListener("dragover", (e) => e.preventDefault());
+            item.addEventListener("drop", (e) => {
+                e.preventDefault();
+                const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                const toIdx = idx;
+                const moved = ccColumns.splice(fromIdx, 1)[0];
+                ccColumns.splice(toIdx, 0, moved);
+                saveCcColumns();
+                renderCcTableHeader();
+                renderCcDrawerColumns();
+                loadTasks(state.page);
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    function renderCcPagination(totalElements, page, totalPages) {
+        if ($("lblTasksRange")) {
+            const start = totalElements > 0 ? (page * state.pageSize + 1) : 0;
+            const end = Math.min((page + 1) * state.pageSize, totalElements);
+            $("lblTasksRange").textContent = totalElements > 0 ? `${start} - ${end}` : "0 - 0";
+        }
+        if ($("lblTasksTotal")) $("lblTasksTotal").textContent = totalElements;
+        if ($("tasksPageSizeSelect")) $("tasksPageSizeSelect").value = state.pageSize;
+
+        if ($("tasksFirstBtn")) $("tasksFirstBtn").disabled = page <= 0;
+        if ($("tasksPrevBtn")) $("tasksPrevBtn").disabled = page <= 0;
+        if ($("tasksNextBtn")) $("tasksNextBtn").disabled = page + 1 >= totalPages;
+        if ($("tasksLastBtn")) $("tasksLastBtn").disabled = page + 1 >= totalPages;
+
+        const numbersContainer = $("tasksPageNumbers");
+        if (numbersContainer) {
+            numbersContainer.innerHTML = "";
+            const maxButtons = 5;
+            let startPage = Math.max(0, page - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages - 1, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(0, endPage - maxButtons + 1);
+            }
+            for (let p = startPage; p <= endPage; p++) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `btn-page ${p === page ? "active" : ""}`;
+                btn.textContent = p + 1;
+                btn.onclick = () => loadTasks(p);
+                numbersContainer.appendChild(btn);
+            }
+        }
+    }
+
+    window.onCcPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadTasks(0);
+    };
+
+    window.goToCcPage = function(p) {
+        if (p < 0 || (state.totalPages && p >= state.totalPages)) return;
+        loadTasks(p);
+    };
+
+    window.goToCcLastPage = function() {
+        if (state.totalPages > 0) {
+            loadTasks(state.totalPages - 1);
+        }
+    };
+
     async function loadTasks(page = state.page) {
         state.page = page;
+        renderCcTableHeader();
+        const visibleCols = ccColumns.filter(c => c.visible);
         const tbody = $("tasksTableBody");
-        tbody.innerHTML = '<tr><td colspan="9" class="empty">Đang tải danh sách công việc CSKH...</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
 
         if (state.tasksAbortController) {
             state.tasksAbortController.abort();
@@ -484,119 +698,143 @@
             state.totalPages = Number(data?.totalPages || 0);
             const totalElements = Number(data?.totalElements || 0);
 
-            $("tasksTotalBadge").textContent = `${totalElements} công việc`;
-            $("tasksPageInfo").textContent = `Trang ${state.totalPages ? page + 1 : 0} / ${state.totalPages}`;
-            $("tasksPrevBtn").disabled = page <= 0;
-            $("tasksNextBtn").disabled = page + 1 >= state.totalPages;
+            if ($("tasksTotalBadge")) $("tasksTotalBadge").textContent = `${totalElements} công việc`;
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+                renderCcPagination(0, 0, 0);
                 return;
             }
 
             tbody.innerHTML = rows.map(t => {
-                const refs = [];
-                if (t.visitCode) {
-                    const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
-                    if (examUrl) {
-                        refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám & lời dặn sau điều trị (#tab-instructions)">🦷 Ca khám: <strong>${escapeHtml(t.visitCode)}</strong> ↗</a>`);
-                    } else {
-                        refs.push(`<span class="source-ref" title="Ca khám">Ca khám: <strong>${escapeHtml(t.visitCode)}</strong></span>`);
-                    }
-                }
-                if (t.prescriptionCode) refs.push(`<span class="source-ref" title="Đơn thuốc">Đơn thuốc: <strong>${escapeHtml(t.prescriptionCode)}</strong></span>`);
-                if (t.appointmentCode) refs.push(`<span class="source-ref" title="Lịch hẹn">Lịch hẹn: <strong>${escapeHtml(t.appointmentCode)}</strong> (${escapeHtml(t.appointmentDate || "")})</span>`);
-
-                const dueTag = t.overdue
-                    ? '<span class="due-tag due-overdue">⚠ Quá hạn xử lý</span>'
-                    : (t.dueToday ? '<span class="due-tag due-today">⏰ Đến hạn hôm nay</span>' : "");
-
-                const retryHtml = t.nextRetryAt
-                    ? `<span class="retry-tag">🔔 Hẹn gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
-                    : "";
-
-                const diagHtml = t.diagnosisSummary
-                    ? `<div style="font-size:11.5px;color:#1e293b;margin-top:4px;"><strong>🩺 Chẩn đoán:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`
-                    : "";
-
-                const instructionsText = t.treatmentInstructions || t.prescriptionAdvice;
-                const instructionsHtml = instructionsText
-                    ? `<div style="font-size:11.5px;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:3px 6px;border-radius:4px;"><strong>📋 Lời dặn ĐT:</strong> ${escapeHtml(instructionsText)}</div>`
-                    : "";
-
-                const docReplyHtml = t.doctorResponse
-                    ? `<div class="doc-reply-snippet"><strong>🩺 BS ${escapeHtml(t.escalatedToDoctorName || "")} chỉ định:</strong> ${escapeHtml(t.doctorResponse)}</div>`
-                    : (t.status === "ESCALATED_TO_DOCTOR"
-                        ? `<div class="retry-tag" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c;">⏳ Đang chờ Bác sĩ ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi chuyên môn</div>`
-                        : "");
-
-                return `<tr>
-                    <td>
-                        <span class="code">${escapeHtml(t.taskCode)}</span>
-                        <div style="font-size:11px;color:#64748b;margin-top:3px;">${escapeHtml(t.branchCode || "")}</div>
-                    </td>
-                    <td class="patient-cell">
-                        <strong>${escapeHtml(t.patientName)}</strong>
-                        <small>Mã BN: <span class="code">${escapeHtml(t.patientCode)}</span></small>
-                        <small>📞 ${escapeHtml(t.patientPhone || "—")}</small>
-                    </td>
-                    <td>
-                        <span class="badge ${getCareGroupBadgeClass(t.careGroup)}">${escapeHtml(t.careGroupLabel)}</span>
-                        <div style="margin-top:4px;">${refs.join(" ")}</div>
-                        ${t.doctorName ? `<div style="font-size:11px;color:#475569;margin-top:3px;">BS khám: <strong>${escapeHtml(t.doctorName)}</strong></div>` : ""}
-                    </td>
-                    <td>
-                        <strong>${escapeHtml(t.dueDate || "—")}</strong>
-                        <div>${dueTag}</div>
-                        ${retryHtml}
-                    </td>
-                    <td style="max-width:320px;">
-                        <div>${escapeHtml(t.notes || "—")}</div>
-                        ${diagHtml}
-                        ${instructionsHtml}
-                        ${docReplyHtml}
-                    </td>
-                    <td>
-                        <div><small style="color:#64748b;">CSKH:</small> <strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
-                        ${t.escalatedToDoctorName ? `<div style="margin-top:4px;color:#b91c1c;"><small>Bác sĩ:</small> <strong>${escapeHtml(t.escalatedToDoctorName)}</strong></div>` : ""}
-                    </td>
-                    <td>
-                        ${formatChannelBadge(t.lastChannel, t.lastContactResult)}
-                        ${t.lastContactAt ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${escapeHtml(formatDateTime(t.lastContactAt))} (${t.interactionCount} lần)</div>` : ""}
-                    </td>
-                    <td>
-                        <span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel)}</span>
-                    </td>
-                    <td>
-                        <div class="row-actions">
-                            <button type="button" class="button button-primary button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ (SCR-44.4)">
-                                📞 Ghi kết quả
-                            </button>
-                            <div class="sub-actions-row">
-                                <button type="button" class="button button-warning-outline button-sm" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)">
-                                    🩺 Chuyển BS
-                                </button>
-                                <button type="button" class="button button-secondary button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân (SCR-44.6)">
-                                    🕒 Lịch sử
-                                </button>
-                            </div>
-                            <div class="sub-actions-row">
-                                ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                    <button type="button" class="button button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn (SCR-44.5)">
-                                        💬 Phản hồi
+                const cells = [];
+                visibleCols.forEach(col => {
+                    if (col.id === "taskCode") {
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <span class="font-mono-code">${escapeHtml(t.taskCode)}</span>
+                                <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(t.branchCode || "")}</div>
+                            </td>
+                        `);
+                    } else if (col.id === "patient") {
+                        cells.push(`
+                            <td class="patient-cell" style="width:${col.width}px;">
+                                <span class="cell-ellipsis" title="${escapeHtml(t.patientName)}"><strong>${escapeHtml(t.patientName)}</strong></span>
+                                <small>Mã BN: <span class="font-mono-code" style="font-size:11px;padding:1px 5px;">${escapeHtml(t.patientCode)}</span></small>
+                                <small>📞 ${escapeHtml(t.patientPhone || "—")}</small>
+                            </td>
+                        `);
+                    } else if (col.id === "careGroup") {
+                        const refs = [];
+                        if (t.visitCode) {
+                            const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
+                            if (examUrl) {
+                                refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám (#tab-instructions)">🦷 Ca: <strong>${escapeHtml(t.visitCode)}</strong> ↗</a>`);
+                            } else {
+                                refs.push(`<span class="source-ref">Ca: <strong>${escapeHtml(t.visitCode)}</strong></span>`);
+                            }
+                        }
+                        if (t.prescriptionCode) refs.push(`<span class="source-ref">Thuốc: <strong>${escapeHtml(t.prescriptionCode)}</strong></span>`);
+                        if (t.appointmentCode) refs.push(`<span class="source-ref">Hẹn: <strong>${escapeHtml(t.appointmentCode)}</strong></span>`);
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <span class="badge ${getCareGroupBadgeClass(t.careGroup)}">${escapeHtml(t.careGroupLabel)}</span>
+                                <div style="margin-top:3px;">${refs.join(" ")}</div>
+                                ${t.doctorName ? `<div style="font-size:11px;color:#475569;margin-top:2px;">BS: <strong>${escapeHtml(t.doctorName)}</strong></div>` : ""}
+                            </td>
+                        `);
+                    } else if (col.id === "due") {
+                        const dueTag = t.overdue
+                            ? '<span class="due-tag due-overdue"><i class="bi bi-exclamation-triangle-fill me-1"></i>Quá hạn</span>'
+                            : (t.dueToday ? '<span class="due-tag due-today"><i class="bi bi-clock-fill me-1"></i>Đến hạn hôm nay</span>' : "");
+                        const retryHtml = t.nextRetryAt
+                            ? `<span class="retry-tag"><i class="bi bi-bell-fill me-1"></i>Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
+                            : "";
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <strong>${escapeHtml(t.dueDate || "—")}</strong>
+                                <div>${dueTag}</div>
+                                ${retryHtml}
+                            </td>
+                        `);
+                    } else if (col.id === "notes") {
+                        const diagHtml = t.diagnosisSummary
+                            ? `<div style="font-size:11.5px;color:#1e293b;margin-top:3px;" class="cell-ellipsis" title="${escapeHtml(t.diagnosisSummary)}"><strong>🩺 CĐ:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`
+                            : "";
+                        const instructionsText = t.treatmentInstructions || t.prescriptionAdvice;
+                        const instructionsHtml = instructionsText
+                            ? `<div style="font-size:11.5px;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:2px 6px;border-radius:4px;" class="cell-ellipsis" title="${escapeHtml(instructionsText)}"><strong>📋 Lời dặn:</strong> ${escapeHtml(instructionsText)}</div>`
+                            : "";
+                        const docReplyHtml = t.doctorResponse
+                            ? `<div class="doc-reply-snippet cell-ellipsis" title="${escapeHtml(t.doctorResponse)}"><strong>🩺 BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>`
+                            : (t.status === "ESCALATED_TO_DOCTOR"
+                                ? `<div class="retry-tag" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c;">⏳ Chờ Bác sĩ ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi</div>`
+                                : "");
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <div class="cell-ellipsis" title="${escapeHtml(t.notes || "—")}">${escapeHtml(t.notes || "—")}</div>
+                                ${diagHtml}
+                                ${instructionsHtml}
+                                ${docReplyHtml}
+                            </td>
+                        `);
+                    } else if (col.id === "staff") {
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <div><small style="color:#64748b;">CSKH:</small> <strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
+                                ${t.escalatedToDoctorName ? `<div style="margin-top:2px;color:#b91c1c;"><small>Bác sĩ:</small> <strong>${escapeHtml(t.escalatedToDoctorName)}</strong></div>` : ""}
+                            </td>
+                        `);
+                    } else if (col.id === "interaction") {
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                ${formatChannelBadge(t.lastChannel, t.lastContactResult)}
+                                ${t.lastContactAt ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(formatDateTime(t.lastContactAt))} (${t.interactionCount} lần)</div>` : ""}
+                            </td>
+                        `);
+                    } else if (col.id === "status") {
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel)}</span>
+                            </td>
+                        `);
+                    } else if (col.id === "actions") {
+                        cells.push(`
+                            <td style="width:${col.width}px;">
+                                <div class="row-actions">
+                                    <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ (SCR-44.4)">
+                                        <i class="bi bi-telephone-fill"></i> Ghi KQ
                                     </button>
-                                ` : ""}
-                                <button type="button" class="button button-secondary button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại (SCR-44.3)">
-                                    ✏️ Sửa
-                                </button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
+                                    <div class="sub-actions-row">
+                                        <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)">
+                                            🩺 Chuyển BS
+                                        </button>
+                                        <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân (SCR-44.6)">
+                                            🕒 Lịch sử
+                                        </button>
+                                    </div>
+                                    <div class="sub-actions-row">
+                                        ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                            <button type="button" class="btn btn-danger button-sm py-1 px-2" style="font-size:11px;" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn (SCR-44.5)">
+                                                💬 Phản hồi
+                                            </button>
+                                        ` : ""}
+                                        <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại (SCR-44.3)">
+                                            <i class="bi bi-pencil-square"></i> Sửa
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        `);
+                    }
+                });
+                return `<tr>${cells.join("")}</tr>`;
             }).join("");
+
+            renderCcPagination(totalElements, page, state.totalPages);
         } catch (err) {
             if (err.name === "AbortError") return;
-            tbody.innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(err.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(err.message)}</td></tr>`;
             showMessage(err.message, "error");
         }
     }
@@ -1147,8 +1385,8 @@
 
         if (!isHistory) {
             const meta = TAB_META[tab] || TAB_META.ALL;
-            $("tasksPanelTitle").textContent = meta.title;
-            $("tasksPanelSubtitle").textContent = meta.subtitle;
+            if ($("tasksPanelTitle")) $("tasksPanelTitle").textContent = meta.title;
+            if ($("tasksPanelSubtitle")) $("tasksPanelSubtitle").textContent = meta.subtitle;
             loadTasks(0);
         } else {
             const selectedPatient = $("historyPatientSelect").value
