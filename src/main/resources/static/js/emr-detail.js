@@ -10,6 +10,31 @@
     const titleTargets = Array.from(page.querySelectorAll('[data-current-doc-title]'));
     const params = new URLSearchParams(window.location.search);
 
+    const toothStates = new Map();
+    for (const diagnosis of (window.emrToothDiagnoses || [])) {
+        const teeth = String(diagnosis.toothNumbers || '').match(/\b[1-4][1-8]\b/g) || [];
+        for (const tooth of teeth) {
+            const next = diagnosis.type === 'MAIN' ? 'main' : 'secondary';
+            if (next === 'main' || !toothStates.has(tooth)) toothStates.set(tooth, next);
+        }
+    }
+    try {
+        const chart = typeof window.emrOdontogram === 'string'
+            ? JSON.parse(window.emrOdontogram) : window.emrOdontogram;
+        if (chart && typeof chart === 'object') {
+            const entries = Array.isArray(chart) ? chart.map(item => [item.tooth || item.number, item.status]) : Object.entries(chart);
+            for (const [tooth, value] of entries) {
+                if (/^[1-4][1-8]$/.test(String(tooth)) && !toothStates.has(String(tooth))) {
+                    toothStates.set(String(tooth), 'recorded');
+                }
+            }
+        }
+    } catch (_) { /* Bản ghi cũ có thể chứa sơ đồ ở định dạng khác. */ }
+    page.querySelectorAll('.emr-tooth-chart [data-tooth]').forEach(cell => {
+        const state = toothStates.get(cell.dataset.tooth);
+        if (state) cell.classList.add('is-' + state);
+    });
+
     function availableDocument(code) {
         return documents.some((item) => item.dataset.emrDocument === code);
     }

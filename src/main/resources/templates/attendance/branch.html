@@ -14,45 +14,56 @@
 
         <header th:replace="~{fragments/header :: appTopbar('Chấm công toàn chi nhánh')}"></header>
 
-        <main class="app-content">
+        <main class="app-content d-flex flex-column" style="min-height: calc(100vh - var(--topbar-h));">
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/schedule.css}">
             <link rel="stylesheet" th:href="@{/css/attendance.css}">
 
-            <section class="panel">
-                <div class="panel__head">
+            <section class="panel flex-grow-1 d-flex flex-column mb-0">
+                <div class="panel__head mb-3">
                     <div>
-                        <h3 class="panel__title">Bảng chấm công toàn chi nhánh</h3>
-                        <p class="panel__subtitle">
-                            Tháng <strong th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
-                            · Dữ liệu ngày công thực tế dùng để tính lương (FT32)
+                        <h3 class="panel__title fs-5 mb-1">Bảng chấm công toàn chi nhánh</h3>
+                        <p class="panel__subtitle text-muted mb-0">
+                            Tháng <strong class="text-primary" th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
+                            · Dữ liệu ngày công thực tế dùng để tính lương &amp; đối soát nhân sự
                         </p>
                     </div>
                 </div>
 
-                <form th:action="@{/admin/attendance}" method="get" class="filter-bar">
+                <!-- BỘ LỌC CHI NHÁNH & THỜI GIAN ĐỒNG BỘ NẰM TRÊN 1 DÒNG -->
+                <form th:action="@{/admin/attendance}" method="get" class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 p-3 bg-light rounded-3 border">
                     <input type="hidden" name="month" th:value="${month}">
-                    <div>
-                        <label for="branchId" class="form-label small mb-1">Chi nhánh</label>
+                    <div style="min-width: 280px; max-width: 420px; flex: 1;">
+                        <label for="branchId" class="form-label small fw-semibold text-muted mb-1">
+                            <i class="bi bi-geo-alt-fill text-primary me-1"></i>Chi nhánh trực thuộc
+                        </label>
                         <select id="branchId" name="branchId" class="form-select" onchange="this.form.submit()">
                             <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                     th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh</option>
                         </select>
                     </div>
-                    <div class="d-flex gap-2 align-items-end">
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}" class="btn btn-light">
-                            <i class="bi bi-chevron-left" aria-hidden="true"></i> Tháng trước</a>
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}" class="btn btn-light">Tháng này</a>
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}" class="btn btn-light">
-                            Tháng sau <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+                    <div class="d-flex gap-2 align-items-center">
+                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}" class="btn btn-outline-secondary">
+                            <i class="bi bi-chevron-left me-1"></i> Tháng trước
+                        </a>
+                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}" class="btn btn-primary px-3">
+                            <i class="bi bi-calendar-event me-1"></i> Tháng này
+                        </a>
+                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}" class="btn btn-outline-secondary">
+                            Tháng sau <i class="bi bi-chevron-right ms-1"></i>
+                        </a>
                     </div>
                 </form>
 
-                <div th:if="${selectedBranchId == null}" class="schedule-empty">Chưa có chi nhánh nào đang hoạt động.</div>
+                <div th:if="${selectedBranchId == null}" class="schedule-empty my-auto text-center py-5">
+                    <i class="bi bi-exclamation-circle text-warning fs-1 d-block mb-2"></i>
+                    Chưa có chi nhánh nào đang hoạt động.
+                </div>
 
                 <th:block th:if="${selectedBranchId != null}">
 
-                    <div class="att-stats mt-3">
+                    <!-- THỐNG KÊ NHANH -->
+                    <div class="att-stats mb-4">
                         <div class="att-stat"><span>Lượt chấm công</span><strong th:text="${summary.workDays}">0</strong></div>
                         <div class="att-stat"><span>Đúng giờ</span><strong th:text="${summary.onTime}">0</strong></div>
                         <div class="att-stat att-stat--late"><span>Đi muộn</span><strong th:text="${summary.late}">0</strong></div>
@@ -63,84 +74,100 @@
                     </div>
 
                     <!-- TỔNG HỢP CÔNG THEO NHÂN VIÊN -->
-                    <h4 class="h6 fw-bold mt-4 mb-2">Tổng hợp công theo nhân viên</h4>
-                    <div class="table-responsive mb-4">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Nhân viên</th>
-                                <th class="text-center">Ngày công</th>
-                                <th class="text-center">Đúng giờ</th>
-                                <th class="text-center">Đi muộn</th>
-                                <th class="text-center">Về sớm</th>
-                                <th class="text-end">Tổng giờ làm</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:if="${#lists.isEmpty(staffSummary)}">
-                                <td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu chấm công trong tháng này.</td>
-                            </tr>
-                            <tr th:each="s : ${staffSummary}">
-                                <td>
-                                    <div class="fw-semibold" th:text="${s.fullName}">Họ tên</div>
-                                    <div class="staff-sub" th:text="${s.staffCode}">NV0001</div>
-                                </td>
-                                <td class="text-center fw-bold" th:text="${s.workDays}">0</td>
-                                <td class="text-center" th:text="${s.onTime}">0</td>
-                                <td class="text-center net-bad" th:text="${s.late}">0</td>
-                                <td class="text-center" th:text="${s.earlyLeave}">0</td>
-                                <td class="text-end" th:text="${s.workedMinutes / 60} + 'h ' + ${s.workedMinutes % 60} + 'm'">0h 0m</td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div class="card border rounded-3 mb-4 shadow-none">
+                        <div class="card-header bg-white py-2 px-3 fw-bold border-bottom d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-people-fill text-primary me-2"></i>Tổng hợp công theo nhân viên</span>
+                            <span class="badge bg-secondary-subtle text-secondary" th:text="${#lists.size(staffSummary)} + ' nhân sự'">0 nhân sự</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Nhân viên</th>
+                                    <th class="text-center">Ngày công</th>
+                                    <th class="text-center">Đúng giờ</th>
+                                    <th class="text-center">Đi muộn</th>
+                                    <th class="text-center">Về sớm</th>
+                                    <th class="text-end pe-3">Tổng giờ làm</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(staffSummary)}">
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="bi bi-calendar2-x fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                                        Chưa có dữ liệu chấm công tổng hợp trong tháng này.
+                                    </td>
+                                </tr>
+                                <tr th:each="s : ${staffSummary}">
+                                    <td class="ps-3">
+                                        <div class="fw-semibold" th:text="${s.fullName}">Họ tên</div>
+                                        <div class="staff-sub text-muted small" th:text="${s.staffCode}">NV0001</div>
+                                    </td>
+                                    <td class="text-center fw-bold" th:text="${s.workDays}">0</td>
+                                    <td class="text-center" th:text="${s.onTime}">0</td>
+                                    <td class="text-center net-bad" th:text="${s.late}">0</td>
+                                    <td class="text-center" th:text="${s.earlyLeave}">0</td>
+                                    <td class="text-end pe-3" th:text="${s.workedMinutes / 60} + 'h ' + ${s.workedMinutes % 60} + 'm'">0h 0m</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <!-- CHI TIẾT TỪNG LƯỢT -->
-                    <h4 class="h6 fw-bold mb-2">Chi tiết từng lượt chấm công</h4>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Nhân viên</th>
-                                <th>Ngày</th>
-                                <th>Check-in</th>
-                                <th>Check-out</th>
-                                <th>Giờ làm</th>
-                                <th>Mạng</th>
-                                <th>Trạng thái</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:if="${#lists.isEmpty(records)}">
-                                <td colspan="7" class="text-center text-muted py-4">Chưa có dữ liệu chấm công trong tháng này.</td>
-                            </tr>
-                            <tr th:each="r : ${records}">
-                                <td>
-                                    <div class="fw-semibold" th:text="${r.staff.fullName}">Họ tên</div>
-                                    <div class="staff-sub" th:text="${r.staff.staffCode}">NV0001</div>
-                                </td>
-                                <td th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">01/01/2026</td>
-                                <td>
-                                    <span th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
-                                    <div class="staff-sub" th:if="${r.checkInIp != null}" th:text="${r.checkInIp}"></div>
-                                </td>
-                                <td>
-                                    <span th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
-                                    <div class="staff-sub" th:if="${r.checkOutIp != null}" th:text="${r.checkOutIp}"></div>
-                                </td>
-                                <td th:text="${r.workedMinutes != null ? (r.workedMinutes / 60) + 'h ' + (r.workedMinutes % 60) + 'm' : '-'}">-</td>
-                                <td>
-                                    <i th:if="${r.isValidNetwork}" class="bi bi-wifi net-ok" title="Mạng hợp lệ"></i>
-                                    <i th:unless="${r.isValidNetwork}" class="bi bi-wifi-off net-bad" title="Mạng không hợp lệ"></i>
-                                </td>
-                                <td>
-                                    <span class="status-badge"
-                                          th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
-                                          th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng giờ</span>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <!-- CHI TIẾT TỪNG LƯỢT CHẤM CÔNG -->
+                    <div class="card border rounded-3 flex-grow-1 shadow-none d-flex flex-column mb-2">
+                        <div class="card-header bg-white py-2 px-3 fw-bold border-bottom d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-clock-history text-primary me-2"></i>Chi tiết từng lượt chấm công</span>
+                            <span class="badge bg-secondary-subtle text-secondary" th:text="${#lists.size(records)} + ' lượt ghi nhận'">0 lượt</span>
+                        </div>
+                        <div class="table-responsive flex-grow-1">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Nhân viên</th>
+                                    <th>Ngày</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Giờ làm</th>
+                                    <th class="text-center">Mạng</th>
+                                    <th class="pe-3">Trạng thái</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(records)}">
+                                    <td colspan="7" class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                        Chưa có lượt chấm công nào được ghi nhận trong tháng này.
+                                    </td>
+                                </tr>
+                                <tr th:each="r : ${records}">
+                                    <td class="ps-3">
+                                        <div class="fw-semibold" th:text="${r.staff.fullName}">Họ tên</div>
+                                        <div class="staff-sub text-muted small" th:text="${r.staff.staffCode}">NV0001</div>
+                                    </td>
+                                    <td th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">01/01/2026</td>
+                                    <td>
+                                        <span th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
+                                        <div class="staff-sub text-muted small" th:if="${r.checkInIp != null}" th:text="${r.checkInIp}"></div>
+                                    </td>
+                                    <td>
+                                        <span th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
+                                        <div class="staff-sub text-muted small" th:if="${r.checkOutIp != null}" th:text="${r.checkOutIp}"></div>
+                                    </td>
+                                    <td th:text="${r.workedMinutes != null ? (r.workedMinutes / 60) + 'h ' + (r.workedMinutes % 60) + 'm' : '-'}">-</td>
+                                    <td class="text-center">
+                                        <i th:if="${r.isValidNetwork}" class="bi bi-wifi text-success" title="Mạng hợp lệ"></i>
+                                        <i th:unless="${r.isValidNetwork}" class="bi bi-wifi-off text-danger" title="Mạng không hợp lệ"></i>
+                                    </td>
+                                    <td class="pe-3">
+                                        <span class="status-badge"
+                                              th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
+                                              th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng giờ</span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </th:block>
             </section>

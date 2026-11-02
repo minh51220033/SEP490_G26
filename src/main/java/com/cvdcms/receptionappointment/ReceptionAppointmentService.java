@@ -3,10 +3,12 @@ package com.cvdcms.receptionappointment;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.patient.PatientAccess;
-import com.cvdcms.patientportal.PortalBookingBranchRepository;
 import com.cvdcms.repository.*;
+import com.cvdcms.service.AppointmentConflictDetectionService;
+import com.cvdcms.service.AppointmentLifecycleService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -24,21 +27,26 @@ public class ReceptionAppointmentService {
     private final ReceptionAppointmentRepository appointments;
     private final ReceptionAppointmentPatientRepository patients;
     private final BranchRepository branches;
-    private final PortalBookingBranchRepository lockedBranches;
+    private final AppointmentBookingLockRepository lockedBranches;
     private final ServiceRepository services;
     private final StaffProfileRepository staff;
     private final ReceptionAppointmentRules rules;
     private final AppointmentHistoryRepository histories;
     private final CustomerCareTaskRepository careTasks;
+    private final AppointmentLifecycleService lifecycle;
+    private final AppointmentConflictDetectionService conflictDetection;
 
+    @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
             ReceptionAppointmentPatientRepository patients, BranchRepository branches,
-            PortalBookingBranchRepository lockedBranches, ServiceRepository services, StaffProfileRepository staff,
+            AppointmentBookingLockRepository lockedBranches, ServiceRepository services, StaffProfileRepository staff,
             ReceptionAppointmentRules rules, AppointmentHistoryRepository histories,
-            CustomerCareTaskRepository careTasks) {
+            CustomerCareTaskRepository careTasks, AppointmentLifecycleService lifecycle,
+            AppointmentConflictDetectionService conflictDetection) {
         this.access = access; this.appointments = appointments; this.patients = patients;
         this.branches = branches; this.lockedBranches = lockedBranches; this.services = services;
         this.staff = staff; this.rules = rules; this.histories = histories; this.careTasks = careTasks;
+        this.lifecycle = lifecycle; this.conflictDetection = conflictDetection;
     }
 
     public record CreateRequest(@NotNull Long branchId, @NotNull Long profileId,
@@ -58,7 +66,19 @@ public class ReceptionAppointmentService {
             Long doctorId, String doctorName, Long serviceId, String serviceName,
             LocalDate date, PreferredSession session, String symptoms,
             AppointmentSource source, AppointmentStatus status, int rescheduleCount,
-            String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt) {}
+            String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt,
+            String conflictNotes) {
+        public AppointmentView(Long id, String code, Long profileId, String patientCode,
+                               String patientName, String patientPhone, Long branchId, String branchName,
+                               Long doctorId, String doctorName, Long serviceId, String serviceName,
+                               LocalDate date, PreferredSession session, String symptoms,
+                               AppointmentSource source, AppointmentStatus status, int rescheduleCount,
+                               String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt) {
+            this(id, code, profileId, patientCode, patientName, patientPhone, branchId, branchName,
+                    doctorId, doctorName, serviceId, serviceName, date, session, symptoms,
+                    source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null);
+        }
+    }
     public record HistoryView(String action, String oldValue, String newValue, String reason, LocalDateTime createdAt) {}
     public record Detail(AppointmentView appointment, List<HistoryView> history) {}
     public record Dashboard(LocalDate date, long total, long pending, long confirmed,
@@ -174,6 +194,7 @@ public class ReceptionAppointmentService {
         a.setDoctor(doctor(request.doctorId())); a.setService(service(request.serviceId()));
         a.setInitialSymptoms(clean(request.symptoms())); a.setExpectedTime(null);
         if (moved) a.setRescheduleCount(a.getRescheduleCount() + 1);
+        lifecycle.transition(a, a.getStatus(), AppointmentLifecycleAction.RESCHEDULE);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), moved ? "RESCHEDULE" : "UPDATE", old,
                 snapshot(a), clean(request.reason()));
@@ -190,7 +211,8 @@ public class ReceptionAppointmentService {
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), a.getAppointmentDate(),
                 a.getPreferredSession(), request.doctorId(), id);
         String old = snapshot(a);
-        a.setDoctor(doctor(request.doctorId())); a.setStatus(AppointmentStatus.CONFIRMED);
+        a.setDoctor(doctor(request.doctorId()));
+        lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CONFIRM", old, snapshot(a), null);
         return view(a);
@@ -206,7 +228,8 @@ public class ReceptionAppointmentService {
             throw bad("Vui lòng chọn lý do hủy trong danh mục và ghi chú nếu chọn Khác.");
         String reason = note == null ? code : code + ": " + note;
         String old = snapshot(a);
-        a.setStatus(AppointmentStatus.CANCELLED); a.setCancelReason(reason);
+        lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
+        a.setCancelReason(reason);
         a.setCancelledBy(scope.user().getUserId());
         a.setCancelledAt(LocalDateTime.now(ReceptionAppointmentRules.ZONE));
         appointments.saveAndFlush(a);
@@ -225,7 +248,7 @@ public class ReceptionAppointmentService {
         Appointment a = appointments.lockById(id).orElse(null);
         if (a == null || a.getStatus() != AppointmentStatus.CONFIRMED
                 || !rules.sessionEnded(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), now)) return;
-        a.setStatus(AppointmentStatus.NO_SHOW);
+        lifecycle.transition(a, AppointmentStatus.NO_SHOW, AppointmentLifecycleAction.MARK_NO_SHOW);
         appointments.saveAndFlush(a);
         for (CustomerCareTask reminder : careTasks.findByAppointment_AppointmentId(id))
             if (reminder.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
@@ -305,10 +328,17 @@ public class ReceptionAppointmentService {
         histories.save(h);
     }
     private AppointmentView view(Appointment a) {
-        boolean doctorUnavailable = a.getDoctor() != null
+        List<AppointmentConflictDetectionService.Conflict> foundConflicts = conflictDetection != null
+                ? conflictDetection.detectConflicts(a) : List.of();
+        boolean hasConflict = !foundConflicts.isEmpty();
+        boolean doctorUnavailable = hasConflict
+                || (a.getDoctor() != null
                 && (a.getStatus() == AppointmentStatus.PENDING || a.getStatus() == AppointmentStatus.CONFIRMED)
                 && !a.getAppointmentDate().isBefore(LocalDate.now(ReceptionAppointmentRules.ZONE))
-                && !rules.doctorAvailable(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), a.getDoctor().getStaffId());
+                && !rules.doctorAvailable(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), a.getDoctor().getStaffId()));
+        String conflictNotes = foundConflicts.isEmpty() ? null
+                : foundConflicts.stream().map(AppointmentConflictDetectionService.Conflict::message).collect(Collectors.joining("; "));
+
         return new AppointmentView(a.getAppointmentId(), a.getAppointmentCode(), a.getPatientProfile().getProfileId(),
                 a.getPatientProfile().getPatientCode(), a.getPatientProfile().getFullName(),
                 a.getPatientProfile().getPhoneNumber(), a.getBranch().getBranchId(), a.getBranch().getBranchName(),
@@ -317,7 +347,7 @@ public class ReceptionAppointmentService {
                 a.getService() == null ? null : a.getService().getServiceId(),
                 a.getService() == null ? null : a.getService().getServiceName(),
                 a.getAppointmentDate(), a.getPreferredSession(), a.getInitialSymptoms(), a.getSource(), a.getStatus(),
-                a.getRescheduleCount(), a.getCancelReason(), doctorUnavailable, a.getCreatedAt());
+                a.getRescheduleCount(), a.getCancelReason(), doctorUnavailable, a.getCreatedAt(), conflictNotes);
     }
     private static long count(List<AppointmentView> list, AppointmentStatus status) {
         return list.stream().filter(a -> a.status() == status).count();

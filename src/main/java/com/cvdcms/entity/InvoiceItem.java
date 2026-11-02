@@ -1,5 +1,6 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.InvoiceItemPaymentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -64,4 +65,23 @@ public class InvoiceItem {
 
     @Column(name = "final_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal finalAmount = BigDecimal.ZERO;
+
+    @Column(name = "line_order", nullable = false)
+    private Integer lineOrder = 1;
+
+    @Column(name = "discount_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "payable_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal payableAmount = BigDecimal.ZERO;
+
+    @Column(name = "paid_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Column(name = "remaining_debt", nullable = false, precision = 15, scale = 2)
+    private BigDecimal remainingDebt = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private InvoiceItemPaymentStatus paymentStatus = InvoiceItemPaymentStatus.UNPAID;
 }
