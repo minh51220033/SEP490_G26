@@ -40,72 +40,18 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
     private String uploadDir;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ClinicalPhotoResponseDTO> getPhotosByProfile(Long profileId) {
         if (profileId == null) return Collections.emptyList();
         List<ClinicalPhoto> list = clinicalPhotoRepository.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(profileId);
-        
-        // Auto-seed demo photos if empty for instant rich UX
-        if (list.isEmpty()) {
-            PatientProfile profile = patientProfileRepository.findById(profileId).orElse(null);
-            if (profile != null) {
-                seedDemoPhotosForProfile(profile, null);
-                list = clinicalPhotoRepository.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(profileId);
-            }
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
         }
-        
         return list.stream()
                 .map(ClinicalPhotoResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    private void seedDemoPhotosForProfile(PatientProfile profile, Visit visit) {
-        try {
-            ClinicalPhoto p1 = new ClinicalPhoto();
-            p1.setPatientProfile(profile);
-            p1.setVisit(visit);
-            p1.setPhotoStage(PhotoStage.BEFORE);
-            p1.setPhotoCategory(PhotoCategory.SMILE);
-            p1.setImageUrl("/uploads/clinical_photos/demo_smile_before.jpg");
-            p1.setCaption("Ảnh nụ cười trước điều trị - Răng 21 mẻ góc cắn, xỉn màu men");
-            p1.setCapturedAt(LocalDateTime.now().minusDays(7));
-            clinicalPhotoRepository.save(p1);
-
-            ClinicalPhoto p2 = new ClinicalPhoto();
-            p2.setPatientProfile(profile);
-            p2.setVisit(visit);
-            p2.setPhotoStage(PhotoStage.BEFORE);
-            p2.setPhotoCategory(PhotoCategory.INTRAORAL);
-            p2.setImageUrl("/uploads/clinical_photos/demo_intraoral_before.jpg");
-            p2.setCaption("Ảnh trong miệng trước can thiệp - Cận cảnh khuyết hổng men ngà răng 21");
-            p2.setCapturedAt(LocalDateTime.now().minusDays(7));
-            clinicalPhotoRepository.save(p2);
-
-            ClinicalPhoto p3 = new ClinicalPhoto();
-            p3.setPatientProfile(profile);
-            p3.setVisit(visit);
-            p3.setPhotoStage(PhotoStage.AFTER);
-            p3.setPhotoCategory(PhotoCategory.SMILE);
-            p3.setImageUrl("/uploads/clinical_photos/demo_smile_after.jpg");
-            p3.setCaption("Ảnh nụ cười sau điều trị - Hoàn tất bọc sứ Cercon HT trắng sáng tự nhiên");
-            p3.setCapturedAt(LocalDateTime.now());
-            clinicalPhotoRepository.save(p3);
-
-            ClinicalPhoto p4 = new ClinicalPhoto();
-            p4.setPatientProfile(profile);
-            p4.setVisit(visit);
-            p4.setPhotoStage(PhotoStage.AFTER);
-            p4.setPhotoCategory(PhotoCategory.INTRAORAL);
-            p4.setImageUrl("/uploads/clinical_photos/demo_intraoral_after.jpg");
-            p4.setCaption("Ảnh trong miệng sau phục hình - Răng sứ sát khít viền nướu, chuẩn khớp cắn");
-            p4.setCapturedAt(LocalDateTime.now());
-            clinicalPhotoRepository.save(p4);
-
-            log.info("Auto-seeded 4 dental clinical demo photos for patient profile ID: {}", profile.getProfileId());
-        } catch (Exception e) {
-            log.warn("Could not auto-seed demo photos: {}", e.getMessage());
-        }
-    }
 
     @Override
     @Transactional(readOnly = true)
