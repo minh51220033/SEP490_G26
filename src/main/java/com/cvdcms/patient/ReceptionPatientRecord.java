@@ -92,6 +92,12 @@ public class ReceptionPatientRecord {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "ACTIVE";
 
+    @Column(name = "customer_source", length = 100)
+    private String customerSource;
+
+    @Column(name = "deposit_balance", precision = 15, scale = 2)
+    private java.math.BigDecimal depositBalance = java.math.BigDecimal.ZERO;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

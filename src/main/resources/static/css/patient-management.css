@@ -1,0 +1,340 @@
+/* ========================================================================= */
+/* SCOPED CSS: PATIENT MANAGEMENT / DENTALSOFT OVERVIEW (CV-DCMS)            */
+/* Phạm vi: Chỉ áp dụng bên trong .patient-management-page                   */
+/* ========================================================================= */
+
+.patient-management-page {
+    padding: 1.25rem 1.5rem 3rem;
+    color: #1e293b;
+    font-family: inherit;
+}
+
+/* 1. Header nhận diện & Thẻ tài chính */
+.patient-management-page .patient-header-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.patient-management-page .patient-avatar-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.patient-management-page .patient-title-group h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: #0f172a;
+}
+
+.patient-management-page .patient-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.patient-management-page .patient-meta-pill span {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Nhóm 3 thẻ chỉ số tài chính (DentalSoft Style) */
+.patient-management-page .fin-stat-card {
+    padding: 0.75rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    min-width: 140px;
+    text-align: right;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.patient-management-page .fin-stat-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.patient-management-page .fin-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    margin-bottom: 0.2rem;
+}
+
+.patient-management-page .fin-stat-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.patient-management-page .fin-stat-value.val-billed {
+    color: #3b82f6;
+}
+
+.patient-management-page .fin-stat-value.val-paid {
+    color: #10b981;
+}
+
+.patient-management-page .fin-stat-value.val-debt {
+    color: #ef4444;
+}
+
+.patient-management-page .fin-stat-value.val-deposit {
+    color: #f59e0b;
+}
+
+/* 2. Thanh Tabs ngang (DentalSoft Compact Pill Style) */
+.patient-management-page .patient-tabs-nav {
+    border-bottom: none;
+    gap: 6px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0;
+}
+
+.patient-management-page .patient-tabs-nav .nav-link {
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    color: #374151;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 5px 12px;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.patient-management-page .patient-tabs-nav .nav-link:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+    color: #111827;
+}
+
+.patient-management-page .patient-tabs-nav .nav-link.active {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #eff6ff;
+    font-weight: 600;
+}
+
+.patient-management-page .patient-tab-badge {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.patient-management-page .nav-link.active .patient-tab-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+/* Sub-header Breadcrumb & Actions chuẩn DentalSoft */
+.patient-management-page .dentalsoft-subhead {
+    background: transparent;
+    padding: 8px 0;
+}
+
+/* 3. Panel nội dung từng tab */
+.patient-management-page .patient-tab-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    min-height: 400px;
+}
+
+/* Card 4 nhóm thông tin cá nhân */
+.patient-management-page .patient-card-group {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.15rem;
+    height: 100%;
+}
+
+.patient-management-page .patient-card-group-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.patient-management-page .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px dashed #f1f5f9;
+}
+
+.patient-management-page .info-row:last-child {
+    border-bottom: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 4. TRÁNH TRÙNG LẶP VỚI NÚT CHAT MESSENGER NỔI (CHAT FAB WIDGET)
+ * Đẩy cụm phân trang sang trái 90px để nút chat không đè lên nút trang 1, 2...
+ * -------------------------------------------------------------------------- */
+.patient-management-page .fin-pagination,
+.fin-pagination,
+.patient-management-page .pagination {
+    padding-right: 90px !important;
+}
+
+.patient-management-page .info-val {
+    color: #0f172a;
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* Bảng phong cách DentalSoft */
+.patient-management-page .dental-table {
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 0.85rem;
+}
+
+.patient-management-page .dental-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.patient-management-page .dental-table td {
+    padding: 0.75rem 0.85rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+.patient-management-page .dental-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Thanh toolbar thao tác */
+.patient-management-page .dental-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* Phân loại thumbnail phim ảnh */
+.patient-management-page .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.patient-management-page .photo-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.patient-management-page .photo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.patient-management-page .photo-img-wrap {
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.patient-management-page .photo-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.patient-management-page .photo-meta {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.78rem;
+}
+
+/* DentalSoft Toolbar Tools & Counter Pill */
+.patient-management-page .patient-counter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 42px;
+    padding: 0 14px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    white-space: nowrap;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.patient-management-page .patient-counter-pill b {
+    color: #0284c7;
+    font-weight: 700;
+}
+
+.patient-management-page .patient-toolbar-tools {
+    margin-left: auto;
+}
+
+@media (max-width: 991px) {
+    .patient-management-page .patient-toolbar-tools {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
