@@ -21,6 +21,8 @@ public interface DiagnosisService {
 
     List<Visit> getAvailableVisitsForDiagnosis();
 
+    List<Visit> getAvailableVisitsForDiagnosis(Long branchId);
+
     ClinicalCompletionCheckDTO checkClinicalCompletionReadiness(Long visitId);
 
     Visit completeClinicalExamination(Long visitId, String doctorNotes);
