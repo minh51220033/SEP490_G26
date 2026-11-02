@@ -235,18 +235,73 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
 }
 
 /* ============================================================================
- * B. THANH THAO TÁC NHANH NỔI (QUICK ACTION FLOATING BAR)
+ * C2. GHIM CỘT THAO TÁC CỐ ĐỊNH BÊN PHẢI (STICKY RIGHT ACTION PINNING)
+ * Đảm bảo cột Thao tác luôn nằm cố định ở mép phải màn hình, không trôi lệch,
+ * không đè chữ nội dung và luôn sẵn sàng thao tác khi cuộn bảng.
+ * ============================================================================ */
+table[data-enhanced-table] th[data-column-action="true"],
+table[data-enhanced-table] th[data-column-key="actions"],
+table[data-enhanced-table] th[data-column-key="action"],
+table[data-enhanced-table] td[data-column-action="true"]:not([colspan]),
+table[data-enhanced-table] td[data-column-key="actions"]:not([colspan]),
+table[data-enhanced-table] td[data-column-key="action"]:not([colspan]) {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 15 !important;
+    background-color: #ffffff !important;
+    border-left: 1px solid #e2e8f0 !important;
+    box-shadow: -4px 0 10px -2px rgba(15, 23, 42, 0.08);
+    white-space: nowrap !important;
+}
+
+table[data-enhanced-table] thead th[data-column-action="true"],
+table[data-enhanced-table] thead th[data-column-key="actions"],
+table[data-enhanced-table] thead th[data-column-key="action"] {
+    background-color: #f8fafc !important;
+    z-index: 24 !important;
+    border-left: 1px solid #cbd5e1 !important;
+}
+
+table[data-enhanced-table] tbody tr:hover td[data-column-action="true"]:not([colspan]),
+table[data-enhanced-table] tbody tr:hover td[data-column-key="actions"]:not([colspan]),
+table[data-enhanced-table] tbody tr:hover td[data-column-key="action"]:not([colspan]) {
+    background-color: #f0f9ff !important;
+}
+
+/* Khử cuộn kép giữa các thẻ bọc ngoài (Bootstrap .table-responsive / .fin-table-wrapper) */
+.table-responsive:has(.enhanced-table-wrapper),
+.fin-table-wrapper:has(.enhanced-table-wrapper) {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Căn chỉnh các nút bấm bên trong cột Thao tác chuẩn */
+table[data-enhanced-table] td[data-column-action="true"] .btn,
+table[data-enhanced-table] td[data-column-action="true"] .fin-btn,
+table[data-enhanced-table] td[data-column-key="actions"] .btn,
+table[data-enhanced-table] td[data-column-key="actions"] .fin-btn {
+    white-space: nowrap !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    vertical-align: middle;
+}
+
+/* ============================================================================
+ * B. THANH THAO TÁC NHANH NỔI (QUICK ACTION FLOATING BAR DỰ PHÒNG)
  * ============================================================================ */
 .enhanced-floating-actions {
     position: absolute;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 5px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(15, 23, 42, 0.08);
+    gap: 6px;
+    padding: 4px 8px;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.18), 0 2px 6px -1px rgba(15, 23, 42, 0.08) !important;
     z-index: 50;
     pointer-events: auto;
     opacity: 0;
@@ -262,7 +317,6 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
     transform: translateY(0);
 }
 
-/* VÃ¹ng Ä‘á»‡m má»: khÃ´ng che khuáº¥t chá»¯ */
 .enhanced-floating-actions::before {
     display: none;
 }
@@ -270,25 +324,27 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
 .enhanced-floating-actions .btn,
 .enhanced-floating-actions button,
 .enhanced-floating-actions a,
-.enhanced-floating-actions .fin-table-btn {
-    height: 28px;
-    padding: 0 8px;
-    font-size: 12px;
-    font-weight: 500;
-    border-radius: 4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    line-height: 1;
-    border: 1px solid transparent;
-    transition: all 0.12s ease;
-    cursor: pointer;
-    text-decoration: none;
-    box-shadow: none !important;
+.enhanced-floating-actions .fin-table-btn,
+.enhanced-floating-actions .fin-btn {
+    height: 28px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    line-height: 1 !important;
+    border: 1px solid transparent !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    white-space: nowrap !important;
 }
 
-/* NÃºt chá»‰ cÃ³ icon -> hÃ¬nh vuÃ´ng 28x28px */
+/* Nút chỉ có icon -> hình vuông 28x28px */
 .enhanced-floating-actions .btn:not(:has(span)):has(i:only-child),
 .enhanced-floating-actions button:not(:has(span)):has(i:only-child),
 .enhanced-floating-actions .fin-table-btn-icon {
@@ -297,29 +353,45 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
     padding: 0 !important;
 }
 
-/* NÃºt xem chi tiáº¿t (Primary/Blue) */
+/* Nút xem chi tiết (Primary/Blue) */
 .enhanced-floating-actions .btn-outline-primary,
 .enhanced-floating-actions .btn-primary,
-.enhanced-floating-actions .fin-table-btn-view {
+.enhanced-floating-actions .fin-table-btn-view,
+.enhanced-floating-actions .fin-btn-outline {
     color: #2563eb !important;
     background: #eff6ff !important;
-    border: 1px solid #dbeafe !important;
+    border: 1px solid #bfdbfe !important;
 }
 .enhanced-floating-actions .btn-outline-primary:hover,
 .enhanced-floating-actions .btn-primary:hover,
-.enhanced-floating-actions .fin-table-btn-view:hover {
+.enhanced-floating-actions .fin-table-btn-view:hover,
+.enhanced-floating-actions .fin-btn-outline:hover {
     color: #ffffff !important;
     background: #2563eb !important;
     border-color: #2563eb !important;
 }
 
-/* NÃºt in / tÃ i liá»‡u (Secondary/Gray) */
+/* Nút xem thông tin / chi tiết (Info/Cyan) */
+.enhanced-floating-actions .btn-outline-info,
+.enhanced-floating-actions .btn-info {
+    color: #0284c7 !important;
+    background: #f0f9ff !important;
+    border: 1px solid #bae6fd !important;
+}
+.enhanced-floating-actions .btn-outline-info:hover,
+.enhanced-floating-actions .btn-info:hover {
+    color: #ffffff !important;
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
+}
+
+/* Nút in / tài liệu (Secondary/Gray) */
 .enhanced-floating-actions .btn-outline-secondary,
 .enhanced-floating-actions .btn-secondary,
 .enhanced-floating-actions .fin-table-btn-print {
     color: #475569 !important;
     background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
 }
 .enhanced-floating-actions .btn-outline-secondary:hover,
 .enhanced-floating-actions .btn-secondary:hover,
@@ -329,7 +401,7 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
     border-color: #475569 !important;
 }
 
-/* NÃºt thu tiá»n / thÃ nh cÃ´ng (Success/Green) */
+/* Nút thu tiền / thành công / xuất Excel (Success/Green) */
 .enhanced-floating-actions .btn-success,
 .enhanced-floating-actions .btn-outline-success,
 .enhanced-floating-actions .fin-table-btn-pay {
@@ -346,7 +418,7 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
     border-color: #059669 !important;
 }
 
-/* NÃºt sá»­a / cáº£nh bÃ¡o (Warning/Amber) */
+/* Nút sửa / cảnh báo (Warning/Amber) */
 .enhanced-floating-actions .btn-outline-warning,
 .enhanced-floating-actions .btn-warning {
     color: #b45309 !important;
@@ -360,15 +432,17 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
     border-color: #d97706 !important;
 }
 
-/* NÃºt xÃ³a / ngá»«ng (Danger/Red) */
+/* Nút xóa / hủy / ngừng (Danger/Red) */
 .enhanced-floating-actions .btn-outline-danger,
-.enhanced-floating-actions .btn-danger {
+.enhanced-floating-actions .btn-danger,
+.enhanced-floating-actions .fin-btn-danger {
     color: #dc2626 !important;
     background: #fef2f2 !important;
     border: 1px solid #fecaca !important;
 }
 .enhanced-floating-actions .btn-outline-danger:hover,
-.enhanced-floating-actions .btn-danger:hover {
+.enhanced-floating-actions .btn-danger:hover,
+.enhanced-floating-actions .fin-btn-danger:hover {
     color: #ffffff !important;
     background: #dc2626 !important;
     border-color: #dc2626 !important;
