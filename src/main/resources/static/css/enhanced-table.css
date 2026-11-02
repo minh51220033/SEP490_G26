@@ -208,12 +208,10 @@ table[data-enhanced-table] th.text-end {
     vertical-align: middle;
 }
 
-/* Xử lý cột mã định danh dài & cột họ và tên không chồng đè nhau */
-table[data-enhanced-table] td[data-column-key="code"],
-table[data-enhanced-table] th[data-column-key="code"],
+/* Xử lý hiển thị thông tin bảng gọn gàng, tránh vỡ layout cột table-cell */
 .patient-code-cell,
 .patient-code-link {
-    max-width: 160px;
+    max-width: 180px;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -221,6 +219,7 @@ table[data-enhanced-table] th[data-column-key="code"],
     vertical-align: middle;
 }
 
+table[data-enhanced-table] td[data-column-key="patient"],
 table[data-enhanced-table] td[data-column-key="fullName"],
 .patient-name-cell {
     min-width: 180px;
