@@ -1,4 +1,4 @@
-<#
+﻿<#
 Nạp dữ liệu demo UTF-8 cho hành trình: đặt lịch -> check-in -> phân công -> cấp số
 -> khám/chẩn đoán -> bệnh án điện tử.
 
@@ -67,10 +67,18 @@ try {
     if ($hasCheckInConstraint -eq '0') { Invoke-DbFile 'database/migrations/V7__ft07_checkin_integrity.sql' }
 
     $hasDispatchConstraint = Invoke-DbValue "SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema='$dbName' AND table_name='queue_tickets' AND constraint_name='uk_ft09_visit_queue';"
-    if ($hasDispatchConstraint -eq '0') { Invoke-DbFile 'database/migrations/V8__ft08_ft09_dispatch_ticket.sql' }
+    if ($hasDispatchConstraint -eq '0') { Invoke-DbFile 'database/migrations/V17__ft08_ft09_dispatch_ticket.sql' }
 
     Invoke-DbFile 'database/migrations/V11__emr_module.sql'
     Invoke-DbFile 'database/migrations/V12__emr_printable_components.sql'
+    Invoke-DbFile 'database/migrations/V14__emr_attachments.sql'
+    Invoke-DbFile 'database/migrations/V16__emr_doctor_only_signing.sql'
+    $demoImageDir = Join-Path $projectRoot 'uploads\clinical_photos'
+    New-Item -ItemType Directory -Path $demoImageDir -Force | Out-Null
+    $demoImageTarget = Join-Path $demoImageDir 'emr-demo-odontogram.png'
+    if (-not (Test-Path $demoImageTarget)) {
+        Copy-Item -LiteralPath (Join-Path $projectRoot 'src\main\resources\static\images\fdi-chart-pure.png') -Destination $demoImageTarget
+    }
     if ($ResetEmrDemo) { Invoke-DbFile 'database/seeds/reset_emr_demo.sql' }
 
     # FT07/08/09/10 cung cấp tình huống tiếp đón, điều phối và hàng chờ.

@@ -157,8 +157,15 @@
                             </td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(tiers)}">
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>Chưa có hạng thành viên nào được thiết lập.
+                            <td colspan="9" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-award empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; h&#7841;ng th&#224;nh vi&#234;n n&#224;o</h6>
+                                    <p>Thi&#7871;t l&#7853;p ch&#237;nh s&#225;ch h&#7841;ng th&#7867; &#273;&#7875; t&#237;ch &#273;i&#7875;m v&#224; &#432;u &#273;&#227;i ch&#259;m s&#243;c kh&#225;ch h&#224;ng.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="openCreateModal()">
+                                        <i class="bi bi-plus-lg me-1"></i>Th&#234;m h&#7841;ng th&#224;nh vi&#234;n m&#7899;i
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         </tbody>

@@ -3,9 +3,10 @@ package com.cvdcms.patientportal;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
+import com.cvdcms.service.AppointmentLifecycleService;
+import com.cvdcms.service.AppointmentPolicyService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,41 +18,30 @@ import java.util.*;
 @Service
 @Transactional
 public class PortalAppointmentService {
-    private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Bangkok");
-    private static final List<AppointmentStatus> ACTIVE = List.of(
-            AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
-            AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED);
+    private static final ZoneId CLINIC_ZONE = AppointmentPolicyService.CLINIC_ZONE;
 
     private final PortalAccess access;
     private final PortalAppointmentRepository appointments;
     private final AppointmentHistoryRepository histories;
-    private final AppointmentSessionPolicyRepository policies;
-    private final AppointmentSessionWindowRepository windows;
     private final BranchRepository branches;
-    private final PortalBookingBranchRepository lockedBranches;
+    private final AppointmentBookingLockRepository lockedBranches;
     private final PortalBookingRequestRepository bookingRequests;
     private final ServiceRepository services;
     private final StaffProfileRepository staff;
-    private final StaffBranchAssignmentRepository assignments;
-    private final StaffScheduleRepository schedules;
-    private final LeaveRequestRepository leaves;
     private final CustomerCareTaskRepository careTasks;
-
-    @Value("${appointments.branch-capacity:24}") private int defaultBranchCapacity;
-    @Value("${appointments.doctor-capacity:10}") private int defaultDoctorCapacity;
+    private final AppointmentPolicyService policy;
+    private final AppointmentLifecycleService lifecycle;
 
     public PortalAppointmentService(PortalAccess access, PortalAppointmentRepository appointments,
-            AppointmentHistoryRepository histories, AppointmentSessionPolicyRepository policies,
-            AppointmentSessionWindowRepository windows,
-            BranchRepository branches, PortalBookingBranchRepository lockedBranches,
+            AppointmentHistoryRepository histories, BranchRepository branches,
+            AppointmentBookingLockRepository lockedBranches,
             PortalBookingRequestRepository bookingRequests, ServiceRepository services, StaffProfileRepository staff,
-            StaffBranchAssignmentRepository assignments, StaffScheduleRepository schedules,
-            LeaveRequestRepository leaves, CustomerCareTaskRepository careTasks) {
+            CustomerCareTaskRepository careTasks, AppointmentPolicyService policy,
+            AppointmentLifecycleService lifecycle) {
         this.access = access; this.appointments = appointments; this.histories = histories;
-        this.policies = policies; this.windows = windows; this.branches = branches; this.lockedBranches = lockedBranches;
+        this.branches = branches; this.lockedBranches = lockedBranches;
         this.bookingRequests = bookingRequests; this.services = services; this.staff = staff;
-        this.assignments = assignments; this.schedules = schedules; this.leaves = leaves;
-        this.careTasks = careTasks;
+        this.careTasks = careTasks; this.policy = policy; this.lifecycle = lifecycle;
     }
 
     public record BookingRequest(@NotNull Long profileId, @NotNull Long branchId,
@@ -98,23 +88,11 @@ public class PortalAppointmentService {
         Branch branch = branches.findById(branchId).orElse(null);
         if (branch == null || !Boolean.TRUE.equals(branch.getIsActive()))
             return new Availability(false, "Chi nhánh không hoạt động.", 0, List.of());
-        String invalid = invalidSession(branch, date, session);
-        if (invalid != null) return new Availability(false, invalid, 0, List.of());
-        AppointmentSessionPolicy policy = policy(branchId, date, session);
-        List<Appointment> booked = appointments.findActiveForSession(branchId, date, session, ACTIVE).stream()
-                .filter(a -> !a.getAppointmentId().equals(excludeAppointmentId)).toList();
-        List<StaffProfile> eligible = eligibleDoctors(branch, date, session);
-        int sessionCapacity = Math.min(branchCapacity(policy), eligible.size() * doctorCapacity(policy));
-        int remaining = Math.max(0, sessionCapacity - booked.size());
-        List<DoctorOption> options = eligible.stream().map(doctor -> {
-            long doctorCount = booked.stream().filter(a -> a.getDoctor() != null
-                    && doctor.getStaffId().equals(a.getDoctor().getStaffId())).count();
-            return new DoctorOption(doctor.getStaffId(), doctor.getFullName(), doctor.getSpecialty(),
-                    Math.max(0, doctorCapacity(policy) - (int) doctorCount));
-        }).filter(d -> d.remaining() > 0).toList();
-        String reason = eligible.isEmpty() ? "Chưa có bác sĩ trực buổi này."
-                : remaining > 0 ? null : "Buổi khám đã đầy.";
-        return new Availability(remaining > 0, reason, remaining, options);
+        AppointmentPolicyService.Availability result = policy.availability(branch, date, session,
+                excludeAppointmentId, AppointmentActorType.PATIENT);
+        return new Availability(result.available(), result.reason(), result.remainingBranch(),
+                result.doctors().stream().map(d ->
+                        new DoctorOption(d.id(), d.name(), d.specialty(), d.remaining())).toList());
     }
 
     public AppointmentView book(HttpSession httpSession, BookingRequest request) {
@@ -137,7 +115,8 @@ public class PortalAppointmentService {
                 throw conflict("Mã yêu cầu đã được dùng cho lịch khác.");
             return view(a);
         }
-        ensureCapacity(branch, request.date(), request.session(), request.doctorId(), profile.getProfileId(), null);
+        policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
+                null, AppointmentActorType.PATIENT);
         com.cvdcms.entity.Service service = requestedService(request.serviceId());
         Appointment appointment = new Appointment();
         appointment.setAppointmentCode("LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -187,19 +166,19 @@ public class PortalAppointmentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         access.requireProfile(user, a.getPatientProfile().getProfileId());
         requireMutable(a);
-        ensurePatientCutoff(a);
+        policy.ensureModificationCutoff(a, AppointmentActorType.PATIENT);
         if (a.getRescheduleCount() >= 3) throw conflict("Đã đạt giới hạn ba lần đổi lịch trực tuyến.");
         if (a.getAppointmentDate().equals(request.date()) && a.getPreferredSession() == request.session()
                 && Objects.equals(id(a.getDoctor()), request.doctorId()))
             throw bad("Vui lòng chọn lịch hoặc bác sĩ khác.");
-        ensureCapacity(branch, request.date(), request.session(), request.doctorId(),
-                a.getPatientProfile().getProfileId(), appointmentId);
+        policy.ensureBookable(branch, a.getPatientProfile(), request.date(), request.session(),
+                request.doctorId(), appointmentId, AppointmentActorType.PATIENT);
         String oldValue = snapshot(a);
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
         a.setDoctor(doctor(request.doctorId()));
         a.setExpectedTime(null);
-        a.setStatus(AppointmentStatus.PENDING);
+        lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);
         appointments.saveAndFlush(a);
         history(a, user.getUserId(), "RESCHEDULE", oldValue, snapshot(a), clean(request.reason()));
@@ -223,11 +202,11 @@ public class PortalAppointmentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         access.requireProfile(user, a.getPatientProfile().getProfileId());
         requireMutable(a);
-        ensurePatientCutoff(a);
+        policy.ensureModificationCutoff(a, AppointmentActorType.PATIENT);
         String reason = clean(request.reason());
         if (reason == null) throw bad("Vui lòng nhập lý do hủy.");
         String oldValue = snapshot(a);
-        a.setStatus(AppointmentStatus.CANCELLED);
+        lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
         a.setCancelReason(reason);
         a.setCancelledBy(user.getUserId());
         a.setCancelledAt(LocalDateTime.now(CLINIC_ZONE));
@@ -241,97 +220,6 @@ public class PortalAppointmentService {
         return view(a);
     }
 
-    private void ensureCapacity(Branch branch, LocalDate date, PreferredSession session,
-                                Long doctorId, Long profileId, Long excludeId) {
-        String invalid = invalidSession(branch, date, session);
-        if (invalid != null) throw conflict(invalid);
-        List<Appointment> duplicate = appointments.findActiveForPatientDay(profileId, branch.getBranchId(), date, ACTIVE);
-        if (duplicate.stream().anyMatch(a -> !a.getAppointmentId().equals(excludeId)))
-            throw conflict("Hồ sơ này đã có lịch hẹn tại chi nhánh trong ngày được chọn.");
-        List<StaffProfile> eligible = eligibleDoctors(branch, date, session);
-        if (eligible.isEmpty()) throw conflict("Chưa có bác sĩ trực buổi này.");
-        List<Appointment> booked = appointments.findActiveForSession(branch.getBranchId(), date, session, ACTIVE);
-        AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        long branchBooked = booked.stream().filter(a -> !a.getAppointmentId().equals(excludeId)).count();
-        if (branchBooked >= Math.min(branchCapacity(policy), eligible.size() * doctorCapacity(policy)))
-            throw conflict("Buổi khám đã đầy.");
-        if (doctorId != null) {
-            if (eligible.stream().noneMatch(d -> doctorId.equals(d.getStaffId())))
-                throw conflict("Bác sĩ không khả dụng tại chi nhánh trong ngày và buổi đã chọn.");
-            long doctorBooked = booked.stream().filter(a -> !a.getAppointmentId().equals(excludeId)
-                    && a.getDoctor() != null && doctorId.equals(a.getDoctor().getStaffId())).count();
-            if (doctorBooked >= doctorCapacity(policy)) throw conflict("Bác sĩ đã hết khả năng nhận lịch trong buổi.");
-        }
-    }
-
-    private List<StaffProfile> eligibleDoctors(Branch branch, LocalDate date, PreferredSession session) {
-        Long branchId = branch.getBranchId();
-        SessionRange range = sessionRange(branch, session);
-        Set<Long> assigned = new HashSet<>();
-        for (StaffBranchAssignment a : assignments.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE)) {
-            if (a.getStartDate().isAfter(date) || a.getEndDate() != null && a.getEndDate().isBefore(date)) continue;
-            String roleName = a.getRole().getRoleName();
-            if (!Boolean.TRUE.equals(a.getRole().getIsActive()) || roleName == null
-                    || !("BAC_SI".equalsIgnoreCase(roleName) || "ROLE_BAC_SI".equalsIgnoreCase(roleName))) continue;
-            if (a.getStaff().getStatus() == StaffStatus.ACTIVE) assigned.add(a.getStaff().getStaffId());
-        }
-        List<LeaveRequest> approved = leaves.findApprovedOn(branchId, date, LeaveStatus.APPROVED);
-        Map<Long, StaffProfile> result = new LinkedHashMap<>();
-        for (StaffSchedule schedule : schedules.findForBooking(branchId, date, ScheduleStatus.SCHEDULED)) {
-            StaffProfile doctor = schedule.getStaff();
-            if (!assigned.contains(doctor.getStaffId())
-                    || !Boolean.TRUE.equals(schedule.getShift().getIsActive())
-                    || !covers(schedule.getShift(), range)) continue;
-            boolean absent = approved.stream().anyMatch(l -> l.getStaff().getStaffId().equals(doctor.getStaffId())
-                    && (l.getShift() == null || l.getShift().getShiftId().equals(schedule.getShift().getShiftId())));
-            if (!absent) result.put(doctor.getStaffId(), doctor);
-        }
-        return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
-    }
-
-    private String invalidSession(Branch branch, LocalDate date, PreferredSession session) {
-        if (!Boolean.TRUE.equals(branch.getIsActive())) return "Chi nhánh không hoạt động.";
-        if (date == null || session == null || session == PreferredSession.ANY)
-            return "Vui lòng chọn ngày và buổi khám cụ thể.";
-        LocalDate today = LocalDate.now(CLINIC_ZONE);
-        if (date.isBefore(today) || date.isAfter(today.plusDays(90)))
-            return "Ngày khám phải nằm trong 90 ngày tới.";
-        String day = date.getDayOfWeek() == DayOfWeek.SUNDAY ? "CN" : String.valueOf(date.getDayOfWeek().getValue() + 1);
-        if (branch.getWorkingDays() == null || Arrays.stream(branch.getWorkingDays().split(","))
-                .map(String::trim).noneMatch(day::equalsIgnoreCase)) return "Chi nhánh không làm việc trong ngày này.";
-        SessionRange range = sessionRange(branch, session);
-        if (!range.active()) return "Chi nhánh không nhận lịch trong buổi này.";
-        if (!range.start().isBefore(range.end())) return "Cấu hình buổi khám không hợp lệ.";
-        if (branch.getOpeningTime().isAfter(range.start()) || branch.getClosingTime().isBefore(range.end()))
-            return "Chi nhánh không mở cửa trong buổi được chọn.";
-        if (date.equals(today) && !LocalTime.now(CLINIC_ZONE).isBefore(range.end().minusHours(2)))
-            return "Đã qua hạn đặt lịch cho buổi này.";
-        return null;
-    }
-
-    private record SessionRange(LocalTime start, LocalTime end, boolean active) {}
-    private SessionRange sessionRange(Branch branch, PreferredSession session) {
-        return windows.findByBranch_BranchIdAndPreferredSession(branch.getBranchId(), session)
-                .map(w -> new SessionRange(w.getStartTime(), w.getEndTime(), Boolean.TRUE.equals(w.getIsActive())))
-                .orElseGet(() -> switch (session) {
-                    case MORNING -> new SessionRange(LocalTime.of(8, 0), LocalTime.NOON, true);
-                    case AFTERNOON -> new SessionRange(LocalTime.of(13, 30), LocalTime.of(17, 30), true);
-                    case EVENING -> new SessionRange(LocalTime.of(18, 0), LocalTime.of(20, 0), true);
-                    default -> new SessionRange(LocalTime.MAX, LocalTime.MIN, false);
-                });
-    }
-    private static boolean covers(WorkShift shift, SessionRange range) {
-        return !shift.getStartTime().isAfter(range.start()) && !shift.getEndTime().isBefore(range.end());
-    }
-    private AppointmentSessionPolicy policy(Long branchId, LocalDate date, PreferredSession session) {
-        return policies.findByBranch_BranchIdAndAppointmentDateAndPreferredSession(branchId, date, session).orElse(null);
-    }
-    private int branchCapacity(AppointmentSessionPolicy policy) {
-        return policy == null ? defaultBranchCapacity : policy.getBranchCapacity();
-    }
-    private int doctorCapacity(AppointmentSessionPolicy policy) {
-        return policy == null ? defaultDoctorCapacity : policy.getDoctorCapacity();
-    }
     private static boolean validKey(String key) {
         try { return UUID.fromString(key).toString().equalsIgnoreCase(key); }
         catch (IllegalArgumentException ex) { return false; }
@@ -361,12 +249,6 @@ public class PortalAppointmentService {
             throw conflict("Lịch hẹn không còn ở trạng thái có thể đổi hoặc hủy.");
         if (a.getPreferredSession() == PreferredSession.ANY)
             throw conflict("Lịch hẹn chưa có buổi khám cụ thể. Vui lòng liên hệ lễ tân.");
-    }
-    private void ensurePatientCutoff(Appointment a) {
-        LocalDateTime deadline = LocalDateTime.of(a.getAppointmentDate(),
-                sessionRange(a.getBranch(), a.getPreferredSession()).end().minusHours(2));
-        if (!LocalDateTime.now(CLINIC_ZONE).isBefore(deadline))
-            throw conflict("Đã qua hạn tự đổi hoặc hủy. Vui lòng liên hệ lễ tân.");
     }
     private void history(Appointment a, Long actor, String action, String oldValue, String newValue, String reason) {
         AppointmentHistory h = new AppointmentHistory();
