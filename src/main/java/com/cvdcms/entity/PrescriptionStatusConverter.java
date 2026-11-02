@@ -1,4 +1,4 @@
-package com.cvdcms.converter;
+package com.cvdcms.entity;
 
 import com.cvdcms.entity.enums.PrescriptionStatus;
 import jakarta.persistence.AttributeConverter;

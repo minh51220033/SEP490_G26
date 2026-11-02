@@ -1,6 +1,5 @@
 package com.cvdcms.entity;
 
-import com.cvdcms.converter.PrescriptionStatusConverter;
 import com.cvdcms.entity.enums.PrescriptionPurchaseChoice;
 import com.cvdcms.entity.enums.PrescriptionStatus;
 import jakarta.persistence.*;
