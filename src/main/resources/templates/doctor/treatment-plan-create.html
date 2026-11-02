@@ -579,14 +579,6 @@
         });
     }
 
-    // Nếu phòng khám chưa cấu hình dịch vụ nào thì dùng dịch vụ mẫu mặc định
-    if (Object.keys(SERVICES_DICT).length === 0) {
-        SERVICES_DICT['SRV_FILLING_O'] = { id: 'SRV_FILLING_O', name: 'Trám răng Composite thẩm mỹ (Mặt O)', price: 300000, unit: 'Răng', requiresTooth: true };
-        SERVICES_DICT['SRV_ENDO_MOLAR'] = { id: 'SRV_ENDO_MOLAR', name: 'Điều trị tủy răng hàm & Phục hồi', price: 2050000, unit: 'Răng', requiresTooth: true };
-        SERVICES_DICT['SRV_WISDOM'] = { id: 'SRV_WISDOM', name: 'Nhổ răng khôn mọc lệch máy Piezotome', price: 2500000, unit: 'Răng', requiresTooth: true };
-        SERVICES_DICT['SRV_SCALING'] = { id: 'SRV_SCALING', name: 'Cạo vôi răng siêu âm & Đánh bóng', price: 250000, unit: 'Lần', requiresTooth: false };
-    }
-
     function isPackageService(serviceId) {
         const srv = SERVICES_DICT[serviceId];
         if (!srv) return false;
@@ -817,27 +809,6 @@
         });
     }
 
-    // Nếu không có chẩn đoán nào trong ca khám thì tạo mẫu mặc định để bác sĩ vẫn lập được kế hoạch
-    if (DIAGNOSES.length === 0) {
-        DIAGNOSES.push({
-            id: 'CD_DEFAULT_1',
-            order: 1,
-            type: 'Chính',
-            icd: 'K02.0',
-            name: 'Sâu men răng',
-            teeth: [
-                { num: '41', surf: 'Mặt O', disp: 'R-41 (Mặt O)' },
-                { num: '42', surf: 'Mặt O', disp: 'R-42 (Mặt O)' }
-            ],
-            selected: true,
-            autoReason: 'K02.0 + Mặt O (Xoang I)',
-            presetKey: 'PRESET_FILLING_O',
-            serviceId: findBestServiceForPreset('PRESET_FILLING_O'),
-            qty: 2,
-            stages: []
-        });
-    }
-
     function formatMoney(amount) {
         return Math.round(amount || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' đ';
     }
@@ -913,6 +884,25 @@
         const tbody = document.getElementById('diagTableBody');
         let html = '';
 
+        if (DIAGNOSES.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i class="bi bi-info-circle text-warning fs-3 d-block mb-2"></i>
+                        <div class="fw-bold text-dark fs-6">Chưa có chẩn đoán bệnh nào cho ca khám này</div>
+                        <div class="small mt-1 text-secondary" style="max-width: 500px; margin: 0 auto;">
+                            Bác sĩ bắt buộc phải hoàn thành bước <strong>Chẩn đoán bệnh (ICD-10 / Sơ đồ răng)</strong> ở màn khám bệnh trước khi lập kế hoạch điều trị.
+                        </div>
+                        <a href="/doctor/examination/${CURRENT_VISIT_ID}/diagnoses" class="btn btn-sm btn-primary mt-3 rounded-pill px-3 shadow-xs">
+                            <i class="bi bi-arrow-left me-1"></i> Quay lại Bàn khám để thêm Chẩn đoán
+                        </a>
+                    </td>
+                </tr>
+            `;
+            document.getElementById('diagSelectedSummary').innerText = `0 / 0 đã chọn`;
+            return;
+        }
+
         DIAGNOSES.forEach(d => {
             const isFullJaw = d.teeth.some(t => t.num === 'Toàn hàm' || t.isFullJaw);
             const teethTokens = d.teeth.map(t => {
@@ -979,6 +969,10 @@
     // =========================================================================
     function renderMappingTable() {
         const tbody = document.getElementById('mappingTableBody');
+        if (DIAGNOSES.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4 small">Chưa có chẩn đoán bệnh để gán phác đồ và dịch vụ tính giá. Vui lòng thêm chẩn đoán ở màn khám bệnh.</td></tr>`;
+            return;
+        }
         const active = DIAGNOSES.filter(d => d.selected);
 
         if (active.length === 0) {
@@ -1541,7 +1535,11 @@
 
         const selectedDiags = DIAGNOSES.filter(d => d.selected);
         if (selectedDiags.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 chẩn đoán để lập kế hoạch!');
+            if (DIAGNOSES.length === 0) {
+                alert('⚠️ Ca khám chưa có chẩn đoán bệnh lý nào!\nBác sĩ vui lòng quay lại Bàn khám để hoàn thành bước chẩn đoán trước khi lưu kế hoạch.');
+            } else {
+                alert('Vui lòng chọn ít nhất 1 chẩn đoán để lập kế hoạch!');
+            }
             return;
         }
 

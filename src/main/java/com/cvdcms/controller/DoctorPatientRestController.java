@@ -35,6 +35,9 @@ public class DoctorPatientRestController {
     private final UserRepository userRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClinicalExaminationRepository clinicalExamRepository;
+
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -156,6 +159,7 @@ public class DoctorPatientRestController {
         newVisit.setVisitCode("VIS" + (10000 + visitCount));
 
         newVisit = visitRepository.save(newVisit);
+        ensureClinicalExamExists(newVisit, doctor);
 
         return ResponseEntity.ok(Map.of(
                 "visitId", newVisit.getVisitId(),
@@ -496,6 +500,7 @@ public class DoctorPatientRestController {
         }
         visit.setVisitCode(vCode);
         visit = visitRepository.save(visit);
+        ensureClinicalExamExists(visit, doctor);
 
         String redirectUrl = "/doctor/examination/" + visit.getVisitId() + "/diagnoses";
         if (branch != null) {
@@ -509,5 +514,29 @@ public class DoctorPatientRestController {
                 "visitCode", visit.getVisitCode(),
                 "redirectUrl", redirectUrl
         ));
+    }
+
+    private void ensureClinicalExamExists(Visit visit, StaffProfile doctor) {
+        if (visit == null || clinicalExamRepository == null) return;
+        try {
+            if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
+                ClinicalExamination exam = new ClinicalExamination();
+                exam.setVisit(visit);
+                exam.setPatientProfile(visit.getPatientProfile());
+                StaffProfile effectiveDoc = doctor != null ? doctor : visit.getPrimaryDoctor();
+                if (effectiveDoc == null) {
+                    effectiveDoc = staffProfileRepository.findAll().stream()
+                            .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
+                            .findFirst().orElse(null);
+                }
+                exam.setDoctor(effectiveDoc);
+                exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
+                        ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
+                exam.setExamTime(LocalDateTime.now());
+                clinicalExamRepository.save(exam);
+            }
+        } catch (Exception e) {
+            log.warn("Không thể tạo ClinicalExamination cho ca khám {}: {}", visit.getVisitId(), e.getMessage());
+        }
     }
 }
