@@ -51,6 +51,8 @@ class TreatmentPlanLogicUnitTest {
     @Mock private SupplierRepository supplierRepository;
     @Mock private VisitRepository visitRepository;
     @Mock private UserRepository userRepository;
+    @Mock private CustomerCareInteractionRepository customerCareInteractionRepository;
+    @Mock private CustomerCareTaskRepository customerCareTaskRepository;
 
     private TreatmentPlanServiceImpl treatmentPlanServiceImpl;
     private DiagnosisController diagnosisController;
@@ -89,7 +91,9 @@ class TreatmentPlanLogicUnitTest {
                 patientProfileRepository,
                 branchRepository,
                 staffProfileRepository,
-                userRepository
+                userRepository,
+                customerCareInteractionRepository,
+                customerCareTaskRepository
         );
 
         mockPatient = new PatientProfile();

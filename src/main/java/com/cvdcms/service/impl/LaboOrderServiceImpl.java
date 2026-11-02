@@ -44,6 +44,9 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     public List<LaboOrderResponseDTO> getOrdersByVisit(Long visitId) {
         if (visitId == null) return Collections.emptyList();
         List<LaboOrder> list = laboOrderRepository.findByVisit_VisitIdOrderBySentDateDesc(visitId);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
         return list.stream().map(LaboOrderResponseDTO::fromEntity).collect(Collectors.toList());
     }
 
@@ -56,12 +59,11 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<LaboOrderResponseDTO> getAllOrders(String keyword, LaboOrderStatus status, Long supplierId, Long visitId, Long profileId) {
         List<LaboOrder> list = laboOrderRepository.searchLaboOrders(keyword, status, supplierId, visitId, profileId);
-        if (list.isEmpty() && (keyword == null || keyword.isBlank()) && status == null && supplierId == null) {
-            seedGlobalDemoOrders();
-            list = laboOrderRepository.searchLaboOrders(keyword, status, supplierId, visitId, profileId);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
         }
         return list.stream().map(LaboOrderResponseDTO::fromEntity).collect(Collectors.toList());
     }
@@ -135,11 +137,6 @@ public class LaboOrderServiceImpl implements LaboOrderService {
 
         if (order.getDoctor() == null && dto.getDoctorId() != null) {
             order.setDoctor(staffProfileRepository.findById(dto.getDoctorId()).orElse(null));
-        }
-
-        // Bắt buộc kiểm tra có bác sĩ phụ trách trước khi lưu phiếu Labo (doctor_id NOT NULL trong DB)
-        if (order.getDoctor() == null) {
-            throw new IllegalArgumentException("Không thể tạo phiếu đặt xưởng khi ca khám chưa có bác sĩ phụ trách. Vui lòng chọn bác sĩ chỉ định hoặc phân công bác sĩ cho ca khám trước!");
         }
 
         // 5. Details
@@ -320,110 +317,4 @@ public class LaboOrderServiceImpl implements LaboOrderService {
         return supplierRepository.save(s);
     }
 
-    private void seedDemoOrdersForVisit(Visit visit) {
-        if (visit == null || visit.getVisitId() == null || visit.getPatientProfile() == null || visit.getPrimaryDoctor() == null) {
-            log.info("Bỏ qua tạo dữ liệu labo mẫu cho ca khám: ca khám chưa được gán bác sĩ phụ trách.");
-            return;
-        }
-        try {
-            Supplier s1 = findOrCreateDefaultSupplier();
-
-            Supplier s2 = supplierRepository.findBySupplierCodeIgnoreCase("LB02").orElseGet(() -> {
-                Supplier supp = new Supplier();
-                supp.setSupplierCode("LB02");
-                supp.setSupplierName("Labo Đức Phát");
-                supp.setPhoneNumber("02838003344");
-                supp.setAddress("Quận Tân Bình, TP. Hồ Chí Minh");
-                supp.setIsActive(true);
-                return supplierRepository.save(supp);
-            });
-
-            Supplier sMedlatec = supplierRepository.findBySupplierCodeIgnoreCase("LB-XN").orElseGet(() -> {
-                Supplier supp = new Supplier();
-                supp.setSupplierCode("LB-XN");
-                supp.setSupplierName("Trung tâm Xét nghiệm Y khoa Medlatec");
-                supp.setPhoneNumber("1900565656");
-                supp.setAddress("Số 42 Nghĩa Dũng, Ba Đình, Hà Nội");
-                supp.setIsActive(true);
-                return supplierRepository.save(supp);
-            });
-
-            String code1 = "LAB-V" + visit.getVisitId() + "-01";
-            if (code1.length() > 20) code1 = code1.substring(0, 20);
-            if (laboOrderRepository.findByLaboCodeIgnoreCase(code1).isEmpty()) {
-                // 1. Phiếu Răng sứ Zirconia
-                LaboOrder o1 = new LaboOrder();
-                o1.setLaboCode(code1);
-                o1.setVisit(visit);
-                o1.setPatientProfile(visit.getPatientProfile());
-                o1.setBranch(visit.getBranch());
-                o1.setDoctor(visit.getPrimaryDoctor());
-                o1.setSupplier(s1);
-                o1.setOrderType(LaboOrderType.NEW);
-                o1.setToothPositions("R26");
-                o1.setMaterialType("Răng sứ Zirconia DDBio cao cấp");
-                o1.setShadeColor("A2 (3M)");
-                o1.setQuantity(1);
-                o1.setUnitPrice(BigDecimal.valueOf(1500000));
-                o1.setCostToClinic(BigDecimal.valueOf(1500000));
-                o1.setSentDate(LocalDate.now().minusDays(3));
-                o1.setTryInDate(LocalDate.now().plusDays(1));
-                o1.setTryInTime("09:30");
-                o1.setExpectedDate(LocalDate.now().plusDays(2));
-                o1.setStatus(LaboOrderStatus.PROCESSING);
-                o1.setCrownInfo("Mão đơn lẻ R26");
-                o1.setNotes("Lấy dấu cao su 2 thì, đường hoàn tất bờ vai 0.5mm, khớp cắn chuẩn giải phẫu, bề mặt đánh bóng kỹ.");
-                o1.setImageUrl("https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80");
-                laboOrderRepository.save(o1);
-            }
-
-            String code2 = "XN-V" + visit.getVisitId() + "-02";
-            if (code2.length() > 20) code2 = code2.substring(0, 20);
-            if (laboOrderRepository.findByLaboCodeIgnoreCase(code2).isEmpty()) {
-                // 2. Phiếu Mẫu Máu & Giấy xét nghiệm đông máu (PT/APTT/INR)
-                LaboOrder o2 = new LaboOrder();
-                o2.setLaboCode(code2);
-                o2.setVisit(visit);
-                o2.setPatientProfile(visit.getPatientProfile());
-                o2.setBranch(visit.getBranch());
-                o2.setDoctor(visit.getPrimaryDoctor());
-                o2.setSupplier(sMedlatec);
-                o2.setOrderType(LaboOrderType.NEW);
-                o2.setToothPositions("Mẫu máu ngoại vi");
-                o2.setMaterialType("Xét nghiệm đông máu PT/APTT/INR & Công thức máu (CBC)");
-                o2.setShadeColor("Ống nghiệm EDTA/Citrate");
-                o2.setQuantity(1);
-                o2.setUnitPrice(BigDecimal.valueOf(350000));
-                o2.setCostToClinic(BigDecimal.valueOf(350000));
-                o2.setSentDate(LocalDate.now().minusDays(1));
-                o2.setTryInDate(LocalDate.now());
-                o2.setTryInTime("14:00");
-                o2.setExpectedDate(LocalDate.now());
-                o2.setReceivedDate(LocalDate.now());
-                o2.setStatus(LaboOrderStatus.DELIVERED);
-                o2.setNotes("Bệnh nhân chuẩn bị cấy ghép Implant & nhổ răng khôn R38. Kiểm tra chỉ số đông máu: PT = 12.5s (bình thường), INR = 1.02. Đủ điều kiện phẫu thuật.");
-                o2.setImageUrl("https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80");
-                laboOrderRepository.save(o2);
-            }
-
-            log.info("Seeded demo labo & blood test orders for visit: {}", visit.getVisitId());
-        } catch (Exception e) {
-            log.error("Lỗi khi tạo dữ liệu labo mẫu cho visit {}: {}", visit.getVisitId(), e.getMessage(), e);
-            throw new RuntimeException("Lỗi khi khởi tạo phiếu labo mẫu: " + e.getMessage(), e);
-        }
-    }
-
-    private void seedGlobalDemoOrders() {
-        List<Visit> visits = visitRepository.findAll();
-        for (Visit v : visits) {
-            if (v.getPrimaryDoctor() != null && v.getPatientProfile() != null) {
-                try {
-                    seedDemoOrdersForVisit(v);
-                    break;
-                } catch (Exception ex) {
-                    log.warn("Không thể tạo labo mẫu cho visit {}: {}", v.getVisitId(), ex.getMessage());
-                }
-            }
-        }
-    }
 }
