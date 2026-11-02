@@ -2,7 +2,7 @@
     const api = '/portal/appointments/api';
     const $ = id => document.getElementById(id);
     const sessionLabel = {MORNING: 'Buổi sáng', AFTERNOON: 'Buổi chiều', EVENING: 'Buổi tối'};
-    const statusLabel = {PENDING: 'Chờ lễ tân xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã đến',
+    const statusLabel = {PENDING: 'Đang chờ phòng khám xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã đến',
         COMPLETED: 'Đã hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Không đến'};
     const statusClass = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-info text-dark',
         COMPLETED: 'bg-success', CANCELLED: 'bg-secondary', NO_SHOW: 'bg-danger'};
@@ -32,7 +32,9 @@
     }
     function cell(row, value) {
         const el = document.createElement('td');
-        el.textContent = value == null || value === '' ? '—' : value;
+        if (value !== undefined && value !== null && value !== '') {
+            el.textContent = value;
+        }
         row.appendChild(el);
         return el;
     }
@@ -40,6 +42,28 @@
         if (!value) return '—';
         const [year, month, day] = value.split('-');
         return `${day}/${month}/${year}`;
+    }
+    function formatSnapshot(raw) {
+        if (!raw) return null;
+        const parts = raw.split('|');
+        if (parts.length < 2) return null;
+        const date = dateLabel(parts[0]);
+        const session = sessionLabel[parts[1]] || parts[1];
+        let doctorText = 'Không yêu cầu bác sĩ đích danh';
+        let statusText = '';
+        for (let i = 2; i < parts.length; i++) {
+            const p = parts[i];
+            if (p.startsWith('doctor=')) {
+                const docVal = p.substring(7);
+                if (docVal && docVal !== 'null' && docVal !== 'none') {
+                    doctorText = 'Bác sĩ chỉ định';
+                }
+            } else if (p.startsWith('status=')) {
+                const statVal = p.substring(7);
+                statusText = statusLabel[statVal] || statVal;
+            }
+        }
+        return { date, session, doctorText, statusText };
     }
     function localDate(offset = 0) {
         const d = new Date();
@@ -71,19 +95,59 @@
             }
             list.forEach(a => {
                 const row = document.createElement('tr');
-                cell(row, a.code);
-                cell(row, `${dateLabel(a.date)} · ${sessionLabel[a.session] || a.session}`);
+
+                // Column 1: Mã lịch
+                const codeTd = cell(row);
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'fw-bold text-dark font-monospace';
+                codeSpan.textContent = a.code;
+                codeTd.appendChild(codeSpan);
+                if (a.code.startsWith('TK')) {
+                    const tkBadge = document.createElement('span');
+                    tkBadge.className = 'badge ms-1.5';
+                    tkBadge.style.cssText = 'background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; font-size: 11px;';
+                    tkBadge.textContent = 'Tái khám';
+                    tkBadge.title = 'Lịch hẹn tái khám theo chỉ định của bác sĩ (FT18)';
+                    codeTd.appendChild(tkBadge);
+                }
+
+                // Column 2: Ngày và buổi
+                const dateTd = cell(row);
+                dateTd.innerHTML = `<span class="fw-medium">${dateLabel(a.date)}</span> <span class="badge bg-light text-secondary border ms-1">${sessionLabel[a.session] || a.session}</span>`;
+
+                // Column 3: Chi nhánh
                 cell(row, a.branchName);
-                cell(row, a.requestedDoctorName || 'Không yêu cầu');
-                const status = cell(row, '');
+
+                // Column 4: Bác sĩ yêu cầu
+                const doctorTd = cell(row);
+                if (a.requestedDoctorName) {
+                    doctorTd.innerHTML = `<i class="bi bi-person-fill text-primary me-1"></i><span>${a.requestedDoctorName}</span>`;
+                } else {
+                    doctorTd.innerHTML = `<span class="text-muted">Không yêu cầu</span>`;
+                }
+                if (a.code.startsWith('TK')) {
+                    const docSub = document.createElement('small');
+                    docSub.style.cssText = 'display: block; color: #7c3aed; font-size: 11px;';
+                    docSub.textContent = 'Bác sĩ chỉ định tái khám';
+                    doctorTd.appendChild(docSub);
+                }
+
+                // Column 5: Trạng thái
+                const statusTd = cell(row);
                 const badge = document.createElement('span');
-                badge.className = `badge ${statusClass[a.status] || 'bg-secondary'}`;
+                badge.className = `badge rounded-pill ${statusClass[a.status] || 'bg-secondary'}`;
+                badge.style.padding = '6px 12px';
                 badge.textContent = statusLabel[a.status] || a.status;
-                status.appendChild(badge);
-                const action = cell(row, '');
+                statusTd.appendChild(badge);
+
+                // Column 6: Thao tác
+                const actionTd = cell(row);
                 const link = document.createElement('a');
-                link.className = 'btn btn-sm btn-outline-primary'; link.href = `/portal/appointments/${a.id}`;
-                link.textContent = 'Xem chi tiết'; action.appendChild(link);
+                link.className = 'btn btn-sm btn-outline-primary fw-medium';
+                link.href = `/portal/appointments/${a.id}`;
+                link.innerHTML = '<i class="bi bi-eye me-1"></i>Xem chi tiết';
+                actionTd.appendChild(link);
+
                 rows.appendChild(row);
             });
         }
@@ -105,6 +169,13 @@
         if (editing) {
             const detail = await request(`/${id}`);
             current = detail.appointment;
+            if (current.code && current.code.startsWith('TK')) {
+                const notice = document.createElement('div');
+                notice.className = 'alert alert-warning mb-3';
+                notice.style.borderRadius = '10px';
+                notice.innerHTML = '<i class="bi bi-info-circle-fill me-2"></i><strong>Lưu ý đổi lịch tái khám:</strong> Lịch này do bác sĩ chỉ định sau điều trị. Khi gửi yêu cầu đổi ngày hoặc buổi, lịch sẽ chuyển về trạng thái <strong>Chờ phòng khám xác nhận</strong> để lễ tân sắp xếp lại bác sĩ phù hợp.';
+                form.insertBefore(notice, form.querySelector('.patient-form-grid') || form.firstChild);
+            }
             $('profileId').value = current.profileId;
             $('branchId').value = current.branchId;
             $('appointmentDate').value = current.date;
@@ -188,27 +259,103 @@
             $('successMessage').hidden = false;
         }
         const facts = $('appointmentFacts');
+        if (a.code && a.code.startsWith('TK')) {
+            const reExamCard = document.createElement('div');
+            reExamCard.className = 'alert alert-primary mb-3';
+            reExamCard.style.cssText = 'background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6; border-radius: 12px; padding: 14px 16px;';
+            reExamCard.innerHTML = `<div class="d-flex align-items-start gap-2.5">
+                <i class="bi bi-calendar2-check-fill fs-4" style="color: #7c3aed; margin-top: -2px;"></i>
+                <div>
+                    <h5 class="fw-bold mb-1" style="font-size: 15px; color: #5b21b6;">Lịch hẹn tái khám theo chỉ định bác sĩ (FT18)</h5>
+                    <p class="mb-0 small" style="color: #6d28d9; line-height: 1.5;">Đây là lịch hẹn tái khám sau điều trị. Vui lòng theo dõi lời dặn dò của bác sĩ và đến đúng ngày để được kiểm tra tiến trình hồi phục vết thương.</p>
+                </div>
+            </div>`;
+            $('appointmentDetail').insertBefore(reExamCard, facts);
+        }
+        if (a.status === 'PENDING') {
+            const pendingNote = document.createElement('div');
+            pendingNote.className = 'alert alert-info mb-3';
+            pendingNote.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> <strong>Đang chờ phòng khám xác nhận:</strong> Lễ tân sẽ kiểm tra lịch bác sĩ và liên hệ xác nhận chính thức.';
+            $('appointmentDetail').insertBefore(pendingNote, facts);
+        }
         const items = [
-            ['Mã lịch', a.code], ['Bệnh nhân', a.patientName], ['Chi nhánh', a.branchName],
-            ['Ngày khám', dateLabel(a.date)], ['Buổi khám', sessionLabel[a.session] || a.session],
-            ['Bác sĩ yêu cầu', a.requestedDoctorName || 'Không yêu cầu · lễ tân điều phối khi đến'],
-            ['Dịch vụ quan tâm', a.serviceName || 'Chưa chọn'], ['Tình trạng ban đầu', a.symptoms || 'Chưa khai báo'],
-            ['Trạng thái', statusLabel[a.status] || a.status], ['Số lần đổi lịch', String(a.rescheduleCount)],
+            ['Mã lịch', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám sau điều trị)' : '')],
+            ['Bệnh nhân', a.patientName],
+            ['Chi nhánh', a.branchName],
+            ['Ngày khám', dateLabel(a.date)],
+            ['Buổi khám', sessionLabel[a.session] || a.session],
+            [a.code.startsWith('TK') ? 'Bác sĩ phụ trách tái khám' : 'Bác sĩ yêu cầu', a.requestedDoctorName || (a.code.startsWith('TK') ? 'Bác sĩ điều trị' : 'Không yêu cầu · lễ tân điều phối khi đến')],
+            ['Dịch vụ quan tâm', a.serviceName || (a.code.startsWith('TK') ? 'Tái khám theo dõi chuyên khoa' : 'Chưa chọn')],
+            [a.code.startsWith('TK') ? 'Lời dặn dò của bác sĩ' : 'Tình trạng ban đầu', a.symptoms || 'Chưa khai báo'],
+            ['Nguồn lịch', a.code.startsWith('TK') ? 'Bác sĩ hẹn tại phòng khám (FT18)' : 'Đặt trực tuyến (Portal)'],
+            ['Trạng thái', statusLabel[a.status] || a.status],
+            ['Số lần đổi lịch', String(a.rescheduleCount)],
             ['Lý do hủy', a.cancelReason || '—']
         ];
+        facts.replaceChildren();
         items.forEach(([label, value]) => {
             const box = document.createElement('div'), heading = document.createElement('span'), content = document.createElement('strong');
             heading.textContent = label; content.textContent = value; box.append(heading, content); facts.appendChild(box);
         });
+
+        // Timeline rendering for Appointment History (Replaces ugly raw database strings)
         const history = $('appointmentHistory');
-        detail.history.forEach(h => {
-            const item = document.createElement('li');
-            item.textContent = `${h.action === 'CREATE' ? 'Đặt lịch' : h.action === 'RESCHEDULE' ? 'Đổi lịch' : 'Hủy lịch'} · ${h.newValue}${h.reason ? ' · ' + h.reason : ''}`;
-            history.appendChild(item);
-        });
-        if (!detail.history.length) {
-            const item = document.createElement('li'); item.textContent = 'Chưa có thay đổi.'; history.appendChild(item);
+        history.replaceChildren();
+        if (!detail.history || !detail.history.length) {
+            const empty = document.createElement('li');
+            empty.className = 'text-muted small py-2';
+            empty.textContent = 'Chưa có lịch sử thay đổi.';
+            history.appendChild(empty);
+        } else {
+            const actionInfo = {
+                CREATE: { label: 'Tạo lịch hẹn', badge: 'bg-primary-subtle text-primary border-primary-subtle', icon: 'bi-calendar-plus' },
+                RESCHEDULE: { label: 'Đổi ngày / buổi khám', badge: 'bg-warning-subtle text-warning border-warning-subtle', icon: 'bi-arrow-repeat' },
+                CONFIRM: { label: 'Phòng khám xác nhận', badge: 'bg-success-subtle text-success border-success-subtle', icon: 'bi-check-circle' },
+                CANCEL: { label: 'Hủy lịch hẹn', badge: 'bg-danger-subtle text-danger border-danger-subtle', icon: 'bi-x-circle' },
+                COMPLETE: { label: 'Hoàn tất lượt khám', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-check2-all' }
+            };
+
+            detail.history.forEach((h, idx) => {
+                const item = document.createElement('li');
+                item.className = 'timeline-entry mb-3';
+                item.style.listStyle = 'none';
+
+                const act = actionInfo[h.action] || { label: h.action, badge: 'bg-secondary-subtle text-secondary border', icon: 'bi-clock-history' };
+                const snap = formatSnapshot(h.newValue);
+
+                let snapText = '';
+                if (snap) {
+                    snapText = `<div class="small mt-1 text-secondary">
+                        <span><i class="bi bi-calendar3 me-1"></i>Ngày hẹn: <strong>${snap.date}</strong> (${snap.session})</span>
+                        <span class="mx-1.5 text-muted">·</span>
+                        <span><i class="bi bi-person-badge me-1"></i>${snap.doctorText}</span>
+                        ${snap.statusText ? `<span class="mx-1.5 text-muted">·</span><span class="badge bg-light text-dark border">${snap.statusText}</span>` : ''}
+                    </div>`;
+                } else if (h.newValue) {
+                    snapText = `<div class="small mt-1 text-muted">${h.newValue}</div>`;
+                }
+
+                let reasonText = '';
+                if (h.reason) {
+                    reasonText = `<div class="small text-muted fst-italic mt-1 ps-2 border-start border-2 border-primary-subtle">
+                        <i class="bi bi-chat-quote me-1"></i>${h.reason}
+                    </div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${act.badge} py-1 px-2 fw-semibold">
+                            <i class="bi ${act.icon} me-1"></i>${act.label}
+                        </span>
+                        <span class="text-muted small fw-medium">Lần #${idx + 1}</span>
+                    </div>
+                    ${snapText}
+                    ${reasonText}
+                `;
+                history.appendChild(item);
+            });
         }
+
         if (a.status === 'PENDING' || a.status === 'CONFIRMED') {
             $('appointmentActions').hidden = false;
             $('changeLink').href = `/portal/appointments/${id}/change`;
