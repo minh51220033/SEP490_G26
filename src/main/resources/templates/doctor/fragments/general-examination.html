@@ -8,16 +8,16 @@
 <!-- ========================================================================= -->
 <div th:fragment="generalExamSection">
     <!-- FOLDABLE HEADER -->
-    <div class="df-foldable-bar d-flex align-items-center justify-content-between" id="bar-exam" onclick="toggleMainBar('exam')">
+    <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-exam" onclick="toggleMainBar('exam')">
         <div class="d-flex align-items-center flex-grow-1">
-            <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-exam"></i>
-            <span class="df-foldable-title">KHÁM TỔNG QUÁT</span>
+            <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-exam"></i>
+            <span class="df-foldable-title">1. KHÁM TỔNG QUÁT</span>
             <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Triệu chứng ban đầu, tiền sử y khoa dị ứng &amp; khám mô mềm / khớp TMJ)</span>
         </div>
     </div>
 
     <!-- FOLDABLE CONTENT -->
-    <div class="df-foldable-content" id="content-exam" style="display: none;">
+    <div class="df-foldable-content" id="content-exam" style="display: block;">
         <div class="p-3 p-md-4 bg-white border-top">
             <div class="row g-3">
                 <!-- ========================================================= -->
