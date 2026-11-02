@@ -39,10 +39,27 @@ public class EmrPageController {
     @GetMapping
     public String list(HttpSession session, Model model,
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) EmrRecordStatus status) {
-        model.addAttribute("dashboard", service.dashboard(session, query, status));
+            @RequestParam(required = false) EmrRecordStatus status,
+            @RequestParam(required = false) java.time.LocalDate fromDate,
+            @RequestParam(required = false) java.time.LocalDate toDate,
+            @RequestParam(required = false) String doctor,
+            @RequestParam(required = false) String branch,
+            @RequestParam(defaultValue = "0") int page) {
+        var dashboard = service.dashboard(session, query, status, fromDate, toDate, doctor, branch);
+        int pageSize = 10;
+        int pageCount = Math.max(1, (dashboard.records().size() + pageSize - 1) / pageSize);
+        int safePage = Math.max(0, Math.min(page, pageCount - 1));
+        model.addAttribute("dashboard", dashboard);
+        model.addAttribute("pagedRecords", dashboard.records().subList(safePage * pageSize,
+                Math.min((safePage + 1) * pageSize, dashboard.records().size())));
+        model.addAttribute("page", safePage);
+        model.addAttribute("pageCount", pageCount);
         model.addAttribute("query", query);
         model.addAttribute("selectedStatus", status);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("branch", branch);
         model.addAttribute("statuses", EmrRecordStatus.values());
         return "emr/list";
     }
@@ -89,17 +106,11 @@ public class EmrPageController {
                 () -> service.lock(session, recordId));
     }
 
-    @PostMapping("/{recordId}/patient-sign-test")
-    public String patientSign(HttpSession session, @PathVariable Long recordId,
-            @RequestParam(required = false) String signerName, RedirectAttributes redirect) {
-        return run(recordId, redirect, "Đã ghi nhận chữ ký thử nghiệm của người bệnh.",
-                () -> service.patientSignForTest(session, recordId, signerName));
-    }
-
     @PostMapping("/{recordId}/doctor-sign-test")
-    public String doctorSign(HttpSession session, @PathVariable Long recordId, RedirectAttributes redirect) {
+    public String doctorSign(HttpSession session, @PathVariable Long recordId,
+            @RequestParam(defaultValue = "false") boolean confirmed, RedirectAttributes redirect) {
         return run(recordId, redirect, "Đã hoàn tất chữ ký thử nghiệm của bác sĩ.",
-                () -> service.doctorSignForTest(session, recordId));
+                () -> service.doctorSignForTest(session, recordId, confirmed));
     }
 
     @PostMapping("/{recordId}/amendments")
@@ -133,6 +144,17 @@ public class EmrPageController {
                         "attachment; filename=emr-" + recordId + "-vietnamese.json")
                 .contentLength(body.length)
                 .body(body);
+    }
+
+    @GetMapping("/{recordId}/attachments/{attachmentId}")
+    @ResponseBody
+    public ResponseEntity<byte[]> attachment(HttpSession session, @PathVariable Long recordId,
+            @PathVariable Long attachmentId) {
+        var file = service.downloadAttachment(session, recordId, attachmentId);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(file.mimeType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=emr-attachment-" + attachmentId)
+                .header("X-Content-Type-Options", "nosniff")
+                .contentLength(file.bytes().length).body(file.bytes());
     }
 
     private String run(Long recordId, RedirectAttributes redirect, String success, Runnable action) {

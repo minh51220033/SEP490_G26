@@ -1,429 +1,712 @@
-
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chỉnh sửa thông tin cá nhân</title>
+<head th:replace="~{fragments/head :: head('Cập nhật thông tin liên hệ')}"></head>
+<body class="app-body">
+<div class="app-shell">
 
-    <style>
-        * {
-            box-sizing: border-box;
+<style>
+    /* Bố cục trang chỉnh sửa thông tin: Trải rộng 100% không gian, phân bổ hài hòa, không khoảng trống thừa */
+    .pe-wrap {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hero Banner: Đồng bộ với màn Thông tin cá nhân, hiện đại, tương phản cao */
+    .pe-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 65%, #0284c7 100%);
+        border-radius: 12px;
+        padding: 16px 24px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        margin-bottom: 16px;
+    }
+    .pe-hero__left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .pe-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        background: #0284c7;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .pe-hero__title {
+        font-size: 19px;
+        font-weight: 700;
+        margin: 0 0 5px 0;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .pe-hero__uname {
+        font-size: 13.5px;
+        color: rgba(255, 255, 255, 0.75);
+        font-weight: 400;
+    }
+    .pe-hero__tags {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .pe-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        user-select: none;
+    }
+    .pe-tag--active {
+        background: rgba(34, 197, 94, 0.22);
+        color: #86efac;
+    }
+    .pe-tag--role {
+        background: rgba(255, 255, 255, 0.16);
+        color: #f8fafc;
+    }
+    .pe-tag--branch {
+        background: rgba(56, 189, 248, 0.2);
+        color: #bae6fd;
+    }
+    .pe-hero__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Các thẻ card nội dung */
+    .pe-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+    .pe-card:last-child {
+        margin-bottom: 0;
+    }
+    .pe-card__head {
+        padding: 12px 22px;
+        background: #f8fafc;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .pe-card__title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pe-card__title i {
+        color: #0284c7;
+        font-size: 16px;
+    }
+    .pe-card__body {
+        padding: 18px 22px;
+    }
+
+    /* Input controls */
+    .pe-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 5px;
+    }
+    .pe-input, .pe-select, .pe-textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 13.5px;
+        color: #0f172a;
+        background: #ffffff;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .pe-input:focus, .pe-select:focus, .pe-textarea:focus {
+        outline: none;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+    .pe-input[readonly] {
+        background: #f8fafc;
+        color: #475569;
+        cursor: not-allowed;
+    }
+
+    /* Lưới thông tin nhân sự 3 cột đều nhau */
+    .pe-staff-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px 18px;
+    }
+    @media (max-width: 1100px) {
+        .pe-staff-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
-
-        body {
-            margin: 0;
-            padding: 30px 16px;
-            font-family: Arial, sans-serif;
-            background: #f3f6fb;
-            color: #1f2937;
+    }
+    @media (max-width: 650px) {
+        .pe-staff-grid {
+            grid-template-columns: 1fr;
         }
+    }
+    .pe-tile {
+        padding: 11px 15px;
+        background: #f8fafc;
+        border-radius: 9px;
+        border: 1px solid #eef2f6;
+        border-left: 3px solid #0284c7;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        transition: all 0.15s ease;
+    }
+    .pe-tile:hover {
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        border-color: #cbd5e1;
+        border-left-color: #0284c7;
+    }
+    .pe-tile-label {
+        font-size: 11.5px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pe-tile-val {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+        word-break: break-word;
+    }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
+    /* Avatar preview cho bệnh nhân */
+    .pe-avatar-box {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+    }
+    .pe-avatar-preview {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #0284c7;
+        background: #e0f2fe;
+        color: #0369a1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+</style>
 
-        .card {
-            background: #fff;
-            padding: 28px;
-            border-radius: 12px;
-            box-shadow: 0 5px 22px rgba(0, 0, 0, 0.07);
-        }
+<aside th:replace="~{fragments/sidebar :: sidebar('profile')}"></aside>
+<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-        h1 {
-            margin-top: 0;
-            font-size: 26px;
-        }
+<div class="app-main">
+    <header th:replace="~{fragments/header :: appTopbar('Cập nhật thông tin liên hệ')}"></header>
 
-        h2 {
-            margin-top: 0;
-            font-size: 21px;
-        }
+    <main class="app-content">
+        <div class="pe-wrap">
 
-        .description,
-        .hint {
-            color: #64748b;
-            line-height: 1.6;
-        }
-
-        section {
-            margin: 24px 0;
-        }
-
-        label {
-            display: block;
-            margin: 14px 0 7px;
-            font-weight: 600;
-        }
-
-        input:not([type="radio"]):not([type="file"]),
-        select,
-        textarea {
-            display: block;
-            width: 100%;
-            padding: 11px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 7px;
-            font-size: 15px;
-            background: #fff;
-        }
-
-        input[readonly] {
-            background: #f1f5f9 !important;
-            color: #64748b;
-        }
-
-        textarea {
-            min-height: 90px;
-            resize: vertical;
-        }
-
-        button,
-        .btn {
-            display: inline-block;
-            border: 0;
-            border-radius: 7px;
-            padding: 11px 16px;
-            margin-top: 16px;
-            background: #2563eb;
-            color: #fff;
-            text-decoration: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .secondary {
-            background: #e9eef5;
-            color: #1e293b;
-        }
-
-        .error {
-            padding: 12px;
-            border-radius: 7px;
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .success {
-            padding: 12px;
-            border-radius: 7px;
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .profile-card {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fcfdff;
-        }
-
-        .avatar {
-            display: block;
-            width: 120px;
-            height: 120px;
-            margin-top: 10px;
-            border-radius: 8px;
-            object-fit: cover;
-        }
-
-        fieldset {
-            margin-top: 18px;
-            padding: 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 7px;
-        }
-
-        fieldset label {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            margin-right: 22px;
-            font-weight: normal;
-        }
-
-        fieldset input {
-            width: auto;
-        }
-
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 24px;
-        }
-
-        .actions .btn {
-            margin-top: 0;
-        }
-
-        hr {
-            margin: 28px 0;
-            border: 0;
-            border-top: 1px solid #e2e8f0;
-        }
-    </style>
-</head>
-
-<body>
-<div class="container">
-    <div class="card">
-
-        <h1>Chỉnh sửa thông tin cá nhân</h1>
-
-        <p class="description">
-            Bạn có thể cập nhật thông tin tài khoản và chỉnh sửa từng hồ sơ
-            bệnh nhân thuộc tài khoản của mình.
-        </p>
-
-        <p class="error"
-           th:if="${error != null}"
-           th:text="${error}"></p>
-
-        <p class="success"
-           th:if="${success != null}"
-           th:text="${success}"></p>
-
-        <!-- PHẦN 1: THÔNG TIN TÀI KHOẢN -->
-        <section>
-            <h2>1. Thông tin tài khoản</h2>
-
-            <form th:action="@{/profile/edit}" method="post">
-
-                <label for="username">Tên đăng nhập</label>
-                <input id="username"
-                       type="text"
-                       th:value="${user.username}"
-                       readonly>
-
-                <label for="email">Email *</label>
-                <input id="email"
-                       type="email"
-                       name="email"
-                       th:value="${user.email}"
-                       maxlength="254"
-                       required>
-
-                <label for="phoneNumber">Số điện thoại tài khoản *</label>
-                <input id="phoneNumber"
-                       type="tel"
-                       name="phoneNumber"
-                       th:value="${user.phoneNumber}"
-                       maxlength="20"
-                       required>
-
-                <button type="submit">Lưu thông tin tài khoản</button>
-            </form>
-        </section>
-
-        <hr th:if="${isPatient}">
-
-        <!-- PHẦN 2: CHỌN HỒ SƠ BỆNH NHÂN (chỉ dành cho BENH_NHAN) -->
-        <section th:if="${isPatient}">
-            <h2>2. Hồ sơ bệnh nhân</h2>
-
-            <p class="description">
-                Chọn hồ sơ cần sửa. Các thay đổi chỉ áp dụng cho hồ sơ được chọn.
-            </p>
-
-            <div th:if="${patientProfiles != null
-                         and !#lists.isEmpty(patientProfiles)}">
-
-                <form th:action="@{/profile/edit}" method="get">
-                    <label for="profileId">Chọn hồ sơ bệnh nhân</label>
-
-                    <select id="profileId"
-                            name="profileId"
-                            required
-                            onchange="this.form.submit()">
-
-                        <option value="">-- Chọn hồ sơ --</option>
-
-                        <option th:each="profile : ${patientProfiles}"
-                                th:value="${profile.profileId}"
-                                th:text="${profile.fullName}"
-                                th:selected="${selectedProfileId != null
-                    and selectedProfileId == profile.profileId}">
-                        </option>
-                    </select>
-
-                    <noscript>
-                        <button type="submit">Chọn hồ sơ</button>
-                    </noscript>
-                </form>
+            <!-- Thông báo thành công / lỗi -->
+            <div th:if="${success != null}" class="alert alert-success d-flex align-items-center justify-content-between mb-3 shadow-sm" role="alert" style="border-radius:10px;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill fs-5"></i>
+                    <span th:text="${success}">Cập nhật thành công.</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
 
-            <p th:if="${patientProfiles == null
-                       or #lists.isEmpty(patientProfiles)}">
-                Tài khoản chưa có hồ sơ bệnh nhân.
-                <a th:href="@{/profile/complete}">Tạo hồ sơ bệnh nhân</a>
-            </p>
-
-            <!-- FORM CHỈ HIỆN KHI ĐÃ CHỌN HỒ SƠ -->
-            <div class="profile-card" th:if="${patientProfile != null}">
-
-                <h3 th:text="${'Chỉnh sửa hồ sơ: '
-                              + patientProfile.fullName}">
-                    Chỉnh sửa hồ sơ
-                </h3>
-
-                <form th:action="@{/profile/edit-patient}"
-                      method="post"
-                      enctype="multipart/form-data">
-
-                    <input type="hidden"
-                           name="profileId"
-                           th:value="${patientProfile.profileId}">
-
-                    <label for="fullName">Họ và tên *</label>
-                    <input id="fullName"
-                           type="text"
-                           name="fullName"
-                           maxlength="100"
-                           th:value="${patientProfile.fullName}"
-                           required>
-
-                    <label for="dob">Ngày sinh</label>
-                    <input id="dob"
-                           type="date"
-                           name="dob"
-                           th:value="${patientProfile.dob}">
-
-                    <label for="gender">Giới tính *</label>
-                    <select id="gender" name="gender" required>
-                        <option value="">-- Chọn giới tính --</option>
-                        <option value="Nam"
-                                th:selected="${patientProfile.gender == 'Nam'}">
-                            Nam
-                        </option>
-                        <option value="Nữ"
-                                th:selected="${patientProfile.gender == 'Nữ'}">
-                            Nữ
-                        </option>
-                        <option value="Khác"
-                                th:selected="${patientProfile.gender == 'Khác'}">
-                            Khác
-                        </option>
-                    </select>
-
-                    <label for="profilePhone">Số điện thoại hồ sơ *</label>
-                    <input id="profilePhone"
-                           type="tel"
-                           name="phoneNumber"
-                           maxlength="20"
-                           th:value="${patientProfile.phoneNumber}"
-                           required>
-
-                    <label for="address">Địa chỉ *</label>
-                    <textarea id="address"
-                              name="address"
-                              maxlength="255"
-                              required
-                              th:text="${patientProfile.address}"></textarea>
-
-
-                    <div class="form-group">
-                        <label>Chi nhánh quản lý hồ sơ</label>
-
-                        <input type="text"
-                               th:value="${currentBranchName != null
-               and !currentBranchName.isBlank()
-               ? currentBranchName
-               : 'Chưa chọn chi nhánh'}"
-                               readonly>
-
-                        <p class="hint">
-                            Tất cả hồ sơ bệnh nhân thuộc tài khoản này sử dụng chung
-                            một chi nhánh. Không thể thay đổi chi nhánh riêng tại từng hồ sơ.
-                        </p>
-
-                        <a class="btn"
-                           th:href="@{/profile/change-branch}">
-                            Đổi chi nhánh cho toàn bộ hồ sơ
-                        </a>
-                    </div>
-
-                    <fieldset>
-                        <legend>Bệnh nhân có bệnh nền không? *</legend>
-
-                        <label>
-                            <input type="radio"
-                                   name="hasUnderlyingDisease"
-                                   value="true"
-                                   th:checked="${patientProfile.hasUnderlyingDisease == true}"
-                                   required>
-                            Có
-                        </label>
-
-                        <label>
-                            <input type="radio"
-                                   name="hasUnderlyingDisease"
-                                   value="false"
-                                   th:checked="${patientProfile.hasUnderlyingDisease == false}"
-                                   required>
-                            Không
-                        </label>
-                    </fieldset>
-
-                    <label for="underlyingDiseaseDetails">
-                        Chi tiết bệnh nền
-                    </label>
-                    <textarea id="underlyingDiseaseDetails"
-                              name="underlyingDiseaseDetails"
-                              maxlength="2000"
-                              th:text="${patientProfile.underlyingDiseaseDetails}"
-                              placeholder="Nhập thông tin bệnh nền nếu có"></textarea>
-
-                    <label for="avatar">Ảnh đại diện mới (không bắt buộc)</label>
-                    <input id="avatar"
-                           type="file"
-                           name="avatar"
-                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-
-                    <p class="hint">
-                        Chỉ chọn ảnh nếu muốn thay ảnh hiện tại.
-                        Hỗ trợ JPG, PNG hoặc WebP; tối đa 5 MB.
-                    </p>
-
-                    <div th:if="${patientProfile.avatarUrl != null
-                                 and !patientProfile.avatarUrl.isBlank()}">
-                        <p>Ảnh đại diện hiện tại:</p>
-                        <img class="avatar"
-                             th:src="${patientProfile.avatarUrl}"
-                             alt="Ảnh đại diện hiện tại">
-                    </div>
-
-                    <button type="submit">Lưu hồ sơ bệnh nhân</button>
-
-
-                    <div class="actions">
-                        <a th:href="@{/profile/add-patient}">
-                            Thêm hồ sơ bệnh nhân
-                        </a>
-                    </div>
-
-                </form>
+            <div th:if="${error != null}" class="alert alert-danger d-flex align-items-center justify-content-between mb-3 shadow-sm" role="alert" style="border-radius:10px;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <span th:text="${error}">Đã xảy ra lỗi.</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
-        </section>
 
-        <div class="actions">
-            <a class="btn secondary" th:href="@{/profile}">
-                Xem thông tin cá nhân
-            </a>
+            <!-- 1. HERO BANNER: Đầy đủ định danh, đồng bộ với trang Hồ sơ, phủ kín chiều ngang 100% -->
+            <section class="pe-hero">
+                <div class="pe-hero__left">
+                    <img th:if="${profileAvatarUrl != null and !#strings.isEmpty(profileAvatarUrl)}"
+                         th:src="${profileAvatarUrl}"
+                         alt="Avatar" class="pe-avatar">
+                    <div th:if="${profileAvatarUrl == null or #strings.isEmpty(profileAvatarUrl)}"
+                         class="pe-avatar"
+                         th:text="${displayName != null and !#strings.isEmpty(displayName) ? #strings.substring(displayName, 0, 1).toUpperCase() : 'U'}">U</div>
 
-            <a class="btn secondary"
-               th:href="@{/profile/change-password}">
-                Đổi mật khẩu
-            </a>
+                    <div>
+                        <h2 class="pe-hero__title">
+                            <span th:text="${displayName}">Đặng Thùy Dung</span>
+                            <span class="pe-hero__uname">
+                                @<span th:text="${user.username}">username</span>
+                                <span class="text-white-50 ms-1">(#<span th:text="${user.userId}">1</span>)</span>
+                            </span>
+                        </h2>
 
-            <a class="btn secondary" th:href="@{/home}">
-                Về trang chủ
-            </a>
+                        <div class="pe-hero__tags">
+                            <span class="pe-tag pe-tag--active">
+                                <i class="bi bi-check-circle-fill"></i> Đang hoạt động
+                            </span>
+                            <span th:each="rName : ${roleDisplayNames}" class="pe-tag pe-tag--role">
+                                <i class="bi bi-person-badge"></i>
+                                <span th:text="${rName}">Bác sĩ nha khoa</span>
+                            </span>
+                            <span th:if="${currentBranchName != null}" class="pe-tag pe-tag--branch">
+                                <i class="bi bi-buildings"></i>
+                                <span th:text="${currentBranchName}">Ngô Cương</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pe-hero__actions">
+                    <a th:href="@{/profile}" class="btn btn-light fw-semibold px-3 shadow-sm" style="font-size: 13px;">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại hồ sơ
+                    </a>
+                    <button type="button" class="btn btn-outline-light px-3" data-bs-toggle="modal" data-bs-target="#changePasswordModal" style="font-size: 13px;">
+                        <i class="bi bi-shield-lock me-1"></i> Đổi mật khẩu
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2. KHỐI FORM CẬP NHẬT THÔNG TIN LIÊN HỆ TÀI KHOẢN (Trải đều 4 cột đối xứng) -->
+            <div class="pe-card">
+                <div class="pe-card__head">
+                    <h2 class="pe-card__title">
+                        <i class="bi bi-person-gear"></i> Thông tin liên hệ Tài khoản đăng nhập
+                    </h2>
+                    <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 12px;">
+                        <i class="bi bi-link-45deg me-1"></i>Tự động đồng bộ sang hồ sơ chuyên môn
+                    </span>
+                </div>
+                <div class="pe-card__body">
+                    <form th:action="@{/profile/edit}" method="post">
+                        <div class="row g-3 mb-3">
+                            <div class="col-lg-3 col-md-6">
+                                <label class="pe-label">Tên đăng nhập (Cố định)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted border-end-0">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </span>
+                                    <input type="text" class="pe-input border-start-0" th:value="${user.username}" readonly>
+                                </div>
+                                <div class="small text-muted mt-1" style="font-size: 11.5px;">Tên định danh duy nhất trên hệ thống.</div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6">
+                                <label class="pe-label">Phân loại tài khoản</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted border-end-0">
+                                        <i class="bi bi-shield-shaded"></i>
+                                    </span>
+                                    <input type="text" class="pe-input border-start-0"
+                                           th:value="${user.userType != null and user.userType.name() == 'STAFF' ? 'Nhân sự nội bộ phòng khám' : 'Bệnh nhân / Khách hàng'}" readonly>
+                                </div>
+                                <div class="small text-muted mt-1" style="font-size: 11.5px;">Quyền hạn phân định theo nhóm người dùng.</div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6">
+                                <label for="accEmail" class="pe-label">Địa chỉ Email <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-primary">
+                                        <i class="bi bi-envelope"></i>
+                                    </span>
+                                    <input type="email"
+                                           id="accEmail"
+                                           name="email"
+                                           class="pe-input border-start-0"
+                                           th:value="${user.email}"
+                                           maxlength="254"
+                                           placeholder="ten@domain.com"
+                                           required>
+                                </div>
+                                <div class="small text-muted mt-1" style="font-size: 11.5px;">Dùng nhận OTP xác thực và thông báo quan trọng.</div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6">
+                                <label for="accPhone" class="pe-label">Số điện thoại liên hệ <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-primary">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <input type="text"
+                                           id="accPhone"
+                                           name="phoneNumber"
+                                           class="pe-input border-start-0"
+                                           th:value="${user.phoneNumber}"
+                                           pattern="^0\d{9,10}$"
+                                           maxlength="11"
+                                           placeholder="0901234567"
+                                           required>
+                                </div>
+                                <div class="small text-muted mt-1" style="font-size: 11.5px;">10-11 chữ số, dùng xác thực và liên lạc.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 border-top">
+                            <span class="small text-muted" style="font-size: 12px;">
+                                <i class="bi bi-shield-check text-success me-1"></i>Thay đổi Email/SĐT sẽ đồng bộ trực tiếp sang hồ sơ chuyên môn tương ứng.
+                            </span>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                                <i class="bi bi-check2-circle me-1"></i> Lưu thông tin tài khoản
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 3. KHỐI TÓM TẮT HỒ SƠ NHÂN SỰ PHÁP LÝ (View Mode - Dành cho Bác sĩ, Lễ tân, Quản trị viên, Nhân sự) -->
+            <div class="pe-card" th:if="${staffProfile != null}">
+                <div class="pe-card__head">
+                    <h2 class="pe-card__title">
+                        <i class="bi bi-person-vcard"></i> Thông tin Hồ sơ Nhân sự &amp; Chuyên môn
+                    </h2>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 12px;">
+                        <i class="bi bi-patch-check-fill me-1"></i>Hồ sơ xác thực nội bộ
+                    </span>
+                </div>
+                <div class="pe-card__body">
+                    <div class="pe-staff-grid mb-3">
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-qr-code text-primary"></i> Mã nhân viên</div>
+                            <div class="pe-tile-val text-primary fw-bold" th:text="${staffProfile.staffCode}">NV001</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-person text-primary"></i> Họ và tên khai sinh</div>
+                            <div class="pe-tile-val" th:text="${staffProfile.fullName}">Đặng Thùy Dung</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-card-heading text-primary"></i> Số CCCD / Định danh</div>
+                            <div class="pe-tile-val" th:text="${staffProfile.idCardNumber != null and !#strings.isEmpty(staffProfile.idCardNumber) ? staffProfile.idCardNumber : 'Chưa cập nhật'}">001092001005</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-calendar3 text-primary"></i> Ngày sinh</div>
+                            <div class="pe-tile-val" th:text="${staffProfile.dob != null ? #temporals.format(staffProfile.dob, 'dd/MM/yyyy') : 'Chưa cập nhật'}">01/01/1990</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-gender-ambiguous text-primary"></i> Giới tính</div>
+                            <div class="pe-tile-val" th:text="${profileGender != null ? profileGender : 'Chưa cập nhật'}">Nữ</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-calendar-check text-primary"></i> Ngày vào làm</div>
+                            <div class="pe-tile-val" th:text="${staffProfile.hireDate != null ? #temporals.format(staffProfile.hireDate, 'dd/MM/yyyy') : 'Chưa cập nhật'}">20/01/2024</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-building text-primary"></i> Phòng ban &amp; Chức danh</div>
+                            <div class="pe-tile-val" th:text="${(staffProfile.department != null ? staffProfile.department : 'Phòng khám') + ' - ' + (staffProfile.positionTitle != null ? staffProfile.positionTitle : 'Nhân viên')}">Khoa Nội nha - Bác sĩ nội nha</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-award text-primary"></i> Chuyên khoa lâm sàng</div>
+                            <div class="pe-tile-val" th:text="${staffProfile.specialty != null and !#strings.isEmpty(staffProfile.specialty) ? staffProfile.specialty : 'Chung'}">Nội nha chữa tủy</div>
+                        </div>
+                        <div class="pe-tile">
+                            <div class="pe-tile-label"><i class="bi bi-journal-check text-primary"></i> Chứng chỉ hành nghề (CCHN)</div>
+                            <div class="pe-tile-val text-success" th:text="${staffProfile.practiceLicenseNo != null and !#strings.isEmpty(staffProfile.practiceLicenseNo) ? staffProfile.practiceLicenseNo : 'Không áp dụng'}">CCHN-04589/BYT</div>
+                        </div>
+                    </div>
+
+                    <!-- Cơ sở phân công công tác -->
+                    <div th:if="${staffBranches != null and !#lists.isEmpty(staffBranches)}" class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="small fw-semibold text-secondary d-flex align-items-center gap-1" style="font-size: 12.5px;">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i>Cơ sở khám chữa bệnh được phân công công tác:
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span th:each="assign : ${staffBranches}"
+                                  class="badge bg-light text-dark border px-3 py-2"
+                                  style="font-size:12.5px; font-weight: normal;">
+                                <i class="bi bi-buildings text-primary me-1"></i>
+                                <strong th:text="${assign.branch != null ? assign.branch.branchName : ''}">Cơ sở</strong>
+                                <span class="text-muted ms-1" th:if="${assign.role != null}" th:text="'(' + ${assign.role.displayName != null ? assign.role.displayName : assign.role.roleName} + ')'"></span>
+                                <span th:if="${assign.isPrimary}" class="badge bg-primary ms-1">Cơ sở chính</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Hộp ghi chú hướng dẫn quy trình thay đổi hồ sơ nhân sự -->
+                    <div class="mt-3 p-3 bg-light rounded-3 border d-flex align-items-start gap-2 text-muted" style="font-size: 12.5px;">
+                        <i class="bi bi-info-circle-fill text-primary fs-6 mt-1 flex-shrink-0"></i>
+                        <div>
+                            <strong>Ghi chú:</strong> Thông tin hồ sơ nhân sự, chuyên khoa và CCHN do Bộ phận Nhân sự (HR) phê duyệt và quản lý tập trung. Để điều chỉnh thông tin hoặc cập nhật điều chuyển chi nhánh, vui lòng gửi đề xuất tới Ban Quản trị / Phòng Nhân sự.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. KHỐI CHỈNH SỬA HỒ SƠ BỆNH NHÂN (Chỉ hiển thị cho tài khoản Bệnh nhân) -->
+            <th:block th:if="${isPatient}">
+                <div class="pe-card">
+                    <div class="pe-card__head">
+                        <h2 class="pe-card__title">
+                            <i class="bi bi-person-vcard-fill"></i> Chỉnh sửa Hồ sơ Bệnh nhân
+                        </h2>
+                        <div class="d-flex gap-2">
+                            <a th:href="@{/profile/change-branch}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-buildings me-1"></i>Đổi cơ sở khám (<span th:text="${currentBranchName != null ? currentBranchName : 'Chưa chọn'}"></span>)
+                            </a>
+                            <a th:href="@{/profile/add-patient}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-person-plus me-1"></i>Thêm hồ sơ người thân
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="pe-card__body">
+                        <!-- Bộ chọn hồ sơ bệnh nhân cần chỉnh sửa -->
+                        <form th:action="@{/profile/edit}" method="get" class="mb-4 pb-3 border-bottom"
+                              th:if="${patientProfiles != null and !#lists.isEmpty(patientProfiles)}">
+                            <label for="profileSelector" class="pe-label">Chọn hồ sơ bệnh nhân muốn chỉnh sửa:</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <select id="profileSelector" name="profileId" class="pe-select" style="max-width: 460px;" onchange="this.form.submit()">
+                                    <option th:each="p : ${patientProfiles}"
+                                            th:value="${p.profileId}"
+                                            th:selected="${selectedProfileId != null and selectedProfileId == p.profileId}"
+                                            th:text="${p.fullName + ' (' + p.patientCode + ')' + (p.isDefault ? ' — Hồ sơ mặc định' : ' — Người thân')}">
+                                    </option>
+                                </select>
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Tải hồ sơ
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Nếu chưa có hồ sơ nào -->
+                        <div th:if="${patientProfiles == null or #lists.isEmpty(patientProfiles)}" class="text-center py-4">
+                            <p class="text-muted mb-3">Tài khoản của bạn chưa có hồ sơ bệnh nhân nào.</p>
+                            <a th:href="@{/profile/complete}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Khởi tạo hồ sơ bệnh nhân mặc định
+                            </a>
+                        </div>
+
+                        <!-- Biểu mẫu chỉnh sửa chi tiết hồ sơ đang chọn -->
+                        <form th:if="${patientProfile != null}"
+                              th:action="@{/profile/edit-patient}"
+                              method="post"
+                              enctype="multipart/form-data">
+
+                            <input type="hidden" name="profileId" th:value="${patientProfile.profileId}">
+
+                            <!-- Ảnh đại diện -->
+                            <div class="pe-avatar-box mb-4">
+                                <img th:if="${patientProfile.avatarUrl != null and !#strings.isEmpty(patientProfile.avatarUrl)}"
+                                     th:src="${patientProfile.avatarUrl}"
+                                     id="avatarPreviewImg"
+                                     alt="Avatar" class="pe-avatar-preview">
+                                <div th:if="${patientProfile.avatarUrl == null or #strings.isEmpty(patientProfile.avatarUrl)}"
+                                     id="avatarPlaceholder"
+                                     class="pe-avatar-preview"
+                                     th:text="${patientProfile.fullName != null and !#strings.isEmpty(patientProfile.fullName) ? #strings.substring(patientProfile.fullName, 0, 1).toUpperCase() : 'B'}">B</div>
+
+                                <div class="flex-grow-1">
+                                    <label for="avatarInput" class="pe-label mb-1">Ảnh đại diện hồ sơ (Tùy chọn — JPG, PNG, WebP tối đa 5MB)</label>
+                                    <input type="file"
+                                           id="avatarInput"
+                                           name="avatar"
+                                           accept="image/jpeg,image/png,image/webp"
+                                           class="form-control form-control-sm"
+                                           style="max-width: 380px;">
+                                    <div class="small text-muted mt-1">Nếu không chọn ảnh mới, hệ thống sẽ giữ nguyên ảnh đại diện hiện tại.</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="pe-label">Họ và tên bệnh nhân <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           name="fullName"
+                                           class="pe-input"
+                                           th:value="${patientProfile.fullName}"
+                                           maxlength="100"
+                                           required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="pe-label">Mã bệnh nhân</label>
+                                    <input type="text"
+                                           class="pe-input"
+                                           th:value="${patientProfile.patientCode}"
+                                           readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="pe-label">Ngày sinh</label>
+                                    <input type="date"
+                                           name="dob"
+                                           class="pe-input"
+                                           th:value="${patientProfile.dob != null ? #temporals.format(patientProfile.dob, 'yyyy-MM-dd') : ''}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="pe-label">Giới tính <span class="text-danger">*</span></label>
+                                    <select name="gender" class="pe-select" required>
+                                        <option value="Nam" th:selected="${patientProfile.gender == 'Nam'}">Nam</option>
+                                        <option value="Nữ" th:selected="${patientProfile.gender == 'Nữ'}">Nữ</option>
+                                        <option value="Khác" th:selected="${patientProfile.gender == 'Khác'}">Khác</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="pe-label">Số điện thoại hồ sơ <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           name="phoneNumber"
+                                           class="pe-input"
+                                           th:value="${patientProfile.phoneNumber}"
+                                           pattern="^0\d{9,10}$"
+                                           maxlength="11"
+                                           required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="pe-label">Địa chỉ thường trú <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           name="address"
+                                           class="pe-input"
+                                           th:value="${patientProfile.address}"
+                                           maxlength="255"
+                                           required>
+                                </div>
+                            </div>
+
+                            <!-- Tiền sử bệnh nền -->
+                            <div class="mb-3 p-3 bg-light rounded-3 border">
+                                <label class="pe-label mb-2">Tiền sử bệnh nền (Tim mạch, huyết áp, tiểu đường, dị ứng thuốc...) <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-4 mb-2 flex-wrap">
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
+                                        <input type="radio"
+                                               name="hasUnderlyingDisease"
+                                               value="false"
+                                               id="diseaseNo"
+                                               th:checked="${patientProfile.hasUnderlyingDisease == null or !patientProfile.hasUnderlyingDisease}">
+                                        <span>Không có bệnh nền</span>
+                                    </label>
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
+                                        <input type="radio"
+                                               name="hasUnderlyingDisease"
+                                               value="true"
+                                               id="diseaseYes"
+                                               th:checked="${patientProfile.hasUnderlyingDisease != null and patientProfile.hasUnderlyingDisease}">
+                                        <span class="fw-semibold text-danger">Có bệnh nền (Cần lưu ý khi khám)</span>
+                                    </label>
+                                </div>
+
+                                <div id="diseaseDetailWrap"
+                                     th:style="${patientProfile.hasUnderlyingDisease != null and patientProfile.hasUnderlyingDisease} ? 'display:block;' : 'display:none;'">
+                                    <label class="pe-label">Mô tả chi tiết bệnh nền <span class="text-danger">*</span></label>
+                                    <textarea name="underlyingDiseaseDetails"
+                                              id="underlyingDiseaseDetails"
+                                              rows="3"
+                                              maxlength="1000"
+                                              class="pe-textarea"
+                                              placeholder="Ghi rõ tên bệnh nền, thuốc đang điều trị hoặc dị ứng cần lưu ý..."
+                                              th:text="${patientProfile.underlyingDiseaseDetails}"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                                <a th:href="@{/profile}" class="btn btn-outline-secondary px-3">Hủy</a>
+                                <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                                    <i class="bi bi-save me-1"></i> Lưu cập nhật hồ sơ bệnh nhân
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </th:block>
+
         </div>
+    </main>
 
-    </div>
+    <!-- MODAL ĐỔI MẬT KHẨU DÙNG CHUNG -->
+    <div th:replace="~{fragments/change-password-modal :: changePasswordModal}"></div>
+
+    <footer th:replace="~{fragments/footer :: appFooter}"></footer>
 </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var yesRadio = document.getElementById('diseaseYes');
+        var noRadio = document.getElementById('diseaseNo');
+        var wrap = document.getElementById('diseaseDetailWrap');
+        var details = document.getElementById('underlyingDiseaseDetails');
+
+        function toggleDisease() {
+            if (!wrap) return;
+            if (yesRadio && yesRadio.checked) {
+                wrap.style.display = 'block';
+                if (details) details.required = true;
+            } else {
+                wrap.style.display = 'none';
+                if (details) details.required = false;
+            }
+        }
+
+        if (yesRadio) yesRadio.addEventListener('change', toggleDisease);
+        if (noRadio) noRadio.addEventListener('change', toggleDisease);
+
+        // Preview avatar nếu có upload
+        var avatarInput = document.getElementById('avatarInput');
+        if (avatarInput) {
+            avatarInput.addEventListener('change', function (e) {
+                var file = e.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function (evt) {
+                        var img = document.getElementById('avatarPreviewImg');
+                        var placeholder = document.getElementById('avatarPlaceholder');
+                        if (!img && placeholder) {
+                            img = document.createElement('img');
+                            img.id = 'avatarPreviewImg';
+                            img.className = 'pe-avatar-preview';
+                            placeholder.parentNode.replaceChild(img, placeholder);
+                        }
+                        if (img) img.src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

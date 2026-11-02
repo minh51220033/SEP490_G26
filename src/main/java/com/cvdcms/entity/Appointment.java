@@ -89,10 +89,38 @@ public class Appointment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Transient
+    private AppointmentStatus originalStatus;
+
+    @PostLoad
+    public void postLoad() {
+        this.originalStatus = this.status;
+    }
+
+    @PostPersist
+    public void postPersist() {
+        this.originalStatus = this.status;
+    }
+
+    @PostUpdate
+    public void postUpdate() {
+        this.originalStatus = this.status;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.appointmentCode == null || this.appointmentCode.isEmpty()) {
             this.appointmentCode = "LH" + System.currentTimeMillis();
+        }
+        if (this.originalStatus == null) {
+            this.originalStatus = this.status;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        if (this.originalStatus == AppointmentStatus.PENDING && this.status == AppointmentStatus.CHECKED_IN) {
+            throw new IllegalStateException("Vi phạm quy tắc chuyển trạng thái: Không thể chuyển trực tiếp từ PENDING sang CHECKED_IN. Bắt buộc phải qua CONFIRMED.");
         }
     }
 }

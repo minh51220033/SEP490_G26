@@ -61,8 +61,15 @@
                         </thead>
                         <tbody>
                         <tr th:if="${distributions.content.isEmpty()}">
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                Chưa có đợt phân chia lợi nhuận nào được tạo.
+                            <td colspan="9" class="text-center py-4">
+                                <div class="empty-state-box">
+                                    <i class="bi bi-pie-chart empty-icon"></i>
+                                    <h6>Ch&#432;a c&#243; &#273;&#7883;t ph&#226;n chia l&#7883;i nhu&#7853;n</h6>
+                                    <p>L&#7853;p &#273;&#7873; xu&#7845;t ph&#226;n chia l&#7883;i nhu&#7853;n/c&#7893; t&#7913;c cho c&#225;c ch&#7911; s&#785 sá»Ÿ h&#7919;u ph&#242;ng kh&#225;m theo k&#7923;.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createDistributionModal">
+                                        <i class="bi bi-plus-circle me-1"></i>L&#7853;p &#273;&#7873; xu&#7845;t ph&#226;n chia
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr th:each="d : ${distributions.content}">
@@ -175,11 +182,11 @@
                     <div class="row g-2 mb-3">
                         <div class="col-md-4">
                             <label for="dDistributable" class="form-label fw-bold">Lợi nhuận có thể chia <span class="text-danger">*</span></label>
-                            <input type="number" id="dDistributable" name="distributableAmount" class="form-control" min="0" step="1000000" required placeholder="VNĐ" oninput="calculateTotal()">
+                            <input type="number" id="dDistributable" name="distributableAmount" class="form-control" min="0" step="1" required placeholder="VNĐ" oninput="calculateTotal()">
                         </div>
                         <div class="col-md-4">
                             <label for="dRetained" class="form-label fw-bold">Giữ lại tái đầu tư</label>
-                            <input type="number" id="dRetained" name="retainedAmount" class="form-control" min="0" step="1000000" value="0" placeholder="VNĐ">
+                            <input type="number" id="dRetained" name="retainedAmount" class="form-control" min="0" step="1" value="0" placeholder="VNĐ">
                         </div>
                         <div class="col-md-4">
                             <label for="dTotalDistributed" class="form-label fw-bold">Tổng phân bổ</label>
@@ -212,7 +219,7 @@
                                     <input type="number" name="items[0].percentage" class="form-control" min="0" max="100" step="0.1" placeholder="Tỷ lệ %">
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="number" name="items[0].amount" class="form-control item-amount" min="0" step="1000000" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()">
+                                    <input type="number" name="items[0].amount" class="form-control item-amount" min="0" step="1" placeholder="Số tiền (VNĐ)" oninput="calculateTotal()">
                                 </div>
                                 <div class="col-md-1 d-flex align-items-center">
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button>
@@ -273,13 +280,32 @@
     /*<![CDATA[*/
     const staffOptions = /*[[${staffOptions}]]*/ [];
 
-    let rowIndex = 1;
+    function reindexRecipientRows() {
+        const rows = document.querySelectorAll('#recipientsContainer .recipient-row');
+        rows.forEach((row, idx) => {
+            const select = row.querySelector('select');
+            if (select) select.name = 'items[' + idx + '].recipientStaffId';
+
+            const percentage = row.querySelector('input[type="number"][name*="percentage"]');
+            if (percentage) percentage.name = 'items[' + idx + '].percentage';
+
+            const amount = row.querySelector('input[type="number"][name*="amount"]');
+            if (amount) {
+                amount.name = 'items[' + idx + '].amount';
+                amount.setAttribute('step', '1');
+            }
+        });
+    }
+
     function addRecipientRow() {
         const container = document.getElementById('recipientsContainer');
+        const rows = document.querySelectorAll('#recipientsContainer .recipient-row');
+        const nextIndex = rows.length;
+
         const div = document.createElement('div');
         div.className = 'row g-2 mb-2 recipient-row';
 
-        let staffSelectHtml = '<select name="items[' + rowIndex + '].recipientStaffId" class="form-select" required><option value="">-- Chọn thành viên nhận --</option>';
+        let staffSelectHtml = '<select name="items[' + nextIndex + '].recipientStaffId" class="form-select" required><option value="">-- Chọn thành viên nhận --</option>';
         staffOptions.forEach(s => {
             staffSelectHtml += '<option value="' + s.staffId + '">' + s.fullName + ' (' + s.staffCode + ')</option>';
         });
@@ -287,19 +313,22 @@
 
         div.innerHTML = `
             <div class="col-md-5">${staffSelectHtml}</div>
-            <div class="col-md-2"><input type="number" name="items[${rowIndex}].percentage" class="form-control" min="0" max="100" step="0.1" placeholder="Tỷ lệ %"></div>
-            <div class="col-md-4"><input type="number" name="items[${rowIndex}].amount" class="form-control item-amount" min="0" step="1000000" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()"></div>
+            <div class="col-md-2"><input type="number" name="items[${nextIndex}].percentage" class="form-control" min="0" max="100" step="0.1" placeholder="Tỷ lệ %"></div>
+            <div class="col-md-4"><input type="number" name="items[${nextIndex}].amount" class="form-control item-amount" min="0" step="1" required placeholder="Số tiền (VNĐ)" oninput="calculateTotal()"></div>
             <div class="col-md-1 d-flex align-items-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></div>
         `;
         container.appendChild(div);
-        rowIndex++;
+        reindexRecipientRows();
     }
 
     function removeRow(btn) {
-        const rows = document.querySelectorAll('.recipient-row');
+        const rows = document.querySelectorAll('#recipientsContainer .recipient-row');
         if (rows.length > 1) {
             btn.closest('.recipient-row').remove();
+            reindexRecipientRows();
             calculateTotal();
+        } else {
+            alert('Đề xuất phân chia phải có ít nhất 1 người nhận.');
         }
     }
 
@@ -311,6 +340,50 @@
         });
         document.getElementById('dTotalDistributed').value = total;
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('#createDistributionModal form');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                reindexRecipientRows();
+
+                // 1. Kiểm tra trùng lặp người nhận
+                const selected = new Set();
+                const selects = document.querySelectorAll('#recipientsContainer select');
+                for (const sel of selects) {
+                    const val = sel.value;
+                    if (!val) continue;
+                    if (selected.has(val)) {
+                        e.preventDefault();
+                        alert('Không được chọn trùng lặp người nhận trong danh sách phân bổ.');
+                        sel.focus();
+                        return;
+                    }
+                    selected.add(val);
+                }
+
+                // 2. Kiểm tra tổng phân bổ không vượt ngân sách
+                const distributable = parseFloat(document.getElementById('dDistributable').value) || 0;
+                const retained = parseFloat(document.getElementById('dRetained').value) || 0;
+                const maxAvailable = distributable - retained;
+                const total = parseFloat(document.getElementById('dTotalDistributed').value) || 0;
+
+                if (total <= 0) {
+                    e.preventDefault();
+                    alert('Tổng số tiền phân bổ phải lớn hơn 0 đ.');
+                    return;
+                }
+
+                if (total > maxAvailable) {
+                    e.preventDefault();
+                    alert('Tổng phân bổ (' + new Intl.NumberFormat('vi-VN').format(total)
+                        + ' đ) không được vượt quá số tiền có thể chia ('
+                        + new Intl.NumberFormat('vi-VN').format(maxAvailable) + ' đ).');
+                    return;
+                }
+            });
+        }
+    });
 
     function openPayDistModalFromButton(btn) {
         const id = btn.getAttribute('data-dist-id');

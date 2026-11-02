@@ -51,6 +51,25 @@ public class Payment {
     @Column(name = "payment_method", nullable = false, length = 30)
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_account_id")
+    private BranchBankAccount bankAccount;
+
+    @Column(name = "bank_bin", length = 20)
+    private String bankBin;
+
+    @Column(name = "bank_name", length = 100)
+    private String bankName;
+
+    @Column(name = "bank_account_number", length = 50)
+    private String bankAccountNumber;
+
+    @Column(name = "bank_account_holder", length = 150)
+    private String bankAccountHolder;
+
+    @Column(name = "expected_transfer_content", length = 100)
+    private String expectedTransferContent;
+
     @Column(name = "amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
