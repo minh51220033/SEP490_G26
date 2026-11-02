@@ -43,4 +43,20 @@ public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT item FROM ServiceCategory item WHERE item.categoryId = :id")
     Optional<ServiceCategory> findForDeletion(@Param("id") Long id);
+
+    @Query("""
+        SELECT c
+        FROM ServiceCategory c
+        WHERE (:isActive IS NULL OR c.isActive = :isActive)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(c.categoryName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(c.categoryCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+        ORDER BY c.displayOrder ASC, c.categoryName ASC
+        """)
+    List<ServiceCategory> searchAdminCategories(
+            @Param("keyword") String keyword,
+            @Param("isActive") Boolean isActive
+    );
 }

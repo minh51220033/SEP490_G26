@@ -88,12 +88,11 @@
 
             <!-- Table Card chuẩn FT19-25 với Tùy chỉnh cột Enhanced Table -->
             <div class="fin-card p-0">
-                <table class="fin-table" data-enhanced-table="admin-patients" data-config-version="1.2">
+                <table class="fin-table" data-enhanced-table="admin-patients" data-config-version="1.3">
                     <thead>
                     <tr>
                         <th data-column-key="stt" class="text-center" data-column-pinned="true" style="min-width: 60px; width: 60px;">STT</th>
-                        <th data-column-key="code" data-column-pinned="true" style="min-width: 140px; width: 140px;">Mã BN</th>
-                        <th data-column-key="fullName" style="min-width: 200px; width: 220px;">Họ và tên</th>
+                        <th data-column-key="patient" data-column-pinned="true" data-column-required="true" style="min-width: 220px;">Khách hàng</th>
                         <th data-column-key="gender" style="min-width: 90px;">Giới tính</th>
                         <th data-column-key="dob" style="min-width: 110px;">Ngày sinh</th>
                         <th data-column-key="phone" style="min-width: 120px;">Số điện thoại</th>
@@ -105,7 +104,7 @@
                     </thead>
                     <tbody>
                     <tr th:if="${patients.content.isEmpty()}">
-                        <td colspan="10" class="text-center py-4">
+                        <td colspan="9" class="text-center py-4">
                             <div class="empty-state-box">
                                 <i class="bi bi-people empty-icon"></i>
                                 <h6>Chưa có hồ sơ khách hàng nào</h6>
@@ -118,11 +117,11 @@
                     </tr>
                     <tr th:each="p, stat : ${patients.content}">
                         <td data-column-key="stt" class="text-center text-muted small" th:text="${patients.number * patients.size + stat.count}">1</td>
-                        <td data-column-key="code">
-                            <a th:href="${recordBasePath + '/' + p.id}" class="fw-bold text-decoration-none text-primary patient-code-cell" th:title="${p.code}" th:text="${p.code}">BN0001</a>
-                        </td>
-                        <td data-column-key="fullName">
-                            <a th:href="${recordBasePath + '/' + p.id}" class="fw-semibold text-dark text-decoration-none patient-name-cell" th:text="${p.fullName}">Nguyễn Văn A</a>
+                        <td data-column-key="patient">
+                            <div>
+                                <a th:href="${recordBasePath + '/' + p.id}" class="fw-bold text-decoration-none text-primary" th:text="${p.fullName}">Nguyễn Văn A</a>
+                            </div>
+                            <small class="text-muted font-monospace" th:title="${p.code}" th:text="${p.code}">BN0001</small>
                         </td>
                         <td data-column-key="gender">
                             <span class="badge bg-light text-dark border" th:text="${p.gender}">Nam</span>
