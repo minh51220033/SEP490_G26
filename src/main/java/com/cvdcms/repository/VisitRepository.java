@@ -2,6 +2,8 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.VisitStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface VisitRepository extends JpaRepository<Visit, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM Visit v WHERE v.visitId = :visitId")
+    Optional<Visit> lockById(@Param("visitId") Long visitId);
 
     Optional<Visit> findByVisitCode(String visitCode);
 
@@ -34,6 +40,20 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     """)
     List<Visit> findRecentVisitsByStatuses(@Param("statuses") List<VisitStatus> statuses);
 
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE v.status IN (:statuses)
+          AND (:branchId IS NULL OR b.branchId = :branchId)
+        ORDER BY v.checkInAt DESC
+    """)
+    List<Visit> findRecentVisitsByStatusesAndBranch(
+            @Param("statuses") List<VisitStatus> statuses,
+            @Param("branchId") Long branchId
+    );
+
     List<Visit> findByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
 
     Optional<Visit> findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
@@ -48,6 +68,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
         WHERE (:start IS NULL OR v.checkInAt >= :start)
           AND (:end IS NULL OR v.checkInAt <= :end)
           AND (:status IS NULL OR v.status = :status)
+          AND (:branchId IS NULL OR b.branchId = :branchId)
           AND (
               :search IS NULL OR :search = ''
               OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -61,8 +82,18 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
             @Param("start") java.time.LocalDateTime start,
             @Param("end") java.time.LocalDateTime end,
             @Param("status") VisitStatus status,
+            @Param("branchId") Long branchId,
             @Param("search") String search
     );
+
+    default List<Visit> findFilteredVisits(
+            java.time.LocalDateTime start,
+            java.time.LocalDateTime end,
+            VisitStatus status,
+            String search
+    ) {
+        return findFilteredVisits(start, end, status, null, search);
+    }
 
     @Query("""
         SELECT v FROM Visit v
