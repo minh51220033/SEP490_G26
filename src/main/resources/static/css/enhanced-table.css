@@ -208,6 +208,27 @@ table[data-enhanced-table] th.text-end {
     vertical-align: middle;
 }
 
+/* Xử lý cột mã định danh dài & cột họ và tên không chồng đè nhau */
+table[data-enhanced-table] td[data-column-key="code"],
+table[data-enhanced-table] th[data-column-key="code"],
+.patient-code-cell,
+.patient-code-link {
+    max-width: 160px;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+table[data-enhanced-table] td[data-column-key="fullName"],
+.patient-name-cell {
+    min-width: 180px;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
 /* ============================================================================
  * C. GHIM CỘT (STICKY LEFT PINNING)
  * ============================================================================ */
