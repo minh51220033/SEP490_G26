@@ -50,6 +50,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private LaboOrderService laboOrderService;
     @Mock private SupplierRepository supplierRepository;
     @Mock private VisitRepository visitRepository;
+    @Mock private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     @Mock private UserRepository userRepository;
     @Mock private CustomerCareInteractionRepository customerCareInteractionRepository;
     @Mock private CustomerCareTaskRepository customerCareTaskRepository;
@@ -91,6 +92,7 @@ class TreatmentPlanLogicUnitTest {
                 patientProfileRepository,
                 branchRepository,
                 staffProfileRepository,
+                staffBranchAssignmentRepository,
                 userRepository,
                 customerCareInteractionRepository,
                 customerCareTaskRepository
