@@ -9,6 +9,7 @@ import com.cvdcms.DTO.PrescriptionItemResponseDTO;
 import com.cvdcms.DTO.PrescriptionResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
@@ -59,9 +60,35 @@ public class DiagnosisController {
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final UserRepository userRepository;
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
+
+    private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
+        if (session == null) return null;
+        Object principal = session.getAttribute("loggedInUser");
+        if (principal instanceof User user && user.getUserId() != null) {
+            return userRepository.findById(user.getUserId()).orElse(null);
+        }
+        return null;
+    }
+
+    private Branch getDoctorAssignedBranch(User user) {
+        if (user == null) return null;
+        if (user.getBranch() != null) {
+            return user.getBranch();
+        }
+        List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
+        if (activeBranchIds != null && !activeBranchIds.isEmpty()) {
+            return branchRepository.findById(activeBranchIds.get(0)).orElse(null);
+        }
+        List<Long> explicitIds = customerCareTaskRepository.findExplicitBranchIdsByUserId(user.getUserId());
+        if (explicitIds != null && !explicitIds.isEmpty()) {
+            return branchRepository.findById(explicitIds.get(0)).orElse(null);
+        }
+        return null;
+    }
 
     @GetMapping({"/doctor/daily-visits", "/doctor/visits"})
     public String dailyVisits(
@@ -70,14 +97,39 @@ public class DiagnosisController {
             Model model
     ) {
         initDemoBranchIfMissing();
-        if (branchId != null && session != null) {
-            session.setAttribute("doctorSelectedBranchId", branchId);
-        } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-            branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+
+        if (isDoctorRestricted) {
+            branchId = assignedBranch.getBranchId();
+            if (session != null) {
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            }
+        } else {
+            if (branchId != null && session != null) {
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
+                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            }
         }
+
+        String assignedBranchFullName = assignedBranch != null
+                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
+                : "";
+
         model.addAttribute("activeMenu", "daily-visits");
         model.addAttribute("branches", branchRepository.findAll());
         model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("isDoctorRestricted", isDoctorRestricted);
+        model.addAttribute("doctorAssignedBranchId", assignedBranch != null ? assignedBranch.getBranchId() : null);
+        model.addAttribute("doctorAssignedBranchCode", assignedBranch != null ? assignedBranch.getBranchCode() : "");
+        model.addAttribute("doctorAssignedBranchName", assignedBranch != null ? assignedBranch.getBranchName() : "");
+        model.addAttribute("doctorAssignedBranchFullName", assignedBranchFullName);
+        if (assignedBranch != null) {
+            model.addAttribute("currentBranchName", assignedBranchFullName);
+        }
         return "doctor/daily-visits";
     }
 
@@ -86,7 +138,7 @@ public class DiagnosisController {
         model.addAttribute("activeMenu", "recalls");
         model.addAttribute("doctors", performedServiceService.getAvailableDoctors());
         model.addAttribute("branches", branchRepository.findAll());
-                model.addAttribute("stats", reExaminationService.getRecallsStatistics());
+        model.addAttribute("stats", reExaminationService.getRecallsStatistics());
         model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị (SCR-18.2) - DentalFlow");
         // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn (FT44 - UC-26)
         return "redirect:/customer-care";
@@ -97,14 +149,36 @@ public class DiagnosisController {
             @RequestParam(value = "visitId", required = false) Long visitId,
             @RequestParam(value = "branchId", required = false) Long branchId,
             jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
             Model model
     ) {
         initDemoBranchIfMissing();
-        if (branchId != null && session != null) {
-            session.setAttribute("doctorSelectedBranchId", branchId);
-        } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-            branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+
+        String assignedBranchFullName = assignedBranch != null
+                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
+                : "";
+
+        if (isDoctorRestricted) {
+            if (branchId != null && !branchId.equals(assignedBranch.getBranchId())) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Cảnh báo: Bác sĩ chỉ được phép tác nghiệp tại cơ sở đang làm việc (" + assignedBranchFullName + ")!");
+            }
+            branchId = assignedBranch.getBranchId();
+            if (session != null) {
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            }
+        } else {
+            if (branchId != null && session != null) {
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
+                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            }
         }
+
         if (visitId == null) {
             List<Visit> availableVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId);
             if (!availableVisits.isEmpty()) {
@@ -176,9 +250,19 @@ public class DiagnosisController {
             @PathVariable("visitId") Long visitId,
             @RequestParam(value = "branchId", required = false) Long branchIdParam,
             jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
             Model model
     ) {
         initDemoBranchIfMissing();
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+
+        String assignedBranchFullName = assignedBranch != null
+                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
+                : "";
+
         Visit visit;
         try {
             visit = diagnosisService.getVisitOrThrow(visitId);
@@ -186,9 +270,21 @@ public class DiagnosisController {
             log.warn("Không tìm thấy ca khám ID={}: {}. Tự động chuyển hướng về trang ca khám.", visitId, ex.getMessage());
             return "redirect:/doctor/diagnoses";
         }
+
+        // Kiểm tra ca khám có thuộc cơ sở của bác sĩ không
+        if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Cảnh báo: Ca khám " + visit.getVisitCode() + " thuộc cơ sở khác (" +
+                            (visit.getBranch().getBranchCode() != null ? visit.getBranch().getBranchCode() + " - " : "") + visit.getBranch().getBranchName() +
+                            "). Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc (" + assignedBranchFullName + ")!");
+            return "redirect:/doctor/daily-visits";
+        }
+
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<Icd10DiseaseDTO> commonDiseases = icd10DiseaseService.getCommonDentalDiseases();
-        List<Visit> otherVisits = visitRepository.findAll();
+        List<Visit> otherVisits = (isDoctorRestricted && assignedBranch != null)
+                ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
+                : visitRepository.findAll();
 
         // FT16: Dịch vụ thực hiện thực tế
         List<PerformedServiceResponseDTO> performedServices = performedServiceService.getPerformedServicesByVisitId(visitId);
@@ -312,20 +408,24 @@ public class DiagnosisController {
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
 
-                List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
         if (branches.isEmpty()) {
             branches = branchRepository.findAll();
         }
 
         Long selectedBranchId = branchIdParam;
-        if (selectedBranchId == null && visit.getBranch() != null) {
-            selectedBranchId = visit.getBranch().getBranchId();
-        }
-        if (selectedBranchId == null && session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-            selectedBranchId = (Long) session.getAttribute("doctorSelectedBranchId");
-        }
-        if (selectedBranchId == null && !branches.isEmpty()) {
-            selectedBranchId = branches.get(0).getBranchId();
+        if (isDoctorRestricted) {
+            selectedBranchId = assignedBranch.getBranchId();
+        } else {
+            if (selectedBranchId == null && visit.getBranch() != null) {
+                selectedBranchId = visit.getBranch().getBranchId();
+            }
+            if (selectedBranchId == null && session != null && session.getAttribute("doctorSelectedBranchId") != null) {
+                selectedBranchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            }
+            if (selectedBranchId == null && !branches.isEmpty()) {
+                selectedBranchId = branches.get(0).getBranchId();
+            }
         }
         if (selectedBranchId != null && session != null) {
             session.setAttribute("doctorSelectedBranchId", selectedBranchId);
@@ -347,6 +447,11 @@ public class DiagnosisController {
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", selectedBranchId);
         model.addAttribute("selectedBranch", selectedBranch);
+        model.addAttribute("isDoctorRestricted", isDoctorRestricted);
+        model.addAttribute("doctorAssignedBranchId", assignedBranch != null ? assignedBranch.getBranchId() : null);
+        model.addAttribute("doctorAssignedBranchCode", assignedBranch != null ? assignedBranch.getBranchCode() : "");
+        model.addAttribute("doctorAssignedBranchName", assignedBranch != null ? assignedBranch.getBranchName() : "");
+        model.addAttribute("doctorAssignedBranchFullName", assignedBranchFullName);
         model.addAttribute("currentBranchName", selectedBranch != null ? (selectedBranch.getBranchCode() != null && !selectedBranch.getBranchCode().isEmpty() ? selectedBranch.getBranchCode() : selectedBranch.getBranchName()) : "DEMO");
 
         return "doctor/diagnoses";
@@ -361,6 +466,20 @@ public class DiagnosisController {
             @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
             Model model
     ) {
+        jakarta.servlet.http.HttpServletRequest request = null;
+        try {
+            org.springframework.web.context.request.RequestAttributes attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
+                request = sra.getRequest();
+            }
+        } catch (Exception ignored) {}
+        jakarta.servlet.http.HttpSession session = request != null ? request.getSession(false) : null;
+
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+
         Visit visit;
         try {
             visit = diagnosisService.getVisitOrThrow(visitId);
@@ -368,10 +487,17 @@ public class DiagnosisController {
             log.warn("Không tìm thấy ca khám ID={}: {}. Tự động chuyển hướng về trang ca khám.", visitId, ex.getMessage());
             return "redirect:/doctor/diagnoses";
         }
+
+        if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
+            return "redirect:/doctor/daily-visits";
+        }
+
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
         List<StaffProfile> doctors = performedServiceService.getAvailableDoctors();
-        List<Visit> allVisits = visitRepository.findAll();
+        List<Visit> allVisits = (isDoctorRestricted && assignedBranch != null)
+                ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
+                : visitRepository.findAll();
 
         model.addAttribute("visit", visit);
         model.addAttribute("patient", visit.getPatientProfile());
@@ -403,7 +529,7 @@ public class DiagnosisController {
         return "doctor/treatment-plan-create";
     }
 
-        private void initDemoBranchIfMissing() {
+    private void initDemoBranchIfMissing() {
         try {
             if (!branchRepository.existsByBranchCode("DEMO")) {
                 Branch demo = new Branch();
