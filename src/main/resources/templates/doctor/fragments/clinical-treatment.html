@@ -2451,7 +2451,9 @@
         `;
 
         try {
-            const res = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query || '')}`);
+            const branchId = typeof getSelectedBranchId === 'function' ? getSelectedBranchId() : '';
+            const branchSuffix = branchId ? `&branchId=${branchId}` : '';
+            const res = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query || '')}${branchSuffix}`);
             if (!res.ok) throw new Error("Lỗi khi tải danh sách bệnh nhân");
             const list = await res.json();
             cachedPatients = list;
@@ -2546,10 +2548,12 @@
     }
 
     function onSelectPatientCard(profileId, latestVisitId, hasActiveVisit) {
+        const branchId = typeof getSelectedBranchId === 'function' ? getSelectedBranchId() : '';
+        const branchSuffix = branchId ? '?branchId=' + branchId : '';
         if (latestVisitId && hasActiveVisit) {
-            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses`;
+            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses${branchSuffix}`;
         } else if (latestVisitId) {
-            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses`;
+            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses${branchSuffix}`;
         } else {
             openOrCreatePatientVisit(profileId);
         }
@@ -2557,7 +2561,8 @@
 
     async function openOrCreatePatientVisit(profileId) {
         try {
-            const res = await fetch(`/api/doctor/patients/${profileId}/open-visit`, {
+            const branchId = typeof getSelectedBranchId === 'function' ? getSelectedBranchId() : '';
+            const res = await fetch(`/api/doctor/patients/${profileId}/open-visit${branchId ? '?branchId=' + branchId : ''}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });

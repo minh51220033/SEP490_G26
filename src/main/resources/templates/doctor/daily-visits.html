@@ -1117,7 +1117,21 @@
                             </button>
                         </div>
 
+                        <!-- Dropdown Chọn Cơ sở (DEMO) -->
+                        <div class="position-relative" style="min-width: 140px;">
+                            <select id="dvBranchSelect" class="form-select form-select-sm rounded-3 fw-bold text-dark border shadow-xs"
+                                    style="height: 40px; font-size: 13.5px; cursor: pointer;"
+                                    onchange="handleDvBranchChange(this.value)" title="Chọn cơ sở lọc ca khám (DEMO)">
+                                <option value="">Tất cả cơ sở</option>
+                                <option th:each="b : ${branches}"
+                                        th:value="${b.branchId}"
+                                        th:text="${b.branchCode != null and !b.branchCode.isEmpty() ? b.branchCode : b.branchName}"
+                                        th:selected="${selectedBranchId != null and b.branchId == selectedBranchId}">DEMO</option>
+                            </select>
+                        </div>
+
                         <a href="/doctor/examination"
+                            onclick="const b = document.getElementById('dvBranchSelect')?.value; if(b) this.href='/doctor/examination?branchId=' + b;"
                             class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
                             style="font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                             <i class="bi bi-person-workspace"></i>
@@ -1608,6 +1622,7 @@
             try {
                 localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
             } catch (e) { }
+
             updatePinnedBadgeCount();
         }
 
@@ -1835,6 +1850,15 @@
             fetchDailyVisits();
         }
 
+        function handleDvBranchChange(branchId) {
+            if (branchId) {
+                localStorage.setItem('doctorSelectedBranchId', branchId);
+            } else {
+                localStorage.removeItem('doctorSelectedBranchId');
+            }
+            fetchDailyVisits();
+        }
+
         // Tải toàn bộ danh sách từ API để hỗ trợ lọc tức thì với mọi toán tử
         async function fetchDailyVisits() {
             const loading = document.getElementById('dvLoadingState');
@@ -1846,7 +1870,10 @@
             if (emptyState) emptyState.style.display = 'none';
 
             try {
-                const res = await fetch('/api/doctor/patients/daily-visits?date=ALL&status=ALL');
+                const branchSel = document.getElementById('dvBranchSelect');
+                const branchId = branchSel ? branchSel.value : (localStorage.getItem('doctorSelectedBranchId') || '');
+                const branchParam = branchId ? `&branchId=${branchId}` : '';
+                const res = await fetch(`/api/doctor/patients/daily-visits?date=ALL&status=ALL${branchParam}`);
                 if (!res.ok) throw new Error('Không thể tải dữ liệu ca khám');
                 rawServerVisits = await res.json();
                 populateDynamicFilterOptions(rawServerVisits);
@@ -2661,6 +2688,12 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
+            const savedBranch = localStorage.getItem('doctorSelectedBranchId');
+            const branchSel = document.getElementById('dvBranchSelect');
+            if (savedBranch && branchSel && (!branchSel.value || branchSel.value === '')) {
+                branchSel.value = savedBranch;
+            }
+
             updatePinnedBadgeCount();
             syncDateInputsVisibility();
             fetchDailyVisits();
