@@ -192,8 +192,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Override
     @Transactional(readOnly = true)
     public List<Visit> getAvailableVisitsForDiagnosis() {
-        return visitRepository.findRecentVisitsByStatuses(
-                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT));
+        return getAvailableVisitsForDiagnosis(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Visit> getAvailableVisitsForDiagnosis(Long branchId) {
+        if (branchId == null) {
+            return visitRepository.findRecentVisitsByStatuses(
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT));
+        }
+        return visitRepository.findRecentVisitsByStatusesAndBranch(
+                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT),
+                branchId);
     }
 
     @Override
