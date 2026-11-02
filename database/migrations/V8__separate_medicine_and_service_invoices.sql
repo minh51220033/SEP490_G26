@@ -31,7 +31,7 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = v_schema z
+        WHERE TABLE_SCHEMA = v_schema
           AND TABLE_NAME = 'invoices' 
           AND COLUMN_NAME = 'prescription_id'
     ) THEN

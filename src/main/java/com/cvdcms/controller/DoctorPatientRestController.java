@@ -1,18 +1,15 @@
 package com.cvdcms.controller;
 
 import com.cvdcms.DTO.PatientSearchResponseDTO;
-import com.cvdcms.entity.Branch;
-import com.cvdcms.entity.PatientProfile;
-import com.cvdcms.entity.StaffProfile;
-import com.cvdcms.entity.Visit;
+import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
-import com.cvdcms.repository.BranchRepository;
-import com.cvdcms.repository.PatientProfileRepository;
-import com.cvdcms.repository.StaffProfileRepository;
-import com.cvdcms.repository.VisitRepository;
+import com.cvdcms.repository.*;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +31,12 @@ public class DoctorPatientRestController {
     private final VisitRepository visitRepository;
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    private final UserRepository userRepository;
+    private final CustomerCareTaskRepository customerCareTaskRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClinicalExaminationRepository clinicalExamRepository;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -46,6 +49,31 @@ public class DoctorPatientRestController {
             VisitStatus.WAITING_RESULT,
             VisitStatus.WAITING_PAYMENT
     );
+
+    private User getLoggedInUser(HttpSession session) {
+        if (session == null) return null;
+        Object principal = session.getAttribute("loggedInUser");
+        if (principal instanceof User user && user.getUserId() != null) {
+            return userRepository.findById(user.getUserId()).orElse(null);
+        }
+        return null;
+    }
+
+    private Branch getDoctorAssignedBranch(User user) {
+        if (user == null) return null;
+        if (user.getBranch() != null) {
+            return user.getBranch();
+        }
+        List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
+        if (activeBranchIds != null && !activeBranchIds.isEmpty()) {
+            return branchRepository.findById(activeBranchIds.get(0)).orElse(null);
+        }
+        List<Long> explicitIds = customerCareTaskRepository.findExplicitBranchIdsByUserId(user.getUserId());
+        if (explicitIds != null && !explicitIds.isEmpty()) {
+            return branchRepository.findById(explicitIds.get(0)).orElse(null);
+        }
+        return null;
+    }
 
     @GetMapping("/search")
     @Transactional(readOnly = true)
@@ -68,9 +96,25 @@ public class DoctorPatientRestController {
 
     @PostMapping("/{profileId}/open-visit")
     @Transactional
-    public ResponseEntity<Map<String, Object>> openOrCreateVisitForPatient(@PathVariable Long profileId) {
+    public ResponseEntity<Map<String, Object>> openOrCreateVisitForPatient(
+            @PathVariable Long profileId,
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            HttpSession session) {
         PatientProfile patient = patientProfileRepository.findById(profileId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân với ID: " + profileId));
+
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        if (!isAdmin && assignedBranch != null) {
+            if (branchId != null && !branchId.equals(assignedBranch.getBranchId())) {
+                String fullBranchName = (assignedBranch.getBranchCode() != null ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "message", "Cảnh báo: Bác sĩ chỉ được phép tiếp nhận ca khám tại cơ sở đang làm việc (" + fullBranchName + ")!"
+                ));
+            }
+            branchId = assignedBranch.getBranchId();
+        }
 
         // 1. Kiểm tra xem bệnh nhân có ca khám nào đang hoạt động chưa
         Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(profileId, ACTIVE_STATUSES);
@@ -93,7 +137,13 @@ public class DoctorPatientRestController {
         newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
 
         // Gán cơ sở
-        Branch branch = patient.getPreferredBranch();
+        Branch branch = branchId != null ? branchRepository.findById(branchId).orElse(null) : null;
+        if (branch == null && assignedBranch != null) {
+            branch = assignedBranch;
+        }
+        if (branch == null) {
+            branch = patient.getPreferredBranch();
+        }
         if (branch == null) {
             branch = branchRepository.findAll().stream().findFirst().orElse(null);
         }
@@ -109,6 +159,7 @@ public class DoctorPatientRestController {
         newVisit.setVisitCode("VIS" + (10000 + visitCount));
 
         newVisit = visitRepository.save(newVisit);
+        ensureClinicalExamExists(newVisit, doctor);
 
         return ResponseEntity.ok(Map.of(
                 "visitId", newVisit.getVisitId(),
@@ -181,45 +232,64 @@ public class DoctorPatientRestController {
     @GetMapping("/daily-visits")
     @Transactional(readOnly = true)
     public ResponseEntity<List<com.cvdcms.DTO.DailyVisitDTO>> getDailyVisits(
-            @RequestParam(value = "date", required = false) String dateStr,
+            @RequestParam(value = "date", required = false) String datePreset,
             @RequestParam(value = "startDate", required = false) String startDateStr,
             @RequestParam(value = "endDate", required = false) String endDateStr,
             @RequestParam(value = "status", required = false) String statusStr,
             @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "currentVisitId", required = false) Long currentVisitId) {
+            @RequestParam(value = "currentVisitId", required = false) Long currentVisitId,
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            HttpSession session) {
+
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        if (!isAdmin && assignedBranch != null) {
+            branchId = assignedBranch.getBranchId();
+        }
 
         LocalDateTime start = null;
         LocalDateTime end = null;
         boolean hasDateFilter = false;
 
-        if (startDateStr != null && !startDateStr.trim().isEmpty() && !startDateStr.equalsIgnoreCase("ALL")) {
+        LocalDate today = LocalDate.now();
+
+        if (datePreset != null && !datePreset.trim().isEmpty() && !datePreset.equalsIgnoreCase("ALL")) {
+            hasDateFilter = true;
+            switch (datePreset.toUpperCase()) {
+                case "TODAY":
+                    start = today.atStartOfDay();
+                    end = today.atTime(23, 59, 59);
+                    break;
+                case "YESTERDAY":
+                    LocalDate yesterday = today.minusDays(1);
+                    start = yesterday.atStartOfDay();
+                    end = yesterday.atTime(23, 59, 59);
+                    break;
+                case "THIS_WEEK":
+                    LocalDate startOfWeek = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+                    start = startOfWeek.atStartOfDay();
+                    end = today.atTime(23, 59, 59);
+                    break;
+                case "THIS_MONTH":
+                    LocalDate startOfMonth = today.withDayOfMonth(1);
+                    start = startOfMonth.atStartOfDay();
+                    end = today.atTime(23, 59, 59);
+                    break;
+            }
+        } else if (startDateStr != null && !startDateStr.trim().isEmpty()) {
+            hasDateFilter = true;
             try {
                 LocalDate sDate = LocalDate.parse(startDateStr.trim());
                 start = sDate.atStartOfDay();
-                hasDateFilter = true;
+                if (endDateStr != null && !endDateStr.trim().isEmpty()) {
+                    LocalDate eDate = LocalDate.parse(endDateStr.trim());
+                    end = eDate.atTime(23, 59, 59);
+                } else {
+                    end = sDate.atTime(23, 59, 59);
+                }
             } catch (Exception e) {
-                log.warn("Invalid startDate param: {}", startDateStr);
-            }
-        }
-
-        if (endDateStr != null && !endDateStr.trim().isEmpty() && !endDateStr.equalsIgnoreCase("ALL")) {
-            try {
-                LocalDate eDate = LocalDate.parse(endDateStr.trim());
-                end = eDate.atTime(java.time.LocalTime.MAX);
-                hasDateFilter = true;
-            } catch (Exception e) {
-                log.warn("Invalid endDate param: {}", endDateStr);
-            }
-        }
-
-        if (start == null && end == null && dateStr != null && !dateStr.trim().isEmpty() && !dateStr.equalsIgnoreCase("ALL")) {
-            try {
-                LocalDate localDate = LocalDate.parse(dateStr.trim());
-                start = localDate.atStartOfDay();
-                end = localDate.atTime(java.time.LocalTime.MAX);
-                hasDateFilter = true;
-            } catch (Exception e) {
-                log.warn("Invalid date param: {}", dateStr);
+                log.warn("Invalid date range params: {} -> {}", startDateStr, endDateStr);
             }
         }
 
@@ -234,11 +304,12 @@ public class DoctorPatientRestController {
 
         String searchPattern = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
 
-        List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, searchPattern);
+        List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, branchId, searchPattern);
 
         // Fallback: nếu không có ca khám nào và người dùng chưa chọn bộ lọc ngày cụ thể, hiển thị danh sách gần nhất
         if (visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
-            visits = visitRepository.findAll().stream()
+            final Long filterBranchId = branchId;
+            visits = visitRepository.findAll().stream().filter(v -> filterBranchId == null || (v.getBranch() != null && filterBranchId.equals(v.getBranch().getBranchId())))
                     .sorted((a, b) -> b.getCheckInAt().compareTo(a.getCheckInAt()))
                     .limit(20)
                     .collect(Collectors.toList());
@@ -329,10 +400,143 @@ public class DoctorPatientRestController {
                 .statusDisplayName(statusDisplay)
                 .statusBadgeClass(badgeClass)
                 .initialSymptoms(v.getInitialSymptoms() != null ? v.getInitialSymptoms() : "Khám theo yêu cầu")
+                .branchId(v.getBranch() != null ? v.getBranch().getBranchId() : null)
+                .branchCode(v.getBranch() != null ? v.getBranch().getBranchCode() : null)
                 .doctorName(doctorName)
                 .branchName(branchName)
                 .chairName(chairName)
                 .isCurrentVisit(isCurrent)
                 .build();
+    }
+
+    @PostMapping("/quick-create")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> quickCreatePatientAndVisit(
+            @RequestBody Map<String, String> payload,
+            HttpSession session) {
+        String fullName = payload.get("fullName");
+        String phoneNumber = payload.get("phoneNumber");
+        String gender = payload.getOrDefault("gender", "Nam");
+        String dobStr = payload.get("dob");
+        String symptoms = payload.getOrDefault("symptoms", "Khám & Điều trị tại ghế");
+        String branchIdStr = payload.get("branchId");
+
+        if (fullName == null || fullName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Họ tên bệnh nhân không được để trống"));
+        }
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Số điện thoại không được để trống"));
+        }
+
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+
+        Long branchId = null;
+        if (branchIdStr != null && !branchIdStr.trim().isEmpty()) {
+            try {
+                branchId = Long.parseLong(branchIdStr.trim());
+            } catch (Exception ignored) {}
+        }
+
+        if (!isAdmin && assignedBranch != null) {
+            if (branchId != null && !branchId.equals(assignedBranch.getBranchId())) {
+                String fullBranchName = (assignedBranch.getBranchCode() != null ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "message", "Cảnh báo: Bác sĩ chỉ được phép tiếp nhận bệnh nhân tại cơ sở đang làm việc (" + fullBranchName + ")!"
+                ));
+            }
+            branchId = assignedBranch.getBranchId();
+        }
+
+        Branch branch = null;
+        if (branchId != null) {
+            branch = branchRepository.findById(branchId).orElse(null);
+        }
+        if (branch == null && assignedBranch != null) {
+            branch = assignedBranch;
+        }
+        if (branch == null) {
+            branch = branchRepository.findAll().stream().findFirst().orElse(null);
+        }
+
+        LocalDate dob = null;
+        if (dobStr != null && !dobStr.trim().isEmpty()) {
+            try {
+                dob = LocalDate.parse(dobStr.trim());
+            } catch (Exception ignored) {}
+        }
+
+        PatientProfile patient = new PatientProfile();
+        patient.setFullName(fullName.trim());
+        patient.setPhoneNumber(phoneNumber.trim());
+        patient.setGender(gender);
+        patient.setDob(dob);
+        patient.setPreferredBranch(branch);
+        patient.setStatus("ACTIVE");
+        patient.setDepositBalance(java.math.BigDecimal.ZERO);
+
+        long pCount = patientProfileRepository.count() + 1;
+        patient.setPatientCode("BN" + String.format("%05d", pCount));
+        patient = patientProfileRepository.save(patient);
+
+        Visit visit = new Visit();
+        visit.setPatientProfile(patient);
+        visit.setCheckInAt(LocalDateTime.now());
+        visit.setStatus(VisitStatus.IN_EXAM);
+        visit.setVisitType(VisitType.WALK_IN);
+        visit.setInitialSymptoms(symptoms);
+        visit.setBranch(branch);
+
+        StaffProfile doctor = staffProfileRepository.findAll().stream()
+                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
+                .findFirst().orElse(null);
+        visit.setPrimaryDoctor(doctor);
+
+        long vCount = visitRepository.count() + 1;
+        String vCode = "VIS" + (10000 + vCount);
+        if (visitRepository.findByVisitCode(vCode).isPresent()) {
+            vCode = "VIS" + System.currentTimeMillis();
+        }
+        visit.setVisitCode(vCode);
+        visit = visitRepository.save(visit);
+        ensureClinicalExamExists(visit, doctor);
+
+        String redirectUrl = "/doctor/examination/" + visit.getVisitId() + "/diagnoses";
+        if (branch != null) {
+            redirectUrl += "?branchId=" + branch.getBranchId();
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "profileId", patient.getProfileId(),
+                "patientCode", patient.getPatientCode(),
+                "visitId", visit.getVisitId(),
+                "visitCode", visit.getVisitCode(),
+                "redirectUrl", redirectUrl
+        ));
+    }
+
+    private void ensureClinicalExamExists(Visit visit, StaffProfile doctor) {
+        if (visit == null || clinicalExamRepository == null) return;
+        try {
+            if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
+                ClinicalExamination exam = new ClinicalExamination();
+                exam.setVisit(visit);
+                exam.setPatientProfile(visit.getPatientProfile());
+                StaffProfile effectiveDoc = doctor != null ? doctor : visit.getPrimaryDoctor();
+                if (effectiveDoc == null) {
+                    effectiveDoc = staffProfileRepository.findAll().stream()
+                            .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
+                            .findFirst().orElse(null);
+                }
+                exam.setDoctor(effectiveDoc);
+                exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
+                        ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
+                exam.setExamTime(LocalDateTime.now());
+                clinicalExamRepository.save(exam);
+            }
+        } catch (Exception e) {
+            log.warn("Không thể tạo ClinicalExamination cho ca khám {}: {}", visit.getVisitId(), e.getMessage());
+        }
     }
 }

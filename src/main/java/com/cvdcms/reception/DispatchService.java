@@ -23,6 +23,9 @@ public class DispatchService {
     private final DispatchBranchRepository branches;
     private final ReceptionAuditRepository audits;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ClinicalExaminationRepository clinicalExamRepository;
+
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
             DispatchScheduleRepository schedules, DispatchRoomRepository rooms, DispatchChairRepository chairs,
             DispatchTicketRepository tickets, DispatchBranchRepository branches, ReceptionAuditRepository audits) {
@@ -83,6 +86,22 @@ public class DispatchService {
                 + ",room=" + visit.getRoomId() + ",chair=" + visit.getChairId();
         visit.setPrimaryDoctor(doctor); visit.setRoomId(effectiveRoom); visit.setChairId(chairId);
         visits.save(visit);
+
+        if (clinicalExamRepository != null) {
+            try {
+                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
+                    ClinicalExamination exam = new ClinicalExamination();
+                    exam.setVisit(visit);
+                    exam.setPatientProfile(visit.getPatientProfile());
+                    exam.setDoctor(doctor);
+                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
+                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
+                    exam.setExamTime(LocalDateTime.now());
+                    clinicalExamRepository.save(exam);
+                }
+            } catch (Exception ignored) {}
+        }
+
         audit(session, visit, "ASSIGN_VISIT", old, "doctor=" + doctorId + ",room=" + effectiveRoom + ",chair=" + chairId);
     }
 

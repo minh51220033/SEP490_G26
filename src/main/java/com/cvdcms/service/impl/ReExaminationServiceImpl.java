@@ -136,10 +136,8 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ReExaminationResponseDTO> getRecallsList(String dateFilter, Long doctorId, String statusStr, String keyword) {
-        seedSampleRecallsIfEmpty();
-
         LocalDate today = LocalDate.now();
         LocalDate startDate = null;
         LocalDate endDate = null;
@@ -341,68 +339,5 @@ public class ReExaminationServiceImpl implements ReExaminationService {
                 .timelineBadgeText(badgeText)
                 .timelineBadgeClass(badgeClass)
                 .build();
-    }
-
-    private synchronized void seedSampleRecallsIfEmpty() {
-        if (appointmentRepository.count() > 0) return;
-
-        log.info("Seeding realistic sample re-examination recalls...");
-        List<PatientProfile> patients = patientProfileRepository.findAll();
-        if (patients.isEmpty()) return;
-
-        Branch branch = branchRepository.findAll().stream().findFirst().orElse(null);
-        StaffProfile doctor = staffProfileRepository.findAll().stream()
-                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
-                .findFirst().orElse(null);
-
-        LocalDate today = LocalDate.now();
-
-        // 1. Tái khám hôm nay: Cắt chỉ sau nhổ răng khôn
-        createSampleAppt(patients.get(0), branch, doctor, today, LocalTime.of(9, 30),
-                "Tái khám cắt chỉ & kiểm tra huyệt ổ răng 38 sau nhổ 7 ngày", AppointmentStatus.CONFIRMED, "TK" + today.format(DateTimeFormatter.ofPattern("yyMMdd")) + "-1001");
-
-        // 2. Tái khám ngày mai: Siết dây cung & thay chun niềng răng
-        if (patients.size() > 1) {
-            createSampleAppt(patients.get(1), branch, doctor, today.plusDays(1), LocalTime.of(14, 0),
-                    "Tái khám chỉnh nha: Thay thun siết răng & kiểm tra mắc cài cung dưới", AppointmentStatus.CONFIRMED, "TK" + today.format(DateTimeFormatter.ofPattern("yyMMdd")) + "-1002");
-        }
-
-        // 3. Tái khám sau 3 ngày: Thử sườn mão răng sứ Cercon
-        if (patients.size() > 2) {
-            createSampleAppt(patients.get(2), branch, doctor, today.plusDays(3), LocalTime.of(10, 0),
-                    "Hẹn thử sườn & so màu mão sứ thẩm mỹ R21", AppointmentStatus.CONFIRMED, "TK" + today.format(DateTimeFormatter.ofPattern("yyMMdd")) + "-1003");
-        }
-
-        // 4. Tái khám quá hạn 2 ngày: Kiểm tra tủy răng số 46
-        if (patients.size() > 3) {
-            createSampleAppt(patients.get(3), branch, doctor, today.minusDays(2), LocalTime.of(15, 30),
-                    "Tái khám kiểm tra tủy & trám bít ống tủy lần 2 (Quá hạn chưa đến)", AppointmentStatus.PENDING, "TK" + today.format(DateTimeFormatter.ofPattern("yyMMdd")) + "-1004");
-        }
-    }
-
-    private void createSampleAppt(PatientProfile patient, Branch branch, StaffProfile doctor, LocalDate date, LocalTime time, String reason, AppointmentStatus status, String code) {
-        Appointment a = new Appointment();
-        a.setAppointmentCode(code);
-        a.setPatientProfile(patient);
-        a.setBranch(branch);
-        a.setDoctor(doctor);
-        a.setAppointmentDate(date);
-        a.setPreferredSession(time.getHour() < 12 ? PreferredSession.MORNING : PreferredSession.AFTERNOON);
-        a.setExpectedTime(time);
-        a.setInitialSymptoms(reason);
-        a.setStatus(status);
-        a.setSource(AppointmentSource.RECEPTIONIST);
-        Appointment saved = appointmentRepository.save(a);
-
-        CustomerCareTask task = new CustomerCareTask();
-        task.setTaskCode("CSKH" + System.currentTimeMillis() % 10000000);
-        task.setPatientProfile(patient);
-        task.setBranch(branch);
-        task.setTaskType(CustomerCareTaskType.APPOINTMENT_REMINDER);
-        task.setAppointment(saved);
-        task.setDueDate(date.minusDays(1).isBefore(LocalDate.now()) ? LocalDate.now() : date.minusDays(1));
-        task.setStatus(status == AppointmentStatus.CONFIRMED ? CustomerCareTaskStatus.COMPLETED : CustomerCareTaskStatus.PENDING);
-        task.setNotes("Nhắc lịch tái khám: " + reason);
-        customerCareTaskRepository.save(task);
     }
 }
