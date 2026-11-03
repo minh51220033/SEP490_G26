@@ -144,7 +144,7 @@
                                     <tbody id="itemsBody">
                                     <tr th:if="${#lists.isEmpty(unbilledServices)}">
                                         <td colspan="7" class="text-center py-4 text-muted">
-                                            Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.
+                                            <span th:if="${selectedVisit == null}"><i class="bi bi-exclamation-triangle me-1 text-warning"></i> Vui lòng chọn ca khám đang chờ thanh toán ở menu phía trên để tải dịch vụ thực hiện.</span><span th:if="${selectedVisit != null}"><i class="bi bi-info-circle me-1"></i> Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.</span>
                                         </td>
                                     </tr>
                                     <tr th:each="ps, iterStat : ${unbilledServices}" class="item-row"

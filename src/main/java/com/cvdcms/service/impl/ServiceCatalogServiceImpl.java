@@ -815,4 +815,16 @@ public class ServiceCatalogServiceImpl
     }
 
 
+
+    @Override
+    public List<ServiceCategory> searchCategories(String keyword, Boolean isActive) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return categoryRepository.searchAdminCategories(cleanKeyword, isActive);
+    }
+
+    @Override
+    public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status);
+    }
 }

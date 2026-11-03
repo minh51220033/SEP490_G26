@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê - FT29/FT30')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
+    <style>
+        .report-kpi-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+        .report-kpi-card.kpi-primary::before { background-color: #2563eb; }
+        .report-kpi-card.kpi-success::before { background-color: #059669; }
+        .report-kpi-card.kpi-warning::before { background-color: #d97706; }
+        .report-kpi-card.kpi-info::before { background-color: #0891b2; }
+        .report-kpi-card.kpi-danger::before { background-color: #dc2626; }
+
+        .report-kpi-card__title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .report-kpi-card__value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        .report-kpi-card__sub {
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+        .report-filter-bar {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .report-tab-pill {
+            background-color: #ffffff !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 6px !important;
+            color: #495057 !important;
+            font-weight: 500 !important;
+            font-size: 0.875rem !important;
+            padding: 0.45rem 0.95rem !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: all 0.15s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .report-tab-pill:hover {
+            border-color: #0d6efd !important;
+            color: #0d6efd !important;
+            background-color: #f8faff !important;
+        }
+        .report-tab-pill.active {
+            border: 1.5px solid #0d6efd !important;
+            background-color: #ffffff !important;
+            color: #0d6efd !important;
+            font-weight: 600 !important;
+            box-shadow: 0 0 0 1px #0d6efd !important;
+        }
+        .report-tab-pill .badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.2em 0.55em;
+            background-color: #f1f3f5;
+            color: #495057;
+            border-radius: 12px;
+        }
+        .report-tab-pill.active .badge {
+            background-color: #e7f1ff !important;
+            color: #0d6efd !important;
+            border: 1px solid #b6d4fe !important;
+        }
+        .mini-progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e2e8f0;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .mini-progress-fill {
+            height: 100%;
+            background-color: #0f766e;
+        }
+        .table-report th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-bottom: 2px solid #cbd5e1;
+        }
+    </style>
+</head>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('reports')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Báo cáo & Thống kê')}"></header>
+
+        <main class="app-content finance-page">
+            <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${warningMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="fin-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 fw-bold text-dark mb-1">Báo cáo & Thống kê Quản trị (FT29–30)</h1>
+                    <p class="text-muted mb-0">
+                        Phân tích doanh thu, thực thu dòng tiền, chi phí vận hành, công nợ viện phí và hiệu suất điều trị theo cơ sở.
+                    </p>
+                </div>
+                <div class="d-flex gap-2 mt-2 mt-md-0">
+                    <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2 shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#exportExcelModal">
+                        <i class="bi bi-file-earmark-excel"></i> Xuất Excel (.xlsx)
+                    </button>
+                    <a th:href="@{/admin/reports(branchId=${selectedBranchId}, startDate=${filter.startDate}, endDate=${filter.endDate}, tab=${activeTab})}"
+                       class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 shadow-sm" title="Làm mới dữ liệu">
+                        <i class="bi bi-arrow-clockwise"></i> Tải lại
+                    </a>
+                </div>
+            </div>
+
+            <!-- SCR-29.4: BỘ LỌC CHUNG THEO CHI NHÁNH & THỜI GIAN -->
+            <div class="report-filter-bar shadow-sm">
+                <form id="reportFilterForm" th:action="@{/admin/reports}" method="get" class="row g-3 align-items-end">
+                    <input type="hidden" name="tab" id="activeTabInput" th:value="${activeTab}">
+
+                    <!-- Lọc Chi nhánh -->
+                    <div class="col-md-3">
+                        <label for="branchSelect" class="form-label fw-semibold small text-secondary">
+                            <i class="bi bi-geo-alt me-1"></i>Chi nhánh / Cơ sở:
+                        </label>
+                        <select id="branchSelect" name="branchId" class="form-select form-select-sm">
+                            <option th:if="${isAdmin}" value="" th:selected="${selectedBranchId == null}">Toàn bộ hệ thống</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.branchId}"
+                                    th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                                Chi nhánh Nha khoa
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Lọc Từ ngày -->
+                    <div class="col-md-2">
+                        <label for="startDateInput" class="form-label fw-semibold small text-secondary">
+                            <i class="bi bi-calendar-event me-1"></i>Từ ngày:
+                        </label>
+                        <input type="date" id="startDateInput" name="startDate" class="form-control form-control-sm"
+                               th:value="${filter.startDate}">
+                    </div>
+
+                    <!-- Lọc Đến ngày -->
+                    <div class="col-md-2">
+                        <label for="endDateInput" class="form-label fw-semibold small text-secondary">
+                            <i class="bi bi-calendar-check me-1"></i>Đến ngày:
+                        </label>
+                        <input type="date" id="endDateInput" name="endDate" class="form-control form-control-sm"
+                               th:value="${filter.endDate}">
+                    </div>
+
+                    <!-- Lọc Thuế suất TNDN -->
+                    <div class="col-md-2">
+                        <label for="taxRateSelect" class="form-label fw-semibold small text-secondary">
+                            <i class="bi bi-percent me-1"></i>Thuế suất TNDN:
+                        </label>
+                        <select id="taxRateSelect" name="taxRate" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 20}">20% (Doanh nghiệp chuẩn)</option>
+                            <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 15}">15% (Ưu đãi DN nhỏ)</option>
+                            <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 2}">2% (Khoán trên Doanh thu)</option>
+                            <option value="0" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 0}">0% (Miễn thuế / Y tế công)</option>
+                        </select>
+                    </div>
+
+                    <!-- Nút Thao tác & Phím tắt nhanh -->
+                    <div class="col-md-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange('today')">Hôm nay</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange('thisWeek')">Tuần này</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange('thisMonth')">Tháng này</button>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                            <i class="bi bi-funnel-fill"></i> Áp dụng lọc
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB NAVIGATION DẠNG THẺ RIÊNG BIỆT (PILL CARDS) -->
+            <div class="d-flex flex-wrap gap-2 mb-4" id="reportTabs" role="tablist">
+                <button class="report-tab-pill" th:classappend="${activeTab == 'overview' ? 'active' : ''}"
+                        id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-pane" type="button" role="tab"
+                        onclick="switchReportTab('overview')">
+                    <i class="bi bi-speedometer2 text-primary me-1"></i> Tổng quan điều hành
+                    <span class="badge rounded-pill bg-light text-secondary border ms-1">29.1</span>
+                </button>
+                <button class="report-tab-pill" th:classappend="${activeTab == 'financial' ? 'active' : ''}"
+                        id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial-pane" type="button" role="tab"
+                        onclick="switchReportTab('financial')">
+                    <i class="bi bi-cash-stack text-success me-1"></i> Báo cáo Tài chính & Dòng tiền
+                    <span class="badge rounded-pill bg-light text-secondary border ms-1">29.2</span>
+                </button>
+                <button class="report-tab-pill" th:classappend="${activeTab == 'debts' ? 'active' : ''}"
+                        id="debts-tab" data-bs-toggle="tab" data-bs-target="#debts-pane" type="button" role="tab"
+                        onclick="switchReportTab('debts')">
+                    <i class="bi bi-receipt-cutoff text-danger me-1"></i> Công nợ Bệnh nhân
+                    <span class="badge rounded-pill bg-danger text-white ms-1"
+                          th:text="${#lists.size(financial.patientDebts)}">0</span>
+                </button>
+                <button class="report-tab-pill" th:classappend="${activeTab == 'operational' ? 'active' : ''}"
+                        id="operational-tab" data-bs-toggle="tab" data-bs-target="#operational-pane" type="button" role="tab"
+                        onclick="switchReportTab('operational')">
+                    <i class="bi bi-people text-info me-1"></i> Vận hành & Nguồn khách
+                    <span class="badge rounded-pill bg-info text-white ms-1"
+                          th:text="${operational.totalVisits} + ' lượt'">0 lượt</span>
+                </button>
+            </div>
+
+            <!-- TAB CONTENT -->
+            <div class="tab-content" id="reportTabContent">
+
+                <!-- TAB 1: TỔNG QUAN ĐIỀU HÀNH (SCR-29.1) -->
+                <div class="tab-pane fade" th:classappend="${activeTab == 'overview' ? 'show active' : ''}"
+                     id="overview-pane" role="tabpanel">
+
+                    <!-- 4 THẺ CHỈ SỐ KPI CHÍNH -->
+                    <div class="row g-3 mb-4">
+                        <!-- KPI 1: Thực thu dòng tiền -->
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="report-kpi-card kpi-success">
+                                <div>
+                                    <div class="report-kpi-card__title">Thực thu dòng tiền (Net Cash)</div>
+                                    <div class="report-kpi-card__value text-success"
+                                         th:text="${#numbers.formatDecimal(dashboard.totalRealRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <div class="report-kpi-card__sub">
+                                    Tiền mặt, CK, POS đã trừ hoàn trả: <span class="fw-semibold text-danger" th:text="${#numbers.formatDecimal(dashboard.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 2: Tổng giá trị hóa đơn -->
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="report-kpi-card kpi-primary">
+                                <div>
+                                    <div class="report-kpi-card__title">Giá trị hóa đơn phát sinh</div>
+                                    <div class="report-kpi-card__value text-primary"
+                                         th:text="${#numbers.formatDecimal(dashboard.totalInvoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <div class="report-kpi-card__sub">
+                                    Viện phí đã xác nhận phát sinh trong kỳ lọc
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 3: Công nợ viện phí phát sinh -->
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="report-kpi-card kpi-warning">
+                                <div>
+                                    <div class="report-kpi-card__title">Công nợ hóa đơn trong kỳ</div>
+                                    <div class="report-kpi-card__value text-warning"
+                                         th:text="${#numbers.formatDecimal(dashboard.totalDebtAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <div class="report-kpi-card__sub">
+                                    Số tiền viện phí chưa thu của các HĐ trong kỳ
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 4: Lượt khám & Tỷ lệ hoàn tất -->
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="report-kpi-card kpi-info">
+                                <div>
+                                    <div class="report-kpi-card__title">Lượt khám & Hoàn tất</div>
+                                    <div class="report-kpi-card__value text-info"
+                                         th:text="${dashboard.totalVisits} + ' lượt'">0 lượt</div>
+                                </div>
+                                <div class="report-kpi-card__sub">
+                                    Tỷ lệ hoàn tất: <strong class="text-dark" th:text="${dashboard.completionRate} + '%'">0%</strong> (<span th:text="${dashboard.completedVisits}">0</span> đạt)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- THẺ PHỤ: CHI PHÍ, LỢI NHUẬN TRƯỚC THUẾ, THUẾ TNDN & LỢI NHUẬN RÒNG -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="fin-card py-3 px-3 border-start border-4 border-danger h-100 shadow-sm">
+                                <span class="text-muted small fw-semibold text-uppercase">Chi phí vận hành hợp lệ</span>
+                                <div class="fs-4 fw-bold text-danger my-1"
+                                     th:text="${#numbers.formatDecimal(dashboard.totalExpenseAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                <span class="small text-muted">Chi phí hoạt động & lương nhân sự</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="fin-card py-3 px-3 border-start border-4 border-primary h-100 shadow-sm">
+                                <span class="text-muted small fw-semibold text-uppercase">Lợi nhuận trước thuế (EBT)</span>
+                                <div class="fs-4 fw-bold my-1"
+                                     th:classappend="${dashboard.operatingMargin.signum() >= 0 ? 'text-primary' : 'text-danger'}"
+                                     th:text="${#numbers.formatDecimal(dashboard.operatingMargin, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                <span class="small text-muted">= Thực thu dòng tiền - Chi phí</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="fin-card py-3 px-3 border-start border-4 border-warning h-100 shadow-sm">
+                                <span class="text-muted small fw-semibold text-uppercase">
+                                    Thuế TNDN tạm tính (<span th:text="${dashboard.taxRate}">20</span>%)
+                                </span>
+                                <div class="fs-4 fw-bold text-warning my-1"
+                                     th:text="${#numbers.formatDecimal(dashboard.estimatedTaxAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                <span class="small text-muted">Tạm tính trên thặng dư dương</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="fin-card py-3 px-3 border-start border-4 border-success h-100 shadow-sm">
+                                <span class="text-muted small fw-semibold text-uppercase">Lợi nhuận ròng sau thuế</span>
+                                <div class="fs-4 fw-bold my-1"
+                                     th:classappend="${dashboard.netProfitAfterTax.signum() >= 0 ? 'text-success' : 'text-danger'}"
+                                     th:text="${#numbers.formatDecimal(dashboard.netProfitAfterTax, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                <span class="small text-muted">= Lợi nhuận trước thuế - Thuế</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG XU HƯỚNG THEO NGÀY -->
+                    <div class="fin-card shadow-sm p-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="fw-bold mb-0 text-dark fs-5">Diễn biến Doanh số & Lượt khám theo ngày</h4>
+                            <span class="badge bg-light text-dark border">
+                                <span th:text="${#lists.size(dashboard.dailyStats)}">0</span> ngày trong kỳ
+                            </span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-report mb-0">
+                                <thead>
+                                <tr>
+                                    <th style="width: 140px;">Ngày</th>
+                                    <th>Doanh số hóa đơn</th>
+                                    <th>Thực thu dòng tiền</th>
+                                    <th class="text-center" style="width: 120px;">Số lượt khám</th>
+                                    <th style="width: 250px;">Mức độ đóng góp</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(dashboard.dailyStats)}">
+                                    <td colspan="5" class="text-center py-4 text-muted">Không có dữ liệu trong khoảng thời gian này.</td>
+                                </tr>
+                                <tr th:each="st : ${dashboard.dailyStats}">
+                                    <td>
+                                        <span class="fw-semibold" th:text="${#temporals.format(st.date, 'dd/MM/yyyy')}">01/11/2026</span>
+                                    </td>
+                                    <td class="fw-bold text-primary"
+                                        th:text="${#numbers.formatDecimal(st.invoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="fw-bold text-success"
+                                        th:text="${#numbers.formatDecimal(st.realRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border px-2 py-1" th:text="${st.visitCount}">0</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="mini-progress-bar flex-grow-1">
+                                                <div class="mini-progress-fill"
+                                                     th:style="'width:' + (${dashboard.totalRealRevenue.signum() > 0 ? (st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue()) : 0}) + '%;'"></div>
+                                            </div>
+                                            <span class="small text-muted" style="min-width: 45px;"
+                                                  th:text="${dashboard.totalRealRevenue.signum() > 0 ? #numbers.formatDecimal(st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue(), 1, 'POINT', 1, 'POINT') + '%' : '0%'}">0%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TÀI CHÍNH & DÒNG TIỀN (SCR-29.2) -->
+                <div class="tab-pane fade" th:classappend="${activeTab == 'financial' ? 'show active' : ''}"
+                     id="financial-pane" role="tabpanel">
+
+                    <div class="row g-4 mb-4">
+                        <!-- Cột 1: Cơ cấu Giá trị Hóa đơn -->
+                        <div class="col-lg-6">
+                            <div class="fin-card p-4 h-100 shadow-sm">
+                                <h4 class="fw-bold fs-5 text-dark mb-3 border-bottom pb-2">
+                                    <i class="bi bi-file-earmark-text text-primary me-2"></i>1. Cơ cấu Giá trị Hóa đơn Viện phí
+                                </h4>
+                                <ul class="list-group list-group-flush mb-3">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span>Doanh thu Dịch vụ kỹ thuật & thủ thuật</span>
+                                        <strong class="text-dark" th:text="${#numbers.formatDecimal(financial.totalServiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span>Doanh thu Đơn thuốc phát theo ca</span>
+                                        <strong class="text-dark" th:text="${#numbers.formatDecimal(financial.totalMedicineAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span>Phụ thu phát sinh ngoài gói</span>
+                                        <strong class="text-dark" th:text="${#numbers.formatDecimal(financial.surchargeAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 text-muted">
+                                        <span>Tổng giảm trừ (Ưu đãi hạng thẻ, Voucher KM, Đổi điểm)</span>
+                                        <span class="text-danger" th:text="'-' + ${#numbers.formatDecimal(financial.totalDiscount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-light py-2 px-2 rounded mt-2 border">
+                                        <strong class="text-primary text-uppercase">Tổng Giá Trị Hóa Đơn Lập Trong Kỳ</strong>
+                                        <strong class="fs-5 text-primary" th:text="${#numbers.formatDecimal(financial.totalInvoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                </ul>
+                                <div class="alert alert-light border small text-muted mb-0">
+                                    <i class="bi bi-info-circle me-1"></i> Giá trị hóa đơn phản ánh nghĩa vụ viện phí phát sinh của bệnh nhân đối với các ca điều trị trong kỳ lọc (đã loại trừ các hóa đơn bị hủy).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cột 2: Cơ cấu Tiền thực thu theo giao dịch -->
+                        <div class="col-lg-6">
+                            <div class="fin-card p-4 h-100 shadow-sm">
+                                <h4 class="fw-bold fs-5 text-dark mb-3 border-bottom pb-2">
+                                    <i class="bi bi-wallet2 text-success me-2"></i>2. Dòng tiền Thực thu theo Giao dịch
+                                </h4>
+                                <ul class="list-group list-group-flush mb-3">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-cash me-2 text-success"></i>Tiền mặt (CASH)</span>
+                                        <strong class="text-success" th:text="${#numbers.formatDecimal(financial.cashAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-bank me-2 text-primary"></i>Chuyển khoản ngân hàng (BANK_TRANSFER)</span>
+                                        <strong class="text-primary" th:text="${#numbers.formatDecimal(financial.bankTransferAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-credit-card me-2 text-info"></i>Thẻ POS tại quầy (POS_CARD)</span>
+                                        <strong class="text-info" th:text="${#numbers.formatDecimal(financial.posCardAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-box-arrow-in-down me-2 text-warning"></i>Tiền nạp tạm ứng mới vào ví cọc</span>
+                                        <strong class="text-dark" th:text="${#numbers.formatDecimal(financial.newDepositAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-light py-2 px-2 rounded mt-2 border">
+                                        <strong class="text-success text-uppercase">Tổng Dòng Tiền Thu Vào Phòng Khám</strong>
+                                        <strong class="fs-5 text-success" th:text="${#numbers.formatDecimal(financial.totalCollected, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 pt-2 text-muted small">
+                                        <span><i class="bi bi-arrow-repeat me-2"></i>Thanh toán trừ ví cọc (Đã ghi nhận dòng tiền khi nạp)</span>
+                                        <span class="text-secondary" th:text="${#numbers.formatDecimal(financial.depositWalletAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                    </li>
+                                </ul>
+                                <div class="alert alert-light border small text-muted mb-0">
+                                    <i class="bi bi-shield-check me-1"></i> Không cộng trùng: Tiền thanh toán bằng ví cọc được theo dõi riêng biệt, tránh tính 2 lần dòng tiền thực thu của phòng khám.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng Tổng hợp Dòng tiền Thuần & Chi phí -->
+                    <div class="fin-card p-4 shadow-sm mb-4">
+                        <h4 class="fw-bold fs-5 text-dark mb-3">3. Bảng Cân đối Dòng tiền Thuần & Thặng dư Hoạt động</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Chỉ tiêu Tài chính</th>
+                                    <th class="text-end" style="width: 250px;">Số tiền</th>
+                                    <th>Diễn giải chi tiết</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td class="fw-semibold">1. Tổng dòng tiền thực thu từ khách</td>
+                                    <td class="text-end fw-bold text-success"
+                                        th:text="${#numbers.formatDecimal(financial.totalCollected, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="small text-muted">Toàn bộ tiền tươi nhận qua Tiền mặt, Ngân hàng, POS và Nạp cọc</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">2. Tiền hoàn trả cho bệnh nhân</td>
+                                    <td class="text-end fw-bold text-danger"
+                                        th:text="'-' + ${#numbers.formatDecimal(financial.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
+                                    <td class="small text-muted">Bao gồm hoàn tiền hóa đơn và hoàn trả số dư cọc</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td class="fw-bold text-uppercase">3. Thực thu thuần sau hoàn trả (= 1 - 2)</td>
+                                    <td class="text-end fw-bold fs-5 text-success"
+                                        th:text="${#numbers.formatDecimal(financial.netRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="small">Dòng tiền thu thuần thực tế còn lại tại cơ sở</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">4. Chi phí vận hành hợp lệ</td>
+                                    <td class="text-end fw-bold text-danger"
+                                        th:text="'-' + ${#numbers.formatDecimal(financial.operatingExpenses, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
+                                    <td class="small text-muted">Tiền mặt bằng, điện nước, lương nhân sự, tạm ứng và chi phí hoạt động</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-bold text-uppercase">5. Lợi nhuận vận hành trước thuế (EBT) (= 3 - 4)</td>
+                                    <td class="text-end fw-bold fs-5"
+                                        th:classappend="${financial.operatingMargin.signum() >= 0 ? 'text-primary' : 'text-danger'}"
+                                        th:text="${#numbers.formatDecimal(financial.operatingMargin, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="small fw-semibold">Thặng dư vận hành trước thuế trong kỳ lọc</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-warning">6. Nghĩa vụ Thuế TNDN tạm tính (<span th:text="${financial.taxRate}">20</span>%)</td>
+                                    <td class="text-end fw-bold text-warning"
+                                        th:text="'-' + ${#numbers.formatDecimal(financial.estimatedTaxAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
+                                    <td class="small text-muted">Tạm tính <span th:text="${financial.taxRate}">20</span>% trên thặng dư vận hành dương</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td class="fw-bold text-uppercase">7. Lợi nhuận ròng sau thuế (Net Profit) (= 5 - 6)</td>
+                                    <td class="text-end fw-bold fs-5"
+                                        th:classappend="${financial.netProfitAfterTax.signum() >= 0 ? 'text-success' : 'text-danger'}"
+                                        th:text="${#numbers.formatDecimal(financial.netProfitAfterTax, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="small fw-semibold">Lợi nhuận ròng thực tế của phòng khám sau nghĩa vụ thuế</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: CÔNG NỢ BỆNH NHÂN -->
+                <div class="tab-pane fade" th:classappend="${activeTab == 'debts' ? 'show active' : ''}"
+                     id="debts-pane" role="tabpanel">
+
+                    <div class="fin-card p-4 shadow-sm mb-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                            <div>
+                                <h4 class="fw-bold fs-5 text-dark mb-1">Danh sách Chi tiết Công nợ Bệnh nhân</h4>
+                                <p class="text-muted small mb-0">Theo dõi nợ lũy kế từng hồ sơ bệnh nhân trên phạm vi chi nhánh được phân quyền.</p>
+                            </div>
+                            <div class="text-md-end mt-2 mt-md-0">
+                                <span class="text-muted small">Tổng nợ lũy kế hiện tại:</span>
+                                <div class="fs-4 fw-bold text-danger"
+                                     th:text="${#numbers.formatDecimal(financial.currentTotalOutstandingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-report mb-0">
+                                <thead>
+                                <tr>
+                                    <th style="width: 50px;">STT</th>
+                                    <th>Mã BN</th>
+                                    <th>Họ và Tên</th>
+                                    <th>Số Điện Thoại</th>
+                                    <th class="text-center">Số HĐ nợ</th>
+                                    <th class="text-end">Tổng tiền HĐ</th>
+                                    <th class="text-end">Đã thanh toán</th>
+                                    <th class="text-end">Nợ còn lại</th>
+                                    <th class="text-end">Số dư ví cọc</th>
+                                    <th class="text-center">Lần khám cuối</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(financial.patientDebts)}">
+                                    <td colspan="10" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle text-success fs-4 d-block mb-1"></i>
+                                        Không có công nợ tồn đọng tại chi nhánh này!
+                                    </td>
+                                </tr>
+                                <tr th:each="d, dStat : ${financial.patientDebts}">
+                                    <td class="text-center" th:text="${dStat.count}">1</td>
+                                    <td>
+                                        <a th:href="@{/payments/dashboard(patientId=${d.profileId})}" class="fw-bold text-primary text-decoration-none"
+                                           th:text="${d.patientCode}" title="Xem Dashboard chi tiết bệnh nhân">BN10001</a>
+                                    </td>
+                                    <td class="fw-semibold" th:text="${d.fullName}">Nguyễn Văn A</td>
+                                    <td th:text="${d.phoneNumber}">0912345678</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning text-dark" th:text="${d.unpaidInvoiceCount}">1</span>
+                                    </td>
+                                    <td class="text-end text-muted" th:text="${#numbers.formatDecimal(d.totalInvoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end text-success" th:text="${#numbers.formatDecimal(d.totalPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(d.totalRemainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(d.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-center small text-muted" th:text="${d.lastInvoiceDate != null ? #temporals.format(d.lastInvoiceDate, 'dd/MM/yyyy') : '-'}">-</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: VẬN HÀNH & NGUỒN KHÁCH (SCR-29.3) -->
+                <div class="tab-pane fade" th:classappend="${activeTab == 'operational' ? 'show active' : ''}"
+                     id="operational-pane" role="tabpanel">
+
+                    <div class="row g-4 mb-4">
+                        <!-- Cột 1: Hiệu suất Khám & Trạng thái -->
+                        <div class="col-lg-6">
+                            <div class="fin-card p-4 shadow-sm h-100">
+                                <h4 class="fw-bold fs-5 text-dark mb-3 border-bottom pb-2">
+                                    <i class="bi bi-activity text-primary me-2"></i>1. Hiệu suất Lượt khám & Trạng thái
+                                </h4>
+                                <div class="p-3 bg-light rounded border mb-3 text-center">
+                                    <div class="text-muted small text-uppercase fw-semibold">Tỷ lệ hoàn tất lượt khám</div>
+                                    <div class="display-6 fw-bold text-primary my-1" th:text="${operational.completionRate} + '%'">0%</div>
+                                    <div class="small text-muted">
+                                        <span class="text-success fw-bold" th:text="${operational.completedVisits}">0</span> lượt hoàn tất trên tổng số
+                                        <span class="fw-bold text-dark" th:text="${operational.totalVisits}">0</span> ca tiếp nhận
+                                    </div>
+                                </div>
+
+                                <ul class="list-group list-group-flush mb-0">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-check-circle-fill text-success me-2"></i>Hoàn tất (COMPLETED)</span>
+                                        <span class="badge bg-success rounded-pill px-3" th:text="${operational.completedVisits}">0</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-x-circle-fill text-danger me-2"></i>Hủy lượt khám (CANCELLED)</span>
+                                        <span class="badge bg-danger rounded-pill px-3" th:text="${operational.cancelledVisits}">0</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-clock-fill text-warning me-2"></i>Đang chờ khám (WAITING)</span>
+                                        <span class="badge bg-warning text-dark rounded-pill px-3" th:text="${operational.waitingVisits}">0</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-person-gear text-info me-2"></i>Đang khám lâm sàng (IN_EXAM)</span>
+                                        <span class="badge bg-info text-dark rounded-pill px-3" th:text="${operational.inExamVisits}">0</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-bandaid text-primary me-2"></i>Đang điều trị ghế nha (IN_TREATMENT)</span>
+                                        <span class="badge bg-primary rounded-pill px-3" th:text="${operational.inTreatmentVisits}">0</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span><i class="bi bi-cash-coin text-secondary me-2"></i>Chờ thanh toán (WAITING_PAYMENT)</span>
+                                        <span class="badge bg-secondary rounded-pill px-3" th:text="${operational.waitingPaymentVisits}">0</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Cột 2: Kênh tiếp nhận & Hình thức khám -->
+                        <div class="col-lg-6">
+                            <div class="fin-card p-4 shadow-sm h-100">
+                                <h4 class="fw-bold fs-5 text-dark mb-3 border-bottom pb-2">
+                                    <i class="bi bi-diagram-3 text-success me-2"></i>2. Hình thức Tiếp nhận & Kênh Đặt hẹn
+                                </h4>
+
+                                <div class="mb-4">
+                                    <h6 class="fw-semibold text-secondary small text-uppercase mb-2">Hình thức tiếp nhận ca khám:</h6>
+                                    <div class="row g-2 text-center">
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded bg-light">
+                                                <div class="fs-5 fw-bold text-dark" th:text="${operational.walkInVisits}">0</div>
+                                                <span class="small text-muted">Vãng lai</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded bg-light">
+                                                <div class="fs-5 fw-bold text-primary" th:text="${operational.appointmentVisits}">0</div>
+                                                <span class="small text-muted">Có hẹn trước</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded bg-light">
+                                                <div class="fs-5 fw-bold text-danger" th:text="${operational.emergencyVisits}">0</div>
+                                                <span class="small text-muted">Cấp cứu</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h6 class="fw-semibold text-secondary small text-uppercase mb-2">Kênh đặt lịch hẹn (Appointments):</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <span><i class="bi bi-globe me-2 text-primary"></i>Cổng trực tuyến (ONLINE)</span>
+                                            <strong th:text="${operational.onlineAppointments}">0</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <span><i class="bi bi-person-badge me-2 text-success"></i>Lễ tân tại quầy (RECEPTIONIST)</span>
+                                            <strong th:text="${operational.receptionistAppointments}">0</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <span><i class="bi bi-telephone me-2 text-info"></i>Hotline / Điện thoại (PHONE)</span>
+                                            <strong th:text="${operational.phoneAppointments}">0</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <span><i class="bi bi-robot me-2 text-secondary"></i>Trợ lý ảo (CHATBOT)</span>
+                                            <strong th:text="${operational.chatbotAppointments}">0</strong>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng Nguồn Khách Hàng (Customer Source) -->
+                    <div class="fin-card p-4 shadow-sm mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="fw-bold fs-5 text-dark mb-0">3. Phân bổ Nguồn Khách Hàng Thực Tế</h4>
+                            <span class="badge bg-light text-secondary border">Dữ liệu thực tế hồ sơ bệnh nhân</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-report mb-0">
+                                <thead>
+                                <tr>
+                                    <th style="width: 50px;">STT</th>
+                                    <th>Nguồn Khách Hàng</th>
+                                    <th class="text-center" style="width: 150px;">Số Bệnh Nhân</th>
+                                    <th class="text-center" style="width: 120px;">Tỷ Lệ</th>
+                                    <th style="width: 300px;">Thanh Biểu Thị</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(operational.customerSources)}">
+                                    <td colspan="5" class="text-center py-4 text-muted">Không có dữ liệu nguồn khách trong kỳ lọc.</td>
+                                </tr>
+                                <tr th:each="cs, csStat : ${operational.customerSources}">
+                                    <td class="text-center" th:text="${csStat.count}">1</td>
+                                    <td>
+                                        <strong th:classappend="${cs.sourceName == 'Chưa xác định' ? 'text-muted fst-italic' : 'text-dark'}"
+                                                th:text="${cs.sourceName}">Facebook</strong>
+                                    </td>
+                                    <td class="text-center fw-bold" th:text="${cs.patientCount}">10</td>
+                                    <td class="text-center fw-semibold text-primary" th:text="${cs.percentage} + '%'">25%</td>
+                                    <td>
+                                        <div class="mini-progress-bar">
+                                            <div class="mini-progress-fill" th:style="'width:' + ${cs.percentage} + '%;'"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SCR-30.2: POPUP CHỌN LOẠI BÁO CÁO & PHẠM VI XUẤT FILE EXCEL (.XLSX)       -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="exportExcelModal" tabindex="-1" aria-labelledby="exportExcelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <form th:action="@{/admin/reports/export}" method="get">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fs-6 fw-bold" id="exportExcelModalLabel">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Tùy chọn Xuất Báo Cáo Excel (.xlsx)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="modalReportType" class="form-label fw-semibold small text-secondary">
+                            1. Chọn Loại Báo Cáo:
+                        </label>
+                        <select id="modalReportType" name="reportType" class="form-select">
+                            <option value="OVERVIEW" th:selected="${activeTab == 'overview'}">Báo cáo Tổng quan (Bao gồm đầy đủ các sheet)</option>
+                            <option value="FINANCIAL" th:selected="${activeTab == 'financial'}">Báo cáo Tài chính, Dòng tiền & Danh sách Hóa đơn</option>
+                            <option value="DEBTS" th:selected="${activeTab == 'debts'}">Báo cáo Chi tiết Công nợ Bệnh nhân</option>
+                            <option value="OPERATIONAL" th:selected="${activeTab == 'operational'}">Báo cáo Hoạt động Vận hành & Nguồn khách</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalBranchSelect" class="form-label fw-semibold small text-secondary">
+                            2. Chi Nhánh Áp Dụng:
+                        </label>
+                        <select id="modalBranchSelect" name="branchId" class="form-select">
+                            <option th:if="${isAdmin}" value="" th:selected="${selectedBranchId == null}">Toàn bộ hệ thống</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.branchId}"
+                                    th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                                Chi nhánh Nha khoa
+                            </option>
+                        </select>
+                        <div class="form-text small" th:if="${!isAdmin}">
+                            <i class="bi bi-shield-lock me-1"></i> Tài khoản chỉ được xuất trong phạm vi chi nhánh được phân công.
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="taxRate" th:value="${filter.taxRate}">
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="modalStartDate" class="form-label fw-semibold small text-secondary">Từ ngày:</label>
+                            <input type="date" id="modalStartDate" name="startDate" class="form-control"
+                                   th:value="${filter.startDate}" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="modalEndDate" class="form-label fw-semibold small text-secondary">Đến ngày:</label>
+                            <input type="date" id="modalEndDate" name="endDate" class="form-control"
+                                   th:value="${filter.endDate}" required>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded border small text-muted">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-file-earmark-check text-success fs-5"></i>
+                            <strong class="text-dark">Định dạng file xuất chuẩn: .xlsx (Excel)</strong>
+                        </div>
+                        File xuất định dạng chuẩn Office Open XML, số liệu tiền tệ dạng số có phân cách hàng nghìn, có dòng thuế TNDN & lợi nhuận sau thuế, bảo mật chống formula injection.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success btn-sm px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-download"></i> Tải file Excel (.xlsx)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function switchReportTab(tabName) {
+        document.getElementById('activeTabInput').value = tabName;
+        // Cập nhật giá trị mặc định cho dropdown trong modal xuất excel
+        const modalType = document.getElementById('modalReportType');
+        if (modalType) {
+            if (tabName === 'financial') modalType.value = 'FINANCIAL';
+            else if (tabName === 'debts') modalType.value = 'DEBTS';
+            else if (tabName === 'operational') modalType.value = 'OPERATIONAL';
+            else modalType.value = 'OVERVIEW';
+        }
+    }
+
+    function setDateRange(rangeType) {
+        const today = new Date();
+        const formatDate = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        let start = new Date(today);
+        let end = new Date(today);
+
+        if (rangeType === 'today') {
+            start = new Date(today);
+            end = new Date(today);
+        } else if (rangeType === 'thisWeek') {
+            const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            start = new Date(today.getFullYear(), today.getMonth(), diff);
+            end = new Date(today);
+        } else if (rangeType === 'thisMonth') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = new Date(today);
+        }
+
+        const startStr = formatDate(start);
+        const endStr = formatDate(end);
+
+        document.getElementById('startDateInput').value = startStr;
+        document.getElementById('endDateInput').value = endStr;
+        const modalStart = document.getElementById('modalStartDate');
+        if (modalStart) modalStart.value = startStr;
+        const modalEnd = document.getElementById('modalEndDate');
+        if (modalEnd) modalEnd.value = endStr;
+
+        // Tự động submit form ngay lập tức để áp dụng lọc dữ liệu!
+        document.getElementById('reportFilterForm').submit();
+    }
+</script>
+</body>
+</html>
+

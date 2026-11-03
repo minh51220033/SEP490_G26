@@ -51,7 +51,11 @@ public class AdminServiceCatalogController {
 
         private static final String CONFIG_VIEW = "admin/services/technical-config";
 
+        private static final String CATEGORY_LIST_VIEW = "admin/services/category-list";
+
         private static final String REDIRECT_LIST = "redirect:/admin/services";
+
+        private static final String REDIRECT_CATEGORIES = "redirect:/admin/services/categories";
 
         private static final String DELETE_TOKEN_SESSION_KEY = "serviceCatalogDeleteToken";
 
@@ -71,12 +75,18 @@ public class AdminServiceCatalogController {
 
         @GetMapping
         public String listServices(
+                        @RequestParam(value = "q", required = false) String keyword,
                         @RequestParam(required = false) Long categoryId,
+                        @RequestParam(required = false) ServiceStatus status,
+                        @RequestParam(value = "tab", required = false) String tab,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
+                if ("categories".equalsIgnoreCase(tab)) {
+                        return REDIRECT_LIST;
+                }
                 try {
-                        prepareListPage(model, session, categoryId);
+                        prepareListPage(model, session, keyword, categoryId, status);
                         return LIST_VIEW;
                 } catch (IllegalArgumentException ex) {
                         redirectAttributes.addFlashAttribute(
@@ -85,6 +95,20 @@ public class AdminServiceCatalogController {
 
                         return REDIRECT_LIST;
                 }
+        }
+
+        // =====================================================
+        // 1.1 DANH SÁCH NHÓM DỊCH VỤ (TAB 2)
+        // =====================================================
+
+        @GetMapping("/categories")
+        public String listCategories(
+                        @RequestParam(value = "q", required = false) String keyword,
+                        @RequestParam(value = "active", required = false) Boolean active,
+                        Model model,
+                        HttpSession session) {
+                prepareCategoryListPage(model, session, keyword, active);
+                return CATEGORY_LIST_VIEW;
         }
 
         // =====================================================
@@ -121,7 +145,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         bindingResult.getAllErrors().get(0).getDefaultMessage());
                         redirectAttributes.addFlashAttribute("openCategoryModal", true);
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
 
                 try {
@@ -131,7 +155,7 @@ public class AdminServiceCatalogController {
                                         "successMessage",
                                         "Th\u00EAm nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 } catch (IllegalArgumentException ex) {
                         if ("standalone".equals(source)) {
                                 bindingResult.reject(
@@ -145,7 +169,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
                         redirectAttributes.addFlashAttribute("openCategoryModal", true);
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -181,7 +205,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -207,7 +231,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
 
                 if (!bindingResult.hasErrors()) {
@@ -220,7 +244,7 @@ public class AdminServiceCatalogController {
                                                 "successMessage",
                                                 "C\u1EADp nh\u1EADt nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
-                                return REDIRECT_LIST;
+                                return REDIRECT_CATEGORIES;
                         } catch (IllegalArgumentException ex) {
                                 bindingResult.reject(
                                                 "category.update.failed",
@@ -254,7 +278,7 @@ public class AdminServiceCatalogController {
                                         ex.getMessage());
                 }
 
-                return REDIRECT_LIST;
+                return REDIRECT_CATEGORIES;
         }
 
         @PostMapping("/categories/{categoryId}/delete")
@@ -273,7 +297,7 @@ public class AdminServiceCatalogController {
                         redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
                 }
 
-                return REDIRECT_LIST;
+                return REDIRECT_CATEGORIES;
         }
 
         // =====================================================
@@ -508,7 +532,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -714,7 +738,9 @@ public class AdminServiceCatalogController {
         private void prepareListPage(
                         Model model,
                         HttpSession session,
-                        Long categoryId) {
+                        String keyword,
+                        Long categoryId,
+                        ServiceStatus status) {
                 addLayoutAttributes(session, model);
 
                 // Token riêng cho thao tác xóa, kể cả khi dự án đang tắt Spring CSRF.
@@ -729,17 +755,12 @@ public class AdminServiceCatalogController {
                                 "categories",
                                 serviceCatalogService.getAllCategories());
 
-                List<Service> services;
-
-                if (categoryId == null) {
-                        services = serviceCatalogService.getAllServices();
-                } else {
-                        services = serviceCatalogService.getServicesByCategory(
-                                        categoryId);
-                }
+                List<Service> services = serviceCatalogService.searchServices(keyword, categoryId, status);
 
                 model.addAttribute("services", services);
+                model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
                 model.addAttribute("selectedCategoryId", categoryId);
+                model.addAttribute("selectedStatus", status);
                 model.addAttribute("serviceTypes", ServiceType.values());
                 model.addAttribute("serviceStatuses", ServiceStatus.values());
 
@@ -749,7 +770,34 @@ public class AdminServiceCatalogController {
                 if (!model.containsAttribute("categoryForm")) {
                         model.addAttribute("categoryForm", new ServiceCategoryDTO());
                 }
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục dịch vụ");
+        }
 
+        private void prepareCategoryListPage(
+                        Model model,
+                        HttpSession session,
+                        String keyword,
+                        Boolean active) {
+                addLayoutAttributes(session, model);
+
+                synchronized (session) {
+                        if (!(session.getAttribute(DELETE_TOKEN_SESSION_KEY) instanceof String)) {
+                                session.setAttribute(DELETE_TOKEN_SESSION_KEY, UUID.randomUUID().toString());
+                        }
+                        model.addAttribute("deleteToken", session.getAttribute(DELETE_TOKEN_SESSION_KEY));
+                }
+
+                model.addAttribute("categories", serviceCatalogService.searchCategories(keyword, active));
+                model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
+                model.addAttribute("selectedActive", active);
+                if (!model.containsAttribute("categoryForm")) {
+                        model.addAttribute("categoryForm", new ServiceCategoryDTO());
+                }
+                model.addAttribute("activeTab", "categories");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Quản lý danh mục - Nhóm dịch vụ");
         }
 
         private void prepareCategoryFormPage(
@@ -759,6 +807,9 @@ public class AdminServiceCatalogController {
                 addLayoutAttributes(session, model);
                 model.addAttribute("categoryEditingId", categoryEditingId);
                 model.addAttribute("serviceTypes", ServiceType.values());
+                model.addAttribute("activeTab", "categories");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", categoryEditingId == null ? "Thêm nhóm dịch vụ - Quản lý danh mục" : "Chỉnh sửa nhóm dịch vụ - Quản lý danh mục");
         }
 
         private void prepareServiceFormPage(
@@ -799,6 +850,9 @@ public class AdminServiceCatalogController {
                 model.addAttribute(
                                 "serviceCode",
                                 editing ? currentService.getServiceCode() : null);
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", editing ? "Chỉnh sửa dịch vụ - Quản lý danh mục" : "Thêm dịch vụ - Quản lý danh mục");
         }
 
         private void prepareTechnicalConfigPage(
@@ -808,6 +862,9 @@ public class AdminServiceCatalogController {
                 addLayoutAttributes(session, model);
 
                 model.addAttribute("service", service);
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Cấu hình kỹ thuật dịch vụ - Quản lý danh mục");
         }
 
         private void requireDeletePermission(HttpSession session, String deleteToken) {

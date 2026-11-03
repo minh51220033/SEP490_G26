@@ -22,58 +22,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Breadcrumb quay lại danh sách -->
-            <div class="mb-2">
+            <!-- Nút quay lại danh sách với khoảng cách chuẩn 14px (12-16px) tới thẻ thông tin -->
+            <div style="margin-bottom: 14px !important;">
                 <a th:href="${recordBasePath}" class="fin-btn fin-btn-sm fin-btn-outline">
                     <i class="bi bi-arrow-left"></i> Danh sách khách hàng
                 </a>
-            </div>
-
-            <!-- Page Header chuẩn FT19-25 -->
-            <div class="fin-header">
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="dropdown">
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li>
-                                <a class="dropdown-item" href="javascript:void(0)" onclick="switchTab('invoices')">
-                                    <i class="bi bi-cash-stack text-success me-2"></i>Thu tiền / Thanh toán
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/payments/dashboard(patientId=${patient.id})}">
-                                    <i class="bi bi-piggy-bank text-warning me-2"></i>Đặt cọc / Tạm ứng
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/payments/refunds}">
-                                    <i class="bi bi-arrow-counterclockwise text-danger me-2"></i>Hoàn tiền viện phí
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/reception/appointments(profileId=${patient.id})}">
-                                    <i class="bi bi-calendar-plus text-info me-2"></i>Đặt lịch hẹn mới
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/customer-care}">
-                                    <i class="bi bi-telephone-plus text-primary me-2"></i>Tạo task CSKH
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/emr/records(query=${patient.code})}">
-                                    <i class="bi bi-file-earmark-medical text-indigo me-2"></i>Bệnh án điện tử (EMR)
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="javascript:void(0)" onclick="switchTab('audit')">
-                                    <i class="bi bi-journal-text text-secondary me-2"></i>Lịch sử thao tác (Audit)
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
             </div>
 
             <!-- Patient Summary Card chuẩn FT19-25 -->
@@ -290,13 +243,12 @@
                     <span class="text-muted small">&gt;</span>
                     <span class="fw-bold text-dark small" id="dentalsoftSubTitle">Thông tin bệnh nhân</span>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2" id="subheadActionContainer">
                     <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5" onclick="window.print()">
                         <i class="bi bi-printer"></i> In phiếu
                     </button>
-                    <a th:href="@{/invoices/create(profileId=${patient.id})}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">
-                        <i class="bi bi-plus-circle"></i> Thêm mới
-                    </a>
+                    <!-- Nút Thêm mới động theo từng tab và phụ thuộc dữ liệu -->
+                    <span id="tabActionSlot"></span>
                 </div>
             </div>
 
@@ -487,7 +439,7 @@
                                                 <strong class="text-primary small" th:text="${plan.planName}">Niềng răng Invisalign</strong>
                                                 <span class="badge bg-info-subtle text-info border" th:text="${plan.status}">ACTIVE</span>
                                             </div>
-                                            <div class="small text-secondary mt-1" th:text="${plan.description ?: 'Không có mô tả chi tiết'}">Giai đoạn điều chỉnh khớp cắn</div>
+                                            <div class="small text-secondary mt-1" th:text="${plan.notes ?: 'Không có mô tả chi tiết'}">Giai đoạn điều chỉnh khớp cắn</div>
                                         </div>
                                     </div>
                                 </div>
@@ -547,15 +499,11 @@
                                 <h5 class="h6 fw-bold mb-0 text-dark"><i class="bi bi-calendar3 text-primary me-2"></i>Lịch sử đặt lịch hẹn khám</h5>
                                 <span class="text-secondary small">Theo dõi danh sách các cuộc hẹn khám mới và lịch hẹn tái khám của bệnh nhân.</span>
                             </div>
-                            <div>
-                                <a th:href="@{/reception/appointments(profileId=${patient.id})}" class="fin-btn fin-btn-sm fin-btn-primary">
-                                    <i class="bi bi-calendar-plus"></i> Đặt lịch hẹn mới
-                                </a>
-                            </div>
                         </div>
 
-                        <div th:if="${#lists.isEmpty(appointments)}" class="text-center py-5 border rounded bg-light">
+                        <div th:if="${#lists.isEmpty(appointments)}" class="text-center py-5 border rounded bg-light" id="appointmentsEmptyState">
                             <i class="bi bi-calendar-x text-secondary fs-1 d-block mb-2"></i>
+                            <h6 class="text-secondary">Chưa có lịch hẹn nào</h6>
                             <p class="text-muted small mb-3">Chưa có lịch hẹn nào được ghi nhận cho khách hàng này.</p>
                             <a th:href="@{/reception/appointments(profileId=${patient.id})}" class="fin-btn fin-btn-sm fin-btn-primary">
                                 <i class="bi bi-calendar-plus"></i> Tạo lịch hẹn ngay
@@ -653,9 +601,13 @@
                             </div>
                         </div>
 
-                        <div th:if="${#lists.isEmpty(prescriptions)}" class="text-center py-5 border rounded bg-light">
+                        <div th:if="${#lists.isEmpty(prescriptions)}" class="text-center py-5 border rounded bg-light" id="prescriptionsEmptyState">
                             <i class="bi bi-capsule text-secondary fs-1 d-block mb-2"></i>
-                            <p class="text-muted small mb-0">Bệnh nhân chưa có đơn thuốc nào.</p>
+                            <h6 class="text-secondary">Chưa có đơn thuốc nào</h6>
+                            <p class="text-muted small mb-0">Bệnh nhân chưa có đơn thuốc điều trị nào trong hệ thống.</p>
+                            <p class="text-muted small fst-italic mt-1" th:unless="${canPerformClinical}">
+                                (Chỉ Bác sĩ điều trị có thẩm quyền kê đơn thuốc trong buổi khám lâm sàng).
+                            </p>
                         </div>
 
                         <div th:unless="${#lists.isEmpty(prescriptions)}" class="d-flex flex-column gap-3">
@@ -768,9 +720,13 @@
                             </div>
                         </div>
 
-                        <div th:if="${#lists.isEmpty(photos)}" class="text-center py-5 border rounded bg-light">
+                        <div th:if="${#lists.isEmpty(photos)}" class="text-center py-5 border rounded bg-light" id="photosEmptyState">
                             <i class="bi bi-camera text-secondary fs-1 d-block mb-2"></i>
-                            <p class="text-muted small mb-0">Chưa có ảnh lâm sàng hoặc phim chụp nào được tải lên cho hồ sơ này.</p>
+                            <h6 class="text-secondary">Chưa có ảnh hoặc phim chụp</h6>
+                            <p class="text-muted small mb-3">Chưa có ảnh lâm sàng hoặc phim chụp nào được tải lên cho hồ sơ này.</p>
+                            <button type="button" class="fin-btn fin-btn-sm fin-btn-primary" onclick="openPhotoUploadModal()">
+                                <i class="bi bi-camera-fill"></i> Tải ảnh mới ngay
+                            </button>
                         </div>
 
                         <div class="photo-grid" th:unless="${#lists.isEmpty(photos)}">
@@ -849,13 +805,10 @@
                                 <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="fin-btn fin-btn-sm fin-btn-success">
                                     <i class="bi bi-wallet2"></i> Dashboard tài chính
                                 </a>
-                                <a th:href="@{/invoices/create(profileId=${patient.id})}" class="fin-btn fin-btn-sm fin-btn-primary">
-                                    <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
-                                </a>
                             </div>
                         </div>
 
-                        <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 border rounded bg-light">
+                        <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 border rounded bg-light" id="invoicesEmptyState">
                             <i class="bi bi-receipt text-secondary fs-1 d-block mb-2"></i>
                             <h6 class="text-secondary">Chưa có hóa đơn nào phát sinh</h6>
                             <p class="text-muted small mb-3">Bệnh nhân chưa có hóa đơn dịch vụ hay hóa đơn bán thuốc.</p>
@@ -978,8 +931,254 @@
     </div>
 </div>
 
+<!-- MODAL TẢI ẢNH / PHIM LÂM SÀNG MỚI (CHUẨN DENTALSOFT) -->
+<div class="modal fade" id="uploadPhotoModal" tabindex="-1" aria-labelledby="uploadPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-3 border-bottom">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="uploadPhotoModalLabel">
+                    <i class="bi bi-camera-fill text-primary me-2"></i>Tải lên Ảnh / Phim lâm sàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="uploadPhotoForm" onsubmit="handlePhotoUpload(event)">
+                <div class="modal-body p-4">
+                    <div id="photoUploadAlert" class="alert alert-danger d-none py-2 px-3 small mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Chọn tệp hình ảnh *</label>
+                        <input type="file" id="photoFileInput" class="form-control" accept="image/*" required onchange="previewUploadPhoto(this)">
+                        <small class="text-muted d-block mt-1">Định dạng hỗ trợ: JPG, PNG, WEBP (Tối đa 15MB).</small>
+                    </div>
+
+                    <div id="photoPreviewWrap" class="mb-3 text-center d-none">
+                        <img id="photoPreviewImg" src="" alt="Xem trước" class="img-thumbnail" style="max-height: 180px; object-fit: contain;">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-dark">Phân loại ảnh *</label>
+                            <select id="photoCategoryInput" class="form-select form-select-sm" required>
+                                <option value="INTRAORAL" selected>Ảnh trong miệng</option>
+                                <option value="EXTRAORAL">Ảnh ngoài mặt / Nụ cười</option>
+                                <option value="XRAY">Phim X-quang cận chóp</option>
+                                <option value="PANORAMIC">Phim toàn cảnh Panorama</option>
+                                <option value="CEPHALOMETRIC">Phim sọ nghiêng Cephalo</option>
+                                <option value="CT_CONEBEAM">Phim cắt lớp CT ConeBeam 3D</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-dark">Giai đoạn điều trị *</label>
+                            <select id="photoStageInput" class="form-select form-select-sm" required>
+                                <option value="BEFORE" selected>Trước điều trị</option>
+                                <option value="DURING">Trong điều trị</option>
+                                <option value="AFTER">Sau điều trị</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Mô tả / Ghi chú ảnh</label>
+                        <input type="text" id="photoCaptionInput" class="form-control form-control-sm" placeholder="Ví dụ: Răng cửa R11, R21 trước trám composite...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 px-4 border-top">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" id="btnSubmitPhoto" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">
+                        <i class="bi bi-cloud-arrow-up-fill"></i> Tải lên ngay
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    var patientId = /*[[${patient.id}]]*/ 0;
+    var patientCode = /*[[${patient.code}]]*/ '';
+    var canPerformClinical = /*[[${canPerformClinical}]]*/ false;
+
+    // Bộ đếm bản ghi của từng tab để điều phối vị trí nút Thêm (Requirement 3)
+    window.tabRecordCounts = {
+        personal: 1,
+        clinical: /*[[${performedServices != null ? performedServices.size() : 0}]]*/ 0,
+        appointments: /*[[${appointments != null ? appointments.size() : 0}]]*/ 0,
+        care: /*[[${careData != null && careData['totalInteractions'] != null ? careData['totalInteractions'] : 0}]]*/ 0,
+        prescriptions: /*[[${prescriptions != null ? prescriptions.size() : 0}]]*/ 0,
+        labo: /*[[${laboOrders != null ? laboOrders.size() : 0}]]*/ 0,
+        photos: /*[[${photos != null ? photos.size() : 0}]]*/ 0,
+        instructions: 0,
+        invoices: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0,
+        audit: /*[[${audits != null ? audits.size() : 0}]]*/ 0
+    };
+
+    // Điều phối nút thao tác góc trên bên phải theo đúng tab và số lượng bản ghi
+    function updateSubheadActionButton(cleanTabId) {
+        var slot = document.getElementById('tabActionSlot');
+        if (!slot) return;
+        slot.innerHTML = '';
+
+        var count = window.tabRecordCounts[cleanTabId] || 0;
+
+        // QUY TẮC:
+        // - Khi chưa có bản ghi (count === 0): Nút thêm nằm ở giữa vùng nội dung, ẨN nút ở góc trên.
+        // - Khi đã có bản ghi (count > 0): Nút thêm đưa lên góc trên bên phải, KHÔNG còn nút ở giữa.
+        if (count <= 0) {
+            return;
+        }
+
+        if (cleanTabId === 'appointments') {
+            slot.innerHTML = '<a href="/reception/appointments?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+                '<i class="bi bi-calendar-plus"></i> Thêm lịch hẹn</a>';
+        } else if (cleanTabId === 'photos') {
+            slot.innerHTML = '<button type="button" onclick="openPhotoUploadModal()" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+                '<i class="bi bi-camera-fill"></i> Thêm phim ảnh</button>';
+        } else if (cleanTabId === 'invoices') {
+            slot.innerHTML = '<a href="/invoices/create?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+                '<i class="bi bi-plus-circle"></i> Lập hóa đơn</a>';
+        } else if (cleanTabId === 'prescriptions') {
+            if (canPerformClinical) {
+                slot.innerHTML = '<a href="/doctor/prescriptions/new?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+                    '<i class="bi bi-capsule"></i> Kê đơn thuốc</a>';
+            }
+        }
+    }
+
+    // Modal mở tải ảnh
+    function openPhotoUploadModal() {
+        var modalEl = document.getElementById('uploadPhotoModal');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            document.getElementById('uploadPhotoForm').reset();
+            var alertEl = document.getElementById('photoUploadAlert');
+            if (alertEl) { alertEl.classList.add('d-none'); alertEl.textContent = ''; }
+            var previewWrap = document.getElementById('photoPreviewWrap');
+            if (previewWrap) previewWrap.classList.add('d-none');
+            modal.show();
+        }
+    }
+
+    function previewUploadPhoto(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var previewImg = document.getElementById('photoPreviewImg');
+                var previewWrap = document.getElementById('photoPreviewWrap');
+                if (previewImg && previewWrap) {
+                    previewImg.src = e.target.result;
+                    previewWrap.classList.remove('d-none');
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    async function handlePhotoUpload(e) {
+        e.preventDefault();
+        var fileInput = document.getElementById('photoFileInput');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            alert('Vui lòng chọn 1 tệp hình ảnh để tải lên!');
+            return;
+        }
+
+        var btnSubmit = document.getElementById('btnSubmitPhoto');
+        var alertEl = document.getElementById('photoUploadAlert');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tải lên...';
+        if (alertEl) alertEl.classList.add('d-none');
+
+        try {
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('profileId', patientId);
+            formData.append('category', document.getElementById('photoCategoryInput').value);
+            formData.append('stage', document.getElementById('photoStageInput').value);
+            formData.append('caption', document.getElementById('photoCaptionInput').value.trim());
+
+            var res = await fetch('/api/doctor/clinical-photos/upload', {
+                method: 'POST',
+                body: formData
+            });
+            var json = await res.json();
+
+            if (res.ok && json.success) {
+                var modalEl = document.getElementById('uploadPhotoModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+                // Cập nhật bộ đếm & vị trí nút đúng trạng thái mới (Requirement 3)
+                window.tabRecordCounts.photos = (window.tabRecordCounts.photos || 0) + 1;
+                
+                // Cập nhật badge trên tab
+                var tabBtn = document.getElementById('tab-photos-btn');
+                if (tabBtn) {
+                    var badge = tabBtn.querySelector('.patient-tab-badge');
+                    if (badge) {
+                        badge.textContent = window.tabRecordCounts.photos;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        var newBadge = document.createElement('span');
+                        newBadge.className = 'patient-tab-badge';
+                        newBadge.textContent = window.tabRecordCounts.photos;
+                        tabBtn.appendChild(newBadge);
+                    }
+                }
+
+                // Ẩn thông báo trống
+                var emptyBox = document.getElementById('photosEmptyState');
+                if (emptyBox) emptyBox.style.display = 'none';
+
+                // Thêm thẻ ảnh vào lưới ảnh
+                var grid = document.querySelector('#photos .photo-grid');
+                if (!grid) {
+                    grid = document.createElement('div');
+                    grid.className = 'photo-grid';
+                    var panel = document.querySelector('#photos .patient-tab-panel');
+                    if (panel) panel.appendChild(grid);
+                }
+                
+                var photoData = json.data || {};
+                var newCard = document.createElement('div');
+                newCard.className = 'photo-card';
+                newCard.innerHTML = 
+                    '<div class="photo-img-wrap" onclick="window.open(\'' + (photoData.imageUrl || '') + '\', \'_blank\')">' +
+                        '<img src="' + (photoData.imageUrl || '') + '" alt="' + (photoData.caption || 'Ảnh lâm sàng') + '">' +
+                    '</div>' +
+                    '<div class="photo-meta border-top">' +
+                        '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                            '<span class="badge bg-primary-subtle text-primary">' + (photoData.photoCategoryText || photoData.photoCategory || 'LÂM SÀNG') + '</span>' +
+                            '<small class="text-muted">' + (photoData.capturedAtFormatted || 'Vừa xong') + '</small>' +
+                        '</div>' +
+                        '<div class="small text-dark fw-semibold text-truncate">' + (photoData.caption || 'Ảnh lâm sàng') + '</div>' +
+                    '</div>';
+                grid.insertBefore(newCard, grid.firstChild);
+
+                // Cập nhật lại nút thêm lên góc trên bên phải
+                updateSubheadActionButton('photos');
+            } else {
+                if (alertEl) {
+                    alertEl.textContent = json.message || 'Lỗi khi tải ảnh lên máy chủ. Vui lòng thử lại!';
+                    alertEl.classList.remove('d-none');
+                } else {
+                    alert(json.message || 'Lỗi khi tải ảnh lên.');
+                }
+            }
+        } catch (err) {
+            console.error('Photo upload error:', err);
+            if (alertEl) {
+                alertEl.textContent = 'Lỗi kết nối máy chủ khi tải ảnh: ' + err.message;
+                alertEl.classList.remove('d-none');
+            } else {
+                alert('Lỗi kết nối máy chủ: ' + err.message);
+            }
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-cloud-arrow-up-fill"></i> Tải lên ngay';
+        }
+    }
+
     // Cơ chế chuyển Tab thuần Vanilla JS đáng tin cậy 100%
     function switchTab(tabId) {
         if (!tabId) return;
@@ -1012,6 +1211,9 @@
             subTitleEl.textContent = rawText.split('\n')[0].trim();
         }
 
+        // Cập nhật nút Thêm mới ở góc trên bên phải theo tab và dữ liệu
+        updateSubheadActionButton(cleanTabId);
+
         // Cập nhật URL hash để giữ tab khi refresh/back-forward mà không nhảy trang
         if (history.replaceState) {
             history.replaceState(null, null, '#' + cleanTabId);
@@ -1039,6 +1241,8 @@
         var initialHash = (window.location.hash || '').replace('#', '');
         if (initialHash) {
             switchTab(initialHash);
+        } else {
+            updateSubheadActionButton('personal');
         }
     });
 
@@ -1049,6 +1253,7 @@
             switchTab(hash);
         }
     });
+    /*]]>*/
 </script>
 </body>
 </html>
