@@ -114,12 +114,27 @@
                 <tr th:each="service : ${services}"
                     th:with="listedPrice=${service.basePrice.add(service.surchargeAmount)}">
                     <td>
-                        <div class="fw-semibold" th:text="${service.serviceName}"></div>
-                        <small class="text-muted" th:text="${service.serviceCode}"></small>
-                        <p class="small text-muted mb-0 mt-1"
-                           th:if="${service.description != null and !#strings.isEmpty(service.description)}"
-                           th:text="${service.description}">
-                        </p>
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="svc-list-thumb flex-shrink-0">
+                                <img th:if="${service.imageUrl != null and !#strings.isEmpty(service.imageUrl)}"
+                                     th:src="${service.imageUrl}"
+                                     th:alt="${service.serviceName}"
+                                     class="svc-list-thumb__img"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="svc-list-thumb__placeholder"
+                                     th:style="${service.imageUrl != null and !#strings.isEmpty(service.imageUrl)} ? 'display:none;' : 'display:flex;'">
+                                    <i class="bi bi-image text-muted" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold" th:text="${service.serviceName}"></div>
+                                <small class="text-muted" th:text="${service.serviceCode}"></small>
+                                <div class="small text-muted mb-0 mt-1 svc-public-desc"
+                                     th:if="${service.sanitizedDescription != null and !#strings.isEmpty(service.sanitizedDescription)}"
+                                     th:utext="${service.sanitizedDescription}">
+                                </div>
+                            </div>
+                        </div>
                     </td>
                     <td th:text="${service.category.categoryName}"></td>
                     <td th:switch="${service.serviceType.name()}">
