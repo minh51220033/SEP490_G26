@@ -43,4 +43,3 @@ DELIMITER ;
 
 CALL sp_upgrade_v102_custom_permissions();
 DROP PROCEDURE IF EXISTS sp_upgrade_v102_custom_permissions;
-
