@@ -19,6 +19,8 @@ import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
 
 import java.math.BigDecimal;
+import com.cvdcms.entity.enums.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,8 @@ class TreatmentPlanLogicUnitTest {
     @Mock private StaffProfileRepository staffProfileRepository;
     @Mock private ServiceRepository serviceRepository;
     @Mock private GeminiAiService geminiAiService;
+    @Mock private PerformedServiceRepository performedServiceRepository;
+    @Mock private InvoiceItemRepository invoiceItemRepository;
 
     @Mock private DiagnosisService diagnosisService;
     @Mock private Icd10DiseaseService icd10DiseaseService;
@@ -74,7 +78,9 @@ class TreatmentPlanLogicUnitTest {
                 branchRepository,
                 staffProfileRepository,
                 serviceRepository,
-                geminiAiService
+                geminiAiService,
+                performedServiceRepository,
+                invoiceItemRepository
         );
 
         diagnosisController = new DiagnosisController(
@@ -213,5 +219,115 @@ class TreatmentPlanLogicUnitTest {
 
         // Kiểm tra lưu cascade
         verify(planRepository, times(1)).save(any(TreatmentPlan.class));
+    }
+
+    @Test
+    @DisplayName("FT15->FT16: HoÃ n thÃ nh 1/2 giai Ä‘oáº¡n (50%) thÃ¬ tráº¡ng thÃ¡i káº¿ hoáº¡ch pháº£i lÃ  IN_PROGRESS, khÃ´ng Ä‘Æ°á»£c COMPLETED")
+    void testSyncPlanProgressAndStatus_HalfCompleted_ShouldBeInProgress() {
+        TreatmentPlan plan = new TreatmentPlan();
+        plan.setPlanId(2L);
+        plan.setStatus(TreatmentPlanStatus.COMPLETED);
+        plan.setStages(new ArrayList<>());
+
+        TreatmentPlanStage stage1 = new TreatmentPlanStage();
+        stage1.setStageId(5L);
+        stage1.setPlan(plan);
+        stage1.setStatus(TreatmentPlanStageStatus.PENDING);
+
+        TreatmentPlanItem item1 = new TreatmentPlanItem();
+        item1.setPlanItemId(5L);
+        item1.setStage(stage1);
+        item1.setStatus(TreatmentPlanItemStatus.PLANNED);
+
+        TreatmentPlanStage stage2 = new TreatmentPlanStage();
+        stage2.setStageId(6L);
+        stage2.setPlan(plan);
+        stage2.setStatus(TreatmentPlanStageStatus.COMPLETED);
+
+        TreatmentPlanItem item2 = new TreatmentPlanItem();
+        item2.setPlanItemId(6L);
+        item2.setStage(stage2);
+        item2.setStatus(TreatmentPlanItemStatus.COMPLETED);
+
+        stage1.setItems(List.of(item1));
+        stage2.setItems(List.of(item2));
+        plan.getStages().add(stage1);
+        plan.getStages().add(stage2);
+
+        when(planRepository.findById(2L)).thenReturn(Optional.of(plan));
+        when(stageRepository.findByPlan_PlanIdOrderByStageOrderAsc(2L)).thenReturn(List.of(stage1, stage2));
+        when(itemRepository.findByStage_StageId(5L)).thenReturn(List.of(item1));
+        when(itemRepository.findByStage_StageId(6L)).thenReturn(List.of(item2));
+        when(planRepository.findByIdWithDetails(2L)).thenReturn(Optional.of(plan));
+
+        TreatmentPlanResponseDTO result = treatmentPlanServiceImpl.syncPlanProgressAndStatus(2L);
+
+        assertNotNull(result);
+        assertEquals(2, result.getTotalStages());
+        assertEquals(1, result.getCompletedStages());
+        assertEquals(50, result.getProgressPercent());
+        assertEquals("IN_PROGRESS", result.getStatus(), "Káº¿ hoáº¡ch 50% tiáº¿n Ä‘á»™ pháº£i á»Ÿ tráº¡ng thÃ¡i IN_PROGRESS");
+    }
+
+    @Test
+    @DisplayName("FT15->FT16: HoÃ n tÃ¡c bÆ°á»›c vá» PLANNED khi chÆ°a láº­p HÄ thÃ¬ tá»± Ä‘á»™ng CANCELLED dá»‹ch vá»¥ thá»±c hiá»‡n")
+    void testRevertItemStatus_CancelsUnbilledPerformedService() {
+        TreatmentPlan plan = new TreatmentPlan();
+        plan.setPlanId(2L);
+        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+
+        TreatmentPlanStage stage = new TreatmentPlanStage();
+        stage.setStageId(5L);
+        stage.setPlan(plan);
+        stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+
+        TreatmentPlanItem item = new TreatmentPlanItem();
+        item.setPlanItemId(5L);
+        item.setStage(stage);
+        item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+
+        PerformedService ps = new PerformedService();
+        ps.setPerformedId(24L);
+        ps.setStatus(PerformedServiceStatus.COMPLETED);
+        ps.setPlanItem(item);
+
+        when(itemRepository.findById(5L)).thenReturn(Optional.of(item));
+        when(performedServiceRepository.findByPlanItem_PlanItemIdAndStatusNot(5L, PerformedServiceStatus.CANCELLED))
+                .thenReturn(List.of(ps));
+        when(invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(24L)).thenReturn(false);
+        when(planRepository.findById(2L)).thenReturn(Optional.of(plan));
+        when(stageRepository.findByPlan_PlanIdOrderByStageOrderAsc(2L)).thenReturn(List.of(stage));
+        when(itemRepository.findByStage_StageId(5L)).thenReturn(List.of(item));
+        when(planRepository.findByIdWithDetails(2L)).thenReturn(Optional.of(plan));
+
+        treatmentPlanServiceImpl.updateItemStatus(5L, "PLANNED");
+
+        assertEquals(TreatmentPlanItemStatus.PLANNED, item.getStatus());
+        assertEquals(PerformedServiceStatus.CANCELLED, ps.getStatus(), "Báº£n ghi FT16 chÆ°a láº­p hÃ³a Ä‘Æ¡n pháº£i bá»‹ CANCELLED khi hoÃ n tÃ¡c");
+        verify(performedServiceRepository, times(1)).save(ps);
+    }
+
+    @Test
+    @DisplayName("FT15->FT16: Cháº·n hoÃ n tÃ¡c bÆ°á»›c KHDT náº¿u dá»‹ch vá»¥ Ä‘Ã£ Ä‘Æ°á»£c láº­p hÃ³a Ä‘Æ¡n")
+    void testRevertItemStatus_BlockedWhenAlreadyBilled() {
+        TreatmentPlanItem item = new TreatmentPlanItem();
+        item.setPlanItemId(6L);
+        item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+
+        PerformedService ps = new PerformedService();
+        ps.setPerformedId(23L);
+        ps.setStatus(PerformedServiceStatus.COMPLETED);
+        ps.setPlanItem(item);
+
+        when(itemRepository.findById(6L)).thenReturn(Optional.of(item));
+        when(performedServiceRepository.findByPlanItem_PlanItemIdAndStatusNot(6L, PerformedServiceStatus.CANCELLED))
+                .thenReturn(List.of(ps));
+        when(invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(23L)).thenReturn(true);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+            treatmentPlanServiceImpl.updateItemStatus(6L, "PLANNED");
+        });
+
+        assertNotNull(ex.getMessage());
     }
 }
