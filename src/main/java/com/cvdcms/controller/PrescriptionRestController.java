@@ -61,7 +61,7 @@ public class PrescriptionRestController {
             response.put("message", "Đã kê đơn thuốc thành công!");
             response.put("data", created);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Validation error createPrescription: {}", e.getMessage());
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
@@ -87,7 +87,7 @@ public class PrescriptionRestController {
             response.put("success", true);
             response.put("message", "Đã xóa đơn thuốc thành công!");
             return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", e.getMessage());
