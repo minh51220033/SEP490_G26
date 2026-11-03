@@ -138,6 +138,10 @@ public class LaboOrderServiceImpl implements LaboOrderService {
         if (order.getDoctor() == null && dto.getDoctorId() != null) {
             order.setDoctor(staffProfileRepository.findById(dto.getDoctorId()).orElse(null));
         }
+        if (order.getDoctor() == null) {
+            List<StaffProfile> doctors = staffProfileRepository.findAll();
+            if (!doctors.isEmpty()) order.setDoctor(doctors.get(0));
+        }
 
         // 5. Details
         order.setMaterialType(dto.getMaterialType() != null && !dto.getMaterialType().isBlank() ? dto.getMaterialType() : "Răng sứ Zirconia DDBio");
