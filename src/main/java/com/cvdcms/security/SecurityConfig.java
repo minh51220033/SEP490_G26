@@ -17,6 +17,12 @@ public class SecurityConfig {
         http
                 // Tắt CSRF để tương thích với các biểu mẫu hiện tại
                 .csrf(csrf -> csrf.disable())
+                // Cho phép Permissions-Policy unload để ngăn Chrome báo [Violation] từ các Extension của trình duyệt
+                .headers(headers -> headers
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("unload=*")
+                        )
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Cho phép truy cập tự do tài nguyên tĩnh và các trang xác thực
                         .requestMatchers(

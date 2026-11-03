@@ -75,6 +75,9 @@ public class ServiceCreateDTO {
 
     private String description;
 
+    @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự.")
+    private String imageUrl;
+
     @NotNull(message = "Vui lòng chọn trạng thái dịch vụ.")
     private ServiceStatus status = ServiceStatus.ACTIVE;
 }

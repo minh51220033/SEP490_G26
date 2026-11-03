@@ -71,14 +71,21 @@
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-             th:classappend="${#strings.contains(',accounts,roles,staffs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgAdmin">
                 <i class="bi bi-shield-lock" aria-hidden="true"></i>
                 <span class="side-group__label">Quản trị hệ thống</span>
                 <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
             </button>
             <div class="side-group__panel" id="sgAdmin">
+
                 <div class="side-group__inner">
+                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE'))}"
+                       th:href="@{/admin/patients}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'admin-patients'} ? 'is-active' : ''"
+                       title="Quản lý khách hàng / Hồ sơ bệnh nhân tổng hợp">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
+                    </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'ACCOUNT_MANAGE'))}"
                        th:href="@{/accounts}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'accounts'} ? 'is-active' : ''">

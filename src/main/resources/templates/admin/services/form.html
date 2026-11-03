@@ -5,6 +5,8 @@
 
 <body class="app-body">
 
+<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+
 <div class="app-shell">
 
     <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
@@ -46,8 +48,10 @@
                 trước khi thêm dịch vụ.
             </div>
 
-            <form th:object="${serviceForm}"
+            <form id="serviceFormElement"
+                  th:object="${serviceForm}"
                   th:action="@{${isEdit ? '/admin/services/' + serviceId + '/update' : '/admin/services'}}"
+                  th:attr="data-upload-url=@{/admin/services/upload/image}"
                   method="post">
                 <input type="hidden" name="source" value="standalone">
 
@@ -157,6 +161,7 @@
 
                                     <option th:each="category : ${categories}"
                                             th:value="${category.categoryId}"
+                                            th:attr="data-category-type=${category.categoryType.name()}"
                                             th:text="${category.categoryName
                                                 + (category.isActive == true
                                                     ? ''
@@ -241,10 +246,106 @@
                                 </div>
                             </div>
 
+                            <!-- HÌNH ẢNH DỊCH VỤ -->
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Hình ảnh dịch vụ
+                                </label>
+
+                                <input type="hidden" id="imageUrl" th:field="*{imageUrl}">
+                                <input type="file"
+                                       id="serviceImageFile"
+                                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                       hidden>
+
+                                <div id="serviceImageUploadError"
+                                     class="alert alert-danger py-2 px-3 mb-2 small"
+                                     role="alert"
+                                     hidden>
+                                </div>
+
+                                <div id="serviceImageUploadStatus"
+                                     class="alert alert-info py-2 px-3 mb-2 small"
+                                     role="status"
+                                     hidden>
+                                    <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+                                    Đang tải ảnh dịch vụ lên hệ thống...
+                                </div>
+
+                                <div id="serviceImageDropZone"
+                                     class="svc-image-box"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="Chọn hình ảnh dịch vụ">
+
+                                    <!-- Placeholder khi chưa có ảnh -->
+                                    <div id="serviceImagePlaceholder"
+                                         class="svc-image-placeholder"
+                                         th:hidden="${serviceForm.imageUrl != null and !#strings.isEmpty(serviceForm.imageUrl)}">
+                                        <div class="svc-image-placeholder__icon">
+                                            <i class="bi bi-image" aria-hidden="true"></i>
+                                        </div>
+                                        <div class="svc-image-placeholder__info">
+                                            <div class="fw-semibold text-dark">Chưa có ảnh dịch vụ</div>
+                                            <div class="text-muted small">
+                                                Hỗ trợ định dạng JPG, JPEG, PNG, WEBP (tối đa 5MB). Nhấn hoặc kéo thả ảnh vào đây.
+                                            </div>
+                                        </div>
+                                        <button type="button"
+                                                id="selectServiceImageBtn"
+                                                class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-upload me-1" aria-hidden="true"></i>
+                                            Chọn ảnh từ máy tính
+                                        </button>
+                                    </div>
+
+                                    <!-- Khung xem trước khi đã có ảnh -->
+                                    <div id="serviceImagePreviewBox"
+                                         class="svc-image-preview"
+                                         th:hidden="${serviceForm.imageUrl == null or #strings.isEmpty(serviceForm.imageUrl)}">
+                                        <div class="svc-image-preview__thumb">
+                                            <img id="serviceImagePreview"
+                                                 th:src="${serviceForm.imageUrl}"
+                                                 alt="Ảnh xem trước dịch vụ">
+                                        </div>
+                                        <div class="svc-image-preview__meta">
+                                            <div class="fw-semibold text-dark mb-1">Ảnh đại diện dịch vụ</div>
+                                            <div class="text-muted small mb-2">
+                                                Ảnh này sẽ hiển thị trên danh mục quản trị và trang bảng giá dịch vụ của khách hàng.
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button type="button"
+                                                        id="changeServiceImageBtn"
+                                                        class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+                                                    Thay đổi ảnh
+                                                </button>
+                                                <button type="button"
+                                                        id="removeServiceImageBtn"
+                                                        class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                                                    Xóa ảnh
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="invalid-feedback d-block"
+                                     th:if="${#fields.hasErrors('imageUrl')}"
+                                     th:errors="*{imageUrl}">
+                                </div>
+                            </div>
+
+                            <!-- MÔ TẢ DỊCH VỤ (CKEDITOR 5) -->
                             <div class="col-12">
                                 <label for="description" class="form-label">
                                     Mô tả dịch vụ
                                 </label>
+
+                                <div class="svc-editor-wrap">
+                                    <div id="serviceDescriptionEditor"></div>
+                                </div>
 
                                 <textarea id="description"
                                           th:field="*{description}"
@@ -456,5 +557,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.umd.js"></script>
+<script th:src="@{/js/service-editor.js}"></script>
 </body>
 </html>

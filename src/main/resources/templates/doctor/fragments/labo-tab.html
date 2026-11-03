@@ -229,13 +229,18 @@
             </div>
         </div>
     </div>
+</div>
 
+<!-- ========================================================================= -->
+<!-- MODALS CHO TAB ĐẶT XƯỞNG LABO & MẪU XÉT NGHIỆM GỬI NGOÀI                  -->
+<!-- ========================================================================= -->
+<div th:fragment="laboModals">
     <!-- ===================================================================== -->
     <!-- MODAL 1: THÊM / SỬA PHIẾU ĐẶT XƯỞNG LABO & GỬI MẪU XÉT NGHIỆM (ẢNH 2) -->
     <!-- ===================================================================== -->
     <div class="modal fade" id="laboOrderModal" tabindex="-1" aria-labelledby="laboOrderModalLabel" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 1060px; width: 94%; margin: 1.5rem auto; height: calc(100vh - 3rem);">
-            <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; height: 100%; max-height: calc(100vh - 3rem);">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 1060px; width: 94%;">
+            <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; max-height: 90vh;">
                 <!-- Header chuẩn DentalSoft: nền trắng tinh, border phân cách rõ ràng, nút đóng [X] luôn hiển thị -->
                 <div class="modal-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
                     <div>
@@ -346,11 +351,11 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ)</label>
-                                <input type="number" class="form-control form-control-sm" id="laboUnitPrice" min="0" value="1500000" oninput="calculateLaboTotal()">
+                                <input type="number" class="form-control form-control-sm" id="laboUnitPrice" min="0" value="0" oninput="calculateLaboTotal()">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Thành tiền (đ)</label>
-                                <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="laboCostDisplay" value="1.500.000 đ" readonly>
+                                <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="laboCostDisplay" value="0 đ" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Loại phiếu</label>
@@ -413,13 +418,13 @@
                                     </div>
                                 </div>
                                 <div class="col-md-5 text-center">
-                                    <div id="laboImagePreviewContainer" class="border rounded-2 p-1 bg-light position-relative d-inline-block"
-                                         style="width: 140px; height: 100px; overflow: hidden; display: none;">
-                                        <img id="laboImagePreview" src="" alt="Xem trước ảnh" style="width: 100%; height: 100%; object-fit: contain;">
+                                    <div id="laboImagePreviewContainer" class="border rounded-2 p-1 bg-light position-relative"
+                                         style="width: 140px; height: 100px; overflow: hidden; display: none !important;">
+                                        <img id="laboImagePreview" src="" alt="Xem trước ảnh" style="width: 100%; height: 100%; object-fit: contain; display: none;">
                                         <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 px-1 m-1"
                                                 onclick="clearLaboImagePreview()" title="Xóa ảnh">&times;</button>
                                     </div>
-                                    <div id="laboImagePlaceholder" class="border rounded-2 p-3 bg-light text-muted small text-center">
+                                    <div id="laboImagePlaceholder" class="border rounded-2 p-3 bg-light text-muted small text-center" style="display: block;">
                                         <i class="bi bi-image fs-4 d-block text-secondary opacity-50 mb-1"></i>
                                         Chưa có ảnh giấy KQ
                                     </div>
@@ -532,8 +537,11 @@
         nextDate.setDate(nextDate.getDate() + 4);
         document.getElementById('laboTryInDate').value = nextDate.toISOString().split('T')[0];
 
-        clearLaboImagePreview();
+        // Khởi tạo lại đơn giá và thành tiền về 0 cho phiếu mới
+        document.getElementById('laboUnitPrice').value = 0;
         calculateLaboTotal();
+
+        clearLaboImagePreview();
 
         const modalEl = document.getElementById('laboOrderModal');
         if (modalEl) {
@@ -598,12 +606,15 @@
 
     function onLaboServiceChange(val) {
         const select = document.getElementById('laboMaterialType');
+        if (!select) return;
         const selectedOpt = select.options[select.selectedIndex];
         const price = selectedOpt ? selectedOpt.getAttribute('data-price') : null;
         if (price) {
             document.getElementById('laboUnitPrice').value = price;
-            calculateLaboTotal();
+        } else {
+            document.getElementById('laboUnitPrice').value = 0;
         }
+        calculateLaboTotal();
     }
 
     function calculateLaboTotal() {
@@ -641,8 +652,9 @@
         const placeholder = document.getElementById('laboImagePlaceholder');
         if (container && img && placeholder) {
             img.src = src;
-            container.style.display = 'inline-block';
-            placeholder.style.display = 'none';
+            img.style.display = 'block';
+            container.style.setProperty('display', 'inline-block', 'important');
+            placeholder.style.setProperty('display', 'none', 'important');
         }
     }
 
@@ -652,9 +664,12 @@
         const placeholder = document.getElementById('laboImagePlaceholder');
         const fileInput = document.getElementById('laboImageFileInput');
         const urlInput = document.getElementById('laboImageUrlInput');
-        if (img) img.src = '';
-        if (container) container.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'block';
+        if (img) {
+            img.src = '';
+            img.style.display = 'none';
+        }
+        if (container) container.style.setProperty('display', 'none', 'important');
+        if (placeholder) placeholder.style.setProperty('display', 'block', 'important');
         if (fileInput) fileInput.value = '';
         if (urlInput) urlInput.value = '';
     }
@@ -662,7 +677,12 @@
     async function submitLaboOrderForm() {
         const formId = document.getElementById('laboFormId').value;
         const isEdit = (formId && formId.trim().length > 0);
-        const visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : 1;
+        let visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : null;
+        if (!visitId) {
+            const match = window.location.pathname.match(/\/doctor\/examination\/(\d+)/);
+            if (match && match[1]) visitId = parseInt(match[1], 10);
+        }
+        if (!visitId) visitId = 1;
 
         const materialType = document.getElementById('laboMaterialType').value;
         const supplierId = document.getElementById('laboSupplierSelect').value;
@@ -916,7 +936,12 @@
     }
 
     async function reloadLaboOrdersTable() {
-        const visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : 1;
+        let visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : null;
+        if (!visitId) {
+            const match = window.location.pathname.match(/\/doctor\/examination\/(\d+)/);
+            if (match && match[1]) visitId = parseInt(match[1], 10);
+        }
+        if (!visitId) visitId = 1;
         try {
             const res = await fetch(`/api/doctor/labo-orders/visit/${visitId}`);
             if (!res.ok) return;

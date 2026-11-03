@@ -42,6 +42,9 @@ public class ReceptionService {
     @Autowired(required = false)
     private DispatchTicketRepository tickets;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ClinicalExaminationRepository clinicalExamRepository;
+
     @Autowired
     public ReceptionService(ReceptionAccess access, ReceptionProfileRepository profiles,
                             ReceptionCheckInAppointmentRepository appointments,
@@ -119,6 +122,22 @@ public class ReceptionService {
         Visit visit = newVisit(patient, branch, VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
         visits.saveAndFlush(visit);
+        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
+            try {
+                visit.setPrimaryDoctor(appointment.getDoctor());
+                visits.saveAndFlush(visit);
+                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
+                    ClinicalExamination exam = new ClinicalExamination();
+                    exam.setVisit(visit);
+                    exam.setPatientProfile(patient);
+                    exam.setDoctor(appointment.getDoctor());
+                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
+                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
+                    exam.setExamTime(LocalDateTime.now());
+                    clinicalExamRepository.save(exam);
+                }
+            } catch (Exception ignored) {}
+        }
         storeKey(requestKey, visit);
 
         appointments.save(appointment);
@@ -193,6 +212,22 @@ public class ReceptionService {
         Visit visit = newVisit(patient, branch, VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
         visits.saveAndFlush(visit);
+        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
+            try {
+                visit.setPrimaryDoctor(appointment.getDoctor());
+                visits.saveAndFlush(visit);
+                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
+                    ClinicalExamination exam = new ClinicalExamination();
+                    exam.setVisit(visit);
+                    exam.setPatientProfile(patient);
+                    exam.setDoctor(appointment.getDoctor());
+                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
+                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
+                    exam.setExamTime(LocalDateTime.now());
+                    clinicalExamRepository.save(exam);
+                }
+            } catch (Exception ignored) {}
+        }
         storeKey(requestKey, visit);
 
         appointments.save(appointment);

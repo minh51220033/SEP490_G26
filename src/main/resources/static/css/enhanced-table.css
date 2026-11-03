@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  * CV-DCMS ENHANCED TABLE SYSTEM (Thư viện bảng tương tác cao cấp)
  * Phạm vi: Chỉ kích hoạt trên các bảng có thuộc tính [data-enhanced-table]
@@ -629,4 +629,370 @@ table[data-enhanced-table] td.enhanced-col-pinned-last {
         right: auto !important;
         background-color: transparent !important;
     }
+}
+
+
+/* =====================================================================
+   CV-DCMS ENTERPRISE TABLE SYSTEM CSS (CHUẨN HÓA GIAO DIỆN HỆ THỐNG)
+   ===================================================================== */
+:root {
+    --brand-navy-start: #1a2f6e;
+    --brand-navy-end: #24408e;
+    --btn-primary: #2563eb;
+    --btn-primary-hover: #1d4ed8;
+    --table-border: #cbd5e1;
+    --table-header-bg: #f8fafc;
+}
+
+/* 1. KHÓA TRIỆT ĐỂ THANH CUỘN CỦA TRÌNH DUYỆT */
+body.viewport-locked-page,
+.viewport-locked-page html {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0;
+    padding: 0;
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif !important;
+    background-color: #f1f5f9;
+}
+
+body.viewport-locked-page .app-shell {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+body.viewport-locked-page .app-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    min-width: 0;
+}
+
+/* TOPBAR CỐ ĐỊNH */
+body.viewport-locked-page .app-topbar__bar,
+.app-topbar__bar {
+    height: 56px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #1a2f6e 0%, #24408e 100%) !important;
+    color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1030;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+/* VÙNG NỘI DUNG MÀN HÌNH BẢNG */
+.app-content-table-view,
+.app-content-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 12px 18px 0 18px;
+    overflow: hidden;
+    background-color: #f1f5f9;
+}
+
+/* TOOLBAR PHÍA TRÊN BẢNG */
+.table-toolbar-card {
+    background: #ffffff;
+    border: 1px solid var(--table-border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.btn-primary-custom {
+    background-color: var(--btn-primary);
+    color: #ffffff;
+    font-weight: 700;
+    border: none;
+    padding: 7px 15px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    transition: background 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-primary-custom:hover {
+    background-color: var(--btn-primary-hover);
+    color: #ffffff;
+}
+
+.btn-secondary-custom {
+    background: #ffffff;
+    border: 1px solid var(--table-border);
+    color: #334155;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.btn-secondary-custom:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.btn-gear-customizer {
+    background: #ffffff;
+    border: 1px solid var(--table-border);
+    color: #334155;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-gear-customizer:hover {
+    background: #f1f5f9;
+    color: var(--btn-primary);
+    border-color: #94a3b8;
+    transform: rotate(20deg);
+}
+
+/* VÙNG CUỘN DUY NHẤT CỦA BẢNG */
+.table-viewport-wrapper,
+.table-scroll-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #ffffff;
+    border: 1px solid var(--table-border);
+    border-bottom: none;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    overflow: auto; /* Duy nhất vùng này có scrollbar */
+    position: relative;
+}
+
+.cv-table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+.cv-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--table-header-bg);
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 11px 13px;
+    border-bottom: 2px solid var(--table-border);
+    border-right: 1px solid #e2e8f0;
+    user-select: none;
+    position: relative;
+    white-space: nowrap;
+}
+
+/* TAY NẮM KÉO RESIZE CỘT */
+.col-resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 20;
+}
+.col-resizer:hover, .col-resizer.is-resizing {
+    background-color: var(--btn-primary);
+}
+
+.cv-table tbody tr {
+    position: relative;
+    transition: background 0.12s ease;
+}
+.cv-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.cv-table tbody td {
+    padding: 10px 13px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    font-size: 13px;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.cell-ellipsis {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.font-mono-code {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-weight: 700;
+    font-size: 12px;
+    color: #0369a1;
+    background: #f1f5f9;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    display: inline-block;
+}
+
+/* THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG */
+.table-pagination-footer {
+    flex-shrink: 0;
+    height: 52px;
+    background: #ffffff;
+    border: 1px solid var(--table-border);
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 20;
+    margin-bottom: 10px;
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.pagination-btn-group .btn-page {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--table-border);
+    background: #ffffff;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 2px;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.pagination-btn-group .btn-page:hover:not(.disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+.pagination-btn-group .btn-page.active {
+    background: var(--btn-primary);
+    color: #ffffff;
+    border-color: var(--btn-primary);
+}
+.pagination-btn-group .btn-page.disabled {
+    color: #cbd5e1;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+}
+
+/* OFFCANVAS TÙY CHỈNH CỘT BÊN PHẢI */
+.column-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1040;
+    display: none;
+    backdrop-filter: blur(2px);
+}
+.column-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 30px);
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.15);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.column-drawer.show {
+    transform: translateX(0);
+}
+.drawer-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--table-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+}
+.drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 14px 16px;
+}
+.drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    margin-bottom: 6px;
+    background: #ffffff;
+    cursor: grab;
+    transition: background 0.12s;
+}
+.drawer-item:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+.drawer-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--table-border);
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ẨN TRIỆT ĐỂ CHAT WIDGET TRÊN CÁC TRANG BẢNG */
+body.viewport-locked-page .cvdcms-chat-widget,
+body.viewport-locked-page .cvdcms-chat-fab,
+body.viewport-locked-page .cvdcms-chat-popup,
+.cvdcms-chat-widget,
+.cvdcms-chat-fab,
+.cvdcms-chat-popup {
+    display: none !important;
+
 }
