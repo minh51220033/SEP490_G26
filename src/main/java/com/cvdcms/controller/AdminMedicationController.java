@@ -59,8 +59,9 @@ public class AdminMedicationController {
         model.addAttribute("size", safeSize);
         model.addAttribute("selectedActive", active);
         model.addAttribute("keyword", keyword);
-        model.addAttribute("pageTitle", "Quản lý danh mục thuốc");
-        model.addAttribute("activeMenu", "medications");
+        model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục thuốc");
+        model.addAttribute("activeMenu", "catalogs");
+        model.addAttribute("activeTab", "medications");
         return LIST_VIEW;
     }
 

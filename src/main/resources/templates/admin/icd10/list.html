@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head('Quản lý danh mục ICD-10')}"></head>
+<head th:replace="~{fragments/head :: head('Quản lý danh mục - Danh mục ICD-10')}"></head>
 
 <body class="app-body icd10-catalog-page">
 <div class="app-shell">
 
-  <aside th:replace="~{fragments/sidebar :: sidebar('icd10')}"></aside>
+  <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
   <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
   <div class="app-main">
-    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục ICD-10')}"></header>
+    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
+      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+      <!-- BREADCRUMB -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Danh mục ICD-10</li>
+        </ol>
+      </nav>
+
+      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('icd10')}"></nav>
 
       <!-- THÔNG BÁO -->
       <div class="alert alert-success" role="status"
