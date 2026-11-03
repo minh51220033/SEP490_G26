@@ -39,6 +39,10 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     public ReExaminationResponseDTO createReExamination(ReExaminationRequestDTO dto) {
         log.info("Creating re-examination appointment: {}", dto);
 
+        if (dto.getAppointmentDate() != null && dto.getAppointmentDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
+        }
+
         PatientProfile patient = patientProfileRepository.findById(dto.getPatientProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + dto.getPatientProfileId()));
 
@@ -223,6 +227,10 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     public ReExaminationResponseDTO updateAppointmentDate(Long appointmentId, LocalDate newDate, String newTime, PreferredSession session) {
         Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn ID: " + appointmentId));
+
+        if (newDate != null && newDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
+        }
 
         if (newDate != null) appt.setAppointmentDate(newDate);
         if (session != null) appt.setPreferredSession(session);

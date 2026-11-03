@@ -120,6 +120,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                     continue;
                 }
 
+                if (itemDTO.getQuantity() != null && itemDTO.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Số lượng thuốc kê đơn phải lớn hơn 0!");
+                }
+
                 PrescriptionItem item = new PrescriptionItem();
                 item.setPrescription(prescription);
 
