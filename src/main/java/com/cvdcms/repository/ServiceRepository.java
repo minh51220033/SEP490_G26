@@ -121,4 +121,24 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
             @Param("serviceType") ServiceType serviceType,
             @Param("keyword") String keyword
     );
+
+    @EntityGraph(attributePaths = "category")
+    @Query("""
+        SELECT s
+        FROM Service s
+        LEFT JOIN s.category c
+        WHERE (:categoryId IS NULL OR c.categoryId = :categoryId)
+          AND (:status IS NULL OR s.status = :status)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(s.serviceName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(s.serviceCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+        ORDER BY s.serviceName ASC
+        """)
+    List<Service> searchAdminServices(
+            @Param("keyword") String keyword,
+            @Param("categoryId") Long categoryId,
+            @Param("status") ServiceStatus status
+    );
 }

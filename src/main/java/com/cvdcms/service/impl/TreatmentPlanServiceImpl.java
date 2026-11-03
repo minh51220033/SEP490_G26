@@ -2,6 +2,7 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.DTO.*;
 import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.PerformedServiceStatus;
 import com.cvdcms.entity.enums.TreatmentPlanItemStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
@@ -33,6 +34,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final StaffProfileRepository staffProfileRepository;
     private final ServiceRepository serviceRepository;
     private final GeminiAiService geminiAiService;
+    private final PerformedServiceRepository performedServiceRepository;
+    private final InvoiceItemRepository invoiceItemRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -285,19 +288,22 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         treatmentPlanStageRepository.save(stage);
 
-        TreatmentPlan plan = stage.getPlan();
-        if (plan != null) {
-            List<TreatmentPlanStage> allStages = plan.getStages();
-            long completedCount = allStages.stream().filter(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED).count();
-            if (completedCount == allStages.size() && allStages.size() > 0) {
-                plan.setStatus(TreatmentPlanStatus.COMPLETED);
-            } else if (completedCount > 0 || newStatus == TreatmentPlanStageStatus.IN_PROGRESS) {
-                if (plan.getStatus() == TreatmentPlanStatus.DRAFT || plan.getStatus() == TreatmentPlanStatus.PROPOSED || plan.getStatus() == TreatmentPlanStatus.ACCEPTED) {
-                    plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+        if (stage.getPlan() != null) {
+            return syncPlanProgressAndStatus(stage.getPlan().getPlanId());
+        }
+
+        if (false) { /*
+            // cleaned
+            // cleaned
+            // cleaned
+
+            // cleaned
+
+
                 }
             }
-            treatmentPlanRepository.save(plan);
-            return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(plan.getPlanId()).orElse(plan));
+            // plan save */
+            // return null;
         }
 
         return null;
@@ -311,6 +317,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         TreatmentPlanItemStatus newStatus = TreatmentPlanItemStatus.valueOf(statusStr.toUpperCase());
         item.setStatus(newStatus);
+        if (newStatus == TreatmentPlanItemStatus.PLANNED) {
+            List<PerformedService> activeServices = performedServiceRepository.findByPlanItem_PlanItemIdAndStatusNot(
+                    planItemId, PerformedServiceStatus.CANCELLED);
+            for (PerformedService ps : activeServices) {
+                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                if (isBilled) {
+                    throw new IllegalStateException("Bước thủ thuật này đã được lập hóa đơn viện phí, không thể hoàn tác!");
+                }
+                ps.setStatus(PerformedServiceStatus.CANCELLED);
+                performedServiceRepository.save(ps);
+            }
+        }
         LocalDateTime now = LocalDateTime.now();
         if (newStatus == TreatmentPlanItemStatus.COMPLETED) {
             item.setCompletedAt(now);
@@ -337,29 +355,78 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
             treatmentPlanStageRepository.save(stage);
 
-            TreatmentPlan plan = stage.getPlan();
-            if (plan != null) {
-                if (plan.getStages() != null) {
-                    boolean allStagesCompleted = plan.getStages().stream()
+            if (stage.getPlan() != null) {
+            return syncPlanProgressAndStatus(stage.getPlan().getPlanId());
+        }
+
+            if (false) { /*
+                if (false) { return null; }
+
                             .allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
-                    boolean anyStageActive = plan.getStages().stream()
+
                             .anyMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED || s.getStatus() == TreatmentPlanStageStatus.IN_PROGRESS);
 
-                    if (allStagesCompleted && !plan.getStages().isEmpty()) {
-                        plan.setStatus(TreatmentPlanStatus.COMPLETED);
-                        treatmentPlanRepository.save(plan);
-                    } else if (anyStageActive && (plan.getStatus() == TreatmentPlanStatus.DRAFT || plan.getStatus() == TreatmentPlanStatus.PROPOSED || plan.getStatus() == TreatmentPlanStatus.ACCEPTED)) {
-                        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
-                        treatmentPlanRepository.save(plan);
+
+        
+                        // noop
+
+    
+                        // noop
                     }
                 }
-                return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(plan.getPlanId()).orElse(plan));
+                */ return null;
             }
         }
         return null;
     }
 
     @Override
+    @Transactional
+    public TreatmentPlanResponseDTO syncPlanProgressAndStatus(Long planId) {
+        TreatmentPlan plan = treatmentPlanRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch ID: " + planId));
+
+        List<TreatmentPlanStage> stages = treatmentPlanStageRepository.findByPlan_PlanIdOrderByStageOrderAsc(planId);
+        int totalStages = stages.size();
+        int completedStages = 0;
+        boolean anyStageActive = false;
+
+        for (TreatmentPlanStage st : stages) {
+            List<TreatmentPlanItem> items = treatmentPlanItemRepository.findByStage_StageId(st.getStageId());
+            boolean allItemsDone = items != null && !items.isEmpty() &&
+                    items.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+            boolean anyItemActive = items != null &&
+                    items.stream().anyMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS);
+
+            if (allItemsDone) {
+                st.setStatus(TreatmentPlanStageStatus.COMPLETED);
+                if (st.getCompletedAt() == null) st.setCompletedAt(LocalDateTime.now());
+                completedStages++;
+                anyStageActive = true;
+            } else if (anyItemActive) {
+                st.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                st.setCompletedAt(null);
+                anyStageActive = true;
+            } else {
+                st.setStatus(TreatmentPlanStageStatus.PENDING);
+                st.setCompletedAt(null);
+            }
+            treatmentPlanStageRepository.save(st);
+        }
+
+        if (totalStages > 0 && completedStages == totalStages) {
+            plan.setStatus(TreatmentPlanStatus.COMPLETED);
+        } else if (anyStageActive || completedStages > 0) {
+            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+        } else {
+            if (plan.getStatus() == TreatmentPlanStatus.COMPLETED || plan.getStatus() == TreatmentPlanStatus.IN_PROGRESS) {
+                plan.setStatus(TreatmentPlanStatus.ACCEPTED);
+            }
+        }
+        treatmentPlanRepository.save(plan);
+        return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(planId).orElse(plan));
+    }
+
     public AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request) {
         return geminiAiService.parseTreatmentPlan(request);
     }
@@ -433,6 +500,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
 
         int progressPercent = (totalStages > 0) ? (completedStages * 100 / totalStages) : 0;
+        TreatmentPlanStatus planStatus = p.getStatus() != null ? p.getStatus() : TreatmentPlanStatus.DRAFT;
+        if (totalStages > 0 && completedStages < totalStages && planStatus == TreatmentPlanStatus.COMPLETED) {
+            planStatus = (completedStages > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
+        }
 
         return TreatmentPlanResponseDTO.builder()
                 .planId(p.getPlanId())
@@ -449,9 +520,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .diagnosisText(extractDiagnosisFromNotes(p.getNotes()))
                 .totalEstimatedCost(p.getTotalEstimatedCost())
                 .finalEstimatedCost(p.getFinalEstimatedCost())
-                .status(p.getStatus() != null ? p.getStatus().name() : "DRAFT")
-                .statusBadgeClass(getPlanStatusBadgeClass(p.getStatus()))
-                .statusDisplayName(getPlanStatusDisplayName(p.getStatus()))
+                .status(planStatus.name())
+                .statusBadgeClass(getPlanStatusBadgeClass(planStatus))
+                .statusDisplayName(getPlanStatusDisplayName(planStatus))
                 .startDate(p.getStartDate() != null ? p.getStartDate().format(DATE_FORMATTER) : null)
                 .expectedEndDate(p.getExpectedEndDate() != null ? p.getExpectedEndDate().format(DATE_FORMATTER) : null)
                 .notes(p.getNotes())
