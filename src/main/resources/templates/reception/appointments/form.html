@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Tạo sửa lịch hẹn')}"></head>
 <body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
@@ -7,10 +7,22 @@
         <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
             <div class="patient-page-heading"><div><a th:href="@{/reception/appointments}">← Quản lý lịch hẹn</a>
                 <h1 th:text="${appointmentId == null ? 'Tạo lịch hẹn' : 'Sửa / đổi lịch hẹn'}">Tạo lịch hẹn</h1>
-                <p>Chốt theo ngày và buổi. Giờ đến cụ thể được điều phối khi tiếp đón.</p></div></div>
+                <p>Tiếp nhận lịch hẹn theo Ngày và Ca (Buổi: Sáng / Chiều / Tối). Giờ đến là dự kiến, thời gian khám thực tế linh hoạt theo thủ thuật nha khoa.</p></div></div>
             <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
             <form id="appointmentForm" class="panel patient-form appointment-form" th:attr="data-appointment-id=${appointmentId}">
-                <h2>Thông tin lịch hẹn</h2><div class="patient-form-grid">
+                <h2>Thông tin lịch hẹn</h2>
+
+                <!-- Thanh hiển thị tình trạng tiếp nhận & cân bằng tải giữa các ca -->
+                <div id="sessionLoadCard" class="card border-0 bg-light p-3 mb-3 rounded-3" hidden>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold small text-secondary"><i class="bi bi-speedometer2 me-1"></i>Tình trạng tiếp nhận các ca trong ngày</span>
+                        <small class="text-muted" id="sessionLoadDate"></small>
+                    </div>
+                    <div id="sessionLoadBars" class="d-flex flex-wrap gap-2"></div>
+                    <div id="sessionRecommendation" class="mt-2 text-primary small" hidden></div>
+                </div>
+
+                <div class="patient-form-grid">
                     <div><label for="branchId">Chi nhánh *</label><select id="branchId" class="form-select" required></select></div>
                     <div id="patientSearchBox"><label for="patientSearch">Tìm hồ sơ bệnh nhân *</label><input id="patientSearch" class="form-control" autocomplete="off" placeholder="Nhập ít nhất 2 ký tự: mã, tên hoặc SĐT"><select id="profileId" class="form-select mt-2" required><option value="">Chọn hồ sơ từ kết quả tìm kiếm</option></select><small>Chỉ hiện hồ sơ đang hoạt động trong phạm vi chi nhánh.</small></div>
                     <div id="existingPatientBox" hidden><label>Bệnh nhân</label><strong id="existingPatientName"></strong></div>
@@ -18,6 +30,7 @@
                     <div><label for="preferredSession">Buổi khám *</label><select id="preferredSession" class="form-select" required><option value="">Chọn buổi</option><option value="MORNING">Buổi sáng</option><option value="AFTERNOON">Buổi chiều</option><option value="EVENING">Buổi tối</option></select></div>
                     <div><label for="doctorId">Bác sĩ bệnh nhân yêu cầu</label><select id="doctorId" class="form-select" disabled><option value="">Không yêu cầu đích danh</option></select><small>Bác sĩ khám thực tế được phân công sau check-in.</small></div>
                     <div><label for="serviceId">Dịch vụ quan tâm</label><select id="serviceId" class="form-select"></select></div>
+                    <div><label for="slotTime">Giờ hẹn dự kiến (Tùy chọn)</label><select id="slotTime" class="form-select" disabled><option value="">Linh động trong ca</option></select><small>Có thể để trống để khám linh động trong ca, hoặc chọn giờ dự kiến đến.</small></div>
                 </div>
                 <p id="availabilityMessage" class="appointment-availability" role="status">Chọn chi nhánh, ngày và buổi để xem khả năng tiếp nhận.</p>
                 <label for="symptoms">Triệu chứng / ghi chú ban đầu</label><textarea id="symptoms" class="form-control" rows="3" maxlength="500"></textarea>
