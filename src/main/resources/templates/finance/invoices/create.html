@@ -463,13 +463,13 @@
                             <td class="fw-bold text-dark" th:text="${plan.planCode}">KH001</td>
                             <td th:text="${plan.planName}">Chỉnh nha niềng răng</td>
                             <td th:text="${plan.doctor != null ? plan.doctor.fullName : 'Bác sĩ'}">BS Nam</td>
-                            <td th:text="${#temporals.format(plan.createdAt, 'dd/MM/yyyy')}">20/10/2026</td>
+                            <td th:text="${plan.createdAt != null ? #temporals.format(plan.createdAt, 'dd/MM/yyyy') : '-'}">20/10/2026</td>
                             <td class="text-end fw-bold text-secondary"
-                                th:text="${#numbers.formatDecimal(plan.estimatedCost, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                th:text="${#numbers.formatDecimal(plan.finalEstimatedCost != null ? plan.finalEstimatedCost : (plan.totalEstimatedCost != null ? plan.totalEstimatedCost : 0), 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 15.000.000 đ
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-light text-dark border" th:text="${plan.status}">ACTIVE</span>
+                                <span class="badge bg-light text-dark border" th:text="${plan.status != null ? plan.status : 'DRAFT'}">ACTIVE</span>
                             </td>
                         </tr>
                         </tbody>
