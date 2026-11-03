@@ -171,6 +171,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/doctor/treatment")
                 || uri.startsWith("/doctor/queue")
                 || uri.startsWith("/api/doctor/diagnoses")
+                || uri.startsWith("/api/v1/diagnoses")
                 || uri.startsWith("/api/doctor/performed-services")
                 || uri.startsWith("/api/doctor/paraclinical")) {
             return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
