@@ -4,7 +4,7 @@
 <body class="app-body"><div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
+    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></header>
         <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/patient-emr.css}">
             <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ bệnh nhân.</div>
             <div class="alert alert-success" th:if="${documentSuccess != null}" th:text="${documentSuccess}"></div>
@@ -17,6 +17,16 @@
                     </a>
                     <a th:if="${canManageAdministrative}" class="btn btn-outline-primary" th:href="${recordBasePath + '/' + patient.id + '/edit'}"><i class="bi bi-pencil"></i> Chỉnh sửa</a>
                 </div>
+            </div>
+            <div class="alert alert-warning" th:if="${canViewClinical and ((patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()))}">
+                <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Thông tin sức khỏe cần lưu ý</strong>
+                <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}" th:text="| · Dị ứng: ${patient.allergyDetails}|"></span>
+                <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" th:text="| · Bệnh nền: ${patient.underlyingDiseaseDetails}|"></span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3" th:if="${canViewClinical}">
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#medical">Bệnh án điện tử</button>
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#history">Lịch sử lượt khám</button>
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#photos">Ảnh lâm sàng</button>
             </div>
             <section class="panel patient-detail">
                 <ul class="nav nav-tabs" role="tablist">
@@ -169,6 +179,7 @@
                         <div th:if="${canViewClinical}">
                             <div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div>
                             <div class="patient-section-heading"><div><h3>Bệnh án điện tử</h3><p>Hồ sơ được tạo từ dữ liệu khám, chẩn đoán, thủ thuật và đơn thuốc.</p></div><a class="btn btn-sm btn-outline-primary" th:href="@{/emr/records(query=${patient.code})}">Mở module EMR</a></div>
+                            <div class="alert alert-info" th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}">Chưa có bệnh án điện tử. <a th:href="@{/emr/records(query=${patient.code})}">Xem lượt khám chờ lập bệnh án và tạo bản nháp</a>.</div>
                             <p th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}" class="text-muted">Bệnh nhân chưa có bệnh án điện tử.</p>
                             <div class="patient-emr-list" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}">
                                 <article th:each="emr : ${emrRecords}">
