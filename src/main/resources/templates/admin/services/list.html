@@ -45,7 +45,23 @@
       <!-- DANH SÁCH DỊCH VỤ -->
       <section class="panel mb-4">
 
-        <!-- TÌM KIẾM & BỘ LỌC DỊCH VỤ -->
+
+        <div class="panel__head flex-wrap gap-3">
+          <div>
+            <h3 class="panel__title">Danh sách dịch vụ</h3>
+            <p class="panel__subtitle">
+              Quản lý dịch vụ nha khoa, xét nghiệm và X-Ray.
+            </p>
+          </div>
+
+          <a th:href="@{/admin/services/create}"
+             class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            Thêm dịch vụ
+          </a>
+        </div>
+
+        <!-- LỌC THEO NHÓM -->
         <form th:action="@{/admin/services}"
               method="get"
               class="p-3 border-bottom">
@@ -146,15 +162,30 @@
             <tr th:each="service : ${services}">
 
               <td data-column-key="service">
-                <div class="fw-semibold"
-                     th:text="${service.serviceName}">
-                </div>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="svc-list-thumb flex-shrink-0">
+                    <img th:if="${service.imageUrl != null and !#strings.isEmpty(service.imageUrl)}"
+                         th:src="${service.imageUrl}"
+                         th:alt="${service.serviceName}"
+                         class="svc-list-thumb__img"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="svc-list-thumb__placeholder"
+                         th:style="${service.imageUrl != null and !#strings.isEmpty(service.imageUrl)} ? 'display:none;' : 'display:flex;'">
+                      <i class="bi bi-image text-muted" aria-hidden="true"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="fw-semibold"
+                         th:text="${service.serviceName}">
+                    </div>
 
-                <small class="text-muted">
-                  <span th:text="${service.serviceCode}"></span>
-                  ·
-                  <span th:text="${service.unit}"></span>
-                </small>
+                    <small class="text-muted">
+                      <span th:text="${service.serviceCode}"></span>
+                      ·
+                      <span th:text="${service.unit}"></span>
+                    </small>
+                  </div>
+                </div>
               </td>
 
               <td data-column-key="category">
@@ -250,21 +281,153 @@
 
             <tr th:if="${#lists.isEmpty(services)}">
               <td colspan="7" class="text-center py-4">
-                <div class="empty-state-box">
-                  <i class="bi bi-search empty-icon" th:if="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}"></i>
-                  <i class="bi bi-tools empty-icon" th:unless="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}"></i>
-                  <h6 th:if="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}">Không tìm thấy dịch vụ phù hợp</h6>
-                  <h6 th:unless="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}">Chưa có dịch vụ nào</h6>
-                  <p th:if="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}">Không có dịch vụ nào khớp với tiêu chí tìm kiếm hoặc bộ lọc được chọn.</p>
-                  <p th:unless="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}">Hiện chưa có dịch vụ nào trong danh sách. Bắt đầu bằng cách thêm dịch vụ mới.</p>
+                <div class="empty-state-box"
+                     th:with="hasFilter=${(keyword != null and keyword != '')
+                       or selectedCategoryId != null
+                       or selectedStatus != null}">
+
+                  <i th:if="${hasFilter}"
+                     class="bi bi-search empty-icon"></i>
+                  <i th:unless="${hasFilter}"
+                     class="bi bi-tools empty-icon"></i>
+
+                  <h6 th:if="${hasFilter}">
+                    Không tìm thấy dịch vụ phù hợp
+                  </h6>
+                  <h6 th:unless="${hasFilter}">
+                    Chưa có dịch vụ nào
+                  </h6>
+
+                  <p th:if="${hasFilter}">
+                    Không có dịch vụ nào khớp với tiêu chí tìm kiếm
+                    hoặc bộ lọc được chọn.
+                  </p>
+                  <p th:unless="${hasFilter}">
+                    Hiện chưa có dịch vụ nào trong danh sách.
+                    Bắt đầu bằng cách thêm dịch vụ mới.
+                  </p>
+
                   <div class="d-flex justify-content-center gap-2 mt-2">
-                    <a th:if="${(keyword != null and keyword != '') or selectedCategoryId != null or selectedStatus != null}"
-                       th:href="@{/admin/services}" class="btn btn-sm btn-outline-secondary">
-                      <i class="bi bi-arrow-counterclockwise me-1"></i>Xóa bộ lọc
+                    <a th:if="${hasFilter}"
+                       th:href="@{/admin/services}"
+                       class="btn btn-sm btn-outline-secondary">
+                      <i class="bi bi-arrow-counterclockwise me-1"></i>
+                      Xóa bộ lọc
                     </a>
-                    <button type="button" class="btn btn-sm btn-primary"
-                            data-bs-toggle="modal" data-bs-target="#createServiceModal">
-                      <i class="bi bi-plus-lg me-1"></i>Thêm dịch vụ mới
+
+                    <button type="button"
+                            class="btn btn-sm btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#createServiceModal">
+                      <i class="bi bi-plus-lg me-1"></i>
+                      Thêm dịch vụ mới
+                    </button>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 border-top text-muted small">
+          <span>
+            Tổng số dịch vụ:
+            <strong th:text="${#lists.size(services)}">0</strong>
+          </span>
+        </div>
+
+      </section>
+
+      <!-- NHÓM DANH MỤC DỊCH VỤ -->
+      <section class="panel" id="service-categories">
+
+        <div class="panel__head flex-wrap gap-3">
+          <div>
+            <h3 class="panel__title">Nhóm danh mục dịch vụ</h3>
+            <p class="panel__subtitle">
+              Các nhóm đang sử dụng và đã ngừng sử dụng.
+            </p>
+          </div>
+
+          <button type="button"
+             class="btn btn-primary"
+             data-bs-toggle="modal"
+             data-bs-target="#createCategoryModal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            Thêm nhóm
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
+
+            <thead class="table-light">
+            <tr>
+              <th scope="col" data-column-key="cat_code" data-column-required="true" data-column-pinned="true">Mã nhóm</th>
+              <th scope="col" data-column-key="cat_name" data-column-pinned="true">Tên nhóm</th>
+              <th scope="col" data-column-key="cat_type">Loại</th>
+              <th scope="col" data-column-key="display_order">Thứ tự</th>
+              <th scope="col" data-column-key="status">Trạng thái</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr th:each="category : ${categories}">
+              <td data-column-key="cat_code" class="fw-semibold"
+                  th:text="${category.categoryCode}">
+              </td>
+
+              <td data-column-key="cat_name" th:text="${category.categoryName}"></td>
+
+              <td data-column-key="cat_type" th:switch="${category.categoryType.name()}">
+                <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
+                <span th:case="'LAB'">Xét nghiệm</span>
+                <span th:case="'XRAY'">X-Ray</span>
+                <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
+                <span th:case="*" th:text="${category.categoryType}"></span>
+              </td>
+
+              <td data-column-key="display_order" th:text="${category.displayOrder}"></td>
+
+              <td data-column-key="status">
+                                <span th:if="${category.isActive == true}"
+                                      class="badge bg-success">
+                                    Đang sử dụng
+                                </span>
+
+                <span th:unless="${category.isActive == true}"
+                      class="badge bg-secondary">
+                                    Ngừng sử dụng
+                                </span>
+              </td>
+
+              <td data-column-key="actions" data-column-action="true" class="text-end">
+                <div class="d-flex gap-2 justify-content-end">
+
+                  <a th:href="@{/admin/services/categories/{id}/edit(
+                                            id=${category.categoryId})}"
+                     class="btn btn-sm btn-outline-primary">
+                    Sửa
+                  </a>
+
+                  <form th:action="@{/admin/services/categories/{id}/toggle(
+                                                id=${category.categoryId})}"
+                        method="post"
+                        class="m-0"
+                        onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái nhóm dịch vụ này?');">
+
+                    <button type="submit"
+                            class="btn btn-sm"
+                            th:classappend="${category.isActive == true}
+                                                    ? 'btn-outline-danger'
+                                                    : 'btn-outline-success'"
+                            th:text="${category.isActive == true}
+                                                    ? 'Ngừng'
+                                                    : 'Kích hoạt'">
                     </button>
                   </div>
                 </div>
@@ -472,7 +635,8 @@
 
 
 
-<script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
   document.addEventListener("DOMContentLoaded", function () {
     // Tu dong dong bo Loai dich vu theo Nhom dich vu duoc chon
     var catSelect = document.getElementById("modalServiceCategory");
