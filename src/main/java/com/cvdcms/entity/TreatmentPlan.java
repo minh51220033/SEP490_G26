@@ -74,6 +74,14 @@ public class TreatmentPlan {
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TreatmentPlanStage> stages = new ArrayList<>();
 
+    @Transient
+    public BigDecimal getEstimatedCost() {
+        if (this.finalEstimatedCost != null && this.finalEstimatedCost.compareTo(BigDecimal.ZERO) > 0) {
+            return this.finalEstimatedCost;
+        }
+        return this.totalEstimatedCost != null ? this.totalEstimatedCost : BigDecimal.ZERO;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.planCode == null || this.planCode.isEmpty()) {
