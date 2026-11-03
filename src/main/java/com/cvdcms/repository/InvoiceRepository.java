@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -375,5 +376,82 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
-}
 
+    @Query("""
+        SELECT COALESCE(SUM(i.totalServiceAmount), 0),
+               COALESCE(SUM(i.totalMedicineAmount), 0),
+               COALESCE(SUM(i.surchargeAmount), 0),
+               COALESCE(SUM(i.discountAmount), 0),
+               COALESCE(SUM(i.promotionDiscount), 0),
+               COALESCE(SUM(i.pointDiscount), 0),
+               COALESCE(SUM(i.totalAmount), 0),
+               COALESCE(SUM(i.remainingDebt), 0)
+        FROM Invoice i
+        WHERE (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
+          AND i.status != 'CANCELLED'
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
+    """)
+    List<Object[]> sumInvoiceBreakdownByBranches(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT i.issuedAt, i.totalAmount
+        FROM Invoice i
+        WHERE (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
+          AND i.status != 'CANCELLED'
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
+        ORDER BY i.issuedAt ASC
+    """)
+    List<Object[]> findInvoiceAmountsForPeriod(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT i FROM Invoice i
+        JOIN FETCH i.patientProfile pp
+        JOIN FETCH i.branch b
+        JOIN FETCH i.cashier c
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND i.status != 'CANCELLED'
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
+        ORDER BY i.issuedAt DESC
+    """)
+    List<Invoice> findAllInvoicesForReport(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT new com.cvdcms.DTO.PatientDebtSummaryDTO(
+            pp.profileId,
+            pp.patientCode,
+            pp.fullName,
+            pp.phoneNumber,
+            pp.depositBalance,
+            COUNT(i.invoiceId),
+            COALESCE(SUM(i.totalAmount), 0),
+            COALESCE(SUM(i.paidAmount), 0),
+            COALESCE(SUM(i.remainingDebt), 0),
+            MAX(i.issuedAt)
+        )
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
+        GROUP BY pp.profileId, pp.patientCode, pp.fullName, pp.phoneNumber, pp.depositBalance
+        ORDER BY COALESCE(SUM(i.remainingDebt), 0) DESC
+    """)
+    List<com.cvdcms.DTO.PatientDebtSummaryDTO> findAllPatientDebtsByBranches(
+            @Param("branchIds") Collection<Long> branchIds
+    );
+}
