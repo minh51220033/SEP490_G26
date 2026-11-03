@@ -27,7 +27,8 @@ public class PortalAppointmentRestController {
                 appointments.branches(session).stream()
                         .map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList(),
                 appointments.bookableServices(session).stream()
-                        .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName())).toList());
+                        .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName(),
+                                com.cvdcms.service.AppointmentSlotService.duration(s))).toList());
     }
 
     @GetMapping("/availability")
@@ -36,6 +37,13 @@ public class PortalAppointmentRestController {
             @RequestParam PreferredSession sessionPeriod,
             @RequestParam(required = false) Long excludeAppointmentId) {
         return appointments.availability(session, branchId, date, sessionPeriod, excludeAppointmentId);
+    }
+    @GetMapping("/slots")
+    public List<PortalAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam PreferredSession sessionPeriod, @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long serviceId, @RequestParam(required = false) Long excludeAppointmentId) {
+        return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId);
     }
 
     @PostMapping
@@ -69,6 +77,6 @@ public class PortalAppointmentRestController {
 
     public record ProfileOption(Long id, String code, String name) {}
     public record BranchOption(Long id, String name) {}
-    public record ServiceOption(Long id, String name) {}
+    public record ServiceOption(Long id, String name, int durationMinutes) {}
     public record Options(List<ProfileOption> profiles, List<BranchOption> branches, List<ServiceOption> services) {}
 }

@@ -70,6 +70,12 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             return List.of(new Conflict("NULL_APPOINTMENT", "Lịch hẹn không tồn tại.", true));
         }
 
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED
+                || appointment.getStatus() == AppointmentStatus.CANCELLED
+                || appointment.getStatus() == AppointmentStatus.NO_SHOW) {
+            return List.of();
+        }
+
         List<Conflict> conflicts = new ArrayList<>();
         Branch branch = appointment.getBranch();
         LocalDate date = appointment.getAppointmentDate();
@@ -158,7 +164,19 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
 
         // 6. Capacity checks
         if (session != null && session != PreferredSession.ANY) {
-            if (policyService != null) {
+            if (appointment.getStatus() == AppointmentStatus.CHECKED_IN) {
+                if (doctor != null) {
+                    LocalTime nowTime = LocalTime.now(AppointmentPolicyService.CLINIC_ZONE);
+                    boolean workingNow = schedules.findForBooking(branch.getBranchId(), date, ScheduleStatus.SCHEDULED).stream()
+                            .filter(s -> s.getStaff().getStaffId().equals(doctor.getStaffId()))
+                            .filter(s -> Boolean.TRUE.equals(s.getShift().getIsActive()))
+                            .anyMatch(s -> !nowTime.isBefore(s.getShift().getStartTime()) && !nowTime.isAfter(s.getShift().getEndTime()));
+                    if (!workingNow) {
+                        conflicts.add(new Conflict("DOCTOR_SHIFT_ENDED",
+                                "Đã tiếp đón; BS. " + doctor.getFullName() + " hiện không có ca trực. Vui lòng chuyển sang Điều phối FT08 để gán bác sĩ ca hiện tại.", false));
+                    }
+                }
+            } else if (policyService != null) {
                 var availability = policyService.availability(branch, date, session, appointment.getAppointmentId(), AppointmentActorType.RECEPTIONIST);
                 if (!availability.available() && availability.remainingBranch() <= 0) {
                     conflicts.add(new Conflict("CAPACITY_FULL", "Buổi khám đã vượt định mức tiếp nhận chi nhánh (" + availability.reason() + ").", false));

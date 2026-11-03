@@ -5,6 +5,7 @@ import com.cvdcms.entity.AppointmentHistory;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.AppointmentLifecycleAction;
 import com.cvdcms.entity.enums.AppointmentStatus;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.AppointmentHistoryRepository;
 import com.cvdcms.repository.AppointmentPolicyRepository;
 import com.cvdcms.repository.VisitRepository;
@@ -81,6 +82,10 @@ public class AppointmentLifecycleServiceImpl implements AppointmentLifecycleServ
         }
 
         if (appointment.getStatus() == AppointmentStatus.CHECKED_IN) {
+            if (visit.getStatus() != VisitStatus.COMPLETED) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Chỉ hoàn tất lịch hẹn sau khi lượt khám đã hoàn thành.");
+            }
             if (actorUserId == null) {
                 throw new IllegalArgumentException("Actor user is required to complete an appointment.");
             }
@@ -125,6 +130,8 @@ public class AppointmentLifecycleServiceImpl implements AppointmentLifecycleServ
                 change(AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED)));
         result.put(AppointmentLifecycleAction.MARK_NO_SHOW,
                 Set.of(change(AppointmentStatus.CONFIRMED, AppointmentStatus.NO_SHOW)));
+        result.put(AppointmentLifecycleAction.REVERT_CHECK_IN,
+                Set.of(change(AppointmentStatus.CHECKED_IN, AppointmentStatus.CONFIRMED)));
         return Map.copyOf(result);
     }
 
