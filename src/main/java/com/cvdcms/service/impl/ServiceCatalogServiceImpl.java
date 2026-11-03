@@ -26,6 +26,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.safety.Safelist;
 
 @org.springframework.stereotype.Service
 @Transactional(readOnly = true)
@@ -230,7 +238,8 @@ public class ServiceCatalogServiceImpl
         dto.setIsBookableOnline(service.getIsBookableOnline());
         dto.setWarrantyMonths(service.getWarrantyMonths());
         dto.setEstimatedDurationMinutes(service.getEstimatedDurationMinutes());
-        dto.setDescription(service.getDescription());
+        dto.setDescription(sanitizeDescription(service.getDescription()));
+        dto.setImageUrl(service.getImageUrl());
         dto.setStatus(service.getStatus());
 
         return dto;
@@ -283,10 +292,13 @@ public class ServiceCatalogServiceImpl
                 isParaclinicalType(dto.getServiceType())
         );
 
+        String validatedImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
+
         service.setIsBookableOnline(dto.getIsBookableOnline());
         service.setWarrantyMonths(dto.getWarrantyMonths());
         service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), 30));
-        service.setDescription(blankToNull(dto.getDescription()));
+        service.setDescription(sanitizeDescription(dto.getDescription()));
+        service.setImageUrl(validatedImageUrl);
         service.setStatus(dto.getStatus());
 
         serviceRepository.save(service);
@@ -355,14 +367,22 @@ public class ServiceCatalogServiceImpl
         service.setIsParaclinical(paraclinical);
         service.setIsBookableOnline(dto.getIsBookableOnline());
 
+        String oldImageUrl = service.getImageUrl();
+        String newImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
+
         service.setWarrantyMonths(dto.getWarrantyMonths());
         service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), service.getEstimatedDurationMinutes()));
-        service.setDescription(blankToNull(dto.getDescription()));
+        service.setDescription(sanitizeDescription(dto.getDescription()));
+        service.setImageUrl(newImageUrl);
         service.setStatus(dto.getStatus());
 
         // Giữ nguyên cấu hình kỹ thuật.
         // Cấu hình đó được cập nhật bằng method riêng.
         serviceRepository.save(service);
+
+        if (oldImageUrl != null && !Objects.equals(oldImageUrl, newImageUrl)) {
+            cleanupUnusedServiceImage(oldImageUrl, serviceId);
+        }
     }
 
     // =====================================================
@@ -411,9 +431,13 @@ public class ServiceCatalogServiceImpl
             );
         }
 
+        String oldImageUrl = service.getImageUrl();
         try {
             serviceRepository.delete(service);
             serviceRepository.flush();
+            if (oldImageUrl != null) {
+                cleanupUnusedServiceImage(oldImageUrl, serviceId);
+            }
         } catch (DataIntegrityViolationException ex) {
             // Khóa ngoại là lớp kiểm tra cuối cùng nếu xuất hiện liên kết khác.
             throw new IllegalArgumentException(
@@ -693,6 +717,101 @@ public class ServiceCatalogServiceImpl
         return value == null || value.isBlank()
                 ? null
                 : value.trim();
+    }
+
+    private String sanitizeDescription(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        Safelist safelist = Safelist.relaxed()
+                .addTags(
+                        "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+                        "figure", "figcaption", "section", "article", "hr", "br", "s", "sub", "sup"
+                )
+                .addAttributes("img", "src", "alt", "title", "width", "height", "style", "class", "loading")
+                .addAttributes("figure", "class", "style")
+                .addAttributes("figcaption", "class", "style")
+                .addAttributes("p", "class", "style")
+                .addAttributes("h1", "class", "style")
+                .addAttributes("h2", "class", "style")
+                .addAttributes("h3", "class", "style")
+                .addAttributes("h4", "class", "style")
+                .addAttributes("div", "class", "style")
+                .addAttributes("span", "class", "style")
+                .addAttributes("table", "class", "style", "border", "cellpadding", "cellspacing")
+                .addAttributes("td", "class", "style", "colspan", "rowspan")
+                .addAttributes("th", "class", "style", "colspan", "rowspan")
+                .addAttributes("a", "href", "title", "target", "rel", "class", "style")
+                .preserveRelativeLinks(true);
+
+        String cleaned = Jsoup.clean(value, "https://cvdcms.local", safelist);
+        Document doc = Jsoup.parseBodyFragment(cleaned);
+        for (Element el : doc.select("[style]")) {
+            String style = el.attr("style");
+            if (style != null && style.toLowerCase(Locale.ROOT).matches(".*(expression\\s*\\(|javascript\\s*:|vbscript\\s*:|-moz-binding).*")) {
+                el.removeAttr("style");
+            }
+        }
+        for (Element el : doc.select("[href], [src]")) {
+            for (String attr : new String[]{"href", "src"}) {
+                if (el.hasAttr(attr)) {
+                    String val = el.attr(attr).trim().toLowerCase(Locale.ROOT);
+                    if (val.startsWith("javascript:") || val.startsWith("vbscript:") || val.startsWith("data:text/html")) {
+                        el.removeAttr(attr);
+                    }
+                }
+            }
+        }
+        if (doc.text().replace(" ", "").isBlank() && doc.select("img").isEmpty()) {
+            return null;
+        }
+        return doc.body().html();
+    }
+
+    private String validateAndNormalizeImageUrl(String rawImageUrl) {
+        String trimmed = blankToNull(rawImageUrl);
+        if (trimmed == null) {
+            return null;
+        }
+        if (trimmed.length() > 500) {
+            throw new IllegalArgumentException("Đường dẫn ảnh dịch vụ tối đa 500 ký tự.");
+        }
+        if (!trimmed.startsWith("/uploads/") || trimmed.contains("..") || trimmed.contains("\\\\")) {
+            throw new IllegalArgumentException("Đường dẫn ảnh dịch vụ không hợp lệ.");
+        }
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (!(lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp"))) {
+            throw new IllegalArgumentException("Định dạng ảnh dịch vụ chỉ chấp nhận JPG, JPEG, PNG hoặc WEBP.");
+        }
+        String subPath = trimmed.substring("/uploads/".length());
+        Path uploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
+        Path physicalFile = uploadRoot.resolve(subPath).normalize();
+        if (!physicalFile.startsWith(uploadRoot) || !Files.exists(physicalFile) || !Files.isRegularFile(physicalFile)) {
+            throw new IllegalArgumentException("Tệp hình ảnh dịch vụ không tồn tại trên hệ thống. Vui lòng tải ảnh lên lại.");
+        }
+        return trimmed;
+    }
+
+    private void cleanupUnusedServiceImage(String oldImageUrl, Long excludeServiceId) {
+        if (oldImageUrl == null || !oldImageUrl.startsWith("/uploads/services/") || oldImageUrl.contains("..")) {
+            return;
+        }
+        boolean stillUsed = excludeServiceId != null
+                ? serviceRepository.existsByImageUrlAndServiceIdNot(oldImageUrl, excludeServiceId)
+                : serviceRepository.existsByImageUrl(oldImageUrl);
+        if (stillUsed) {
+            return;
+        }
+        try {
+            String subPath = oldImageUrl.substring("/uploads/".length());
+            Path servicesUploadDir = Paths.get("uploads", "services").toAbsolutePath().normalize();
+            Path physicalFile = Paths.get("uploads").toAbsolutePath().normalize().resolve(subPath).normalize();
+            if (physicalFile.startsWith(servicesUploadDir) && Files.isRegularFile(physicalFile)) {
+                Files.deleteIfExists(physicalFile);
+            }
+        } catch (IOException ignored) {
+            // Không làm gián đoạn giao dịch nếu tệp đang bị khóa bởi tiến trình khác
+        }
     }
 
 

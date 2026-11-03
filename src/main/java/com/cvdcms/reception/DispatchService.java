@@ -32,7 +32,6 @@ public class DispatchService {
     private final ClinicalExaminationBootstrapService examinations;
     private final ObjectMapper mapper;
 
-    @Autowired
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
             DispatchScheduleRepository schedules, DispatchRoomRepository rooms, DispatchChairRepository chairs,
             DispatchTicketRepository tickets, DispatchBranchRepository branches, ReceptionAuditRepository audits,

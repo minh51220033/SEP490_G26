@@ -10,6 +10,10 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.safety.Safelist;
 
 @Entity
 @Table(
@@ -75,6 +79,9 @@ public class Service {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private ServiceStatus status = ServiceStatus.ACTIVE;
@@ -82,4 +89,54 @@ public class Service {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Transient
+    public String getSanitizedDescription() {
+        if (this.description == null || this.description.isBlank()) {
+            return null;
+        }
+        Safelist safelist = Safelist.relaxed()
+                .addTags(
+                        "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+                        "figure", "figcaption", "section", "article", "hr", "br", "s", "sub", "sup"
+                )
+                .addAttributes("img", "src", "alt", "title", "width", "height", "style", "class", "loading")
+                .addAttributes("figure", "class", "style")
+                .addAttributes("figcaption", "class", "style")
+                .addAttributes("p", "class", "style")
+                .addAttributes("h1", "class", "style")
+                .addAttributes("h2", "class", "style")
+                .addAttributes("h3", "class", "style")
+                .addAttributes("h4", "class", "style")
+                .addAttributes("div", "class", "style")
+                .addAttributes("span", "class", "style")
+                .addAttributes("table", "class", "style", "border", "cellpadding", "cellspacing")
+                .addAttributes("td", "class", "style", "colspan", "rowspan")
+                .addAttributes("th", "class", "style", "colspan", "rowspan")
+                .addAttributes("a", "href", "title", "target", "rel", "class", "style")
+                .preserveRelativeLinks(true);
+
+        String cleaned = Jsoup.clean(this.description, "https://cvdcms.local", safelist);
+        Document doc = Jsoup.parseBodyFragment(cleaned);
+        for (Element el : doc.select("[style]")) {
+            String style = el.attr("style");
+            if (style != null && style.toLowerCase().matches(".*(expression\\s*\\(|javascript\\s*:|vbscript\\s*:|-moz-binding).*")) {
+                el.removeAttr("style");
+            }
+        }
+        for (Element el : doc.select("[href], [src]")) {
+            for (String attr : new String[]{"href", "src"}) {
+                if (el.hasAttr(attr)) {
+                    String val = el.attr(attr).trim().toLowerCase();
+                    if (val.startsWith("javascript:") || val.startsWith("vbscript:") || val.startsWith("data:text/html")) {
+                        el.removeAttr(attr);
+                    }
+                }
+            }
+        }
+        if (doc.text().replace(" ", "").isBlank() && doc.select("img").isEmpty()) {
+            return null;
+        }
+        return doc.body().html();
+    }
 }
