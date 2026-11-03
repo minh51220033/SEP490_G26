@@ -18,7 +18,7 @@ BEGIN
     -- =========================================================================
     -- 1.1 line_order
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'line_order'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN line_order INT NOT NULL DEFAULT 1 COMMENT 'Thứ tự phân bổ chốt lúc tạo';
@@ -26,7 +26,7 @@ BEGIN
 
     -- 1.2 discount_amount
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'discount_amount'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Giảm trừ phân bổ';
@@ -34,7 +34,7 @@ BEGIN
 
     -- 1.3 payable_amount
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'payable_amount'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN payable_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Phải trả sau giảm trừ';
@@ -42,7 +42,7 @@ BEGIN
 
     -- 1.4 paid_amount
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'paid_amount'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN paid_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Đã thanh toán';
@@ -50,7 +50,7 @@ BEGIN
 
     -- 1.5 remaining_debt
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'remaining_debt'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN remaining_debt DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Còn nợ';
@@ -58,7 +58,7 @@ BEGIN
 
     -- 1.6 payment_status
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoice_items' AND COLUMN_NAME = 'payment_status'
     ) THEN
         ALTER TABLE invoice_items ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID' COMMENT 'UNPAID, PARTIAL, PAID';
@@ -68,21 +68,21 @@ BEGIN
     -- 2. BỔ SUNG CÁC CỘT VÀO BẢNG invoices (Phụ thu & Điểm thưởng loyalty)
     -- =========================================================================
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'surcharge_paid_amount'
     ) THEN
         ALTER TABLE invoices ADD COLUMN surcharge_paid_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Đã trả phần phụ thu';
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'surcharge_remaining_debt'
     ) THEN
         ALTER TABLE invoices ADD COLUMN surcharge_remaining_debt DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Còn nợ phần phụ thu';
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
+        SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'points_redeemed'
     ) THEN
         ALTER TABLE invoices ADD COLUMN points_redeemed INT DEFAULT 0 COMMENT 'Số điểm tích lũy loyalty thực tế đã sử dụng';
@@ -92,7 +92,7 @@ BEGIN
     -- 3. TẠO BẢNG payment_allocations
     -- =========================================================================
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.TABLES 
+        SELECT 1 FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = v_schema AND TABLE_NAME = 'payment_allocations'
     ) THEN
         CREATE TABLE payment_allocations (
@@ -118,7 +118,7 @@ BEGIN
     -- =========================================================================
     -- 4. KHỞI TẠO DỮ LIỆU CƠ SỞ CHO CÁC DÒNG HÓA ĐƠN ĐÃ CÓ (Bảo toàn dữ liệu)
     -- =========================================================================
-    UPDATE invoice_items 
+    UPDATE invoice_items
     SET payable_amount = final_amount,
         remaining_debt = final_amount
     WHERE (payable_amount = 0.00 AND final_amount > 0.00);
@@ -133,4 +133,3 @@ DELIMITER ;
 
 CALL sp_upgrade_v101_payment_allocations();
 DROP PROCEDURE IF EXISTS sp_upgrade_v101_payment_allocations;
-
