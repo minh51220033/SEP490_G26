@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +56,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     );
 
     List<Visit> findByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
+
+    List<Visit> findByPatientProfile_ProfileIdAndStatusOrderByCheckInAtDesc(Long profileId, VisitStatus status);
 
     Optional<Visit> findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(Long profileId);
 
@@ -107,5 +110,78 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     List<Visit> findVisitsByStatusAndBranch(
             @Param("status") VisitStatus status,
             @Param("branchId") Long branchId
+    );
+
+    @Query("""
+        SELECT v.status, COUNT(v)
+        FROM Visit v
+        WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR v.checkInAt >= :startDate)
+          AND (:endDate IS NULL OR v.checkInAt <= :endDate)
+        GROUP BY v.status
+    """)
+    List<Object[]> countVisitsByStatusAndBranches(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT v.visitType, COUNT(v)
+        FROM Visit v
+        WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR v.checkInAt >= :startDate)
+          AND (:endDate IS NULL OR v.checkInAt <= :endDate)
+        GROUP BY v.visitType
+    """)
+    List<Object[]> countVisitsByTypeAndBranches(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT pp.customerSource, COUNT(DISTINCT pp.profileId)
+        FROM Visit v
+        JOIN v.patientProfile pp
+        WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR v.checkInAt >= :startDate)
+          AND (:endDate IS NULL OR v.checkInAt <= :endDate)
+        GROUP BY pp.customerSource
+    """)
+    List<Object[]> countPatientSourcesByVisitsAndBranches(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT v.checkInAt
+        FROM Visit v
+        WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR v.checkInAt >= :startDate)
+          AND (:endDate IS NULL OR v.checkInAt <= :endDate)
+        ORDER BY v.checkInAt ASC
+    """)
+    List<java.time.LocalDateTime> findVisitCheckInDates(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT v FROM Visit v
+        JOIN FETCH v.patientProfile pp
+        JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND (:startDate IS NULL OR v.checkInAt >= :startDate)
+          AND (:endDate IS NULL OR v.checkInAt <= :endDate)
+        ORDER BY v.checkInAt DESC
+    """)
+    List<Visit> findAllVisitsForReport(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
     );
 }

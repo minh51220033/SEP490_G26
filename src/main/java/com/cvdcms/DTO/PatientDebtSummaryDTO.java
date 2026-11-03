@@ -46,4 +46,21 @@ public class PatientDebtSummaryDTO {
                 unpaidInvoicesCount != null ? unpaidInvoicesCount.longValue() : 0L,
                 totalBilled, totalPaid, totalDebt, lastInvoiceDate);
     }
+
+    // Aliases for compatibility
+    public BigDecimal getTotalRemainingDebt() {
+        return totalDebt != null ? totalDebt : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalInvoiceAmount() {
+        return totalBilled != null ? totalBilled : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalPaidAmount() {
+        return totalPaid != null ? totalPaid : BigDecimal.ZERO;
+    }
+
+    public int getUnpaidInvoiceCount() {
+        return unpaidInvoicesCount;
+    }
 }
