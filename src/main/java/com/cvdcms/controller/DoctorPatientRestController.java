@@ -11,6 +11,7 @@ import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.VisitRepository;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,7 @@ public class DoctorPatientRestController {
     private final VisitRepository visitRepository;
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final ClinicalExaminationBootstrapService examinations;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -112,6 +114,7 @@ public class DoctorPatientRestController {
         newVisit.setVisitCode("VIS" + (10000 + visitCount));
 
         newVisit = visitRepository.save(newVisit);
+        examinations.ensureForAssignedVisit(newVisit.getVisitId());
 
         return ResponseEntity.ok(Map.of(
                 "visitId", newVisit.getVisitId(),
@@ -414,6 +417,7 @@ public class DoctorPatientRestController {
         }
         visit.setVisitCode(vCode);
         visit = visitRepository.save(visit);
+        examinations.ensureForAssignedVisit(visit.getVisitId());
 
         String redirectUrl = "/doctor/examination/" + visit.getVisitId() + "/diagnoses";
         if (branch != null) {
