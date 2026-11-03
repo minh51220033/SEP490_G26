@@ -16,8 +16,9 @@ interface DispatchVisitRepository extends JpaRepository<Visit, Long> {
     @Query("select v from Visit v join fetch v.patientProfile where v.branch.branchId = :branch and v.checkInAt >= :start and v.checkInAt < :end order by v.checkInAt, v.visitId")
     List<Visit> today(@Param("branch") Long branch, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    @Query("select count(v) from Visit v where v.primaryDoctor.staffId = :doctor and v.status = :status and v.visitId <> :id")
-    long doctorLoad(@Param("doctor") Long doctor, @Param("status") VisitStatus status, @Param("id") Long id);
+    @Query("select count(v) from Visit v where v.primaryDoctor.staffId = :doctor and v.branch.branchId = :branch and v.checkInAt >= :start and v.checkInAt < :end and v.status in (com.cvdcms.entity.enums.VisitStatus.WAITING, com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT) and v.visitId <> :id")
+    long doctorLoad(@Param("doctor") Long doctor, @Param("branch") Long branch,
+            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("id") Long id);
 
     @Query("select count(v) from Visit v where v.chairId = :chair and v.visitId <> :id and v.status in :statuses")
     long occupiedChair(@Param("chair") Long chair, @Param("id") Long id, @Param("statuses") Set<VisitStatus> statuses);
@@ -42,9 +43,17 @@ interface DispatchChairRepository extends JpaRepository<DentalChair, Long> {
 }
 
 interface DispatchTicketRepository extends JpaRepository<QueueTicket, Long> {
-    Optional<QueueTicket> findByVisitVisitIdAndQueueType(Long visit, QueueType type);
+    @Query("select t from QueueTicket t where t.visit.visitId = :visit and t.queueType = :type order by t.ticketId desc")
+    List<QueueTicket> findAllByVisitAndType(@Param("visit") Long visit, @Param("type") QueueType type);
+
+    default Optional<QueueTicket> findByVisitVisitIdAndQueueType(Long visit, QueueType type) {
+        List<QueueTicket> list = findAllByVisitAndType(visit, type);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
     @Query("select coalesce(max(t.ticketNumber), 0) from QueueTicket t where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type and t.isPriority = :priority")
     int maxNumber(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("type") QueueType type, @Param("priority") boolean priority);
+
     @Query("select t from QueueTicket t join fetch t.visit v join fetch v.patientProfile where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type order by t.isEmergency desc, t.isPriority desc, t.ticketNumber")
     List<QueueTicket> board(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("type") QueueType type);
 }
