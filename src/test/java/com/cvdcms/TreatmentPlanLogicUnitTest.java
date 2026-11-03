@@ -40,6 +40,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private GeminiAiService geminiAiService;
 
     @Mock private DiagnosisService diagnosisService;
+    @Mock private ClinicalExaminationBootstrapService examinations;
     @Mock private Icd10DiseaseService icd10DiseaseService;
     @Mock private PerformedServiceService performedServiceService;
     @Mock private PrescriptionService prescriptionService;
@@ -78,6 +79,7 @@ class TreatmentPlanLogicUnitTest {
 
         diagnosisController = new DiagnosisController(
                 diagnosisService,
+                examinations,
                 icd10DiseaseService,
                 performedServiceService,
                 prescriptionService,

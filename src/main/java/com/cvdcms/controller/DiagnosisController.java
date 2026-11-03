@@ -17,6 +17,7 @@ import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 import com.cvdcms.service.DiagnosisService;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import com.cvdcms.service.Icd10DiseaseService;
 import com.cvdcms.service.PerformedServiceService;
 import com.cvdcms.service.PrescriptionService;
@@ -46,6 +47,7 @@ import java.util.Optional;
 public class DiagnosisController {
 
     private final DiagnosisService diagnosisService;
+    private final ClinicalExaminationBootstrapService examinations;
     private final Icd10DiseaseService icd10DiseaseService;
     private final PerformedServiceService performedServiceService;
     private final PrescriptionService prescriptionService;
@@ -167,6 +169,7 @@ public class DiagnosisController {
         }
         newVisit.setVisitCode(genCode);
         newVisit = visitRepository.save(newVisit);
+        examinations.ensureForAssignedVisit(newVisit.getVisitId());
 
         return "redirect:/doctor/examination/" + newVisit.getVisitId() + "/diagnoses";
     }
@@ -489,7 +492,9 @@ public class DiagnosisController {
         visit.setStatus(VisitStatus.IN_EXAM);
         visit.setInitialSymptoms("Triệu chứng mẫu 1: Đau nhức răng");
         visit.setCheckInAt(LocalDateTime.now());
-        return visitRepository.save(visit);
+        Visit saved = visitRepository.save(visit);
+        examinations.ensureForAssignedVisit(saved.getVisitId());
+        return saved;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
