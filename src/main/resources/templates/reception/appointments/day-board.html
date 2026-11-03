@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Lịch hẹn theo bác sĩ')}"></head>
+<body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div><div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Lịch hẹn theo bác sĩ')}"></header><main class="app-content">
+<link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}"><link rel="stylesheet" th:href="@{/css/reception-day-board.css}">
+<div class="day-heading"><div><a th:href="@{/reception/appointments}">← Quản lý lịch hẹn</a><h1>Lịch hẹn theo bác sĩ và ghế</h1><p>Xem giờ đến dự kiến, thời lượng và ghế đã điều phối. Lịch cũ chưa có giờ được ghi rõ.</p></div><a class="btn btn-primary" th:href="@{/reception/appointments/new}">+ Tạo lịch hẹn</a></div>
+<nav class="appointment-nav mb-3" aria-label="Màn hình lịch hẹn">
+    <a th:href="@{/reception/appointments}"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+    <a class="is-current" th:href="@{/reception/appointments/day}"><i class="bi bi-calendar-day me-1"></i> Lịch ngày theo bác sĩ</a>
+    <a th:href="@{/reception/appointments/calendar}"><i class="bi bi-calendar3 me-1"></i> Lịch tuần / tháng</a>
+    <a th:href="@{/reception/appointments/no-shows}"><i class="bi bi-exclamation-circle me-1"></i> Không đến &amp; cần nhắc</a>
+</nav>
+<div id="dayBoardError" class="alert alert-danger" role="alert" hidden></div>
+<div class="day-controls"><label>Ngày khám<input type="date" id="dayDate" class="form-control"></label><label>Chi nhánh<select id="dayBranch" class="form-select"></select></label><label>Tìm bệnh nhân<input id="daySearch" type="search" class="form-control" placeholder="Tên, mã hoặc số điện thoại"></label><a class="btn btn-outline-secondary" th:href="@{/reception/appointments/calendar}">Lịch tuần / tháng</a></div>
+<div id="daySummary" class="day-summary" aria-live="polite"></div><div id="dayBoard" class="day-board" aria-live="polite"></div>
+</main></div></div><script th:src="@{/js/reception-day-board.js}" defer></script></body></html>
