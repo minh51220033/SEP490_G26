@@ -67,6 +67,25 @@ public class ReceptionCheckInController {
         return "redirect:/reception/check-in?branchId=" + branchId;
     }
 
+    @PostMapping("/appointments/{id}/revert")
+    public String revertCheckIn(@PathVariable Long id, @RequestParam Long branchId,
+                                @RequestParam(required = false) String returnUrl,
+                                HttpSession session, RedirectAttributes redirect) {
+        try {
+            var r = service.revertCheckIn(session, id);
+            redirect.addFlashAttribute("notice", "Đã hoàn tác check-in thành công cho " + r.patientName() + " – Lịch hẹn trở về trạng thái Đã xác nhận.");
+        } catch (ResponseStatusException e) {
+            redirect.addFlashAttribute("error", e.getReason());
+        }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            String trimmed = returnUrl.trim();
+            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
+                return "redirect:" + trimmed;
+            }
+        }
+        return "redirect:/reception/check-in?branchId=" + branchId;
+    }
+
     @PostMapping("/walk-ins")
     public String walkIn(@RequestParam Long branchId, @RequestParam Long profileId,
                          @RequestParam String symptoms, @RequestParam(defaultValue = "false") boolean emergency,

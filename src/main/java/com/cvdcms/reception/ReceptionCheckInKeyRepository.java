@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.Lock;
 import java.util.Optional;
 public interface ReceptionCheckInKeyRepository extends JpaRepository<ReceptionCheckInKey, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE) Optional<ReceptionCheckInKey> findByRequestKey(String requestKey);
+    Optional<ReceptionCheckInKey> findByVisit_VisitId(Long visitId);
 }
