@@ -385,7 +385,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                COALESCE(SUM(i.promotionDiscount), 0),
                COALESCE(SUM(i.pointDiscount), 0),
                COALESCE(SUM(i.totalAmount), 0),
-               COALESCE(SUM(i.remainingDebt), 0)
+               COALESCE(SUM(i.remainingDebt), 0),
+               COALESCE(SUM(i.totalVatAmount), 0)
         FROM Invoice i
         WHERE (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
           AND i.status != 'CANCELLED'

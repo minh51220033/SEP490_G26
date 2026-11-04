@@ -726,6 +726,7 @@ public class PayrollPageController {
         sb.append("<div class=\"subtitle\">BẢNG LƯƠNG NHÂN SỰ CHI TIẾT - ").append(escapeXml(period.getPeriodName())).append("</div>\n");
         sb.append("<p><b>Cơ sở:</b> ").append(escapeXml(period.getBranch() != null ? period.getBranch().getBranchName() : "")).append(" | ");
         sb.append("<b>Kỳ tính:</b> Tháng ").append(period.getMonth()).append("/").append(period.getYear()).append(" | ");
+        sb.append("<b>Chính sách thuế:</b> ").append(escapeXml(period.getTaxPolicyCode() != null ? period.getTaxPolicyCode() : "PIT_VN_2020")).append(" | ");
         sb.append("<b>Trạng thái:</b> ").append(period.getStatus() != null ? period.getStatus().name() : "").append("</p>\n");
 
         sb.append("<table>\n");
@@ -734,15 +735,23 @@ public class PayrollPageController {
         sb.append("<th>Mã NV</th>\n");
         sb.append("<th>Họ và tên</th>\n");
         sb.append("<th>Vị trí / Chức vụ</th>\n");
+        sb.append("<th>HĐLĐ</th>\n");
         sb.append("<th>Ngày công</th>\n");
         sb.append("<th>Lương cơ bản (VNĐ)</th>\n");
         sb.append("<th>Phụ cấp (VNĐ)</th>\n");
         sb.append("<th>Thưởng (VNĐ)</th>\n");
         sb.append("<th>Hoa hồng (VNĐ)</th>\n");
-        sb.append("<th>Giảm trừ (VNĐ)</th>\n");
+        sb.append("<th>Tổng Gross (VNĐ)</th>\n");
+        sb.append("<th>BHXH NLĐ (10.5%)</th>\n");
+        sb.append("<th>Giảm trừ bản thân (VNĐ)</th>\n");
+        sb.append("<th>Giảm trừ NPT (VNĐ)</th>\n");
+        sb.append("<th>Thu nhập tính thuế (VNĐ)</th>\n");
+        sb.append("<th>Thuế TNCN (VNĐ)</th>\n");
+        sb.append("<th>Giảm trừ khác (VNĐ)</th>\n");
         sb.append("<th>Lương Net (VNĐ)</th>\n");
         sb.append("<th>Đã trừ tạm ứng (VNĐ)</th>\n");
         sb.append("<th>Thực nhận (VNĐ)</th>\n");
+        sb.append("<th>Chi tiết tính thuế</th>\n");
         sb.append("<th>Ghi chú</th>\n");
         sb.append("</tr></thead>\n");
         sb.append("<tbody>\n");
@@ -752,6 +761,12 @@ public class PayrollPageController {
         BigDecimal sumAllow = BigDecimal.ZERO;
         BigDecimal sumBonus = BigDecimal.ZERO;
         BigDecimal sumComm = BigDecimal.ZERO;
+        BigDecimal sumGross = BigDecimal.ZERO;
+        BigDecimal sumInsEmp = BigDecimal.ZERO;
+        BigDecimal sumPersonal = BigDecimal.ZERO;
+        BigDecimal sumDep = BigDecimal.ZERO;
+        BigDecimal sumAssessable = BigDecimal.ZERO;
+        BigDecimal sumPit = BigDecimal.ZERO;
         BigDecimal sumDeduct = BigDecimal.ZERO;
         BigDecimal sumNet = BigDecimal.ZERO;
         BigDecimal sumAdv = BigDecimal.ZERO;
@@ -761,11 +776,18 @@ public class PayrollPageController {
             String staffCode = it.getStaff() != null ? it.getStaff().getStaffCode() : "";
             String staffName = it.getStaff() != null ? it.getStaff().getFullName() : "";
             String pos = it.getStaff() != null ? (it.getStaff().getPositionTitle() != null ? it.getStaff().getPositionTitle() : (it.getStaff().getSpecialty() != null ? it.getStaff().getSpecialty() : "Nhân sự")) : "";
+            String contract = it.getStaff() != null && it.getStaff().getContractType() != null ? it.getStaff().getContractType().name() : "FULL_CONTRACT";
 
             BigDecimal base = it.getActualBaseSalary() != null ? it.getActualBaseSalary() : BigDecimal.ZERO;
             BigDecimal allow = it.getTotalAllowance() != null ? it.getTotalAllowance() : BigDecimal.ZERO;
             BigDecimal bonus = it.getBonusAmount() != null ? it.getBonusAmount() : BigDecimal.ZERO;
             BigDecimal comm = it.getTotalCommission() != null ? it.getTotalCommission() : BigDecimal.ZERO;
+            BigDecimal gross = it.getGrossSalary() != null ? it.getGrossSalary() : base.add(allow).add(bonus).add(comm);
+            BigDecimal insEmp = it.getInsuranceEmployeeDeduction() != null ? it.getInsuranceEmployeeDeduction() : BigDecimal.ZERO;
+            BigDecimal personal = it.getPersonalDeductionAmount() != null ? it.getPersonalDeductionAmount() : BigDecimal.ZERO;
+            BigDecimal dep = it.getDependentDeductionAmount() != null ? it.getDependentDeductionAmount() : BigDecimal.ZERO;
+            BigDecimal assess = it.getAssessableIncome() != null ? it.getAssessableIncome() : BigDecimal.ZERO;
+            BigDecimal pit = it.getPitAmount() != null ? it.getPitAmount() : BigDecimal.ZERO;
             BigDecimal deduct = it.getDeductionAmount() != null ? it.getDeductionAmount() : BigDecimal.ZERO;
             BigDecimal net = it.getNetSalary() != null ? it.getNetSalary() : BigDecimal.ZERO;
             BigDecimal adv = it.getAdvanceAllocatedAmount() != null ? it.getAdvanceAllocatedAmount() : BigDecimal.ZERO;
@@ -775,6 +797,12 @@ public class PayrollPageController {
             sumAllow = sumAllow.add(allow);
             sumBonus = sumBonus.add(bonus);
             sumComm = sumComm.add(comm);
+            sumGross = sumGross.add(gross);
+            sumInsEmp = sumInsEmp.add(insEmp);
+            sumPersonal = sumPersonal.add(personal);
+            sumDep = sumDep.add(dep);
+            sumAssessable = sumAssessable.add(assess);
+            sumPit = sumPit.add(pit);
             sumDeduct = sumDeduct.add(deduct);
             sumNet = sumNet.add(net);
             sumAdv = sumAdv.add(adv);
@@ -785,31 +813,45 @@ public class PayrollPageController {
             sb.append("<td class=\"text-center\" style=\"mso-number-format:'\\@';\">").append(escapeXml(staffCode)).append("</td>\n");
             sb.append("<td class=\"text-start\"><b>").append(escapeXml(staffName)).append("</b></td>\n");
             sb.append("<td class=\"text-start\">").append(escapeXml(pos)).append("</td>\n");
+            sb.append("<td class=\"text-center\">").append(escapeXml(contract)).append("</td>\n");
             sb.append("<td class=\"text-center\">").append(it.getActualWorkDays() != null ? it.getActualWorkDays() : "-").append("</td>\n");
             sb.append("<td class=\"num\">").append(base.longValue()).append("</td>\n");
             sb.append("<td class=\"num\">").append(allow.longValue()).append("</td>\n");
             sb.append("<td class=\"num\">").append(bonus.longValue()).append("</td>\n");
             sb.append("<td class=\"num\">").append(comm.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"font-weight:bold;\">").append(gross.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"color:#0284c7;\">").append(insEmp.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(personal.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(dep.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\">").append(assess.longValue()).append("</td>\n");
+            sb.append("<td class=\"num\" style=\"font-weight:bold;color:#dc2626;\">").append(pit.longValue()).append("</td>\n");
             sb.append("<td class=\"num\">").append(deduct.longValue()).append("</td>\n");
             sb.append("<td class=\"num\" style=\"font-weight:bold;\">").append(net.longValue()).append("</td>\n");
             sb.append("<td class=\"num\" style=\"color:#b45309;\">").append(adv.longValue()).append("</td>\n");
             sb.append("<td class=\"num\" style=\"font-weight:bold;color:#047857;\">").append(rem.longValue()).append("</td>\n");
+            sb.append("<td class=\"text-start\">").append(escapeXml(it.getTaxCalculationDetail() != null ? it.getTaxCalculationDetail() : "-")).append("</td>\n");
             sb.append("<td class=\"text-start\">").append(escapeXml(it.getNote() != null ? it.getNote() : "")).append("</td>\n");
             sb.append("</tr>\n");
         }
 
         sb.append("</tbody>\n");
         sb.append("<tfoot>\n<tr class=\"total-row\">\n");
-        sb.append("<td colspan=\"5\" class=\"text-center\">TỔNG CỘNG (").append(items.size()).append(" NHÂN SỰ)</td>\n");
+        sb.append("<td colspan=\"6\" class=\"text-center\">TỔNG CỘNG (").append(items.size()).append(" NHÂN SỰ)</td>\n");
         sb.append("<td class=\"num\">").append(sumBase.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumAllow.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumBonus.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumComm.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumGross.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumInsEmp.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumPersonal.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumDep.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumAssessable.longValue()).append("</td>\n");
+        sb.append("<td class=\"num\">").append(sumPit.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumDeduct.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumNet.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumAdv.longValue()).append("</td>\n");
         sb.append("<td class=\"num\">").append(sumRem.longValue()).append("</td>\n");
-        sb.append("<td></td>\n");
+        sb.append("<td colspan=\"2\"></td>\n");
         sb.append("</tr>\n</tfoot>\n");
         sb.append("</table>\n");
         sb.append("</body>\n</html>");
@@ -824,22 +866,30 @@ public class PayrollPageController {
 
     private byte[] generatePayrollCsv(PayrollPeriod period, List<PayrollItem> items) {
         StringBuilder sb = new StringBuilder();
-        sb.append("STT,Mã nhân viên,Họ và tên,Vị trí / Chức vụ,Ngày công,Lương cơ bản,Phụ cấp,Thưởng,Hoa hồng,Giảm trừ,Lương Net,Khấu trừ tạm ứng,Thực nhận,Ghi chú\n");
+        sb.append("STT,Mã nhân viên,Họ và tên,Vị trí / Chức vụ,HĐLĐ,Ngày công,Lương cơ bản,Phụ cấp,Thưởng,Hoa hồng,Tổng Gross,BHXH NLĐ (10.5%),Giảm trừ bản thân,Giảm trừ NPT,Thu nhập tính thuế,Thuế TNCN,Giảm trừ khác,Lương Net,Khấu trừ tạm ứng,Thực nhận,Chi tiết tính thuế,Ghi chú\n");
         int stt = 1;
         for (PayrollItem it : items) {
             sb.append(stt++).append(",");
             sb.append(escapeCsv(it.getStaff() != null ? it.getStaff().getStaffCode() : "")).append(",");
             sb.append(escapeCsv(it.getStaff() != null ? it.getStaff().getFullName() : "")).append(",");
             sb.append(escapeCsv(it.getStaff() != null ? (it.getStaff().getPositionTitle() != null ? it.getStaff().getPositionTitle() : (it.getStaff().getSpecialty() != null ? it.getStaff().getSpecialty() : "Nhân sự")) : "")).append(",");
+            sb.append(escapeCsv(it.getStaff() != null && it.getStaff().getContractType() != null ? it.getStaff().getContractType().name() : "FULL_CONTRACT")).append(",");
             sb.append(it.getActualWorkDays() != null ? it.getActualWorkDays() : "").append(",");
             sb.append(it.getActualBaseSalary() != null ? it.getActualBaseSalary().longValue() : 0).append(",");
             sb.append(it.getTotalAllowance() != null ? it.getTotalAllowance().longValue() : 0).append(",");
             sb.append(it.getBonusAmount() != null ? it.getBonusAmount().longValue() : 0).append(",");
             sb.append(it.getTotalCommission() != null ? it.getTotalCommission().longValue() : 0).append(",");
+            sb.append(it.getGrossSalary() != null ? it.getGrossSalary().longValue() : 0).append(",");
+            sb.append(it.getInsuranceEmployeeDeduction() != null ? it.getInsuranceEmployeeDeduction().longValue() : 0).append(",");
+            sb.append(it.getPersonalDeductionAmount() != null ? it.getPersonalDeductionAmount().longValue() : 0).append(",");
+            sb.append(it.getDependentDeductionAmount() != null ? it.getDependentDeductionAmount().longValue() : 0).append(",");
+            sb.append(it.getAssessableIncome() != null ? it.getAssessableIncome().longValue() : 0).append(",");
+            sb.append(it.getPitAmount() != null ? it.getPitAmount().longValue() : 0).append(",");
             sb.append(it.getDeductionAmount() != null ? it.getDeductionAmount().longValue() : 0).append(",");
             sb.append(it.getNetSalary() != null ? it.getNetSalary().longValue() : 0).append(",");
             sb.append(it.getAdvanceAllocatedAmount() != null ? it.getAdvanceAllocatedAmount().longValue() : 0).append(",");
             sb.append(it.getRemainingPayable() != null ? it.getRemainingPayable().longValue() : 0).append(",");
+            sb.append(escapeCsv(it.getTaxCalculationDetail() != null ? it.getTaxCalculationDetail() : "-")).append(",");
             sb.append(escapeCsv(it.getNote() != null ? it.getNote() : "")).append("\n");
         }
 
