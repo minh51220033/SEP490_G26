@@ -159,7 +159,7 @@ public class PermissionDataInitializer implements ApplicationRunner {
                     modified |= syncSystemRolePermissions(role, permissionMap, Set.of(
                             "PATIENT_PROFILE_MANAGE", "RECEPTION_MEMBERSHIPS", "APPOINTMENT_MANAGE",
                             "RECEPTION_CHECKIN", "APPOINTMENT_VIEW", "RECEPTION_DISPATCH",
-                            "CUSTOMER_CARE_MANAGE", "SCHEDULE_MY", "HR_MY_ATTENDANCE", "HR_LEAVE_REQUESTS"
+                            "CUSTOMER_CARE_MANAGE", "SCHEDULE_MY", "HR_MY_ATTENDANCE"
                     ));
                 }
                 case "KE_TOAN", "ROLE_KE_TOAN" -> {
@@ -168,7 +168,7 @@ public class PermissionDataInitializer implements ApplicationRunner {
                     modified |= syncSystemRolePermissions(role, permissionMap, Set.of(
                             "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT",
                             "FINANCE_DEBT", "REFUND_MANAGE", "SCHEDULE_MY",
-                            "HR_MY_ATTENDANCE", "HR_LEAVE_REQUESTS"
+                            "HR_MY_ATTENDANCE"
                     ));
                 }
                 case "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO" -> {
@@ -176,7 +176,7 @@ public class PermissionDataInitializer implements ApplicationRunner {
                             "Quản lý tồn kho vật tư nha khoa, phiếu nhập/xuất kho và danh mục nhà cung cấp.");
                     modified |= syncSystemRolePermissions(role, permissionMap, Set.of(
                             "INVENTORY_STOCK", "SUPPLIER_MANAGE", "SCHEDULE_MY",
-                            "HR_MY_ATTENDANCE", "HR_LEAVE_REQUESTS"
+                            "HR_MY_ATTENDANCE"
                     ));
                 }
                 case "BENH_NHAN", "ROLE_BENH_NHAN" -> {

@@ -1,192 +1,803 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <head th:replace="~{fragments/head :: head('Quản lý tin tức')}"></head>
 
-<body class="app-body">
+<body class="app-body account-page-body staff-page-body">
 
-<!-- CSS riêng của trang tin tức -->
-<link rel="stylesheet" th:href="@{/css/news.css}">
+    <div class="app-shell">
 
-<header th:replace="~{fragments/header :: siteHeader}"></header>
+        <aside th:replace="~{fragments/sidebar :: sidebar('admin-news')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-<div class="app-shell">
+        <div class="app-main">
 
-    <aside th:replace="~{fragments/sidebar :: sidebar('news')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+            <header th:replace="~{fragments/header :: appTopbar('Quản lý tin tức')}"></header>
 
-    <div class="app-main">
+            <main class="app-content">
+                <link rel="stylesheet" th:href="@{/css/staff.css}">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
 
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý tin tức')}"></header>
-
-        <main class="app-content nw-page">
-
-            <div class="nw-admin-head">
-                <div>
-                    <span class="eyebrow">CV-DCMS · Nội dung</span>
-                    <h1>Quản lý tin tức</h1>
-                    <p>Tạo, chỉnh sửa và xuất bản bài viết cho từng chi nhánh phòng khám.</p>
-                </div>
-                <div class="nw-admin-head__actions">
-                    <a th:href="@{/news}" target="_blank" rel="noopener" class="nw-btn nw-btn--ghost">
-                        <i class="bi bi-box-arrow-up-right"></i> Xem trang tin tức
-                    </a>
-                    <a th:href="@{/admin/news/create}" class="nw-btn nw-btn--primary">
-                        <i class="bi bi-plus-lg"></i> Tạo bài viết
-                    </a>
-                </div>
-            </div>
-
-            <!-- BỘ LỌC -->
-            <form th:action="@{/admin/news}" method="get" class="nw-card nw-filters" role="search">
-                <div class="nw-field nw-field--keyword">
-                    <label for="keyword">Từ khóa</label>
-                    <input id="keyword" class="nw-input" type="search" name="keyword" th:value="${keyword}"
-                           placeholder="Tìm theo tiêu đề...">
-                </div>
-
-                <div class="nw-field">
-                    <label for="branchFilter">Chi nhánh</label>
-                    <select id="branchFilter" class="nw-select" name="branchId">
-                        <option value="" th:selected="${branchId == null}">Tất cả chi nhánh</option>
-                        <option th:each="branch : ${branches}"
-                                th:value="${branch.branchId}"
-                                th:text="${branch.branchName}"
-                                th:selected="${branchId != null and branchId.equals(branch.branchId)}"></option>
-                    </select>
-                </div>
-
-                <div class="nw-field">
-                    <label for="statusFilter">Trạng thái</label>
-                    <select id="statusFilter" class="nw-select" name="status">
-                        <option value="" th:selected="${status == null || status == ''}">Tất cả</option>
-                        <option value="DRAFT" th:selected="${status == 'DRAFT'}">Bản nháp</option>
-                        <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">Đã đăng</option>
-                        <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">Lưu trữ</option>
-                    </select>
-                </div>
-
-                <div class="nw-field">
-                    <label for="sortFilter">Sắp xếp</label>
-                    <select id="sortFilter" class="nw-select" name="sort">
-                        <option value="createdAt" th:selected="${sort == 'createdAt'}">Ngày tạo</option>
-                        <option value="title" th:selected="${sort == 'title'}">Tiêu đề</option>
-                        <option value="publishedAt" th:selected="${sort == 'publishedAt'}">Ngày đăng</option>
-                    </select>
-                </div>
-
-                <div class="nw-field">
-                    <label for="directionFilter">Thứ tự</label>
-                    <select id="directionFilter" class="nw-select" name="direction">
-                        <option value="desc" th:selected="${direction == 'desc'}">Giảm dần</option>
-                        <option value="asc" th:selected="${direction == 'asc'}">Tăng dần</option>
-                    </select>
-                </div>
-
-                <div class="nw-field" style="flex-direction:row; gap:8px">
-                    <button type="submit" class="nw-btn nw-btn--primary"><i class="bi bi-funnel"></i> Lọc</button>
-                    <a th:href="@{/admin/news}" class="nw-btn nw-btn--neutral" title="Xóa bộ lọc" aria-label="Xóa bộ lọc">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </a>
-                </div>
-            </form>
-
-            <!-- BẢNG -->
-            <section class="nw-card nw-table-card">
-                <div class="nw-result" style="padding:16px 18px; border-bottom:1px solid var(--line)">
-                    <span>Tổng số: <strong th:text="${newsPage.totalElements}">0</strong> bài viết</span>
-                    <span th:if="${newsPage.totalPages > 0}">
-                        Trang <strong th:text="${newsPage.number + 1}">1</strong> / <strong th:text="${newsPage.totalPages}">1</strong>
-                    </span>
-                </div>
-
-                <div class="nw-table-scroll">
-                    <table class="nw-table">
-                        <thead>
-                        <tr>
-                            <th scope="col">ID</th>
-                            <th scope="col">Tiêu đề</th>
-                            <th scope="col">Chi nhánh</th>
-                            <th scope="col">Trạng thái</th>
-                            <th scope="col">Người tạo</th>
-                            <th scope="col">Ngày tạo</th>
-                            <th scope="col">Ngày đăng</th>
-                            <th scope="col">Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="news : ${newsPage.content}">
-                            <td class="nw-table__id" th:text="${'#' + news.newsId}">#1</td>
-                            <td><span class="nw-table__title" th:text="${news.title}">Tiêu đề</span></td>
-                            <td th:text="${news.branch != null ? news.branch.branchName : 'Chưa gán chi nhánh'}">Chi nhánh</td>
-                            <td>
-                                <span th:if="${news.status == 'DRAFT'}" class="nw-status nw-status--draft">Bản nháp</span>
-                                <span th:if="${news.status == 'PUBLISHED'}" class="nw-status nw-status--published">Đã đăng</span>
-                                <span th:if="${news.status == 'ARCHIVED'}" class="nw-status nw-status--archived">Lưu trữ</span>
-                            </td>
-                            <td th:text="${news.createdBy != null ? news.createdBy.username : '-'}">admin</td>
-                            <td class="nw-table__muted"
-                                th:text="${news.createdAt != null ? #temporals.format(news.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
-                            <td class="nw-table__muted"
-                                th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
-                            <td>
-                                <div class="nw-table__actions">
-                                    <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
-                                       class="nw-btn nw-btn--soft nw-btn--sm" title="Sửa bài viết">
-                                        <i class="bi bi-pencil-square"></i> Sửa
-                                    </a>
-                                    <a th:href="@{'/admin/news/' + ${news.newsId}}" target="_blank" rel="noopener"
-                                       class="nw-btn nw-btn--neutral nw-btn--sm" title="Xem bài viết">
-                                        <i class="bi bi-eye"></i> Xem
-                                    </a>
-                                    <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}" method="post"
-                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này không?');">
-                                        <button type="submit" class="nw-btn nw-btn--danger nw-btn--sm" title="Xóa bài viết">
-                                            <i class="bi bi-trash3"></i> Xóa
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr th:if="${newsPage.content.isEmpty()}">
-                            <td colspan="8" class="nw-table__empty">
-                                <i class="bi bi-inbox"></i>
-                                Không tìm thấy bài viết.
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- PHÂN TRANG -->
-                <nav class="nw-pager" aria-label="Phân trang" th:if="${newsPage.totalPages > 1}">
-                    <div class="nw-pager__list">
-                        <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'" aria-label="Trang trước"
-                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
-                                    direction=${direction}, size=${newsPage.size}, page=${newsPage.number - 1})}">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                        <a class="nw-pager__link"
-                           th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
-                                    direction=${direction}, size=${newsPage.size}, page=${pageNumber})}"
-                           th:text="${pageNumber + 1}"
-                           th:classappend="${pageNumber == newsPage.number} ? ' active'"
-                           th:attr="aria-current=${pageNumber == newsPage.number ? 'page' : null}">1</a>
-                        <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'" aria-label="Trang tiếp"
-                           th:href="@{/admin/news(keyword=${keyword}, status=${status}, branchId=${branchId}, sort=${sort},
-                                    direction=${direction}, size=${newsPage.size}, page=${newsPage.number + 1})}">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
+                <!-- THÔNG BÁO FLASH / PARAM -->
+                <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                    <div>
+                        <span th:if="${param.success[0] == 'created'}">Tạo bài viết mới thành công!</span>
+                        <span th:if="${param.success[0] == 'updated'}">Cập nhật bài viết thành công!</span>
+                        <span th:if="${param.success[0] == 'deleted'}">Xóa bài viết thành công!</span>
+                        <span th:unless="${param.success[0] == 'created' or param.success[0] == 'updated' or param.success[0] == 'deleted'}">Thao tác thành công!</span>
                     </div>
-                </nav>
-            </section>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <div th:text="${param.error}">Có lỗi xảy ra trong quá trình xử lý.</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
 
-        </main>
+                <!-- TIÊU ĐỀ TRANG CHUẨN MISA -->
+                <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <h1 class="staff-page-title">Quản lý tin tức</h1>
+                        <p class="staff-page-subtitle">Quản lý danh sách bài viết, phân loại theo cơ sở và trạng thái xuất bản</p>
+                    </div>
+                </div>
 
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+                <!-- TOOLBAR / BỘ LỌC CHUẨN MISA -->
+                <section class="staff-toolbar-card">
+                    <form th:action="@{/admin/news}" method="get" id="newsFilterForm" class="staff-toolbar-form">
+                        <!-- Bên trái: Ô tìm kiếm + Dropdowns lọc nhanh -->
+                        <div class="staff-toolbar-left">
+                            <!-- 1. Ô tìm kiếm -->
+                            <div class="staff-search-box-compact">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                                       class="form-control" placeholder="Tìm kiếm bài viết...">
+                            </div>
+
+                            <!-- 2. Lọc theo cơ sở -->
+                            <div>
+                                <select id="branchId" name="branchId" class="form-select staff-select-compact" aria-label="Cơ sở" onchange="this.form.submit()">
+                                    <option value="" th:selected="${branchId == null}">Cơ sở: Tất cả</option>
+                                    <option th:each="b : ${branches}"
+                                            th:value="${b.branchId}"
+                                            th:text="${b.branchName}"
+                                            th:selected="${branchId != null and branchId.equals(b.branchId)}"></option>
+                                </select>
+                            </div>
+
+                            <!-- 3. Lọc theo trạng thái -->
+                            <div>
+                                <select id="status" name="status" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
+                                    <option value="" th:selected="${status == null || status == ''}">Trạng thái: Tất cả</option>
+                                    <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">Đã đăng</option>
+                                    <option value="DRAFT" th:selected="${status == 'DRAFT'}">Bản nháp</option>
+                                    <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">Lưu trữ</option>
+                                </select>
+                            </div>
+
+                            <!-- Hidden fields cho phân trang và sắp xếp -->
+                            <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                            <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+                            <input type="hidden" id="sortInput" name="sort" th:value="${sort}">
+                            <input type="hidden" id="directionInput" name="direction" th:value="${direction}">
+
+                            <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
+                            <a th:if="${(keyword != null and keyword != '') or (branchId != null) or (status != null and status != '')}"
+                               th:href="@{/admin/news}"
+                               class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                               title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                            </a>
+                        </div>
+
+                        <!-- Bên phải: Xem trang tin tức + Thêm mới + Tùy chỉnh cột -->
+                        <div class="staff-toolbar-right">
+                            <a th:href="@{/news}" target="_blank" rel="noopener" class="btn btn-secondary-custom btn-vua text-primary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> Trang tin tức
+                            </a>
+                            <a th:href="@{/admin/news/create}" class="btn btn-primary btn-vua">
+                                <i class="bi bi-plus-lg"></i> Thêm mới
+                            </a>
+
+                            <!-- Bánh răng mở Dropdown Tùy chỉnh cột -->
+                            <div class="custom-col-dropdown position-relative d-inline-block">
+                                <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                    <i class="bi bi-gear"></i>
+                                </button>
+
+                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                                <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                    <div class="custom-column-header">
+                                        <h6 class="custom-column-title">
+                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                        </h6>
+                                        <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                    </div>
+
+                                    <!-- Ô tìm kiếm tên trường -->
+                                    <div class="custom-column-search">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tiêu đề danh sách cột -->
+                                    <div class="custom-column-table-head">
+                                        <div class="flex-grow-1">Tên trường</div>
+                                    </div>
+
+                                    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="custom-col-item" data-col-target="stt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="title">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-title" checked>
+                                            <label for="chk-col-title" class="custom-col-name">Tiêu đề bài viết</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="branch">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+                                            <label for="chk-col-branch" class="custom-col-name">Cơ sở / Chi nhánh</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="author">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-author" checked>
+                                            <label for="chk-col-author" class="custom-col-name">Người tạo</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="publishedAt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-publishedAt" checked>
+                                            <label for="chk-col-publishedAt" class="custom-col-name">Ngày đăng</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="status">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="actions">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-actions" checked>
+                                            <label for="chk-col-actions" class="custom-col-name">Thao tác</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Nút Thao tác Footer -->
+                                    <div class="custom-column-footer">
+                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                            Lấy lại mặc định
+                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- BẢNG DỮ LIỆU TIN TỨC CHUẨN MISA -->
+                <section class="staff-table-card">
+                    <div class="staff-table-wrapper">
+                        <table class="table staff-modern-table align-middle" id="newsTable">
+                            <colgroup>
+                                <col data-col="stt" style="width: 60px;">
+                                <col data-col="title" style="width: 320px;">
+                                <col data-col="branch" style="width: 190px;">
+                                <col data-col="author" style="width: 150px;">
+                                <col data-col="publishedAt" style="width: 160px;">
+                                <col data-col="status" style="width: 150px;">
+                                <col data-col="actions" style="width: 130px;">
+                            </colgroup>
+                            <thead>
+                            <tr>
+                                <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                    <span>#</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="title" style="width: 320px; min-width: 250px;">
+                                    <span>Tiêu đề bài viết</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="branch" style="width: 190px; min-width: 160px;">
+                                    <span>Cơ sở / Chi nhánh</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="author" style="width: 150px; min-width: 130px;">
+                                    <span>Người tạo</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="publishedAt" style="width: 160px; min-width: 140px;">
+                                    <span>Ngày đăng</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="status" style="width: 150px; min-width: 130px;">
+                                    <span>Trạng thái</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="actions" style="width: 130px; min-width: 110px;">
+                                    <span>Thao tác</span>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="news, iter : ${newsList}"
+                                th:data-news-id="${news.newsId}"
+                                th:data-slug="${news.slug}">
+
+                                <!-- 1. STT -->
+                                <td data-col="stt" class="text-muted fw-semibold">
+                                    <span th:text="${currentPage * pageSize + iter.count}">1</span>
+                                </td>
+
+                                <!-- 2. Tiêu đề + Ảnh nhỏ nếu có + Slug -->
+                                <td data-col="title">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img th:if="${news.thumbnail != null and news.thumbnail != ''}"
+                                             th:src="${news.thumbnail}" alt="Thumbnail"
+                                             class="rounded" style="width: 44px; height: 36px; object-fit: cover; flex-shrink: 0;">
+                                        <div class="text-truncate">
+                                            <div class="staff-name text-truncate">
+                                                <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
+                                                   class="text-dark text-decoration-none fw-semibold"
+                                                   th:text="${news.title}" th:title="${news.title}">Tiêu đề bài viết</a>
+                                            </div>
+                                            <div class="staff-sub" th:if="${news.createdAt != null}">
+                                                <span>Tạo: </span><span th:text="${#temporals.format(news.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 3. Cơ sở -->
+                                <td data-col="branch">
+                                    <span th:if="${news.branch != null}" class="chip chip--primary" th:title="${news.branch.branchName}">
+                                        <i class="bi bi-buildings me-1"></i>
+                                        <span th:text="${news.branch.branchName}">Chi nhánh</span>
+                                    </span>
+                                    <span th:unless="${news.branch != null}" class="chip">
+                                        <i class="bi bi-globe me-1"></i>Toàn hệ thống
+                                    </span>
+                                </td>
+
+                                <!-- 4. Người tạo -->
+                                <td data-col="author">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="staff-avatar bg-primary text-white"
+                                              th:text="${news.createdBy != null and news.createdBy.username != null ? #strings.toUpperCase(#strings.substring(news.createdBy.username, 0, 1)) : 'A'}">A</span>
+                                        <span class="small fw-semibold text-truncate"
+                                              th:text="${news.createdBy != null ? news.createdBy.username : '—'}">admin</span>
+                                    </div>
+                                </td>
+
+                                <!-- 5. Ngày đăng -->
+                                <td data-col="publishedAt">
+                                    <span class="small text-muted"
+                                          th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                                </td>
+
+                                <!-- 6. Trạng thái -->
+                                <td data-col="status">
+                                    <span th:if="${news.status == 'PUBLISHED'}" class="misa-status-badge misa-status-badge--active">
+                                        Đã đăng
+                                    </span>
+                                    <span th:if="${news.status == 'DRAFT'}" class="misa-status-badge misa-status-badge--inactive">
+                                        Bản nháp
+                                    </span>
+                                    <span th:if="${news.status == 'ARCHIVED'}" class="misa-status-badge misa-status-badge--inactive">
+                                        Lưu trữ
+                                    </span>
+                                </td>
+
+                                <!-- 7. Thao tác -->
+                                <td data-col="actions">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a th:href="@{'/admin/news/' + ${news.newsId} + '/edit'}"
+                                           class="btn btn-sm btn-outline-primary py-0 px-2" title="Chỉnh sửa bài viết">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a th:href="@{'/news/' + ${news.slug}}" target="_blank" rel="noopener"
+                                           class="btn btn-sm btn-outline-secondary py-0 px-2" title="Xem trên trang chủ">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <form th:action="@{'/admin/news/' + ${news.newsId} + '/delete'}" method="post" class="d-inline"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Xóa bài viết">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Empty State khi không có dữ liệu -->
+                            <tr th:if="${#lists.isEmpty(newsList)}">
+                                <td colspan="7" class="p-0">
+                                    <div class="account-empty-state">
+                                        <div class="account-empty-icon">
+                                            <i class="bi bi-newspaper"></i>
+                                        </div>
+                                        <h5 class="account-empty-title">Không tìm thấy bài viết nào</h5>
+                                        <p class="account-empty-desc">
+                                            Không có tin tức nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                        </p>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a th:href="@{/admin/news}" class="btn btn-secondary-custom btn-be">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                            </a>
+                                            <a th:href="@{/admin/news/create}" class="btn btn-primary btn-be">
+                                                <i class="bi bi-plus-lg"></i> Thêm mới
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- FOOTER PHÂN TRANG CHUẨN MISA -->
+                    <div class="misa-pagination-footer">
+                        <!-- Bên trái: Tổng số -->
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${totalItems}">0</strong>
+                        </div>
+
+                        <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                        <div class="misa-pagination-right">
+                            <!-- Chọn số dòng/trang -->
+                            <div class="misa-page-size-wrapper">
+                                <span>Số dòng/trang</span>
+                                <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                                    <option value="25" th:selected="${pageSize == 25}">25</option>
+                                    <option value="50" th:selected="${pageSize == 50}">50</option>
+                                    <option value="100" th:selected="${pageSize == 100}">100</option>
+                                </select>
+                            </div>
+
+                            <!-- Khoảng hiển thị -->
+                            <div class="misa-page-range">
+                                <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                            </div>
+
+                            <!-- Nút phân trang (|< < > >|) -->
+                            <div class="d-flex align-items-center gap-1">
+                                <!-- Về trang đầu -->
+                                <a th:href="@{/admin/news(page=0, size=${pageSize}, keyword=${keyword}, branchId=${branchId}, status=${status}, sort=${sort}, direction=${direction})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang đầu">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </a>
+
+                                <!-- Trang trước -->
+                                <a th:href="@{/admin/news(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, branchId=${branchId}, status=${status}, sort=${sort}, direction=${direction})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+
+                                <!-- Trang kế tiếp -->
+                                <a th:href="@{/admin/news(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, branchId=${branchId}, status=${status}, sort=${sort}, direction=${direction})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+
+                                <!-- Đến trang cuối -->
+                                <a th:href="@{/admin/news(page=${totalPages - 1}, size=${pageSize}, keyword=${keyword}, branchId=${branchId}, status=${status}, sort=${sort}, direction=${direction})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang cuối">
+                                    <i class="bi bi-chevron-bar-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
     </div>
-</div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Phân trang & Đổi số dòng / trang
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('newsFilterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+                filterForm.submit();
+            });
+        }
+
+        // 2. Kéo dãn cột & Tùy chỉnh cột chuẩn MISA
+        const table = document.getElementById('newsTable');
+        const STORAGE_WIDTH_KEY = 'cv_news_table_widths_v1';
+        const STORAGE_CONFIG_KEY = 'cv_news_cols_v1';
+
+        const defaultColOrder = ['stt', 'title', 'branch', 'author', 'publishedAt', 'status', 'actions'];
+        const defaultColWidths = {
+            stt: 60,
+            title: 320,
+            branch: 190,
+            author: 150,
+            publishedAt: 160,
+            status: 150,
+            actions: 130
+        };
+
+        let currentWidths = loadColWidths();
+        let currentConfig = getColConfig();
+
+        function loadColWidths() {
+            try {
+                const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultColWidths);
+            }
+        }
+
+        function saveColWidths(widths) {
+            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+        }
+
+        function getColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                defaultColOrder.forEach(col => {
+                    if (!order.includes(col)) order.push(col);
+                });
+                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                return { order, hidden };
+            } catch (e) {
+                return { order: defaultColOrder.slice(), hidden: [] };
+            }
+        }
+
+        function saveColConfig(config) {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function applyColOrder(order) {
+            if (!order || !Array.isArray(order) || !table) return;
+
+            const customColList = document.getElementById('customColList');
+            if (customColList) {
+                order.forEach(colKey => {
+                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                    if (item) customColList.appendChild(item);
+                });
+            }
+
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+                order.forEach(colKey => {
+                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                    if (col) colgroup.appendChild(col);
+                });
+            }
+
+            const theadTr = table.querySelector('thead tr');
+            if (theadTr) {
+                order.forEach(colKey => {
+                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                    if (th) theadTr.appendChild(th);
+                });
+            }
+
+            const tbodyRows = table.querySelectorAll('tbody tr');
+            tbodyRows.forEach(tr => {
+                order.forEach(colKey => {
+                    const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                    if (td) tr.appendChild(td);
+                });
+            });
+        }
+
+        function applyColWidths() {
+            if (!table) return;
+            currentWidths = loadColWidths();
+            let totalColsWidth = 0;
+
+            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+            order.forEach(col => {
+                const w = currentWidths[col] || defaultColWidths[col] || 150;
+                currentWidths[col] = w;
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    if (!th.classList.contains('d-none')) {
+                        totalColsWidth += w;
+                    }
+                }
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
+        }
+
+        function applyColConfig(config) {
+            if (!table) return;
+
+            const order = (config && config.order) ? config.order : defaultColOrder;
+            let visibleTotalW = 0;
+
+            order.forEach(col => {
+                const isHidden = config.hidden.includes(col);
+                const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                cells.forEach(cell => {
+                    if (isHidden) {
+                        cell.classList.add('d-none');
+                    } else {
+                        cell.classList.remove('d-none');
+                    }
+                });
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) {
+                    colEl.style.display = isHidden ? 'none' : '';
+                }
+
+                if (!isHidden) {
+                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 150);
+                }
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(visibleTotalW, containerW) + 'px';
+        }
+
+        function initDrawerDragAndDrop() {
+            const colList = document.getElementById('customColList');
+            if (!colList) return;
+
+            let draggedItem = null;
+
+            colList.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function () {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                });
+
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem !== this) {
+                        const rect = this.getBoundingClientRect();
+                        const mid = rect.top + rect.height / 2;
+                        if (e.clientY < mid) {
+                            colList.insertBefore(draggedItem, this);
+                        } else {
+                            colList.insertBefore(draggedItem, this.nextSibling);
+                        }
+                    }
+                });
+            });
+        }
+
+        function initColumnResizers() {
+            if (!table) return;
+            const resizers = table.querySelectorAll('.col-resizer');
+
+            resizers.forEach(resizer => {
+                let startX, startW, colKey, colEl, thEl;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    thEl = resizer.parentElement;
+                    colKey = thEl.getAttribute('data-col');
+                    colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
+
+                    startX = e.pageX;
+                    startW = thEl.offsetWidth;
+
+                    resizer.classList.add('is-resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const minW = 60;
+                        const newW = Math.max(startW + diff, minW);
+
+                        if (thEl) {
+                            thEl.style.width = newW + 'px';
+                            thEl.style.minWidth = newW + 'px';
+                        }
+                        if (colEl) {
+                            colEl.style.width = newW + 'px';
+                        }
+                        currentWidths[colKey] = newW;
+
+                        let totalW = 0;
+                        defaultColOrder.forEach(col => {
+                            if (!currentConfig.hidden.includes(col)) {
+                                totalW += (currentWidths[col] || defaultColWidths[col] || 150);
+                            }
+                        });
+
+                        const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                        table.style.width = Math.max(totalW, containerW) + 'px';
+                    }
+
+                    function onMouseUp() {
+                        resizer.classList.remove('is-resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+
+                        saveColWidths(currentWidths);
+
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Quản lý Popover Tùy chỉnh cột
+        const popoverEl = document.getElementById('customColumnPopover');
+        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        const btnCloseCol = document.getElementById('btnCloseColPopover');
+        const btnCancelCol = document.getElementById('btnCancelCols');
+        const colSearchInput = document.getElementById('colSearchInput');
+
+        function openCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'block';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'true');
+                btnToggleCol.classList.add('active');
+            }
+            document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                const colKey = item.getAttribute('data-col-target');
+                const chk = item.querySelector('.custom-col-check');
+                if (chk) {
+                    chk.checked = !currentConfig.hidden.includes(colKey);
+                }
+            });
+            if (colSearchInput) {
+                colSearchInput.value = '';
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(it => it.style.display = '');
+                setTimeout(() => colSearchInput.focus(), 60);
+            }
+        }
+
+        function closeCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'false');
+                btnToggleCol.classList.remove('active');
+            }
+        }
+
+        if (btnToggleCol) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                    openCustomColPopover();
+                } else {
+                    closeCustomColPopover();
+                }
+            });
+        }
+
+        if (btnCloseCol) btnCloseCol.addEventListener('click', closeCustomColPopover);
+        if (btnCancelCol) btnCancelCol.addEventListener('click', closeCustomColPopover);
+
+        document.addEventListener('click', function (e) {
+            if (popoverEl && popoverEl.style.display !== 'none') {
+                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                    closeCustomColPopover();
+                }
+            }
+        });
+
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const term = this.value.toLowerCase().trim();
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(item => {
+                    const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = label.includes(term) ? '' : 'none';
+                });
+            });
+        }
+
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                const order = [];
+                const hidden = [];
+
+                items.forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    order.push(colKey);
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+
+                currentConfig = { order, hidden };
+                saveColConfig(currentConfig);
+
+                applyColOrder(order);
+                applyColConfig(currentConfig);
+
+                closeCustomColPopover();
+            });
+        }
+
+        const btnResetCols = document.getElementById('btnResetCols');
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                localStorage.removeItem(STORAGE_CONFIG_KEY);
+
+                currentWidths = Object.assign({}, defaultColWidths);
+                currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+
+                applyColOrder(currentConfig.order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+
+                closeCustomColPopover();
+            });
+        }
+
+        // Áp dụng khởi tạo
+        applyColOrder(currentConfig.order);
+        applyColConfig(currentConfig);
+        applyColWidths();
+        initColumnResizers();
+        initDrawerDragAndDrop();
+    });
+    </script>
 </body>
 </html>

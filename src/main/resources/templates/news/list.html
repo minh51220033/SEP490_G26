@@ -23,13 +23,13 @@
 
 <main class="nw-wrap nw-page">
 
-    <!-- Thông tin cơ sở hiện tại -->
-    <section class="nw-card nw-branch" th:if="${currentBranchName != null}">
+    <!-- Thông tin cơ sở đang xem -->
+    <section class="nw-card nw-branch">
         <div class="nw-branch__icon" aria-hidden="true"><i class="bi bi-hospital"></i></div>
 
         <div class="nw-branch__info">
-            <span class="eyebrow">Cơ sở đang xem</span>
-            <h2 class="nw-branch__name" th:text="${currentBranchName}">Cơ sở Cường Việt</h2>
+            <span class="eyebrow">Cơ sở hiển thị</span>
+            <h2 class="nw-branch__name" th:text="${currentBranchName}">Tất cả cơ sở</h2>
 
             <p class="nw-branch__meta"
                th:if="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)}">
@@ -39,23 +39,18 @@
 
             <p class="nw-branch__meta">
                 <i class="bi bi-info-circle"></i>
-                <span>Tin tức được hiển thị theo cơ sở của tài khoản bạn.</span>
+                <span th:if="${currentBranchId != null}">Hiển thị các bài viết và ưu đãi dành riêng cho chi nhánh này.</span>
+                <span th:if="${currentBranchId == null}">Hiển thị tất cả bài viết từ hệ thống các cơ sở phòng khám.</span>
             </p>
         </div>
 
-        <div class="nw-branch__status">
+        <div class="nw-branch__status" th:if="${currentBranchId != null}">
             <span class="nw-dot"></span>
-            Cơ sở hiện tại
+            Đang lọc chi nhánh
         </div>
     </section>
 
-    <!-- Thông báo lỗi nếu tài khoản chưa có cơ sở -->
-    <div class="nw-alert nw-alert--error" role="alert" th:if="${errorMessage != null}">
-        <i class="bi bi-exclamation-triangle"></i>
-        <span th:text="${errorMessage}">Không xác định được cơ sở của tài khoản.</span>
-    </div>
-
-    <!-- Tìm kiếm và chọn số bài viết mỗi trang -->
+    <!-- Tìm kiếm, chọn cơ sở và số bài viết mỗi trang -->
     <form th:action="@{/news}" method="get" class="nw-search" role="search">
         <label class="nw-search__input">
             <i class="bi bi-search" aria-hidden="true"></i>
@@ -65,6 +60,15 @@
                    placeholder="Tìm kiếm tin tức..."
                    aria-label="Tìm kiếm tin tức">
         </label>
+
+        <!-- Bộ chọn cơ sở phòng khám -->
+        <select class="nw-select" name="branchId" aria-label="Lọc theo cơ sở" onchange="this.form.submit()">
+            <option value="" th:selected="${currentBranchId == null}">Tất cả cơ sở</option>
+            <option th:each="b : ${branches}"
+                    th:value="${b.branchId}"
+                    th:text="${b.branchName}"
+                    th:selected="${currentBranchId != null and currentBranchId.equals(b.branchId)}"></option>
+        </select>
 
         <select class="nw-select" name="size" aria-label="Số bài viết mỗi trang" onchange="this.form.submit()">
             <option value="6" th:selected="${size == 6}">6 bài/trang</option>
@@ -103,10 +107,15 @@
             </a>
 
             <div class="nw-news__body">
-                <span class="nw-news__date" th:if="${news.publishedAt != null}">
-                    <i class="bi bi-calendar3"></i>
-                    <time th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 16:50</time>
-                </span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span class="nw-news__date" th:if="${news.publishedAt != null}">
+                        <i class="bi bi-calendar3"></i>
+                        <time th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 16:50</time>
+                    </span>
+                    <span th:if="${news.branch != null}" style="font-size:11px; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:12px; font-weight:600;">
+                        <i class="bi bi-building"></i> <span th:text="${news.branch.branchName}">Cơ sở</span>
+                    </span>
+                </div>
 
                 <h2 class="nw-news__title">
                     <a th:href="@{/news/{slug}(slug=${news.slug})}" th:text="${news.title}">Tiêu đề bài viết</a>
@@ -135,25 +144,25 @@
          th:if="${newsPage != null and newsPage.totalPages > 1}">
         <div class="nw-pager__list">
             <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=0)}" aria-label="Trang đầu">
+               th:href="@{/news(keyword=${keyword}, branchId=${currentBranchId}, size=${size}, page=0)}" aria-label="Trang đầu">
                 <i class="bi bi-chevron-double-left"></i>
             </a>
             <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.number - 1})}" aria-label="Trang trước">
+               th:href="@{/news(keyword=${keyword}, branchId=${currentBranchId}, size=${size}, page=${newsPage.number - 1})}" aria-label="Trang trước">
                 <i class="bi bi-chevron-left"></i>
             </a>
             <a class="nw-pager__link"
                th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${pageNumber})}"
+               th:href="@{/news(keyword=${keyword}, branchId=${currentBranchId}, size=${size}, page=${pageNumber})}"
                th:text="${pageNumber + 1}"
                th:classappend="${pageNumber == newsPage.number} ? ' active'"
                th:attr="aria-current=${pageNumber == newsPage.number ? 'page' : null}">1</a>
             <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.number + 1})}" aria-label="Trang tiếp">
+               th:href="@{/news(keyword=${keyword}, branchId=${currentBranchId}, size=${size}, page=${newsPage.number + 1})}" aria-label="Trang tiếp">
                 <i class="bi bi-chevron-right"></i>
             </a>
             <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.totalPages - 1})}" aria-label="Trang cuối">
+               th:href="@{/news(keyword=${keyword}, branchId=${currentBranchId}, size=${size}, page=${newsPage.totalPages - 1})}" aria-label="Trang cuối">
                 <i class="bi bi-chevron-double-right"></i>
             </a>
         </div>
