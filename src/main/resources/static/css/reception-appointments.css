@@ -279,3 +279,10 @@
     .appointment-day { min-height: 5.5rem; padding: 0.4rem; font-size: 0.8rem; }
     .appointment-day span { font-size: 0.72rem; }
 }
+.appointment-table { min-width: 1080px; }
+.appointment-table th, .appointment-table td { white-space: nowrap; vertical-align: middle; }
+.appointment-table th:nth-child(2), .appointment-table td:nth-child(2) { min-width: 190px; }
+.appointment-table th:nth-child(4), .appointment-table td:nth-child(4) { min-width: 200px; white-space: normal; }
+.appointment-table th:last-child, .appointment-table td:last-child { min-width: 245px; position: sticky; right: 0; background: #fff; z-index: 1; box-shadow: -8px 0 12px -12px #334155; }
+.appointment-table thead th:last-child { background: #f8fafc; z-index: 2; }
+.appointment-table tbody tr:hover td:last-child { background: #f7f9fc; }

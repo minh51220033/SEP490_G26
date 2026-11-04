@@ -42,7 +42,8 @@ class ClinicalPhotoRestControllerTest {
 
     @BeforeEach
     void setUp() {
-        clinicalPhotoRestController = new ClinicalPhotoRestController(clinicalPhotoService);
+        clinicalPhotoRestController = new ClinicalPhotoRestController(clinicalPhotoService,
+                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class));
 
         mockPhoto = new ClinicalPhoto();
         mockPhoto.setPhotoId(50L);
@@ -60,7 +61,7 @@ class ClinicalPhotoRestControllerTest {
         when(clinicalPhotoService.getPhotosByProfile(1L)).thenReturn(List.of(dto));
         when(clinicalPhotoService.getPhotoStatistics(1L)).thenReturn(Map.of("total", 1));
 
-        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.getPhotosByPatient(1L);
+        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.getPhotosByPatient(1L, null);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -74,7 +75,7 @@ class ClinicalPhotoRestControllerTest {
         ClinicalPhotoResponseDTO dto = ClinicalPhotoResponseDTO.fromEntity(mockPhoto);
         when(clinicalPhotoService.getPhotosByVisit(300L)).thenReturn(List.of(dto));
 
-        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.getPhotosByVisit(300L);
+        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.getPhotosByVisit(300L, null);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -94,7 +95,7 @@ class ClinicalPhotoRestControllerTest {
                 .thenReturn(dto);
 
         ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.uploadPhoto(
-                1L, 300L, "BEFORE", "INTRAORAL", "Ảnh hàm trên", file
+                1L, 300L, "BEFORE", "INTRAORAL", "Ảnh hàm trên", file, null
         );
 
         assertNotNull(response);
@@ -108,7 +109,7 @@ class ClinicalPhotoRestControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "bytes".getBytes());
 
         ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.uploadPhoto(
-                1L, 300L, "UNKNOWN_STAGE", "INTRAORAL", null, file
+                1L, 300L, "UNKNOWN_STAGE", "INTRAORAL", null, file, null
         );
 
         assertNotNull(response);
@@ -125,7 +126,7 @@ class ClinicalPhotoRestControllerTest {
                 .thenThrow(new IOException("Disk write error"));
 
         ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.uploadPhoto(
-                1L, 300L, "BEFORE", "INTRAORAL", null, file
+                1L, 300L, "BEFORE", "INTRAORAL", null, file, null
         );
 
         assertNotNull(response);
@@ -138,7 +139,7 @@ class ClinicalPhotoRestControllerTest {
     void deletePhoto_Success() throws IOException {
         doNothing().when(clinicalPhotoService).deletePhoto(50L);
 
-        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.deletePhoto(50L);
+        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.deletePhoto(50L, null);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -159,7 +160,7 @@ class ClinicalPhotoRestControllerTest {
                 "category", "EXTRAORAL"
         );
 
-        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.updatePhoto(50L, body);
+        ResponseEntity<Map<String, Object>> response = clinicalPhotoRestController.updatePhoto(50L, body, null);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
