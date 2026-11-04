@@ -43,7 +43,7 @@
       </div>
 
       <!-- DANH SÁCH DỊCH VỤ -->
-      <section class="panel mb-4">
+      <section class="panel catalog-filter-panel p-0 mb-3">
         <!-- LỌC THEO NHÓM -->
         <form th:action="@{/admin/services}"
               method="get"
@@ -124,7 +124,9 @@
 
           </div>
         </form>
+      </section>
 
+      <section class="panel p-0 mt-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
 
@@ -136,7 +138,7 @@
               <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
               <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
               <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">Thao tác</th>
             </tr>
             </thead>
 
@@ -214,47 +216,54 @@
                                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
 
-                  <a th:href="@{/admin/services/{id}/edit(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
+                  <!-- Sửa: icon bút chì, viền xanh -->
+                  <a th:href="@{/admin/services/{id}/edit(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-primary"
+                     title="Sửa"
+                     aria-label="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
 
-                  <a th:href="@{/admin/services/{id}/config(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-secondary">
-                    Cấu hình
+                  <!-- Cấu hình: icon bánh răng, viền xám -->
+                  <a th:href="@{/admin/services/{id}/config(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-secondary"
+                     title="Cấu hình"
+                     aria-label="Cấu hình">
+                    <i class="bi bi-gear" aria-hidden="true"></i>
                   </a>
 
-                  <form th:action="@{/admin/services/{id}/toggle(
-                                                id=${service.serviceId})}"
+                  <!-- Ngừng / Kích hoạt: icon tạm dừng (viền vàng) / icon phát (viền xanh lá) -->
+                  <form th:action="@{/admin/services/{id}/toggle(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái dịch vụ này?');">
-
                     <button type="submit"
                             class="btn btn-sm"
-                            th:classappend="${service.status.name() == 'ACTIVE'}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${service.status.name() == 'ACTIVE'}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
+                            th:classappend="${service.status.name() == 'ACTIVE'} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'"
+                            th:aria-label="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${service.status.name() == 'ACTIVE'} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
                     </button>
                   </form>
 
+                  <!-- Xóa: icon thùng rác, viền đỏ -->
                   <form th:action="@{/admin/services/{id}/delete(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         data-delete-catalog-form
                         data-delete-kind="dịch vụ"
                         th:attr="data-delete-name=${service.serviceName}">
                     <input type="hidden" name="deleteToken" th:value="${deleteToken}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                      Xóa
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Xóa"
+                            aria-label="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                   </form>
 
