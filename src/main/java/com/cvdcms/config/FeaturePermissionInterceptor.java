@@ -32,25 +32,6 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             Object handler
     ) throws IOException {
 
-        HttpSession session = request.getSession(false);
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User sessionUser)) {
-            return true;
-        }
-
-        Long userId = sessionUser.getUserId();
-        if (userId == null || userId <= 0) {
-            return true;
-        }
-
-        // Luôn đồng bộ danh sách mã quyền hiệu lực mới nhất từ DB vào session ở mỗi request
-        List<String> activePermissionCodes = userRepository.findActivePermissionCodesByUserId(userId);
-        session.setAttribute("permissionCodes", activePermissionCodes);
-
-        // Quản trị viên hệ thống (ADMIN) có toàn quyền
-        if (userRepository.hasActiveAdminRole(userId)) {
-            return true;
-        }
-
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
@@ -61,6 +42,39 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
 
         List<String> requiredAnyOf = resolveRequiredPermissions(uri, isWriteMethod);
         if (requiredAnyOf == null || requiredAnyOf.isEmpty()) {
+            return true;
+        }
+
+        // Tuyến đường yêu cầu quyền hạn -> Bắt buộc phải đăng nhập
+        HttpSession session = request.getSession(false);
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User sessionUser)) {
+            String accept = request.getHeader("Accept");
+            boolean isApi = uri.startsWith("/api/")
+                    || uri.contains("/api/")
+                    || "XMLHttpRequest".equals(request.getHeader("X-Requested-With"))
+                    || (accept != null && accept.contains("application/json"));
+            if (isApi) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"message\":\"Vui lòng đăng nhập để tiếp tục.\",\"error\":\"UNAUTHORIZED\"}");
+            } else {
+                response.sendRedirect((contextPath != null ? contextPath : "") + "/login");
+            }
+            return false;
+        }
+
+        Long userId = sessionUser.getUserId();
+        if (userId == null || userId <= 0) {
+            response.sendRedirect((contextPath != null ? contextPath : "") + "/login");
+            return false;
+        }
+
+        // Luôn đồng bộ danh sách mã quyền hiệu lực mới nhất từ DB vào session ở mỗi request
+        List<String> activePermissionCodes = userRepository.findActivePermissionCodesByUserId(userId);
+        session.setAttribute("permissionCodes", activePermissionCodes);
+
+        // Quản trị viên hệ thống (ADMIN) có toàn quyền
+        if (userRepository.hasActiveAdminRole(userId)) {
             return true;
         }
 
@@ -215,6 +229,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
         if (uri.startsWith("/admin/attendance") || uri.startsWith("/api/attendance")) {
             return List.of("HR_BRANCH_ATTENDANCE");
+        }
+        if (uri.startsWith("/admin/leave-requests") || uri.startsWith("/api/admin/leave-requests")) {
+            return List.of("SCHEDULE_MANAGE", "STAFF_MANAGE");
         }
         if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
             return List.of("SCHEDULE_MANAGE");

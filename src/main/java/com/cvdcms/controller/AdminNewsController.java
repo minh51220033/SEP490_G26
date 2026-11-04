@@ -8,8 +8,10 @@ import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.CommentRepository;
 import com.cvdcms.repository.NewsArticleRepository;
+import com.cvdcms.service.SystemAuditLogService;
 import com.cvdcms.service.impl.HtmlSanitizerService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
@@ -48,10 +50,7 @@ public class AdminNewsController {
     private final HtmlSanitizerService htmlSanitizerService;
     private final CommentRepository commentRepository;
     private final BranchRepository branchRepository;
-
-
-
-
+    private final SystemAuditLogService auditLogService;
 
     private boolean isAdmin(HttpSession session) {
         User user = getLoggedInUser(session);
@@ -80,7 +79,7 @@ public class AdminNewsController {
             return "error/403";
         }
 
-        if (size != 10 && size != 20 && size != 50) size = 10;
+        if (size != 10 && size != 25 && size != 50 && size != 100) size = 10;
         if (page < 0) page = 0;
 
         Set<String> allowedSorts = Set.of("createdAt", "updatedAt", "publishedAt", "title");
@@ -96,15 +95,27 @@ public class AdminNewsController {
                 pageable
         );
 
+        long totalItems = newsPage.getTotalElements();
+        int currentPage = newsPage.getNumber();
+        int pageSize = newsPage.getSize();
+        int totalPages = newsPage.getTotalPages();
+        long fromItem = totalItems == 0 ? 0 : ((long) currentPage * pageSize) + 1;
+        long toItem = Math.min(((long) (currentPage + 1) * pageSize), totalItems);
+
         model.addAttribute("newsPage", newsPage);
+        model.addAttribute("newsList", newsPage.getContent());
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("keyword", keyword);
         model.addAttribute("status", status);
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
-        model.addAttribute("size", size);
         model.addAttribute("branchId", branchId);
 
-// Danh sách chi nhánh cho bộ lọc.
         model.addAttribute(
                 "branches",
                 branchRepository.findAllByOrderByBranchNameAsc()
@@ -147,6 +158,7 @@ public class AdminNewsController {
     public String createNews(
             @Valid @ModelAttribute("newsCreateDTO") NewsCreateDTO dto,
             BindingResult bindingResult,
+            HttpServletRequest request,
             HttpSession session,
             Model model) {
 
@@ -157,7 +169,6 @@ public class AdminNewsController {
             return "error/403";
         }
 
-        // Nếu dữ liệu không hợp lệ, phải nạp lại danh sách chi nhánh.
         if (bindingResult.hasErrors()) {
             model.addAttribute(
                     "branches",
@@ -166,7 +177,6 @@ public class AdminNewsController {
             return "admin/news/create";
         }
 
-        // Kiểm tra chi nhánh được chọn có tồn tại và đang hoạt động không.
         Branch branch = branchRepository.findById(dto.getBranchId())
                 .filter(b -> Boolean.TRUE.equals(b.getIsActive()))
                 .orElse(null);
@@ -184,7 +194,6 @@ public class AdminNewsController {
             );
             return "admin/news/create";
         }
-
 
         User admin = getLoggedInUser(session);
 
@@ -210,6 +219,18 @@ public class AdminNewsController {
         }
 
         newsRepository.save(news);
+
+        // Ghi nhận Audit Log (FT31)
+        auditLogService.logAction(
+                admin,
+                branch,
+                "CREATE_NEWS",
+                "news_articles",
+                news.getNewsId(),
+                request.getRemoteAddr(),
+                null,
+                Map.of("title", news.getTitle(), "status", news.getStatus(), "branch", branch.getBranchName())
+        );
 
         session.setAttribute("newsSuccess", "Tạo bài viết thành công.");
         return "redirect:/admin/news";
@@ -254,6 +275,7 @@ public class AdminNewsController {
             @PathVariable Long id,
             @Valid @ModelAttribute("newsUpdateDTO") NewsUpdateDTO dto,
             BindingResult bindingResult,
+            HttpServletRequest request,
             HttpSession session,
             Model model) {
 
@@ -270,7 +292,6 @@ public class AdminNewsController {
             return "redirect:/admin/news";
         }
 
-        // Nạp lại danh sách chi nhánh khi phải hiển thị lại form.
         if (bindingResult.hasErrors()) {
             model.addAttribute(
                     "branches",
@@ -279,7 +300,6 @@ public class AdminNewsController {
             return "admin/news/edit";
         }
 
-        // Xác thực chi nhánh được chọn.
         if (dto.getBranchId() == null) {
             bindingResult.rejectValue(
                     "branchId",
@@ -310,7 +330,6 @@ public class AdminNewsController {
             return "admin/news/edit";
         }
 
-        // Kiểm tra trạng thái hợp lệ.
         Set<String> allowedStatuses =
                 Set.of("DRAFT", "PUBLISHED", "ARCHIVED");
 
@@ -329,9 +348,11 @@ public class AdminNewsController {
             return "admin/news/edit";
         }
 
+        String oldTitle = news.getTitle();
+        String oldStatus = news.getStatus();
+
         news.setTitle(dto.getTitle().trim());
 
-        // Giữ slug hiện tại của bài đã xuất bản để tránh hỏng liên kết cũ.
         if (!"PUBLISHED".equals(news.getStatus())) {
             news.setSlug(generateUniqueSlug(
                     dto.getTitle(),
@@ -346,20 +367,28 @@ public class AdminNewsController {
                 htmlSanitizerService.sanitize(dto.getContent())
         );
         news.setThumbnail(dto.getThumbnail());
-
-        // Lưu chi nhánh mới được chọn.
         news.setBranch(branch);
 
-        // Chỉ gán thời gian xuất bản khi bài được xuất bản lần đầu
-        // hoặc được xuất bản trở lại nhưng chưa có publishedAt.
         if ("PUBLISHED".equals(newStatus)
                 && news.getPublishedAt() == null) {
             news.setPublishedAt(LocalDateTime.now());
         }
 
         news.setStatus(newStatus);
-
         newsRepository.save(news);
+
+        // Ghi nhận Audit Log (FT31)
+        User admin = getLoggedInUser(session);
+        auditLogService.logAction(
+                admin,
+                branch,
+                "UPDATE_NEWS",
+                "news_articles",
+                news.getNewsId(),
+                request.getRemoteAddr(),
+                Map.of("title", oldTitle, "status", oldStatus),
+                Map.of("title", news.getTitle(), "status", newStatus, "branch", branch.getBranchName())
+        );
 
         session.setAttribute(
                 "newsSuccess",
@@ -385,12 +414,8 @@ public class AdminNewsController {
             ).body(error);
         }
 
-        // Giữ phần xử lý upload hiện tại bên dưới.
-
-
         Map<String, Object> response = new HashMap<>();
         try {
-            // Lấy file từ 'file' hoặc 'upload' (đáp ứng cả CKEditor và Custom JS)
             MultipartFile multipartFile = (file != null && !file.isEmpty()) ? file : upload;
 
             if (multipartFile == null || multipartFile.isEmpty()) {
@@ -409,7 +434,6 @@ public class AdminNewsController {
 
             String fileUrl = "/uploads/news/" + fileName;
 
-            // Trả về cả "url" (CKEditor) và "location" (TinyMCE)
             response.put("url", fileUrl);
             response.put("location", fileUrl);
 
@@ -424,7 +448,10 @@ public class AdminNewsController {
 
     @PostMapping("/{id}/delete")
     @Transactional
-    public String deleteNews(@PathVariable Long id, HttpSession session) {
+    public String deleteNews(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            HttpSession session) {
         if (!isAdmin(session)) {
             if (getLoggedInUser(session) == null) return "redirect:/login";
             return "error/403";
@@ -432,8 +459,22 @@ public class AdminNewsController {
 
         NewsArticle news = newsRepository.findById(id).orElse(null);
         if (news != null) {
+            User admin = getLoggedInUser(session);
             commentRepository.deleteByNews_NewsId(news.getNewsId());
             newsRepository.delete(news);
+
+            // Ghi nhận Audit Log (FT31)
+            auditLogService.logAction(
+                    admin,
+                    news.getBranch(),
+                    "DELETE_NEWS",
+                    "news_articles",
+                    news.getNewsId(),
+                    request.getRemoteAddr(),
+                    Map.of("title", news.getTitle(), "slug", news.getSlug()),
+                    null
+            );
+
             session.setAttribute("newsSuccess", "Xóa bài viết thành công.");
         }
         return "redirect:/admin/news";
@@ -480,9 +521,6 @@ public class AdminNewsController {
         }
     }
 
-    /**
-     * Lấy thông tin user đang đăng nhập từ HttpSession
-     */
     private User getLoggedInUser(HttpSession session) {
         return (User) session.getAttribute("loggedInUser");
     }
