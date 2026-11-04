@@ -33,22 +33,12 @@
       <div class="alert alert-danger" role="alert"
            th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-      <!-- TIÊU ĐỀ + NÚT THÊM -->
-      <section class="panel mb-4 medication-catalog-list">
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Danh mục thuốc nha khoa</h3>
-            <p class="panel__subtitle">Quản lý thuốc dùng trong kê đơn cho bệnh nhân.</p>
-          </div>
-          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
-          </button>
-        </div>
-
         <!-- TÌM KIẾM & BỘ LỌC -->
+      <section class="panel catalog-filter-panel p-0 mb-3">
+        <h2 class="visually-hidden">Danh mục thuốc nha khoa</h2>
         <form id="medicationFilterForm" th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
           <div class="row g-2 align-items-end">
-            <div class="col-md-5 col-lg-4">
+            <div class="col-12 col-md-4 col-lg-3">
               <label for="searchKeyword" class="form-label">Tìm kiếm</label>
               <input id="searchKeyword" type="text" name="q" class="form-control"
                      placeholder="Tên thuốc, mã thuốc, hoạt chất..."
@@ -75,12 +65,19 @@
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-search" aria-hidden="true"></i> Tìm
               </button>
-              <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Xoá bộ lọc</a>
+              <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
+            </div>
+            <div class="col-12 col-md-auto ms-md-auto text-end">
+               <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
+                 <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
+                </button>
             </div>
           </div>
         </form>
+      </section>
 
         <!-- BẢNG DANH SÁCH -->
+      <section class="panel p-0 mt-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="tblMedications" data-enhanced-table="admin-medications">
             <thead class="table-light">
@@ -99,7 +96,7 @@
                 <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
               </tr>
               <tr th:each="med : ${medications}">
-                <td data-column-key="code"><code th:text="${med.drugCode}">TH001</code></td>
+                <td data-column-key="code" class="fw-semibold" th:text="${med.drugCode}">TH001</td>
                 <td data-column-key="name" th:text="${med.drugName}">Amoxicillin</td>
                 <td data-column-key="activeIngredient" th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
                 <td data-column-key="unit" th:text="${med.unit}">Viên</td>

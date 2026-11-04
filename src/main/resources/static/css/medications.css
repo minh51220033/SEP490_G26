@@ -98,14 +98,16 @@ body.medication-catalog-page
     border-radius: 7px;
 }
 
-body.medication-catalog-page
-.medication-catalog-list > form .btn-primary {
+body.service-catalog-page .btn-primary,
+body.service-category-page .btn-primary,
+body.medication-catalog-page #medicationFilterForm .btn-primary {
     background: #294690;
     border-color: #294690;
 }
 
-body.medication-catalog-page
-.medication-catalog-list > form .btn-primary:hover {
+body.service-catalog-page .btn-primary:hover,
+body.service-category-page .btn-primary:hover,
+body.medication-catalog-page #medicationFilterForm .btn-primary:hover {
     background: #1d3677;
     border-color: #1d3677;
 }
