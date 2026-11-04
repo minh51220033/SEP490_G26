@@ -62,7 +62,8 @@ class DiagnosisOdontogramUnitTest {
                 patientProfileRepository,
                 invoiceRepository
         );
-        icd10RestController = new Icd10RestController(icd10DiseaseService, diagnosisService);
+        icd10RestController = new Icd10RestController(icd10DiseaseService, diagnosisService,
+                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class));
 
         mockVisit = new Visit();
         mockVisit.setVisitId(100L);
@@ -174,7 +175,7 @@ class DiagnosisOdontogramUnitTest {
             return ed;
         });
 
-        ResponseEntity<?> responseEntity = icd10RestController.addDiagnosis(request);
+        ResponseEntity<?> responseEntity = icd10RestController.addDiagnosis(request, null);
 
         assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
         assertTrue(responseEntity.getBody() instanceof DiagnosisResponseDTO);
@@ -193,7 +194,7 @@ class DiagnosisOdontogramUnitTest {
         when(diagnosisRepository.findById(5L)).thenReturn(Optional.of(existing));
         doNothing().when(diagnosisRepository).delete(existing);
 
-        ResponseEntity<?> res = icd10RestController.deleteDiagnosis(5L);
+        ResponseEntity<?> res = icd10RestController.deleteDiagnosis(5L, null);
         assertEquals(HttpStatus.OK, res.getStatusCode());
         verify(diagnosisRepository, times(1)).delete(existing);
     }

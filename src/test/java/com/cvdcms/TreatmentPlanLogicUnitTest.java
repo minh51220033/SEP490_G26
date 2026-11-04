@@ -44,6 +44,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private InvoiceItemRepository invoiceItemRepository;
 
     @Mock private DiagnosisService diagnosisService;
+    @Mock private ClinicalExaminationBootstrapService examinations;
     @Mock private Icd10DiseaseService icd10DiseaseService;
     @Mock private PerformedServiceService performedServiceService;
     @Mock private PrescriptionService prescriptionService;
@@ -85,6 +86,7 @@ class TreatmentPlanLogicUnitTest {
 
         diagnosisController = new DiagnosisController(
                 diagnosisService,
+                examinations,
                 icd10DiseaseService,
                 performedServiceService,
                 prescriptionService,
@@ -101,7 +103,8 @@ class TreatmentPlanLogicUnitTest {
                 staffBranchAssignmentRepository,
                 userRepository,
                 customerCareInteractionRepository,
-                customerCareTaskRepository
+                customerCareTaskRepository,
+                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class)
         );
 
         mockPatient = new PatientProfile();

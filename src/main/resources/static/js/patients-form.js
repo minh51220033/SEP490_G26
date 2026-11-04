@@ -39,16 +39,26 @@ document.addEventListener('DOMContentLoaded', () => {
     dobInput.addEventListener('change', updateGuardianRequirement);
     updateGuardianRequirement();
 
+    function getCsrfToken() {
+        const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+        if (match) return decodeURIComponent(match[1]);
+        const meta = document.querySelector('meta[name="_csrf"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
     function values(confirmDuplicate = false) {
         const data = new FormData(form);
         const read = name => String(data.get(name) || '').trim();
+        const branchVal = data.get('branchId');
         return {
             fullName: read('fullName'),
             dob: data.get('dob'),
             gender: data.get('gender'),
             phoneNumber: read('phoneNumber'),
             address: read('address'),
-            branchId: Number(data.get('branchId')),
+            allergyDetails: read('allergyDetails'),
+            underlyingDiseaseDetails: read('underlyingDiseaseDetails'),
+            branchId: branchVal ? Number(branchVal) : null,
             guardianName: read('guardianName'),
             guardianPhone: read('guardianPhone'),
             guardianRelationship: read('guardianRelationship'),
@@ -67,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayCandidates(candidates) {
         const current = values();
         document.getElementById('currentCandidate').textContent =
-            `${current.fullName} · ${current.dob} · ${current.phoneNumber}`;
+            `${current.fullName} · ${current.dob} · ${current.phoneNumber}${current.idCardNumber ? " · CCCD: " + current.idCardNumber : ""}`;
         rows.replaceChildren();
         for (const candidate of candidates) {
             const tr = document.createElement('tr');
@@ -94,16 +104,23 @@ document.addEventListener('DOMContentLoaded', () => {
         error.hidden = true;
         saveButton.disabled = true;
         try {
+            const csrfToken = getCsrfToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken;
+
             const response = await fetch(id ? `/patients/${encodeURIComponent(id)}` : '/patients', {
                 method: id ? 'PATCH' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 credentials: 'same-origin',
                 body: JSON.stringify(values(confirmDuplicate))
             });
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));
-                throw new Error(body.detail || body.message ||
-                    (response.status === 409 ? 'Có hồ sơ tương tự. Vui lòng kiểm tra lại.' : 'Không thể lưu hồ sơ. Vui lòng kiểm tra dữ liệu.'));
+                const msg = body.message || body.detail ||
+                    (response.status === 409 ? 'Có hồ sơ tương tự. Vui lòng đối chiếu và xác nhận lại.' :
+                     response.status === 400 ? 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại họ tên, ngày sinh, số điện thoại hoặc chi nhánh.' :
+                     'Không thể lưu hồ sơ. Vui lòng kiểm tra dữ liệu.');
+                throw new Error(msg);
             }
             const patient = await response.json();
             window.location.assign(`/reception/patients/${encodeURIComponent(patient.id)}?saved=1`);
@@ -124,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = values();
             const query = new URLSearchParams({ fullName: data.fullName, dob: data.dob,
                 phoneNumber: data.phoneNumber });
+            if (data.idCardNumber) query.set('idCardNumber', data.idCardNumber);
             if (id) query.set('excludeId', id);
             const response = await fetch(`/patients/duplicate-candidates?${query}`, { credentials: 'same-origin' });
             if (!response.ok) throw new Error('Không thể kiểm tra hồ sơ trùng. Vui lòng thử lại.');

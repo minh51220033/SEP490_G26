@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Chi tiết lịch hẹn')}"></head>
 <body class="app-body"><div class="app-shell"><aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
@@ -19,10 +19,22 @@
                     <i class="bi bi-exclamation-triangle-fill me-1"></i> Bác sĩ đích danh không còn khả dụng. Hãy sửa yêu cầu bác sĩ trước khi xác nhận.
                 </div>
                 <div id="appointmentFacts" class="patient-facts"></div>
-                <div id="appointmentActions" class="patient-form-actions mt-3 pt-3 border-top d-flex gap-2" hidden>
+                <div id="appointmentActions" class="patient-form-actions mt-3 pt-3 border-top d-flex flex-wrap gap-2 align-items-center" hidden>
+                    <a id="checkInDirectLink" class="btn btn-success fw-bold shadow-sm" href="#" hidden><i class="bi bi-person-check-fill me-1"></i> Tiếp đón &amp; Check-in ngay (FT07) &rarr;</a>
+                    <button id="confirmButton" class="btn btn-primary fw-semibold" type="button" hidden><i class="bi bi-check-circle me-1"></i> Xác nhận lịch</button>
                     <a id="editLink" class="btn btn-outline-primary" href="#"><i class="bi bi-pencil me-1"></i> Sửa / đổi lịch</a>
-                    <button id="confirmButton" class="btn btn-primary" type="button" hidden><i class="bi bi-check-circle me-1"></i> Xác nhận lịch</button>
                     <button id="cancelButton" class="btn btn-outline-danger" type="button"><i class="bi bi-x-circle me-1"></i> Hủy lịch</button>
+                </div>
+                <div id="checkedInActions" class="patient-form-actions mt-3 pt-3 border-top d-flex flex-wrap gap-2 align-items-center" hidden>
+                    <a id="dispatchLink" class="btn btn-primary" href="#"><i class="bi bi-diagram-3 me-1"></i> Vào Điều phối FT08</a>
+                    <form id="revertCheckInForm" method="post" action="#" class="d-inline mb-0">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="branchId" id="revertBranchId" value="">
+                        <input type="hidden" name="returnUrl" th:value="@{/reception/appointments/{id}(id=${appointmentId})}">
+                        <button type="submit" class="btn btn-outline-warning text-dark fw-semibold" id="revertCheckInBtn">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn tác tiếp đón (Bấm nhầm / BN chưa đến)
+                        </button>
+                    </form>
                 </div>
                 <div id="confirmBox" class="appointment-action-box" hidden>
                     <h6 class="fw-bold text-dark mb-1"><i class="bi bi-check2-circle text-primary me-1"></i> Xác nhận lịch hẹn</h6>

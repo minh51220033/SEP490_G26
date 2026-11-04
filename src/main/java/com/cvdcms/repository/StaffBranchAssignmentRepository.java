@@ -14,6 +14,9 @@ import java.util.Optional;
 @Repository
 public interface StaffBranchAssignmentRepository extends JpaRepository<StaffBranchAssignment, Long> {
 
+    @Query("select count(a) > 0 from StaffBranchAssignment a where a.staff.staffId = :staffId and a.branch.branchId = :branchId and a.status = com.cvdcms.entity.enums.AssignmentStatus.ACTIVE and a.startDate <= CURRENT_DATE and (a.endDate is null or a.endDate >= CURRENT_DATE) and a.role.roleName in ('BAC_SI', 'DOCTOR')")
+    boolean hasActiveDoctorAssignment(@Param("staffId") Long staffId, @Param("branchId") Long branchId);
+
     // ==========================================
     // CÁC HÀM TỪ NHÁNH CỦA FT21 - FT22
     // ==========================================

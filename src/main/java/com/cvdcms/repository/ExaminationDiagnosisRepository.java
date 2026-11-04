@@ -39,6 +39,8 @@ public interface ExaminationDiagnosisRepository extends JpaRepository<Examinatio
 
     List<ExaminationDiagnosis> findByClinicalExamination_ExamId(Long examId);
 
+    boolean existsByClinicalExamination_ExamId(Long examId);
+
     boolean existsByVisit_VisitIdAndDiagnosisType(Long visitId, DiagnosisType diagnosisType);
 
     long countByVisit_VisitId(Long visitId);

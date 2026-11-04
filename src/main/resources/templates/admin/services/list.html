@@ -470,6 +470,12 @@
               <input id="modalServiceWarranty" type="number" name="warrantyMonths" class="form-control"
                      th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (th&#225;ng)">
             </div>
+            <div class="col-md-6">
+              <label for="modalServiceDuration" class="form-label fw-semibold text-dark small">Thời lượng lịch hẹn (phút)</label>
+              <input id="modalServiceDuration" type="number" name="estimatedDurationMinutes" class="form-control"
+                     th:value="${serviceForm?.estimatedDurationMinutes != null ? serviceForm.estimatedDurationMinutes : 30}"
+                     min="15" max="240" step="15" required>
+            </div>
 
             <!-- Checkbox dieu kien su dung -->
             <div class="col-12">
