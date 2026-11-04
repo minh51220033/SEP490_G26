@@ -27,7 +27,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/admin/services")
@@ -41,7 +51,11 @@ public class AdminServiceCatalogController {
 
         private static final String CONFIG_VIEW = "admin/services/technical-config";
 
+        private static final String CATEGORY_LIST_VIEW = "admin/services/category-list";
+
         private static final String REDIRECT_LIST = "redirect:/admin/services";
+
+        private static final String REDIRECT_CATEGORIES = "redirect:/admin/services/categories";
 
         private static final String DELETE_TOKEN_SESSION_KEY = "serviceCatalogDeleteToken";
 
@@ -61,12 +75,18 @@ public class AdminServiceCatalogController {
 
         @GetMapping
         public String listServices(
+                        @RequestParam(value = "q", required = false) String keyword,
                         @RequestParam(required = false) Long categoryId,
+                        @RequestParam(required = false) ServiceStatus status,
+                        @RequestParam(value = "tab", required = false) String tab,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
+                if ("categories".equalsIgnoreCase(tab)) {
+                        return REDIRECT_LIST;
+                }
                 try {
-                        prepareListPage(model, session, categoryId);
+                        prepareListPage(model, session, keyword, categoryId, status);
                         return LIST_VIEW;
                 } catch (IllegalArgumentException ex) {
                         redirectAttributes.addFlashAttribute(
@@ -75,6 +95,20 @@ public class AdminServiceCatalogController {
 
                         return REDIRECT_LIST;
                 }
+        }
+
+        // =====================================================
+        // 1.1 DANH SÁCH NHÓM DỊCH VỤ (TAB 2)
+        // =====================================================
+
+        @GetMapping("/categories")
+        public String listCategories(
+                        @RequestParam(value = "q", required = false) String keyword,
+                        @RequestParam(value = "active", required = false) Boolean active,
+                        Model model,
+                        HttpSession session) {
+                prepareCategoryListPage(model, session, keyword, active);
+                return CATEGORY_LIST_VIEW;
         }
 
         // =====================================================
@@ -93,14 +127,25 @@ public class AdminServiceCatalogController {
         @PostMapping("/categories")
         public String createCategory(
                         @Valid @ModelAttribute("categoryForm") ServiceCategoryDTO dto,
-
                         BindingResult bindingResult,
+                        @RequestParam(value = "source", required = false) String source,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
                 if (bindingResult.hasErrors()) {
-                        prepareCategoryFormPage(model, session, null);
-                        return CATEGORY_FORM_VIEW;
+                        if ("standalone".equals(source)) {
+                                prepareCategoryFormPage(model, session, null);
+                                return CATEGORY_FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute(
+                                        "org.springframework.validation.BindingResult.categoryForm",
+                                        bindingResult);
+                        redirectAttributes.addFlashAttribute("categoryForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
+                                        bindingResult.getAllErrors().get(0).getDefaultMessage());
+                        redirectAttributes.addFlashAttribute("openCategoryModal", true);
+                        return REDIRECT_CATEGORIES;
                 }
 
                 try {
@@ -108,16 +153,23 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Thêm nhóm dịch vụ thành công.");
+                                        "Th\u00EAm nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 } catch (IllegalArgumentException ex) {
-                        bindingResult.reject(
-                                        "category.create.failed",
+                        if ("standalone".equals(source)) {
+                                bindingResult.reject(
+                                                "category.create.failed",
+                                                ex.getMessage());
+                                prepareCategoryFormPage(model, session, null);
+                                return CATEGORY_FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute("categoryForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
                                         ex.getMessage());
-
-                        prepareCategoryFormPage(model, session, null);
-                        return CATEGORY_FORM_VIEW;
+                        redirectAttributes.addFlashAttribute("openCategoryModal", true);
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -153,7 +205,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -179,7 +231,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
 
                 if (!bindingResult.hasErrors()) {
@@ -190,9 +242,9 @@ public class AdminServiceCatalogController {
 
                                 redirectAttributes.addFlashAttribute(
                                                 "successMessage",
-                                                "Cập nhật nhóm dịch vụ thành công.");
+                                                "C\u1EADp nh\u1EADt nh\u00F3m d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
-                                return REDIRECT_LIST;
+                                return REDIRECT_CATEGORIES;
                         } catch (IllegalArgumentException ex) {
                                 bindingResult.reject(
                                                 "category.update.failed",
@@ -219,14 +271,14 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Đã thay đổi trạng thái nhóm dịch vụ.");
+                                        "\u0110\u00E3 thay \u0111\u1ED5i tr\u1EA1ng th\u00E1i nh\u00F3m d\u1ECBch v\u1EE5.");
                 } catch (IllegalArgumentException ex) {
                         redirectAttributes.addFlashAttribute(
                                         "errorMessage",
                                         ex.getMessage());
                 }
 
-                return REDIRECT_LIST;
+                return REDIRECT_CATEGORIES;
         }
 
         @PostMapping("/categories/{categoryId}/delete")
@@ -245,7 +297,7 @@ public class AdminServiceCatalogController {
                         redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
                 }
 
-                return REDIRECT_LIST;
+                return REDIRECT_CATEGORIES;
         }
 
         // =====================================================
@@ -272,14 +324,25 @@ public class AdminServiceCatalogController {
         @PostMapping
         public String createService(
                         @Valid @ModelAttribute("serviceForm") ServiceCreateDTO dto,
-
                         BindingResult bindingResult,
+                        @RequestParam(value = "source", required = false) String source,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
                 if (bindingResult.hasErrors()) {
-                        prepareServiceFormPage(model, session, null);
-                        return FORM_VIEW;
+                        if ("standalone".equals(source)) {
+                                prepareServiceFormPage(model, session, null);
+                                return FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute(
+                                        "org.springframework.validation.BindingResult.serviceForm",
+                                        bindingResult);
+                        redirectAttributes.addFlashAttribute("serviceForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
+                                        bindingResult.getAllErrors().get(0).getDefaultMessage());
+                        redirectAttributes.addFlashAttribute("openServiceModal", true);
+                        return REDIRECT_LIST;
                 }
 
                 try {
@@ -287,17 +350,23 @@ public class AdminServiceCatalogController {
 
                         redirectAttributes.addFlashAttribute(
                                         "successMessage",
-                                        "Thêm dịch vụ thành công.");
+                                        "Th\u00EAm d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                         return REDIRECT_LIST;
                 } catch (IllegalArgumentException ex) {
-                        bindingResult.reject(
-                                        "service.create.failed",
+                        if ("standalone".equals(source)) {
+                                bindingResult.reject(
+                                                "service.create.failed",
+                                                ex.getMessage());
+                                prepareServiceFormPage(model, session, null);
+                                return FORM_VIEW;
+                        }
+                        redirectAttributes.addFlashAttribute("serviceForm", dto);
+                        redirectAttributes.addFlashAttribute(
+                                        "errorMessage",
                                         ex.getMessage());
-
-                        prepareServiceFormPage(model, session, null);
-
-                        return FORM_VIEW;
+                        redirectAttributes.addFlashAttribute("openServiceModal", true);
+                        return REDIRECT_LIST;
                 }
         }
 
@@ -370,7 +439,7 @@ public class AdminServiceCatalogController {
 
                                 redirectAttributes.addFlashAttribute(
                                                 "successMessage",
-                                                "Cập nhật dịch vụ thành công.");
+                                                "C\u1EADp nh\u1EADt d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
 
                                 return REDIRECT_LIST;
                         } catch (IllegalArgumentException ex) {
@@ -463,7 +532,7 @@ public class AdminServiceCatalogController {
                                         "errorMessage",
                                         ex.getMessage());
 
-                        return REDIRECT_LIST;
+                        return REDIRECT_CATEGORIES;
                 }
         }
 
@@ -523,13 +592,155 @@ public class AdminServiceCatalogController {
         }
 
         // =====================================================
+        // 12B. UPLOAD HÌNH ẢNH DỊCH VỤ & ẢNH TRONG MÔ TẢ CKEDITOR
+        // =====================================================
+
+        private static final long MAX_SERVICE_IMAGE_BYTES = 5L * 1024 * 1024; // 5MB
+        private static final Set<String> ALLOWED_IMAGE_MIMES = Set.of(
+                        "image/jpeg", "image/jpg", "image/png", "image/webp");
+        private static final Set<String> ALLOWED_IMAGE_EXTS = Set.of(
+                        "jpg", "jpeg", "png", "webp");
+
+        @PostMapping("/upload/image")
+        @ResponseBody
+        public ResponseEntity<Map<String, Object>> uploadServiceImage(
+                        @RequestParam(value = "file", required = false) MultipartFile file,
+                        @RequestParam(value = "upload", required = false) MultipartFile upload,
+                        HttpSession session) {
+                Map<String, Object> response = new HashMap<>();
+
+                Object sessionUser = session != null ? session.getAttribute("loggedInUser") : null;
+                if (!(sessionUser instanceof User user) || user.getUserId() == null) {
+                        response.put("error", Map.of("message", "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                boolean isAllowed = userRepository.hasActiveAdminRole(user.getUserId())
+                                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE");
+                if (!isAllowed) {
+                        response.put("error", Map.of("message", "Bạn không có quyền tải ảnh dịch vụ lên."));
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                }
+
+                MultipartFile multipartFile = (file != null && !file.isEmpty()) ? file : upload;
+                if (multipartFile == null || multipartFile.isEmpty()) {
+                        response.put("error", Map.of("message", "Vui lòng chọn tệp hình ảnh hợp lệ."));
+                        return ResponseEntity.badRequest().body(response);
+                }
+
+                if (multipartFile.getSize() > MAX_SERVICE_IMAGE_BYTES) {
+                        response.put("error", Map.of("message", "Dung lượng ảnh vượt quá giới hạn cho phép (tối đa 5MB)."));
+                        return ResponseEntity.badRequest().body(response);
+                }
+
+                String contentType = multipartFile.getContentType();
+                String normalizedMime = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
+                if (!ALLOWED_IMAGE_MIMES.contains(normalizedMime)) {
+                        response.put("error", Map.of("message", "Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh JPG, JPEG, PNG hoặc WEBP."));
+                        return ResponseEntity.badRequest().body(response);
+                }
+
+                String originalName = multipartFile.getOriginalFilename();
+                String ext = extractExtension(originalName);
+                if (!ALLOWED_IMAGE_EXTS.contains(ext) || !isMimeMatchingExt(normalizedMime, ext)) {
+                        response.put("error", Map.of("message", "Phần mở rộng tệp không hợp lệ hoặc không khớp định dạng ảnh (JPG, PNG, WEBP)."));
+                        return ResponseEntity.badRequest().body(response);
+                }
+
+                try {
+                        byte[] bytes = multipartFile.getBytes();
+                        if (!isValidImageSignature(bytes, ext)) {
+                                response.put("error", Map.of("message", "Nội dung tệp không phải là hình ảnh hợp lệ hoặc tệp bị hỏng."));
+                                return ResponseEntity.badRequest().body(response);
+                        }
+
+                        String safeFileName = UUID.randomUUID().toString() + "." + ext;
+                        Path uploadDir = Paths.get("uploads", "services").toAbsolutePath().normalize();
+                        Files.createDirectories(uploadDir);
+
+                        Path targetPath = uploadDir.resolve(safeFileName).normalize();
+                        if (!targetPath.startsWith(uploadDir)) {
+                                response.put("error", Map.of("message", "Đường dẫn lưu tệp không hợp lệ."));
+                                return ResponseEntity.badRequest().body(response);
+                        }
+
+                        Files.write(targetPath, bytes);
+
+                        String fileUrl = "/uploads/services/" + safeFileName;
+                        response.put("url", fileUrl);
+                        response.put("location", fileUrl);
+                        return ResponseEntity.ok(response);
+                } catch (Exception ex) {
+                        response.put("error", Map.of("message", "Không thể lưu hình ảnh dịch vụ. Vui lòng thử lại."));
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+                }
+        }
+
+        private String extractExtension(String filename) {
+                if (filename == null) {
+                        return "";
+                }
+                int dotIdx = filename.lastIndexOf('.');
+                if (dotIdx < 0 || dotIdx == filename.length() - 1) {
+                        return "";
+                }
+                return filename.substring(dotIdx + 1).trim().toLowerCase(Locale.ROOT);
+        }
+
+        private boolean isMimeMatchingExt(String mime, String ext) {
+                if ("image/jpeg".equals(mime) || "image/jpg".equals(mime)) {
+                        return "jpg".equals(ext) || "jpeg".equals(ext);
+                }
+                if ("image/png".equals(mime)) {
+                        return "png".equals(ext);
+                }
+                if ("image/webp".equals(mime)) {
+                        return "webp".equals(ext);
+                }
+                return false;
+        }
+
+        private boolean isValidImageSignature(byte[] bytes, String ext) {
+                if (bytes == null || bytes.length < 12) {
+                        return false;
+                }
+                if ("jpg".equals(ext) || "jpeg".equals(ext)) {
+                        return (bytes[0] & 0xFF) == 0xFF
+                                        && (bytes[1] & 0xFF) == 0xD8
+                                        && (bytes[2] & 0xFF) == 0xFF;
+                }
+                if ("png".equals(ext)) {
+                        return bytes.length >= 24
+                                        && (bytes[0] & 0xFF) == 0x89
+                                        && bytes[1] == 0x50
+                                        && bytes[2] == 0x4E
+                                        && bytes[3] == 0x47
+                                        && bytes[4] == 0x0D
+                                        && bytes[5] == 0x0A
+                                        && bytes[6] == 0x1A
+                                        && bytes[7] == 0x0A
+                                        && bytes[12] == 'I'
+                                        && bytes[13] == 'H'
+                                        && bytes[14] == 'D'
+                                        && bytes[15] == 'R';
+                }
+                if ("webp".equals(ext)) {
+                        return bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                                        && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
+                }
+                return false;
+        }
+
+        // =====================================================
         // 13. CHUẨN BỊ DỮ LIỆU CHO GIAO DIỆN
         // =====================================================
 
         private void prepareListPage(
                         Model model,
                         HttpSession session,
-                        Long categoryId) {
+                        String keyword,
+                        Long categoryId,
+                        ServiceStatus status) {
                 addLayoutAttributes(session, model);
 
                 // Token riêng cho thao tác xóa, kể cả khi dự án đang tắt Spring CSRF.
@@ -544,20 +755,49 @@ public class AdminServiceCatalogController {
                                 "categories",
                                 serviceCatalogService.getAllCategories());
 
-                List<Service> services;
-
-                if (categoryId == null) {
-                        services = serviceCatalogService.getAllServices();
-                } else {
-                        services = serviceCatalogService.getServicesByCategory(
-                                        categoryId);
-                }
+                List<Service> services = serviceCatalogService.searchServices(keyword, categoryId, status);
 
                 model.addAttribute("services", services);
+                model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
                 model.addAttribute("selectedCategoryId", categoryId);
+                model.addAttribute("selectedStatus", status);
                 model.addAttribute("serviceTypes", ServiceType.values());
                 model.addAttribute("serviceStatuses", ServiceStatus.values());
 
+                if (!model.containsAttribute("serviceForm")) {
+                        model.addAttribute("serviceForm", new ServiceCreateDTO());
+                }
+                if (!model.containsAttribute("categoryForm")) {
+                        model.addAttribute("categoryForm", new ServiceCategoryDTO());
+                }
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục dịch vụ");
+        }
+
+        private void prepareCategoryListPage(
+                        Model model,
+                        HttpSession session,
+                        String keyword,
+                        Boolean active) {
+                addLayoutAttributes(session, model);
+
+                synchronized (session) {
+                        if (!(session.getAttribute(DELETE_TOKEN_SESSION_KEY) instanceof String)) {
+                                session.setAttribute(DELETE_TOKEN_SESSION_KEY, UUID.randomUUID().toString());
+                        }
+                        model.addAttribute("deleteToken", session.getAttribute(DELETE_TOKEN_SESSION_KEY));
+                }
+
+                model.addAttribute("categories", serviceCatalogService.searchCategories(keyword, active));
+                model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
+                model.addAttribute("selectedActive", active);
+                if (!model.containsAttribute("categoryForm")) {
+                        model.addAttribute("categoryForm", new ServiceCategoryDTO());
+                }
+                model.addAttribute("activeTab", "categories");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Quản lý danh mục - Nhóm dịch vụ");
         }
 
         private void prepareCategoryFormPage(
@@ -567,6 +807,9 @@ public class AdminServiceCatalogController {
                 addLayoutAttributes(session, model);
                 model.addAttribute("categoryEditingId", categoryEditingId);
                 model.addAttribute("serviceTypes", ServiceType.values());
+                model.addAttribute("activeTab", "categories");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", categoryEditingId == null ? "Thêm nhóm dịch vụ - Quản lý danh mục" : "Chỉnh sửa nhóm dịch vụ - Quản lý danh mục");
         }
 
         private void prepareServiceFormPage(
@@ -607,6 +850,9 @@ public class AdminServiceCatalogController {
                 model.addAttribute(
                                 "serviceCode",
                                 editing ? currentService.getServiceCode() : null);
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", editing ? "Chỉnh sửa dịch vụ - Quản lý danh mục" : "Thêm dịch vụ - Quản lý danh mục");
         }
 
         private void prepareTechnicalConfigPage(
@@ -616,6 +862,9 @@ public class AdminServiceCatalogController {
                 addLayoutAttributes(session, model);
 
                 model.addAttribute("service", service);
+                model.addAttribute("activeTab", "services");
+                model.addAttribute("activeMenu", "catalogs");
+                model.addAttribute("pageTitle", "Cấu hình kỹ thuật dịch vụ - Quản lý danh mục");
         }
 
         private void requireDeletePermission(HttpSession session, String deleteToken) {

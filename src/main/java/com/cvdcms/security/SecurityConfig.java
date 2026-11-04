@@ -7,38 +7,94 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final SessionAuthenticationFilter sessionAuthFilter;
+
+    public SecurityConfig(SessionAuthenticationFilter sessionAuthFilter) {
+        this.sessionAuthFilter = sessionAuthFilter;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Tắt CSRF để tương thích với các biểu mẫu hiện tại
-                .csrf(csrf -> csrf.disable())
+                // Tích hợp Filter đồng bộ session User vào SecurityContext
+                .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // Bật CSRF protection với CookieCsrfTokenRepository chuẩn (HttpOnly = false để client JS đọc được token nếu cần)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        // Bỏ qua CSRF cho màn hình TV công cộng, WebSocket và các API nội bộ
+                        .ignoringRequestMatchers(
+                                "/reception/queue/tv/**",
+                                "/api/**",
+                                "/reception/appointments/api/**",
+                                "/patients/**",
+                                "/portal/patients/**",
+                                "/ws/**",
+                                "/chat-websocket/**"
+                        )
+                )
+                // Keep the browser's unload permission policy used by the shared layout.
+                .headers(headers -> headers
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("unload=*")
+                        )
+                )
+
+                // Deny-by-default: Mặc định mọi request đều phải xác thực, chỉ public đúng các route công khai
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép truy cập tự do tài nguyên tĩnh và các trang xác thực
+                        // 1. Tài nguyên tĩnh
                         .requestMatchers(
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
                                 "/uploads/**",
-                                "/favicon.ico",
+                                "/favicon.ico"
+                        ).permitAll()
+
+                        // 2. Các trang xác thực & tài khoản công khai
+                        .requestMatchers(
                                 "/",
                                 "/login",
                                 "/register",
                                 "/forgot-password",
                                 "/verify-otp",
-                                "/reset-password"
+                                "/reset-password",
+                                "/logout"
                         ).permitAll()
-                        // Cho phép quản lý chi nhánh
-                        .requestMatchers("/admin/branches/**").permitAll()
-                        // Các request còn lại cho phép đi qua để khớp với cơ chế quản lý session hiện tại
-                        .anyRequest().permitAll()
+
+                        // 3. Màn hình TV gọi số công cộng tại sảnh tiếp đón (FT10)
+                        .requestMatchers(
+                                "/tv-display",
+                                "/public/queue/tv",
+                                "/reception/queue/tv/**"
+                        ).permitAll()
+
+                        // 4. Các trang thông báo lỗi thân thiện và WebSocket
+                        .requestMatchers(
+                                "/friendly-error/**",
+                                "/error",
+                                "/access-denied",
+                                "/ws/**",
+                                "/chat-websocket/**"
+                        ).permitAll()
+
+                        // 5. Toàn bộ các route còn lại yêu cầu người dùng phải đăng nhập hợp lệ
+                        .anyRequest().authenticated()
+                )
+
+                // Nếu chưa đăng nhập, chuyển hướng người dùng về trang đăng nhập /login
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
                 );
 
-        // Đã sửa thành http.build() chuẩn của Spring Security
         return http.build();
     }
 

@@ -75,6 +75,15 @@ public class QueueTicket {
     @Column(name = "called_at")
     private LocalDateTime calledAt;
 
+    @Column(name = "paused_at")
+    private LocalDateTime pausedAt;
+
+    @Column(name = "resumed_at")
+    private LocalDateTime resumedAt;
+
+    @Column(name = "pause_reason", length = 255)
+    private String pauseReason;
+
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 }

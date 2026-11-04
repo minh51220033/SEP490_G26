@@ -1,0 +1,89 @@
+/* ============================================================================
+ * CV-DCMS CATALOG MANAGEMENT (QUẢN LÝ DANH MỤC TẬP TRUNG)
+ * Phạm vi: Các trang quản lý danh mục (Dịch vụ, Nhóm dịch vụ, Thuốc, ICD-10)
+ * ============================================================================ */
+
+/* Khung chứa thanh tab ngang phía trên */
+.catalog-tabs-container {
+    width: 100%;
+    margin-bottom: 1.25rem;
+}
+
+/* Danh sách tab ngang */
+.catalog-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* Từng ô tab riêng biệt có viền, khoảng cách rõ ràng */
+.catalog-tab-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #475569;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.catalog-tab-item:hover {
+    color: #0284c7;
+    border-color: #38bdf8;
+    background-color: #f0f9ff;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.1);
+}
+
+/* Tab đang được chọn (Nổi bật màu xanh chuẩn giao diện hệ thống) */
+.catalog-tab-item.is-active {
+    color: #0284c7;
+    background-color: #e0f2fe;
+    border-color: #0284c7;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.2);
+}
+
+.catalog-tab-item.is-active i {
+    color: #0284c7;
+}
+
+.catalog-tab-item i {
+    font-size: 15px;
+    color: #64748b;
+    transition: color 0.15s ease-in-out;
+}
+
+.catalog-tab-item:hover i {
+    color: #0284c7;
+}
+
+/* Tối ưu hiển thị trên màn hình nhỏ / điện thoại */
+@media (max-width: 768px) {
+    .catalog-tabs-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+    }
+
+    .catalog-tab-item {
+        flex: 0 0 auto;
+        padding: 7px 14px;
+        font-size: 13px;
+    }
+}
+

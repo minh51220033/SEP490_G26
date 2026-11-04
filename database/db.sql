@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     voucher_id BIGINT NULL,
     total_service_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     total_medicine_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    surcharge_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    surcharge_description VARCHAR(500) NULL,
     discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     promotion_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     point_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
@@ -48,18 +50,28 @@ CREATE TABLE IF NOT EXISTS invoices (
 -- 2. CHI TIẾT DỊCH VỤ TRÊN HÓA ĐƠN (INVOICE_ITEMS - FT21)
 CREATE TABLE IF NOT EXISTS invoice_items (
                                              item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                             item_type VARCHAR(20) NOT NULL DEFAULT 'SERVICE',
                                              invoice_id BIGINT NOT NULL,
                                              performed_id BIGINT NULL,
-                                             service_id BIGINT NOT NULL,
+                                             prescription_item_id BIGINT NULL,
+                                             service_id BIGINT NULL,
+                                             medication_id BIGINT NULL,
+                                             batch_id BIGINT NULL,
                                              item_name VARCHAR(200) NOT NULL,
     quantity DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    unit VARCHAR(30) NULL,
+    usage_instruction VARCHAR(255) NULL,
     unit_price DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     final_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     INDEX idx_item_invoice (invoice_id),
     INDEX idx_item_performed (performed_id),
+    INDEX idx_item_type (item_type),
     CONSTRAINT fk_item_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
     CONSTRAINT fk_item_performed FOREIGN KEY (performed_id) REFERENCES performed_services(performed_id),
-    CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services(service_id)
+    CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services(service_id),
+    CONSTRAINT fk_item_prescription_item FOREIGN KEY (prescription_item_id) REFERENCES prescription_items(item_id) ON DELETE SET NULL,
+    CONSTRAINT fk_item_medication FOREIGN KEY (medication_id) REFERENCES medications(medication_id) ON DELETE SET NULL,
+    CONSTRAINT fk_item_batch FOREIGN KEY (batch_id) REFERENCES material_batches(batch_id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. NHẬT KÝ ĐIỀU CHỈNH & HỦY HÓA ĐƠN (INVOICE_AUDIT_LOGS - SCR-21.4)
@@ -83,16 +95,42 @@ CREATE TABLE IF NOT EXISTS invoice_audit_logs (
     CONSTRAINT fk_inv_audit_staff FOREIGN KEY (performed_by) REFERENCES staff_profiles(staff_id) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. GIAO DỊCH THANH TOÁN & TẠM ỨNG (PAYMENTS - FT22)
+-- 4. TÀI KHOẢN NGÂN HÀNG NHẬN TIỀN THEO CHI NHÁNH (BRANCH_BANK_ACCOUNTS - FT22)
+CREATE TABLE IF NOT EXISTS branch_bank_accounts (
+    account_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id BIGINT NOT NULL,
+    bank_bin VARCHAR(20) NOT NULL,
+    bank_name VARCHAR(100) NOT NULL,
+    bank_short_name VARCHAR(50) NULL,
+    account_number VARCHAR(50) NOT NULL,
+    account_holder_name VARCHAR(150) NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    default_branch_id BIGINT GENERATED ALWAYS AS (CASE WHEN is_default = 1 THEN branch_id ELSE NULL END) STORED,
+    INDEX idx_bba_branch_active (branch_id, is_active),
+    UNIQUE KEY uk_bba_default_branch (default_branch_id),
+    CONSTRAINT fk_bba_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. GIAO DỊCH THANH TOÁN & TẠM ỨNG (PAYMENTS - FT22)
 CREATE TABLE IF NOT EXISTS payments (
-                                        payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                        payment_code VARCHAR(50) NOT NULL UNIQUE,
+    payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    payment_code VARCHAR(50) NOT NULL UNIQUE,
     invoice_id BIGINT NULL,
     profile_id BIGINT NOT NULL,
     branch_id BIGINT NOT NULL,
     cashier_id BIGINT NOT NULL,
     payment_type VARCHAR(20) NOT NULL DEFAULT 'PAYMENT',
     payment_method VARCHAR(30) NOT NULL DEFAULT 'CASH',
+    bank_account_id BIGINT NULL,
+    bank_bin VARCHAR(20) NULL,
+    bank_name VARCHAR(100) NULL,
+    bank_account_number VARCHAR(50) NULL,
+    bank_account_holder VARCHAR(150) NULL,
+    expected_transfer_content VARCHAR(100) NULL,
     amount DECIMAL(15,2) NOT NULL,
     transaction_ref VARCHAR(100) NULL,
     idempotency_key VARCHAR(100) NULL UNIQUE,
@@ -102,11 +140,13 @@ CREATE TABLE IF NOT EXISTS payments (
     INDEX idx_pmt_profile (profile_id),
     INDEX idx_pmt_date (paid_at),
     INDEX idx_pmt_transaction_ref (transaction_ref),
+    INDEX idx_pmt_bank_account (bank_account_id),
     UNIQUE INDEX uk_pmt_idempotency (idempotency_key),
     CONSTRAINT fk_pmt_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id),
     CONSTRAINT fk_pmt_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id),
     CONSTRAINT fk_pmt_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id),
-    CONSTRAINT fk_pmt_cashier FOREIGN KEY (cashier_id) REFERENCES staff_profiles(staff_id)
+    CONSTRAINT fk_pmt_cashier FOREIGN KEY (cashier_id) REFERENCES staff_profiles(staff_id),
+    CONSTRAINT fk_pmt_bank_account FOREIGN KEY (bank_account_id) REFERENCES branch_bank_accounts(account_id) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. HOÀN TIỀN DỊCH VỤ (REFUNDS - FT22)

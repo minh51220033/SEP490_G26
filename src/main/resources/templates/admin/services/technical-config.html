@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head('Cấu hình kỹ thuật dịch vụ')}"></head>
+<head th:replace="~{fragments/head :: head('Quản lý danh mục - Cấu hình kỹ thuật')}"></head>
 
 <body class="app-body">
 
 <div class="app-shell">
 
-  <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+  <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
   <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
   <div class="app-main">
 
-    <header th:replace="~{fragments/header :: appTopbar('Cấu hình kỹ thuật dịch vụ')}"></header>
+    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content"
           th:with="paraclinical=${service.serviceType.name() == 'LAB'
                   or service.serviceType.name() == 'XRAY'}">
+      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+      <!-- BREADCRUMB -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Danh mục dịch vụ</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Cấu hình kỹ thuật</li>
+        </ol>
+      </nav>
+
+      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
 
       <div class="d-flex flex-wrap justify-content-between
                         align-items-center gap-3 mb-4">
@@ -246,7 +260,7 @@
 
     </main>
 
-    <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
 
   </div>
 </div>

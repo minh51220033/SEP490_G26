@@ -51,6 +51,14 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final BranchInventoryRepository branchInventoryRepository;
     private final MedicationRepository medicationRepository;
     private final StockIssueRepository stockIssueRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private MembershipTierRepository membershipTierRepository;
+
+    public void setMembershipTierRepository(MembershipTierRepository membershipTierRepository) {
+        this.membershipTierRepository = membershipTierRepository;
+    }
 
     public InvoiceServiceImpl(
             InvoiceRepository invoiceRepository,
@@ -210,6 +218,10 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 if (ps.getStatus() != PerformedServiceStatus.COMPLETED) {
                     throw new IllegalStateException("Dịch vụ thực hiện ID " + ps.getPerformedId() + " chưa được bác sĩ hoàn thành (trạng thái: " + ps.getStatus() + ").");
+                }
+
+                if (ps.getPlanItem() != null && ps.getPlanItem().getStatus() != TreatmentPlanItemStatus.COMPLETED) {
+                    throw new IllegalStateException("Dịch vụ thực hiện ID " + ps.getPerformedId() + " thuộc bước kế hoạch điều trị chưa hoàn thành.");
                 }
 
                 if (itemDto.getServiceId() != null && !itemDto.getServiceId().equals(ps.getService().getServiceId())) {
@@ -477,6 +489,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setPromotion(benefit.promotion);
         invoice.setVoucher(benefit.voucher);
         invoice.setPointDiscount(benefit.pointDiscount);
+        invoice.setPointsRedeemed(benefit.pointsToRedeem);
 
         // Tổng phải thanh toán = (Tiền dịch vụ - Các khoản giảm) + Tiền thuốc
         BigDecimal netPayable = benefit.netAmount.add(totalMedicineAmount).setScale(2, RoundingMode.HALF_UP);
@@ -485,6 +498,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setRemainingDebt(netPayable);
         invoice.setPaymentStatus(netPayable.compareTo(BigDecimal.ZERO) == 0 ? InvoicePaymentStatus.PAID : InvoicePaymentStatus.UNPAID);
         invoice.setItems(invoiceItems);
+        if (paymentAllocationService != null) {
+            paymentAllocationService.initializeItemizedDebtOnInvoiceCreation(invoice);
+        }
 
         Invoice saved = invoiceRepository.save(invoice);
 
@@ -599,7 +615,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                     serviceIds.add(it.getServiceId());
                 } else if (it.getPerformedId() != null) {
                     performedServiceRepository.findById(it.getPerformedId())
-                            .ifPresent(ps -> serviceIds.add(ps.getService().getServiceId()));
+                            .ifPresent(ps -> { if (ps.getService() != null) serviceIds.add(ps.getService().getServiceId()); });
                 }
             }
         }
@@ -623,6 +639,26 @@ public class InvoiceServiceImpl implements InvoiceService {
         preview.setPromotionDiscountAmount(benefit.promoOrVoucherDiscount);
         preview.setPromoName(benefit.promoOrVoucherName);
         preview.setPointDiscountAmount(benefit.pointDiscount);
+        preview.setPointsRedeemed(benefit.pointsToRedeem);
+        BigDecimal pointVal = resolvePointValue(patientOpt.orElse(null));
+        preview.setPointValue(pointVal);
+
+        BigDecimal payableBeforePoints = totalService
+                .subtract(benefit.memberDiscount)
+                .subtract(benefit.promoOrVoucherDiscount)
+                .subtract(benefit.manualDiscount)
+                .max(BigDecimal.ZERO);
+        int maxPointsForInvoice = pointVal.compareTo(BigDecimal.ZERO) > 0
+                ? payableBeforePoints.divide(pointVal, 0, RoundingMode.CEILING).intValue()
+                : 0;
+        int walletPoints = 0;
+        if (patientOpt.isPresent()) {
+            walletPoints = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patientOpt.get().getProfileId())
+                    .map(PatientLoyaltyWallet::getCurrentPoints)
+                    .orElse(0);
+        }
+        preview.setMaxPointsAllowed(Math.min(walletPoints, maxPointsForInvoice));
+
         preview.setTotalDiscountAmount(benefit.totalDiscount);
         preview.setTotalAmount(benefit.netAmount.add(totalMedicine).setScale(2, RoundingMode.HALF_UP));
         preview.setPointsEarnable(benefit.netAmount.divide(new BigDecimal("10000"), 0, RoundingMode.DOWN).intValue());
@@ -818,8 +854,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .mapToInt(PointTransaction::getPoints)
                         .findFirst()
                         .orElseGet(() -> {
-                            BigDecimal pointVal = (invoice.getPatientProfile().getMembershipTier() != null && invoice.getPatientProfile().getMembershipTier().getPointValue() != null)
-                                    ? invoice.getPatientProfile().getMembershipTier().getPointValue() : new BigDecimal("100");
+                            if (invoice.getPointsRedeemed() != null && invoice.getPointsRedeemed() > 0) {
+                                return invoice.getPointsRedeemed();
+                            }
+                            BigDecimal pointVal = resolvePointValue(invoice.getPatientProfile());
                             return invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
                         });
                 Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByProfileIdForUpdate(invoice.getPatientProfile().getProfileId());
@@ -913,13 +951,18 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public List<PerformedService> getUnbilledPerformedServices(Long visitId) {
+        if (visitId == null) {
+            return Collections.emptyList();
+        }
         List<PerformedService> allServices = performedServiceRepository.findByVisitIdWithDetails(visitId);
         List<Long> billedIds = invoiceItemRepository.findBilledPerformedServiceIdsByVisitId(visitId);
-        if (billedIds.isEmpty()) {
+        if (false) {
             return allServices;
         }
         return allServices.stream()
-                .filter(ps -> !billedIds.contains(ps.getPerformedId()))
+                .filter(ps -> ps.getStatus() == PerformedServiceStatus.COMPLETED)
+                .filter(ps -> ps.getPlanItem() == null || ps.getPlanItem().getStatus() == TreatmentPlanItemStatus.COMPLETED)
+                .filter(ps -> billedIds.isEmpty() || !billedIds.contains(ps.getPerformedId()))
                 .toList();
     }
 
@@ -952,13 +995,18 @@ public class InvoiceServiceImpl implements InvoiceService {
                     invoice.getInvoiceId(), PointTransactionType.REDEEM);
             if (!alreadyRedeemed && invoice.getPatientProfile() != null) {
                 PatientProfile patient = invoice.getPatientProfile();
-                BigDecimal pointVal = (patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null)
-                        ? patient.getMembershipTier().getPointValue() : new BigDecimal("10.00");
-                int pointsToDeduct = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
+                int pointsToDeduct;
+                if (invoice.getPointsRedeemed() != null && invoice.getPointsRedeemed() > 0) {
+                    pointsToDeduct = invoice.getPointsRedeemed();
+                } else {
+                    BigDecimal pointVal = resolvePointValue(patient);
+                    pointsToDeduct = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
+                }
                 if (pointsToDeduct > 0) {
                     Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId());
                     walletOpt.ifPresent(wallet -> {
-                        int newBalance = Math.max(0, wallet.getCurrentPoints() - pointsToDeduct);
+                        int current = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
+                        int newBalance = Math.max(0, current - pointsToDeduct);
                         wallet.setCurrentPoints(newBalance);
                         patientLoyaltyWalletRepository.save(wallet);
 
@@ -987,6 +1035,22 @@ public class InvoiceServiceImpl implements InvoiceService {
         BigDecimal manualDiscount = BigDecimal.ZERO;
         BigDecimal totalDiscount = BigDecimal.ZERO;
         BigDecimal netAmount = BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolvePointValue(PatientProfile patient) {
+        if (patient != null && patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null
+                && patient.getMembershipTier().getPointValue().compareTo(BigDecimal.ZERO) > 0) {
+            return patient.getMembershipTier().getPointValue();
+        }
+        if (membershipTierRepository != null) {
+            List<MembershipTier> activeTiers = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc();
+            for (MembershipTier t : activeTiers) {
+                if (t.getPointValue() != null && t.getPointValue().compareTo(BigDecimal.ZERO) > 0) {
+                    return t.getPointValue();
+                }
+            }
+        }
+        return new BigDecimal("10.00");
     }
 
     private BenefitCalculationResult calculateAndValidateBenefits(
@@ -1066,20 +1130,28 @@ public class InvoiceServiceImpl implements InvoiceService {
         result.manualDiscount = manual.min(remaining);
         remaining = remaining.subtract(result.manualDiscount);
 
-        // 5. Điểm tích lũy Loyalty
+        // 5. Điểm tích lũy Loyalty: Tuyệt đối không giảm vượt quá số tiền còn lại của hóa đơn
         if (pointsToRedeem != null && pointsToRedeem > 0 && patient != null) {
             Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
             if (walletOpt.isPresent()) {
                 PatientLoyaltyWallet wallet = walletOpt.get();
-                int maxPoints = wallet.getCurrentPoints();
-                int redeem = Math.min(pointsToRedeem, maxPoints);
-                if (redeem > 0) {
-                    BigDecimal pointVal = (patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null)
-                            ? patient.getMembershipTier().getPointValue() : new BigDecimal("10.00");
-                    BigDecimal ptDiscount = pointVal.multiply(new BigDecimal(redeem)).setScale(2, RoundingMode.HALF_UP);
-                    result.pointDiscount = ptDiscount.min(remaining).setScale(2, RoundingMode.HALF_UP);
-                    result.pointsToRedeem = result.pointDiscount.divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
-                    remaining = remaining.subtract(result.pointDiscount);
+                int maxPointsInWallet = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
+                int redeemRequested = Math.min(pointsToRedeem, maxPointsInWallet);
+                if (redeemRequested > 0 && remaining.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal pointVal = resolvePointValue(patient);
+                    if (pointVal.compareTo(BigDecimal.ZERO) > 0) {
+                        // Số điểm tối đa cần thiết để thanh toán hết số tiền còn lại của hóa đơn
+                        int maxPointsNeeded = remaining.divide(pointVal, 0, RoundingMode.CEILING).intValue();
+                        int actualPointsToUse = Math.min(redeemRequested, maxPointsNeeded);
+
+                        BigDecimal ptDiscount = pointVal.multiply(new BigDecimal(actualPointsToUse)).setScale(2, RoundingMode.HALF_UP);
+                        // Giảm trừ từ điểm không bao giờ vượt quá số tiền còn lại
+                        result.pointDiscount = ptDiscount.min(remaining).setScale(2, RoundingMode.HALF_UP);
+                        // Cập nhật lại số điểm chính xác cần dùng (không trừ lố điểm)
+                        int exactPointsNeeded = result.pointDiscount.divide(pointVal, 0, RoundingMode.CEILING).intValue();
+                        result.pointsToRedeem = Math.min(actualPointsToUse, exactPointsNeeded);
+                        remaining = remaining.subtract(result.pointDiscount);
+                    }
                 }
             }
         }
@@ -1392,6 +1464,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setRemainingDebt(totalMedicineAmount);
         invoice.setPaymentStatus(totalMedicineAmount.compareTo(BigDecimal.ZERO) == 0 ? InvoicePaymentStatus.PAID : InvoicePaymentStatus.UNPAID);
         invoice.setItems(invoiceItems);
+        if (paymentAllocationService != null) {
+            paymentAllocationService.initializeItemizedDebtOnInvoiceCreation(invoice);
+        }
 
         Invoice saved = invoiceRepository.save(invoice);
 

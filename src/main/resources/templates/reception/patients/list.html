@@ -27,7 +27,23 @@
                         <tbody>
                         <tr th:each="patient : ${patients.content}">
                             <td class="fw-semibold" th:text="${patient.code}">BN001</td>
-                            <td th:text="${patient.fullName}">Họ tên</td>
+                            <td>
+                                <strong th:text="${patient.fullName}">Họ tên</strong>
+                                <div class="d-flex align-items-center gap-1 mt-0.5 flex-wrap">
+                                    <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}"
+                                          class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                                          style="font-size: 0.72rem; cursor: help;"
+                                          th:title="${'Cảnh báo dị ứng: ' + patient.allergyDetails}">
+                                        <i class="bi bi-shield-fill-exclamation me-0.5"></i><span th:text="${'Dị ứng: ' + (#strings.length(patient.allergyDetails) > 25 ? #strings.substring(patient.allergyDetails, 0, 22) + '…' : patient.allergyDetails)}">Dị ứng</span>
+                                    </span>
+                                    <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}"
+                                          class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"
+                                          style="font-size: 0.72rem; cursor: help;"
+                                          th:title="${'Bệnh nền cần lưu ý: ' + patient.underlyingDiseaseDetails}">
+                                        <i class="bi bi-heart-pulse-fill me-0.5"></i><span th:text="${'Bệnh nền: ' + (#strings.length(patient.underlyingDiseaseDetails) > 25 ? #strings.substring(patient.underlyingDiseaseDetails, 0, 22) + '…' : patient.underlyingDiseaseDetails)}">Bệnh nền</span>
+                                    </span>
+                                </div>
+                            </td>
                             <td th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : '—'}">—</td>
                             <td th:text="${patient.phoneNumber}">—</td>
                             <td th:text="${patient.branchName}">—</td>

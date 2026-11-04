@@ -167,8 +167,8 @@ public class PermissionDataInitializer implements ApplicationRunner {
                             "Quản lý hóa đơn viện phí, thu tiền, công nợ bệnh nhân và xử lý hoàn tiền tại chi nhánh.");
                     modified |= syncSystemRolePermissions(role, permissionMap, Set.of(
                             "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT",
-                            "FINANCE_DEBT", "REFUND_MANAGE", "SCHEDULE_MY",
-                            "HR_MY_ATTENDANCE"
+                            "FINANCE_DEBT", "REFUND_MANAGE", "FINANCE_REPORTS", "SCHEDULE_MY",
+                            "HR_MY_ATTENDANCE", "HR_LEAVE_REQUESTS"
                     ));
                 }
                 case "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO" -> {

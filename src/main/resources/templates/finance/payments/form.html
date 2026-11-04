@@ -86,11 +86,19 @@
                                 </select>
                             </div>
 
+                            <!-- Hidden inputs cho tài khoản ngân hàng & nội dung tham chiếu -->
+                            <input type="hidden" id="bankAccountId" name="bankAccountId">
+                            <input type="hidden" id="expectedTransferContent" name="expectedTransferContent">
+                            <input type="hidden" id="formIdempotencyKey" name="idempotencyKey">
+
+                            <!-- Khu vực hiển thị VietQR động -->
+                            <div id="vietqrPaymentContainer" class="mb-3" style="display: none;"></div>
+
                             <!-- Mã giao dịch -->
                             <div class="mb-3">
-                                <label for="transactionRef" class="form-label">Mã giao dịch / Mã chuẩn chi ngân hàng (nếu có)</label>
+                                <label for="transactionRef" class="form-label">Mã giao dịch ngân hàng thực tế (do kế toán đối soát)</label>
                                 <input type="text" id="transactionRef" name="transactionRef" class="form-control"
-                                       placeholder="VD: FT241024889988, VCB-9922...">
+                                       placeholder="VD: FT241024889988, VCB-9922 (Nhập sau khi khách đã chuyển khoản)...">
                             </div>
 
                             <!-- Ghi chú -->
@@ -114,5 +122,34 @@
         </main>
     </div>
 </div>
+<script th:src="@{/js/vietqr-payment.js}"></script>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const idempotencyKeyEl = document.getElementById('formIdempotencyKey');
+        if (idempotencyKeyEl && !idempotencyKeyEl.value) {
+            idempotencyKeyEl.value = 'PAY-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        new VietQrPaymentBox({
+            container: 'vietqrPaymentContainer',
+            methodSelect: 'paymentMethod',
+            amountInput: 'amount',
+            branchId: () => {
+                const el = document.querySelector('input[name="branchId"]');
+                return el ? el.value : null;
+            },
+            invoiceId: () => {
+                const el = document.querySelector('input[name="invoiceId"]');
+                return el ? el.value : null;
+            },
+            profileId: () => {
+                const el = document.querySelector('input[name="profileId"]');
+                return el ? el.value : null;
+            },
+            bankAccountIdInput: 'bankAccountId',
+            expectedContentInput: 'expectedTransferContent'
+        });
+    });
+</script>
 </body>
 </html>

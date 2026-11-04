@@ -98,12 +98,14 @@ body.service-catalog-page .form-select {
     border-radius: 7px;
 }
 
-body.service-catalog-page .btn-primary {
+body.service-catalog-page .btn-primary,
+body.service-category-page .btn-primary {
     background: #294690;
     border-color: #294690;
 }
 
-body.service-catalog-page .btn-primary:hover {
+body.service-catalog-page .btn-primary:hover,
+body.service-category-page .btn-primary:hover {
     background: #1d3677;
     border-color: #1d3677;
 }
@@ -317,4 +319,139 @@ main.app-content > section.panel:first-of-type > .table-responsive {
     background: #fff;
     box-shadow: 0 4px 14px rgba(28, 44, 85, .06);
     overflow-x: auto;
+}
+
+/* =========================================================
+   HÌNH ẢNH DỊCH VỤ & CKEDITOR 5 TRONG QUẢN LÝ DỊCH VỤ
+   ========================================================= */
+
+.svc-list-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dce4f1;
+    background: #f8fafd;
+}
+
+.svc-list-thumb__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.svc-list-thumb__placeholder {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: #f4f6fb;
+}
+
+.svc-image-box {
+    border: 1.5px dashed #cbd5e5;
+    border-radius: 10px;
+    padding: 16px;
+    background: #fafbff;
+    transition: border-color 0.2s, background-color 0.2s;
+    cursor: pointer;
+}
+
+.svc-image-box:hover,
+.svc-image-box.is-dragover {
+    border-color: #294690;
+    background: #f4f7ff;
+}
+
+.svc-image-placeholder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.svc-image-placeholder__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #294690;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.svc-image-placeholder__info {
+    flex: 1 1 220px;
+}
+
+.svc-image-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    cursor: default;
+}
+
+.svc-image-preview__thumb {
+    width: 120px;
+    height: 90px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dce4f1;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.svc-image-preview__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.svc-image-preview__meta {
+    flex: 1 1 240px;
+}
+
+.svc-editor-wrap .ck-editor__editable_inline {
+    min-height: 220px;
+    padding: 0 16px !important;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.svc-editor-wrap .ck.ck-editor__main > .ck-editor__editable {
+    border-radius: 0 0 8px 8px !important;
+}
+
+.svc-editor-wrap .ck.ck-toolbar {
+    border-radius: 8px 8px 0 0 !important;
+    background: #f8fafd;
+}
+
+.svc-editor-wrap .ck-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+
+.svc-public-desc p {
+    margin-bottom: 0.25rem;
+}
+
+.svc-public-desc p:last-child,
+.svc-public-desc ul:last-child,
+.svc-public-desc ol:last-child {
+    margin-bottom: 0;
+}
+
+.svc-public-desc img {
+    max-width: 180px;
+    height: auto;
+    border-radius: 6px;
 }
