@@ -229,6 +229,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/attendance") || uri.startsWith("/api/attendance")) {
             return List.of("HR_BRANCH_ATTENDANCE");
         }
+        if (uri.startsWith("/admin/leave-requests") || uri.startsWith("/api/admin/leave-requests")) {
+            return List.of("SCHEDULE_MANAGE", "STAFF_MANAGE");
+        }
         if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
             return List.of("SCHEDULE_MANAGE");
         }
