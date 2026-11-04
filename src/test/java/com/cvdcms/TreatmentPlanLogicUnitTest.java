@@ -103,7 +103,8 @@ class TreatmentPlanLogicUnitTest {
                 staffBranchAssignmentRepository,
                 userRepository,
                 customerCareInteractionRepository,
-                customerCareTaskRepository
+                customerCareTaskRepository,
+                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class)
         );
 
         mockPatient = new PatientProfile();
