@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Quản lý Hoàn tiền dịch vụ (SCR-22.3) - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Thu ngân - Quản lý Hoàn tiền')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/cashier.css}">
+    <script th:src="@{/js/cashier-tabs.js}" defer></script>
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -10,9 +12,9 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý Hoàn tiền Dịch vụ')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
 
-        <main class="app-content finance-page">
+        <main class="app-content finance-page cashier-page">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -22,19 +24,24 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Page Header -->
-            <div class="fin-header">
-                <div>
-                    <h1> Quản lý Hoàn tiền Viện phí (SCR-22.3)</h1>
-                    <p>Lập phiếu hoàn trả tiền cho bệnh nhân khi hủy dịch vụ, hoàn số tiền nộp thừa hoặc đổi lộ trình điều trị.</p>
+            <!-- Thanh tabs ngang khu vực Thu ngân -->
+            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('refunds')}"></div>
+
+            <!-- Vùng nội dung tab Hoàn tiền -->
+            <div id="cashierTabContent" class="cashier-tab-content">
+                <!-- Page Sub Header -->
+                <div class="cashier-subhead">
+                    <div>
+                        <h2 class="cashier-subhead-title"><i class="bi bi-arrow-counterclockwise text-danger"></i> Quản lý hoàn tiền viện phí</h2>
+                        <p class="cashier-subhead-desc">Lập phiếu hoàn trả tiền cho bệnh nhân khi hủy dịch vụ, hoàn số tiền nộp thừa hoặc đổi lộ trình điều trị</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="fin-btn fin-btn-danger fin-btn-sm" onclick="toggleRefundModal()">
+                            <i class="bi bi-plus-lg"></i> Lập phiếu hoàn tiền
+                        </button>
+                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline fin-btn-sm"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="fin-btn fin-btn-danger" onclick="toggleRefundModal()">
-                        <i class="bi bi-plus-lg"></i> Lập phiếu hoàn tiền
-                    </button>
-                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
-                </div>
-            </div>
 
             <!-- Filter Bar -->
             <div class="fin-card">
@@ -167,9 +174,6 @@
                     </nav>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
 
 <!-- Modal Lập Phiếu Hoàn Tiền (SCR-24.3) -->
 <div id="refundModal" class="fin-modal-backdrop" style="display: none;">
@@ -306,5 +310,9 @@
         document.getElementById('refundPatientList').style.display = 'none';
     }
 </script>
+            </div> <!-- end #cashierTabContent -->
+        </main>
+    </div>
+</div>
 </body>
 </html>

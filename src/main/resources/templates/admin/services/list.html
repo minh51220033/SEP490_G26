@@ -43,24 +43,7 @@
       </div>
 
       <!-- DANH SÁCH DỊCH VỤ -->
-      <section class="panel mb-4">
-
-
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Danh sách dịch vụ</h3>
-            <p class="panel__subtitle">
-              Quản lý dịch vụ nha khoa, xét nghiệm và X-Ray.
-            </p>
-          </div>
-
-          <a th:href="@{/admin/services/create}"
-             class="btn btn-primary">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm dịch vụ
-          </a>
-        </div>
-
+      <section class="panel catalog-filter-panel p-0 mb-3">
         <!-- LỌC THEO NHÓM -->
         <form th:action="@{/admin/services}"
               method="get"
@@ -141,7 +124,9 @@
 
           </div>
         </form>
+      </section>
 
+      <section class="panel p-0 mt-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
 
@@ -153,7 +138,7 @@
               <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
               <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
               <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">Thao tác</th>
             </tr>
             </thead>
 
@@ -231,47 +216,54 @@
                                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
 
-                  <a th:href="@{/admin/services/{id}/edit(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
+                  <!-- Sửa: icon bút chì, viền xanh -->
+                  <a th:href="@{/admin/services/{id}/edit(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-primary"
+                     title="Sửa"
+                     aria-label="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
 
-                  <a th:href="@{/admin/services/{id}/config(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-secondary">
-                    Cấu hình
+                  <!-- Cấu hình: icon bánh răng, viền xám -->
+                  <a th:href="@{/admin/services/{id}/config(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-secondary"
+                     title="Cấu hình"
+                     aria-label="Cấu hình">
+                    <i class="bi bi-gear" aria-hidden="true"></i>
                   </a>
 
-                  <form th:action="@{/admin/services/{id}/toggle(
-                                                id=${service.serviceId})}"
+                  <!-- Ngừng / Kích hoạt: icon tạm dừng (viền vàng) / icon phát (viền xanh lá) -->
+                  <form th:action="@{/admin/services/{id}/toggle(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái dịch vụ này?');">
-
                     <button type="submit"
                             class="btn btn-sm"
-                            th:classappend="${service.status.name() == 'ACTIVE'}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${service.status.name() == 'ACTIVE'}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
+                            th:classappend="${service.status.name() == 'ACTIVE'} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'"
+                            th:aria-label="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${service.status.name() == 'ACTIVE'} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
                     </button>
                   </form>
 
+                  <!-- Xóa: icon thùng rác, viền đỏ -->
                   <form th:action="@{/admin/services/{id}/delete(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         data-delete-catalog-form
                         data-delete-kind="dịch vụ"
                         th:attr="data-delete-name=${service.serviceName}">
                     <input type="hidden" name="deleteToken" th:value="${deleteToken}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                      Xóa
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Xóa"
+                            aria-label="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                   </form>
 
@@ -339,115 +331,7 @@
         </div>
 
       </section>
-
-      <!-- NHÓM DANH MỤC DỊCH VỤ -->
-      <section class="panel" id="service-categories">
-
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Nhóm danh mục dịch vụ</h3>
-            <p class="panel__subtitle">
-              Các nhóm đang sử dụng và đã ngừng sử dụng.
-            </p>
-          </div>
-
-          <button type="button"
-             class="btn btn-primary"
-             data-bs-toggle="modal"
-             data-bs-target="#createCategoryModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm nhóm
-          </button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
-
-            <thead class="table-light">
-            <tr>
-              <th scope="col" data-column-key="cat_code" data-column-required="true" data-column-pinned="true">Mã nhóm</th>
-              <th scope="col" data-column-key="cat_name" data-column-pinned="true">Tên nhóm</th>
-              <th scope="col" data-column-key="cat_type">Loại</th>
-              <th scope="col" data-column-key="display_order">Thứ tự</th>
-              <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
-            </tr>
-            </thead>
-
-            <tbody>
-
-            <tr th:each="category : ${categories}">
-              <td data-column-key="cat_code" class="fw-semibold"
-                  th:text="${category.categoryCode}">
-              </td>
-
-              <td data-column-key="cat_name" th:text="${category.categoryName}"></td>
-
-              <td data-column-key="cat_type" th:switch="${category.categoryType.name()}">
-                <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
-                <span th:case="'LAB'">Xét nghiệm</span>
-                <span th:case="'XRAY'">X-Ray</span>
-                <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
-                <span th:case="*" th:text="${category.categoryType}"></span>
-              </td>
-
-              <td data-column-key="display_order" th:text="${category.displayOrder}"></td>
-
-              <td data-column-key="status">
-                                <span th:if="${category.isActive == true}"
-                                      class="badge bg-success">
-                                    Đang sử dụng
-                                </span>
-
-                <span th:unless="${category.isActive == true}"
-                      class="badge bg-secondary">
-                                    Ngừng sử dụng
-                                </span>
-              </td>
-
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
-
-                  <a th:href="@{/admin/services/categories/{id}/edit(
-                                            id=${category.categoryId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
-                  </a>
-
-                  <form th:action="@{/admin/services/categories/{id}/toggle(
-                                                id=${category.categoryId})}"
-                        method="post"
-                        class="m-0"
-                        onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái nhóm dịch vụ này?');">
-
-                    <button type="submit"
-                            class="btn btn-sm"
-                            th:classappend="${category.isActive == true}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${category.isActive == true}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-
-            </tbody>
-          </table>
-        </div>
-        <div class="p-3 border-top text-muted small d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <span>Tổng số dịch vụ: <strong th:text="${#lists.size(services)}">0</strong></span>
-        </div>
-      </section>
-
-      
-
     </main>
-
-
-
   </div>
 </div>
 

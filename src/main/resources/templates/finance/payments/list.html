@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Lịch sử các đợt thanh toán (SCR-22.3) - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Thu ngân - Lịch sử thanh toán')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/cashier.css}">
+    <script th:src="@{/js/cashier-tabs.js}" defer></script>
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -10,9 +12,9 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Thu tiền & Phiếu thu Viện phí')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
 
-        <main class="app-content finance-page">
+        <main class="app-content finance-page cashier-page">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -22,24 +24,29 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Page Header -->
-            <div class="fin-header">
-                <div>
-                    <h1>Lịch sử các đợt Thanh toán (SCR-22.3)</h1>
-                    <p>Theo dõi luồng tiền thu viện phí, nộp tiền tạm ứng, phương thức thanh toán tiền mặt, chuyển khoản QR và POS.</p>
+            <!-- Thanh tabs ngang khu vực Thu ngân -->
+            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('payments')}"></div>
+
+            <!-- Vùng nội dung tab Lịch sử thanh toán -->
+            <div id="cashierTabContent" class="cashier-tab-content">
+                <!-- Page Sub Header -->
+                <div class="cashier-subhead">
+                    <div>
+                        <h2 class="cashier-subhead-title"><i class="bi bi-credit-card-2-front text-primary"></i> Lịch sử các đợt thanh toán</h2>
+                        <p class="cashier-subhead-desc">Theo dõi luồng tiền thu viện phí, nộp tiền tạm ứng, phương thức thanh toán tiền mặt, chuyển khoản QR và POS</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/payments/create}" class="fin-btn fin-btn-success fin-btn-sm">
+                            <i class="bi bi-plus-lg"></i> Thu tiền viện phí
+                        </a>
+                        <a th:href="@{/payments/deposits}" class="fin-btn fin-btn-outline fin-btn-sm">
+                            <i class="bi bi-wallet2"></i> Tạm ứng / Đặt cọc
+                        </a>
+                        <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline fin-btn-sm">
+                            <i class="bi bi-cash-stack"></i> Quản lý công nợ
+                        </a>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a th:href="@{/payments/create}" class="fin-btn fin-btn-success">
-                        <i class="bi bi-plus-lg"></i> Thu tiền viện phí
-                    </a>
-                    <a th:href="@{/payments/deposits}" class="fin-btn fin-btn-outline">
-                        <i class="bi bi-wallet2"></i> Tạm ứng / Đặt cọc
-                    </a>
-                    <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline">
-                        <i class="bi bi-cash-stack"></i> Quản lý công nợ
-                    </a>
-                </div>
-            </div>
 
             <!-- Filter Bar -->
             <div class="fin-card">
@@ -190,9 +197,6 @@
                     </nav>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
 <script>
 (function() {
     const kwInput = document.getElementById('keyword');
@@ -205,5 +209,9 @@
     });
 })();
 </script>
+            </div> <!-- end #cashierTabContent -->
+        </main>
+    </div>
+</div>
 </body>
 </html>
