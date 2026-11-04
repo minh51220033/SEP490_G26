@@ -71,7 +71,7 @@
         <!-- QUẢN TRỊ HỆ THỐNG -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-             th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,bans,branches,schedules,attendance,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,admin-comments,bans,branches,schedules,attendance,admin-leaves,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgAdmin">
                 <i class="bi bi-shield-lock" aria-hidden="true"></i>
                 <span class="side-group__label">Quản trị hệ thống</span>
@@ -112,6 +112,11 @@
                        th:classappend="${activeMenu == 'admin-news'} ? 'is-active' : ''">
                         <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i><span class="side-link__label">Quản lý tin tức</span>
                     </a>
+                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
+                       th:href="@{/admin/comments}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'admin-comments'} ? 'is-active' : ''">
+                        <i class="bi bi-chat-square-dots" aria-hidden="true"></i><span class="side-link__label">Kiểm duyệt bình luận</span>
+                    </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SYSTEM_BANS'))}"
                        th:href="@{/admin/bans}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'bans'} ? 'is-active' : ''">
@@ -136,6 +141,15 @@
                        title="Bảng theo dõi chấm công toàn chi nhánh (SCR-33.4)">
                         <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công chi nhánh</span>
                     </a>
+                    <!-- Duyệt nghỉ phép & Khóa lịch (FT42 / SCR-42.3) -->
+                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE')))}"
+                       th:href="@{/admin/leave-requests}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'admin-leaves'} ? 'is-active' : ''"
+                       title="Quản lý & Duyệt yêu cầu nghỉ phép, khóa lịch bác sĩ (FT42 / SCR-42.3)">
+                        <i class="bi bi-calendar-check-fill text-warning" aria-hidden="true"></i><span class="side-link__label">Duyệt nghỉ phép</span>
+                        <span class="side-badge side-badge--warning">FT42</span>
+                    </a>
+
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))}"
                        th:href="@{/admin/membership-tiers}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'membership-tiers'} ? 'is-active' : ''"
@@ -386,6 +400,9 @@
                        title="Check-in / Check-out &amp; lịch sử chấm công (SCR-33.2, SCR-33.4)">
                         <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công</span>
                     </a>
+                    <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
+                    <a th:if="${(roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'ROLE_BAC_SI'))) and (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
+=======
                     <!-- Đơn xin nghỉ / Khóa lịch -->
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
                        th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
