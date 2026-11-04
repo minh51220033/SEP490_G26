@@ -524,7 +524,7 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
                     <div class="dv-breadcrumb mb-1">
-                        <a href="/doctor/dashboard"><i class="bi bi-house-door me-1"></i>Trang chủ</a>
+                        <a href="/doctor/daily-visits"><i class="bi bi-house-door me-1"></i>Trang chủ</a>
                         <span class="mx-1">/</span>
                         <span>Bác sĩ &amp; Điều phối lâm sàng</span>
                         <span class="mx-1">/</span>
@@ -566,7 +566,7 @@
                 <div class="col-xl-3 col-sm-6">
                     <div class="dv-kpi-card active-kpi" id="kpiCardAll" style="--kpi-accent: #0284c7;" onclick="setStatusFilter('ALL')">
                         <div>
-                            <div class="dv-kpi-num" id="statTotal" th:text="${workflows.size()}">0</div>
+                            <div class="dv-kpi-num" id="statTotal" th:text="${workflows != null ? workflows.size() : 0}">0</div>
                             <div class="dv-kpi-label">Tổng số quy trình</div>
                             <div class="dv-kpi-sub">Chuẩn chuyên môn BYT</div>
                         </div>
@@ -666,7 +666,7 @@
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="fw-bold text-dark" style="font-size: 15px;">
-                            Hiển thị <span class="text-primary fw-bolder" id="visibleCountText" th:text="${workflows.size()}">0</span> quy trình kỹ thuật
+                            Hiển thị <span class="text-primary fw-bolder" id="visibleCountText" th:text="${workflows != null ? workflows.size() : 0}">0</span> quy trình kỹ thuật
                             <span class="text-muted mx-1">•</span>
                             <span class="text-secondary fw-semibold">Chuẩn hóa theo Quyết định 3207/QĐ-BYT</span>
                         </div>
