@@ -59,6 +59,7 @@ public class DispatchController {
             return "redirect:/login";
         }
         model.addAttribute("ticket", service.ticket(session, id));
+        model.addAttribute("printView", service.printView(session, id));
         model.addAttribute("autoPrint", autoPrint);
         return "reception/exam-ticket";
     }

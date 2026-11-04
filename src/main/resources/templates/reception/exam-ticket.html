@@ -239,7 +239,7 @@
             <div class="clinic-brand-sub">HỆ THỐNG NHA KHOA KỸ THUẬT CAO · CV-DCMS</div>
             <div class="clinic-branch-info">
                 <i class="bi bi-geo-alt-fill me-1"></i><span th:text="${ticket.branch.branchName}">Cơ sở Quận 1</span>
-                <span th:if="${ticket.branch.phoneNumber != null}"> &middot; Hotline: <span th:text="${ticket.branch.phoneNumber}">0900.000.001</span></span>
+                <span th:if="${printView.branchPhone != null}"> &middot; Hotline: <span th:text="${printView.branchPhone}">0900.000.001</span></span>
             </div>
         </div>
 
@@ -277,11 +277,11 @@
                             <span class="text-primary fw-bold" th:text="${ticket.visit.primaryDoctor != null ? ticket.visit.primaryDoctor.fullName : 'Theo phân bổ điều phối'}">BS. CK1 Lê Hoàng Nam</span>
                         </td>
                     </tr>
-                    <tr th:if="${ticket.visit.room != null or ticket.visit.dentalChair != null}">
+                    <tr th:if="${printView.roomName != null or printView.chairName != null}">
                         <td class="info-label"><i class="bi bi-door-open me-1"></i>Vị trí khám:</td>
                         <td class="info-value">
-                            <span th:if="${ticket.visit.room != null}" th:text="${ticket.visit.room.roomName}">Phòng 101</span>
-                            <span th:if="${ticket.visit.dentalChair != null}" th:text="| &middot; ${ticket.visit.dentalChair.chairName}|">Ghế 01</span>
+                            <span th:if="${printView.roomName != null}" th:text="${printView.roomName}">Phòng 101</span>
+                            <span th:if="${printView.chairName != null}" th:text="${printView.chairName}">Ghế 01</span>
                         </td>
                     </tr>
                     <tr>
