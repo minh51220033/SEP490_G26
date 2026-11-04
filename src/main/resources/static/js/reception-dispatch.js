@@ -82,6 +82,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (assignModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
         assignModal = bootstrap.Modal.getOrCreateInstance(assignModalEl);
     }
+    function closeFallbackModal() {
+        if (assignModal || !assignModalEl) return;
+        assignModalEl.classList.remove('show');
+        assignModalEl.style.display = 'none';
+        assignModalEl.setAttribute('aria-hidden', 'true');
+    }
+    if (assignModalEl) {
+        assignModalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button =>
+            button.addEventListener('click', closeFallbackModal));
+        assignModalEl.addEventListener('click', event => {
+            if (event.target === assignModalEl) closeFallbackModal();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeFallbackModal();
+        });
+    }
 
     const modalForm = document.getElementById('modalAssignForm');
     const modalPatientName = document.getElementById('modalPatientName');
@@ -184,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (assignModalEl) {
                 assignModalEl.classList.add('show');
                 assignModalEl.style.display = 'block';
+                assignModalEl.setAttribute('aria-hidden', 'false');
             }
         });
     });

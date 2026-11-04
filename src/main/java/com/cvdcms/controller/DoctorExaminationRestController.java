@@ -19,12 +19,14 @@ import java.util.Map;
 public class DoctorExaminationRestController {
 
     private final DiagnosisService diagnosisService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     /**
      * Kiểm tra điều kiện hoàn tất ca khám lâm sàng (ICD-10, dịch vụ COMPLETED, etc.)
      */
     @GetMapping("/{visitId}/completion-check")
-    public ResponseEntity<ClinicalCompletionCheckDTO> checkCompletionReadiness(@PathVariable Long visitId) {
+    public ResponseEntity<ClinicalCompletionCheckDTO> checkCompletionReadiness(@PathVariable Long visitId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         ClinicalCompletionCheckDTO checkDTO = diagnosisService.checkClinicalCompletionReadiness(visitId);
         return ResponseEntity.ok(checkDTO);
     }
@@ -36,8 +38,10 @@ public class DoctorExaminationRestController {
     @PostMapping("/{visitId}/complete-clinical")
     public ResponseEntity<Map<String, Object>> completeClinicalExamination(
             @PathVariable Long visitId,
-            @RequestBody(required = false) ClinicalCompletionRequestDTO request
+            @RequestBody(required = false) ClinicalCompletionRequestDTO request,
+            jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         String doctorNotes = (request != null) ? request.getDoctorNotes() : null;
         try {
             Visit updatedVisit = diagnosisService.completeClinicalExamination(visitId, doctorNotes);
@@ -70,8 +74,10 @@ public class DoctorExaminationRestController {
     @PostMapping("/{visitId}/reopen-clinical")
     public ResponseEntity<Map<String, Object>> reopenClinicalExamination(
             @PathVariable Long visitId,
-            @RequestBody(required = false) Map<String, String> body
+            @RequestBody(required = false) Map<String, String> body,
+            jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         String reason = (body != null) ? body.get("reason") : null;
         try {
             Visit updatedVisit = diagnosisService.reopenClinicalExamination(visitId, reason);
@@ -101,7 +107,8 @@ public class DoctorExaminationRestController {
      * Lấy thông tin khám tổng quát (Triệu chứng, Tiền sử dị ứng/bệnh nền, Mô mềm/TMJ)
      */
     @GetMapping("/{visitId}/general-examination")
-    public ResponseEntity<com.cvdcms.DTO.GeneralExaminationRequestDTO> getGeneralExamination(@PathVariable Long visitId) {
+    public ResponseEntity<com.cvdcms.DTO.GeneralExaminationRequestDTO> getGeneralExamination(@PathVariable Long visitId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         return ResponseEntity.ok(diagnosisService.getGeneralExamination(visitId));
     }
 
@@ -111,8 +118,10 @@ public class DoctorExaminationRestController {
     @PostMapping("/{visitId}/general-examination")
     public ResponseEntity<Map<String, Object>> saveGeneralExamination(
             @PathVariable Long visitId,
-            @RequestBody com.cvdcms.DTO.GeneralExaminationRequestDTO request
+            @RequestBody com.cvdcms.DTO.GeneralExaminationRequestDTO request,
+            jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         Map<String, Object> response = new HashMap<>();
         try {
             if (request == null) {
@@ -142,8 +151,10 @@ public class DoctorExaminationRestController {
     @PostMapping("/{visitId}/instructions")
     public ResponseEntity<Map<String, Object>> saveDoctorInstructions(
             @PathVariable Long visitId,
-            @RequestBody Map<String, String> body
+            @RequestBody Map<String, String> body,
+            jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         Map<String, Object> response = new HashMap<>();
         try {
             String adviceNotes = (body != null) ? body.get("adviceNotes") : "";

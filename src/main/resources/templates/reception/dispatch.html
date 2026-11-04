@@ -275,7 +275,7 @@
             <!-- Action Buttons for this queued patient -->
             <div class="d-flex flex-wrap gap-1.5 mt-2 pt-2 border-top">
               <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2 fw-semibold btn-open-assign" style="font-size: 11.5px;"
-                      th:if="${v.status.name() != 'COMPLETED' and v.status.name() != 'CANCELLED' and v.status.name() != 'WAITING_PAYMENT'}"
+                       th:if="${v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT'}"
                       th:attr="data-visit-id=${v.visitId},
                                data-visit-code=${v.visitCode},
                                data-patient-name=${v.patientProfile.fullName},
@@ -288,6 +288,7 @@
                                data-current-chair=${v.chairId != null ? v.chairId : ''}">
                 <i class="bi bi-arrow-left-right me-0.5"></i>Đổi BS &amp; Ghế
               </button>
+              <span th:if="${v.status.name() == 'IN_EXAM' or v.status.name() == 'IN_TREATMENT'}" class="badge bg-secondary-subtle text-secondary">Đang khám · Khóa điều phối</span>
 
               <span th:if="${v.status.name() == 'COMPLETED'}" class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 11px;">
                 <i class="bi bi-check-circle me-1"></i>Đã khám xong
@@ -593,6 +594,7 @@
 </main>
 </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script th:src="@{/js/reception-dispatch.js}" defer></script>
 </body>
 </html>

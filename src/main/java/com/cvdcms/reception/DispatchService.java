@@ -236,6 +236,17 @@ public class DispatchService {
         return ticket;
     }
 
+    @Transactional(readOnly = true)
+    public ExamTicketPrintView printView(HttpSession session, Long id) {
+        QueueTicket ticket = ticket(session, id);
+        Visit visit = ticket.getVisit();
+        String roomName = visit.getRoomId() == null ? null : rooms.findById(visit.getRoomId()).map(Room::getRoomName).orElse(null);
+        String chairName = visit.getChairId() == null ? null : chairs.findById(visit.getChairId()).map(DentalChair::getChairName).orElse(null);
+        return new ExamTicketPrintView(ticket.getBranch().getPhone(), roomName, chairName);
+    }
+
+    public record ExamTicketPrintView(String branchPhone, String roomName, String chairName) {}
+
     private Branch branch(HttpSession session, Long id) {
         var scope = access.require(session);
         Branch b = branches.lock(id).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));

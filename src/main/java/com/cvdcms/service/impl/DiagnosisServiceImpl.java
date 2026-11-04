@@ -41,6 +41,12 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final PatientProfileRepository patientProfileRepository;
     private final InvoiceRepository invoiceRepository;
     private final ClinicalExaminationBootstrapService examinations;
+    @Autowired(required = false)
+    private DentalChairRepository dentalChairs;
+    @Autowired(required = false)
+    private ClinicalQueueTicketRepository queueTickets;
+    @Autowired(required = false)
+    private SystemAuditLogRepository auditLogs;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -412,6 +418,23 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         visit.setStatus(VisitStatus.WAITING_PAYMENT);
+        if (dentalChairs != null && visit.getChairId() != null) {
+            dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
+                if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
+                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.CLEANING);
+                    dentalChairs.save(chair);
+                }
+            });
+        }
+        if (queueTickets != null) {
+            queueTickets.findByVisitVisitIdAndQueueType(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
+                    .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE)
+                    .forEach(t -> {
+                        t.setStatus(com.cvdcms.entity.enums.QueueStatus.DONE);
+                        t.setCompletedAt(LocalDateTime.now());
+                        queueTickets.save(t);
+                    });
+        }
 
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
         String svcCostStr = vndFmt
@@ -449,7 +472,34 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                     "Không thể mở lại ca khám đã có hóa đơn còn hiệu lực. Vui lòng xử lý hóa đơn trước.");
         }
 
+        if (reason == null || reason.trim().length() < 10 || reason.trim().length() > 255) {
+            throw new IllegalArgumentException("Lý do mở lại cần từ 10 đến 255 ký tự.");
+        }
+
         visit.setStatus(VisitStatus.IN_EXAM);
+        // Mở bệnh án để bổ sung tại bàn; số gọi cũ và ghế đã giải phóng không được tái kích hoạt.
+        visit.setChairId(null);
+        visit.setRoomId(null);
+        if (auditLogs != null) {
+            SystemAuditLog audit = new SystemAuditLog();
+            audit.setBranch(visit.getBranch());
+            audit.setEntityTable("visits");
+            audit.setEntityId(visitId);
+            audit.setAction("REOPEN_CLINICAL");
+            audit.setOldValuesJson("{\"status\":\"WAITING_PAYMENT\"}");
+            try {
+                audit.setNewValuesJson(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                        Map.of("status", "IN_EXAM", "reason", reason.trim())));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+                throw new IllegalStateException("Không thể ghi nhật ký mở lại ca khám.", ex);
+            }
+            var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (attributes instanceof org.springframework.web.context.request.ServletRequestAttributes web) {
+                var session = web.getRequest().getSession(false);
+                if (session != null && session.getAttribute("loggedInUser") instanceof User user) audit.setUser(user);
+            }
+            auditLogs.save(audit);
+        }
 
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM từ WAITING_PAYMENT lúc {}. Lý do: {}", visitId, timestamp, reason);
