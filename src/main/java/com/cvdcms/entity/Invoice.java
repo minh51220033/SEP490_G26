@@ -106,6 +106,9 @@ public class Invoice {
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    @Column(name = "total_vat_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalVatAmount = BigDecimal.ZERO;
+
     @Column(name = "paid_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 

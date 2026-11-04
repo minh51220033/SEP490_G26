@@ -197,6 +197,7 @@
                             <i class="bi bi-percent me-1"></i>Thuế suất TNDN:
                         </label>
                         <select id="taxRateSelect" name="taxRate" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="" th:selected="${filter.taxRate == null}">Theo cấu hình chi nhánh</option>
                             <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 20}">20% (Doanh nghiệp chuẩn)</option>
                             <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 15}">15% (Ưu đãi DN nhỏ)</option>
                             <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 2}">2% (Khoán trên Doanh thu)</option>
@@ -335,12 +336,14 @@
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="fin-card py-3 px-3 border-start border-4 border-warning h-100 shadow-sm">
-                                <span class="text-muted small fw-semibold text-uppercase">
-                                    Thuế TNDN tạm tính (<span th:text="${dashboard.taxRate}">20</span>%)
-                                </span>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small fw-semibold text-uppercase">Thuế TNDN / HKD</span>
+                                    <span th:if="${dashboard.taxConfigured}" class="badge bg-success-subtle text-success small">Có cấu hình</span>
+                                    <span th:if="${!dashboard.taxConfigured}" class="badge bg-warning text-dark small">Chưa đủ cơ sở</span>
+                                </div>
                                 <div class="fs-4 fw-bold text-warning my-1"
                                      th:text="${#numbers.formatDecimal(dashboard.estimatedTaxAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                                <span class="small text-muted">Tạm tính trên thặng dư dương</span>
+                                <span class="small text-muted" th:text="${dashboard.taxCalculationBasis}">Tạm tính trên thặng dư</span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-xl-3">
@@ -350,6 +353,33 @@
                                      th:classappend="${dashboard.netProfitAfterTax.signum() >= 0 ? 'text-success' : 'text-danger'}"
                                      th:text="${#numbers.formatDecimal(dashboard.netProfitAfterTax, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
                                 <span class="small text-muted">= Lợi nhuận trước thuế - Thuế</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BANNER PHÂN TÁCH 3 NGHĨA VỤ THUẾ ĐỘC LẬP (A, B, C) -->
+                    <div class="alert alert-light border shadow-sm py-2 px-3 mb-4 rounded-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-shield-shaded text-primary fs-5"></i>
+                                <div>
+                                    <strong class="text-dark">Phân định 3 nghĩa vụ thuế:</strong>
+                                    <span class="text-muted ms-1" th:text="${dashboard.taxRegimeName}">Chính sách thuế</span>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-4 text-nowrap">
+                                <div>
+                                    <span class="text-secondary small">A. Thuế GTGT đầu ra (Thuốc 5%):</span>
+                                    <strong class="text-primary ms-1" th:text="${#numbers.formatDecimal(dashboard.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                </div>
+                                <div>
+                                    <span class="text-secondary small">B. Thuế ĐV kinh doanh:</span>
+                                    <strong class="text-warning ms-1" th:text="${#numbers.formatDecimal(dashboard.estimatedTaxAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                </div>
+                                <div>
+                                    <span class="text-secondary small">C. Thuế TNCN NLĐ đã khấu trừ:</span>
+                                    <strong class="text-danger ms-1" th:text="${#numbers.formatDecimal(dashboard.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -528,10 +558,13 @@
                                     <td class="small fw-semibold">Thặng dư vận hành trước thuế trong kỳ lọc</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold text-warning">6. Nghĩa vụ Thuế TNDN tạm tính (<span th:text="${financial.taxRate}">20</span>%)</td>
+                                    <td class="fw-semibold text-warning">
+                                        6. Nghĩa vụ Thuế đơn vị kinh doanh (TNDN / Khoán)
+                                        <span class="badge bg-light text-secondary border ms-1" th:text="${financial.taxRegimeName}">Doanh nghiệp</span>
+                                    </td>
                                     <td class="text-end fw-bold text-warning"
                                         th:text="'-' + ${#numbers.formatDecimal(financial.estimatedTaxAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
-                                    <td class="small text-muted">Tạm tính <span th:text="${financial.taxRate}">20</span>% trên thặng dư vận hành dương</td>
+                                    <td class="small text-muted" th:text="${financial.taxCalculationBasis}">Căn cứ pháp lý</td>
                                 </tr>
                                 <tr class="table-primary">
                                     <td class="fw-bold text-uppercase">7. Lợi nhuận ròng sau thuế (Net Profit) (= 5 - 6)</td>
@@ -539,6 +572,14 @@
                                         th:classappend="${financial.netProfitAfterTax.signum() >= 0 ? 'text-success' : 'text-danger'}"
                                         th:text="${#numbers.formatDecimal(financial.netProfitAfterTax, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
                                     <td class="small fw-semibold">Lợi nhuận ròng thực tế của phòng khám sau nghĩa vụ thuế</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td colspan="3" class="py-2">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2">
+                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương (FT32): <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
+                                            <span th:if="${!financial.taxConfigured}" class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Chưa đủ cơ sở tính thuế</span>
+                                        </div>
+                                    </td>
                                 </tr>
                                 </tbody>
                             </table>

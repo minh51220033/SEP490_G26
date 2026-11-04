@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -49,5 +50,20 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
             @Param("year") Integer year,
             @Param("status") PayrollStatus status,
             Pageable pageable
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(p.totalPitAmount), 0) FROM PayrollPeriod p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND p.status = 'PAID'
+          AND ((p.year > :startYear OR (p.year = :startYear AND p.month >= :startMonth))
+           AND (p.year < :endYear OR (p.year = :endYear AND p.month <= :endMonth)))
+    """)
+    BigDecimal sumPaidPit(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startMonth") Integer startMonth,
+            @Param("startYear") Integer startYear,
+            @Param("endMonth") Integer endMonth,
+            @Param("endYear") Integer endYear
     );
 }

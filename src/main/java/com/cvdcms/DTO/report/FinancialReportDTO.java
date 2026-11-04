@@ -44,6 +44,13 @@ public class FinancialReportDTO {
     private BigDecimal estimatedTaxAmount = BigDecimal.ZERO;   // Nghĩa vụ thuế TNDN tạm tính
     private BigDecimal netProfitAfterTax = BigDecimal.ZERO;    // Lợi nhuận ròng sau thuế
 
+    // Thông tin chế độ thuế & Căn cứ pháp lý
+    private String taxRegimeName = "Doanh nghiệp (TNDN tạm tính quản trị)";
+    private boolean isTaxConfigured = true;
+    private String taxCalculationBasis = "Căn cứ Luật Thuế TNDN 14/2008/QH12 (Tạm tính phục vụ quản trị nội bộ)";
+    private BigDecimal totalPitWithheld = BigDecimal.ZERO;
+    private BigDecimal totalVatAmount = BigDecimal.ZERO;
+
     // 5. Công nợ
     private BigDecimal periodDebt = BigDecimal.ZERO;           // Nợ phát sinh của hóa đơn trong kỳ
     private BigDecimal currentTotalOutstandingDebt = BigDecimal.ZERO; // Nợ lũy kế hiện tại
