@@ -208,32 +208,13 @@
                        title="Khu vực thu ngân: Tổng quan, Hóa đơn, Lịch sử thanh toán, Công nợ, Đặt cọc &amp; Hoàn tiền">
                         <i class="bi bi-cash-coin" aria-hidden="true"></i><span class="side-link__label">Thu ngân</span>
                     </a>
-                    <a th:href="@{/expenses}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'expenses'} ? 'is-active' : ''"
-                       title="Quản lý chi phí vận hành phòng khám (FT25)">
-                        <i class="bi bi-journal-arrow-down text-warning" aria-hidden="true"></i><span class="side-link__label">Chi phí vận hành</span>
-                        <span class="side-badge side-badge--warning">FT25</span>
-                    </a>
-                    <a th:href="@{/payroll}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'payroll'} ? 'is-active' : ''"
-                       title="Quản lý bảng lương &amp; hoa hồng (FT32)">
-                        <i class="bi bi-calculator text-primary" aria-hidden="true"></i><span class="side-link__label">Bảng lương &amp; Hoa hồng</span>
-                        <span class="side-badge side-badge--info">FT32</span>
-                    </a>
-                    <a th:href="@{/payroll/advances}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'payroll_advances'} ? 'is-active' : ''"
-                       title="Quản lý tạm ứng lương nhân viên">
-                        <i class="bi bi-cash-coin" aria-hidden="true"></i><span class="side-link__label">Tạm ứng lương</span>
-                    </a>
-                    <a th:href="@{/payroll/commission-config}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'payroll_config'} ? 'is-active' : ''"
-                       title="Cấu hình chính sách hoa hồng bác sĩ (SCR-32.3)">
-                        <i class="bi bi-sliders" aria-hidden="true"></i><span class="side-link__label">Cấu hình hoa hồng</span>
-                    </a>
-                    <a th:href="@{/payroll/owner-distributions}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'owner_distributions'} ? 'is-active' : ''"
-                       title="Phân chia lợi nhuận chủ phòng khám">
-                        <i class="bi bi-diagram-2" aria-hidden="true"></i><span class="side-link__label">Phân chia lợi nhuận</span>
+                    <!-- CHI PHÍ & THU NHẬP (Gộp FT25, FT32: Chi phí vận hành, Bảng lương, Tạm ứng lương, Cấu hình hoa hồng, Phân chia lợi nhuận) -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
+                       th:href="@{/expenses}"
+                       class="side-link side-sublink"
+                       th:classappend="${#strings.contains(',expenses,payroll,payroll_advances,payroll_config,owner_distributions,expense_income,', ',' + activeMenu + ',')} ? 'is-active' : ''"
+                       title="Chi phí &amp; thu nhập: Chi phí vận hành, Bảng lương, Tạm ứng lương, Cấu hình hoa hồng &amp; Phân chia lợi nhuận">
+                        <i class="bi bi-calculator" aria-hidden="true"></i><span class="side-link__label">Chi phí &amp; thu nhập</span>
                     </a>
                 </div>
             </div>
