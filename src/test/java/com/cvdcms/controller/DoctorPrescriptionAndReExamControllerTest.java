@@ -39,7 +39,7 @@ class DoctorPrescriptionAndReExamControllerTest {
 
     @BeforeEach
     void setUp() {
-        prescriptionRestController = new PrescriptionRestController(prescriptionService);
+        prescriptionRestController = new PrescriptionRestController(prescriptionService, org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class));
         reExaminationRestController = new ReExaminationRestController(reExaminationService);
     }
 
@@ -59,7 +59,7 @@ class DoctorPrescriptionAndReExamControllerTest {
 
         when(prescriptionService.createPrescription(request)).thenReturn(respDto);
 
-        ResponseEntity<?> response = prescriptionRestController.createPrescription(request);
+        ResponseEntity<?> response = prescriptionRestController.createPrescription(request, null);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -77,7 +77,7 @@ class DoctorPrescriptionAndReExamControllerTest {
         when(prescriptionService.createPrescription(request))
                 .thenThrow(new IllegalArgumentException("Đơn thuốc phải có ít nhất một loại thuốc"));
 
-        ResponseEntity<?> response = prescriptionRestController.createPrescription(request);
+        ResponseEntity<?> response = prescriptionRestController.createPrescription(request, null);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -90,7 +90,7 @@ class DoctorPrescriptionAndReExamControllerTest {
     void testController_DeletePrescription_Success() {
         doNothing().when(prescriptionService).deletePrescription(50L);
 
-        ResponseEntity<?> response = prescriptionRestController.deletePrescription(50L);
+        ResponseEntity<?> response = prescriptionRestController.deletePrescription(50L, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

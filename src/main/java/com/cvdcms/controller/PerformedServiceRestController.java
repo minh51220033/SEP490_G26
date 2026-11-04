@@ -22,6 +22,7 @@ import java.util.Map;
 public class PerformedServiceRestController {
 
     private final PerformedServiceService performedServiceService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @GetMapping("/services/catalog")
     public ResponseEntity<List<ServiceDTO>> getActiveServicesCatalog() {
@@ -30,15 +31,17 @@ public class PerformedServiceRestController {
 
     @GetMapping("/performed-services")
     public ResponseEntity<List<PerformedServiceResponseDTO>> getPerformedServicesByVisit(
-            @RequestParam("visitId") Long visitId
+            @RequestParam("visitId") Long visitId, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         return ResponseEntity.ok(performedServiceService.getPerformedServicesByVisitId(visitId));
     }
 
     @PostMapping("/performed-services")
     public ResponseEntity<Map<String, Object>> createPerformedService(
-            @Valid @RequestBody PerformedServiceRequestDTO requestDTO
+            @Valid @RequestBody PerformedServiceRequestDTO requestDTO, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, requestDTO.getVisitId());
         log.info("API createPerformedService called with: visitId={}, serviceId={}",
                 requestDTO.getVisitId(), requestDTO.getServiceId());
 
@@ -61,8 +64,9 @@ public class PerformedServiceRestController {
 
     @DeleteMapping("/performed-services/{id}")
     public ResponseEntity<Map<String, Object>> cancelPerformedService(
-            @PathVariable("id") Long id
+            @PathVariable("id") Long id, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.requirePerformedService(session, id);
         log.info("API cancelPerformedService called with id={}", id);
         try {
             performedServiceService.cancelPerformedService(id);
