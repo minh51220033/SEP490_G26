@@ -192,7 +192,7 @@
         <!-- TÀI CHÍNH & KẾ TOÁN (FT21, FT22, FT24, FT25, FT32) -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-             th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,expenses,payroll,payroll_advances,payroll_config,owner_distributions,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,deposits,cashier,expenses,payroll,payroll_advances,payroll_config,owner_distributions,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgFinance">
                 <i class="bi bi-wallet2" aria-hidden="true"></i>
                 <span class="side-group__label">Tài chính &amp; Kế toán</span>
@@ -200,38 +200,13 @@
             </button>
             <div class="side-group__panel" id="sgFinance">
                 <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DASHBOARD'))}"
-                       th:href="@{/payments/dashboard}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'dashboard_finance'} ? 'is-active' : ''"
-                       title="Dashboard tài chính bệnh nhân (SCR-22.1)">
-                        <i class="bi bi-speedometer2" aria-hidden="true"></i><span class="side-link__label">Dashboard bệnh nhân</span>
-                        <span class="side-badge side-badge--info">22.1</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVOICE_CREATE'))}"
-                       th:href="@{/invoices}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'invoices'} ? 'is-active' : ''"
-                       title="Danh sách hoá đơn &amp; viện phí (SCR-21.2)">
-                        <i class="bi bi-receipt" aria-hidden="true"></i><span class="side-link__label">Quản lý hoá đơn</span>
-                        <span class="side-badge">21.2</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}"
-                       th:href="@{/payments}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'payments'} ? 'is-active' : ''"
-                       title="Lịch sử các đợt thanh toán (SCR-22.3)">
-                        <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span class="side-link__label">Lịch sử thanh toán</span>
-                        <span class="side-badge side-badge--success">22.3</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DEBT'))}"
-                       th:href="@{/payments/debts}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'debts'} ? 'is-active' : ''"
-                       title="Theo dõi &amp; Quản lý công nợ bệnh nhân">
-                        <i class="bi bi-cash-stack" aria-hidden="true"></i><span class="side-link__label">Công nợ bệnh nhân</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'REFUND_MANAGE'))}"
-                       th:href="@{/payments/refunds}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'refunds'} ? 'is-active' : ''"
-                       title="Hoàn tiền dịch vụ &amp; Hủy điều trị">
-                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span class="side-link__label">Quản lý hoàn tiền</span>
+                    <!-- THU NGÂN (Gộp các mục tài chính viện phí: Tổng quan, Hóa đơn, Thanh toán, Công nợ, Hoàn tiền) -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
+                       th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DASHBOARD')) or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN')))} ? @{/payments/dashboard} : (${permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW'))} ? @{/invoices} : (${permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT')} ? @{/payments} : (${permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DEBT')} ? @{/payments/debts} : (${permissionCodes != null and #lists.contains(permissionCodes, 'REFUND_MANAGE')} ? @{/payments/refunds} : @{/payments/dashboard}))))"
+                       class="side-link side-sublink"
+                       th:classappend="${#strings.contains(',dashboard_finance,invoices,payments,debts,refunds,deposits,cashier,', ',' + activeMenu + ',')} ? 'is-active' : ''"
+                       title="Khu vực thu ngân: Tổng quan, Hóa đơn, Lịch sử thanh toán, Công nợ, Đặt cọc &amp; Hoàn tiền">
+                        <i class="bi bi-cash-coin" aria-hidden="true"></i><span class="side-link__label">Thu ngân</span>
                     </a>
                     <a th:href="@{/expenses}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'expenses'} ? 'is-active' : ''"

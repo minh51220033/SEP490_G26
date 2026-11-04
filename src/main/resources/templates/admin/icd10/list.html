@@ -34,17 +34,6 @@
            th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
       <section class="panel mb-4">
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Danh mục mã bệnh ICD-10</h3>
-            <p class="panel__subtitle">Dùng chung cho bác sĩ ghi nhận chẩn đoán (FT14).</p>
-          </div>
-          <button type="button" class="btn btn-primary"
-                  data-bs-toggle="modal" data-bs-target="#modalCreate">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
-          </button>
-        </div>
-
         <!-- TÌM KIẾM -->
         <form th:action="@{/admin/icd10}" method="get" class="p-3 border-bottom">
           <div class="row g-2 align-items-end">
@@ -58,7 +47,13 @@
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-search" aria-hidden="true"></i> Tìm
               </button>
-              <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary ms-1">Xoá bộ lọc</a>
+              <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
+            </div>
+            <div class="col-md-auto">
+            <button type="button" class="btn btn-primary"
+                    data-bs-toggle="modal" data-bs-target="#modalCreate">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
+            </button>
             </div>
           </div>
         </form>

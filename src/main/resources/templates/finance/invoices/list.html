@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Quản lý Hóa đơn & Thu phí dịch vụ (FT21)')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Thu ngân - Quản lý Hóa đơn')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/cashier.css}">
+    <script th:src="@{/js/cashier-tabs.js}" defer></script>
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -10,9 +12,9 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý Hóa đơn & Viện phí')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
 
-        <main class="app-content finance-page">
+        <main class="app-content finance-page cashier-page">
             <!-- Alert Messages -->
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
@@ -23,21 +25,26 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Page Header -->
-            <div class="fin-header">
-                <div>
-                    <h1> Danh sách Hóa đơn (SCR-21.2)</h1>
-                    <p>Theo dõi phát hành hóa đơn, áp dụng ưu đãi hội viên/khuyến mãi, trạng thái thanh toán và công nợ.</p>
+            <!-- Thanh tabs ngang khu vực Thu ngân -->
+            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('invoices')}"></div>
+
+            <!-- Vùng nội dung tab Hóa đơn -->
+            <div id="cashierTabContent" class="cashier-tab-content">
+                <!-- Page Sub Header -->
+                <div class="cashier-subhead">
+                    <div>
+                        <h2 class="cashier-subhead-title"><i class="bi bi-receipt text-primary"></i> Quản lý hóa đơn &amp; viện phí</h2>
+                        <p class="cashier-subhead-desc">Theo dõi phát hành hóa đơn, áp dụng ưu đãi hội viên/khuyến mãi, trạng thái thanh toán và công nợ</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/invoices/create}" class="fin-btn fin-btn-primary fin-btn-sm">
+                            <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
+                        </a>
+                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline fin-btn-sm">
+                            <i class="bi bi-credit-card"></i> Danh sách phiếu thu
+                        </a>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a th:href="@{/invoices/create}" class="fin-btn fin-btn-primary">
-                        <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
-                    </a>
-                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline">
-                        <i class="bi bi-credit-card"></i> Danh sách phiếu thu
-                    </a>
-                </div>
-            </div>
 
             <!-- 4 KPI Summary Cards -->
             <div class="fin-kpi-grid">
@@ -253,9 +260,6 @@
                     </nav>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
 
 <!-- Quick Pay Modal (AJAX) -->
 <div id="quickPayModal" class="fin-modal-backdrop" style="display: none;">
@@ -447,5 +451,9 @@
         }
     }
 </script>
+            </div> <!-- end #cashierTabContent -->
+        </main>
+    </div>
+</div>
 </body>
 </html>
