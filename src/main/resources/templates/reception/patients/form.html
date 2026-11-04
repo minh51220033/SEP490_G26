@@ -30,6 +30,12 @@
                     <div><label for="healthInsuranceNumber">Số bảo hiểm y tế</label><input id="healthInsuranceNumber" name="healthInsuranceNumber" class="form-control" maxlength="20" th:value="${patient != null ? patient.healthInsuranceNumber : ''}"><small>Không bắt buộc.</small></div>
                 </div>
                 <div id="guardianNotice" class="alert alert-info mt-3" hidden>Bệnh nhân dưới 18 tuổi: bắt buộc nhập đầy đủ họ tên, số điện thoại và quan hệ của người giám hộ.</div>
+                <h2>Thông tin sức khỏe cần lưu ý</h2>
+                <p class="text-muted small">Chỉ ghi thông tin đã được bệnh nhân hoặc người giám hộ cung cấp. Để trống nếu chưa khai thác.</p>
+                <div class="patient-form-grid">
+                    <div><label for="allergyDetails">Dị ứng thuốc, vật liệu hoặc thức ăn</label><textarea id="allergyDetails" name="allergyDetails" class="form-control" maxlength="1000" rows="3" placeholder="Tác nhân và biểu hiện, nếu có" th:text="${patient != null ? patient.allergyDetails : ''}"></textarea></div>
+                    <div><label for="underlyingDiseaseDetails">Bệnh nền và tình trạng cần lưu ý</label><textarea id="underlyingDiseaseDetails" name="underlyingDiseaseDetails" class="form-control" maxlength="1000" rows="3" placeholder="Tên bệnh và tình trạng hiện tại, nếu có" th:text="${patient != null ? patient.underlyingDiseaseDetails : ''}"></textarea></div>
+                </div>
                 <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${patient == null} ? @{/reception/patients} : @{/reception/patients/{id}(id=${patient.id})}">Hủy</a><button class="btn btn-primary" type="submit" id="saveButton">Lưu hồ sơ</button></div>
             </form>
         </main>

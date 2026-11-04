@@ -7,5 +7,6 @@ public enum AppointmentLifecycleAction {
     CHECK_IN,
     COMPLETE,
     CANCEL,
-    MARK_NO_SHOW
+    MARK_NO_SHOW,
+    REVERT_CHECK_IN
 }

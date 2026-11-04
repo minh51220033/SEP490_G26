@@ -524,6 +524,13 @@
                                     Có thể để trống nếu chưa thiết lập thời hạn bảo hành.
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <label for="estimatedDurationMinutes" class="form-label">Thời lượng lịch hẹn dự kiến (phút)</label>
+                                <input id="estimatedDurationMinutes" type="number" th:field="*{estimatedDurationMinutes}"
+                                       class="form-control" min="15" max="240" step="15" required>
+                                <div class="form-text">Dùng để kiểm tra giờ trống và tránh đặt trùng lịch bác sĩ.</div>
+                                <div class="invalid-feedback" th:errors="*{estimatedDurationMinutes}"></div>
+                            </div>
 
                         </div>
                     </div>

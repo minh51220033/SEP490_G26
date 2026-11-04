@@ -38,6 +38,10 @@ public class ReceptionAppointmentRules {
                 result.doctors().stream().map(this::doctorOption).toList());
     }
 
+    public List<AppointmentPolicyService.SessionLoadSummary> dayLoadOverview(Branch branch, LocalDate date) {
+        return policy.dayLoadOverview(branch, date, AppointmentActorType.RECEPTIONIST);
+    }
+
     public void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
             PreferredSession session, Long doctorId, Long excludeId) {
         policy.ensureBookable(branch, profile, date, session, doctorId, excludeId,

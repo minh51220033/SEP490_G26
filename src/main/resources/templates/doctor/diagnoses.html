@@ -325,7 +325,13 @@
                             </th:block>
 
                             <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                <a th:href="@{/emr/records(query=${visit.visitCode})}"
+                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                               title="Xem hoặc tạo bệnh án điện tử EMR cho ca khám này">
+                                <i class="bi bi-file-earmark-medical text-primary"></i>
+                                <span>Bệnh án EMR</span>
+                            </a>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
                                     <i class="bi bi-check-circle-fill text-success"></i>
                                     <span>Đã hoàn tất ca khám</span>
                                 </span>
@@ -337,6 +343,22 @@
                     </div>
                 </div>
 
+                <!-- DẢI CẢNH BÁO Y KHOA: DỊ ỨNG & BỆNH NỀN CỐ ĐỊNH Ở ĐẦU MÀN BÁC SĨ (CHUẨN FT03 & FT14) -->
+                <div class="px-3 py-2 bg-danger-subtle border-top border-bottom border-danger-subtle text-danger d-flex align-items-center justify-content-between gap-2"
+                     th:if="${patient != null and ((patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()))}">
+                    <div class="d-flex align-items-center gap-2 small">
+                        <i class="bi bi-exclamation-octagon-fill text-danger fs-6"></i>
+                        <strong class="text-danger-emphasis">CẢNH BÁO Y KHOA:</strong>
+                        <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}">
+                            <strong>Dị ứng:</strong> <span th:text="${patient.allergyDetails}"></span>
+                        </span>
+                        <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank() and patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" class="text-secondary opacity-50">•</span>
+                        <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}">
+                            <strong>Bệnh nền:</strong> <span th:text="${patient.underlyingDiseaseDetails}"></span>
+                        </span>
+                    </div>
+                    <span class="badge bg-danger text-white text-uppercase" style="font-size: 10px;">Lưu ý an toàn lâm sàng</span>
+                </div>
                 <!-- HÀNG 3: THANH TAB ĐIỀU HƯỚNG GẮN LIỀN VÀO ĐÁY PANEL (CÓ CUỘN NGANG & HIỆU ỨNG 1S) -->
                 <div class="df-subnav-container">
                     <button type="button" class="df-subnav-arrow df-subnav-arrow-left" onclick="scrollSubnav(-200)" aria-label="Cuộn trái">
@@ -913,7 +935,7 @@
             return;
         }
         localStorage.setItem('doctorSelectedBranchId', branchId);
-        window.location.href = '/doctor/examination?branchId=' + branchId;
+        window.location.href = '/doctor/examination?branchId=' + encodeURIComponent(branchId);
     }
 
     function triggerDatePick() {

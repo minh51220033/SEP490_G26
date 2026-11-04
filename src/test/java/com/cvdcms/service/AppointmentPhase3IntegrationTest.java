@@ -61,7 +61,8 @@ import static org.mockito.Mockito.*;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({ReceptionService.class, PortalAppointmentService.class,
-        AppointmentLifecycleServiceImpl.class})
+        AppointmentLifecycleServiceImpl.class,
+        com.cvdcms.service.impl.ClinicalExaminationBootstrapServiceImpl.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class AppointmentPhase3IntegrationTest {
 
@@ -70,6 +71,7 @@ class AppointmentPhase3IntegrationTest {
     @MockitoBean ReceptionAccess access;
     @MockitoBean PortalAccess portalAccess;
     @MockitoBean AppointmentPolicyService policy;
+    @MockitoBean AppointmentSlotService slots;
     @MockitoBean ObjectMapper objectMapper;
 
     @jakarta.annotation.Resource ReceptionService receptionService;
@@ -85,8 +87,10 @@ class AppointmentPhase3IntegrationTest {
 
     @BeforeEach
     void resetMocks() throws Exception {
-        reset(access, portalAccess, policy, objectMapper);
+        reset(access, portalAccess, policy, slots, objectMapper);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(slots.resolve(any(), any(), any(), nullable(Long.class), anyInt(),
+                nullable(Long.class), nullable(LocalTime.class), any())).thenReturn(LocalTime.of(8, 0));
     }
 
     @Test

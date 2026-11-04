@@ -31,9 +31,10 @@ public class PatientRestController {
     public List<DuplicateCandidate> candidates(@RequestParam(required = false) String fullName,
                                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dob,
                                                 @RequestParam(required = false) String phoneNumber,
+                                                @RequestParam(required = false) String idCardNumber,
                                                 @RequestParam(required = false) Long excludeId,
                                                 HttpSession session) {
-        return service.candidates(session, fullName, dob, phoneNumber, excludeId);
+        return service.candidates(session, fullName, dob, phoneNumber, idCardNumber, excludeId);
     }
 
     @PostMapping

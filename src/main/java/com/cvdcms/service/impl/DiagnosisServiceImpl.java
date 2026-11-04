@@ -11,6 +11,7 @@ import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.DiagnosisService;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final AppointmentRepository appointmentRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final InvoiceRepository invoiceRepository;
+    private final ClinicalExaminationBootstrapService examinations;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -52,7 +54,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             TreatmentPlanRepository treatmentPlanRepository,
             AppointmentRepository appointmentRepository,
             PatientProfileRepository patientProfileRepository,
-            InvoiceRepository invoiceRepository) {
+            InvoiceRepository invoiceRepository,
+            ClinicalExaminationBootstrapService examinations) {
         this.diagnosisRepository = diagnosisRepository;
         this.icd10DiseaseRepository = icd10DiseaseRepository;
         this.visitRepository = visitRepository;
@@ -64,6 +67,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         this.appointmentRepository = appointmentRepository;
         this.patientProfileRepository = patientProfileRepository;
         this.invoiceRepository = invoiceRepository;
+        this.examinations = examinations;
     }
 
     public DiagnosisServiceImpl(
@@ -88,7 +92,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 null,
                 appointmentRepository,
                 patientProfileRepository,
-                invoiceRepository);
+                invoiceRepository,
+                null);
     }
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -455,20 +460,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     private ClinicalExamination createDefaultExamination(Visit visit) {
-        ClinicalExamination exam = new ClinicalExamination();
-        exam.setVisit(visit);
-        exam.setPatientProfile(visit.getPatientProfile());
-
-        StaffProfile doctor = visit.getPrimaryDoctor();
-        if (doctor == null) {
-            // lấy bác sĩ đầu tiên hoặc tạo bác sĩ mẫu
-            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
+        if (examinations == null) {
+            throw new IllegalStateException("Không thể khởi tạo hồ sơ lâm sàng: dịch vụ khởi tạo chưa sẵn sàng.");
         }
-        exam.setDoctor(doctor);
-        exam.setChiefComplaint(
-                visit.getInitialSymptoms() != null ? visit.getInitialSymptoms() : "Đến khám nha khoa định kỳ");
-        exam.setExamTime(LocalDateTime.now());
-        return clinicalExamRepository.save(exam);
+        return examinations.ensureForAssignedVisit(visit.getVisitId());
     }
 
     private DiagnosisResponseDTO mapToDTO(ExaminationDiagnosis ed) {
