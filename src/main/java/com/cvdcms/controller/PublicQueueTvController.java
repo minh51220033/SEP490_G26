@@ -20,4 +20,9 @@ public class PublicQueueTvController {
         model.addAttribute("board", queueService.publicBoard(branchId));
         return "reception/queue-tv";
     }
+
+    @GetMapping("/public/queue/tv")
+    public String publicAlias(@RequestParam(defaultValue = "1") Long branchId) {
+        return "redirect:/tv-display?branchId=" + branchId;
+    }
 }

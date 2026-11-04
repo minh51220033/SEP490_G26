@@ -31,13 +31,13 @@
       <div class="tv-panel-title">ĐANG CHỜ</div>
       <strong id="waiting" class="waiting-count" th:text="${board.waiting}">0</strong>
       <div class="tv-panel-title next-title">SỐ TIẾP THEO</div>
-      <div id="next" class="next-list">—</div>
+      <div id="next" class="next-list" aria-live="polite">—</div>
+    </section>
+    <section class="tv-panel tv-serving">
+      <div class="tv-panel-title">ĐANG KHÁM TẠI GHẾ</div>
+      <div id="serving" class="serving-list">—</div>
     </section>
   </div>
-  <section class="tv-panel tv-serving">
-    <div class="tv-panel-title">ĐANG KHÁM TẠI GHẾ</div>
-    <div id="serving" class="serving-list">—</div>
-  </section>
 </main>
 <script th:src="@{/js/reception-queue-tv.js}" defer></script>
 </body>

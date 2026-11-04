@@ -14,11 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastAnnouncedTicketId = null;
     let lastAnnouncedNumber = null;
     let failCount = 0;
+    const speechQueue = [];
+    let speaking = false;
+    let audioContext;
 
     if (soundToggle) {
         soundToggle.addEventListener('click', () => {
             speechEnabled = !speechEnabled;
             if (speechEnabled) {
+                try {
+                    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+                    audioContext.resume();
+                } catch (_) { /* TV không hỗ trợ Web Audio vẫn dùng TTS. */ }
                 soundToggle.classList.add('is-active');
                 if (soundIcon) soundIcon.textContent = '🔊';
                 if (soundText) soundText.textContent = 'Âm thanh: Đang bật';
@@ -27,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 soundToggle.classList.remove('is-active');
                 if (soundIcon) soundIcon.textContent = '🔈';
                 if (soundText) soundText.textContent = 'Bật âm thanh';
+                speechQueue.length = 0;
                 if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             }
         });
@@ -34,14 +42,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function speak(text) {
         if (!speechEnabled || !('speechSynthesis' in window)) return;
+        speechQueue.push(text);
+        playNext();
+    }
+
+    function playNext() {
+        if (speaking || !speechEnabled || !speechQueue.length) return;
+        speaking = true;
+        const text = speechQueue.shift();
         try {
-            window.speechSynthesis.cancel();
+            if (audioContext && audioContext.state === 'running') {
+                const start = audioContext.currentTime;
+                [523.25, 659.25].forEach((frequency, index) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    oscillator.frequency.value = frequency;
+                    gain.gain.setValueAtTime(0.0001, start + index * 0.22);
+                    gain.gain.exponentialRampToValueAtTime(0.12, start + index * 0.22 + 0.025);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.22 + 0.18);
+                    oscillator.connect(gain).connect(audioContext.destination);
+                    oscillator.start(start + index * 0.22);
+                    oscillator.stop(start + index * 0.22 + 0.19);
+                });
+            }
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'vi-VN';
             utterance.rate = 0.92;
             utterance.pitch = 1.05;
-            window.speechSynthesis.speak(utterance);
-        } catch (_) {}
+            utterance.onend = utterance.onerror = () => { speaking = false; playNext(); };
+            setTimeout(() => window.speechSynthesis.speak(utterance), 500);
+        } catch (_) { speaking = false; playNext(); }
     }
 
     function location(number) {
@@ -92,7 +122,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             branch.textContent = data.branch;
             waiting.textContent = data.waiting;
-            next.textContent = data.next.join('  ·  ') || '—';
+            next.replaceChildren(...data.next.map(label => {
+                const item = document.createElement('div');
+                item.className = 'next-item';
+                const [number, ...doctor] = label.split(' · ');
+                const badge = document.createElement('strong'); badge.textContent = number;
+                const name = document.createElement('span'); name.textContent = doctor.join(' · ');
+                item.append(badge, name);
+                return item;
+            }));
+            if (!data.next.length) next.textContent = '—';
             called.replaceChildren(...data.called.map(calledCard));
             if (!data.called.length) {
                 const empty = document.createElement('div');
