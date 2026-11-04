@@ -57,8 +57,8 @@
                     <div><label for="filterType">Loại lịch hẹn</label><select id="filterType" class="form-select"><option value="ALL">Tất cả loại lịch</option><option value="LH">Lịch hẹn thường (LH)</option><option value="TK">Lịch tái khám chỉ định (TK - FT18)</option></select></div>
                 </div>
                 <div class="appointment-kpis" id="appointmentKpis" aria-live="polite"></div>
-                <div class="table-responsive rounded-3 border">
-                    <table class="table table-hover align-middle mb-0">
+                <div class="table-responsive appointment-table-wrap rounded-3 border" tabindex="0" aria-label="Bảng lịch hẹn, cuộn ngang để xem thêm cột">
+                    <table class="table table-hover align-middle mb-0 appointment-table">
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 150px;">Mã lịch</th>
