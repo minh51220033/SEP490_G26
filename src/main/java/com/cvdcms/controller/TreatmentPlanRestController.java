@@ -31,6 +31,7 @@ public class TreatmentPlanRestController {
     private final PerformedServiceService performedServiceService;
     private final TreatmentPlanItemRepository treatmentPlanItemRepository;
     private final VisitRepository visitRepository;
+    private final com.cvdcms.repository.PerformedServiceRepository performedServiceRepository;
 
     /**
      * Lấy danh sách kế hoạch điều trị theo hồ sơ bệnh nhân
@@ -152,8 +153,40 @@ public class TreatmentPlanRestController {
             com.cvdcms.entity.TreatmentPlanItem item = treatmentPlanItemRepository.findById(itemId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bước thủ thuật với ID: " + itemId));
 
+            if (item.getStatus() == com.cvdcms.entity.enums.TreatmentPlanItemStatus.COMPLETED) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Bước thủ thuật này đã ở trạng thái Đã thực hiện, không thể thực hiện lại."
+                ));
+            }
+
+            boolean alreadyPerformed = performedServiceRepository.existsByPlanItem_PlanItemIdAndStatusNot(
+                    itemId, com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED);
+            if (alreadyPerformed) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Bước phác đồ này đã được ghi nhận dịch vụ thực hiện, không thể tạo trùng lặp."
+                ));
+            }
+
             com.cvdcms.entity.Visit visit = visitRepository.findById(visitId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + visitId));
+
+            if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT ||
+                visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Ca khám đã hoàn tất lâm sàng và khóa bất biến (BR-EMR-02). Không thể thêm dịch vụ thực hiện."
+                ));
+            }
+
+            if (item.getPlan() != null && item.getPlan().getPatientProfile() != null &&
+                !item.getPlan().getPatientProfile().getProfileId().equals(visit.getPatientProfile().getProfileId())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Ca khám không khớp với hồ sơ bệnh nhân của kế hoạch điều trị."
+                ));
+            }
 
             Long docId = doctorId;
             if (docId == null) {
@@ -192,7 +225,7 @@ public class TreatmentPlanRestController {
                     .build();
 
             PerformedServiceResponseDTO ps = performedServiceService.createPerformedService(req);
-            TreatmentPlanResponseDTO planDto = treatmentPlanService.getPlanById(item.getPlan().getPlanId());
+            TreatmentPlanResponseDTO planDto = treatmentPlanService.syncPlanProgressAndStatus(item.getPlan().getPlanId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

@@ -2,6 +2,8 @@ package com.cvdcms.reception;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
+import com.cvdcms.repository.AppointmentRepository;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,8 @@ class DispatchServiceTest {
     @Mock DispatchTicketRepository tickets;
     @Mock DispatchBranchRepository branches;
     @Mock ReceptionAuditRepository audits;
+    @Mock AppointmentRepository appointments;
+    @Mock ClinicalExaminationBootstrapService examinations;
     @Mock HttpSession session;
     DispatchService service;
     Branch branch;
@@ -33,7 +37,7 @@ class DispatchServiceTest {
     StaffProfile doctor;
 
     @BeforeEach void setup() {
-        service = new DispatchService(access, visits, doctors, schedules, rooms, chairs, tickets, branches, audits);
+        service = new DispatchService(access, visits, doctors, schedules, rooms, chairs, tickets, branches, audits, appointments, examinations);
         branch = new Branch(); branch.setBranchId(1L); branch.setIsActive(true);
         doctor = new StaffProfile(); doctor.setStaffId(3L);
         visit = new Visit(); visit.setVisitId(7L); visit.setBranch(branch); visit.setStatus(VisitStatus.WAITING);
@@ -55,7 +59,7 @@ class DispatchServiceTest {
         DentalChair chair = new DentalChair(); chair.setChairId(6L); chair.setBranch(branch); chair.setRoom(room); chair.setStatus(ChairStatus.AVAILABLE);
         when(chairs.findById(6L)).thenReturn(Optional.of(chair));
         when(rooms.findById(5L)).thenReturn(Optional.of(room));
-        service.assign(session, 1L, 7L, 3L, 5L, 6L);
+        service.assign(session, 1L, 7L, 3L, 5L, 6L, null);
         assertEquals(VisitStatus.WAITING, visit.getStatus());
         assertEquals(ChairStatus.AVAILABLE, chair.getStatus());
         assertEquals(6L, visit.getChairId());
@@ -65,7 +69,74 @@ class DispatchServiceTest {
     @Test void doctorWithoutCurrentScheduleIsRejected() {
         permitted();
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
-        assertThrows(ResponseStatusException.class, () -> service.assign(session, 1L, 7L, 3L, null, null));
+        assertThrows(ResponseStatusException.class, () -> service.assign(session, 1L, 7L, 3L, null, null, null));
+        verify(visits, never()).save(any());
+    }
+
+    @Test void autoAssignmentChoosesLeastWaitingDoctor() {
+        permitted();
+        StaffProfile quieter = new StaffProfile(); quieter.setStaffId(5L);
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, quieter));
+        when(schedules.working(anyLong(), eq(1L), any(), any())).thenReturn(1L);
+        when(visits.doctorLoad(eq(3L), eq(1L), any(), any(), eq(7L))).thenReturn(4L);
+        when(visits.doctorLoad(eq(5L), eq(1L), any(), any(), eq(7L))).thenReturn(1L);
+        when(doctors.findById(5L)).thenReturn(Optional.of(quieter));
+
+        service.assign(session, 1L, 7L, null, null, null, null);
+
+        assertSame(quieter, visit.getPrimaryDoctor());
+        verify(visits).save(visit);
+    }
+
+    @Test void namedDoctorIsKeptAndOverrideRequiresReason() {
+        permitted();
+        PatientProfile patient = new PatientProfile(); patient.setProfileId(11L); visit.setPatientProfile(patient);
+        Appointment appointment = new Appointment(); appointment.setAppointmentId(12L);
+        appointment.setBranch(branch); appointment.setPatientProfile(patient); appointment.setDoctor(doctor);
+        visit.setAppointmentId(12L);
+        StaffProfile other = new StaffProfile(); other.setStaffId(5L);
+        when(appointments.findById(12L)).thenReturn(Optional.of(appointment));
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, other));
+        when(schedules.working(anyLong(), eq(1L), any(), any())).thenReturn(1L);
+
+        assertThrows(ResponseStatusException.class, () -> service.assign(session, 1L, 7L, 5L, null, null, null));
+        verify(visits, never()).save(any());
+
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+        service.assign(session, 1L, 7L, null, null, null, null);
+        assertSame(doctor, visit.getPrimaryDoctor());
+    }
+
+    @Test void transferKeepsExistingTicketAndRecordsReason() {
+        permitted(); visit.setPrimaryDoctor(doctor);
+        StaffProfile other = new StaffProfile(); other.setStaffId(5L);
+        QueueTicket ticket = new QueueTicket(); ticket.setStatus(QueueStatus.WAITING); ticket.setDisplayNumber("P-03");
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, other));
+        when(schedules.working(anyLong(), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(5L)).thenReturn(Optional.of(other));
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.of(ticket));
+
+        assertThrows(ResponseStatusException.class, () -> service.assign(session, 1L, 7L, 5L, null, null, "ngắn"));
+        service.assign(session, 1L, 7L, 5L, null, null, "Bệnh nhân đồng ý đổi bác sĩ");
+
+        assertSame(other, visit.getPrimaryDoctor());
+        assertEquals("P-03", ticket.getDisplayNumber());
+        verify(tickets, never()).save(any());
+        verify(audits).save(argThat(log -> "TRANSFER_DOCTOR_QUEUE".equals(log.getAction())
+                && log.getNewValuesJson().contains("Bệnh nhân đồng ý đổi bác sĩ")));
+    }
+
+    @Test void cannotTransferAfterTicketWasCalled() {
+        permitted(); visit.setPrimaryDoctor(doctor);
+        StaffProfile other = new StaffProfile(); other.setStaffId(5L);
+        QueueTicket ticket = new QueueTicket(); ticket.setStatus(QueueStatus.CALLED);
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, other));
+        when(schedules.working(anyLong(), eq(1L), any(), any())).thenReturn(1L);
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.of(ticket));
+
+        assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, 5L, null, null, "Bệnh nhân đồng ý đổi bác sĩ"));
+        assertSame(doctor, visit.getPrimaryDoctor());
         verify(visits, never()).save(any());
     }
 

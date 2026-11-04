@@ -10,7 +10,6 @@ class EmrStatePolicyTest {
     void draftCanRefreshAndValidateButCannotSign() {
         assertTrue(EmrStatePolicy.canRefresh(EmrRecordStatus.DRAFT));
         assertTrue(EmrStatePolicy.canValidate(EmrRecordStatus.DRAFT));
-        assertFalse(EmrStatePolicy.canPatientSign(EmrRecordStatus.DRAFT));
         assertFalse(EmrStatePolicy.canDoctorSign(EmrRecordStatus.DRAFT));
     }
 
@@ -22,11 +21,9 @@ class EmrStatePolicyTest {
     }
 
     @Test
-    void signatureStepsAreOrdered() {
-        assertTrue(EmrStatePolicy.canPatientSign(EmrRecordStatus.PATIENT_SIGNATURE_PENDING));
-        assertFalse(EmrStatePolicy.canDoctorSign(EmrRecordStatus.PATIENT_SIGNATURE_PENDING));
+    void doctorCanSignLockedRecordAndLegacyPendingRecord() {
+        assertTrue(EmrStatePolicy.canDoctorSign(EmrRecordStatus.PATIENT_SIGNATURE_PENDING));
         assertTrue(EmrStatePolicy.canDoctorSign(EmrRecordStatus.DOCTOR_SIGNATURE_PENDING));
-        assertFalse(EmrStatePolicy.canPatientSign(EmrRecordStatus.DOCTOR_SIGNATURE_PENDING));
     }
 
     @Test

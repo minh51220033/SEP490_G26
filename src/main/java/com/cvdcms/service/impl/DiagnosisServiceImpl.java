@@ -11,6 +11,7 @@ import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.DiagnosisService;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,13 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final AppointmentRepository appointmentRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final InvoiceRepository invoiceRepository;
+    private final ClinicalExaminationBootstrapService examinations;
+    @Autowired(required = false)
+    private DentalChairRepository dentalChairs;
+    @Autowired(required = false)
+    private ClinicalQueueTicketRepository queueTickets;
+    @Autowired(required = false)
+    private SystemAuditLogRepository auditLogs;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -52,7 +60,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             TreatmentPlanRepository treatmentPlanRepository,
             AppointmentRepository appointmentRepository,
             PatientProfileRepository patientProfileRepository,
-            InvoiceRepository invoiceRepository) {
+            InvoiceRepository invoiceRepository,
+            ClinicalExaminationBootstrapService examinations) {
         this.diagnosisRepository = diagnosisRepository;
         this.icd10DiseaseRepository = icd10DiseaseRepository;
         this.visitRepository = visitRepository;
@@ -64,6 +73,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         this.appointmentRepository = appointmentRepository;
         this.patientProfileRepository = patientProfileRepository;
         this.invoiceRepository = invoiceRepository;
+        this.examinations = examinations;
     }
 
     public DiagnosisServiceImpl(
@@ -88,7 +98,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 null,
                 appointmentRepository,
                 patientProfileRepository,
-                invoiceRepository);
+                invoiceRepository,
+                null);
     }
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -192,8 +203,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Override
     @Transactional(readOnly = true)
     public List<Visit> getAvailableVisitsForDiagnosis() {
-        return visitRepository.findRecentVisitsByStatuses(
-                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT));
+        return getAvailableVisitsForDiagnosis(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Visit> getAvailableVisitsForDiagnosis(Long branchId) {
+        if (branchId == null) {
+            return visitRepository.findRecentVisitsByStatuses(
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT));
+        }
+        return visitRepository.findRecentVisitsByStatusesAndBranch(
+                List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT),
+                branchId);
     }
 
     @Override
@@ -396,6 +418,23 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         visit.setStatus(VisitStatus.WAITING_PAYMENT);
+        if (dentalChairs != null && visit.getChairId() != null) {
+            dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
+                if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
+                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.CLEANING);
+                    dentalChairs.save(chair);
+                }
+            });
+        }
+        if (queueTickets != null) {
+            queueTickets.findByVisitVisitIdAndQueueType(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
+                    .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE)
+                    .forEach(t -> {
+                        t.setStatus(com.cvdcms.entity.enums.QueueStatus.DONE);
+                        t.setCompletedAt(LocalDateTime.now());
+                        queueTickets.save(t);
+                    });
+        }
 
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
         String svcCostStr = vndFmt
@@ -433,7 +472,34 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                     "Không thể mở lại ca khám đã có hóa đơn còn hiệu lực. Vui lòng xử lý hóa đơn trước.");
         }
 
+        if (reason == null || reason.trim().length() < 10 || reason.trim().length() > 255) {
+            throw new IllegalArgumentException("Lý do mở lại cần từ 10 đến 255 ký tự.");
+        }
+
         visit.setStatus(VisitStatus.IN_EXAM);
+        // Mở bệnh án để bổ sung tại bàn; số gọi cũ và ghế đã giải phóng không được tái kích hoạt.
+        visit.setChairId(null);
+        visit.setRoomId(null);
+        if (auditLogs != null) {
+            SystemAuditLog audit = new SystemAuditLog();
+            audit.setBranch(visit.getBranch());
+            audit.setEntityTable("visits");
+            audit.setEntityId(visitId);
+            audit.setAction("REOPEN_CLINICAL");
+            audit.setOldValuesJson("{\"status\":\"WAITING_PAYMENT\"}");
+            try {
+                audit.setNewValuesJson(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                        Map.of("status", "IN_EXAM", "reason", reason.trim())));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+                throw new IllegalStateException("Không thể ghi nhật ký mở lại ca khám.", ex);
+            }
+            var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (attributes instanceof org.springframework.web.context.request.ServletRequestAttributes web) {
+                var session = web.getRequest().getSession(false);
+                if (session != null && session.getAttribute("loggedInUser") instanceof User user) audit.setUser(user);
+            }
+            auditLogs.save(audit);
+        }
 
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM từ WAITING_PAYMENT lúc {}. Lý do: {}", visitId, timestamp, reason);
@@ -444,20 +510,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     private ClinicalExamination createDefaultExamination(Visit visit) {
-        ClinicalExamination exam = new ClinicalExamination();
-        exam.setVisit(visit);
-        exam.setPatientProfile(visit.getPatientProfile());
-
-        StaffProfile doctor = visit.getPrimaryDoctor();
-        if (doctor == null) {
-            // lấy bác sĩ đầu tiên hoặc tạo bác sĩ mẫu
-            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
+        if (examinations == null) {
+            throw new IllegalStateException("Không thể khởi tạo hồ sơ lâm sàng: dịch vụ khởi tạo chưa sẵn sàng.");
         }
-        exam.setDoctor(doctor);
-        exam.setChiefComplaint(
-                visit.getInitialSymptoms() != null ? visit.getInitialSymptoms() : "Đến khám nha khoa định kỳ");
-        exam.setExamTime(LocalDateTime.now());
-        return clinicalExamRepository.save(exam);
+        return examinations.ensureForAssignedVisit(visit.getVisitId());
     }
 
     private DiagnosisResponseDTO mapToDTO(ExaminationDiagnosis ed) {

@@ -19,6 +19,7 @@ import java.util.Map;
 public class ClinicalWorkflowRestController {
 
     private final ClinicalWorkflowService workflowService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @GetMapping
     public ResponseEntity<List<WorkflowTemplateResponseDTO>> getAllWorkflows() {
@@ -69,6 +70,7 @@ public class ClinicalWorkflowRestController {
             @PathVariable Long visitId,
             @PathVariable Long serviceId,
             HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         User user = (User) session.getAttribute("loggedInUser");
         Long staffId = user != null ? user.getUserId() : 1L;
 
@@ -84,6 +86,7 @@ public class ClinicalWorkflowRestController {
             @RequestBody Map<String, Object> body,
             HttpSession session) {
         Long executionId = Long.valueOf(body.get("executionId").toString());
+        doctorVisitAccess.requireWorkflowExecution(session, executionId);
         Long stepId = Long.valueOf(body.get("stepId").toString());
         String status = body.get("status").toString();
         String note = body.containsKey("note") && body.get("note") != null ? body.get("note").toString() : null;

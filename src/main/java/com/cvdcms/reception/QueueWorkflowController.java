@@ -38,11 +38,31 @@ public class QueueWorkflowController {
     }
     @PostMapping("/{id}/{action}")
     public String change(@PathVariable Long id, @PathVariable QueueWorkflowService.Action action,
-            @RequestParam Long branchId, @RequestParam(required = false) String reason,
+            @RequestParam Long branchId, @RequestParam(required = false) Long chairId, @RequestParam(required = false) String reason,
             HttpSession session, RedirectAttributes flash) {
         try {
-            service.transition(session, id, action, reason);
-            flash.addFlashAttribute("notice", "Đã cập nhật hàng chờ: " + action.name());
+            service.transition(session, id, action, chairId, reason);
+            String notice = switch (action) {
+                case CALL -> "Đã gọi số khám.";
+                case PAUSE -> "Đã tạm dừng số khám.";
+                case RESUME -> "Số khám đã trở lại hàng chờ.";
+                case PRIORITIZE -> "Đã cập nhật mức ưu tiên.";
+                case EMERGENCY -> "Đã chuyển số khám sang cấp cứu.";
+                case START -> "Đã bắt đầu khám.";
+                case DONE -> "Đã hoàn tất số khám.";
+            };
+            flash.addFlashAttribute("notice", notice);
+        } catch (ResponseStatusException ex) {
+            flash.addFlashAttribute("error", ex.getReason());
+        }
+        return "redirect:/reception/queue?branchId=" + branchId;
+    }
+    @PostMapping("/doctors/{doctorId}/call-next")
+    public String callNext(@PathVariable Long doctorId, @RequestParam Long branchId,
+            HttpSession session, RedirectAttributes flash) {
+        try {
+            var ticket = service.callNext(session, branchId, doctorId);
+            flash.addFlashAttribute("notice", "Đã gọi số " + ticket.getDisplayNumber() + ".");
         } catch (ResponseStatusException ex) {
             flash.addFlashAttribute("error", ex.getReason());
         }

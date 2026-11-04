@@ -69,6 +69,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByProfileIdWithDetails(@Param("profileId") Long profileId);
     Optional<Appointment> findByAppointmentCode(String appointmentCode);
 
+    @Query("""
+        SELECT a.source, COUNT(a)
+        FROM Appointment a
+        WHERE (:branchIds IS NULL OR a.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR a.appointmentDate >= :startDate)
+          AND (:endDate IS NULL OR a.appointmentDate <= :endDate)
+        GROUP BY a.source
+    """)
+    List<Object[]> countAppointmentsBySourceAndBranches(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
     @Query("SELECT a FROM Appointment a " +
            "LEFT JOIN FETCH a.patientProfile p " +
            "LEFT JOIN FETCH a.doctor d " +

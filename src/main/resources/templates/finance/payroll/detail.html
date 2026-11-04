@@ -41,6 +41,7 @@
                 <!-- Action Buttons depending on status -->
                 <div class="d-flex gap-2 flex-wrap align-items-center">
                     <a th:href="@{/payroll}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Danh sách</a>
+                    <a th:href="@{/payroll/{id}/export(id=${period.periodId})}" class="btn btn-success d-inline-flex align-items-center gap-1 shadow-sm" title="T&#7843;i xu&#7889;ng b&#7843;ng t&#237;nh Excel"><i class="bi bi-file-earmark-excel"></i> Xu&#7845;t file Excel</a>
 
                     <!-- DRAFT Actions -->
                     <th:block th:if="${period.status.name() == 'DRAFT'}">

@@ -8,16 +8,16 @@
 <!-- ========================================================================= -->
 <div th:fragment="generalExamSection">
     <!-- FOLDABLE HEADER -->
-    <div class="df-foldable-bar d-flex align-items-center justify-content-between" id="bar-exam" onclick="toggleMainBar('exam')">
+    <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-exam" onclick="toggleMainBar('exam')">
         <div class="d-flex align-items-center flex-grow-1">
-            <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-exam"></i>
-            <span class="df-foldable-title">KHÁM TỔNG QUÁT</span>
+            <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-exam"></i>
+            <span class="df-foldable-title">1. KHÁM TỔNG QUÁT</span>
             <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Triệu chứng ban đầu, tiền sử y khoa dị ứng &amp; khám mô mềm / khớp TMJ)</span>
         </div>
     </div>
 
     <!-- FOLDABLE CONTENT -->
-    <div class="df-foldable-content" id="content-exam" style="display: none;">
+    <div class="df-foldable-content" id="content-exam" style="display: block;">
         <div class="p-3 p-md-4 bg-white border-top">
             <div class="row g-3">
                 <!-- ========================================================= -->
@@ -343,7 +343,7 @@
     /**
      * Lưu thông tin khám tổng quát vào database
      */
-    async function saveGeneralExamination() {
+    async function saveGeneralExamination(silent = false) {
         const visitId = (typeof getCurrentVisitId === 'function')
             ? getCurrentVisitId()
             : (document.getElementById('visitId')?.value || 1);
@@ -402,7 +402,7 @@
                 const notice = document.getElementById('generalExamSavedNotice');
                 if (notice) notice.textContent = `✓ Đã lưu lúc ${nowStr}`;
 
-                if (typeof showToast === 'function') {
+                if (!silent && typeof showToast === 'function') {
                     showToast('✓ Đã lưu thông tin khám tổng quát thành công!');
                 }
             } else {
@@ -410,7 +410,10 @@
             }
         } catch (err) {
             console.error('Lỗi lưu khám tổng quát:', err);
-            if (typeof showToast === 'function') {
+            if (silent) {
+                const notice = document.getElementById('generalExamSavedNotice');
+                if (notice) notice.textContent = 'Chưa lưu được bản nháp, vui lòng bấm Lưu lại';
+            } else if (typeof showToast === 'function') {
                 showToast(err.message, true);
             } else {
                 alert('Lỗi: ' + err.message);
@@ -426,6 +429,22 @@
     // Khởi tạo trạng thái ban đầu khi tải trang
     document.addEventListener('DOMContentLoaded', function() {
         handleAllergyCheckChange();
+        const fields = ['examSymptomsInput','allergyCheck','allergyDetailsInput','cardioCheck',
+            'diabetesCheck','bleedingCheck','pregnantCheck','underlyingDetailsInput',
+            'tmjSelect','hygieneSelect','gingivaSelect'];
+        let timer;
+        fields.forEach(id => {
+            const field = document.getElementById(id);
+            if (!field) return;
+            const schedule = () => {
+                clearTimeout(timer);
+                const notice = document.getElementById('generalExamSavedNotice');
+                if (notice) notice.textContent = 'Đang chờ tự lưu…';
+                timer = setTimeout(() => saveGeneralExamination(true), 3000);
+            };
+            field.addEventListener('input', schedule);
+            field.addEventListener('change', schedule);
+        });
     });
 </script>
 

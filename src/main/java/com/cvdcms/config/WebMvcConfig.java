@@ -91,6 +91,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/payroll", "/payroll/**",
                         "/api/invoices", "/api/invoices/**",
                         "/api/payments", "/api/payments/**",
+                        "/api/finance", "/api/finance/**",
                         "/api/expenses", "/api/expenses/**",
                         "/api/payroll", "/api/payroll/**"
                 )

@@ -1,5 +1,7 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.PrescriptionPurchaseChoice;
+import com.cvdcms.entity.enums.PrescriptionStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,12 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-        name = "prescriptions",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_presc_code", columnNames = "prescription_code")
-        }
-)
+@Table(name = "prescriptions", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_presc_code", columnNames = "prescription_code")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -56,13 +55,13 @@ public class Prescription {
     @Column(name = "followup_date")
     private LocalDate followupDate;
 
-    @Convert(converter = com.cvdcms.entity.converter.PrescriptionStatusConverter.class)
+    @Convert(converter = PrescriptionStatusConverter.class)
     @Column(name = "status", nullable = false, length = 30)
-    private com.cvdcms.entity.enums.PrescriptionStatus status = com.cvdcms.entity.enums.PrescriptionStatus.PENDING;
+    private PrescriptionStatus status = PrescriptionStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "purchase_choice", length = 30)
-    private com.cvdcms.entity.enums.PrescriptionPurchaseChoice purchaseChoice;
+    private PrescriptionPurchaseChoice purchaseChoice;
 
     @Column(name = "choice_note", length = 255)
     private String choiceNote;
