@@ -43,8 +43,7 @@
       </div>
 
       <!-- NHÓM DANH MỤC DỊCH VỤ -->
-      <section class="panel" id="service-categories">
-
+      <section class="panel catalog-filter-panel p-0 mb-3" id="service-categories">
         <!-- TÌM KIẾM & BỘ LỌC NHÓM DỊCH VỤ -->
         <form th:action="@{/admin/services/categories}"
               method="get"
@@ -53,7 +52,7 @@
           <div class="row g-2 align-items-end">
 
             <!-- 1. Ô tìm kiếm theo mã nhóm hoặc tên nhóm -->
-            <div class="col-12 col-md-5 col-lg-4">
+            <div class="col-12 col-md-4 col-lg-3">
               <label for="catKeyword" class="form-label small text-muted mb-1">
                 Tìm kiếm nhóm danh mục dịch vụ
               </label>
@@ -105,10 +104,11 @@
                 Thêm nhóm dịch vụ
               </button>
             </div>
-
           </div>
         </form>
+      </section>
 
+      <section class="panel p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
 
@@ -119,7 +119,7 @@
               <th scope="col" data-column-key="cat_type">Loại</th>
               <th scope="col" data-column-key="display_order">Thứ tự</th>
               <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 130px;">Thao tác</th>
             </tr>
             </thead>
 
@@ -154,41 +154,46 @@
                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
 
-                  <a th:href="@{/admin/services/categories/{id}/edit(
-                                            id=${category.categoryId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
+                  <!-- Sửa: icon bút chì, viền xanh -->
+                  <a th:href="@{/admin/services/categories/{id}/edit(id=${category.categoryId})}"
+                     class="btn btn-sm btn-outline-primary"
+                     title="Sửa"
+                     aria-label="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
 
-                  <form th:action="@{/admin/services/categories/{id}/toggle(
-                                                id=${category.categoryId})}"
+                  <!-- Ngừng / Kích hoạt: icon tạm dừng (viền vàng) / icon phát (viền xanh lá) -->
+                  <form th:action="@{/admin/services/categories/{id}/toggle(id=${category.categoryId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái nhóm dịch vụ này?');">
-
                     <button type="submit"
                             class="btn btn-sm"
-                            th:classappend="${category.isActive == true}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${category.isActive == true}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
+                            th:classappend="${category.isActive == true} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${category.isActive == true} ? 'Ngừng sử dụng' : 'Kích hoạt'"
+                            th:aria-label="${category.isActive == true} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${category.isActive == true} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
                     </button>
                   </form>
 
+                  <!-- Xóa: icon thùng rác, viền đỏ -->
                   <form th:action="@{/admin/services/categories/{id}/delete(id=${category.categoryId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         data-delete-catalog-form
                         data-delete-kind="nhóm dịch vụ"
                         th:attr="data-delete-name=${category.categoryName}">
                     <input type="hidden" name="deleteToken" th:value="${deleteToken}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                      Xóa
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Xóa"
+                            aria-label="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                   </form>
                 </div>

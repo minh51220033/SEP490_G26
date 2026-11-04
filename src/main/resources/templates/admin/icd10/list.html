@@ -34,10 +34,11 @@
            th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
       <section class="panel mb-4">
+        <h2 class="visually-hidden">Danh mục mã bệnh ICD-10</h2>
         <!-- TÌM KIẾM -->
         <form th:action="@{/admin/icd10}" method="get" class="p-3 border-bottom">
           <div class="row g-2 align-items-end">
-            <div class="col-md-5 col-lg-4">
+            <div class="col-12 col-md-4 col-lg-3">
               <label for="searchKeyword" class="form-label">Tìm kiếm</label>
               <input id="searchKeyword" type="text" name="q" class="form-control"
                      placeholder="Mã ICD-10, tên tiếng Việt, tiếng Anh..."
@@ -49,7 +50,7 @@
               </button>
               <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
             </div>
-            <div class="col-md-auto">
+            <div class="col-12 col-md-auto ms-md-auto text-end">
             <button type="button" class="btn btn-primary"
                     data-bs-toggle="modal" data-bs-target="#modalCreate">
               <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
