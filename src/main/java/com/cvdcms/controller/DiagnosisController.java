@@ -64,6 +64,7 @@ public class DiagnosisController {
     private final UserRepository userRepository;
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
         if (session == null) return null;
@@ -270,6 +271,7 @@ public class DiagnosisController {
             log.warn("Không tìm thấy ca khám ID={}: {}. Hiển thị màn hình rỗng.", visitId, ex.getMessage());
             return renderEmptyDiagnosisPage(branchIdParam, session, model);
         }
+        doctorVisitAccess.require(session, visitId);
 
         // Kiểm tra ca khám có thuộc cơ sở của bác sĩ không
         if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
