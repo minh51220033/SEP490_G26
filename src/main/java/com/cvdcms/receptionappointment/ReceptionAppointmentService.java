@@ -6,6 +6,8 @@ import com.cvdcms.patient.PatientAccess;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentConflictDetectionService;
 import com.cvdcms.service.AppointmentLifecycleService;
+import com.cvdcms.service.AppointmentPolicyService;
+import com.cvdcms.service.AppointmentSlotService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,7 @@ public class ReceptionAppointmentService {
     private final CustomerCareTaskRepository careTasks;
     private final AppointmentLifecycleService lifecycle;
     private final AppointmentConflictDetectionService conflictDetection;
+    private final AppointmentSlotService slots;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -42,23 +45,35 @@ public class ReceptionAppointmentService {
             AppointmentBookingLockRepository lockedBranches, ServiceRepository services, StaffProfileRepository staff,
             ReceptionAppointmentRules rules, AppointmentHistoryRepository histories,
             CustomerCareTaskRepository careTasks, AppointmentLifecycleService lifecycle,
-            AppointmentConflictDetectionService conflictDetection) {
+            AppointmentConflictDetectionService conflictDetection, AppointmentSlotService slots) {
         this.access = access; this.appointments = appointments; this.patients = patients;
         this.branches = branches; this.lockedBranches = lockedBranches; this.services = services;
         this.staff = staff; this.rules = rules; this.histories = histories; this.careTasks = careTasks;
         this.lifecycle = lifecycle; this.conflictDetection = conflictDetection;
+        this.slots = slots;
     }
 
     public record CreateRequest(@NotNull Long branchId, @NotNull Long profileId,
             @NotNull LocalDate date, @NotNull PreferredSession session, Long doctorId, Long serviceId,
-            @Size(max = 500) String symptoms) {}
+            @Size(max = 500) String symptoms, LocalTime expectedTime) {
+        public CreateRequest(Long branchId, Long profileId, LocalDate date, PreferredSession session,
+                Long doctorId, Long serviceId, String symptoms) {
+            this(branchId, profileId, date, session, doctorId, serviceId, symptoms, null);
+        }
+    }
+    public record SlotOption(LocalTime time, int remaining) {}
     public record UpdateRequest(@NotNull LocalDate date, @NotNull PreferredSession session,
             Long doctorId, Long serviceId, @Size(max = 500) String symptoms,
-            @NotBlank @Size(max = 255) String reason) {}
+            @NotBlank @Size(max = 255) String reason, LocalTime expectedTime) {
+        public UpdateRequest(LocalDate date, PreferredSession session, Long doctorId, Long serviceId,
+                String symptoms, String reason) {
+            this(date, session, doctorId, serviceId, symptoms, reason, null);
+        }
+    }
     public record ConfirmRequest(Long doctorId) {}
     public record CancelRequest(@NotBlank String reasonCode, @Size(max = 180) String note) {}
     public record BranchOption(Long id, String name) {}
-    public record ServiceOption(Long id, String name) {}
+    public record ServiceOption(Long id, String name, int durationMinutes) {}
     public record PatientOption(Long id, String code, String name, String phone) {}
     public record Options(List<BranchOption> branches, List<ServiceOption> services) {}
     public record AppointmentView(Long id, String code, Long profileId, String patientCode,
@@ -67,7 +82,7 @@ public class ReceptionAppointmentService {
             LocalDate date, PreferredSession session, String symptoms,
             AppointmentSource source, AppointmentStatus status, int rescheduleCount,
             String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt,
-            String conflictNotes) {
+            String conflictNotes, LocalTime expectedTime, Integer durationMinutes) {
         public AppointmentView(Long id, String code, Long profileId, String patientCode,
                                String patientName, String patientPhone, Long branchId, String branchName,
                                Long doctorId, String doctorName, Long serviceId, String serviceName,
@@ -76,7 +91,7 @@ public class ReceptionAppointmentService {
                                String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt) {
             this(id, code, profileId, patientCode, patientName, patientPhone, branchId, branchName,
                     doctorId, doctorName, serviceId, serviceName, date, session, symptoms,
-                    source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null);
+                    source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null, null, 30);
         }
     }
     public record HistoryView(String action, String oldValue, String newValue, String reason, LocalDateTime createdAt) {}
@@ -92,7 +107,8 @@ public class ReceptionAppointmentService {
         List<BranchOption> branchOptions = allowed.stream().map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList();
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive()))
-                .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName())).toList();
+                .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName(),
+                        AppointmentSlotService.duration(s))).toList();
         return new Options(branchOptions, serviceOptions);
     }
 
@@ -119,9 +135,29 @@ public class ReceptionAppointmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppointmentPolicyService.SessionLoadSummary> sessionLoad(HttpSession session, Long branchId, LocalDate date) {
+        PatientAccess.Scope scope = access.require(session);
+        Branch branch = requireBranch(scope, branchId);
+        return rules.dayLoadOverview(branch, date);
+    }
+
+    @Transactional(readOnly = true)
     public List<ReceptionAppointmentRules.DoctorOption> doctors(HttpSession session, Long branchId, LocalDate date) {
         PatientAccess.Scope scope = access.require(session);
         return rules.doctorsForDate(requireBranch(scope, branchId), date);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SlotOption> slots(HttpSession session, Long branchId, LocalDate date,
+            PreferredSession period, Long doctorId, Long serviceId, Long excludeId) {
+        PatientAccess.Scope scope = access.require(session);
+        Branch branch = requireBranch(scope, branchId);
+        if (excludeId != null && !owned(scope, excludeId).getBranch().getBranchId().equals(branchId))
+            throw bad("Không thể đổi chi nhánh của lịch này.");
+        return slots.available(branch, date, period, doctorId,
+                AppointmentSlotService.duration(service(serviceId)), excludeId,
+                AppointmentActorType.RECEPTIONIST).stream()
+                .map(s -> new SlotOption(s.time(), s.remaining())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -172,8 +208,15 @@ public class ReceptionAppointmentService {
         Appointment a = new Appointment();
         a.setAppointmentCode(code()); a.setBranch(branch); a.setPatientProfile(profile);
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
-        a.setExpectedTime(null); a.setDoctor(doctor(request.doctorId()));
+        a.setDoctor(doctor(request.doctorId()));
         a.setService(service(request.serviceId())); a.setInitialSymptoms(clean(request.symptoms()));
+        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
+        LocalTime expectedTime = null;
+        if (request.expectedTime() != null) {
+            expectedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                    a.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.RECEPTIONIST);
+        }
+        a.setExpectedTime(expectedTime);
         a.setSource(AppointmentSource.RECEPTIONIST); a.setStatus(AppointmentStatus.CONFIRMED);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CREATE", null, snapshot(a), null);
@@ -189,10 +232,21 @@ public class ReceptionAppointmentService {
                 request.doctorId(), id);
         String old = snapshot(a);
         boolean moved = !Objects.equals(a.getAppointmentDate(), request.date())
-                || a.getPreferredSession() != request.session();
+                || a.getPreferredSession() != request.session()
+                || request.expectedTime() != null && !Objects.equals(a.getExpectedTime(), request.expectedTime());
+        LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
+                : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
+                    ? a.getExpectedTime() : null;
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
         a.setDoctor(doctor(request.doctorId())); a.setService(service(request.serviceId()));
-        a.setInitialSymptoms(clean(request.symptoms())); a.setExpectedTime(null);
+        a.setInitialSymptoms(clean(request.symptoms()));
+        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
+        LocalTime expectedTime = null;
+        if (requestedTime != null) {
+            expectedTime = slots.resolveFlexibly(a.getBranch(), request.date(), request.session(), request.doctorId(),
+                    a.getDurationMinutes(), id, requestedTime, AppointmentActorType.RECEPTIONIST);
+        }
+        a.setExpectedTime(expectedTime);
         if (moved) a.setRescheduleCount(a.getRescheduleCount() + 1);
         lifecycle.transition(a, a.getStatus(), AppointmentLifecycleAction.RESCHEDULE);
         appointments.saveAndFlush(a);
@@ -212,6 +266,10 @@ public class ReceptionAppointmentService {
                 a.getPreferredSession(), request.doctorId(), id);
         String old = snapshot(a);
         a.setDoctor(doctor(request.doctorId()));
+        if (a.getExpectedTime() != null) {
+            slots.resolveFlexibly(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), request.doctorId(),
+                    a.getDurationMinutes(), id, a.getExpectedTime(), AppointmentActorType.RECEPTIONIST);
+        }
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CONFIRM", old, snapshot(a), null);
@@ -250,6 +308,8 @@ public class ReceptionAppointmentService {
                 || !rules.sessionEnded(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), now)) return;
         lifecycle.transition(a, AppointmentStatus.NO_SHOW, AppointmentLifecycleAction.MARK_NO_SHOW);
         appointments.saveAndFlush(a);
+        history(a, null, "NO_SHOW", snapshotWithStatus(a, AppointmentStatus.CONFIRMED), snapshot(a),
+                "Tự động đánh dấu không đến sau khi buổi khám kết thúc");
         for (CustomerCareTask reminder : careTasks.findByAppointment_AppointmentId(id))
             if (reminder.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
                     && reminder.getStatus() != CustomerCareTaskStatus.COMPLETED)
@@ -347,14 +407,19 @@ public class ReceptionAppointmentService {
                 a.getService() == null ? null : a.getService().getServiceId(),
                 a.getService() == null ? null : a.getService().getServiceName(),
                 a.getAppointmentDate(), a.getPreferredSession(), a.getInitialSymptoms(), a.getSource(), a.getStatus(),
-                a.getRescheduleCount(), a.getCancelReason(), doctorUnavailable, a.getCreatedAt(), conflictNotes);
+                a.getRescheduleCount(), a.getCancelReason(), doctorUnavailable, a.getCreatedAt(), conflictNotes,
+                a.getExpectedTime(), a.getDurationMinutes());
     }
     private static long count(List<AppointmentView> list, AppointmentStatus status) {
         return list.stream().filter(a -> a.status() == status).count();
     }
     private static String snapshot(Appointment a) {
         return a.getAppointmentDate() + "|" + a.getPreferredSession() + "|doctor="
-                + (a.getDoctor() == null ? null : a.getDoctor().getStaffId()) + "|status=" + a.getStatus();
+                + (a.getDoctor() == null ? null : a.getDoctor().getStaffId()) + "|time="
+                + a.getExpectedTime() + "|status=" + a.getStatus();
+    }
+    private static String snapshotWithStatus(Appointment a, AppointmentStatus status) {
+        return snapshot(a).replace("|status=" + a.getStatus(), "|status=" + status);
     }
     private static String code() {
         return "LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();

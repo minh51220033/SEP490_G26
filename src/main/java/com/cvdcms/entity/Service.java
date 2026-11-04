@@ -73,6 +73,9 @@ public class Service {
     @Column(name = "warranty_months")
     private Integer warrantyMonths;
 
+    @Column(name = "estimated_duration_minutes", nullable = false)
+    private Integer estimatedDurationMinutes = 30;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

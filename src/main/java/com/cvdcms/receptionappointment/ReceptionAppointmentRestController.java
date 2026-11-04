@@ -2,6 +2,7 @@ package com.cvdcms.receptionappointment;
 
 import com.cvdcms.entity.enums.AppointmentStatus;
 import com.cvdcms.entity.enums.PreferredSession;
+import com.cvdcms.service.AppointmentPolicyService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -35,6 +36,19 @@ public class ReceptionAppointmentRestController {
             @RequestParam PreferredSession sessionPeriod,
             @RequestParam(required = false) Long excludeAppointmentId) {
         return appointments.availability(session, branchId, date, sessionPeriod, excludeAppointmentId);
+    }
+    @GetMapping("/sessions-overview")
+    public List<AppointmentPolicyService.SessionLoadSummary> sessionsOverview(HttpSession session,
+            @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return appointments.sessionLoad(session, branchId, date);
+    }
+    @GetMapping("/slots")
+    public List<ReceptionAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam PreferredSession sessionPeriod, @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long serviceId, @RequestParam(required = false) Long excludeAppointmentId) {
+        return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId);
     }
     @GetMapping("/doctors")
     public List<ReceptionAppointmentRules.DoctorOption> doctors(HttpSession session, @RequestParam Long branchId,

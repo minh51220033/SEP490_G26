@@ -6,6 +6,8 @@
         COMPLETED: 'Đã hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Không đến'};
     const statusClass = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-info text-dark',
         COMPLETED: 'bg-success', CANCELLED: 'bg-secondary', NO_SHOW: 'bg-danger'};
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,
+        char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
 
     async function request(path, options = {}) {
         const response = await fetch(api + path, {
@@ -51,6 +53,7 @@
         const session = sessionLabel[parts[1]] || parts[1];
         let doctorText = 'Không yêu cầu bác sĩ đích danh';
         let statusText = '';
+        let timeText = '';
         for (let i = 2; i < parts.length; i++) {
             const p = parts[i];
             if (p.startsWith('doctor=')) {
@@ -61,9 +64,11 @@
             } else if (p.startsWith('status=')) {
                 const statVal = p.substring(7);
                 statusText = statusLabel[statVal] || statVal;
+            } else if (p.startsWith('time=')) {
+                timeText = p.substring(5) === 'null' ? '' : p.substring(5).slice(0, 5);
             }
         }
-        return { date, session, doctorText, statusText };
+        return { date, session, doctorText, statusText, timeText };
     }
     function localDate(offset = 0) {
         const d = new Date();
@@ -113,7 +118,7 @@
 
                 // Column 2: Ngày và buổi
                 const dateTd = cell(row);
-                dateTd.innerHTML = `<span class="fw-medium">${dateLabel(a.date)}</span> <span class="badge bg-light text-secondary border ms-1">${sessionLabel[a.session] || a.session}</span>`;
+                dateTd.innerHTML = `<span class="fw-medium">${dateLabel(a.date)}</span> <span class="badge bg-light text-secondary border ms-1">${sessionLabel[a.session] || a.session}</span> · ${a.expectedTime ? a.expectedTime.slice(0, 5) : 'Chưa chốt giờ'}`;
 
                 // Column 3: Chi nhánh
                 cell(row, a.branchName);
@@ -162,7 +167,7 @@
         const options = await request('/options');
         setSelect($('profileId'), options.profiles, 'Chọn hồ sơ', p => `${p.name} (${p.code})`);
         setSelect($('branchId'), options.branches, 'Chọn chi nhánh', b => b.name);
-        setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ', s => s.name);
+        setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ · 30 phút', s => `${s.name} · ${s.durationMinutes} phút`);
         $('appointmentDate').min = localDate();
         $('appointmentDate').max = localDate(90);
         let current = null;
@@ -191,11 +196,31 @@
         }
         let available = false;
         let sequence = 0;
+        async function loadSlots(token) {
+            const select = $('slotTime');
+            const previous = select.value || (current?.expectedTime || '').slice(0, 5);
+            select.disabled = true; select.replaceChildren(option('', 'Đang tải giờ trống…'));
+            const params = new URLSearchParams({branchId: $('branchId').value, date: $('appointmentDate').value,
+                sessionPeriod: $('preferredSession').value});
+            if ($('doctorId').value) params.set('doctorId', $('doctorId').value);
+            if (!editing && $('serviceId').value) params.set('serviceId', $('serviceId').value);
+            if (editing) params.set('excludeAppointmentId', id);
+            const list = await request(`/slots?${params}`);
+            if (token !== sequence) return;
+            select.replaceChildren(option('', 'Chọn giờ hẹn'));
+            list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
+            if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) select.value = previous;
+            select.disabled = !list.length;
+            $('submitAppointment').disabled = !list.length;
+            if (!list.length) { available = false; $('availabilityMessage').textContent = 'Không còn giờ phù hợp. Hãy chọn buổi hoặc bác sĩ khác.';
+                $('availabilityMessage').classList.remove('is-success'); $('availabilityMessage').classList.add('is-error'); }
+        }
         async function availability() {
             const token = ++sequence;
             const branchId = $('branchId').value, date = $('appointmentDate').value, session = $('preferredSession').value;
             const doctor = $('doctorId'), message = $('availabilityMessage'), button = $('submitAppointment');
             available = false; button.disabled = true; doctor.disabled = true;
+            $('slotTime').disabled = true; $('slotTime').replaceChildren(option('', 'Chọn ngày và buổi trước'));
             doctor.replaceChildren(option('', 'Không yêu cầu bác sĩ'));
             message.className = 'appointment-availability';
             if (!branchId || !date || !session) {
@@ -219,9 +244,13 @@
             if (current?.requestedDoctorId && !result.doctors.some(d => d.id === current.requestedDoctorId))
                 message.textContent += ' Bác sĩ trong lịch cũ không khả dụng ở buổi mới; hãy chọn lại bác sĩ.';
             message.classList.add('is-success');
+            await loadSlots(token);
         }
         ['branchId', 'appointmentDate', 'preferredSession'].forEach(field =>
             $(field).addEventListener('change', () => availability().catch(e => error(e.message))));
+        ['doctorId', 'serviceId'].forEach(field => $(field).addEventListener('change', () => {
+            if (available) loadSlots(sequence).catch(e => error(e.message));
+        }));
         if (editing) await availability();
         let key = sessionStorage.getItem('ft06-booking-key');
         if (!key) { key = crypto.randomUUID(); sessionStorage.setItem('ft06-booking-key', key); }
@@ -231,6 +260,7 @@
             const button = $('submitAppointment'); button.disabled = true;
             try {
                 const payload = {date: $('appointmentDate').value, session: $('preferredSession').value,
+                    expectedTime: $('slotTime').value,
                     doctorId: $('doctorId').value ? Number($('doctorId').value) : null};
                 let saved;
                 if (editing) {
@@ -283,6 +313,8 @@
             ['Bệnh nhân', a.patientName],
             ['Chi nhánh', a.branchName],
             ['Ngày khám', dateLabel(a.date)],
+            ['Giờ hẹn dự kiến', a.expectedTime ? a.expectedTime.slice(0, 5) : 'Chưa chốt giờ'],
+            ['Thời lượng dự kiến', a.durationMinutes ? `${a.durationMinutes} phút` : 'Chưa rõ'],
             ['Buổi khám', sessionLabel[a.session] || a.session],
             [a.code.startsWith('TK') ? 'Bác sĩ phụ trách tái khám' : 'Bác sĩ yêu cầu', a.requestedDoctorName || (a.code.startsWith('TK') ? 'Bác sĩ điều trị' : 'Không yêu cầu · lễ tân điều phối khi đến')],
             ['Dịch vụ quan tâm', a.serviceName || (a.code.startsWith('TK') ? 'Tái khám theo dõi chuyên khoa' : 'Chưa chọn')],
@@ -312,7 +344,10 @@
                 RESCHEDULE: { label: 'Đổi ngày / buổi khám', badge: 'bg-warning-subtle text-warning border-warning-subtle', icon: 'bi-arrow-repeat' },
                 CONFIRM: { label: 'Phòng khám xác nhận', badge: 'bg-success-subtle text-success border-success-subtle', icon: 'bi-check-circle' },
                 CANCEL: { label: 'Hủy lịch hẹn', badge: 'bg-danger-subtle text-danger border-danger-subtle', icon: 'bi-x-circle' },
-                COMPLETE: { label: 'Hoàn tất lượt khám', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-check2-all' }
+                COMPLETE: { label: 'Hoàn tất lượt khám', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-check2-all' },
+                CHECK_IN: { label: 'Đã đến phòng khám', badge: 'bg-info-subtle text-info border-info-subtle', icon: 'bi-person-check' },
+                NO_SHOW: { label: 'Không đến lịch hẹn', badge: 'bg-danger-subtle text-danger border-danger-subtle', icon: 'bi-person-x' },
+                REVERT_CHECK_IN: { label: 'Điều chỉnh tiếp đón', badge: 'bg-warning-subtle text-warning border-warning-subtle', icon: 'bi-arrow-counterclockwise' }
             };
 
             detail.history.forEach((h, idx) => {
@@ -326,28 +361,28 @@
                 let snapText = '';
                 if (snap) {
                     snapText = `<div class="small mt-1 text-secondary">
-                        <span><i class="bi bi-calendar3 me-1"></i>Ngày hẹn: <strong>${snap.date}</strong> (${snap.session})</span>
+                        <span><i class="bi bi-calendar3 me-1"></i>Ngày hẹn: <strong>${escapeHtml(snap.date)}</strong> (${escapeHtml(snap.session)})${snap.timeText ? ' · ' + escapeHtml(snap.timeText) : ''}</span>
                         <span class="mx-1.5 text-muted">·</span>
-                        <span><i class="bi bi-person-badge me-1"></i>${snap.doctorText}</span>
-                        ${snap.statusText ? `<span class="mx-1.5 text-muted">·</span><span class="badge bg-light text-dark border">${snap.statusText}</span>` : ''}
+                        <span><i class="bi bi-person-badge me-1"></i>${escapeHtml(snap.doctorText)}</span>
+                        ${snap.statusText ? `<span class="mx-1.5 text-muted">·</span><span class="badge bg-light text-dark border">${escapeHtml(snap.statusText)}</span>` : ''}
                     </div>`;
                 } else if (h.newValue) {
-                    snapText = `<div class="small mt-1 text-muted">${h.newValue}</div>`;
+                    snapText = `<div class="small mt-1 text-muted">${escapeHtml(h.newValue)}</div>`;
                 }
 
                 let reasonText = '';
                 if (h.reason) {
                     reasonText = `<div class="small text-muted fst-italic mt-1 ps-2 border-start border-2 border-primary-subtle">
-                        <i class="bi bi-chat-quote me-1"></i>${h.reason}
+                        <i class="bi bi-chat-quote me-1"></i>${escapeHtml(h.reason)}
                     </div>`;
                 }
 
                 item.innerHTML = `
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge ${act.badge} py-1 px-2 fw-semibold">
-                            <i class="bi ${act.icon} me-1"></i>${act.label}
+                            <i class="bi ${act.icon} me-1"></i>${escapeHtml(act.label)}
                         </span>
-                        <span class="text-muted small fw-medium">Lần #${idx + 1}</span>
+                        <span class="text-muted small fw-medium">${h.createdAt ? escapeHtml(h.createdAt.replace('T', ' ').slice(0, 16)) : `Lần #${idx + 1}`}</span>
                     </div>
                     ${snapText}
                     ${reasonText}

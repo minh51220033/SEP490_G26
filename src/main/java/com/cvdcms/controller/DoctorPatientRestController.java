@@ -7,6 +7,7 @@ import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
 import jakarta.servlet.http.HttpSession;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -34,9 +35,7 @@ public class DoctorPatientRestController {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final UserRepository userRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
-
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private ClinicalExaminationRepository clinicalExamRepository;
+    private final ClinicalExaminationBootstrapService examinations;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -159,7 +158,7 @@ public class DoctorPatientRestController {
         newVisit.setVisitCode("VIS" + (10000 + visitCount));
 
         newVisit = visitRepository.save(newVisit);
-        ensureClinicalExamExists(newVisit, doctor);
+        examinations.ensureForAssignedVisit(newVisit.getVisitId());
 
         return ResponseEntity.ok(Map.of(
                 "visitId", newVisit.getVisitId(),
@@ -500,7 +499,7 @@ public class DoctorPatientRestController {
         }
         visit.setVisitCode(vCode);
         visit = visitRepository.save(visit);
-        ensureClinicalExamExists(visit, doctor);
+        examinations.ensureForAssignedVisit(visit.getVisitId());
 
         String redirectUrl = "/doctor/examination/" + visit.getVisitId() + "/diagnoses";
         if (branch != null) {
@@ -516,27 +515,4 @@ public class DoctorPatientRestController {
         ));
     }
 
-    private void ensureClinicalExamExists(Visit visit, StaffProfile doctor) {
-        if (visit == null || clinicalExamRepository == null) return;
-        try {
-            if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                ClinicalExamination exam = new ClinicalExamination();
-                exam.setVisit(visit);
-                exam.setPatientProfile(visit.getPatientProfile());
-                StaffProfile effectiveDoc = doctor != null ? doctor : visit.getPrimaryDoctor();
-                if (effectiveDoc == null) {
-                    effectiveDoc = staffProfileRepository.findAll().stream()
-                            .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
-                            .findFirst().orElse(null);
-                }
-                exam.setDoctor(effectiveDoc);
-                exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                        ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                exam.setExamTime(LocalDateTime.now());
-                clinicalExamRepository.save(exam);
-            }
-        } catch (Exception e) {
-            log.warn("Không thể tạo ClinicalExamination cho ca khám {}: {}", visit.getVisitId(), e.getMessage());
-        }
-    }
 }

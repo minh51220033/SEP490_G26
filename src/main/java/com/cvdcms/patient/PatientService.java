@@ -85,9 +85,15 @@ public class PatientService {
 
     @Transactional(readOnly = true)
     public List<DuplicateCandidate> candidates(HttpSession session, String name, LocalDate dob,
-                                                String phone, Long excludeId) {
+                                                String phone, String idCardNumber, Long excludeId) {
         var scope = access.require(session);
-        return findCandidates(scope, name, dob, phone, excludeId);
+        return findCandidates(scope, name, dob, phone, idCardNumber, excludeId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DuplicateCandidate> candidates(HttpSession session, String name, LocalDate dob,
+                                                String phone, Long excludeId) {
+        return candidates(session, name, dob, phone, null, excludeId);
     }
 
     public PatientView create(HttpSession session, PatientProfileForm form) {
@@ -198,23 +204,26 @@ public class PatientService {
 
     private void requireDuplicateConfirmation(PatientAccess.Scope scope, PatientProfileForm form, Long excludeId) {
         if (!form.confirmDuplicate() && !findCandidates(scope, form.fullName(), form.dob(),
-                form.phoneNumber(), excludeId).isEmpty()) {
+                form.phoneNumber(), form.idCardNumber(), excludeId).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Có hồ sơ tương tự. Vui lòng đối chiếu và xác nhận trước khi lưu.");
         }
     }
 
     private List<DuplicateCandidate> findCandidates(PatientAccess.Scope scope, String name, LocalDate dob,
-                                                     String phone, Long excludeId) {
+                                                     String phone, String idCardNumber, Long excludeId) {
         String cleanName = blankToNull(name);
         String cleanPhone = blankToNull(phone);
-        if (cleanPhone == null && (cleanName == null || dob == null)) return List.of();
+        String cleanIdCard = blankToNull(idCardNumber);
+        if (cleanPhone == null && (cleanName == null || dob == null) && cleanIdCard == null) return List.of();
         List<ReceptionPatientRecord> found = search.candidates(scope.branchId(),
                 cleanPhone == null ? "" : cleanPhone,
                 dob, cleanName == null ? "" : cleanName.toLowerCase(Locale.ROOT),
+                cleanIdCard == null ? "" : cleanIdCard,
                 PageRequest.of(0, 15));
         return found.stream().filter(p -> !p.getProfileId().equals(excludeId)).map(p -> {
             List<String> matches = new ArrayList<>();
+            if (cleanIdCard != null && cleanIdCard.equals(p.getIdCardNumber())) matches.add("Số CCCD");
             if (cleanPhone != null && cleanPhone.equals(p.getPhoneNumber())) matches.add("Số điện thoại");
             if (cleanName != null && cleanName.equalsIgnoreCase(p.getFullName().trim())) matches.add("Họ tên");
             if (dob != null && dob.equals(p.getDob())) matches.add("Ngày sinh");
@@ -231,6 +240,10 @@ public class PatientService {
         profile.setPhoneNumber(form.phoneNumber().trim());
         profile.setAddress(form.address() == null ? "" : form.address().trim());
         profile.setPreferredBranch(branch);
+        profile.setAllergyDetails(blankToNull(form.allergyDetails()));
+        profile.setHasAllergies(profile.getAllergyDetails() == null ? null : true);
+        profile.setUnderlyingDiseaseDetails(blankToNull(form.underlyingDiseaseDetails()));
+        profile.setHasUnderlyingDisease(profile.getUnderlyingDiseaseDetails() == null ? null : true);
         profile.setGuardianName(blankToNull(form.guardianName()));
         profile.setGuardianPhone(blankToNull(form.guardianPhone()));
         profile.setGuardianRelationship(blankToNull(form.guardianRelationship()));

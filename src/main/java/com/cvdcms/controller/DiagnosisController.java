@@ -11,13 +11,12 @@ import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.DiagnosisType;
-import com.cvdcms.entity.enums.StaffGender;
-import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 import com.cvdcms.service.DiagnosisService;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import com.cvdcms.service.Icd10DiseaseService;
 import com.cvdcms.service.PerformedServiceService;
 import com.cvdcms.service.PrescriptionService;
@@ -47,6 +46,7 @@ import java.util.Optional;
 public class DiagnosisController {
 
     private final DiagnosisService diagnosisService;
+    private final ClinicalExaminationBootstrapService examinations;
     private final Icd10DiseaseService icd10DiseaseService;
     private final PerformedServiceService performedServiceService;
     private final PrescriptionService prescriptionService;
@@ -64,9 +64,6 @@ public class DiagnosisController {
     private final UserRepository userRepository;
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
-
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private ClinicalExaminationRepository clinicalExamRepository;
 
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
         if (session == null) return null;
@@ -244,7 +241,7 @@ public class DiagnosisController {
         }
         newVisit.setVisitCode(genCode);
         newVisit = visitRepository.save(newVisit);
-        ensureClinicalExamExists(newVisit, newVisit.getPrimaryDoctor());
+        examinations.ensureForAssignedVisit(newVisit.getVisitId());
 
         return "redirect:/doctor/examination/" + newVisit.getVisitId() + "/diagnoses";
     }
@@ -530,30 +527,6 @@ public class DiagnosisController {
         model.addAttribute("activeMenu", "examination");
 
         return "doctor/treatment-plan-create";
-    }
-
-    private void ensureClinicalExamExists(Visit visit, StaffProfile doctor) {
-        if (visit == null || clinicalExamRepository == null) return;
-        try {
-            if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                ClinicalExamination exam = new ClinicalExamination();
-                exam.setVisit(visit);
-                exam.setPatientProfile(visit.getPatientProfile());
-                StaffProfile effectiveDoc = doctor != null ? doctor : visit.getPrimaryDoctor();
-                if (effectiveDoc == null) {
-                    effectiveDoc = staffProfileRepository.findAll().stream()
-                            .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
-                            .findFirst().orElse(null);
-                }
-                exam.setDoctor(effectiveDoc);
-                exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                        ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                exam.setExamTime(LocalDateTime.now());
-                clinicalExamRepository.save(exam);
-            }
-        } catch (Exception e) {
-            log.warn("Không thể tạo ClinicalExamination cho ca khám {}: {}", visit.getVisitId(), e.getMessage());
-        }
     }
 
     private String renderEmptyDiagnosisPage(Long branchIdParam, jakarta.servlet.http.HttpSession session, Model model) {

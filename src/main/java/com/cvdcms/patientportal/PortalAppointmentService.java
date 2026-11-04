@@ -5,6 +5,7 @@ import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentLifecycleService;
 import com.cvdcms.service.AppointmentPolicyService;
+import com.cvdcms.service.AppointmentSlotService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
 import org.springframework.http.HttpStatus;
@@ -31,25 +32,36 @@ public class PortalAppointmentService {
     private final CustomerCareTaskRepository careTasks;
     private final AppointmentPolicyService policy;
     private final AppointmentLifecycleService lifecycle;
+    private final AppointmentSlotService slots;
 
     public PortalAppointmentService(PortalAccess access, PortalAppointmentRepository appointments,
             AppointmentHistoryRepository histories, BranchRepository branches,
             AppointmentBookingLockRepository lockedBranches,
             PortalBookingRequestRepository bookingRequests, ServiceRepository services, StaffProfileRepository staff,
             CustomerCareTaskRepository careTasks, AppointmentPolicyService policy,
-            AppointmentLifecycleService lifecycle) {
+            AppointmentLifecycleService lifecycle, AppointmentSlotService slots) {
         this.access = access; this.appointments = appointments; this.histories = histories;
         this.branches = branches; this.lockedBranches = lockedBranches;
         this.bookingRequests = bookingRequests; this.services = services; this.staff = staff;
-        this.careTasks = careTasks; this.policy = policy; this.lifecycle = lifecycle;
+        this.careTasks = careTasks; this.policy = policy; this.lifecycle = lifecycle; this.slots = slots;
     }
 
     public record BookingRequest(@NotNull Long profileId, @NotNull Long branchId,
                                  @NotNull LocalDate date, @NotNull PreferredSession session,
                                  Long doctorId, Long serviceId, @Size(max = 500) String symptoms,
-                                 @NotBlank String requestKey) {}
+                                 @NotBlank String requestKey, LocalTime expectedTime) {
+        public BookingRequest(Long profileId, Long branchId, LocalDate date, PreferredSession session,
+                Long doctorId, Long serviceId, String symptoms, String requestKey) {
+            this(profileId, branchId, date, session, doctorId, serviceId, symptoms, requestKey, null);
+        }
+    }
+    public record SlotOption(LocalTime time, int remaining) {}
     public record RescheduleRequest(@NotNull LocalDate date, @NotNull PreferredSession session,
-                                    Long doctorId, @Size(max = 255) String reason) {}
+                                    Long doctorId, @Size(max = 255) String reason, LocalTime expectedTime) {
+        public RescheduleRequest(LocalDate date, PreferredSession session, Long doctorId, String reason) {
+            this(date, session, doctorId, reason, null);
+        }
+    }
     public record CancelRequest(@NotBlank @Size(max = 255) String reason) {}
     public record DoctorOption(Long id, String name, String specialty, int remaining) {}
     public record Availability(boolean available, String reason, int remainingBranch,
@@ -57,7 +69,8 @@ public class PortalAppointmentService {
     public record AppointmentView(Long id, String code, Long profileId, String patientName,
             Long branchId, String branchName, Long requestedDoctorId, String requestedDoctorName,
             String serviceName, LocalDate date, PreferredSession session, String symptoms,
-            AppointmentStatus status, int rescheduleCount, String cancelReason, LocalDateTime createdAt) {}
+            AppointmentStatus status, int rescheduleCount, String cancelReason, LocalDateTime createdAt,
+            LocalTime expectedTime, Integer durationMinutes) {}
     public record HistoryView(String action, String oldValue, String newValue, String reason,
                               LocalDateTime createdAt) {}
     public record Detail(AppointmentView appointment, List<HistoryView> history) {}
@@ -95,6 +108,21 @@ public class PortalAppointmentService {
                         new DoctorOption(d.id(), d.name(), d.specialty(), d.remaining())).toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<SlotOption> slots(HttpSession httpSession, Long branchId, LocalDate date,
+            PreferredSession period, Long doctorId, Long serviceId, Long excludeId) {
+        User user = access.requireUser(httpSession);
+        if (excludeId != null && !owned(user, excludeId).getBranch().getBranchId().equals(branchId))
+            throw bad("Không thể đổi chi nhánh từ biểu mẫu này.");
+        Branch branch = branches.findById(branchId).filter(b -> Boolean.TRUE.equals(b.getIsActive()))
+                .orElseThrow(() -> bad("Chi nhánh không hoạt động."));
+        com.cvdcms.entity.Service service = serviceId == null ? null : requestedService(serviceId);
+        if (excludeId != null) service = owned(user, excludeId).getService();
+        return slots.available(branch, date, period, doctorId, AppointmentSlotService.duration(service), excludeId,
+                        AppointmentActorType.PATIENT)
+                .stream().map(s -> new SlotOption(s.time(), s.remaining())).toList();
+    }
+
     public AppointmentView book(HttpSession httpSession, BookingRequest request) {
         User user = access.requireUser(httpSession);
         PatientProfile profile = access.requireProfile(user, request.profileId());
@@ -111,7 +139,8 @@ public class PortalAppointmentService {
                     || a.getPreferredSession() != request.session()
                     || !Objects.equals(id(a.getDoctor()), request.doctorId())
                     || !Objects.equals(serviceId(a.getService()), request.serviceId())
-                    || !Objects.equals(a.getInitialSymptoms(), clean(request.symptoms())))
+                    || !Objects.equals(a.getInitialSymptoms(), clean(request.symptoms()))
+                    || request.expectedTime() != null && !Objects.equals(a.getExpectedTime(), request.expectedTime()))
                 throw conflict("Mã yêu cầu đã được dùng cho lịch khác.");
             return view(a);
         }
@@ -126,7 +155,9 @@ public class PortalAppointmentService {
         appointment.setService(service);
         appointment.setAppointmentDate(request.date());
         appointment.setPreferredSession(request.session());
-        appointment.setExpectedTime(null);
+        appointment.setDurationMinutes(AppointmentSlotService.duration(service));
+        appointment.setExpectedTime(slots.resolve(branch, request.date(), request.session(), request.doctorId(),
+                appointment.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.PATIENT));
         appointment.setInitialSymptoms(clean(request.symptoms()));
         appointment.setSource(AppointmentSource.ONLINE);
         appointment.setStatus(AppointmentStatus.PENDING);
@@ -169,15 +200,21 @@ public class PortalAppointmentService {
         policy.ensureModificationCutoff(a, AppointmentActorType.PATIENT);
         if (a.getRescheduleCount() >= 3) throw conflict("Đã đạt giới hạn ba lần đổi lịch trực tuyến.");
         if (a.getAppointmentDate().equals(request.date()) && a.getPreferredSession() == request.session()
-                && Objects.equals(id(a.getDoctor()), request.doctorId()))
+                && Objects.equals(id(a.getDoctor()), request.doctorId())
+                && (request.expectedTime() == null || Objects.equals(a.getExpectedTime(), request.expectedTime())))
             throw bad("Vui lòng chọn lịch hoặc bác sĩ khác.");
         policy.ensureBookable(branch, a.getPatientProfile(), request.date(), request.session(),
                 request.doctorId(), appointmentId, AppointmentActorType.PATIENT);
         String oldValue = snapshot(a);
+        LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
+                : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
+                    ? a.getExpectedTime() : null;
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
         a.setDoctor(doctor(request.doctorId()));
-        a.setExpectedTime(null);
+        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
+        a.setExpectedTime(slots.resolve(branch, request.date(), request.session(), request.doctorId(),
+                a.getDurationMinutes(), appointmentId, requestedTime, AppointmentActorType.PATIENT));
         lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);
         appointments.saveAndFlush(a);
@@ -258,7 +295,7 @@ public class PortalAppointmentService {
     }
     private String snapshot(Appointment a) {
         return a.getAppointmentDate() + "|" + a.getPreferredSession() + "|doctor=" + id(a.getDoctor())
-                + "|status=" + a.getStatus();
+                + "|time=" + a.getExpectedTime() + "|status=" + a.getStatus();
     }
     private AppointmentView view(Appointment a) {
         return new AppointmentView(a.getAppointmentId(), a.getAppointmentCode(), a.getPatientProfile().getProfileId(),
@@ -266,7 +303,7 @@ public class PortalAppointmentService {
                 id(a.getDoctor()), a.getDoctor() == null ? null : a.getDoctor().getFullName(),
                 a.getService() == null ? null : a.getService().getServiceName(), a.getAppointmentDate(),
                 a.getPreferredSession(), a.getInitialSymptoms(), a.getStatus(), a.getRescheduleCount(),
-                a.getCancelReason(), a.getCreatedAt());
+                a.getCancelReason(), a.getCreatedAt(), a.getExpectedTime(), a.getDurationMinutes());
     }
     private static ResponseStatusException bad(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
