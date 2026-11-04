@@ -223,7 +223,7 @@
         <!-- LỄ TÂN -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS') or #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE')))}"
-             th:classappend="${#strings.contains(',patients,reception-memberships,appointments,checkin,queue,accounts,dispatch,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',reception-memberships,appointments,checkin,queue,accounts,dispatch,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgReception">
                 <i class="bi bi-person-workspace" aria-hidden="true"></i>
                 <span class="side-group__label">Lễ tân</span>
@@ -231,11 +231,6 @@
             </button>
             <div class="side-group__panel" id="sgReception">
                 <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE'))}"
-                       th:href="@{/reception/patients}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''">
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Hồ sơ bệnh nhân</span>
-                    </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS'))}"
                        th:href="@{/reception/memberships}" class="side-link side-sublink"
                        title="Tra cứu thẻ thành viên, điểm tích luỹ &amp; quyền lợi (FT19)">
@@ -290,12 +285,6 @@
                        title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
                         <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy trình kỹ thuật</span>
                     </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DISPATCH'))}"
-                       th:href="@{/reception/dispatch}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'dispatch'} ? 'is-active' : ''"
-                       title="Bảng điều phối ghế &amp; hàng chờ">
-                        <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
-                    </a>
                 </div>
             </div>
         </div>
@@ -332,7 +321,7 @@
         <!-- HỒ SƠ & TÁI KHÁM -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE')))}"
-             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'emr' or activeMenu == 'customer-care'} ? 'is-open' : ''">
+             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'patients' or activeMenu == 'emr' or activeMenu == 'customer-care'} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgRecords">
                 <i class="bi bi-folder2-open" aria-hidden="true"></i>
                 <span class="side-group__label">Hồ sơ &amp; Tái khám</span>
@@ -340,10 +329,19 @@
             </button>
             <div class="side-group__panel" id="sgRecords">
                 <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW'))}"
+                    <!-- Hồ sơ bệnh nhân (Lễ tân & CSKH) -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE'))}"
+                       th:href="@{/reception/patients}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'patients'} ? 'is-active' : ''"
+                       title="Quản lý thông tin hành chính hồ sơ bệnh nhân">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Hồ sơ bệnh nhân</span>
+                    </a>
+                    <!-- Bệnh án & Lịch sử khám (Bác sĩ) -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW'))}"
                        th:href="@{/doctor/patient-records}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'doctor-records'} ? 'is-active' : ''">
-                        <i class="bi bi-file-earmark-medical" aria-hidden="true"></i><span class="side-link__label">Hồ sơ bệnh nhân</span>
+                       th:classappend="${activeMenu == 'doctor-records'} ? 'is-active' : ''"
+                       title="Quản lý hồ sơ bệnh nhân, bệnh án &amp; lịch sử điều trị">
+                        <i class="bi bi-file-earmark-medical" aria-hidden="true"></i><span class="side-link__label">Quản Lý Hồ Sơ Bệnh Nhân</span>
                     </a>
                     <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI')))}"
                        th:href="@{/emr/records}" class="side-link side-sublink"
