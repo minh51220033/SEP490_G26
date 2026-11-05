@@ -19,7 +19,7 @@
         <!-- Breadcrumb + nút quản lý cho Admin -->
         <div class="nw-result">
             <nav class="nw-breadcrumb" style="margin:0" aria-label="Breadcrumb">
-                <a th:href="@{/home}"><i class="bi bi-house-door"></i> Trang chủ</a>
+                <a th:href="@{/}"><i class="bi bi-house-door"></i> Trang chủ</a>
                 <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 <a th:href="@{/news}">Tin tức</a>
                 <i class="bi bi-chevron-right" aria-hidden="true"></i>
@@ -44,22 +44,46 @@
                  class="nw-article__cover">
 
             <div class="nw-article__inner">
-                <span class="eyebrow">Tin tức</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span class="eyebrow" style="margin-bottom:0;">Tin tức &amp; Sự kiện</span>
+                    <span th:if="${news.branch != null}" style="font-size:12px; background:#eff6ff; color:#2563eb; padding:3px 10px; border-radius:12px; font-weight:600;">
+                        <i class="bi bi-building"></i> <span th:text="${news.branch.branchName}">Cơ sở</span>
+                    </span>
+                </div>
+
                 <h1 class="nw-article__title" th:text="${news.title}">Tiêu đề bài viết</h1>
 
                 <div class="nw-article__meta">
-                <span th:if="${news.publishedAt != null}">
-                    <i class="bi bi-calendar3"></i>
-                    <time th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</time>
-                </span>
+                    <span th:if="${news.publishedAt != null}">
+                        <i class="bi bi-calendar3"></i>
+                        <time th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</time>
+                    </span>
                     <span>
-                    <i class="bi bi-person-circle"></i>
-                    Tác giả:
-                    <strong th:text="${news.createdBy != null ? news.createdBy.username : 'Admin'}">Admin</strong>
-                </span>
+                        <i class="bi bi-person-circle"></i>
+                        Tác giả:
+                        <strong th:text="${news.createdBy != null ? news.createdBy.username : 'Admin'}">Admin</strong>
+                    </span>
                 </div>
 
                 <div class="nw-article__content" th:utext="${news.content}"></div>
+
+                <!-- Tương tác bài viết (Like bài viết - FT38 SCR-38.3) -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 0 6px; border-top:1px solid #e2e8f0; margin-top:28px;">
+                    <form th:action="@{'/news/' + ${news.newsId} + '/like'}" method="post">
+                        <button type="submit" class="nw-btn"
+                                th:classappend="${isArticleLiked} ? 'nw-btn--primary' : 'nw-btn--neutral'"
+                                style="display:inline-flex; align-items:center; gap:8px;"
+                                th:title="${isArticleLiked ? 'Bỏ thích bài viết' : 'Thích bài viết này'}">
+                            <i th:class="${isArticleLiked} ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
+                            <span th:text="${isArticleLiked ? 'Đã thích' : 'Thích bài viết'}">Thích bài viết</span>
+                            <span class="badge" style="background:rgba(0,0,0,0.1); padding:2px 8px; border-radius:10px; font-weight:700;" th:text="${articleLikesCount}">0</span>
+                        </button>
+                    </form>
+
+                    <span style="font-size:13px; color:#64748b;">
+                        <i class="bi bi-chat-dots"></i> <span th:text="${comments != null ? #lists.size(comments) : 0}">0</span> thảo luận
+                    </span>
+                </div>
             </div>
         </article>
 
@@ -105,94 +129,107 @@
                 <!-- Chưa đăng nhập -->
                 <div class="nw-alert nw-alert--info" th:if="${session.loggedInUser == null}">
                     <i class="bi bi-person-lock"></i>
-                    <span>Vui lòng <a th:href="@{/login}">đăng nhập</a> để bình luận.</span>
+                    <span>Vui lòng <a th:href="@{/login}">đăng nhập</a> để tham gia bình luận và tương tác.</span>
                 </div>
             </div>
 
             <!-- ==================== DANH SÁCH BÌNH LUẬN ==================== -->
             <div style="margin-top:12px">
-                <div class="nw-comment" th:each="comment : ${comments}">
+                <div class="nw-comment" th:each="comment : ${comments}" th:id="|comment-${comment.commentId}|">
 
-                    <div class="nw-comment__head">
-                    <span class="nw-avatar" aria-hidden="true"
-                          th:text="${comment.user != null and !#strings.isEmpty(comment.user.username)
-                                    ? #strings.substring(comment.user.username, 0, 1) : 'U'}">U</span>
-                        <div>
-                            <div class="nw-comment__user"
-                                 th:text="${comment.user != null ? comment.user.username : 'Người dùng'}">Người dùng</div>
-                            <div class="nw-comment__date" th:if="${comment.createdAt != null}"
-                                 th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</div>
-                        </div>
+                    <!-- Trạng thái bình luận: ĐANG HOẠT ĐỘNG -->
+                    <th:block th:if="${comment.status == 'ACTIVE'}">
+                        <div class="nw-comment__head">
+                            <span class="nw-avatar" aria-hidden="true"
+                                  th:text="${comment.user != null and !#strings.isEmpty(comment.user.username)
+                                            ? #strings.substring(comment.user.username, 0, 1) : 'U'}">U</span>
+                            <div>
+                                <div class="nw-comment__user"
+                                     th:text="${comment.user != null ? comment.user.username : 'Người dùng'}">Người dùng</div>
+                                <div class="nw-comment__date" th:if="${comment.createdAt != null}"
+                                     th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}">03/10/2026</div>
+                            </div>
 
-                        <!-- Thao tác dành cho Admin -->
-                        <div class="nw-mod" th:if="${isAdmin}">
-                            <form th:action="@{/admin/comments/{id}/delete(id=${comment.commentId})}" method="post"
-                                  onsubmit="return confirm('Xóa bình luận này?');">
-                                <button type="submit" class="nw-chip-btn nw-chip-btn--danger">
-                                    <i class="bi bi-trash3"></i> Xóa
-                                </button>
-                            </form>
+                            <!-- Thao tác dành cho Admin -->
+                            <div class="nw-mod" th:if="${isAdmin}">
+                                <form th:action="@{/admin/comments/{id}/delete(id=${comment.commentId})}" method="post"
+                                      onsubmit="return confirm('Bạn có chắc muốn ẩn/xóa bình luận này?');">
+                                    <button type="submit" class="nw-chip-btn nw-chip-btn--danger">
+                                        <i class="bi bi-trash3"></i> Xóa
+                                    </button>
+                                </form>
 
-                            <form th:if="${comment.user != null
-                                      and comment.user.userId != session.loggedInUser.userId
-                                      and comment.user.roles != null
-                                      and comment.user.roles.?[roleName == 'ADMIN'].size() == 0}"
-                                  th:action="@{/admin/comments/{id}/ban(id=${comment.commentId})}" method="post"
-                                  onsubmit="return confirm('Cấm (Ban) người dùng này?');">
-                                <input type="hidden" name="reason" value="Vi phạm quy định bình luận">
-                                <button type="submit" class="nw-chip-btn nw-chip-btn--warn">
+                                <button th:if="${comment.user != null
+                                              and comment.user.userId != session.loggedInUser.userId
+                                              and comment.user.roles != null
+                                              and comment.user.roles.?[roleName == 'ADMIN'].size() == 0}"
+                                        type="button" class="nw-chip-btn nw-chip-btn--warn"
+                                        th:data-comment-id="${comment.commentId}"
+                                        th:data-username="${comment.user.username}"
+                                        onclick="openDetailBanModal(this.getAttribute('data-comment-id'), this.getAttribute('data-username'))">
                                     <i class="bi bi-slash-circle"></i> Ban
                                 </button>
+                            </div>
+                        </div>
+
+                        <div class="nw-comment__text" th:id="|comment-text-${comment.commentId}|"
+                             th:text="${comment.content}">Nội dung bình luận</div>
+
+                        <!-- Form sửa bình luận -->
+                        <div class="nw-comment__panel" th:id="|edit-form-${comment.commentId}|">
+                            <form th:action="@{/comments/{id}/edit(id=${comment.commentId})}" method="post">
+                            <textarea class="nw-textarea" name="content" rows="3" maxlength="2000" required
+                                      aria-label="Sửa bình luận" th:text="${comment.content}"></textarea>
+                                <div class="nw-form-row">
+                                    <button type="button" class="nw-btn nw-btn--neutral nw-btn--sm"
+                                            th:onclick="|toggleEdit(${comment.commentId})|">Hủy</button>
+                                    <button type="submit" class="nw-btn nw-btn--primary nw-btn--sm">
+                                        <i class="bi bi-check2"></i> Lưu chỉnh sửa
+                                    </button>
+                                </div>
                             </form>
                         </div>
-                    </div>
 
-                    <div class="nw-comment__text" th:id="|comment-text-${comment.commentId}|"
-                         th:text="${comment.content}">Nội dung bình luận</div>
-
-                    <!-- Form sửa bình luận -->
-                    <div class="nw-comment__panel" th:id="|edit-form-${comment.commentId}|">
-                        <form th:action="@{/comments/{id}/edit(id=${comment.commentId})}" method="post">
-                        <textarea class="nw-textarea" name="content" rows="3" maxlength="2000" required
-                                  aria-label="Sửa bình luận" th:text="${comment.content}"></textarea>
-                            <div class="nw-form-row">
-                                <button type="button" class="nw-btn nw-btn--neutral nw-btn--sm"
-                                        th:onclick="|toggleEdit(${comment.commentId})|">Hủy</button>
-                                <button type="submit" class="nw-btn nw-btn--primary nw-btn--sm">
-                                    <i class="bi bi-check2"></i> Lưu chỉnh sửa
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Thao tác của bình luận -->
-                    <div class="nw-comment__actions">
-                        <form th:action="@{/comments/{id}/like(id=${comment.commentId})}" method="post">
-                            <button type="submit" class="nw-action nw-action--like" aria-label="Thích bình luận">
-                                <i class="bi bi-heart"></i>
-                                <span th:text="${likeCounts != null and likeCounts[comment.commentId] != null
-                                            ? likeCounts[comment.commentId] : 0}">0</span>
-                            </button>
-                        </form>
-
-                        <button th:if="${session.loggedInUser != null and !isBanned}" type="button" class="nw-action"
-                                th:onclick="|toggleReply(${comment.commentId})|">
-                            <i class="bi bi-reply"></i> Trả lời
-                        </button>
-
-                        <th:block th:if="${session.loggedInUser != null and comment.user != null
-                                      and session.loggedInUser.userId == comment.user.userId and !isBanned}">
-                            <button type="button" class="nw-action" th:onclick="|toggleEdit(${comment.commentId})|">
-                                <i class="bi bi-pencil"></i> Sửa
-                            </button>
-                            <form th:action="@{/comments/{id}/delete(id=${comment.commentId})}" method="post"
-                                  onsubmit="return confirm('Bạn có chắc muốn xóa bình luận này?');">
-                                <button type="submit" class="nw-action nw-action--danger">
-                                    <i class="bi bi-trash3"></i> Xóa
+                        <!-- Thao tác của bình luận -->
+                        <div class="nw-comment__actions">
+                            <form th:action="@{/comments/{id}/like(id=${comment.commentId})}" method="post">
+                                <button type="submit" class="nw-action nw-action--like"
+                                        th:classappend="${likedCommentIds != null and likedCommentIds.contains(comment.commentId)} ? 'nw-action--liked' : ''"
+                                        aria-label="Thích bình luận">
+                                    <i th:class="${likedCommentIds != null and likedCommentIds.contains(comment.commentId)} ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
+                                    <span th:text="${likeCounts != null and likeCounts[comment.commentId] != null
+                                                ? likeCounts[comment.commentId] : 0}">0</span>
                                 </button>
                             </form>
-                        </th:block>
-                    </div>
+
+                            <button th:if="${session.loggedInUser != null and !isBanned}" type="button" class="nw-action"
+                                    th:onclick="|toggleReply(${comment.commentId})|">
+                                <i class="bi bi-reply"></i> Trả lời
+                            </button>
+
+                            <th:block th:if="${session.loggedInUser != null and comment.user != null
+                                          and session.loggedInUser.userId == comment.user.userId and !isBanned}">
+                                <button type="button" class="nw-action" th:onclick="|toggleEdit(${comment.commentId})|">
+                                    <i class="bi bi-pencil"></i> Sửa
+                                </button>
+                                <form th:action="@{/comments/{id}/delete(id=${comment.commentId})}" method="post"
+                                      onsubmit="return confirm('Bạn có chắc muốn xóa bình luận này?');">
+                                    <button type="submit" class="nw-action nw-action--danger">
+                                        <i class="bi bi-trash3"></i> Xóa
+                                    </button>
+                                </form>
+                            </th:block>
+                        </div>
+                    </th:block>
+
+                    <!-- Trạng thái bình luận: ĐÃ BỊ XÓA NHƯNG CÓ CÂU TRẢ LỜI CON -->
+                    <th:block th:if="${comment.status == 'DELETED'}">
+                        <div style="padding:10px 14px; background:#f8fafc; border-radius:8px; border-left:3px solid #cbd5e1; margin-bottom:8px;">
+                            <span style="font-size:13px; color:#94a3b8; font-style:italic;">
+                                <i class="bi bi-info-circle"></i> [Bình luận này đã bị xóa bởi Quản trị viên hoặc người dùng]
+                            </span>
+                        </div>
+                    </th:block>
 
                     <!-- Form trả lời -->
                     <div class="nw-comment__panel" th:id="|reply-form-${comment.commentId}|"
@@ -210,8 +247,8 @@
                         </form>
                     </div>
 
-                    <!-- ==================== DANH SÁCH PHẢN HỒI ==================== -->
-                    <div class="nw-reply" th:each="reply : ${repliesByComment[comment.commentId]}">
+                    <!-- ==================== DANH SÁCH PHẢN HỒI CON ==================== -->
+                    <div class="nw-reply" th:each="reply : ${repliesByComment[comment.commentId]}" th:id="|comment-${reply.commentId}|">
                         <div class="nw-comment__head">
                         <span class="nw-avatar nw-avatar--sm" aria-hidden="true"
                               th:text="${reply.user != null and !#strings.isEmpty(reply.user.username)
@@ -252,8 +289,10 @@
 
                         <div class="nw-comment__actions">
                             <form th:action="@{/comments/{id}/like(id=${reply.commentId})}" method="post">
-                                <button type="submit" class="nw-action nw-action--like" aria-label="Thích phản hồi">
-                                    <i class="bi bi-heart"></i>
+                                <button type="submit" class="nw-action nw-action--like"
+                                        th:classappend="${likedCommentIds != null and likedCommentIds.contains(reply.commentId)} ? 'nw-action--liked' : ''"
+                                        aria-label="Thích phản hồi">
+                                    <i th:class="${likedCommentIds != null and likedCommentIds.contains(reply.commentId)} ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
                                     <span th:text="${likeCounts != null and likeCounts[reply.commentId] != null
                                                 ? likeCounts[reply.commentId] : 0}">0</span>
                                 </button>
@@ -283,8 +322,64 @@
             </div>
         </section>
 
+        <!-- ==================== BÀI VIẾT LIÊN QUAN ==================== -->
+        <section class="nw-card nw-card--pad mt-4" th:if="${relatedNews != null and !#lists.isEmpty(relatedNews)}">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h2 class="h6 fw-bold text-dark mb-0">
+                    <i class="bi bi-journal-text text-primary me-2"></i>Bài viết liên quan
+                </h2>
+                <a th:href="@{/news}" class="small fw-semibold text-primary">Xem tất cả <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4" th:each="rel : ${relatedNews}">
+                    <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column">
+                        <div class="small text-muted mb-1"
+                             th:text="${rel.publishedAt != null ? #temporals.format(rel.publishedAt, 'dd/MM/yyyy') : #temporals.format(rel.createdAt, 'dd/MM/yyyy')}">01/11/2026</div>
+                        <h3 class="h6 fw-bold text-dark mb-2">
+                            <a th:href="@{/news/{slug}(slug=${rel.slug})}" th:text="${rel.title}">Tiêu đề</a>
+                        </h3>
+                        <a th:href="@{/news/{slug}(slug=${rel.slug})}" class="small fw-semibold text-primary mt-auto">
+                            Đọc tiếp <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 </th:block>
+
+<!-- MODAL CẤM TÀI KHOẢN TỪ CHI TIẾT BÀI VIẾT (SCR-39.4) -->
+<div id="detailBanModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; width:92%; max-width:480px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:18px; font-weight:700; color:#0f172a;">🚫 Cấm người dùng bình luận</h3>
+            <button type="button" onclick="closeDetailBanModal()" style="border:none; background:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
+        <form id="detailBanForm" method="post">
+            <p style="font-size:14px; color:#475569; margin-bottom:14px;">
+                Áp dụng lệnh cấm bình luận đối với tài khoản: <strong id="detailModalUsername" style="color:#dc2626;"></strong>.
+            </p>
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">Lý do cấm vi phạm:</label>
+                <input type="text" name="reason" class="nw-input" required placeholder="Nhập lý do cấm..." value="Vi phạm quy định bình luận" style="width:100%;">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">Thời hạn cấm:</label>
+                <select name="durationDays" class="nw-select" style="width:100%;">
+                    <option value="3">3 ngày</option>
+                    <option value="7" selected>7 ngày</option>
+                    <option value="30">30 ngày</option>
+                    <option value="0">Vĩnh viễn</option>
+                </select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" onclick="closeDetailBanModal()" class="nw-btn nw-btn--neutral">Hủy</button>
+                <button type="submit" class="nw-btn nw-btn--danger">Xác nhận cấm</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- Footer dùng chung -->
 <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
@@ -305,6 +400,16 @@
         const open = panel.classList.contains("show");
         if (text) text.style.display = open ? "none" : "";
         if (open) panel.querySelector("textarea")?.focus();
+    }
+
+    function openDetailBanModal(commentId, username) {
+        document.getElementById('detailBanForm').action = '/admin/comments/' + commentId + '/ban';
+        document.getElementById('detailModalUsername').innerText = username;
+        document.getElementById('detailBanModal').style.display = 'flex';
+    }
+
+    function closeDetailBanModal() {
+        document.getElementById('detailBanModal').style.display = 'none';
     }
 </script>
 </body>

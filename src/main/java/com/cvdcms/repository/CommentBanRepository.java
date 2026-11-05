@@ -16,7 +16,6 @@ public interface CommentBanRepository
             Long userId
     );
 
-
     @Query("""
         SELECT b
         FROM CommentBan b
@@ -35,7 +34,6 @@ public interface CommentBanRepository
             @Param("keyword") String keyword,
             Pageable pageable
     );
-
 
     @Query("""
         SELECT b
@@ -57,4 +55,7 @@ public interface CommentBanRepository
             Pageable pageable
     );
 
+    long countByActiveTrue();
+
+    long countByActiveFalse();
 }

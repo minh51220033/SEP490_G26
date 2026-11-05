@@ -383,6 +383,7 @@ a { color: inherit; text-decoration: none; }
     top: calc(100% + 6px);
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(-6px);
     transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur);
     background: #fff;
@@ -435,6 +436,7 @@ a { color: inherit; text-decoration: none; }
     .site-nav__item:hover > .simple-menu {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
         transform: none;
         transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s;
     }
@@ -722,6 +724,7 @@ a { color: inherit; text-decoration: none; }
     -webkit-backdrop-filter: blur(3px);
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity var(--dur-slow) var(--ease), visibility 0s linear var(--dur-slow);
 }
 
@@ -952,6 +955,7 @@ a { color: inherit; text-decoration: none; }
     box-shadow: var(--shadow-lg);
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(-6px) scale(.98);
     transform-origin: top right;
     transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur);
@@ -1386,6 +1390,7 @@ a.feature-card:hover { border-color: var(--primary-100); box-shadow: var(--shado
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(12px) scale(.9);
     transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur),
     background-color var(--dur-fast) var(--ease);
@@ -1435,6 +1440,7 @@ a.feature-card:hover { border-color: var(--primary-100); box-shadow: var(--shado
     .is-sidebar-open .app-sidebar__backdrop {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
         transition: opacity var(--dur-slow) var(--ease), visibility 0s;
     }
     /* Khoá cuộn nền khi drawer mở */
@@ -1468,12 +1474,14 @@ a.feature-card:hover { border-color: var(--primary-100); box-shadow: var(--shado
         overflow-y: auto;
         opacity: 0;
         visibility: hidden;
+    pointer-events: none;
         transform: translateY(-8px);
         transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur);
     }
     .site-nav.is-open {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
         transform: none;
         transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s;
     }
@@ -1486,6 +1494,7 @@ a.feature-card:hover { border-color: var(--primary-100); box-shadow: var(--shado
         display: none;
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
         transform: none;
         box-shadow: none;
         border: 0;
@@ -1519,12 +1528,14 @@ a.feature-card:hover { border-color: var(--primary-100); box-shadow: var(--shado
         background: var(--primary);
         opacity: 0;
         visibility: hidden;
+    pointer-events: none;
         transform: translateY(-6px);
         transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur);
     }
     .app-topbar.is-searching .app-search {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
         transform: none;
         transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s;
     }

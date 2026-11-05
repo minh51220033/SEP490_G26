@@ -15,6 +15,8 @@
     <meta name="color-scheme" content="light">
     <meta name="format-detection" content="telephone=no">
     <title th:text="${title} + ' | CV-DCMS'">CV-DCMS</title>
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}"/>
 
     <!--
         Áp dụng trạng thái sidebar TRƯỚC khi trang được vẽ để tránh nháy giao diện (FOUC).
@@ -46,6 +48,7 @@
 
     <!-- Layout dùng chung (phải nạp SAU Bootstrap để ghi đè) -->
     <link href="../../static/css/layout.css" th:href="@{/css/layout.css}" rel="stylesheet">
+    <link href="../../static/css/customer-portal.css" th:href="@{/css/customer-portal.css}" rel="stylesheet">
     <link th:href="@{/css/service-catalog.css}" rel="stylesheet">
     <link href="../../static/css/chat.css" th:href="@{/css/chat.css}" rel="stylesheet">
     <link href="../../static/css/icd10.css"

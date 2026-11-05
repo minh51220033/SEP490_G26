@@ -11,7 +11,9 @@ import com.cvdcms.repository.CommentRepository;
 import com.cvdcms.repository.NewsArticleRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +38,9 @@ public class CommentController {
         this.newsRepository = newsRepository;
     }
 
-
+    // =====================================================
+    // 1. ĐĂNG BÌNH LUẬN GỐC (POST /news/{id}/comments)
+    // =====================================================
     @PostMapping("/news/{id}/comments")
     public String createComment(
             @PathVariable Long id,
@@ -44,9 +48,7 @@ public class CommentController {
             BindingResult bindingResult,
             HttpSession session) {
 
-        // 1. Tìm bài viết trước để xác định đúng trang quay về
         NewsArticle news = newsRepository.findById(id).orElse(null);
-
         if (news == null || !"PUBLISHED".equals(news.getStatus())) {
             session.setAttribute("commentError", "Bài viết không tồn tại hoặc chưa được xuất bản.");
             return "redirect:/news";
@@ -54,29 +56,23 @@ public class CommentController {
 
         String detailUrl = "redirect:/news/" + news.getSlug();
 
-        // 2. Kiểm tra đăng nhập
         User user = getLoggedInUser(session);
-
         if (user == null) {
             return "redirect:/login";
         }
 
-        // 3. Kiểm tra dữ liệu bình luận
         if (bindingResult.hasErrors()
                 || dto.getContent() == null
                 || dto.getContent().trim().isEmpty()) {
-
-            session.setAttribute("commentError", "Nội dung bình luận không được để trống.");
+            session.setAttribute("commentError", "Nội dung bình luận không được để trống (tối thiểu 2 ký tự).");
             return detailUrl;
         }
 
-        // 4. Kiểm tra trạng thái cấm bình luận
         if (isCommentBanned(user)) {
             session.setAttribute("commentError", getBanMessage(user));
             return detailUrl;
         }
 
-        // 5. Tạo và lưu bình luận
         Comment comment = new Comment();
         comment.setNews(news);
         comment.setUser(user);
@@ -86,12 +82,13 @@ public class CommentController {
 
         commentRepository.save(comment);
 
-        // 6. Thông báo và quay lại đúng trang chi tiết theo slug
         session.setAttribute("commentSuccess", "Đăng bình luận thành công.");
-
         return detailUrl;
     }
 
+    // =====================================================
+    // 2. PHẢN HỒI BÌNH LUẬN (POST /comments/{id}/reply)
+    // =====================================================
     @PostMapping("/comments/{id}/reply")
     public String reply(
             @PathVariable Long id,
@@ -103,19 +100,34 @@ public class CommentController {
         if (user == null) return "redirect:/login";
 
         Comment parent = commentRepository.findById(id).orElse(null);
-        if (parent == null || !"ACTIVE".equals(parent.getStatus())) return "redirect:/news";
+        if (parent == null) return "redirect:/news";
+
+        NewsArticle news = parent.getNews();
+        if (news == null || !"PUBLISHED".equals(news.getStatus())) {
+            session.setAttribute("commentError", "Bài viết không còn khả dụng.");
+            return "redirect:/news";
+        }
+
+        String detailUrl = "redirect:/news/" + news.getSlug();
+
+        // Không cho phép phản hồi bình luận đã bị xóa
+        if (!"ACTIVE".equals(parent.getStatus())) {
+            session.setAttribute("commentError", "Không thể phản hồi bình luận đã bị xóa.");
+            return detailUrl;
+        }
 
         if (bindingResult.hasErrors() || isCommentBanned(user)) {
             if (isCommentBanned(user)) session.setAttribute("commentError", getBanMessage(user));
-            return "redirect:/news/" + parent.getNews().getSlug();
+            return detailUrl;
         }
 
+        // Giới hạn 1 cấp phản hồi: nếu parent vốn là 1 reply thì không cho lồng thêm
         if (parent.getParentComment() != null) {
-            return "redirect:/news/" + parent.getNews().getSlug();
+            return detailUrl;
         }
 
         Comment reply = new Comment();
-        reply.setNews(parent.getNews());
+        reply.setNews(news);
         reply.setUser(user);
         reply.setParentComment(parent);
         reply.setContent(dto.getContent().trim());
@@ -123,10 +135,12 @@ public class CommentController {
 
         commentRepository.save(reply);
         session.setAttribute("commentSuccess", "Gửi phản hồi thành công.");
-        return "redirect:/news/" + parent.getNews().getSlug();
+        return detailUrl;
     }
 
-    // CHẶN CHỈNH SỬA BÌNH LUẬN NẾU TÀI KHOẢN ĐANG BỊ BAN
+    // =====================================================
+    // 3. CHỈNH SỬA BÌNH LUẬN (POST /comments/{id}/edit)
+    // =====================================================
     @PostMapping("/comments/{id}/edit")
     public String editComment(
             @PathVariable Long id,
@@ -139,18 +153,19 @@ public class CommentController {
         Comment comment = commentRepository.findById(id).orElse(null);
         if (comment == null || !"ACTIVE".equals(comment.getStatus())) return "redirect:/news";
 
+        String detailUrl = "redirect:/news/" + comment.getNews().getSlug();
+
         if (isCommentBanned(user)) {
             session.setAttribute("commentError", "Tài khoản của bạn đã bị cấm, không được phép chỉnh sửa bình luận!");
-            return "redirect:/news/" + comment.getNews().getSlug();
+            return detailUrl;
         }
 
         boolean isOwner = comment.getUser() != null
                 && comment.getUser().getUserId().equals(user.getUserId());
+        boolean admin = isAdmin(user);
 
-        boolean isAdmin = isAdmin(user);
-
-        if (!isOwner && !isAdmin) {
-            return "redirect:/news/" + comment.getNews().getSlug();
+        if (!isOwner && !admin) {
+            return detailUrl;
         }
 
         if (content != null && !content.trim().isEmpty()) {
@@ -159,60 +174,57 @@ public class CommentController {
             session.setAttribute("commentSuccess", "Cập nhật bình luận thành công.");
         }
 
-        return "redirect:/news/" + comment.getNews().getSlug();
+        return detailUrl;
     }
 
-    // CHẶN XÓA BÌNH LUẬN CỦA CHÍNH MÌNH NẾU ĐANG BỊ BAN
+    // =====================================================
+    // 4. XÓA BÌNH LUẬN CỦA CHÍNH MÌNH (POST /comments/{id}/delete)
+    // =====================================================
     @PostMapping("/comments/{id}/delete")
     public String deleteOwnComment(
             @PathVariable Long id,
             HttpSession session) {
 
         User user = getLoggedInUser(session);
-
-        if (user == null) {
-            return "redirect:/login";
-        }
+        if (user == null) return "redirect:/login";
 
         Comment comment = commentRepository.findById(id).orElse(null);
+        if (comment == null) return "redirect:/news";
 
-        if (comment == null) {
-            return "redirect:/news";
-        }
+        String detailUrl = "redirect:/news/" + comment.getNews().getSlug();
 
         boolean admin = isAdmin(user);
-
-        // Người dùng thông thường bị ban không được xóa bình luận.
         if (!admin && isCommentBanned(user)) {
-            session.setAttribute(
-                    "commentError",
-                    "Tài khoản của bạn đã bị cấm, không thể xóa bình luận."
-            );
-
-            return "redirect:/news/" + comment.getNews().getSlug();
+            session.setAttribute("commentError", "Tài khoản của bạn đã bị cấm, không thể xóa bình luận.");
+            return detailUrl;
         }
 
         boolean isOwner = comment.getUser() != null
                 && comment.getUser().getUserId().equals(user.getUserId());
 
         if (!isOwner && !admin) {
-            return "redirect:/news/" + comment.getNews().getSlug();
+            return detailUrl;
         }
 
         if (!"ACTIVE".equals(comment.getStatus())) {
-            return "redirect:/news/" + comment.getNews().getSlug();
+            return detailUrl;
         }
 
         comment.setStatus("DELETED");
         comment.setDeletedAt(LocalDateTime.now());
         comment.setDeletedBy(user);
-
         commentRepository.save(comment);
 
-        return "redirect:/news/" + comment.getNews().getSlug();
+        session.setAttribute("commentSuccess", "Đã xóa bình luận.");
+        return detailUrl;
     }
 
+    // =====================================================
+    // 5. THÍCH / BỎ THÍCH BÌNH LUẬN (POST /comments/{id}/like)
+    // Bổ sung @Transactional, kiểm tra Ban và chống Race Condition
+    // =====================================================
     @PostMapping("/comments/{id}/like")
+    @Transactional
     public String toggleLike(@PathVariable Long id, HttpSession session) {
         User user = getLoggedInUser(session);
         if (user == null) return "redirect:/login";
@@ -220,19 +232,30 @@ public class CommentController {
         Comment comment = commentRepository.findById(id).orElse(null);
         if (comment == null || !"ACTIVE".equals(comment.getStatus())) return "redirect:/news";
 
-        boolean alreadyLiked = commentLikeRepository.existsByComment_CommentIdAndUser_UserId(id, user.getUserId());
+        String detailUrl = "redirect:/news/" + comment.getNews().getSlug();
 
-        if (alreadyLiked) {
-            commentLikeRepository.findByComment_CommentIdAndUser_UserId(id, user.getUserId())
-                    .ifPresent(commentLikeRepository::delete);
-        } else {
-            CommentLike like = new CommentLike();
-            like.setComment(comment);
-            like.setUser(user);
-            commentLikeRepository.save(like);
+        // Kiểm tra xem người dùng có bị cấm tương tác không
+        if (isCommentBanned(user)) {
+            session.setAttribute("commentError", "Tài khoản của bạn đang bị cấm tương tác.");
+            return detailUrl;
         }
 
-        return "redirect:/news/" + comment.getNews().getSlug();
+        try {
+            boolean alreadyLiked = commentLikeRepository.existsByComment_CommentIdAndUser_UserId(id, user.getUserId());
+            if (alreadyLiked) {
+                commentLikeRepository.findByComment_CommentIdAndUser_UserId(id, user.getUserId())
+                        .ifPresent(commentLikeRepository::delete);
+            } else {
+                CommentLike like = new CommentLike();
+                like.setComment(comment);
+                like.setUser(user);
+                commentLikeRepository.save(like);
+            }
+        } catch (DataIntegrityViolationException ignored) {
+            // Chống lỗi đụng độ 500 khi click đúp nhanh
+        }
+
+        return detailUrl;
     }
 
     private User getLoggedInUser(HttpSession session) {
@@ -251,22 +274,16 @@ public class CommentController {
         return hasRole(user, "ADMIN");
     }
 
-
-    //,nhưng nên dùng !ban.getExpiresAt().isAfter(now) để xem thời điểm hết hạn đã tới là hết ban
     private boolean isCommentBanned(User user) {
         return commentBanRepository
-                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(
-                        user.getUserId()
-                )
+                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(user.getUserId())
                 .map(ban -> {
                     if (ban.getExpiresAt() != null
                             && !ban.getExpiresAt().isAfter(LocalDateTime.now())) {
-
                         ban.setActive(false);
                         commentBanRepository.save(ban);
                         return false;
                     }
-
                     return true;
                 })
                 .orElse(false);
@@ -276,9 +293,5 @@ public class CommentController {
         return commentBanRepository.findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(user.getUserId())
                 .map(ban -> ban.getExpiresAt() == null ? "Tài khoản của bạn đã bị cấm bình luận vĩnh viễn." : "Tài khoản của bạn đã bị cấm bình luận đến " + ban.getExpiresAt().toLocalDate() + ".")
                 .orElse("Tài khoản của bạn không thể bình luận.");
-    }
-
-    private String getNewsSlug(Long newsId) {
-        return newsRepository.findById(newsId).map(NewsArticle::getSlug).orElse("");
     }
 }
