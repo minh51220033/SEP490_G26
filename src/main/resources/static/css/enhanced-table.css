@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * CV-DCMS ENHANCED TABLE SYSTEM (Thư viện bảng tương tác cao cấp)
  * Phạm vi: Chỉ kích hoạt trên các bảng có thuộc tính [data-enhanced-table]
@@ -1006,13 +1006,13 @@ body.viewport-locked-page .app-topbar__bar,
     justify-content: space-between;
 }
 
-/* ẨN TRIỆT ĐỂ CHAT WIDGET TRÊN CÁC TRANG BẢNG */
-body.viewport-locked-page .cvdcms-chat-widget,
-body.viewport-locked-page .cvdcms-chat-fab,
-body.viewport-locked-page .cvdcms-chat-popup,
-.cvdcms-chat-widget,
-.cvdcms-chat-fab,
-.cvdcms-chat-popup {
-    display: none !important;
-
+/* TỐI ƯU VỊ TRÍ CHAT WIDGET TRÊN CÁC TRANG BẢNG CÓ THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG */
+body.viewport-locked-page .cvdcms-chat-widget {
+    bottom: 74px;
+    right: 24px;
+    z-index: 1060;
+}
+body.viewport-locked-page .cvdcms-chat-popup {
+    bottom: 144px;
+    right: 24px;
 }

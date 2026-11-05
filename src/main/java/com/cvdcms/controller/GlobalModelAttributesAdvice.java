@@ -1,28 +1,63 @@
 package com.cvdcms.controller;
 
 import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.PatientProfile;
+import com.cvdcms.entity.Service;
+import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.User;
+import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
+import com.cvdcms.service.CustomerPortalService;
+import com.cvdcms.service.ServiceCatalogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
- * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar.
- * Đảm bảo isAdmin, roleNames, permissionCodes, displayName luôn có giá trị an toàn (không bao giờ null)
- * giúp Thymeleaf không bị lỗi EL1001E và sidebar hiển thị đúng phân quyền của người dùng đăng nhập.
+ * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc Customer Portal Header/Footer.
+ * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches, footerServices luôn có giá trị an toàn.
  */
 @ControllerAdvice
-@RequiredArgsConstructor
 public class GlobalModelAttributesAdvice {
 
+    private static final Set<String> STAFF_ROLE_CODES = Set.of(
+            "ADMIN", "ROLE_ADMIN",
+            "BAC_SI", "ROLE_BAC_SI",
+            "LE_TAN", "ROLE_LE_TAN",
+            "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO",
+            "KE_TOAN", "ROLE_KE_TOAN"
+    );
+
     private final UserRepository userRepository;
+    private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
+    private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
+    private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
+
+    public GlobalModelAttributesAdvice(UserRepository userRepository) {
+        this(userRepository, null, null, null);
+    }
+
+    @Autowired
+    public GlobalModelAttributesAdvice(
+            UserRepository userRepository,
+            ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
+            ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider
+    ) {
+        this.userRepository = userRepository;
+        this.customerPortalServiceProvider = customerPortalServiceProvider;
+        this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
+        this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
+    }
 
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpServletRequest request, HttpSession session) {
@@ -112,6 +147,53 @@ public class GlobalModelAttributesAdvice {
         return false;
     }
 
+    @ModelAttribute("isStaffUser")
+    public boolean populateIsStaffUser(HttpServletRequest request, HttpSession session) {
+        List<String> roles = populateRoleNames(request, session);
+        for (String r : roles) {
+            if (r != null && STAFF_ROLE_CODES.contains(r.trim().toUpperCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @ModelAttribute("isPatientUser")
+    public boolean populateIsPatientUser(HttpServletRequest request, HttpSession session) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
+            return false;
+        }
+        if (populateIsStaffUser(request, session)) {
+            return false;
+        }
+        List<String> roles = populateRoleNames(request, session);
+        for (String r : roles) {
+            if (r != null) {
+                String norm = r.trim().toUpperCase(Locale.ROOT);
+                if ("BENH_NHAN".equals(norm) || "ROLE_BENH_NHAN".equals(norm)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @ModelAttribute("defaultPatientProfile")
+    public PatientProfile populateDefaultPatientProfile(HttpSession session) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user) || user.getUserId() == null) {
+            return null;
+        }
+        PatientProfileRepository repo = patientProfileRepositoryProvider != null
+                ? patientProfileRepositoryProvider.getIfAvailable()
+                : null;
+        if (repo == null) {
+            return null;
+        }
+        return repo.findFirstByUser_UserIdAndIsDefaultTrueAndStatus(user.getUserId(), "ACTIVE")
+                .or(() -> repo.findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId()))
+                .orElse(null);
+    }
+
     @ModelAttribute("displayName")
     public String populateDisplayName(HttpSession session) {
         if (session == null) {
@@ -121,6 +203,10 @@ public class GlobalModelAttributesAdvice {
         Object displayName = session.getAttribute("displayName");
         if (displayName != null && !displayName.toString().isBlank()) {
             return displayName.toString();
+        }
+        PatientProfile pp = populateDefaultPatientProfile(session);
+        if (pp != null && pp.getFullName() != null && !pp.getFullName().isBlank()) {
+            return pp.getFullName();
         }
         if (session.getAttribute("loggedInUser") instanceof User user) {
             return user.getUsername();
@@ -162,12 +248,69 @@ public class GlobalModelAttributesAdvice {
         return null;
     }
 
-    private List<String> toStringList(Collection<?> collection) {
-        if (collection == null || collection.isEmpty()) {
+    @ModelAttribute("publicBranches")
+    public List<Branch> populatePublicBranches() {
+        CustomerPortalService portalService = customerPortalServiceProvider != null
+                ? customerPortalServiceProvider.getIfAvailable()
+                : null;
+        if (portalService == null) {
             return Collections.emptyList();
         }
-        return collection.stream()
-                .filter(item -> item != null)
+        try {
+            return portalService.getActiveBranches();
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    @ModelAttribute("primaryBranch")
+    public Branch populatePrimaryBranch() {
+        CustomerPortalService portalService = customerPortalServiceProvider != null
+                ? customerPortalServiceProvider.getIfAvailable()
+                : null;
+        if (portalService == null) {
+            return null;
+        }
+        try {
+            return portalService.getPrimaryBranch();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @ModelAttribute("footerServices")
+    public List<Service> populateFooterServices() {
+        CustomerPortalService portalService = customerPortalServiceProvider != null
+                ? customerPortalServiceProvider.getIfAvailable()
+                : null;
+        if (portalService == null) {
+            return Collections.emptyList();
+        }
+        try {
+            return portalService.getFeaturedServices(5);
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    @ModelAttribute("headerServiceCategories")
+    public List<ServiceCategory> populateHeaderServiceCategories() {
+        ServiceCatalogService catalogService = serviceCatalogServiceProvider != null
+                ? serviceCatalogServiceProvider.getIfAvailable()
+                : null;
+        if (catalogService == null) {
+            return Collections.emptyList();
+        }
+        try {
+            return catalogService.getActiveCategories();
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<String> toStringList(Collection<?> col) {
+        return col.stream()
+                .filter(item -> item != null && !item.toString().isBlank())
                 .map(Object::toString)
                 .toList();
     }

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Đội ngũ Bác sĩ Răng Hàm Mặt')}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li>Đội ngũ Bác sĩ</li>
+        </ol>
+        <h1 class="cp-page-banner__title">Đội ngũ Bác sĩ Răng Hàm Mặt</h1>
+        <p class="cp-page-banner__desc">
+            Tra cứu thông tin chuyên môn, chứng chỉ hành nghề, cơ sở công tác và lịch trực khám của đội ngũ bác sĩ
+            tại Hệ thống Nha khoa Cường Việt.
+        </p>
+    </div>
+</section>
+
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
+
+        <!-- THANH TÌM KIẾM & BỘ LỌC BÁC SĨ -->
+        <div class="cp-filter-box">
+            <form method="get" th:action="@{/doctors}" class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label for="doctorKeyword" class="form-label small fw-bold text-secondary mb-1">
+                        <i class="bi bi-search me-1 text-primary"></i>Tìm theo họ tên hoặc chuyên khoa
+                    </label>
+                    <input id="doctorKeyword"
+                           type="text"
+                           name="keyword"
+                           class="form-control"
+                           placeholder="Nhập họ tên bác sĩ hoặc chuyên môn..."
+                           th:value="${selectedKeyword}">
+                </div>
+
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="specialtySelect" class="form-label small fw-bold text-secondary mb-1">
+                        <i class="bi bi-award me-1 text-primary"></i>Chuyên khoa
+                    </label>
+                    <select id="specialtySelect" name="specialty" class="form-select">
+                        <option value="">Tất cả chuyên khoa</option>
+                        <option th:each="sp : ${specialties}"
+                                th:value="${sp}"
+                                th:text="${sp}"
+                                th:selected="${selectedSpecialty != null and selectedSpecialty == sp}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label for="branchSelect" class="form-label small fw-bold text-secondary mb-1">
+                        <i class="bi bi-buildings me-1 text-primary"></i>Cơ sở công tác
+                    </label>
+                    <select id="branchSelect" name="branchId" class="form-select">
+                        <option value="">Tất cả cơ sở</option>
+                        <option th:each="br : ${branches}"
+                                th:value="${br.branchId}"
+                                th:text="${br.branchName}"
+                                th:selected="${selectedBranchId != null and selectedBranchId == br.branchId}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn-brand flex-grow-1" style="height:38px;">
+                        <i class="bi bi-funnel-fill"></i> Lọc
+                    </button>
+                    <a th:href="@{/doctors}" class="btn-light-soft" style="height:38px;" title="Đặt lại bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- DANH SÁCH BÁC SĨ DẠNG GRID CARD -->
+        <div class="cp-card-grid-4" th:if="${doctors != null and !#lists.isEmpty(doctors)}">
+            <article class="cp-card" th:each="doc : ${doctors}">
+                <div class="cp-doctor-card__top">
+                    <div class="cp-doctor-avatar" th:text="${doc.initials}">BS</div>
+                    <span class="cp-doctor-card__role" th:text="${doc.positionTitle}">Bác sĩ Răng Hàm Mặt</span>
+                    <h2 class="cp-doctor-card__name">
+                        <a th:href="@{/doctors/{id}(id=${doc.staffId})}" th:text="${doc.fullName}">Họ tên bác sĩ</a>
+                    </h2>
+                    <p class="cp-doctor-card__specialty" th:text="${doc.specialty}">Chuyên khoa</p>
+                </div>
+
+                <div class="cp-doctor-card__body">
+                    <ul class="cp-doctor-meta">
+                        <li th:if="${doc.department != null and !#strings.isEmpty(doc.department)}">
+                            <i class="bi bi-hospital"></i>
+                            <span>Khoa/Bộ phận: <strong th:text="${doc.department}">Lâm sàng</strong></span>
+                        </li>
+                        <li th:if="${doc.practiceLicenseNo != null and !#strings.isEmpty(doc.practiceLicenseNo)}">
+                            <i class="bi bi-patch-check-fill"></i>
+                            <span>CCHN: <strong th:text="${doc.practiceLicenseNo}">CCHN</strong></span>
+                        </li>
+                        <li th:if="${doc.branchNames != null and !#lists.isEmpty(doc.branchNames)}">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <span>Cơ sở: <strong th:text="${#strings.listJoin(doc.branchNames, ', ')}">Cơ sở</strong></span>
+                        </li>
+                    </ul>
+
+                    <div class="d-flex gap-2 mt-auto">
+                        <a th:href="@{/doctors/{id}(id=${doc.staffId})}" class="btn-outline-brand flex-grow-1">
+                            Xem chi tiết <i class="bi bi-chevron-right"></i>
+                        </a>
+                        <a th:if="${session.loggedInUser != null and isPatientUser}"
+                           th:href="@{/portal/appointments/new}"
+                           class="btn-brand">
+                            Đặt lịch
+                        </a>
+                        <a th:if="${session.loggedInUser == null}"
+                           th:href="@{/login}"
+                           class="btn-brand">
+                            Đặt lịch
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div class="empty-state-box bg-white rounded-4 border p-5"
+             th:if="${doctors == null or #lists.isEmpty(doctors)}">
+            <i class="bi bi-person-badge empty-icon"></i>
+            <h6>Không tìm thấy bác sĩ phù hợp</h6>
+            <p>Hiện không có hồ sơ bác sĩ nào khớp với điều kiện tìm kiếm hoặc bộ lọc bạn đã chọn.</p>
+            <a th:href="@{/doctors}" class="btn-brand">
+                <i class="bi bi-arrow-counterclockwise"></i> Xem tất cả bác sĩ
+            </a>
+        </div>
+
+        <!-- PHÂN TRANG -->
+        <nav aria-label="Phân trang bác sĩ"
+             class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4 pt-3 border-top"
+             th:if="${totalPages != null and totalPages > 1}">
+            <div class="small text-muted">
+                Trang <strong th:text="${currentPage + 1}">1</strong> / <strong th:text="${totalPages}">1</strong>
+                (Tổng <strong th:text="${totalDoctors}">0</strong> bác sĩ)
+            </div>
+            <ul class="pagination mb-0">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/doctors(page=${currentPage - 1}, size=${pageSize}, keyword=${selectedKeyword}, specialty=${selectedSpecialty}, branchId=${selectedBranchId})}">
+                        <i class="bi bi-chevron-left"></i> Trước
+                    </a>
+                </li>
+                <li class="page-item"
+                    th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${p == currentPage} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/doctors(page=${p}, size=${pageSize}, keyword=${selectedKeyword}, specialty=${selectedSpecialty}, branchId=${selectedBranchId})}"
+                       th:text="${p + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/doctors(page=${currentPage + 1}, size=${pageSize}, keyword=${selectedKeyword}, specialty=${selectedSpecialty}, branchId=${selectedBranchId})}">
+                        Sau <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+    </div>
+</main>
+
+<section th:replace="~{fragments/footer :: ctaBanner}"></section>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>

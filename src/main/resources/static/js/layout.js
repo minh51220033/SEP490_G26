@@ -12,6 +12,8 @@
    7. Ripple       : hiệu ứng gợn sóng khi bấm (chỉ transform + opacity)
    8. Scroll       : bóng topbar, nút lên đầu trang, gợi ý cuộn bảng
    9. Misc         : link bị vô hiệu hoá, link cuộn tới section
+   10. Reveal      : (v2) hiện dần card khi cuộn tới — opt-out bằng data-reveal-skip
+   11. Loading     : (v2) trạng thái đang xử lý cho form có data-loading-on-submit
    ===================================================================== */
 (function () {
     "use strict";
@@ -458,6 +460,78 @@
             if (!section) return;
             event.preventDefault();
             section.scrollIntoView({ behavior: REDUCED_MOTION.matches ? "auto" : "smooth", block: "start" });
+        });
+    });
+
+    /* =============================================================
+       10. SCROLL REVEAL (v2)
+       - Chỉ chạy khi có IntersectionObserver và KHÔNG bật giảm chuyển động.
+       - Chỉ thêm/bỏ class hiển thị, gỡ sạch sau khi chạy xong để trả lại
+         transition gốc (hover) của từng thành phần.
+       - Phần tử nằm trong [data-reveal-skip] sẽ được bỏ qua.
+       ============================================================= */
+    (function initReveal() {
+        if (REDUCED_MOTION.matches || !("IntersectionObserver" in window)) return;
+
+        var SELECTOR = "[data-reveal], .stat-card, .feature-card, .cp-card, .cp-branch-card, .cp-section-header";
+        var items = $all(SELECTOR).filter(function (el) {
+            return !el.closest("[data-reveal-skip]") && !el.classList.contains("reveal-item");
+        });
+        if (!items.length) return;
+
+        root.classList.add("js-reveal");
+
+        items.forEach(function (el) {
+            // Trễ nhẹ theo thứ tự trong cùng hàng (tối đa 5 bước) để tạo nhịp
+            var index = Array.prototype.indexOf.call(el.parentNode.children, el);
+            el.style.setProperty("--reveal-delay", (Math.min(Math.max(index, 0), 5) * 60) + "ms");
+            el.classList.add("reveal-item");
+        });
+
+        function cleanup(el) {
+            el.classList.remove("reveal-item", "is-revealed");
+            el.style.removeProperty("--reveal-delay");
+        }
+
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                var el = entry.target;
+                observer.unobserve(el);
+                el.classList.add("is-revealed");
+                var done = false;
+                var finish = function () { if (!done) { done = true; cleanup(el); } };
+                el.addEventListener("transitionend", function (e) {
+                    if (e.target === el && e.propertyName === "opacity") finish();
+                });
+                window.setTimeout(finish, 1200); // phòng khi transitionend không bắn
+            });
+        }, { rootMargin: "0px 0px -6% 0px", threshold: 0.06 });
+
+        items.forEach(function (el) { observer.observe(el); });
+    })();
+
+    /* =============================================================
+       11. LOADING STATE CHO FORM (v2, opt-in)
+       Thêm data-loading-on-submit vào <form> để nút submit hiện spinner.
+       - Không disable nút (giữ nguyên name/value gửi lên server).
+       - Nếu JS nghiệp vụ khác preventDefault() thì không bật loading.
+       - Gỡ trạng thái khi quay lại trang bằng nút Back (bfcache).
+       ============================================================= */
+    document.addEventListener("submit", function (event) {
+        var form = event.target;
+        if (!form || !form.matches || !form.matches("form[data-loading-on-submit]")) return;
+        var button = event.submitter || form.querySelector("[type='submit']");
+        window.setTimeout(function () {
+            if (event.defaultPrevented || !button) return;
+            button.classList.add("is-loading");
+            button.setAttribute("aria-busy", "true");
+        }, 0);
+    });
+    window.addEventListener("pageshow", function () {
+        $all(".is-loading[aria-busy='true']").forEach(function (el) {
+            el.classList.remove("is-loading");
+            el.removeAttribute("aria-busy");
         });
     });
 

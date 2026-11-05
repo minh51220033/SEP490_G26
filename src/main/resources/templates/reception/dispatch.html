@@ -504,7 +504,12 @@
   </div>
 </section>
 
+</main>
+</div>
+</div>
+
 <!-- SCR-08.2: POPUP PHÂN CÔNG / ĐỔI BÁC SĨ & GHẾ KHÁM -->
+<!-- Must be a direct child of body: Bootstrap appends its backdrop to body. -->
 <div class="modal fade" id="dispatchAssignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow rounded-4">
@@ -591,9 +596,6 @@
   </div>
 </div>
 
-</main>
-</div>
-</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script th:src="@{/js/reception-dispatch.js}" defer></script>
 </body>

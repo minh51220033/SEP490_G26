@@ -1,4 +1,4 @@
-/* =========================================================================
+﻿/* =========================================================================
    CV-DCMS INVENTORY MANAGEMENT (QUẢN LÝ KHO VẬT TƯ) - ENTERPRISE STANDARD
    Theo chuẩn thiết kế DentalFlow / CV-DCMS:
    - Viewport Scroll Lock 100vh (Không 2 thanh cuộn song song)
@@ -986,9 +986,3 @@ textarea:focus {
     font-size: 12.5px;
 }
 
-/* 12. TRIỆT ĐỂ ẨN CHAT WIDGET TRÊN TOÀN TRANG KHO */
-.cvdcms-chat-widget,
-.cvdcms-chat-fab,
-.cvdcms-chat-popup {
-    display: none !important;
-}
