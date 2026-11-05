@@ -1,4 +1,4 @@
-/* =========================================================================
+﻿/* =========================================================================
    CV-DCMS CUSTOMER CARE (CSKH & HẬU PHẪU) - ENTERPRISE STANDARD
    Theo chuẩn thiết kế DentalFlow / CV-DCMS:
    - Viewport Scroll Lock 100vh (Không 2 thanh cuộn)
@@ -1073,9 +1073,3 @@ textarea:focus {
     gap: 8px;
 }
 
-/* 12. TRIỆT ĐỂ ẨN CHAT WIDGET TRÊN TOÀN TRANG */
-.cvdcms-chat-widget,
-.cvdcms-chat-fab,
-.cvdcms-chat-popup {
-    display: none !important;
-}
