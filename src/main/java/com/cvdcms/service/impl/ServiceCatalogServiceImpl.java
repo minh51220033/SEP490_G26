@@ -504,6 +504,21 @@ public class ServiceCatalogServiceImpl
 
     // =====================================================
     // 7. BẢNG GIÁ CÔNG KHAI
+
+    @Override
+    public Service getPublicServiceById(Long serviceId) {
+        if (serviceId == null || serviceId <= 0) {
+            throw new IllegalArgumentException("ID dịch vụ không hợp lệ.");
+        }
+        Service service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ."));
+        if (service.getStatus() != ServiceStatus.ACTIVE
+                || service.getCategory() == null
+                || !Boolean.TRUE.equals(service.getCategory().getIsActive())) {
+            throw new IllegalArgumentException("Dịch vụ hiện không còn cung cấp công khai.");
+        }
+        return service;
+    }
     // =====================================================
 
     @Override

@@ -104,4 +104,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("status") AppointmentStatus status,
             @Param("keyword") String keyword
     );
+
+    // FT42: Tìm các lịch hẹn của bác sĩ trong khoảng ngày nghỉ có trạng thái hoạt động (PENDING, CONFIRMED)
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patientProfile p
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH a.doctor d
+        LEFT JOIN FETCH a.service srv
+        WHERE d.staffId = :doctorId
+          AND a.appointmentDate BETWEEN :startDate AND :endDate
+          AND a.status IN :statuses
+        ORDER BY a.appointmentDate ASC, a.expectedTime ASC
+    """)
+    List<Appointment> findAffectedAppointments(
+            @Param("doctorId") Long doctorId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("statuses") List<AppointmentStatus> statuses
+    );
 }
