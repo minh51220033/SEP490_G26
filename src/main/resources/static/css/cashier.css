@@ -232,3 +232,67 @@
 .cashier-page .table .badge {
     font-weight: 500;
 }
+
+/* ============================================================================
+   6. Pinned Action Column for Cashier Table (Chống tràn mép & cố định thao tác)
+   ============================================================================ */
+.cashier-page th.cashier-actions-col {
+    position: sticky !important;
+    right: 0 !important;
+    min-width: 330px !important;
+    width: 330px !important;
+    background-color: #f8fafc !important;
+    z-index: 6 !important;
+    box-shadow: -3px 0 6px -2px rgba(15, 23, 42, 0.08);
+}
+
+.cashier-page td.cashier-actions-col {
+    position: sticky !important;
+    right: 0 !important;
+    min-width: 330px !important;
+    width: 330px !important;
+    background-color: #ffffff;
+    z-index: 5 !important;
+    box-shadow: -3px 0 6px -2px rgba(15, 23, 42, 0.08);
+    white-space: nowrap !important;
+    text-align: center;
+}
+
+.cashier-page tr:hover td.cashier-actions-col {
+    background-color: #f8fafc !important;
+}
+
+.cashier-page tr.table-primary td.cashier-actions-col {
+    background-color: #eff6ff !important;
+}
+
+/* Nhóm nút thao tác hàng ngang gọn gàng, không bị tràn ra ngoài */
+.cashier-actions-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.cashier-actions-group .btn {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* Tắt triệt để thanh nổi floating action bar trên bảng thu ngân để không bị tràn mép thẻ */
+table[data-enhanced-table="cashier-pending-patients"] ~ .enhanced-floating-actions,
+table[data-disable-floating-actions="true"] ~ .enhanced-floating-actions,
+.enhanced-floating-actions {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}

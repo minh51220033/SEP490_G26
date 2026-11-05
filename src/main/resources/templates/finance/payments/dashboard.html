@@ -49,8 +49,7 @@
                            title="Chuyển tới màn hình Lập hóa đơn để chọn lượt khám chờ thanh toán">
                             <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn
                         </a>
-                        <button type="button" class="fin-btn fin-btn-success fin-btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#quickPayModal">
+                        <button type="button" class="fin-btn fin-btn-success fin-btn-sm" onclick="handleTopQuickPayClick()">
                             <i class="bi bi-cash-coin"></i> Thu tiền hóa đơn
                         </button>
                         <button type="button" class="fin-btn fin-btn-warning text-dark fin-btn-sm" data-bs-toggle="modal"
@@ -134,6 +133,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 enhanced-table"
                            data-enhanced-table="cashier-pending-patients"
+                           data-disable-floating-actions="true"
                            style="font-size: 13px;">
                         <thead class="table-light text-nowrap">
                             <tr>
@@ -148,7 +148,7 @@
                                 <th class="text-end">Còn nợ</th>
                                 <th class="text-end">Ví tạm ứng</th>
                                 <th class="text-center">Trạng thái xử lý</th>
-                                <th class="text-center" style="min-width: 140px;">Thao tác</th>
+                                <th class="text-center cashier-actions-col">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -254,8 +254,8 @@
                                 </td>
 
                                 <!-- Thao tác -->
-                                <td class="text-center text-nowrap">
-                                    <div class="btn-group btn-group-sm" role="group">
+                                <td class="text-center cashier-actions-col">
+                                    <div class="cashier-actions-group" role="group">
                                         <!-- Lập hóa đơn: 1 ca -> link trực tiếp; >1 ca -> modal -->
                                         <a th:if="${p.unbilledVisitCount == 1 and !p.pendingVisits.isEmpty()}"
                                            th:href="@{/invoices/create(visitId=${p.pendingVisits[0].visitId})}"
@@ -272,27 +272,23 @@
                                             <i class="bi bi-file-earmark-plus"></i> Lập HĐ <span class="badge bg-primary text-white ms-1" th:text="${p.unbilledVisitCount}">2</span>
                                         </button>
 
-                                        <!-- Thu tiền: 1 HĐ -> link trực tiếp / modal; >1 HĐ -> modal chọn HĐ -->
-                                        <button th:if="${p.unpaidInvoiceCount == 1 and !p.unpaidInvoices.isEmpty()}"
+                                        <!-- Thu tiền: Khi click mở ngay popup thu tiền với hóa đơn & tiền nợ điền sẵn -->
+                                        <button th:if="${p.unpaidInvoiceCount > 0}"
                                                 type="button"
                                                 class="btn btn-outline-success"
-                                                th:data-invoice-id="${p.unpaidInvoices[0].invoiceId}"
-                                                th:data-invoice-code="${p.unpaidInvoices[0].invoiceCode}"
-                                                th:data-debt="${p.unpaidInvoices[0].remainingDebt}"
+                                                data-role="cashier-pay-btn"
+                                                th:data-profile-id="${p.profileId}"
                                                 th:data-patient-name="${p.fullName}"
                                                 th:data-patient-code="${p.patientCode}"
                                                 th:data-deposit-balance="${p.depositBalance}"
-                                                onclick="openQuickPayForInvoice(this.dataset.invoiceId, this.dataset.invoiceCode, parseFloat(this.dataset.debt), this.dataset.patientName, this.dataset.patientCode, parseFloat(this.dataset.depositBalance))"
-                                                title="Thu tiền cho hóa đơn còn nợ">
+                                                th:data-invoice-count="${p.unpaidInvoiceCount}"
+                                                th:data-first-invoice-id="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].invoiceId : ''}"
+                                                th:data-first-invoice-code="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].invoiceCode : ''}"
+                                                th:data-first-debt="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].remainingDebt : 0}"
+                                                onclick="openCashierQuickPayFromRow(this)"
+                                                title="Thu tiền cho hóa đơn còn nợ của bệnh nhân này">
                                             <i class="bi bi-cash-coin"></i> Thu tiền
-                                        </button>
-                                        <button th:if="${p.unpaidInvoiceCount > 1}"
-                                                type="button"
-                                                class="btn btn-outline-success"
-                                                data-bs-toggle="modal"
-                                                th:data-bs-target="'#invoiceSelectModal_' + ${p.profileId}"
-                                                title="Chọn hóa đơn cần thu tiền">
-                                            <i class="bi bi-cash-coin"></i> Thu tiền <span class="badge bg-danger text-white ms-1" th:text="${p.unpaidInvoiceCount}">2</span>
+                                            <span th:if="${p.unpaidInvoiceCount > 1}" class="badge bg-danger text-white ms-1" th:text="${p.unpaidInvoiceCount}">2</span>
                                         </button>
 
                                         <!-- Xem tài chính -->
@@ -1042,9 +1038,27 @@
                             aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <!-- Thông tin bệnh nhân đang thanh toán -->
+                    <div class="mb-3 p-3 bg-light rounded border">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span class="text-muted small d-block">BỆNH NHÂN THANH TOÁN:</span>
+                                <strong id="modalPatientDisplayName" class="text-primary fs-6"
+                                        th:text="${patient != null ? patient.fullName + ' (' + patient.patientCode + ')' : '-- Bệnh nhân chờ thanh toán --'}">
+                                    Nguyễn Văn An
+                                </strong>
+                            </div>
+                            <div>
+                                <span id="modalPatientDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle"
+                                      th:text="'Ví tạm ứng: ' + (${patient != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ'">
+                                    Ví tạm ứng: 0 đ
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label for="modalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần
-                            thu:</label>
+                        <label for="modalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần thu:</label>
                         <select id="modalInvoiceSelect" name="invoiceId" class="form-select"
                                 onchange="onModalInvoiceChange(this)" required>
                             <option value="">-- Chọn hóa đơn chưa thanh toán đủ --</option>
@@ -1052,6 +1066,9 @@
                                 <option th:each="inv : ${invoices}" th:if="${inv.remainingDebt > 0}"
                                         th:value="${inv.invoiceId}"
                                         th:data-debt="${inv.remainingDebt}"
+                                        th:data-patient-name="${patient.fullName}"
+                                        th:data-patient-code="${patient.patientCode}"
+                                        th:data-deposit-balance="${patient.depositBalance}"
                                         th:text="${inv.invoiceCode} + ' - Còn nợ: ' + ${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 </option>
                             </th:block>
@@ -1457,16 +1474,184 @@
             });
     }
 
+    function showQuickPayModal() {
+        const payKey = document.getElementById('quickPayIdempotencyKey');
+        if (payKey) {
+            payKey.value = 'pay-' + generateUUID();
+        }
+        const modalEl = document.getElementById('quickPayModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
     function onModalInvoiceChange(select) {
         if (!select || select.selectedIndex < 0) return;
         const option = select.options[select.selectedIndex];
-        if (!option) return;
+        if (!option || !option.value) return;
         const debt = parseFloat(option.getAttribute('data-debt')) || 0;
-        document.getElementById('modalDebtDisplay').value = formatMoney(debt);
-        document.getElementById('modalPayAmount').value = debt;
-        document.getElementById('modalPayAmount').max = debt;
+        const pName = option.getAttribute('data-patient-name');
+        const pCode = option.getAttribute('data-patient-code');
+        const pDep = parseFloat(option.getAttribute('data-deposit-balance')) || 0;
+
+        if (pName) {
+            const nameEl = document.getElementById('modalPatientDisplayName');
+            if (nameEl) {
+                nameEl.textContent = `${pName} (${pCode || ''})`;
+            }
+            const depBadge = document.getElementById('modalPatientDepositBadge');
+            if (depBadge) {
+                depBadge.textContent = 'Ví tạm ứng: ' + formatMoney(pDep);
+            }
+            const depositOpt = document.getElementById('modalDepositOption');
+            if (depositOpt) {
+                depositOpt.textContent = `Ví tiền tạm ứng (Số dư: ${formatMoney(pDep)})`;
+                depositOpt.disabled = (pDep <= 0);
+            }
+        }
+
+        const debtDisplay = document.getElementById('modalDebtDisplay');
+        if (debtDisplay) debtDisplay.value = formatMoney(debt);
+        const amtInput = document.getElementById('modalPayAmount');
+        if (amtInput) {
+            amtInput.value = debt;
+            amtInput.max = debt;
+        }
         triggerAllocationPreview();
     }
+
+    function openCashierQuickPayFromRow(btn) {
+        const profileId = btn.getAttribute('data-profile-id');
+        const patientName = btn.getAttribute('data-patient-name') || '';
+        const patientCode = btn.getAttribute('data-patient-code') || '';
+        const depositBalance = parseFloat(btn.getAttribute('data-deposit-balance')) || 0;
+        const invoiceCount = parseInt(btn.getAttribute('data-invoice-count')) || 1;
+        const firstInvoiceId = btn.getAttribute('data-first-invoice-id');
+        const firstInvoiceCode = btn.getAttribute('data-first-invoice-code');
+        const firstDebt = parseFloat(btn.getAttribute('data-first-debt')) || 0;
+
+        // 1. Cập nhật banner thông tin bệnh nhân
+        const nameEl = document.getElementById('modalPatientDisplayName');
+        if (nameEl) {
+            nameEl.textContent = `${patientName} (${patientCode})`;
+        }
+        const depBadge = document.getElementById('modalPatientDepositBadge');
+        if (depBadge) {
+            depBadge.textContent = 'Ví tạm ứng: ' + formatMoney(depositBalance);
+        }
+        const depositOpt = document.getElementById('modalDepositOption');
+        if (depositOpt) {
+            depositOpt.textContent = `Ví tiền tạm ứng (Số dư: ${formatMoney(depositBalance)})`;
+            depositOpt.disabled = (depositBalance <= 0);
+        }
+
+        const select = document.getElementById('modalInvoiceSelect');
+
+        // 2. Nếu bệnh nhân chỉ có 1 hóa đơn (hoặc hiển thị ngay hóa đơn đầu tiên)
+        if (invoiceCount <= 1 && firstInvoiceId) {
+            if (select) {
+                select.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = firstInvoiceId;
+                opt.setAttribute('data-debt', firstDebt);
+                opt.setAttribute('data-patient-name', patientName);
+                opt.setAttribute('data-patient-code', patientCode);
+                opt.setAttribute('data-deposit-balance', depositBalance);
+                opt.textContent = `${firstInvoiceCode} - Còn nợ: ${formatMoney(firstDebt)}`;
+                select.appendChild(opt);
+                select.value = firstInvoiceId;
+
+                const debtDisplay = document.getElementById('modalDebtDisplay');
+                if (debtDisplay) debtDisplay.value = formatMoney(firstDebt);
+                const amtInput = document.getElementById('modalPayAmount');
+                if (amtInput) {
+                    amtInput.value = firstDebt;
+                    amtInput.max = firstDebt;
+                }
+                triggerAllocationPreview();
+            }
+            showQuickPayModal();
+            return;
+        }
+
+        // 3. Nếu bệnh nhân có nhiều hóa đơn (> 1):
+        // Điền tạm hóa đơn đầu tiên để modal sẵn sàng ngay, sau đó tải trọn bộ danh sách hóa đơn của bệnh nhân này
+        if (select) {
+            select.innerHTML = '';
+            if (firstInvoiceId) {
+                const opt = document.createElement('option');
+                opt.value = firstInvoiceId;
+                opt.setAttribute('data-debt', firstDebt);
+                opt.setAttribute('data-patient-name', patientName);
+                opt.setAttribute('data-patient-code', patientCode);
+                opt.setAttribute('data-deposit-balance', depositBalance);
+                opt.textContent = `${firstInvoiceCode} - Còn nợ: ${formatMoney(firstDebt)}`;
+                select.appendChild(opt);
+                select.value = firstInvoiceId;
+
+                const debtDisplay = document.getElementById('modalDebtDisplay');
+                if (debtDisplay) debtDisplay.value = formatMoney(firstDebt);
+                const amtInput = document.getElementById('modalPayAmount');
+                if (amtInput) {
+                    amtInput.value = firstDebt;
+                    amtInput.max = firstDebt;
+                }
+                triggerAllocationPreview();
+            } else {
+                select.innerHTML = '<option value="">Đang tải danh sách hóa đơn...</option>';
+            }
+        }
+        showQuickPayModal();
+
+        // Tải toàn bộ danh sách hóa đơn nợ của bệnh nhân này
+        fetch(`/payments/api/patients/${profileId}/unpaid-invoices`)
+            .then(res => {
+                if (!res.ok) throw new Error('Không thể tải danh sách hóa đơn');
+                return res.json();
+            })
+            .then(invoices => {
+                if (!select || !invoices || invoices.length === 0) return;
+                select.innerHTML = '';
+                invoices.forEach(inv => {
+                    const opt = document.createElement('option');
+                    opt.value = inv.invoiceId;
+                    opt.setAttribute('data-debt', inv.remainingDebt);
+                    opt.setAttribute('data-patient-name', patientName);
+                    opt.setAttribute('data-patient-code', patientCode);
+                    opt.setAttribute('data-deposit-balance', depositBalance);
+                    opt.textContent = `${inv.invoiceCode} - Còn nợ: ${formatMoney(inv.remainingDebt)}`;
+                    select.appendChild(opt);
+                });
+                if (select.options.length > 0) {
+                    select.selectedIndex = 0;
+                    onModalInvoiceChange(select);
+                }
+            })
+            .catch(err => {
+                console.warn('Lỗi tải danh sách hóa đơn bệnh nhân:', err);
+            });
+    }
+
+    function handleTopQuickPayClick() {
+        const firstRowPayBtn = document.querySelector('[data-role="cashier-pay-btn"]');
+        if (firstRowPayBtn) {
+            openCashierQuickPayFromRow(firstRowPayBtn);
+            return;
+        }
+
+        const select = document.getElementById('modalInvoiceSelect');
+        if (select && select.options.length > 0) {
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value) {
+                    select.selectedIndex = i;
+                    onModalInvoiceChange(select);
+                    break;
+                }
+            }
+        }
+        showQuickPayModal();
+    }
+
     function onRefundSourceChange(select) {
         const group = document.getElementById('reduceInvoiceTotalGroup');
         const check = document.getElementById('reduceInvoiceTotal');
@@ -1477,29 +1662,36 @@
             if (check) check.checked = false;
         }
     }
+
     function openInvoicePayModal(btn) {
         const invoiceId = btn.getAttribute('data-invoice-id');
         const debt = parseFloat(btn.getAttribute('data-debt')) || 0;
+        const patientName = btn.getAttribute('data-patient') || '';
+        if (patientName) {
+            const nameEl = document.getElementById('modalPatientDisplayName');
+            if (nameEl) nameEl.textContent = patientName;
+        }
         const select = document.getElementById('modalInvoiceSelect');
         if (select) {
             select.value = invoiceId;
-            document.getElementById('modalDebtDisplay').value = formatMoney(debt);
-            document.getElementById('modalPayAmount').value = debt;
-            document.getElementById('modalPayAmount').max = debt;
+            const debtDisplay = document.getElementById('modalDebtDisplay');
+            if (debtDisplay) debtDisplay.value = formatMoney(debt);
+            const amtInput = document.getElementById('modalPayAmount');
+            if (amtInput) {
+                amtInput.value = debt;
+                amtInput.max = debt;
+            }
             select.dispatchEvent(new Event('change'));
         }
-        const payKey = document.getElementById('quickPayIdempotencyKey');
-        if (payKey) {
-            payKey.value = 'pay-' + generateUUID();
-        }
-        const modalEl = document.getElementById('quickPayModal');
-        if (modalEl && window.bootstrap) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        }
+        showQuickPayModal();
     }
 
     function openQuickPayForInvoice(invoiceId, invoiceCode, debt, patientName, patientCode, depositBalance) {
+        const nameEl = document.getElementById('modalPatientDisplayName');
+        if (nameEl) nameEl.textContent = `${patientName} (${patientCode})`;
+        const depBadge = document.getElementById('modalPatientDepositBadge');
+        if (depBadge) depBadge.textContent = 'Ví tạm ứng: ' + formatMoney(depositBalance);
+
         const select = document.getElementById('modalInvoiceSelect');
         if (select) {
             let opt = select.querySelector(`option[value="${invoiceId}"]`);
@@ -1507,14 +1699,20 @@
                 opt = document.createElement('option');
                 opt.value = invoiceId;
                 opt.setAttribute('data-debt', debt);
+                opt.setAttribute('data-patient-name', patientName);
+                opt.setAttribute('data-patient-code', patientCode);
+                opt.setAttribute('data-deposit-balance', depositBalance);
                 opt.textContent = `${invoiceCode} - Còn nợ: ${formatMoney(debt)} (${patientName})`;
                 select.appendChild(opt);
             }
             select.value = invoiceId;
-            document.getElementById('modalDebtDisplay').value = formatMoney(debt);
+            const debtDisplay = document.getElementById('modalDebtDisplay');
+            if (debtDisplay) debtDisplay.value = formatMoney(debt);
             const amtInput = document.getElementById('modalPayAmount');
-            amtInput.value = debt;
-            amtInput.max = debt;
+            if (amtInput) {
+                amtInput.value = debt;
+                amtInput.max = debt;
+            }
             triggerAllocationPreview();
         }
         const depositOpt = document.getElementById('modalDepositOption');
@@ -1523,14 +1721,7 @@
             depositOpt.textContent = `Ví tiền tạm ứng (Số dư: ${formatMoney(dep)})`;
             depositOpt.disabled = (dep <= 0);
         }
-        const payKey = document.getElementById('quickPayIdempotencyKey');
-        if (payKey) {
-            payKey.value = 'pay-' + generateUUID();
-        }
-        const modalEl = document.getElementById('quickPayModal');
-        if (modalEl && window.bootstrap) {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
+        showQuickPayModal();
     }
 
     function openQuickPayFromSelectModal(btn) {
