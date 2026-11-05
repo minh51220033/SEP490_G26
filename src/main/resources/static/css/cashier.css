@@ -1,0 +1,207 @@
+/* ==========================================================================
+   CV-DCMS CASHIER MODULE (KHU VỰC THU NGÂN - FT21 & FT22)
+   Tất cả style được đóng gói trong phạm vi .cashier-page và .cashier-tabs-wrapper
+   ========================================================================== */
+
+/* 1. Header & Tiêu đề phân hệ */
+.cashier-page .cashier-tabs-wrapper {
+    margin-bottom: 1.25rem;
+}
+
+.cashier-page .cashier-header-bar {
+    margin-bottom: 0.85rem;
+}
+
+.cashier-page .cashier-main-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cashier-page .cashier-main-desc {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 4px 0 0 0;
+}
+
+/* 2. Dãy nút chuyển tab ngang (DentalSoft Compact Pill Style - Ảnh 3) */
+.cashier-page .cashier-tabs-nav {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.cashier-page .cashier-tabs-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cashier-page .cashier-tab-item {
+    display: inline-flex;
+}
+
+/* Nút thấp, khoảng cách đều, chuẩn ảnh 3 */
+.cashier-page .cashier-tab-btn {
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    color: #374151;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 5px 12px;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cashier-page .cashier-tab-btn:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+    color: #111827;
+}
+
+/* Tab đang chọn có viền xanh và nền nhạt như ảnh */
+.cashier-page .cashier-tab-btn.active {
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.cashier-page .cashier-tab-btn i {
+    font-size: 14px;
+}
+
+/* 3. Vùng nội dung tab (Container chuyển động mượt mà) */
+.cashier-page .cashier-tab-content {
+    transition: opacity 0.15s ease;
+    min-height: 450px;
+}
+
+.cashier-page .cashier-tab-content.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* 4. Sub-toolbar cho từng tab (Tiêu đề tab phụ + các nút hành động: Lập HĐ, Thu tiền, Hoàn tiền...) */
+.cashier-page .cashier-subhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.cashier-page .cashier-subhead-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cashier-page .cashier-subhead-desc {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 2px 0 0 0;
+}
+
+/* 5. Mẫu bố cục thanh lọc & bảng (Ảnh 2) */
+.cashier-page .cashier-filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cashier-page .cashier-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.cashier-page .cashier-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 140px;
+    flex: 1;
+}
+
+.cashier-page .cashier-filter-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+}
+
+.cashier-page .cashier-filter-field .form-control,
+.cashier-page .cashier-filter-field .form-select,
+.cashier-page .cashier-filter-field .fin-input,
+.cashier-page .cashier-filter-field .fin-select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #ffffff;
+}
+
+.cashier-page .cashier-filter-field .form-control:focus,
+.cashier-page .cashier-filter-field .form-select:focus,
+.cashier-page .cashier-filter-field .fin-input:focus,
+.cashier-page .cashier-filter-field .fin-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.cashier-page .cashier-filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.cashier-page .cashier-filter-actions .btn,
+.cashier-page .cashier-filter-actions .fin-btn {
+    height: 38px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/* Card chứa bảng */
+.cashier-page .cashier-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    margin-bottom: 24px;
+}
+

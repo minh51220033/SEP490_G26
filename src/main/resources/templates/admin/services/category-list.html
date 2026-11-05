@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý danh mục - Nhóm dịch vụ')}"></head>
+
+<body class="app-body service-category-page">
+
+<div class="app-shell">
+
+  <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
+  <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+  <div class="app-main">
+
+    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
+
+    <main class="app-content">
+      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+      <!-- BREADCRUMB -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
+        </ol>
+      </nav>
+
+      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
+
+      <!-- THÔNG BÁO -->
+      <div class="alert alert-success"
+           role="status"
+           th:if="${successMessage}"
+           th:text="${successMessage}">
+      </div>
+
+      <div class="alert alert-danger"
+           role="alert"
+           th:if="${errorMessage}"
+           th:text="${errorMessage}">
+      </div>
+
+      <!-- NHÓM DANH MỤC DỊCH VỤ -->
+      <section class="panel catalog-filter-panel p-0 mb-3" id="service-categories">
+        <!-- TÌM KIẾM & BỘ LỌC NHÓM DỊCH VỤ -->
+        <form th:action="@{/admin/services/categories}"
+              method="get"
+              class="p-3 border-bottom">
+
+          <div class="row g-2 align-items-end">
+
+            <!-- 1. Ô tìm kiếm theo mã nhóm hoặc tên nhóm -->
+            <div class="col-12 col-md-4 col-lg-3">
+              <label for="catKeyword" class="form-label small text-muted mb-1">
+                Tìm kiếm nhóm danh mục dịch vụ
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input id="catKeyword"
+                       type="text"
+                       name="q"
+                       class="form-control"
+                       placeholder="Mã hoặc tên nhóm..."
+                       th:value="${keyword}">
+              </div>
+            </div>
+
+            <!-- 2. Bộ lọc trạng thái -->
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+              <label for="catStatusFilter" class="form-label small text-muted mb-1">
+                Trạng thái
+              </label>
+              <select id="catStatusFilter"
+                      name="active"
+                      class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Đang sử dụng</option>
+                <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Ngừng sử dụng</option>
+              </select>
+            </div>
+
+            <!-- 3. Nút Lọc và Bỏ lọc -->
+            <div class="col-auto d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                Lọc
+              </button>
+
+              <a th:href="@{/admin/services/categories}"
+                 class="btn btn-outline-secondary">
+                Bỏ lọc
+              </a>
+            </div>
+
+            <!-- 4. Nút Thêm nhóm dịch vụ (đặt phía bên phải) -->
+            <div class="col-12 col-md-auto ms-md-auto text-end">
+              <button type="button"
+                      class="btn btn-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#createCategoryModal">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Thêm nhóm dịch vụ
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
+
+            <thead class="table-light">
+            <tr>
+              <th scope="col" data-column-key="cat_code" data-column-required="true" data-column-pinned="true">Mã nhóm</th>
+              <th scope="col" data-column-key="cat_name" data-column-pinned="true">Tên nhóm</th>
+              <th scope="col" data-column-key="cat_type">Loại</th>
+              <th scope="col" data-column-key="display_order">Thứ tự</th>
+              <th scope="col" data-column-key="status">Trạng thái</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 130px;">Thao tác</th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr th:each="category : ${categories}">
+              <td data-column-key="cat_code" class="fw-semibold"
+                  th:text="${category.categoryCode}">
+              </td>
+
+              <td data-column-key="cat_name" th:text="${category.categoryName}"></td>
+
+              <td data-column-key="cat_type" th:switch="${category.categoryType.name()}">
+                <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
+                <span th:case="'LAB'">Xét nghiệm</span>
+                <span th:case="'XRAY'">X-Ray</span>
+                <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
+                <span th:case="*" th:text="${category.categoryType}"></span>
+              </td>
+
+              <td data-column-key="display_order" th:text="${category.displayOrder}"></td>
+
+              <td data-column-key="status">
+                <span th:if="${category.isActive == true}"
+                      class="badge bg-success">
+                    Đang sử dụng
+                </span>
+
+                <span th:unless="${category.isActive == true}"
+                      class="badge bg-secondary">
+                    Ngừng sử dụng
+                </span>
+              </td>
+
+              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+
+                  <!-- Sửa: icon bút chì, viền xanh -->
+                  <a th:href="@{/admin/services/categories/{id}/edit(id=${category.categoryId})}"
+                     class="btn btn-sm btn-outline-primary"
+                     title="Sửa"
+                     aria-label="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </a>
+
+                  <!-- Ngừng / Kích hoạt: icon tạm dừng (viền vàng) / icon phát (viền xanh lá) -->
+                  <form th:action="@{/admin/services/categories/{id}/toggle(id=${category.categoryId})}"
+                        method="post"
+                        class="d-inline m-0"
+                        onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái nhóm dịch vụ này?');">
+                    <button type="submit"
+                            class="btn btn-sm"
+                            th:classappend="${category.isActive == true} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${category.isActive == true} ? 'Ngừng sử dụng' : 'Kích hoạt'"
+                            th:aria-label="${category.isActive == true} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${category.isActive == true} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
+                    </button>
+                  </form>
+
+                  <!-- Xóa: icon thùng rác, viền đỏ -->
+                  <form th:action="@{/admin/services/categories/{id}/delete(id=${category.categoryId})}"
+                        method="post"
+                        class="d-inline m-0"
+                        data-delete-catalog-form
+                        data-delete-kind="nhóm dịch vụ"
+                        th:attr="data-delete-name=${category.categoryName}">
+                    <input type="hidden" name="deleteToken" th:value="${deleteToken}">
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Xóa"
+                            aria-label="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(categories)}">
+              <td colspan="6" class="text-center py-4">
+                <div class="empty-state-box">
+                  <i class="bi bi-search empty-icon" th:if="${(keyword != null and keyword != '') or selectedActive != null}"></i>
+                  <i class="bi bi-folder2-open empty-icon" th:unless="${(keyword != null and keyword != '') or selectedActive != null}"></i>
+                  <h6 th:if="${(keyword != null and keyword != '') or selectedActive != null}">Không tìm thấy nhóm dịch vụ phù hợp</h6>
+                  <h6 th:unless="${(keyword != null and keyword != '') or selectedActive != null}">Chưa có nhóm dịch vụ nào</h6>
+                  <p th:if="${(keyword != null and keyword != '') or selectedActive != null}">Không có nhóm dịch vụ nào khớp với tiêu chí tìm kiếm hoặc bộ lọc được chọn.</p>
+                  <p th:unless="${(keyword != null and keyword != '') or selectedActive != null}">Hãy thêm nhóm mới để phân loại và quản lý dịch vụ nha khoa.</p>
+                  <div class="d-flex justify-content-center gap-2 mt-2">
+                    <a th:if="${(keyword != null and keyword != '') or selectedActive != null}"
+                       th:href="@{/admin/services/categories}" class="btn btn-sm btn-outline-secondary">
+                      <i class="bi bi-arrow-counterclockwise me-1"></i>Xóa bộ lọc
+                    </a>
+                    <button type="button" class="btn btn-sm btn-primary"
+                            data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                      <i class="bi bi-plus-lg me-1"></i>Thêm nhóm mới
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-top text-muted small d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span>Tổng số nhóm dịch vụ: <strong th:text="${#lists.size(categories)}">0</strong></span>
+        </div>
+      </section>
+
+    </main>
+
+
+
+  </div>
+
+</div>
+
+<!-- Modal Them Nhom Dich Vu Moi -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+      <form th:action="@{/admin/services/categories}" method="post" id="createCategoryForm">
+        <div class="modal-header border-bottom py-3 px-4">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createCategoryModalLabel">
+            <i class="bi bi-folder-plus text-primary me-2 fs-5"></i>
+            <span>Thêm nhóm dịch vụ mới</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <!-- Ma nhom -->
+            <div class="col-md-5">
+              <label for="modalCategoryCode" class="form-label fw-semibold text-dark small">
+                Mã nhóm <span class="text-danger">*</span>
+              </label>
+              <input id="modalCategoryCode" type="text" name="categoryCode" class="form-control"
+                     th:value="${categoryForm?.categoryCode}"
+                     minlength="2" maxlength="30" pattern="[A-Za-z0-9_\-]{2,30}"
+                     title="Nhập 2–30 ký tự: chữ không dấu, số, dấu - hoặc _."
+                     placeholder="VD: NHA_CHU" required>
+            </div>
+
+            <!-- Ten nhom -->
+            <div class="col-md-7">
+              <label for="modalCategoryName" class="form-label fw-semibold text-dark small">
+                Tên nhóm <span class="text-danger">*</span>
+              </label>
+              <input id="modalCategoryName" type="text" name="categoryName" class="form-control"
+                     th:value="${categoryForm?.categoryName}"
+                     maxlength="150" placeholder="VD: Nha chu &amp; Điều trị nướu" required>
+            </div>
+
+            <!-- Loai nhom -->
+            <div class="col-md-12">
+              <label for="modalCategoryType" class="form-label fw-semibold text-dark small">
+                Loại nhóm <span class="text-danger">*</span>
+              </label>
+              <select id="modalCategoryType" name="categoryType" class="form-select" required>
+                <option value="">-- Chọn loại nhóm --</option>
+                <option value="PROCEDURE" th:selected="${categoryForm?.categoryType?.name() == 'PROCEDURE'}">Thủ thuật nha khoa</option>
+                <option value="LAB" th:selected="${categoryForm?.categoryType?.name() == 'LAB'}">Xét nghiệm</option>
+                <option value="XRAY" th:selected="${categoryForm?.categoryType?.name() == 'XRAY'}">X-Ray</option>
+                <option value="CONSULTATION" th:selected="${categoryForm?.categoryType?.name() == 'CONSULTATION'}">Khám / Tư vấn</option>
+              </select>
+            </div>
+
+            <!-- Thu tu hien thi -->
+            <div class="col-md-6">
+              <label for="modalDisplayOrder" class="form-label fw-semibold text-dark small">
+                Thứ tự hiển thị
+              </label>
+              <input id="modalDisplayOrder" type="number" name="displayOrder" class="form-control"
+                     th:value="${categoryForm?.displayOrder != null ? categoryForm.displayOrder : 0}"
+                     min="0" max="9999">
+            </div>
+
+            <!-- Trang thai hoat dong -->
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="modalCategoryActive" name="isActive" value="true"
+                       th:checked="${categoryForm?.isActive == null || categoryForm?.isActive == true}">
+                <label class="form-check-label fw-semibold text-dark small" for="modalCategoryActive">
+                  Kích hoạt ngay
+                </label>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+        <div class="modal-footer border-top py-3 px-4 bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary px-4 fw-semibold">
+            <i class="bi bi-check-lg me-1"></i>Lưu nhóm dịch vụ
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Xác nhận xóa an toàn -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-bottom py-3 px-4 bg-danger text-white">
+        <h5 class="modal-title fw-bold d-flex align-items-center">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+          <span>Xác nhận xóa</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="mb-2">Bạn có chắc chắn muốn xóa <span id="deleteItemKind" class="fw-bold"></span> này không?</p>
+        <p class="fw-bold text-danger mb-3 fs-6" id="deleteItemName"></p>
+        <div class="alert alert-warning py-2 px-3 small mb-0">
+          <i class="bi bi-info-circle me-1"></i> Thao tác xóa không thể hoàn tác nếu không có ràng buộc dữ liệu.
+        </div>
+      </div>
+      <div class="modal-footer border-top py-3 px-4 bg-light">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-danger px-4 fw-semibold" id="confirmDeleteBtn">
+          <i class="bi bi-trash me-1"></i>Xác nhận xóa
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/enhanced-table.js}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Tự động mở modal nếu có lỗi validation khi submit modal
+    var openCat = /*[[${openCategoryModal}]]*/ false;
+    if (openCat) {
+      var catModalEl = document.getElementById('createCategoryModal');
+      if (catModalEl) new bootstrap.Modal(catModalEl).show();
+    }
+
+    // Modal xóa an toàn
+    var activeDeleteForm = null;
+    var deleteModalEl = document.getElementById('deleteConfirmModal');
+    var deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
+
+    document.querySelectorAll('form[data-delete-catalog-form]').forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        activeDeleteForm = form;
+        var kind = form.getAttribute('data-delete-kind') || 'mục';
+        var name = form.getAttribute('data-delete-name') || '';
+        document.getElementById('deleteItemKind').textContent = kind;
+        document.getElementById('deleteItemName').textContent = name;
+        deleteModal.show();
+      });
+    });
+
+    var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+      confirmDeleteBtn.addEventListener('click', function () {
+        if (activeDeleteForm) activeDeleteForm.submit();
+      });
+    }
+  });
+</script>
+
+</body>
+</html>

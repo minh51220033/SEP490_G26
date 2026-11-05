@@ -27,7 +27,7 @@ public interface NewsArticleRepository
     SELECT n
     FROM NewsArticle n
     WHERE n.status = 'PUBLISHED'
-      AND n.branch.branchId = :branchId
+      AND (:branchId IS NULL OR n.branch.branchId = :branchId)
       AND (
           :keyword = ''
           OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -82,6 +82,9 @@ public interface NewsArticleRepository
 
     // TÃ¬m kiáº¿m bÃ i viáº¿t trong trang quáº£n trá»‹.
     // CÃ³ thá»ƒ lá»c theo tá»« khÃ³a, tráº¡ng thÃ¡i vÃ  chi nhÃ¡nh.
+
+    // Tìm kiếm bài viết trong trang quản trị.
+    // Có thể lọc theo từ khóa, trạng thái và chi nhánh.
     @Query("""
         SELECT n
         FROM NewsArticle n
@@ -106,4 +109,5 @@ public interface NewsArticleRepository
             Pageable pageable
     );
 
+    long countByStatus(String status);
 }

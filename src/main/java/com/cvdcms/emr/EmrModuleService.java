@@ -278,9 +278,13 @@ public class EmrModuleService {
         if (record.getVisit().getPrimaryDoctor() == null || !Objects.equals(
                 record.getVisit().getPrimaryDoctor().getUser().getUserId(), scope.user().getUserId()))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ bác sĩ khám được ký hồ sơ này.");
+        StaffProfile signingDoctor = staffProfiles.findByUser_UserId(scope.user().getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Chưa có hồ sơ bác sĩ."));
+        if (signingDoctor.getPracticeLicenseNo() == null || signingDoctor.getPracticeLicenseNo().isBlank())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Bác sĩ chưa có số giấy phép hành nghề; không thể xác nhận ký hồ sơ.");
         EmrRecordVersion version = currentVersion(record);
-        String doctorName = staffProfiles.findByUser_UserId(scope.user().getUserId())
-                .map(StaffProfile::getFullName).orElse(scope.user().getUsername());
+        String doctorName = signingDoctor.getFullName();
         createTestSignature(version, EmrSignerType.DOCTOR, doctorName, scope.user());
         versions.findAllDetailsByRecordId(recordId).stream()
                 .filter(previous -> previous.getVersionNumber() < version.getVersionNumber())

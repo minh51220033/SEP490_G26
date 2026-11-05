@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Hồ sơ bệnh nhân')}"></head>
+<head th:replace="~{fragments/head :: head(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></head>
 <body class="app-body">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></header>
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <div class="patient-page-heading">
-                <div><h1>Hồ sơ bệnh nhân</h1></div>
+                <div><h1 th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'}">Hồ sơ bệnh nhân</h1></div>
                 <a th:if="${canManageAdministrative}" class="btn btn-primary"
                    th:href="${recordBasePath + '/new'}"><i class="bi bi-plus-lg"></i> Thêm bệnh nhân</a>
             </div>
@@ -33,7 +33,24 @@
                     <thead><tr><th>Bệnh nhân</th><th>Ngày sinh</th><th>Liên hệ</th><th>Chi nhánh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                     <tbody>
                     <tr th:each="patient : ${patients.content}">
-                        <td class="patient-name-cell"><strong th:text="${patient.fullName}">Họ tên</strong><small th:text="${patient.code}">BN001</small></td>
+                        <td class="patient-name-cell">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <strong th:text="${patient.fullName}">Họ tên</strong>
+                                <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}"
+                                      class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                                      style="font-size: 0.72rem; cursor: help;"
+                                      th:title="${'Cảnh báo dị ứng: ' + patient.allergyDetails}">
+                                    <i class="bi bi-shield-fill-exclamation me-0.5"></i><span th:text="${'Dị ứng: ' + (#strings.length(patient.allergyDetails) > 25 ? #strings.substring(patient.allergyDetails, 0, 22) + '…' : patient.allergyDetails)}">Dị ứng</span>
+                                </span>
+                                <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}"
+                                      class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"
+                                      style="font-size: 0.72rem; cursor: help;"
+                                      th:title="${'Bệnh nền cần lưu ý: ' + patient.underlyingDiseaseDetails}">
+                                    <i class="bi bi-heart-pulse-fill me-0.5"></i><span th:text="${'Bệnh nền: ' + (#strings.length(patient.underlyingDiseaseDetails) > 25 ? #strings.substring(patient.underlyingDiseaseDetails, 0, 22) + '…' : patient.underlyingDiseaseDetails)}">Bệnh nền</span>
+                                </span>
+                            </div>
+                            <small th:text="${patient.code}">BN001</small>
+                        </td>
                         <td th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : '—'}">—</td>
                         <td th:text="${patient.phoneNumber ?: 'Chưa cập nhật'}">—</td><td th:text="${patient.branchName}">—</td>
                         <td><span class="badge" th:classappend="${patient.status == 'ACTIVE'} ? 'bg-success' : 'bg-secondary'" th:text="${patient.status == 'ACTIVE'} ? 'Đang hoạt động' : 'Ngừng hoạt động'">—</span></td>

@@ -28,4 +28,10 @@ public class WorkflowStepDTO {
     private String completedAt;
     private String resultNote;
     private String staffName;
+
+    // FT43: thông tin thực hiện bổ sung cho bảng tiến độ quy trình
+    private String startedAt;
+    private String targetQueueType;
+    @Builder.Default
+    private java.util.List<String> allowedActions = new java.util.ArrayList<>();
 }

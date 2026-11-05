@@ -34,7 +34,7 @@ class DoctorPerformedServiceControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new PerformedServiceRestController(performedServiceService);
+        controller = new PerformedServiceRestController(performedServiceService, org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class));
     }
 
     @Test
@@ -69,7 +69,7 @@ class DoctorPerformedServiceControllerTest {
 
         when(performedServiceService.getPerformedServicesByVisitId(100L)).thenReturn(List.of(respDto));
 
-        ResponseEntity<List<PerformedServiceResponseDTO>> response = controller.getPerformedServicesByVisit(100L);
+        ResponseEntity<List<PerformedServiceResponseDTO>> response = controller.getPerformedServicesByVisit(100L, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -94,7 +94,7 @@ class DoctorPerformedServiceControllerTest {
 
         when(performedServiceService.createPerformedService(request)).thenReturn(respDto);
 
-        ResponseEntity<Map<String, Object>> response = controller.createPerformedService(request);
+        ResponseEntity<Map<String, Object>> response = controller.createPerformedService(request, null);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -114,7 +114,7 @@ class DoctorPerformedServiceControllerTest {
         when(performedServiceService.createPerformedService(request))
                 .thenThrow(new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02)."));
 
-        ResponseEntity<Map<String, Object>> response = controller.createPerformedService(request);
+        ResponseEntity<Map<String, Object>> response = controller.createPerformedService(request, null);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -127,7 +127,7 @@ class DoctorPerformedServiceControllerTest {
     void testController_CancelPerformedService_Success() {
         doNothing().when(performedServiceService).cancelPerformedService(101L);
 
-        ResponseEntity<Map<String, Object>> response = controller.cancelPerformedService(101L);
+        ResponseEntity<Map<String, Object>> response = controller.cancelPerformedService(101L, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -141,7 +141,7 @@ class DoctorPerformedServiceControllerTest {
         doThrow(new IllegalStateException("Bệnh án lâm sàng đã khóa bất biến (BR-EMR-02)."))
                 .when(performedServiceService).cancelPerformedService(101L);
 
-        ResponseEntity<Map<String, Object>> response = controller.cancelPerformedService(101L);
+        ResponseEntity<Map<String, Object>> response = controller.cancelPerformedService(101L, null);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());

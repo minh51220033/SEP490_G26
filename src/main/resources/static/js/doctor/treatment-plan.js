@@ -605,9 +605,28 @@ function changeStageStatus(stageId, status) {
  * Bác sĩ nhấn "Làm trong ca này": liên kết trực tiếp bước KHDT vào ca khám hiện tại (FT15 -> FT16)
  */
 function executePlanItemDirectly(planItemId) {
+    window._executingPlanItems = window._executingPlanItems || new Set();
+    if (window._executingPlanItems.has(planItemId)) {
+        return;
+    }
+    const clickedBtn = typeof event !== 'undefined' && event && event.target ? event.target.closest('button') : null;
+    if (clickedBtn) {
+        clickedBtn.disabled = true;
+        clickedBtn.dataset.origHtml = clickedBtn.innerHTML;
+        clickedBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+    }
+    window._executingPlanItems.add(planItemId);
+    const resetBtn = () => {
+        window._executingPlanItems.delete(planItemId);
+        if (clickedBtn) {
+            clickedBtn.disabled = false;
+            if (clickedBtn.dataset.origHtml) clickedBtn.innerHTML = clickedBtn.dataset.origHtml;
+        }
+    };
     const visitIdInput = document.getElementById('visitId') || document.getElementById('treatVisitId');
     const visitId = visitIdInput ? visitIdInput.value : null;
     if (!visitId) {
+        resetBtn();
         showToast('Không xác định được ca khám hiện tại!', true);
         return;
     }
@@ -617,11 +636,13 @@ function executePlanItemDirectly(planItemId) {
     })
     .then(res => {
         if (!res.ok) {
+            resetBtn();
             return res.json().then(err => { throw new Error(err.message || 'Lỗi khi ghi nhận dịch vụ thực hiện'); });
         }
         return res.json();
     })
     .then(result => {
+        resetBtn();
         showToast('Đã đưa dịch vụ vào ca khám hôm nay & hoàn thành bước trong phác đồ!');
         if (result.plan) {
             updatePlanInlineView(result.plan);
@@ -636,6 +657,7 @@ function executePlanItemDirectly(planItemId) {
         }
     })
     .catch(err => {
+        resetBtn();
         showToast(err.message, true);
     });
 }

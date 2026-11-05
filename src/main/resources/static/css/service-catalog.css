@@ -98,12 +98,14 @@ body.service-catalog-page .form-select {
     border-radius: 7px;
 }
 
-body.service-catalog-page .btn-primary {
+body.service-catalog-page .btn-primary,
+body.service-category-page .btn-primary {
     background: #294690;
     border-color: #294690;
 }
 
-body.service-catalog-page .btn-primary:hover {
+body.service-catalog-page .btn-primary:hover,
+body.service-category-page .btn-primary:hover {
     background: #1d3677;
     border-color: #1d3677;
 }

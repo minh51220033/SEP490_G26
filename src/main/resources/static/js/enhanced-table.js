@@ -114,10 +114,13 @@
                                    isAction ||
                                    idx === 0; // Cột đầu thường là mã/định danh
 
-                const isDefaultPinned = th.getAttribute('data-column-pinned') === 'true' || 
-                                       (idx === 0 && !isAction);
+                const isPinnedAttr = th.getAttribute('data-column-pinned') === 'true' || 
+                                     th.getAttribute('data-pinned') === 'true';
+                const isDefaultPinned = isPinnedAttr || (idx === 0 && !isAction);
 
-                const defaultWidth = th.offsetWidth || 120;
+                const minW = parseInt(th.style.minWidth, 10) || 0;
+                const naturalW = th.offsetWidth || 120;
+                const defaultWidth = minW > 0 ? minW : Math.min(Math.max(naturalW, 80), 240);
 
                 const colDef = {
                     key: key,
@@ -125,6 +128,7 @@
                     visible: true,
                     pinned: isDefaultPinned,
                     width: defaultWidth,
+                    minWidth: minW > 0 ? minW : 60,
                     required: isRequired,
                     isAction: isAction
                 };
@@ -171,11 +175,12 @@
                 savedData.columns.forEach(savedCol => {
                     if (existingKeyMap.has(savedCol.key)) {
                         const original = existingKeyMap.get(savedCol.key);
+                        const effectiveMin = original.minWidth || 60;
                         mergedColumns.push({
                             ...original,
                             visible: original.required ? true : (savedCol.visible !== false),
-                            pinned: !!savedCol.pinned,
-                            width: savedCol.width && savedCol.width >= 60 ? savedCol.width : original.width
+                            pinned: typeof savedCol.pinned === 'boolean' ? savedCol.pinned : original.pinned,
+                            width: Math.max(savedCol.width || 0, effectiveMin)
                         });
                         existingKeyMap.delete(savedCol.key);
                     }
@@ -250,13 +255,15 @@
                     th.style.display = displayVal;
                     if (col.width && col.visible) {
                         th.style.width = col.width + 'px';
-                        th.style.minWidth = col.width + 'px';
+                        th.style.minWidth = (col.minWidth || col.width) + 'px';
                     }
                 }
 
                 tds.forEach(td => {
                     td.style.display = displayVal;
                     if (col.width && col.visible) {
+                        td.style.width = col.width + 'px';
+                        td.style.minWidth = (col.minWidth || 60) + 'px';
                         td.style.maxWidth = (col.width + 40) + 'px';
                     }
                 });
@@ -298,7 +305,8 @@
                 const th = theadTr.querySelector(`th[data-column-key="${col.key}"]`);
                 if (!th) return;
 
-                const thWidth = th.offsetWidth;
+                const thRect = th.getBoundingClientRect();
+                const thWidth = thRect.width > 0 ? thRect.width : (th.offsetWidth || col.width || 100);
                 if (currentOffset + thWidth > maxPinnedWidth && idx > 0) {
                     // Quá giới hạn màn hình hẹp, ngừng ghim các cột tiếp theo để đảm bảo tính khả dụng
                     return;
@@ -426,7 +434,8 @@
             const onMouseMove = (moveEvent) => {
                 if (!this.isResizing) return;
                 const diff = moveEvent.pageX - startX;
-                const newWidth = Math.max(70, startWidth + diff);
+                const minLimit = col.minWidth || 60;
+                const newWidth = Math.max(minLimit, startWidth + diff);
 
                 th.style.width = newWidth + 'px';
                 th.style.minWidth = newWidth + 'px';
@@ -434,6 +443,8 @@
 
                 const tds = this.table.querySelectorAll(`tbody td[data-column-key="${colKey}"]`);
                 tds.forEach(td => {
+                    td.style.width = newWidth + 'px';
+                    td.style.minWidth = minLimit + 'px';
                     td.style.maxWidth = (newWidth + 40) + 'px';
                 });
 

@@ -41,8 +41,9 @@ public class AdminIcd10Controller {
         generateDeleteToken(session, model);
         model.addAttribute("diseases", diseases);
         model.addAttribute("keyword", keyword);
-        model.addAttribute("pageTitle", "Quản lý danh mục ICD-10");
-        model.addAttribute("activeMenu", "icd10");
+        model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục ICD-10");
+        model.addAttribute("activeMenu", "catalogs");
+        model.addAttribute("activeTab", "icd10");
         return LIST_VIEW;
     }
 

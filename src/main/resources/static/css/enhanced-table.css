@@ -208,6 +208,26 @@ table[data-enhanced-table] th.text-end {
     vertical-align: middle;
 }
 
+/* Xử lý hiển thị thông tin bảng gọn gàng, tránh vỡ layout cột table-cell */
+.patient-code-cell,
+.patient-code-link {
+    max-width: 180px;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+table[data-enhanced-table] td[data-column-key="patient"],
+table[data-enhanced-table] td[data-column-key="fullName"],
+.patient-name-cell {
+    min-width: 180px;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
 /* ============================================================================
  * C. GHIM CỘT (STICKY LEFT PINNING)
  * ============================================================================ */

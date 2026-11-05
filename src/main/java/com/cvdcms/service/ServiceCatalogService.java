@@ -7,6 +7,7 @@ import com.cvdcms.DTO.ServiceUpdateDTO;
 import com.cvdcms.entity.Service;
 import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.enums.ServiceType;
+import com.cvdcms.entity.enums.ServiceStatus;
 
 import java.util.List;
 
@@ -33,11 +34,15 @@ public interface ServiceCatalogService {
 
     void deleteCategory(Long categoryId);
 
+    List<ServiceCategory> searchCategories(String keyword, Boolean isActive);
+
     // =====================================================
     // DỊCH VỤ VÀ BẢNG GIÁ
     // =====================================================
 
     List<Service> getAllServices();
+
+    List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status);
 
     List<Service> getServicesByCategory(Long categoryId);
 

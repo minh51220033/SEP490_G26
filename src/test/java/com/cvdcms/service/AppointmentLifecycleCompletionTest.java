@@ -5,6 +5,7 @@ import com.cvdcms.entity.AppointmentHistory;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.AppointmentStatus;
 import com.cvdcms.entity.enums.PreferredSession;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.AppointmentHistoryRepository;
 import com.cvdcms.repository.AppointmentPolicyRepository;
 import com.cvdcms.repository.VisitRepository;
@@ -19,8 +20,10 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class AppointmentLifecycleCompletionTest {
@@ -41,6 +44,7 @@ class AppointmentLifecycleCompletionTest {
         visit.setVisitId(50L);
         visit.setVisitCode("V20261102-1234");
         visit.setAppointmentId(10L);
+        visit.setStatus(VisitStatus.COMPLETED);
 
         Appointment appointment = new Appointment();
         appointment.setAppointmentId(10L);
@@ -76,6 +80,19 @@ class AppointmentLifecycleCompletionTest {
         assertEquals(AppointmentStatus.COMPLETED, appointment.getStatus());
         verify(appointments, never()).saveAndFlush(any());
         verify(histories, never()).save(any());
+    }
+
+    @Test
+    void checkedInAppointmentStaysOpenWhileVisitIsWaitingForPayment() {
+        Visit visit = new Visit(); visit.setVisitId(52L); visit.setAppointmentId(12L);
+        visit.setStatus(VisitStatus.WAITING_PAYMENT);
+        Appointment appointment = new Appointment(); appointment.setAppointmentId(12L);
+        appointment.setStatus(AppointmentStatus.CHECKED_IN);
+        when(visits.findById(52L)).thenReturn(Optional.of(visit));
+        when(appointments.lockById(12L)).thenReturn(Optional.of(appointment));
+        assertThrows(ResponseStatusException.class, () -> lifecycle.completeByVisit(52L, 9L));
+        assertEquals(AppointmentStatus.CHECKED_IN, appointment.getStatus());
+        verify(appointments, never()).saveAndFlush(any());
     }
 
     @Test
