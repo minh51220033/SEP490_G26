@@ -1,0 +1,858 @@
+/* =====================================================================
+   CV-DCMS — CUSTOMER PORTAL STYLESHEET
+   Phong cách: Modern Dental Clinic (Sáng, sạch, chuyên nghiệp, đáng tin cậy)
+   Đồng bộ với hệ thống biến CSS trong layout.css
+   ===================================================================== */
+
+:root {
+    --cp-primary: #0052cc;
+    --cp-primary-dark: #0747a6;
+    --cp-primary-light: #e9f2ff;
+    --cp-accent-cyan: #0284c7;
+    --cp-accent-teal: #0d9488;
+    --cp-ink: #0f172a;
+    --cp-ink-soft: #334155;
+    --cp-muted: #64748b;
+    --cp-bg-soft: #f8fafc;
+    --cp-surface: #ffffff;
+    --cp-border: #e2e8f0;
+    --cp-radius-sm: 10px;
+    --cp-radius: 16px;
+    --cp-radius-lg: 24px;
+    --cp-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.05);
+    --cp-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    --cp-shadow-hover: 0 16px 36px rgba(0, 82, 204, 0.14);
+}
+
+.cp-body {
+    background-color: var(--cp-bg-soft);
+    color: var(--cp-ink);
+    overflow-x: hidden;
+}
+
+/* =====================================================================
+   1. HEADER ENHANCEMENTS FOR CUSTOMER PORTAL
+   ===================================================================== */
+.site-nav__link.is-active {
+    color: var(--cp-primary);
+    background: var(--cp-primary-light);
+    font-weight: 600;
+}
+
+.cp-user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--cp-border);
+    background: #fff;
+    color: var(--cp-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cp-user-pill:hover {
+    border-color: var(--cp-primary);
+    box-shadow: 0 2px 8px rgba(0, 82, 204, 0.1);
+}
+
+.cp-user-pill__avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--cp-primary);
+    color: #fff;
+    display: inline-grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.cp-user-pill__name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cp-user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 260px;
+    background: #fff;
+    border: 1px solid var(--cp-border);
+    border-radius: 14px;
+    box-shadow: var(--cp-shadow);
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.18s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+    z-index: 1050;
+}
+
+[data-dropdown].is-open > .cp-user-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition: opacity 0.18s ease, transform 0.2s ease, visibility 0s;
+}
+
+/* =====================================================================
+   2. HERO BANNER SECTION (SECTION 2)
+   ===================================================================== */
+.cp-hero {
+    position: relative;
+    padding: 64px 0 72px;
+    background: radial-gradient(circle at 85% 20%, rgba(2, 132, 199, 0.10), transparent 45%),
+                radial-gradient(circle at 10% 80%, rgba(0, 82, 204, 0.08), transparent 40%),
+                linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+    border-bottom: 1px solid var(--cp-border);
+    overflow: hidden;
+}
+
+.cp-hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    color: var(--cp-primary);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 82, 204, 0.06);
+    margin-bottom: 20px;
+}
+
+.cp-hero__title {
+    font-family: "Be Vietnam Pro", "Inter", sans-serif;
+    font-size: clamp(28px, 4vw, 46px);
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--cp-ink);
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+}
+
+.cp-hero__title span {
+    background: linear-gradient(135deg, var(--cp-primary) 0%, var(--cp-accent-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.cp-hero__desc {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--cp-ink-soft);
+    margin-bottom: 28px;
+    max-width: 560px;
+}
+
+.cp-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 32px;
+}
+
+.cp-hero__trust {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 24px;
+    border-top: 1px solid #dbeafe;
+}
+
+.cp-hero__trust-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.cp-hero__trust-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--cp-primary-light);
+    color: var(--cp-primary);
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.cp-hero__trust-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--cp-ink);
+    margin: 0 0 2px;
+}
+
+.cp-hero__trust-sub {
+    font-size: 12px;
+    color: var(--cp-muted);
+    margin: 0;
+}
+
+.cp-hero__visual {
+    position: relative;
+}
+
+.cp-hero__card-main {
+    position: relative;
+    border-radius: var(--cp-radius-lg);
+    background: linear-gradient(145deg, #0052cc 0%, #0284c7 100%);
+    padding: 32px;
+    color: #ffffff;
+    box-shadow: var(--cp-shadow-hover);
+    overflow: hidden;
+}
+
+.cp-hero__card-main::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
+.cp-hero__floating-card {
+    background: #ffffff;
+    color: var(--cp-ink);
+    border-radius: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--cp-border);
+    box-shadow: var(--cp-shadow);
+    margin-top: 16px;
+}
+
+/* =====================================================================
+   3. SECTION HEADINGS & COMMON CONTAINERS
+   ===================================================================== */
+.cp-section {
+    padding: 64px 0;
+}
+
+.cp-section--white {
+    background: #ffffff;
+}
+
+.cp-section--soft {
+    background: var(--cp-bg-soft);
+}
+
+.cp-section--tint {
+    background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 100%);
+}
+
+.cp-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 36px;
+}
+
+.cp-section-header--center {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cp-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--cp-primary-light);
+    color: var(--cp-primary);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+}
+
+.cp-section-title {
+    font-family: "Be Vietnam Pro", "Inter", sans-serif;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 800;
+    color: var(--cp-ink);
+    margin: 0 0 8px;
+    line-height: 1.25;
+}
+
+.cp-section-subtitle {
+    font-size: 15px;
+    color: var(--cp-muted);
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* =====================================================================
+   4. PAGE HERO BANNER (FOR LIST / DETAIL / ABOUT / CONTACT PAGES)
+   ===================================================================== */
+.cp-page-banner {
+    background: linear-gradient(135deg, #0b2a5b 0%, #0052cc 60%, #0284c7 100%);
+    color: #ffffff;
+    padding: 44px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.cp-page-banner__breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 12px;
+    list-style: none;
+    padding: 0;
+}
+
+.cp-page-banner__breadcrumb a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+.cp-page-banner__breadcrumb a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.cp-page-banner__title {
+    font-family: "Be Vietnam Pro", "Inter", sans-serif;
+    font-size: clamp(24px, 3.2vw, 36px);
+    font-weight: 800;
+    margin: 0 0 8px;
+}
+
+.cp-page-banner__desc {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.88);
+    max-width: 680px;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* =====================================================================
+   5. CARDS: SERVICES, DOCTORS, NEWS, BRANCHES
+   ===================================================================== */
+.cp-card-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.cp-card-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.cp-card-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.cp-card {
+    background: #ffffff;
+    border: 1px solid var(--cp-border);
+    border-radius: var(--cp-radius);
+    box-shadow: var(--cp-shadow-sm);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.cp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--cp-shadow-hover);
+    border-color: #93c5fd;
+}
+
+/* Service Card */
+.cp-service-card__media {
+    position: relative;
+    height: 190px;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cp-service-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.cp-card:hover .cp-service-card__img {
+    transform: scale(1.04);
+}
+
+.cp-service-card__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--cp-primary);
+}
+
+.cp-service-card__placeholder i {
+    font-size: 40px;
+    opacity: 0.85;
+}
+
+.cp-service-card__badges {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.cp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.cp-badge--category {
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--cp-primary);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.cp-badge--promo {
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.cp-badge--warranty {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.cp-service-card__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.cp-service-card__title {
+    font-size: 16.5px;
+    font-weight: 700;
+    color: var(--cp-ink);
+    margin: 0 0 8px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.cp-service-card__title a:hover {
+    color: var(--cp-primary);
+}
+
+.cp-service-card__desc {
+    font-size: 13.5px;
+    color: var(--cp-muted);
+    line-height: 1.6;
+    margin: 0 0 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+}
+
+.cp-service-card__price-box {
+    padding-top: 14px;
+    border-top: 1px dashed var(--cp-border);
+    margin-bottom: 14px;
+}
+
+.cp-price-current {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--cp-primary);
+}
+
+.cp-price-original {
+    font-size: 13px;
+    color: #94a3b8;
+    text-decoration: line-through;
+    margin-left: 6px;
+}
+
+.cp-price-unit {
+    font-size: 12.5px;
+    color: var(--cp-muted);
+    font-weight: 500;
+}
+
+/* Doctor Card */
+.cp-doctor-card__top {
+    padding: 24px 20px 16px;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.cp-doctor-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--cp-primary) 0%, var(--cp-accent-cyan) 100%);
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(0, 82, 204, 0.22);
+    border: 3px solid #ffffff;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+.cp-doctor-avatar--lg {
+    width: 120px;
+    height: 120px;
+    font-size: 36px;
+}
+
+.cp-doctor-card__role {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--cp-primary-light);
+    color: var(--cp-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.cp-doctor-card__name {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--cp-ink);
+    margin: 0 0 4px;
+}
+
+.cp-doctor-card__specialty {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--cp-accent-cyan);
+    margin: 0;
+}
+
+.cp-doctor-card__body {
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 10px;
+}
+
+.cp-doctor-meta {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 8px;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--cp-ink-soft);
+    flex: 1;
+}
+
+.cp-doctor-meta li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.cp-doctor-meta i {
+    color: var(--cp-primary);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* News Card */
+.cp-news-card__media {
+    position: relative;
+    height: 185px;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cp-news-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.cp-card:hover .cp-news-card__img {
+    transform: scale(1.04);
+}
+
+.cp-news-card__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.cp-news-card__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--cp-muted);
+    margin-bottom: 10px;
+}
+
+.cp-news-card__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cp-ink);
+    margin: 0 0 10px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.cp-news-card__title a:hover {
+    color: var(--cp-primary);
+}
+
+.cp-news-card__summary {
+    font-size: 13.5px;
+    color: var(--cp-muted);
+    line-height: 1.6;
+    margin: 0 0 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+}
+
+/* Branch Card */
+.cp-branch-card {
+    background: #ffffff;
+    border: 1px solid var(--cp-border);
+    border-radius: var(--cp-radius);
+    padding: 24px;
+    box-shadow: var(--cp-shadow-sm);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.cp-branch-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--cp-shadow);
+    border-color: #93c5fd;
+}
+
+.cp-branch-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.cp-branch-card__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--cp-primary-light);
+    color: var(--cp-primary);
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.cp-branch-card__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px;
+    display: grid;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--cp-ink-soft);
+    flex: 1;
+}
+
+.cp-branch-card__list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.cp-branch-card__list i {
+    color: var(--cp-primary);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* =====================================================================
+   6. FILTER BAR & PAGINATION
+   ===================================================================== */
+.cp-filter-box {
+    background: #ffffff;
+    border: 1px solid var(--cp-border);
+    border-radius: var(--cp-radius);
+    padding: 20px;
+    box-shadow: var(--cp-shadow-sm);
+    margin-bottom: 28px;
+}
+
+.cp-rich-content {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--cp-ink-soft);
+    overflow-wrap: break-word;
+}
+
+.cp-rich-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin: 12px 0;
+}
+
+.cp-rich-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.cp-rich-content th,
+.cp-rich-content td {
+    border: 1px solid var(--cp-border);
+    padding: 10px 12px;
+}
+
+/* =====================================================================
+   7. RESPONSIVE BREAKPOINTS (1440px, 1366px, 768px, 390px, 360px)
+   ===================================================================== */
+@media (max-width: 1199.98px) {
+    .cp-card-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cp-card-grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991.98px) {
+    .cp-hero {
+        padding: 44px 0 52px;
+    }
+    .cp-hero__trust {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .cp-section {
+        padding: 48px 0;
+    }
+    .cp-user-dropdown {
+        position: static;
+        width: 100%;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        box-shadow: none;
+        margin-top: 8px;
+        display: none;
+    }
+    [data-dropdown].is-open > .cp-user-dropdown {
+        display: block;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .cp-card-grid-4,
+    .cp-card-grid-3,
+    .cp-card-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .cp-hero__actions {
+        flex-direction: column;
+    }
+    .cp-hero__actions > a,
+    .cp-hero__actions > button {
+        width: 100%;
+        justify-content: center;
+    }
+    .cp-filter-box {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 399.98px) {
+    .cp-hero__title {
+        font-size: 25px;
+    }
+    .cp-hero__card-main {
+        padding: 20px;
+    }
+    .cp-service-card__body,
+    .cp-doctor-card__body,
+    .cp-news-card__body,
+    .cp-branch-card {
+        padding: 16px;
+    }
+}

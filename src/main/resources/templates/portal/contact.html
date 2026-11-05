@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Hệ thống Cơ sở & Liên hệ')}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li>Hệ thống Cơ sở &amp; Liên hệ</li>
+        </ol>
+        <h1 class="cp-page-banner__title">Hệ thống Cơ sở &amp; Thông tin Liên hệ</h1>
+        <p class="cp-page-banner__desc">
+            Tra cứu địa chỉ, số điện thoại hotline, email và khung giờ hoạt động của các cơ sở thuộc
+            Hệ thống Nha khoa Cường Việt.
+        </p>
+    </div>
+</section>
+
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
+
+        <!-- DANH SÁCH CƠ SỞ ĐANG HOẠT ĐỘNG TỪ DB -->
+        <div class="cp-card-grid-2" th:if="${branches != null and !#lists.isEmpty(branches)}">
+            <div class="cp-branch-card" th:each="br : ${branches}">
+                <div class="cp-branch-card__head">
+                    <span class="cp-branch-card__icon">
+                        <i class="bi bi-hospital-fill"></i>
+                    </span>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-primary-subtle text-primary fw-bold font-monospace"
+                                  th:text="${br.branchCode}">CN01</span>
+                            <span class="badge bg-success-subtle text-success">Đang hoạt động</span>
+                        </div>
+                        <h2 class="h5 fw-bold text-dark mb-0" th:text="${br.branchName}">Tên cơ sở</h2>
+                    </div>
+                </div>
+
+                <ul class="cp-branch-card__list">
+                    <li>
+                        <i class="bi bi-geo-alt-fill"></i>
+                        <div>
+                            <span class="text-muted d-block small">Địa chỉ cơ sở:</span>
+                            <strong class="text-dark" th:text="${br.address}">Địa chỉ chi nhánh</strong>
+                        </div>
+                    </li>
+                    <li th:if="${br.phone != null and !#strings.isEmpty(br.phone)}">
+                        <i class="bi bi-telephone-fill"></i>
+                        <div>
+                            <span class="text-muted d-block small">Điện thoại / Hotline:</span>
+                            <a th:href="'tel:' + ${br.phone}" class="fw-bold text-primary" th:text="${br.phone}">0900 000 000</a>
+                        </div>
+                    </li>
+                    <li th:if="${br.email != null and !#strings.isEmpty(br.email)}">
+                        <i class="bi bi-envelope-fill"></i>
+                        <div>
+                            <span class="text-muted d-block small">Email liên hệ:</span>
+                            <a th:href="'mailto:' + ${br.email}" class="fw-semibold text-dark" th:text="${br.email}">contact@cuongvietdental.vn</a>
+                        </div>
+                    </li>
+                    <li th:if="${br.openingTime != null and br.closingTime != null}">
+                        <i class="bi bi-clock-fill"></i>
+                        <div>
+                            <span class="text-muted d-block small">Giờ mở cửa đón khách:</span>
+                            <strong class="text-dark"
+                                    th:text="${#temporals.format(br.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(br.closingTime, 'HH:mm')}">08:00 - 20:00</strong>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="d-flex flex-wrap gap-2 mt-auto pt-3 border-top">
+                    <a th:href="@{/doctors(branchId=${br.branchId})}" class="btn-outline-brand flex-grow-1">
+                        <i class="bi bi-people"></i> Xem bác sĩ tại cơ sở
+                    </a>
+                    <a th:href="@{/news(branchId=${br.branchId})}" class="btn-light-soft">
+                        <i class="bi bi-newspaper"></i> Tin tức cơ sở
+                    </a>
+                    <a th:if="${session.loggedInUser != null and isPatientUser}"
+                       th:href="@{/portal/appointments/new}" class="btn-brand">
+                        <i class="bi bi-calendar2-plus"></i> Đặt lịch khám
+                    </a>
+                    <a th:if="${session.loggedInUser == null}"
+                       th:href="@{/login}" class="btn-brand">
+                        <i class="bi bi-calendar2-check"></i> Đặt lịch khám
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div class="empty-state-box bg-white rounded-4 border p-5"
+             th:if="${branches == null or #lists.isEmpty(branches)}">
+            <i class="bi bi-building-exclamation empty-icon"></i>
+            <h6>Chưa có cơ sở hoạt động</h6>
+            <p class="mb-0">Thông tin các chi nhánh phòng khám hiện đang được cập nhật trên hệ thống.</p>
+        </div>
+
+        <!-- HƯỚNG DẪN KẾT NỐI TRỰC TUYẾN -->
+        <div class="bg-white rounded-4 border p-4 shadow-sm mt-4">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <h3 class="h5 fw-bold text-dark mb-2">
+                        <i class="bi bi-chat-dots-fill text-primary me-2"></i>Kênh hỗ trợ trực tuyến trên CV-DCMS
+                    </h3>
+                    <p class="text-secondary mb-0" style="line-height:1.65;">
+                        Bên cạnh tổng đài điện thoại tại từng chi nhánh, quý khách có thể sử dụng biểu tượng
+                        <strong>Chat trực tuyến</strong> ở góc dưới bên phải màn hình để nhắn tin trực tiếp với
+                        đội ngũ Lễ tân và Bác sĩ thuộc cơ sở đăng ký khám.
+                    </p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <a th:href="@{/services}" class="btn-outline-brand me-2">Bảng giá dịch vụ</a>
+                    <a th:href="@{/doctors}" class="btn-brand">Đội ngũ bác sĩ</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<section th:replace="~{fragments/footer :: ctaBanner}"></section>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>
