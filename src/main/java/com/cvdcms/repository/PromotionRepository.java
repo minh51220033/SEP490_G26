@@ -38,4 +38,18 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
             @Param("branchId") Long branchId,
             @Param("now") LocalDateTime now
     );
+
+    @Query("""
+        SELECT p FROM Promotion p
+        JOIN FETCH p.applicableService s
+        LEFT JOIN FETCH p.branch b
+        WHERE p.isActive = true
+          AND p.startDate <= :now
+          AND p.endDate >= :now
+          AND (p.usageLimit IS NULL OR p.usedCount < p.usageLimit)
+          AND (b IS NULL OR b.isActive = true)
+          AND s.status = com.cvdcms.entity.enums.ServiceStatus.ACTIVE
+        ORDER BY p.discountValue DESC, p.startDate DESC
+    """)
+    List<Promotion> findActiveServicePromotions(@Param("now") LocalDateTime now);
 }

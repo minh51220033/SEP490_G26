@@ -19,7 +19,7 @@
         <!-- Breadcrumb + nút quản lý cho Admin -->
         <div class="nw-result">
             <nav class="nw-breadcrumb" style="margin:0" aria-label="Breadcrumb">
-                <a th:href="@{/home}"><i class="bi bi-house-door"></i> Trang chủ</a>
+                <a th:href="@{/}"><i class="bi bi-house-door"></i> Trang chủ</a>
                 <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 <a th:href="@{/news}">Tin tức</a>
                 <i class="bi bi-chevron-right" aria-hidden="true"></i>
@@ -279,6 +279,30 @@
                     <i class="bi bi-chat-square-text"></i>
                     <strong>Chưa có bình luận nào</strong>
                     <p>Hãy là người đầu tiên chia sẻ ý kiến về bài viết này.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== BÀI VIẾT LIÊN QUAN ==================== -->
+        <section class="nw-card nw-card--pad mt-4" th:if="${relatedNews != null and !#lists.isEmpty(relatedNews)}">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h2 class="h6 fw-bold text-dark mb-0">
+                    <i class="bi bi-journal-text text-primary me-2"></i>Bài viết liên quan
+                </h2>
+                <a th:href="@{/news}" class="small fw-semibold text-primary">Xem tất cả <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4" th:each="rel : ${relatedNews}">
+                    <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column">
+                        <div class="small text-muted mb-1"
+                             th:text="${rel.publishedAt != null ? #temporals.format(rel.publishedAt, 'dd/MM/yyyy') : #temporals.format(rel.createdAt, 'dd/MM/yyyy')}">01/11/2026</div>
+                        <h3 class="h6 fw-bold text-dark mb-2">
+                            <a th:href="@{/news/{slug}(slug=${rel.slug})}" th:text="${rel.title}">Tiêu đề</a>
+                        </h3>
+                        <a th:href="@{/news/{slug}(slug=${rel.slug})}" class="small fw-semibold text-primary mt-auto">
+                            Đọc tiếp <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>

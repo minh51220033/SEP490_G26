@@ -3,7 +3,7 @@
 <body>
 
 <!-- ===================================================================== -->
-<!-- 1. KHỐI KÊU GỌI HÀNH ĐỘNG (đặt ngay trên siteFooter ở trang công khai)  -->
+<!-- 1. KHỐI KÊU GỌI HÀNH ĐỘNG (SECTION 8: LIÊN HỆ / CALL TO ACTION)        -->
 <!--    Cách dùng: <section th:replace="~{fragments/footer :: ctaBanner}"></section> -->
 <!-- ===================================================================== -->
 
@@ -11,21 +11,53 @@
     <div class="container-xl">
         <div class="cta-card">
             <div>
-                <h2 class="cta-card__title">Đặt lịch khám ngay hôm nay</h2>
+                <h2 class="cta-card__title">Đặt lịch thăm khám &amp; tư vấn nha khoa</h2>
                 <p class="cta-card__desc">
-                    Đội ngũ bác sĩ Cường Việt Dental tư vấn miễn phí và lên kế hoạch điều trị phù hợp nhất cho bạn.
+                    Đội ngũ bác sĩ chuyên khoa Cường Việt Dental thăm khám trực tiếp, chụp phim chẩn đoán
+                    và xây dựng phác đồ điều trị minh bạch cho từng khách hàng.
                 </p>
+                <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50" th:if="${primaryBranch != null}">
+                    <span th:if="${primaryBranch.phone != null and !#strings.isEmpty(primaryBranch.phone)}">
+                        <i class="bi bi-telephone-fill text-white me-1"></i>
+                        Hotline: <strong class="text-white" th:text="${primaryBranch.phone}">0900 000 000</strong>
+                    </span>
+                    <span th:if="${primaryBranch.openingTime != null and primaryBranch.closingTime != null}">
+                        <i class="bi bi-clock-fill text-white me-1"></i>
+                        Giờ làm việc:
+                        <strong class="text-white"
+                                th:text="${#temporals.format(primaryBranch.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(primaryBranch.closingTime, 'HH:mm')}">08:00 - 20:00</strong>
+                    </span>
+                    <span th:if="${primaryBranch.address != null and !#strings.isEmpty(primaryBranch.address)}">
+                        <i class="bi bi-geo-alt-fill text-white me-1"></i>
+                        <span class="text-white" th:text="${primaryBranch.address}">Địa chỉ cơ sở</span>
+                    </span>
+                </div>
             </div>
-            <a href="#" class="btn-brand btn-brand--lg">
-                Đặt lịch tư vấn <i class="bi bi-arrow-right" aria-hidden="true"></i>
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:if="${session.loggedInUser == null}"
+                   th:href="@{/login}" class="btn-brand btn-brand--lg">
+                    <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám ngay
+                </a>
+                <a th:if="${session.loggedInUser != null and isPatientUser}"
+                   th:href="@{/portal/appointments/new}" class="btn-brand btn-brand--lg">
+                    <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám ngay
+                </a>
+                <a th:if="${session.loggedInUser != null and !isPatientUser}"
+                   th:href="@{/contact}" class="btn-brand btn-brand--lg">
+                    <i class="bi bi-buildings" aria-hidden="true"></i> Xem hệ thống cơ sở
+                </a>
+                <a th:href="@{/contact}" class="btn btn-outline-light fw-semibold px-3 d-inline-flex align-items-center gap-2"
+                   style="height:44px;border-radius:8px;">
+                    <i class="bi bi-geo-alt" aria-hidden="true"></i> Liên hệ cơ sở
+                </a>
+            </div>
         </div>
     </div>
 </section>
 
 
 <!-- ===================================================================== -->
-<!-- 2. FOOTER TRANG CÔNG KHAI (tối giản, nền trắng)                          -->
+<!-- 2. FOOTER TRANG CUSTOMER PORTAL (SECTION 9: 4 NHÓM CHUẨN DỮ LIỆU ĐỘNG) -->
 <!--    Cách dùng: <footer th:replace="~{fragments/footer :: siteFooter}"></footer> -->
 <!-- ===================================================================== -->
 
@@ -33,65 +65,107 @@
     <div class="container-xl">
 
         <div class="site-footer__top">
+            <!-- NHÓM 1: VỀ PHÒNG KHÁM -->
             <div class="site-footer__about">
                 <a th:replace="~{fragments/logo :: logo('dark')}"></a>
                 <p class="site-footer__desc">
-                    Hệ thống quản lý phòng khám nha khoa Cường Việt — bệnh nhân, lịch hẹn, dịch vụ
-                    và nhân sự trên một nền tảng duy nhất.
+                    Nha khoa Cường Việt (CV-DCMS) — Hệ thống phòng khám Răng Hàm Mặt ứng dụng hồ sơ bệnh án điện tử,
+                    chẩn đoán hình ảnh kỹ thuật số và quy trình điều trị chuẩn y khoa.
                 </p>
-                <ul class="site-footer__contact">
-                    <li>
-                        <i class="bi bi-telephone" aria-hidden="true"></i>
-                        <a href="tel:0900000000">0900 000 000</a>
-                        <span class="text-muted-light">· 8h00 - 20h00</span>
+                <ul class="site-footer__contact" th:if="${primaryBranch != null}">
+                    <li th:if="${primaryBranch.phone != null and !#strings.isEmpty(primaryBranch.phone)}">
+                        <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+                        <a th:href="'tel:' + ${primaryBranch.phone}" th:text="${primaryBranch.phone}">0900 000 000</a>
+                        <span class="text-muted-light"
+                              th:if="${primaryBranch.openingTime != null and primaryBranch.closingTime != null}"
+                              th:text="'· ' + ${#temporals.format(primaryBranch.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(primaryBranch.closingTime, 'HH:mm')}">· 08:00 - 20:00</span>
                     </li>
-                    <li>
-                        <i class="bi bi-envelope" aria-hidden="true"></i>
-                        <a href="mailto:support@cuongvietdental.vn">support@cuongvietdental.vn</a>
+                    <li th:if="${primaryBranch.email != null and !#strings.isEmpty(primaryBranch.email)}">
+                        <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                        <a th:href="'mailto:' + ${primaryBranch.email}" th:text="${primaryBranch.email}">contact@cuongvietdental.vn</a>
+                    </li>
+                    <li th:if="${primaryBranch.address != null and !#strings.isEmpty(primaryBranch.address)}">
+                        <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                        <span th:text="${primaryBranch.address}">Địa chỉ phòng khám</span>
                     </li>
                 </ul>
+                <div class="mt-3 d-flex flex-wrap gap-3 small">
+                    <a th:href="@{/about}" class="text-primary fw-semibold">Giới thiệu phòng khám</a>
+                    <a th:href="@{/doctors}" class="text-primary fw-semibold">Đội ngũ bác sĩ</a>
+                    <a th:href="@{/news}" class="text-primary fw-semibold">Tin tức nha khoa</a>
+                </div>
             </div>
 
-            <nav class="site-footer__col" aria-label="Về chúng tôi">
-                <h3 class="site-footer__heading">Về chúng tôi</h3>
+            <!-- NHÓM 2: DỊCH VỤ NHA KHOA (ĐỘNG TỪ DB) -->
+            <nav class="site-footer__col" aria-label="Dịch vụ nha khoa">
+                <h3 class="site-footer__heading">Dịch vụ nha khoa</h3>
                 <ul>
-                    <li><a href="#">Giới thiệu</a></li>
-                    <li><a href="#">Đội ngũ bác sĩ</a></li>
-                    <li><a th:href="@{/news}" href="#">Tin tức</a></li>
-                    <li><a href="#">Hệ thống cơ sở</a></li>
+                    <th:block th:if="${footerServices != null and !#lists.isEmpty(footerServices)}">
+                        <li th:each="svc : ${footerServices}">
+                            <a th:href="@{/services/{id}(id=${svc.serviceId})}"
+                               th:text="${svc.serviceName}">Tên dịch vụ</a>
+                        </li>
+                    </th:block>
+                    <li>
+                        <a th:href="@{/services}" class="fw-semibold text-primary">
+                            Bảng giá tất cả dịch vụ <i class="bi bi-arrow-right-short"></i>
+                        </a>
+                    </li>
                 </ul>
             </nav>
 
-            <nav class="site-footer__col" aria-label="Dịch vụ">
-                <h3 class="site-footer__heading">Dịch vụ</h3>
+            <!-- NHÓM 3: HỖ TRỢ KHÁCH HÀNG & CHÍNH SÁCH -->
+            <nav class="site-footer__col" aria-label="Hỗ trợ khách hàng">
+                <h3 class="site-footer__heading">Hỗ trợ &amp; Chính sách</h3>
                 <ul>
-                    <li><a href="#">Niềng răng</a></li>
-                    <li><a href="#">Cấy ghép Implant</a></li>
-                    <li><a href="#">Bọc răng sứ</a></li>
-                    <li><a th:href="@{/services}" href="#">Bảng giá</a></li>
+                    <li th:if="${session.loggedInUser == null}">
+                        <a th:href="@{/login}">Đặt lịch khám trực tuyến</a>
+                    </li>
+                    <li th:if="${session.loggedInUser != null and isPatientUser}">
+                        <a th:href="@{/portal/appointments/new}">Đặt lịch khám trực tuyến</a>
+                    </li>
+                    <li th:if="${session.loggedInUser != null and isPatientUser}">
+                        <a th:href="@{/portal/records}">Hồ sơ &amp; Kết quả khám</a>
+                    </li>
+                    <li><a th:href="@{/doctors}">Tra cứu lịch làm việc bác sĩ</a></li>
+                    <li><a th:href="@{/privacy}">Chính sách bảo mật</a></li>
+                    <li><a th:href="@{/terms}">Điều khoản sử dụng</a></li>
                 </ul>
             </nav>
 
-            <nav class="site-footer__col" aria-label="Trợ giúp">
-                <h3 class="site-footer__heading">Trợ giúp</h3>
-                <ul>
-                    <li><a href="#">Câu hỏi thường gặp</a></li>
-                    <li><a href="#">Chính sách quyền riêng tư</a></li>
-                    <li><a href="#">Điều khoản sử dụng</a></li>
+            <!-- NHÓM 4: THÔNG TIN LIÊN HỆ CÁC CƠ SỞ (ĐỘNG TỪ DB) -->
+            <div class="site-footer__col" aria-label="Hệ thống cơ sở">
+                <h3 class="site-footer__heading">Hệ thống cơ sở</h3>
+                <ul th:if="${publicBranches != null and !#lists.isEmpty(publicBranches)}">
+                    <li th:each="br, stat : ${publicBranches}" th:if="${stat.index < 3}" class="mb-2">
+                        <a th:href="@{/contact}" class="fw-semibold text-dark d-block" th:text="${br.branchName}">Tên cơ sở</a>
+                        <span class="d-block small text-muted" th:text="${br.address}">Địa chỉ</span>
+                        <span class="d-block small text-primary" th:if="${br.phone != null and !#strings.isEmpty(br.phone)}">
+                            <i class="bi bi-telephone me-1"></i><span th:text="${br.phone}">SĐT</span>
+                        </span>
+                    </li>
+                    <li>
+                        <a th:href="@{/contact}" class="fw-semibold text-primary">
+                            Xem chi tiết các cơ sở <i class="bi bi-arrow-right-short"></i>
+                        </a>
+                    </li>
                 </ul>
-            </nav>
+                <p class="small text-muted mb-0" th:if="${publicBranches == null or #lists.isEmpty(publicBranches)}">
+                    Đang cập nhật thông tin hệ thống cơ sở phòng khám.
+                </p>
+            </div>
         </div>
 
         <div class="site-footer__bottom">
             <p class="mb-0">
-                &copy; 2020–<span th:text="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy')}">2026</span>
-                Cường Việt Dental Clinic. GPKD số 0000000000.
+                &copy; <span th:text="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy')}">2026</span>
+                <strong>Cường Việt Dental Clinic (CV-DCMS)</strong>. Hệ thống Quản lý &amp; Đặt lịch Phòng khám Nha khoa.
             </p>
             <div class="site-footer__socials">
-                <a href="#" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>
-                <a href="#" aria-label="Zalo"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i></a>
-                <a href="#" aria-label="YouTube"><i class="bi bi-youtube" aria-hidden="true"></i></a>
-                <a href="#" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>
+                <a th:href="@{/about}" aria-label="Giới thiệu phòng khám" title="Giới thiệu"><i class="bi bi-info-circle" aria-hidden="true"></i></a>
+                <a th:href="@{/services}" aria-label="Dịch vụ nha khoa" title="Dịch vụ"><i class="bi bi-heart-pulse" aria-hidden="true"></i></a>
+                <a th:href="@{/doctors}" aria-label="Đội ngũ bác sĩ" title="Bác sĩ"><i class="bi bi-person-badge" aria-hidden="true"></i></a>
+                <a th:href="@{/contact}" aria-label="Hệ thống chi nhánh" title="Liên hệ"><i class="bi bi-geo-alt" aria-hidden="true"></i></a>
             </div>
         </div>
     </div>
@@ -113,9 +187,9 @@
         <strong>CV-DCMS</strong> · Cường Việt Dental Clinic
     </p>
     <nav class="app-footer__links" aria-label="Liên kết chân trang">
-        <a href="#">Trợ giúp</a>
-        <a href="#">Điều khoản</a>
-        <a href="tel:0900000000">Hotline 0900 000 000</a>
+        <a th:href="@{/}">Cổng thông tin khách hàng</a>
+        <a th:href="@{/terms}">Điều khoản</a>
+        <a th:href="@{/contact}">Hệ thống cơ sở</a>
     </nav>
     <button type="button" class="back-to-top" data-back-to-top aria-label="Lên đầu trang">
         <i class="bi bi-arrow-up" aria-hidden="true"></i>

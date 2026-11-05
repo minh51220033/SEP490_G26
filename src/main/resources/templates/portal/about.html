@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Giới thiệu Nha khoa Cường Việt')}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li>Giới thiệu Phòng khám</li>
+        </ol>
+        <h1 class="cp-page-banner__title">Giới thiệu Hệ thống Nha khoa Cường Việt</h1>
+        <p class="cp-page-banner__desc">
+            Đồng hành chăm sóc sức khỏe răng miệng bền vững với quy trình khám chữa bệnh chuẩn y khoa,
+            bệnh án điện tử xuyên suốt và đội ngũ bác sĩ chuyên khoa tận tâm.
+        </p>
+    </div>
+</section>
+
+<main>
+    <!-- TỔNG QUAN & SỨ MỆNH -->
+    <section class="cp-section cp-section--white">
+        <div class="container-xl">
+            <div class="row align-items-center g-4 g-lg-5">
+                <div class="col-lg-6">
+                    <span class="cp-eyebrow">
+                        <i class="bi bi-award"></i> Tầm nhìn &amp; Sứ mệnh
+                    </span>
+                    <h2 class="cp-section-title">
+                        Chuẩn hóa trải nghiệm thăm khám và điều trị Răng Hàm Mặt
+                    </h2>
+                    <p class="text-secondary mb-3" style="font-size:15px;line-height:1.75;">
+                        <strong>Nha khoa Cường Việt (CV-DCMS)</strong> được phát triển nhằm kết nối liền mạch giữa
+                        bệnh nhân, đội ngũ lễ tân tiếp đón, bác sĩ lâm sàng, bộ phận chẩn đoán hình ảnh X-quang,
+                        labo phục hình và bộ phận chăm sóc khách hàng sau điều trị.
+                    </p>
+                    <p class="text-secondary mb-4" style="font-size:15px;line-height:1.75;">
+                        Mọi quyết định lâm sàng đều dựa trên kết quả thăm khám thực tế, sơ đồ răng chi tiết và hình ảnh
+                        cận lâm sàng rõ ràng. Khách hàng được tư vấn minh bạch về phương án điều trị, chi phí niêm yết
+                        và chế độ bảo hành trước khi thực hiện bất kỳ thủ thuật nào.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a th:href="@{/services}" class="btn-brand">
+                            <i class="bi bi-card-checklist"></i> Khám phá dịch vụ
+                        </a>
+                        <a th:href="@{/doctors}" class="btn-outline-brand">
+                            <i class="bi bi-people"></i> Đội ngũ bác sĩ
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="p-4 rounded-4 border bg-light h-100">
+                                <span class="icon-tile mb-3"><i class="bi bi-check2-all"></i></span>
+                                <h3 class="h6 fw-bold text-dark mb-2">Minh bạch thông tin</h3>
+                                <p class="small text-muted mb-0" style="line-height:1.6;">
+                                    Công khai danh mục dịch vụ, đơn giá, phụ thu và chính sách bảo hành trên cổng thông tin khách hàng.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-4 rounded-4 border bg-light h-100">
+                                <span class="icon-tile mb-3"><i class="bi bi-journal-medical"></i></span>
+                                <h3 class="h6 fw-bold text-dark mb-2">Hồ sơ bệnh án điện tử</h3>
+                                <p class="small text-muted mb-0" style="line-height:1.6;">
+                                    Lưu trữ tập trung lịch sử khám, chẩn đoán ICD-10, phác đồ điều trị, đơn thuốc và phim X-quang.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-4 rounded-4 border bg-light h-100">
+                                <span class="icon-tile mb-3"><i class="bi bi-person-check"></i></span>
+                                <h3 class="h6 fw-bold text-dark mb-2">Bác sĩ đúng chuyên môn</h3>
+                                <p class="small text-muted mb-0" style="line-height:1.6;">
+                                    Đội ngũ bác sĩ Răng Hàm Mặt có chứng chỉ hành nghề, phân công lịch trực rõ ràng theo từng cơ sở.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-4 rounded-4 border bg-light h-100">
+                                <span class="icon-tile mb-3"><i class="bi bi-chat-heart"></i></span>
+                                <h3 class="h6 fw-bold text-dark mb-2">Đồng hành sau điều trị</h3>
+                                <p class="small text-muted mb-0" style="line-height:1.6;">
+                                    Theo dõi sát sao sau thủ thuật, nhắc lịch uống thuốc và lịch tái khám định kỳ cho từng bệnh nhân.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUY TRÌNH KHÁM CHỮA BỆNH CHUẨN 5 BƯỚC -->
+    <section class="cp-section cp-section--soft">
+        <div class="container-xl">
+            <div class="cp-section-header cp-section-header--center">
+                <span class="cp-eyebrow"><i class="bi bi-diagram-3"></i> Quy trình chuẩn hóa</span>
+                <h2 class="cp-section-title">Quy trình thăm khám tại Nha khoa Cường Việt</h2>
+                <p class="cp-section-subtitle">
+                    Mỗi lượt khám đều tuân thủ quy trình khép kín giúp tiết kiệm thời gian chờ đợi và đảm bảo an toàn lâm sàng.
+                </p>
+            </div>
+
+            <div class="cp-card-grid-4">
+                <div class="p-4 rounded-4 bg-white border shadow-sm">
+                    <span class="badge bg-primary rounded-pill mb-3">Bước 01</span>
+                    <h3 class="h6 fw-bold text-dark mb-2">Đặt lịch &amp; Tiếp đón</h3>
+                    <p class="small text-muted mb-0" style="line-height:1.6;">
+                        Khách hàng đặt lịch trực tuyến hoặc đăng ký tại quầy lễ tân, nhận số thứ tự hàng chờ theo phòng khám.
+                    </p>
+                </div>
+                <div class="p-4 rounded-4 bg-white border shadow-sm">
+                    <span class="badge bg-primary rounded-pill mb-3">Bước 02</span>
+                    <h3 class="h6 fw-bold text-dark mb-2">Khám &amp; Chụp phim Cận lâm sàng</h3>
+                    <p class="small text-muted mb-0" style="line-height:1.6;">
+                        Bác sĩ khám tổng quát, ghi nhận sơ đồ răng và chỉ định chụp X-quang kỹ thuật số khi cần thiết.
+                    </p>
+                </div>
+                <div class="p-4 rounded-4 bg-white border shadow-sm">
+                    <span class="badge bg-primary rounded-pill mb-3">Bước 03</span>
+                    <h3 class="h6 fw-bold text-dark mb-2">Tư vấn Phác đồ &amp; Điều trị</h3>
+                    <p class="small text-muted mb-0" style="line-height:1.6;">
+                        Thống nhất kế hoạch điều trị và chi phí minh bạch với bệnh nhân trước khi thực hiện thủ thuật lâm sàng.
+                    </p>
+                </div>
+                <div class="p-4 rounded-4 bg-white border shadow-sm">
+                    <span class="badge bg-primary rounded-pill mb-3">Bước 04</span>
+                    <h3 class="h6 fw-bold text-dark mb-2">Kê đơn &amp; Chăm sóc tái khám</h3>
+                    <p class="small text-muted mb-0" style="line-height:1.6;">
+                        Hướng dẫn chăm sóc tại nhà, kê đơn thuốc (nếu có) và hẹn lịch tái khám theo dõi kết quả điều trị.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CÁC NHÓM CHUYÊN KHOA / DANH MỤC DỊCH VỤ TỪ DB -->
+    <section class="cp-section cp-section--white" th:if="${categories != null and !#lists.isEmpty(categories)}">
+        <div class="container-xl">
+            <div class="cp-section-header">
+                <div>
+                    <span class="cp-eyebrow"><i class="bi bi-grid"></i> Chuyên khoa &amp; Dịch vụ</span>
+                    <h2 class="cp-section-title">Các nhóm dịch vụ đang triển khai</h2>
+                </div>
+                <a th:href="@{/services}" class="btn-outline-brand">
+                    Xem bảng giá chi tiết <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4 col-sm-6" th:each="cat : ${categories}">
+                    <a th:href="@{/services(categoryId=${cat.categoryId})}"
+                       class="p-3 rounded-4 border bg-light d-flex align-items-center justify-content-between text-decoration-none h-100">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="icon-tile"><i class="bi bi-heart-pulse"></i></span>
+                            <div>
+                                <div class="fw-bold text-dark" th:text="${cat.categoryName}">Tên nhóm</div>
+                                <div class="small text-muted font-monospace" th:text="${cat.categoryCode}">CODE</div>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-right text-primary"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section th:replace="~{fragments/footer :: ctaBanner}"></section>
+</main>
+
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>

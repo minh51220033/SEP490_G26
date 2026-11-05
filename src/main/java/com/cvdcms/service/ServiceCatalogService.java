@@ -80,10 +80,14 @@ public interface ServiceCatalogService {
             Long categoryId,
             ServiceType serviceType
     );
+
     // Bảng giá công khai: tìm theo tên/mã và kết hợp bộ lọc.
     List<Service> getPublicServices(
             Long categoryId,
             ServiceType serviceType,
             String keyword
     );
+
+    // Lấy chi tiết 1 dịch vụ công khai (chỉ trả về khi dịch vụ ACTIVE và nhóm ACTIVE).
+    Service getPublicServiceById(Long serviceId);
 }

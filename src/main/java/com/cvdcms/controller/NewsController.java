@@ -1,7 +1,18 @@
 package com.cvdcms.controller;
 
-import com.cvdcms.entity.*;
-import com.cvdcms.repository.*;
+import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.Comment;
+import com.cvdcms.entity.NewsArticle;
+import com.cvdcms.entity.PatientProfile;
+import com.cvdcms.entity.User;
+import com.cvdcms.repository.BranchRepository;
+import com.cvdcms.repository.CommentBanRepository;
+import com.cvdcms.repository.CommentLikeRepository;
+import com.cvdcms.repository.CommentRepository;
+import com.cvdcms.repository.NewsArticleRepository;
+import com.cvdcms.repository.PatientProfileRepository;
+import com.cvdcms.repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -9,22 +20,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import com.cvdcms.entity.Branch;
-import com.cvdcms.entity.PatientProfile;
-import com.cvdcms.entity.User;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import com.cvdcms.entity.NewsArticle;
-
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/news")
 public class NewsController {
-
 
     private final NewsArticleRepository newsRepository;
     private final CommentRepository commentRepository;
@@ -34,101 +42,86 @@ public class NewsController {
     private final UserRepository userRepository;
     private final PatientProfileRepository patientProfileRepository;
 
-
     public NewsController(
             NewsArticleRepository newsRepository,
             CommentRepository commentRepository,
             CommentLikeRepository commentLikeRepository,
             CommentBanRepository commentBanRepository,
             BranchRepository branchRepository,
-            UserRepository userRepository,                     // Thêm dòng này
-            PatientProfileRepository patientProfileRepository) { // Thêm dòng này
-
+            UserRepository userRepository,
+            PatientProfileRepository patientProfileRepository
+    ) {
         this.newsRepository = newsRepository;
         this.commentRepository = commentRepository;
         this.commentLikeRepository = commentLikeRepository;
         this.commentBanRepository = commentBanRepository;
         this.branchRepository = branchRepository;
-        this.userRepository = userRepository;                   // Thêm dòng này
-        this.patientProfileRepository = patientProfileRepository; // Thêm dòng này
+        this.userRepository = userRepository;
+        this.patientProfileRepository = patientProfileRepository;
     }
 
     // =====================================================
     // 1. TRANG DANH SÁCH TIN TỨC CÔNG KHAI (GET /news)
-    // Tích hợp đúng với searchPublished() & list_2.html
+    // Cho phép Guest, Bệnh nhân và Nhân viên xem công khai
     // =====================================================
     @GetMapping({"", "/"})
     public String publicNewsList(
             @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(required = false) Long branchId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "6") int size,
             HttpSession session,
-            Model model) {
-
+            Model model
+    ) {
         page = Math.max(page, 0);
-
-        if (size != 6 && size != 12 && size != 18) {
+        if (size != 6 && size != 9 && size != 12 && size != 18) {
             size = 6;
         }
-        
 
-        // 1. Lấy tài khoản đang đăng nhập từ session.
-        User sessionUser = (User) session.getAttribute("loggedInUser");
-
-        if (sessionUser == null) {
-            return "redirect:/login";
-        }
-
-        // 2. Tải lại tài khoản từ database.
-        User user = userRepository.findById(sessionUser.getUserId())
-                .orElse(null);
-
-        if (user == null) {
-            session.invalidate();
-            return "redirect:/login";
-        }
-
-        // 3. Lấy hồ sơ bệnh nhân mặc định của tài khoản.
-        // Giả định repository trả về Optional<PatientProfile>.
-        PatientProfile profile = patientProfileRepository
-                .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
-                .orElse(null);
-
-        if (profile == null || profile.getPreferredBranch() == null) {
-            model.addAttribute(
-                    "errorMessage",
-                    "Tài khoản chưa có hồ sơ mặc định hoặc chưa được gán cơ sở."
-            );
-            model.addAttribute("newsPage", Page.empty());
-            model.addAttribute("keyword", keyword.trim());
-            model.addAttribute("size", size);
-            model.addAttribute("currentBranchName", "Chưa xác định cơ sở");
-
-            return "news/list";
-        }
-
-        // 4. Lấy đúng cơ sở của tài khoản.
-        Branch branch = profile.getPreferredBranch();
-        Long currentBranchId = branch.getBranchId();
-
-        // 5. Chỉ truy vấn tin tức thuộc cơ sở hiện tại.
         String searchKeyword = keyword == null ? "" : keyword.trim();
+        List<Branch> activeBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+
+        String currentBranchName = "Tất cả cơ sở";
+        String currentBranchAddress = "";
+        Long currentBranchId = branchId;
+
+        if (branchId != null) {
+            for (Branch b : activeBranches) {
+                if (branchId.equals(b.getBranchId())) {
+                    currentBranchName = b.getBranchName();
+                    currentBranchAddress = b.getAddress() != null ? b.getAddress() : "";
+                    break;
+                }
+            }
+        } else if (session != null && session.getAttribute("loggedInUser") instanceof User sessionUser) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(null);
+            if (user != null) {
+                PatientProfile profile = patientProfileRepository
+                        .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
+                        .orElse(null);
+                if (profile != null && profile.getPreferredBranch() != null) {
+                    Branch pref = profile.getPreferredBranch();
+                    currentBranchName = pref.getBranchName();
+                    currentBranchAddress = pref.getAddress() != null ? pref.getAddress() : "";
+                }
+            }
+        }
 
         Pageable pageable = PageRequest.of(page, size);
+        Page<NewsArticle> newsPage = newsRepository.searchPublishedPublic(
+                searchKeyword,
+                branchId,
+                pageable
+        );
 
-        Page<NewsArticle> newsPage =
-                newsRepository.searchPublishedByBranch(
-                        searchKeyword,
-                        currentBranchId,
-                        pageable
-                );
-
-        // 6. Truyền dữ liệu cho giao diện.
+        model.addAttribute("activeNav", "news");
         model.addAttribute("newsPage", newsPage);
         model.addAttribute("keyword", searchKeyword);
         model.addAttribute("size", size);
-        model.addAttribute("currentBranchName", branch.getBranchName());
-        model.addAttribute("currentBranchAddress", branch.getAddress());
+        model.addAttribute("branches", activeBranches);
+        model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("currentBranchName", currentBranchName);
+        model.addAttribute("currentBranchAddress", currentBranchAddress);
         model.addAttribute("currentBranchId", currentBranchId);
 
         return "news/list";
@@ -142,23 +135,35 @@ public class NewsController {
             @PathVariable String slug,
             @RequestParam(defaultValue = "0") int commentPage,
             HttpSession session,
-            Model model) {
+            HttpServletResponse response,
+            Model model
+    ) {
+        model.addAttribute("activeNav", "news");
 
         NewsArticle news = newsRepository.findBySlug(slug).orElse(null);
-        if (news == null || !"PUBLISHED".equals(news.getStatus())) {
-            return "redirect:/news";
+        if (news == null
+                || !"PUBLISHED".equalsIgnoreCase(news.getStatus())
+                || (news.getBranch() != null && !Boolean.TRUE.equals(news.getBranch().getIsActive()))) {
+            if (response != null) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
+            model.addAttribute("notFoundTitle", "Không tìm thấy bài viết");
+            model.addAttribute("notFoundMessage", "Bài viết không tồn tại hoặc hiện chưa được xuất bản công khai.");
+            model.addAttribute("backUrl", "/news");
+            model.addAttribute("backLabel", "Quay lại danh sách tin tức");
+            return "portal/not-found";
         }
 
-        if (session.getAttribute("commentError") != null) {
+        if (session != null && session.getAttribute("commentError") != null) {
             model.addAttribute("commentError", session.getAttribute("commentError"));
             session.removeAttribute("commentError");
         }
-        if (session.getAttribute("commentSuccess") != null) {
+        if (session != null && session.getAttribute("commentSuccess") != null) {
             model.addAttribute("commentSuccess", session.getAttribute("commentSuccess"));
             session.removeAttribute("commentSuccess");
         }
 
-        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        User loggedInUser = session != null ? (User) session.getAttribute("loggedInUser") : null;
         boolean isBanned = false;
         String banMessage = null;
 
@@ -172,9 +177,12 @@ public class NewsController {
                 } else {
                     isBanned = true;
                     if (ban.getExpiresAt() == null) {
-                        banMessage = "Tài khoản của bạn đã bị cấm bình luận vĩnh viễn. Lý do: " + (ban.getReason() != null ? ban.getReason() : "Vi phạm quy định.");
+                        banMessage = "Tài khoản của bạn đã bị cấm bình luận vĩnh viễn. Lý do: "
+                                + (ban.getReason() != null ? ban.getReason() : "Vi phạm quy định.");
                     } else {
-                        banMessage = "Tài khoản của bạn đang bị cấm bình luận đến " + ban.getExpiresAt().toLocalDate() + ". Lý do: " + (ban.getReason() != null ? ban.getReason() : "Vi phạm quy định.");
+                        banMessage = "Tài khoản của bạn đang bị cấm bình luận đến "
+                                + ban.getExpiresAt().toLocalDate() + ". Lý do: "
+                                + (ban.getReason() != null ? ban.getReason() : "Vi phạm quy định.");
                     }
                 }
             }
@@ -183,15 +191,26 @@ public class NewsController {
         model.addAttribute("isBanned", isBanned);
         model.addAttribute("banMessage", banMessage);
 
-        Pageable commentPageable = PageRequest.of(Math.max(commentPage, 0), 10, Sort.by(Sort.Direction.ASC, "createdAt"));
-        Page<Comment> commentPageResult = commentRepository.findByNews_NewsIdAndParentCommentIsNullAndStatus(news.getNewsId(), "ACTIVE", commentPageable);
+        Pageable commentPageable = PageRequest.of(
+                Math.max(commentPage, 0),
+                10,
+                Sort.by(Sort.Direction.ASC, "createdAt")
+        );
+        Page<Comment> commentPageResult = commentRepository.findByNews_NewsIdAndParentCommentIsNullAndStatus(
+                news.getNewsId(),
+                "ACTIVE",
+                commentPageable
+        );
         List<Comment> comments = commentPageResult.getContent();
 
         Map<Long, List<Comment>> repliesByComment = new HashMap<>();
         Map<Long, Long> likeCounts = new HashMap<>();
 
         for (Comment comment : comments) {
-            List<Comment> replies = commentRepository.findByParentComment_CommentIdAndStatusOrderByCreatedAtAsc(comment.getCommentId(), "ACTIVE");
+            List<Comment> replies = commentRepository.findByParentComment_CommentIdAndStatusOrderByCreatedAtAsc(
+                    comment.getCommentId(),
+                    "ACTIVE"
+            );
             repliesByComment.put(comment.getCommentId(), replies);
             likeCounts.put(comment.getCommentId(), commentLikeRepository.countByComment_CommentId(comment.getCommentId()));
 
@@ -200,7 +219,13 @@ public class NewsController {
             }
         }
 
+        List<NewsArticle> relatedNews = newsRepository.findRelatedPublished(
+                news.getNewsId(),
+                PageRequest.of(0, 3)
+        );
+
         model.addAttribute("news", news);
+        model.addAttribute("relatedNews", relatedNews);
         model.addAttribute("comments", comments);
         model.addAttribute("commentPage", commentPageResult);
         model.addAttribute("repliesByComment", repliesByComment);
