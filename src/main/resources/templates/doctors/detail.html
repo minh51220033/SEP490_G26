@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${doctor.fullName} + ' - Đội ngũ Bác sĩ')}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li><a th:href="@{/doctors}">Đội ngũ Bác sĩ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li th:text="${doctor.fullName}">Chi tiết bác sĩ</li>
+        </ol>
+        <h1 class="cp-page-banner__title" th:text="${doctor.fullName}">Họ tên bác sĩ</h1>
+        <p class="cp-page-banner__desc">
+            <span th:text="${doctor.positionTitle}">Bác sĩ Răng Hàm Mặt</span>
+            · Chuyên khoa: <strong th:text="${doctor.specialty}">Chuyên khoa</strong>
+        </p>
+    </div>
+</section>
+
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
+        <div class="row g-4">
+
+            <!-- CỘT TRÁI: THÔNG TIN TỔNG QUAN BÁC SĨ -->
+            <div class="col-lg-4">
+                <div class="bg-white rounded-4 border p-4 shadow-sm text-center mb-4">
+                    <div class="cp-doctor-avatar cp-doctor-avatar--lg mx-auto" th:text="${doctor.initials}">BS</div>
+                    <span class="cp-doctor-card__role" th:text="${doctor.positionTitle}">Bác sĩ</span>
+                    <h2 class="h5 fw-bold text-dark mb-1" th:text="${doctor.fullName}">Họ tên bác sĩ</h2>
+                    <p class="text-primary fw-semibold small mb-3" th:text="${doctor.specialty}">Chuyên khoa</p>
+
+                    <div class="d-grid gap-2">
+                        <a th:if="${session.loggedInUser == null}"
+                           th:href="@{/login}" class="btn-brand">
+                            <i class="bi bi-calendar2-check"></i> Đặt lịch khám với Bác sĩ
+                        </a>
+                        <a th:if="${session.loggedInUser != null and isPatientUser}"
+                           th:href="@{/portal/appointments/new}" class="btn-brand">
+                            <i class="bi bi-calendar2-plus"></i> Đặt lịch khám với Bác sĩ
+                        </a>
+                        <a th:href="@{/doctors}" class="btn-outline-brand">
+                            <i class="bi bi-arrow-left"></i> Danh sách bác sĩ
+                        </a>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <ul class="list-unstyled text-start small d-grid gap-3 mb-0">
+                        <li class="d-flex justify-content-between align-items-center"
+                            th:if="${doctor.staffCode != null}">
+                            <span class="text-muted">Mã nhân sự</span>
+                            <strong class="font-monospace text-dark" th:text="${doctor.staffCode}">NV001</strong>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center"
+                            th:if="${doctor.genderLabel != null}">
+                            <span class="text-muted">Giới tính</span>
+                            <strong class="text-dark" th:text="${doctor.genderLabel}">Nam</strong>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center"
+                            th:if="${doctor.department != null and !#strings.isEmpty(doctor.department)}">
+                            <span class="text-muted">Khoa / Bộ phận</span>
+                            <strong class="text-dark" th:text="${doctor.department}">Lâm sàng</strong>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center"
+                            th:if="${doctor.practiceLicenseNo != null and !#strings.isEmpty(doctor.practiceLicenseNo)}">
+                            <span class="text-muted">Chứng chỉ hành nghề</span>
+                            <strong class="text-primary font-monospace" th:text="${doctor.practiceLicenseNo}">CCHN</strong>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center"
+                            th:if="${doctor.hireDate != null}">
+                            <span class="text-muted">Ngày công tác tại hệ thống</span>
+                            <strong class="text-dark" th:text="${#temporals.format(doctor.hireDate, 'dd/MM/yyyy')}">01/01/2023</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: CƠ SỞ CÔNG TÁC & LỊCH LÀM VIỆC 7 NGÀY TỚI (CHỈ XEM) -->
+            <div class="col-lg-8">
+                <!-- THÔNG TIN CHUYÊN MÔN & CƠ SỞ CÔNG TÁC -->
+                <div class="bg-white rounded-4 border p-4 shadow-sm mb-4">
+                    <h3 class="h5 fw-bold text-dark mb-3">
+                        <i class="bi bi-person-vcard text-primary me-2"></i>Thông tin chuyên môn &amp; Cơ sở công tác
+                    </h3>
+                    <p class="text-secondary mb-4" style="line-height:1.7;">
+                        <strong th:text="${doctor.fullName}">Bác sĩ</strong> hiện đảm nhiệm vị trí
+                        <strong th:text="${doctor.positionTitle}">Bác sĩ Răng Hàm Mặt</strong>,
+                        chuyên sâu trong lĩnh vực <strong th:text="${doctor.specialty}">Nha khoa</strong>
+                        <span th:if="${doctor.department != null and !#strings.isEmpty(doctor.department)}">
+                            thuộc bộ phận <strong th:text="${doctor.department}">Lâm sàng</strong>
+                        </span>
+                        tại Hệ thống Nha khoa Cường Việt.
+                    </p>
+
+                    <h4 class="h6 fw-bold text-dark mb-3">
+                        <i class="bi bi-buildings text-primary me-2"></i>Cơ sở phòng khám đang công tác
+                    </h4>
+
+                    <div class="row g-3" th:if="${doctor.activeBranches != null and !#lists.isEmpty(doctor.activeBranches)}">
+                        <div class="col-md-6" th:each="br : ${doctor.activeBranches}">
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <div class="fw-bold text-dark mb-1">
+                                    <i class="bi bi-hospital text-primary me-1"></i>
+                                    <span th:text="${br.branchName}">Tên cơ sở</span>
+                                </div>
+                                <div class="small text-muted mb-1">
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    <span th:text="${br.address}">Địa chỉ</span>
+                                </div>
+                                <div class="small text-primary fw-semibold" th:if="${br.phone != null}">
+                                    <i class="bi bi-telephone me-1"></i>
+                                    <span th:text="${br.phone}">0900 000 000</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-3 bg-light border small text-muted"
+                         th:if="${doctor.activeBranches == null or #lists.isEmpty(doctor.activeBranches)}">
+                        Thông tin phân công cơ sở của bác sĩ đang được cập nhật.
+                    </div>
+                </div>
+
+                <!-- LỊCH LÀM VIỆC DỰ KIẾN 7 NGÀY TỚI (CHỈ XEM) -->
+                <div class="bg-white rounded-4 border p-4 shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <h3 class="h5 fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar2-week text-primary me-2"></i>Lịch trực khám dự kiến (7 ngày tới)
+                        </h3>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
+                            Chỉ xem · Đồng bộ từ hệ thống phân ca
+                        </span>
+                    </div>
+
+                    <div class="table-responsive"
+                         th:if="${doctor.upcomingSchedules != null and !#lists.isEmpty(doctor.upcomingSchedules)}">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ngày làm việc</th>
+                                    <th>Ca trực</th>
+                                    <th>Khung giờ</th>
+                                    <th>Cơ sở khám</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="sch : ${doctor.upcomingSchedules}">
+                                    <td class="fw-semibold text-dark"
+                                        th:text="${#temporals.format(sch.workDate, 'dd/MM/yyyy')}">04/11/2026</td>
+                                    <td>
+                                        <span class="badge bg-info-subtle text-info-emphasis"
+                                              th:text="${sch.shift != null ? sch.shift.shiftName : 'Ca khám'}">Ca sáng</span>
+                                    </td>
+                                    <td class="font-monospace"
+                                        th:text="${sch.shift != null and sch.shift.startTime != null and sch.shift.endTime != null
+                                                ? #temporals.format(sch.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(sch.shift.endTime, 'HH:mm')
+                                                : 'Theo giờ hành chính'}">08:00 - 12:00</td>
+                                    <td>
+                                        <span class="fw-semibold text-primary"
+                                              th:text="${sch.branch != null ? sch.branch.branchName : 'Cơ sở chính'}">Cơ sở</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-4 rounded-3 bg-light border text-center"
+                         th:if="${doctor.upcomingSchedules == null or #lists.isEmpty(doctor.upcomingSchedules)}">
+                        <i class="bi bi-calendar2-check text-primary fs-3 d-block mb-2"></i>
+                        <div class="fw-semibold text-dark mb-1">Chưa có lịch phân ca cố định trong 7 ngày tới</div>
+                        <p class="small text-muted mb-0">
+                            Quý khách có thể đặt lịch khám trực tuyến hoặc liên hệ hotline cơ sở để được lễ tân sắp xếp lịch hẹn phù hợp với bác sĩ.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BÁC SĨ KHÁC TRONG ĐỘI NGŨ -->
+        <div class="mt-5" th:if="${relatedDoctors != null and !#lists.isEmpty(relatedDoctors)}">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="h5 fw-bold text-dark mb-0">Các bác sĩ khác trong đội ngũ</h3>
+                <a th:href="@{/doctors}" class="small fw-semibold text-primary">Xem tất cả <i class="bi bi-arrow-right"></i></a>
+            </div>
+
+            <div class="cp-card-grid-4">
+                <article class="cp-card" th:each="rel : ${relatedDoctors}">
+                    <div class="cp-doctor-card__top">
+                        <div class="cp-doctor-avatar" th:text="${rel.initials}">BS</div>
+                        <span class="cp-doctor-card__role" th:text="${rel.positionTitle}">Bác sĩ</span>
+                        <h4 class="cp-doctor-card__name">
+                            <a th:href="@{/doctors/{id}(id=${rel.staffId})}" th:text="${rel.fullName}">Tên bác sĩ</a>
+                        </h4>
+                        <p class="cp-doctor-card__specialty" th:text="${rel.specialty}">Chuyên khoa</p>
+                    </div>
+                    <div class="cp-doctor-card__body">
+                        <a th:href="@{/doctors/{id}(id=${rel.staffId})}" class="btn-outline-brand w-100 mt-auto">
+                            Xem hồ sơ
+                        </a>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<section th:replace="~{fragments/footer :: ctaBanner}"></section>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>

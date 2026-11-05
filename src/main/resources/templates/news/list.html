@@ -1,173 +1,171 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Tin tức')}"></head>
+<head th:replace="~{fragments/head :: head('Tin tức & Kiến thức Nha khoa')}"></head>
+<body class="cp-body">
 
-<body class="app-body">
-
-<!-- CSS riêng của trang tin tức -->
-<link rel="stylesheet" th:href="@{/css/news.css}">
-
-<!-- Header công khai dùng chung (trang dành cho mọi role, không có sidebar) -->
 <header th:replace="~{fragments/header :: siteHeader}"></header>
 
-<section class="nw-hero">
-    <span class="eyebrow">Tin tức &amp; Kiến thức</span>
-    <h1>Tin tức nha khoa</h1>
-    <p>Cập nhật thông tin, kiến thức chăm sóc răng miệng và hoạt động mới nhất từ phòng khám.</p>
-    <nav class="nw-breadcrumb" aria-label="Breadcrumb">
-        <a th:href="@{/home}"><i class="bi bi-house-door"></i> Trang chủ</a>
-        <i class="bi bi-chevron-right" aria-hidden="true"></i>
-        <span aria-current="page">Tin tức</span>
-    </nav>
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li>Tin tức &amp; Kiến thức Nha khoa</li>
+        </ol>
+        <div class="d-flex align-items-end justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="cp-page-banner__title">Tin tức &amp; Kiến thức Nha khoa</h1>
+                <p class="cp-page-banner__desc">
+                    Cập nhật kiến thức chăm sóc răng miệng chuẩn y khoa, công nghệ điều trị mới và thông báo hoạt động
+                    tại các cơ sở thuộc Hệ thống Nha khoa Cường Việt.
+                </p>
+            </div>
+            <a th:if="${isAdmin}" th:href="@{/admin/news}" class="btn btn-light fw-semibold">
+                <i class="bi bi-gear-fill text-primary me-1"></i> Quản lý bài viết
+            </a>
+        </div>
+    </div>
 </section>
 
-<main class="nw-wrap nw-page">
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
 
-    <!-- Thông tin cơ sở hiện tại -->
-    <section class="nw-card nw-branch" th:if="${currentBranchName != null}">
-        <div class="nw-branch__icon" aria-hidden="true"><i class="bi bi-hospital"></i></div>
-
-        <div class="nw-branch__info">
-            <span class="eyebrow">Cơ sở đang xem</span>
-            <h2 class="nw-branch__name" th:text="${currentBranchName}">Cơ sở Cường Việt</h2>
-
-            <p class="nw-branch__meta"
-               th:if="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)}">
-                <i class="bi bi-geo-alt"></i>
-                <span th:text="${currentBranchAddress}">Địa chỉ cơ sở</span>
-            </p>
-
-            <p class="nw-branch__meta">
-                <i class="bi bi-info-circle"></i>
-                <span>Tin tức được hiển thị theo cơ sở của tài khoản bạn.</span>
-            </p>
-        </div>
-
-        <div class="nw-branch__status">
-            <span class="nw-dot"></span>
-            Cơ sở hiện tại
-        </div>
-    </section>
-
-    <!-- Thông báo lỗi nếu tài khoản chưa có cơ sở -->
-    <div class="nw-alert nw-alert--error" role="alert" th:if="${errorMessage != null}">
-        <i class="bi bi-exclamation-triangle"></i>
-        <span th:text="${errorMessage}">Không xác định được cơ sở của tài khoản.</span>
-    </div>
-
-    <!-- Tìm kiếm và chọn số bài viết mỗi trang -->
-    <form th:action="@{/news}" method="get" class="nw-search" role="search">
-        <label class="nw-search__input">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <input type="search"
-                   name="keyword"
-                   th:value="${keyword}"
-                   placeholder="Tìm kiếm tin tức..."
-                   aria-label="Tìm kiếm tin tức">
-        </label>
-
-        <select class="nw-select" name="size" aria-label="Số bài viết mỗi trang" onchange="this.form.submit()">
-            <option value="6" th:selected="${size == 6}">6 bài/trang</option>
-            <option value="12" th:selected="${size == 12}">12 bài/trang</option>
-            <option value="18" th:selected="${size == 18}">18 bài/trang</option>
-        </select>
-
-        <button type="submit" class="nw-btn nw-btn--primary" style="height:48px">
-            <i class="bi bi-search"></i> Tìm kiếm
-        </button>
-    </form>
-
-    <!-- Thông tin kết quả -->
-    <div class="nw-result" th:if="${newsPage != null}">
-        <span>Tổng số bài viết: <strong th:text="${newsPage.totalElements}">0</strong></span>
-        <span th:if="${newsPage.totalElements > 0}">
-            Trang <strong th:text="${newsPage.number + 1}">1</strong>
-            / <strong th:text="${newsPage.totalPages}">1</strong>
-        </span>
-    </div>
-
-    <!-- Danh sách tin tức -->
-    <section class="nw-grid" th:if="${newsPage != null}" aria-label="Danh sách tin tức">
-
-        <article class="nw-news" th:each="news : ${newsPage.content}">
-            <a class="nw-news__thumb" th:href="@{/news/{slug}(slug=${news.slug})}" tabindex="-1" aria-hidden="true">
-                <img th:if="${news.thumbnail != null and !#strings.isEmpty(news.thumbnail)}"
-                     th:src="${news.thumbnail}"
-                     th:alt="${news.title}"
-                     loading="lazy">
-                <div class="nw-news__placeholder"
-                     th:if="${news.thumbnail == null or #strings.isEmpty(news.thumbnail)}">
-                    <i class="bi bi-image"></i>
-                    <span>Chưa có ảnh</span>
+        <!-- THANH TÌM KIẾM & LỌC THEO CƠ SỞ -->
+        <div class="cp-filter-box">
+            <form method="get" th:action="@{/news}" class="row g-3 align-items-end">
+                <div class="col-12 col-md-6">
+                    <label for="newsKeywordInput" class="form-label small fw-bold text-secondary mb-1">
+                        <i class="bi bi-search me-1 text-primary"></i>Tìm kiếm bài viết
+                    </label>
+                    <input id="newsKeywordInput"
+                           type="text"
+                           name="keyword"
+                           class="form-control"
+                           placeholder="Nhập tiêu đề hoặc nội dung tóm tắt..."
+                           th:value="${keyword}">
                 </div>
-            </a>
 
-            <div class="nw-news__body">
-                <span class="nw-news__date" th:if="${news.publishedAt != null}">
-                    <i class="bi bi-calendar3"></i>
-                    <time th:text="${#temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 16:50</time>
-                </span>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <label for="newsBranchSelect" class="form-label small fw-bold text-secondary mb-1">
+                        <i class="bi bi-buildings me-1 text-primary"></i>Cơ sở đăng tin
+                    </label>
+                    <select id="newsBranchSelect" name="branchId" class="form-select">
+                        <option value="">Tất cả cơ sở</option>
+                        <option th:each="br : ${branches}"
+                                th:value="${br.branchId}"
+                                th:text="${br.branchName}"
+                                th:selected="${selectedBranchId != null and selectedBranchId == br.branchId}">
+                        </option>
+                    </select>
+                </div>
 
-                <h2 class="nw-news__title">
-                    <a th:href="@{/news/{slug}(slug=${news.slug})}" th:text="${news.title}">Tiêu đề bài viết</a>
-                </h2>
+                <div class="col-12 col-sm-6 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn-brand flex-grow-1" style="height:38px;">
+                        <i class="bi bi-funnel-fill"></i> Lọc
+                    </button>
+                    <a th:href="@{/news}" class="btn-light-soft" style="height:38px;" title="Đặt lại bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
 
-                <p class="nw-news__summary"
-                   th:if="${news.summary != null and !#strings.isEmpty(news.summary)}"
-                   th:text="${news.summary}">Mô tả bài viết</p>
-
-                <a class="nw-news__more" th:href="@{/news/{slug}(slug=${news.slug})}">
-                    Đọc tiếp <i class="bi bi-arrow-right"></i>
+        <!-- DANH SÁCH BÀI VIẾT -->
+        <div class="cp-card-grid-3"
+             th:if="${newsPage != null and !newsPage.content.isEmpty()}">
+            <article class="cp-card" th:each="item : ${newsPage.content}">
+                <a th:href="@{/news/{slug}(slug=${item.slug})}" class="cp-news-card__media text-decoration-none">
+                    <img th:if="${item.thumbnail != null and !#strings.isEmpty(item.thumbnail)}"
+                         th:src="${item.thumbnail}"
+                         th:alt="${item.title}"
+                         class="cp-news-card__img"
+                         loading="lazy">
+                    <div th:if="${item.thumbnail == null or #strings.isEmpty(item.thumbnail)}"
+                         class="cp-service-card__placeholder">
+                        <i class="bi bi-newspaper"></i>
+                        <span class="small fw-semibold">Cường Việt Dental</span>
+                    </div>
                 </a>
+
+                <div class="cp-news-card__body">
+                    <div class="cp-news-card__meta">
+                        <span>
+                            <i class="bi bi-calendar3 text-primary me-1"></i>
+                            <span th:text="${item.publishedAt != null
+                                    ? #temporals.format(item.publishedAt, 'dd/MM/yyyy')
+                                    : #temporals.format(item.createdAt, 'dd/MM/yyyy')}">01/11/2026</span>
+                        </span>
+                        <span th:if="${item.branch != null}">
+                            <i class="bi bi-geo-alt text-primary me-1"></i>
+                            <span th:text="${item.branch.branchName}">Cơ sở</span>
+                        </span>
+                    </div>
+
+                    <h2 class="cp-news-card__title">
+                        <a th:href="@{/news/{slug}(slug=${item.slug})}" th:text="${item.title}">Tiêu đề bài viết</a>
+                    </h2>
+
+                    <p class="cp-news-card__summary"
+                       th:text="${item.summary != null and !#strings.isEmpty(item.summary)
+                               ? item.summary
+                               : 'Xem chi tiết bài viết chuyên môn và hướng dẫn chăm sóc răng miệng từ Nha khoa Cường Việt.'}">
+                        Tóm tắt bài viết.
+                    </p>
+
+                    <a th:href="@{/news/{slug}(slug=${item.slug})}" class="btn-outline-brand w-100 mt-auto">
+                        Xem chi tiết <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div class="empty-state-box bg-white rounded-4 border p-5"
+             th:if="${newsPage == null or newsPage.content.isEmpty()}">
+            <i class="bi bi-newspaper empty-icon"></i>
+            <h6>Chưa có bài viết phù hợp</h6>
+            <p>Hiện không có bài viết đã xuất bản nào khớp với từ khóa hoặc cơ sở bạn đã chọn.</p>
+            <a th:href="@{/news}" class="btn-brand">
+                <i class="bi bi-arrow-counterclockwise"></i> Xem tất cả tin tức
+            </a>
+        </div>
+
+        <!-- PHÂN TRANG -->
+        <nav aria-label="Phân trang tin tức"
+             class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4 pt-3 border-top"
+             th:if="${newsPage != null and newsPage.totalPages > 1}">
+            <div class="small text-muted">
+                Trang <strong th:text="${newsPage.number + 1}">1</strong> / <strong th:text="${newsPage.totalPages}">1</strong>
+                (Tổng <strong th:text="${newsPage.totalElements}">0</strong> bài viết)
             </div>
-        </article>
+            <ul class="pagination mb-0">
+                <li class="page-item" th:classappend="${newsPage.first} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/news(page=${newsPage.number - 1}, size=${size}, keyword=${keyword}, branchId=${selectedBranchId})}">
+                        <i class="bi bi-chevron-left"></i> Trước
+                    </a>
+                </li>
+                <li class="page-item"
+                    th:each="p : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
+                    th:classappend="${p == newsPage.number} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/news(page=${p}, size=${size}, keyword=${keyword}, branchId=${selectedBranchId})}"
+                       th:text="${p + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${newsPage.last} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/news(page=${newsPage.number + 1}, size=${size}, keyword=${keyword}, branchId=${selectedBranchId})}">
+                        Sau <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
-        <!-- Không có kết quả -->
-        <div class="nw-empty" th:if="${newsPage.content.isEmpty()}">
-            <i class="bi bi-newspaper"></i>
-            <strong>Chưa tìm thấy bài viết phù hợp</strong>
-            <p>Hãy thử từ khóa khác hoặc quay lại sau.</p>
-        </div>
-    </section>
-
-    <!-- Phân trang -->
-    <nav class="nw-pager" aria-label="Phân trang tin tức"
-         th:if="${newsPage != null and newsPage.totalPages > 1}">
-        <div class="nw-pager__list">
-            <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=0)}" aria-label="Trang đầu">
-                <i class="bi bi-chevron-double-left"></i>
-            </a>
-            <a class="nw-pager__link" th:classappend="${newsPage.first} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.number - 1})}" aria-label="Trang trước">
-                <i class="bi bi-chevron-left"></i>
-            </a>
-            <a class="nw-pager__link"
-               th:each="pageNumber : ${#numbers.sequence(0, newsPage.totalPages - 1)}"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${pageNumber})}"
-               th:text="${pageNumber + 1}"
-               th:classappend="${pageNumber == newsPage.number} ? ' active'"
-               th:attr="aria-current=${pageNumber == newsPage.number ? 'page' : null}">1</a>
-            <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.number + 1})}" aria-label="Trang tiếp">
-                <i class="bi bi-chevron-right"></i>
-            </a>
-            <a class="nw-pager__link" th:classappend="${newsPage.last} ? ' disabled'"
-               th:href="@{/news(keyword=${keyword}, size=${size}, page=${newsPage.totalPages - 1})}" aria-label="Trang cuối">
-                <i class="bi bi-chevron-double-right"></i>
-            </a>
-        </div>
-
-        <p class="nw-pager__summary">
-            Đang xem trang <strong th:text="${newsPage.number + 1}">1</strong>
-            trong <strong th:text="${newsPage.totalPages}">1</strong> trang ·
-            <strong th:text="${newsPage.totalElements}">0</strong> bài viết
-        </p>
-    </nav>
-
+    </div>
 </main>
 
-<!-- Footer dùng chung -->
+<section th:replace="~{fragments/footer :: ctaBanner}"></section>
 <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 </body>

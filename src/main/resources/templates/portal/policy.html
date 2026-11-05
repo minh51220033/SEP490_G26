@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${pageTitle != null ? pageTitle : 'Chính sách & Điều khoản'})}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<!-- PAGE BANNER -->
+<section class="cp-page-banner">
+    <div class="container-xl">
+        <ol class="cp-page-banner__breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><i class="bi bi-chevron-right small"></i></li>
+            <li th:text="${pageTitle}">Chính sách &amp; Quy định</li>
+        </ol>
+        <h1 class="cp-page-banner__title" th:text="${pageTitle}">Chính sách &amp; Quy định</h1>
+        <p class="cp-page-banner__desc">
+            Quy định bảo mật thông tin hồ sơ bệnh án và điều khoản sử dụng dịch vụ đặt lịch khám trực tuyến
+            trên hệ thống CV-DCMS.
+        </p>
+    </div>
+</section>
+
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
+        <div class="bg-white rounded-4 border p-4 p-lg-5 shadow-sm">
+
+            <!-- CHÍNH SÁCH BẢO MẬT -->
+            <div th:if="${policyType == 'privacy'}">
+                <h2 class="h5 fw-bold text-dark mb-3">1. Cam kết bảo mật thông tin bệnh nhân</h2>
+                <p class="text-secondary mb-4" style="line-height:1.75;">
+                    Hệ thống Quản lý &amp; Đặt lịch Phòng khám Nha khoa Cường Việt (CV-DCMS) tuân thủ nghiêm ngặt quy định
+                    về bảo mật thông tin cá nhân và hồ sơ bệnh án điện tử. Dữ liệu của khách hàng chỉ được sử dụng cho
+                    mục đích tiếp đón, khám chữa bệnh, nhắc lịch tái khám và chăm sóc sau điều trị tại phòng khám.
+                </p>
+
+                <h2 class="h5 fw-bold text-dark mb-3">2. Phân quyền truy cập dữ liệu y tế</h2>
+                <p class="text-secondary mb-4" style="line-height:1.75;">
+                    Hồ sơ bệnh nhân, kết quả cận lâm sàng, phim chụp X-quang và đơn thuốc được phân quyền chặt chẽ theo
+                    vai trò nghiệp vụ. Chỉ chủ tài khoản bệnh nhân và nhân sự y tế có thẩm quyền trong ca khám mới được
+                    phép truy cập hồ sơ tương ứng.
+                </p>
+
+                <h2 class="h5 fw-bold text-dark mb-3">3. Quyền của khách hàng đối với thông tin cá nhân</h2>
+                <p class="text-secondary mb-0" style="line-height:1.75;">
+                    Khách hàng đã đăng ký tài khoản có thể chủ động xem và cập nhật thông tin cá nhân tại mục
+                    <a th:href="@{/profile}" class="text-primary fw-semibold">Thông tin cá nhân</a>, hoặc liên hệ trực tiếp
+                    quầy lễ tân cơ sở để được hỗ trợ điều chỉnh thông tin hồ sơ bệnh án.
+                </p>
+            </div>
+
+            <!-- ĐIỀU KHOẢN SỬ DỤNG -->
+            <div th:if="${policyType != 'privacy'}">
+                <h2 class="h5 fw-bold text-dark mb-3">1. Quy định đặt lịch khám trực tuyến</h2>
+                <p class="text-secondary mb-4" style="line-height:1.75;">
+                    Khách hàng sử dụng tài khoản bệnh nhân trên hệ thống CV-DCMS có thể đặt lịch hẹn trực tuyến theo
+                    cơ sở, dịch vụ và khung giờ mong muốn. Quý khách vui lòng cung cấp thông tin liên hệ chính xác và
+                    có mặt tại phòng khám trước giờ hẹn từ 10–15 phút để hoàn tất thủ tục check-in.
+                </p>
+
+                <h2 class="h5 fw-bold text-dark mb-3">2. Thay đổi hoặc hủy lịch hẹn</h2>
+                <p class="text-secondary mb-4" style="line-height:1.75;">
+                    Trong trường hợp cần dời lịch hoặc hủy lịch hẹn, quý khách có thể thao tác trực tiếp tại mục
+                    <strong>Lịch hẹn của tôi</strong> trên cổng thông tin bệnh nhân hoặc thông báo qua hotline cơ sở
+                    để phòng khám sắp xếp lại ca khám phù hợp.
+                </p>
+
+                <h2 class="h5 fw-bold text-dark mb-3">3. Quy tắc ứng xử khi bình luận &amp; trao đổi trực tuyến</h2>
+                <p class="text-secondary mb-0" style="line-height:1.75;">
+                    Khi tham gia bình luận dưới các bài viết tin tức hoặc nhắn tin qua kênh hỗ trợ trực tuyến, người dùng
+                    cam kết sử dụng ngôn từ văn minh, tôn trọng đội ngũ y tế và không đăng tải nội dung vi phạm pháp luật.
+                </p>
+            </div>
+
+            <hr class="my-4">
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/privacy}" class="btn-outline-brand" th:classappend="${policyType == 'privacy'} ? 'active' : ''">
+                    Chính sách bảo mật
+                </a>
+                <a th:href="@{/terms}" class="btn-outline-brand" th:classappend="${policyType == 'terms'} ? 'active' : ''">
+                    Điều khoản sử dụng
+                </a>
+                <a th:href="@{/}" class="btn-brand ms-auto">
+                    <i class="bi bi-house-door"></i> Về Trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>

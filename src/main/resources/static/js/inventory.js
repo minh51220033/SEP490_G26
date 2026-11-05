@@ -3,6 +3,15 @@
 
     const $ = (id) => document.getElementById(id);
 
+    const safeOn = (id, event, handler, options) => {
+        const el = typeof id === "string" ? $(id) : id;
+        if (el && typeof el.addEventListener === "function") {
+            el.addEventListener(event, handler, options);
+            return el;
+        }
+        return null;
+    };
+
     const REGEX = {
         BATCH_NUMBER: /^[A-Za-z0-9._/-]{2,50}$/,
         INVOICE_NO: /^[A-Za-z0-9._/-]{1,50}$/,
@@ -2315,18 +2324,18 @@
 
     function handleKpiCardActivate(target) {
         if (target === "inventory-all") {
-            $("lowStock").checked = false;
+            if ($("lowStock")) $("lowStock").checked = false;
             switchTab("inventory");
             loadInventory(0);
         } else if (target === "inventory-low") {
-            $("lowStock").checked = true;
+            if ($("lowStock")) $("lowStock").checked = true;
             switchTab("inventory");
             loadInventory(0);
         } else if (target === "batches-expiring") {
             const limitDate = new Date();
             limitDate.setDate(limitDate.getDate() + 30);
-            $("expiryFrom").value = "";
-            $("expiryTo").value = limitDate.toISOString().slice(0, 10);
+            if ($("expiryFrom")) $("expiryFrom").value = "";
+            if ($("expiryTo")) $("expiryTo").value = limitDate.toISOString().slice(0, 10);
             switchTab("batches");
             loadBatches(0);
         } else if (target === "supplier-debt") {
@@ -2373,55 +2382,55 @@
             });
         });
 
-        $("branchId").addEventListener("change", async () => {
+        safeOn("branchId", "change", async () => {
             state.branchId = Number($("branchId").value) || null;
             populateDestinationBranches();
             await refreshBranchData();
         });
 
-        $("searchBtn").addEventListener("click", triggerGlobalKeywordSearch);
+        safeOn("searchBtn", "click", triggerGlobalKeywordSearch);
 
         if ($("clearSearchBtn")) {
-            $("clearSearchBtn").addEventListener("click", () => {
+            safeOn("clearSearchBtn", "click", () => {
                 $("keyword").value = "";
-                $("lowStock").checked = false;
+                if ($("lowStock")) $("lowStock").checked = false;
                 triggerGlobalKeywordSearch();
             });
         }
 
         const debouncedGlobalSearch = debounce(triggerGlobalKeywordSearch, 350);
-        $("keyword").addEventListener("input", debouncedGlobalSearch);
-        $("keyword").addEventListener("keydown", e => {
+        safeOn("keyword", "input", debouncedGlobalSearch);
+        safeOn("keyword", "keydown", e => {
             if (e.key === "Enter") { e.preventDefault(); triggerGlobalKeywordSearch(); }
         });
 
         // A1: Invoice file upload & preview bindings
         if ($("invoiceFileInput")) {
-            $("invoiceFileInput").addEventListener("change", (e) => {
+            safeOn("invoiceFileInput", "change", (e) => {
                 const file = e.target.files?.[0];
                 if (file) handleInvoiceFileUpload(file);
             });
         }
         if ($("clearUploadedInvoiceBtn")) {
-            $("clearUploadedInvoiceBtn").addEventListener("click", clearUploadedInvoice);
+            safeOn("clearUploadedInvoiceBtn", "click", clearUploadedInvoice);
         }
         if ($("zoomUploadedInvoiceBtn")) {
-            $("zoomUploadedInvoiceBtn").addEventListener("click", () => {
+            safeOn("zoomUploadedInvoiceBtn", "click", () => {
                 openImageLightbox($("attachmentUrl").value, "Hóa đơn đính kèm phiếu nhập");
             });
         }
         if ($("invoicePreviewImg")) {
-            $("invoicePreviewImg").addEventListener("click", () => {
+            safeOn("invoicePreviewImg", "click", () => {
                 openImageLightbox($("attachmentUrl").value, "Hóa đơn đính kèm phiếu nhập");
             });
         }
 
         // A2: Initial payment bindings
         if ($("receiptPaidAmount")) {
-            $("receiptPaidAmount").addEventListener("input", calculateReceiptTotal);
+            safeOn("receiptPaidAmount", "input", calculateReceiptTotal);
         }
         if ($("payFullReceiptBtn")) {
-            $("payFullReceiptBtn").addEventListener("click", () => {
+            safeOn("payFullReceiptBtn", "click", () => {
                 const total = computeCurrentReceiptTotalNumber();
                 if ($("receiptPaidAmount")) {
                     $("receiptPaidAmount").value = String(total);
@@ -2431,84 +2440,84 @@
         }
 
         // A4: Digital signature modal bindings
-        if ($("openReceiptSignBtn")) $("openReceiptSignBtn").addEventListener("click", () => openSignatureModal("receipt-draft"));
-        if ($("clearReceiptSignBtn")) $("clearReceiptSignBtn").addEventListener("click", () => clearDraftSignature("receipt"));
-        if ($("openIssueSignBtn")) $("openIssueSignBtn").addEventListener("click", () => openSignatureModal("issue-draft"));
-        if ($("clearIssueSignBtn")) $("clearIssueSignBtn").addEventListener("click", () => clearDraftSignature("issue"));
-        if ($("openTransferSignBtn")) $("openTransferSignBtn").addEventListener("click", () => openSignatureModal("transfer-draft"));
-        if ($("clearTransferSignBtn")) $("clearTransferSignBtn").addEventListener("click", () => clearDraftSignature("transfer"));
+        if ($("openReceiptSignBtn")) safeOn("openReceiptSignBtn", "click", () => openSignatureModal("receipt-draft"));
+        if ($("clearReceiptSignBtn")) safeOn("clearReceiptSignBtn", "click", () => clearDraftSignature("receipt"));
+        if ($("openIssueSignBtn")) safeOn("openIssueSignBtn", "click", () => openSignatureModal("issue-draft"));
+        if ($("clearIssueSignBtn")) safeOn("clearIssueSignBtn", "click", () => clearDraftSignature("issue"));
+        if ($("openTransferSignBtn")) safeOn("openTransferSignBtn", "click", () => openSignatureModal("transfer-draft"));
+        if ($("clearTransferSignBtn")) safeOn("clearTransferSignBtn", "click", () => clearDraftSignature("transfer"));
 
-        if ($("clearSignatureCanvasBtn")) $("clearSignatureCanvasBtn").addEventListener("click", clearSignatureCanvas);
-        if ($("closeSignatureModalBtn")) $("closeSignatureModalBtn").addEventListener("click", () => { $("signatureModal").hidden = true; });
-        if ($("cancelSignatureModalBtn")) $("cancelSignatureModalBtn").addEventListener("click", () => { $("signatureModal").hidden = true; });
-        if ($("confirmSignatureBtn")) $("confirmSignatureBtn").addEventListener("click", confirmSignature);
+        if ($("clearSignatureCanvasBtn")) safeOn("clearSignatureCanvasBtn", "click", clearSignatureCanvas);
+        if ($("closeSignatureModalBtn")) safeOn("closeSignatureModalBtn", "click", () => { $("signatureModal").hidden = true; });
+        if ($("cancelSignatureModalBtn")) safeOn("cancelSignatureModalBtn", "click", () => { $("signatureModal").hidden = true; });
+        if ($("confirmSignatureBtn")) safeOn("confirmSignatureBtn", "click", confirmSignature);
 
-        if ($("closeLightboxBtn")) $("closeLightboxBtn").addEventListener("click", () => { $("imageLightboxModal").hidden = true; });
-        if ($("closeLightboxFooterBtn")) $("closeLightboxFooterBtn").addEventListener("click", () => { $("imageLightboxModal").hidden = true; });
+        if ($("closeLightboxBtn")) safeOn("closeLightboxBtn", "click", () => { $("imageLightboxModal").hidden = true; });
+        if ($("closeLightboxFooterBtn")) safeOn("closeLightboxFooterBtn", "click", () => { $("imageLightboxModal").hidden = true; });
 
-        $("lowStock").addEventListener("change", () => loadInventory(0));
-        $("filterBatchesBtn").addEventListener("click", () => loadBatches(0));
+        safeOn("lowStock", "change", () => loadInventory(0));
+        safeOn("filterBatchesBtn", "click", () => loadBatches(0));
         if ($("clearBatchesFilterBtn")) {
-            $("clearBatchesFilterBtn").addEventListener("click", () => {
-                $("expiryFrom").value = "";
+            safeOn("clearBatchesFilterBtn", "click", () => {
+                if ($("expiryFrom")) $("expiryFrom").value = "";
                 $("expiryTo").value = "";
                 loadBatches(0);
             });
         }
 
-        $("filterReceiptsBtn").addEventListener("click", () => loadReceiptHistory(0));
-        $("filterIssuesBtn").addEventListener("click", () => loadIssueHistory(0));
-        $("filterTransfersBtn").addEventListener("click", () => loadTransferHistory(0));
-        $("filterPaymentsBtn").addEventListener("click", () => loadPaymentHistory(0));
+        safeOn("filterReceiptsBtn", "click", () => loadReceiptHistory(0));
+        safeOn("filterIssuesBtn", "click", () => loadIssueHistory(0));
+        safeOn("filterTransfersBtn", "click", () => loadTransferHistory(0));
+        safeOn("filterPaymentsBtn", "click", () => loadPaymentHistory(0));
 
-        $("issueType").addEventListener("change", refreshIssueAndTransferRows);
-        $("matCategoryFilter").addEventListener("change", () => loadMaterialsTable(0));
-        $("matActiveFilter").addEventListener("change", () => loadMaterialsTable(0));
+        safeOn("issueType", "change", refreshIssueAndTransferRows);
+        safeOn("matCategoryFilter", "change", () => loadMaterialsTable(0));
+        safeOn("matActiveFilter", "change", () => loadMaterialsTable(0));
 
         // Pagination buttons
-        $("inventoryPrev").addEventListener("click", () => loadInventory(Math.max(0, state.inventoryPage - 1)));
-        $("inventoryNext").addEventListener("click", () => loadInventory(state.inventoryPage + 1));
-        $("batchesPrev").addEventListener("click", () => loadBatches(Math.max(0, state.batchesPage - 1)));
-        $("batchesNext").addEventListener("click", () => loadBatches(state.batchesPage + 1));
-        $("receiptHistoryPrev").addEventListener("click", () => loadReceiptHistory(Math.max(0, state.receiptsPage - 1)));
-        $("receiptHistoryNext").addEventListener("click", () => loadReceiptHistory(state.receiptsPage + 1));
-        $("issueHistoryPrev").addEventListener("click", () => loadIssueHistory(Math.max(0, state.issuesPage - 1)));
-        $("issueHistoryNext").addEventListener("click", () => loadIssueHistory(state.issuesPage + 1));
-        $("transferHistoryPrev").addEventListener("click", () => loadTransferHistory(Math.max(0, state.transfersPage - 1)));
-        $("transferHistoryNext").addEventListener("click", () => loadTransferHistory(state.transfersPage + 1));
-        $("materialsPrev").addEventListener("click", () => loadMaterialsTable(Math.max(0, state.materialsPage - 1)));
-        $("materialsNext").addEventListener("click", () => loadMaterialsTable(state.materialsPage + 1));
-        if ($("paymentHistoryPrev")) $("paymentHistoryPrev").addEventListener("click", () => loadPaymentHistory(Math.max(0, state.paymentsPage - 1)));
-        if ($("paymentHistoryNext")) $("paymentHistoryNext").addEventListener("click", () => loadPaymentHistory(state.paymentsPage + 1));
+        safeOn("inventoryPrev", "click", () => loadInventory(Math.max(0, state.inventoryPage - 1)));
+        safeOn("inventoryNext", "click", () => loadInventory(state.inventoryPage + 1));
+        safeOn("batchesPrev", "click", () => loadBatches(Math.max(0, state.batchesPage - 1)));
+        safeOn("batchesNext", "click", () => loadBatches(state.batchesPage + 1));
+        safeOn("receiptHistoryPrev", "click", () => loadReceiptHistory(Math.max(0, state.receiptsPage - 1)));
+        safeOn("receiptHistoryNext", "click", () => loadReceiptHistory(state.receiptsPage + 1));
+        safeOn("issueHistoryPrev", "click", () => loadIssueHistory(Math.max(0, state.issuesPage - 1)));
+        safeOn("issueHistoryNext", "click", () => loadIssueHistory(state.issuesPage + 1));
+        safeOn("transferHistoryPrev", "click", () => loadTransferHistory(Math.max(0, state.transfersPage - 1)));
+        safeOn("transferHistoryNext", "click", () => loadTransferHistory(state.transfersPage + 1));
+        safeOn("materialsPrev", "click", () => loadMaterialsTable(Math.max(0, state.materialsPage - 1)));
+        safeOn("materialsNext", "click", () => loadMaterialsTable(state.materialsPage + 1));
+        safeOn("paymentHistoryPrev", "click", () => loadPaymentHistory(Math.max(0, state.paymentsPage - 1)));
+        safeOn("paymentHistoryNext", "click", () => loadPaymentHistory(state.paymentsPage + 1));
 
         // Add row, Reset & Form submits
-        $("addReceiptItem").addEventListener("click", addReceiptRow);
-        $("addIssueItem").addEventListener("click", () => addIssueOrTransferRow("issueItems", false));
-        $("addTransferItem").addEventListener("click", () => addIssueOrTransferRow("transferItems", true));
+        safeOn("addReceiptItem", "click", addReceiptRow);
+        safeOn("addIssueItem", "click", () => addIssueOrTransferRow("issueItems", false));
+        safeOn("addTransferItem", "click", () => addIssueOrTransferRow("transferItems", true));
 
-        if ($("resetReceiptBtn")) $("resetReceiptBtn").addEventListener("click", resetReceiptForm);
-        if ($("resetIssueBtn")) $("resetIssueBtn").addEventListener("click", resetIssueForm);
-        if ($("resetTransferBtn")) $("resetTransferBtn").addEventListener("click", resetTransferForm);
+        safeOn("resetReceiptBtn", "click", resetReceiptForm);
+        safeOn("resetIssueBtn", "click", resetIssueForm);
+        safeOn("resetTransferBtn", "click", resetTransferForm);
 
-        $("receiptForm").addEventListener("submit", submitReceipt);
-        $("issueForm").addEventListener("submit", submitIssue);
-        $("transferForm").addEventListener("submit", submitTransfer);
-        $("materialForm").addEventListener("submit", submitMaterialForm);
-        $("paymentForm").addEventListener("submit", submitPaymentForm);
-        $("quickSupplierForm").addEventListener("submit", submitQuickSupplierForm);
+        safeOn("receiptForm", "submit", submitReceipt);
+        safeOn("issueForm", "submit", submitIssue);
+        safeOn("transferForm", "submit", submitTransfer);
+        safeOn("materialForm", "submit", submitMaterialForm);
+        safeOn("paymentForm", "submit", submitPaymentForm);
+        safeOn("quickSupplierForm", "submit", submitQuickSupplierForm);
 
         // Modals open/close
-        $("openAddMaterialBtn").addEventListener("click", () => openMaterialModal());
-        $("addMaterialFromCategoryBtn").addEventListener("click", () => openMaterialModal());
-        $("closeMaterialModalBtn").addEventListener("click", () => { $("materialModal").hidden = true; });
-        $("cancelMaterialModalBtn").addEventListener("click", () => { $("materialModal").hidden = true; });
+        safeOn("openAddMaterialBtn", "click", () => openMaterialModal());
+        safeOn("addMaterialFromCategoryBtn", "click", () => openMaterialModal());
+        safeOn("closeMaterialModalBtn", "click", () => { $("materialModal").hidden = true; });
+        safeOn("cancelMaterialModalBtn", "click", () => { $("materialModal").hidden = true; });
 
-        $("openPaymentModalBtn").addEventListener("click", () => openPaymentModal());
-        $("closePaymentModalBtn").addEventListener("click", () => { $("paymentModal").hidden = true; });
-        $("cancelPaymentModalBtn").addEventListener("click", () => { $("paymentModal").hidden = true; });
+        safeOn("openPaymentModalBtn", "click", () => openPaymentModal());
+        safeOn("closePaymentModalBtn", "click", () => { $("paymentModal").hidden = true; });
+        safeOn("cancelPaymentModalBtn", "click", () => { $("paymentModal").hidden = true; });
 
-        $("paySupplierId").addEventListener("change", (e) => loadUnpaidReceiptsForPaymentModal(e.target.value));
-        $("payReceiptId").addEventListener("change", (e) => {
+        safeOn("paySupplierId", "change", (e) => loadUnpaidReceiptsForPaymentModal(e.target.value));
+        safeOn("payReceiptId", "change", (e) => {
             const opt = e.target.options[e.target.selectedIndex];
             const receiptDebt = opt?.dataset?.debt ? Number(opt.dataset.debt) : null;
             updatePaymentDebtBanner($("paySupplierId").value, receiptDebt);
@@ -2517,11 +2526,11 @@
             }
         });
 
-        $("openQuickSupplierBtn").addEventListener("click", () => openQuickSupplierModal());
-        $("closeQuickSupplierBtn").addEventListener("click", () => { $("quickSupplierModal").hidden = true; });
-        $("cancelQuickSupplierBtn").addEventListener("click", () => { $("quickSupplierModal").hidden = true; });
+        safeOn("openQuickSupplierBtn", "click", () => openQuickSupplierModal());
+        safeOn("closeQuickSupplierBtn", "click", () => { $("quickSupplierModal").hidden = true; });
+        safeOn("cancelQuickSupplierBtn", "click", () => { $("quickSupplierModal").hidden = true; });
 
-        $("closeDetailModalBtn").addEventListener("click", () => { $("detailModal").hidden = true; });
+        safeOn("closeDetailModalBtn", "click", () => { $("detailModal").hidden = true; });
         $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
 
         ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal"].forEach(modalId => {
@@ -2675,7 +2684,7 @@
             }
         });
 
-        $("refreshBtn").addEventListener("click", async () => {
+        safeOn("refreshBtn", "click", async () => {
             await refreshBranchData();
             showMessage("Đã làm mới dữ liệu kho.", "success");
         });
