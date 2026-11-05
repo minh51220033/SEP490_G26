@@ -471,6 +471,9 @@
 
         /* 7. Thanh thao tác nhanh nổi sát mép phải nhìn thấy (Requirement B) */
         setupQuickActionBar() {
+            if (this.table.getAttribute('data-disable-floating-actions') === 'true' || this.table.classList.contains('no-floating-actions')) {
+                return;
+            }
             let floatingBar = this.wrapper.querySelector('.enhanced-floating-actions');
             if (!floatingBar) {
                 floatingBar = document.createElement('div');
@@ -655,6 +658,9 @@
 
         /* Đồng bộ hiển thị / ẩn thanh nổi linh hoạt theo trạng thái cuộn và vị trí */
         checkAndSyncFloatingActionBar(row) {
+            if (!this.floatingBar || this.table.getAttribute('data-disable-floating-actions') === 'true' || this.table.classList.contains('no-floating-actions')) {
+                return;
+            }
             if (!row) {
                 this.hideFloatingActionBar();
                 return;
