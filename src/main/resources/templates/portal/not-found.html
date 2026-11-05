@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${notFoundTitle != null ? notFoundTitle : 'Không tìm thấy nội dung'})}"></head>
+<body class="cp-body">
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="cp-section cp-section--soft">
+    <div class="container-xl">
+        <div class="empty-state-box bg-white rounded-4 border p-5 shadow-sm my-4">
+            <i class="bi bi-search-heart empty-icon text-primary" style="font-size:3.2rem;"></i>
+            <h1 class="h4 fw-bold text-dark mt-2 mb-2"
+                th:text="${notFoundTitle != null ? notFoundTitle : 'Không tìm thấy nội dung yêu cầu'}">
+                Không tìm thấy nội dung yêu cầu
+            </h1>
+            <p class="text-muted mb-4"
+               th:text="${notFoundMessage != null ? notFoundMessage : 'Nội dung bạn đang tìm kiếm không tồn tại hoặc hiện đã ngừng cung cấp công khai.'}">
+                Nội dung bạn đang tìm kiếm không tồn tại hoặc hiện đã ngừng cung cấp công khai.
+            </p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a th:if="${backUrl != null}" th:href="@{${backUrl}}" class="btn-brand">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    <span th:text="${backLabel != null ? backLabel : 'Quay lại'}">Quay lại</span>
+                </a>
+                <a th:href="@{/}" class="btn-outline-brand">
+                    <i class="bi bi-house-door" aria-hidden="true"></i> Về Trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+
+</body>
+</html>

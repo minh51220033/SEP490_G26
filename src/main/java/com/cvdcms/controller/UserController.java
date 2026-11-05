@@ -51,6 +51,45 @@ public class UserController {
     @Autowired
     private StaffProfileRepository staffProfileRepository;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.CustomerPortalService customerPortalService;
+
+    private String populateCustomerPortalHome(Model model) {
+        model.addAttribute("activeNav", "home");
+        if (customerPortalService != null) {
+            model.addAttribute("featuredServices", customerPortalService.getFeaturedServices(4));
+            model.addAttribute("servicePromotions", customerPortalService.getActiveServicePromotionsMap());
+            model.addAttribute("featuredDoctors", customerPortalService.getFeaturedDoctors(4));
+            model.addAttribute("latestNews", customerPortalService.getLatestPublishedNews(4));
+            model.addAttribute("branches", customerPortalService.getActiveBranches());
+        } else {
+            model.addAttribute("featuredServices", List.of());
+            model.addAttribute("servicePromotions", java.util.Map.of());
+            model.addAttribute("featuredDoctors", List.of());
+            model.addAttribute("latestNews", List.of());
+            model.addAttribute("branches", List.of());
+        }
+        return "portal/home";
+    }
+
+    private boolean hasStaffRole(List<String> roleNames) {
+        if (roleNames == null) {
+            return false;
+        }
+        for (String r : roleNames) {
+            if (r == null) continue;
+            String norm = r.trim().toUpperCase(Locale.ROOT);
+            if ("ADMIN".equals(norm) || "ROLE_ADMIN".equals(norm)
+                    || "BAC_SI".equals(norm) || "ROLE_BAC_SI".equals(norm)
+                    || "LE_TAN".equals(norm) || "ROLE_LE_TAN".equals(norm)
+                    || "QUAN_LY_KHO".equals(norm) || "ROLE_QUAN_LY_KHO".equals(norm)
+                    || "KE_TOAN".equals(norm) || "ROLE_KE_TOAN".equals(norm)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // =====================================================
     // BIỂU THỨC KIỂM TRA DỮ LIỆU ĐẦU VÀO
     // =====================================================
@@ -149,8 +188,37 @@ public class UserController {
     }
 
 
+
+    @GetMapping({"/", "/portal"})
+    public String customerPortalLanding(HttpSession session, Model model) {
+        Object loggedInUser = session != null ? session.getAttribute("loggedInUser") : null;
+        if (loggedInUser instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(null);
+            if (user != null && Boolean.TRUE.equals(user.getIsActive())) {
+                session.setAttribute("loggedInUser", user);
+                List<String> roleNames = user.getRoles() != null
+                        ? user.getRoles().stream().map(Role::getRoleName).toList()
+                        : List.of();
+                session.setAttribute("roleNames", roleNames);
+                model.addAttribute("roleNames", roleNames);
+                PatientProfile defaultProfile = patientProfileRepository
+                        .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
+                        .orElse(null);
+                if (defaultProfile != null) {
+                    model.addAttribute("defaultPatientProfile", defaultProfile);
+                    session.setAttribute("defaultPatientProfile", defaultProfile);
+                }
+            }
+        }
+        return populateCustomerPortalHome(model);
+    }
+
+
     @GetMapping("/home")
-    public String home(HttpSession session, Model model) {
+    public String home(@RequestParam(value = "view", required = false) String view, HttpSession session, Model model) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
+            return populateCustomerPortalHome(model);
+        }
 
         // 1. Kiểm tra người dùng đã đăng nhập chưa
         Object loggedInUser = session.getAttribute("loggedInUser");
@@ -256,6 +324,9 @@ public class UserController {
         session.setAttribute("displayName", displayName);
         session.setAttribute("currentBranchName", currentBranchName);
 
+        if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
+            return populateCustomerPortalHome(model);
+        }
         return "user/home";
     }
 
@@ -263,7 +334,7 @@ public class UserController {
     // LOGIN - GET
     // =====================================================
 
-    @GetMapping({"/", "/login"})
+    @GetMapping("/login")
     public String showLoginForm(
             HttpSession session,
             Model model) {
