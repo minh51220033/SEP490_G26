@@ -3,32 +3,31 @@ package com.cvdcms.controller;
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.Comment;
 import com.cvdcms.entity.NewsArticle;
+import com.cvdcms.entity.NewsArticleLike;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.CommentBanRepository;
 import com.cvdcms.repository.CommentLikeRepository;
 import com.cvdcms.repository.CommentRepository;
+import com.cvdcms.repository.NewsArticleLikeRepository;
 import com.cvdcms.repository.NewsArticleRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
 @RequestMapping("/news")
@@ -41,6 +40,7 @@ public class NewsController {
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
     private final PatientProfileRepository patientProfileRepository;
+    private final NewsArticleLikeRepository newsArticleLikeRepository;
 
     public NewsController(
             NewsArticleRepository newsRepository,
@@ -49,7 +49,8 @@ public class NewsController {
             CommentBanRepository commentBanRepository,
             BranchRepository branchRepository,
             UserRepository userRepository,
-            PatientProfileRepository patientProfileRepository
+            PatientProfileRepository patientProfileRepository,
+            NewsArticleLikeRepository newsArticleLikeRepository
     ) {
         this.newsRepository = newsRepository;
         this.commentRepository = commentRepository;
@@ -58,11 +59,12 @@ public class NewsController {
         this.branchRepository = branchRepository;
         this.userRepository = userRepository;
         this.patientProfileRepository = patientProfileRepository;
+        this.newsArticleLikeRepository = newsArticleLikeRepository;
     }
 
     // =====================================================
     // 1. TRANG DANH SÁCH TIN TỨC CÔNG KHAI (GET /news)
-    // Cho phép Guest, Bệnh nhân và Nhân viên xem công khai
+    // Cho phép khách vãng lai và tất cả người dùng (Admin/Bác sĩ/Nhân viên/Bệnh nhân)
     // =====================================================
     @GetMapping({"", "/"})
     public String publicNewsList(
@@ -78,39 +80,49 @@ public class NewsController {
             size = 6;
         }
 
-        String searchKeyword = keyword == null ? "" : keyword.trim();
+        // Tải danh sách tất cả cơ sở đang hoạt động để người dùng lọc
         List<Branch> activeBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
 
+        String searchKeyword = keyword == null ? "" : keyword.trim();
+        User sessionUser = (User) session.getAttribute("loggedInUser");
+        Long targetBranchId = branchId;
+
+        // Nếu người dùng không chỉ định branchId cụ thể và đang đăng nhập:
+        // Cố gắng lấy chi nhánh mặc định của bệnh nhân hoặc cơ sở của nhân viên
+        if (targetBranchId == null && sessionUser != null) {
+            User currentUser = userRepository.findById(sessionUser.getUserId()).orElse(null);
+            if (currentUser != null) {
+                PatientProfile profile = patientProfileRepository
+                        .findFirstByUser_UserIdAndIsDefaultTrue(currentUser.getUserId())
+                        .orElse(null);
+
+                if (profile != null && profile.getPreferredBranch() != null) {
+                    targetBranchId = profile.getPreferredBranch().getBranchId();
+                } else if (currentUser.getBranch() != null) {
+                    targetBranchId = currentUser.getBranch().getBranchId();
+                }
+            }
+        }
+
+        // Lấy thông tin cơ sở hiển thị
         String currentBranchName = "Tất cả cơ sở";
         String currentBranchAddress = "";
-        Long currentBranchId = branchId;
-
-        if (branchId != null) {
+        if (targetBranchId != null) {
             for (Branch b : activeBranches) {
-                if (branchId.equals(b.getBranchId())) {
+                if (b.getBranchId().equals(targetBranchId)) {
                     currentBranchName = b.getBranchName();
                     currentBranchAddress = b.getAddress() != null ? b.getAddress() : "";
                     break;
                 }
             }
-        } else if (session != null && session.getAttribute("loggedInUser") instanceof User sessionUser) {
-            User user = userRepository.findById(sessionUser.getUserId()).orElse(null);
-            if (user != null) {
-                PatientProfile profile = patientProfileRepository
-                        .findFirstByUser_UserIdAndIsDefaultTrue(user.getUserId())
-                        .orElse(null);
-                if (profile != null && profile.getPreferredBranch() != null) {
-                    Branch pref = profile.getPreferredBranch();
-                    currentBranchName = pref.getBranchName();
-                    currentBranchAddress = pref.getAddress() != null ? pref.getAddress() : "";
-                }
-            }
         }
 
         Pageable pageable = PageRequest.of(page, size);
+
+        // Truy vấn tin tức đã xuất bản
         Page<NewsArticle> newsPage = newsRepository.searchPublishedPublic(
                 searchKeyword,
-                branchId,
+                targetBranchId,
                 pageable
         );
 
@@ -119,16 +131,17 @@ public class NewsController {
         model.addAttribute("keyword", searchKeyword);
         model.addAttribute("size", size);
         model.addAttribute("branches", activeBranches);
-        model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("selectedBranchId", targetBranchId);
         model.addAttribute("currentBranchName", currentBranchName);
         model.addAttribute("currentBranchAddress", currentBranchAddress);
-        model.addAttribute("currentBranchId", currentBranchId);
+        model.addAttribute("currentBranchId", targetBranchId);
 
         return "news/list";
     }
 
     // =====================================================
     // 2. TRANG CHI TIẾT BÀI VIẾT (GET /news/{slug})
+    // Tối ưu Query và bảo toàn cây bình luận
     // =====================================================
     @GetMapping("/{slug}")
     public String newsDetail(
@@ -191,6 +204,13 @@ public class NewsController {
         model.addAttribute("isBanned", isBanned);
         model.addAttribute("banMessage", banMessage);
 
+        // Lấy trạng thái Like của bài viết (FT38 SCR-38.3)
+        long articleLikesCount = newsArticleLikeRepository.countByNews_NewsId(news.getNewsId());
+        boolean isArticleLiked = loggedInUser != null && newsArticleLikeRepository.existsByNews_NewsIdAndUser_UserId(news.getNewsId(), loggedInUser.getUserId());
+        model.addAttribute("articleLikesCount", articleLikesCount);
+        model.addAttribute("isArticleLiked", isArticleLiked);
+
+        // Tải bình luận gốc
         Pageable commentPageable = PageRequest.of(
                 Math.max(commentPage, 0),
                 10,
@@ -232,5 +252,56 @@ public class NewsController {
         model.addAttribute("likeCounts", likeCounts);
 
         return "news/detail";
+    }
+
+    // =====================================================
+    // 3. THÍCH / BỎ THÍCH BÀI VIẾT (POST /news/{id}/like)
+    // FT38 - SCR-38.3
+    // =====================================================
+    @PostMapping("/{id}/like")
+    @Transactional
+    public String toggleArticleLike(@PathVariable Long id, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        NewsArticle news = newsRepository.findById(id).orElse(null);
+        if (news == null || !"PUBLISHED".equalsIgnoreCase(news.getStatus())) {
+            return "redirect:/news";
+        }
+
+        // Kiểm tra xem tài khoản có đang bị ban tương tác hay không
+        boolean isBanned = commentBanRepository
+                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(user.getUserId())
+                .map(ban -> {
+                    if (ban.getExpiresAt() != null && !ban.getExpiresAt().isAfter(LocalDateTime.now())) {
+                        ban.setActive(false);
+                        commentBanRepository.save(ban);
+                        return false;
+                    }
+                    return true;
+                }).orElse(false);
+
+        if (isBanned) {
+            session.setAttribute("commentError", "Tài khoản của bạn đang bị hạn chế tương tác.");
+            return "redirect:/news/" + news.getSlug();
+        }
+
+        try {
+            var existingLike = newsArticleLikeRepository.findByNews_NewsIdAndUser_UserId(id, user.getUserId());
+            if (existingLike.isPresent()) {
+                newsArticleLikeRepository.delete(existingLike.get());
+            } else {
+                NewsArticleLike newLike = new NewsArticleLike();
+                newLike.setNews(news);
+                newLike.setUser(user);
+                newsArticleLikeRepository.save(newLike);
+            }
+        } catch (DataIntegrityViolationException ignored) {
+            // Tránh đụng độ race condition khi click nhanh
+        }
+
+        return "redirect:/news/" + news.getSlug();
     }
 }

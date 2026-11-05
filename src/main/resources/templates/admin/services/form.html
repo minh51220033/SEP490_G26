@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head('Thông tin dịch vụ & Giá')}"></head>
+<head th:replace="~{fragments/head :: head('Quản lý danh mục - Chỉnh sửa dịch vụ')}"></head>
 
 <body class="app-body">
 
@@ -9,14 +9,28 @@
 
 <div class="app-shell">
 
-    <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+    <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
 
-        <header th:replace="~{fragments/header :: appTopbar('Thông tin dịch vụ & Giá')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
         <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+            <!-- BREADCRUMB -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Danh mục dịch vụ</a></li>
+                    <li class="breadcrumb-item active" aria-current="page" th:text="${isEdit ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ'}">Chỉnh sửa dịch vụ</li>
+                </ol>
+            </nav>
+
+            <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+            <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
 
             <div class="d-flex flex-wrap justify-content-between
                         align-items-center gap-3 mb-4">
@@ -509,6 +523,13 @@
                                 <div class="form-text">
                                     Có thể để trống nếu chưa thiết lập thời hạn bảo hành.
                                 </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="estimatedDurationMinutes" class="form-label">Thời lượng lịch hẹn dự kiến (phút)</label>
+                                <input id="estimatedDurationMinutes" type="number" th:field="*{estimatedDurationMinutes}"
+                                       class="form-control" min="15" max="240" step="15" required>
+                                <div class="form-text">Dùng để kiểm tra giờ trống và tránh đặt trùng lịch bác sĩ.</div>
+                                <div class="invalid-feedback" th:errors="*{estimatedDurationMinutes}"></div>
                             </div>
 
                         </div>

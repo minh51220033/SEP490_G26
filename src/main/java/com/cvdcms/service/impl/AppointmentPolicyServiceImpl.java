@@ -65,6 +65,63 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     }
 
     @Override
+    public List<SessionLoadSummary> dayLoadOverview(Branch branch, LocalDate date,
+                                                    AppointmentActorType actorType) {
+        if (branch == null || date == null) return List.of();
+        List<PreferredSession> sessions = List.of(PreferredSession.MORNING,
+                PreferredSession.AFTERNOON, PreferredSession.EVENING);
+        Map<PreferredSession, String> names = Map.of(
+                PreferredSession.MORNING, "Buổi sáng",
+                PreferredSession.AFTERNOON, "Buổi chiều",
+                PreferredSession.EVENING, "Buổi tối"
+        );
+
+        record RawLoad(PreferredSession session, String name, int booked, int capacity, int remaining,
+                       String status, boolean active) {}
+        List<RawLoad> rawList = new ArrayList<>();
+
+        for (PreferredSession session : sessions) {
+            String name = names.getOrDefault(session, session.name());
+            String invalid = invalidSession(branch, date, session, actorType);
+            List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
+            if (invalid != null || doctors.isEmpty()) {
+                rawList.add(new RawLoad(session, name, 0, 0, 0, "OFF", false));
+                continue;
+            }
+            AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
+            int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
+            int booked = booked(branch.getBranchId(), date, session, null).size();
+            int remaining = Math.max(0, capacity - booked);
+            double ratio = capacity == 0 ? 1.0 : (double) booked / capacity;
+            String status = remaining == 0 ? "FULL" : ratio >= 0.75 ? "HIGH" : ratio <= 0.35 ? "LOW" : "BALANCED";
+            rawList.add(new RawLoad(session, name, booked, capacity, remaining, status, true));
+        }
+
+        Optional<RawLoad> lightSession = rawList.stream()
+                .filter(r -> r.active && "LOW".equals(r.status) && r.remaining >= 2)
+                .findFirst();
+
+        List<SessionLoadSummary> result = new ArrayList<>();
+        for (RawLoad r : rawList) {
+            String rec;
+            if (!r.active) {
+                rec = "Không có ca trực";
+            } else if ("FULL".equals(r.status)) {
+                rec = "Ca đã đủ định mức tiếp nhận (" + r.booked + "/" + r.capacity + " ca). Vui lòng chọn ca khác.";
+            } else if ("HIGH".equals(r.status) && lightSession.isPresent() && !lightSession.get().session.equals(r.session)) {
+                rec = "Ca " + r.name + " sắp đầy (" + r.booked + "/" + r.capacity + " ca). Khuyến nghị điều phối sang "
+                        + lightSession.get().name + " (còn " + lightSession.get().remaining + " chỗ) để tránh dồn lịch.";
+            } else if ("LOW".equals(r.status)) {
+                rec = "Ca " + r.name + " đang vắng (mới " + r.booked + "/" + r.capacity + " ca), rất thích hợp tiếp nhận thêm.";
+            } else {
+                rec = "Ca " + r.name + " đang tiếp nhận ổn định (" + r.booked + "/" + r.capacity + " ca).";
+            }
+            result.add(new SessionLoadSummary(r.session, r.name, r.booked, r.capacity, r.remaining, r.status, rec));
+        }
+        return result;
+    }
+
+    @Override
     public void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
             PreferredSession session, Long doctorId, Long excludeAppointmentId,
             AppointmentActorType actorType) {
@@ -78,8 +135,9 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         if (doctors.isEmpty()) throw conflict("Chưa có bác sĩ trực buổi này.");
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        if (booked.size() >= Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy))) {
-            throw conflict("Buổi khám đã đầy.");
+        int maxCapacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
+        if (booked.size() >= maxCapacity) {
+            throw conflict("Buổi khám đã đủ định mức tiếp nhận (" + booked.size() + "/" + maxCapacity + " ca).");
         }
         if (doctorId != null) {
             if (doctors.stream().noneMatch(d -> doctorId.equals(d.getStaffId()))) {
@@ -88,7 +146,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
                     && doctorId.equals(a.getDoctor().getStaffId())).count();
             if (doctorBooked >= doctorCapacity(policy)) {
-                throw conflict("Bác sĩ đã hết khả năng nhận lịch trong buổi.");
+                throw conflict("Bác sĩ đã hết khả năng nhận lịch trong buổi (" + doctorBooked + "/" + doctorCapacity(policy) + " ca).");
             }
         }
     }
@@ -133,7 +191,8 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             throw conflict("Lịch hẹn chưa có buổi khám cụ thể. Vui lòng liên hệ lễ tân.");
         }
         LocalDateTime deadline = LocalDateTime.of(appointment.getAppointmentDate(),
-                sessionRange(appointment.getBranch(), appointment.getPreferredSession()).end().minusHours(2));
+                (appointment.getExpectedTime() != null ? appointment.getExpectedTime()
+                        : sessionRange(appointment.getBranch(), appointment.getPreferredSession()).end()).minusHours(2));
         if (!LocalDateTime.now(CLINIC_ZONE).isBefore(deadline)) {
             throw conflict("Đã qua hạn tự đổi hoặc hủy. Vui lòng liên hệ lễ tân.");
         }

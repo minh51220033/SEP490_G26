@@ -5,6 +5,7 @@ import com.cvdcms.entity.enums.ServiceType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -59,6 +60,10 @@ public class ServiceUpdateDTO {
 
     @Min(value = 0, message = "Số tháng bảo hành không được âm.")
     private Integer warrantyMonths;
+
+    @Min(value = 15, message = "Thời lượng tối thiểu 15 phút.")
+    @Max(value = 240, message = "Thời lượng tối đa 240 phút.")
+    private Integer estimatedDurationMinutes;
 
     private String description;
 

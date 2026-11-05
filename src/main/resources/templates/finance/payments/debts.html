@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Quản lý Công nợ Bệnh nhân - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Thu ngân - Quản lý công nợ')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/cashier.css}">
+    <script th:src="@{/js/cashier-tabs.js}" defer></script>
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -10,25 +12,30 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý Công nợ Bệnh nhân')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
 
-        <main class="app-content finance-page">
+        <main class="app-content finance-page cashier-page">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Page Header -->
-            <div class="fin-header">
-                <div>
-                    <h1> Quản lý Công nợ Bệnh nhân</h1>
-                    <p>Theo dõi danh sách khách hàng chưa thanh toán đủ viện phí, xem dashboard tài chính (SCR-22.1) và nhắc thu nợ định kỳ.</p>
+            <!-- Thanh tabs ngang khu vực Thu ngân -->
+            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('debts')}"></div>
+
+            <!-- Vùng nội dung tab Công nợ -->
+            <div id="cashierTabContent" class="cashier-tab-content">
+                <!-- Page Sub Header -->
+                <div class="cashier-subhead">
+                    <div>
+                        <h2 class="cashier-subhead-title"><i class="bi bi-cash-stack text-primary"></i> Quản lý công nợ bệnh nhân</h2>
+                        <p class="cashier-subhead-desc">Theo dõi danh sách khách hàng chưa thanh toán đủ viện phí, xem dashboard tài chính và nhắc thu nợ</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/invoices}" class="fin-btn fin-btn-outline fin-btn-sm"><i class="bi bi-receipt"></i> Danh sách hóa đơn</a>
+                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline fin-btn-sm"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-receipt"></i> Danh sách hóa đơn</a>
-                    <a th:href="@{/payments}" class="fin-btn fin-btn-outline"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
-                </div>
-            </div>
 
             <!-- Filter Bar -->
             <div class="fin-card">
@@ -145,6 +152,7 @@
                     </nav>
                 </div>
             </div>
+            </div> <!-- end #cashierTabContent -->
         </main>
     </div>
 </div>

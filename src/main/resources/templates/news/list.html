@@ -3,62 +3,73 @@
 <head th:replace="~{fragments/head :: head('Tin tức & Kiến thức Nha khoa')}"></head>
 <body class="cp-body">
 
+<!-- CSS riêng của trang tin tức -->
+<link rel="stylesheet" th:href="@{/css/news.css}">
+
+<!-- Header công khai dùng chung (trang dành cho mọi role, không có sidebar) -->
 <header th:replace="~{fragments/header :: siteHeader}"></header>
 
-<!-- PAGE BANNER -->
-<section class="cp-page-banner">
-    <div class="container-xl">
-        <ol class="cp-page-banner__breadcrumb">
-            <li><a th:href="@{/}">Trang chủ</a></li>
-            <li><i class="bi bi-chevron-right small"></i></li>
-            <li>Tin tức &amp; Kiến thức Nha khoa</li>
-        </ol>
-        <div class="d-flex align-items-end justify-content-between flex-wrap gap-3">
-            <div>
-                <h1 class="cp-page-banner__title">Tin tức &amp; Kiến thức Nha khoa</h1>
-                <p class="cp-page-banner__desc">
-                    Cập nhật kiến thức chăm sóc răng miệng chuẩn y khoa, công nghệ điều trị mới và thông báo hoạt động
-                    tại các cơ sở thuộc Hệ thống Nha khoa Cường Việt.
-                </p>
-            </div>
-            <a th:if="${isAdmin}" th:href="@{/admin/news}" class="btn btn-light fw-semibold">
-                <i class="bi bi-gear-fill text-primary me-1"></i> Quản lý bài viết
-            </a>
-        </div>
-    </div>
+<section class="nw-hero">
+    <span class="eyebrow">Tin tức &amp; Kiến thức</span>
+    <h1>Tin tức nha khoa</h1>
+    <p>Cập nhật thông tin, kiến thức chăm sóc răng miệng và hoạt động mới nhất từ phòng khám.</p>
+    <nav class="nw-breadcrumb" aria-label="Breadcrumb">
+        <a th:href="@{/home}"><i class="bi bi-house-door"></i> Trang chủ</a>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span aria-current="page">Tin tức</span>
+    </nav>
 </section>
 
-<main class="cp-section cp-section--soft">
-    <div class="container-xl">
+<main class="nw-wrap nw-page">
 
-        <!-- THANH TÌM KIẾM & LỌC THEO CƠ SỞ -->
-        <div class="cp-filter-box">
-            <form method="get" th:action="@{/news}" class="row g-3 align-items-end">
-                <div class="col-12 col-md-6">
-                    <label for="newsKeywordInput" class="form-label small fw-bold text-secondary mb-1">
-                        <i class="bi bi-search me-1 text-primary"></i>Tìm kiếm bài viết
-                    </label>
-                    <input id="newsKeywordInput"
-                           type="text"
-                           name="keyword"
-                           class="form-control"
-                           placeholder="Nhập tiêu đề hoặc nội dung tóm tắt..."
-                           th:value="${keyword}">
-                </div>
+    <!-- Thông tin cơ sở hiện tại -->
+    <section class="nw-card nw-branch" th:if="${currentBranchName != null}">
+        <div class="nw-branch__icon" aria-hidden="true"><i class="bi bi-hospital"></i></div>
 
-                <div class="col-12 col-sm-6 col-md-4">
-                    <label for="newsBranchSelect" class="form-label small fw-bold text-secondary mb-1">
-                        <i class="bi bi-buildings me-1 text-primary"></i>Cơ sở đăng tin
-                    </label>
-                    <select id="newsBranchSelect" name="branchId" class="form-select">
-                        <option value="">Tất cả cơ sở</option>
-                        <option th:each="br : ${branches}"
-                                th:value="${br.branchId}"
-                                th:text="${br.branchName}"
-                                th:selected="${selectedBranchId != null and selectedBranchId == br.branchId}">
-                        </option>
-                    </select>
-                </div>
+        <div class="nw-branch__info">
+            <span class="eyebrow">Cơ sở đang xem</span>
+            <h2 class="nw-branch__name" th:text="${currentBranchName}">Cơ sở Cường Việt</h2>
+
+            <p class="nw-branch__meta"
+               th:if="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)}">
+                <i class="bi bi-geo-alt"></i>
+                <span th:text="${currentBranchAddress}">Địa chỉ cơ sở</span>
+            </p>
+
+            <p class="nw-branch__meta">
+                <i class="bi bi-info-circle"></i>
+                <span>Tin tức được hiển thị theo cơ sở của tài khoản bạn.</span>
+            </p>
+        </div>
+
+        <div class="nw-branch__status">
+            <span class="nw-dot"></span>
+            Cơ sở hiện tại
+        </div>
+    </section>
+
+    <!-- Thông báo lỗi nếu tài khoản chưa có cơ sở -->
+    <div class="nw-alert nw-alert--error" role="alert" th:if="${errorMessage != null}">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span th:text="${errorMessage}">Không xác định được cơ sở của tài khoản.</span>
+    </div>
+
+    <!-- Tìm kiếm và chọn số bài viết mỗi trang -->
+    <form th:action="@{/news}" method="get" class="nw-search" role="search">
+        <label class="nw-search__input">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search"
+                   name="keyword"
+                   th:value="${keyword}"
+                   placeholder="Tìm kiếm tin tức..."
+                   aria-label="Tìm kiếm tin tức">
+        </label>
+
+        <select class="nw-select" name="size" aria-label="Số bài viết mỗi trang" onchange="this.form.submit()">
+            <option value="6" th:selected="${size == 6}">6 bài/trang</option>
+            <option value="12" th:selected="${size == 12}">12 bài/trang</option>
+            <option value="18" th:selected="${size == 18}">18 bài/trang</option>
+        </select>
 
                 <div class="col-12 col-sm-6 col-md-2 d-flex gap-2">
                     <button type="submit" class="btn-brand flex-grow-1" style="height:38px;">

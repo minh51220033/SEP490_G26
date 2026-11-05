@@ -14,12 +14,14 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, Lo
 
     @Query("SELECT DISTINCT p FROM TreatmentPlan p " +
            "LEFT JOIN FETCH p.stages s " +
+           "LEFT JOIN FETCH p.doctor d " +
            "WHERE p.patientProfile.profileId = :profileId " +
            "ORDER BY p.createdAt DESC")
     List<TreatmentPlan> findByProfileIdWithDetails(@Param("profileId") Long profileId);
 
     @Query("SELECT DISTINCT p FROM TreatmentPlan p " +
            "LEFT JOIN FETCH p.stages s " +
+           "LEFT JOIN FETCH p.doctor d " +
            "WHERE p.planId = :planId")
     Optional<TreatmentPlan> findByIdWithDetails(@Param("planId") Long planId);
 }

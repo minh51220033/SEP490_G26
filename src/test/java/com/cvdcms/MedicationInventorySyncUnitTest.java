@@ -259,6 +259,7 @@ class MedicationInventorySyncUnitTest {
         dto.setBranchId(1L);
         dto.setSupplierId(10L);
         dto.setReceiptDate(LocalDate.now());
+        dto.setAttachmentUrl("/uploads/invoices/med_receipt.png");
         StockReceiptCreateDTO.Item item = new StockReceiptCreateDTO.Item();
         item.setMaterialId(200L);
         item.setBatchNumber("LO-T01");

@@ -1,0 +1,289 @@
+/* ==========================================================================
+   CV-DCMS EXPENSE & INCOME MODULE (CHI PHÍ & THU NHẬP - FT24, FT25, FT32)
+   Tất cả style được đóng gói trong phạm vi .expense-income-page và .expense-income-tabs-wrapper
+   ========================================================================== */
+
+/* 1. Header & Tiêu đề phân hệ */
+.expense-income-page .expense-income-tabs-wrapper {
+    margin-bottom: 1.25rem;
+}
+
+.expense-income-page .expense-income-header-bar {
+    margin-bottom: 0.85rem;
+}
+
+.expense-income-page .expense-income-main-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.expense-income-page .expense-income-main-desc {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 4px 0 0 0;
+}
+
+/* 2. Dãy nút chuyển tab ngang (DentalSoft Compact Pill Style - Ảnh 3) */
+.expense-income-page .expense-income-tabs-nav {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.expense-income-page .expense-income-tabs-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.expense-income-page .expense-income-tab-item {
+    display: inline-flex;
+}
+
+/* Nút thấp, khoảng cách đều, chuẩn ảnh 3 */
+.expense-income-page .expense-income-tab-btn {
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    color: #374151;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 5px 12px;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.expense-income-page .expense-income-tab-btn:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+    color: #111827;
+}
+
+/* Tab đang chọn có viền xanh và nền nhạt như ảnh */
+.expense-income-page .expense-income-tab-btn.active {
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.expense-income-page .expense-income-tab-btn i {
+    font-size: 14px;
+}
+
+/* 3. Vùng nội dung tab (Container chuyển động mượt mà) */
+.expense-income-page .expense-income-tab-content {
+    transition: opacity 0.15s ease;
+    min-height: 450px;
+}
+
+.expense-income-page .expense-income-tab-content.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* 4. Subhead hành động cho từng màn hình con */
+.expense-income-page .expense-income-subhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.expense-income-page .expense-income-subhead__title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+}
+
+.expense-income-page .expense-income-subhead__desc {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 2px 0 0 0;
+}
+
+/* 5. Bộ lọc & Bảng gọn gàng (Chuẩn Bố cục Ảnh 2) */
+.expense-income-page .fin-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.expense-income-page .fin-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.expense-income-page .fin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.expense-income-page .fin-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+}
+
+.expense-income-page .fin-select,
+.expense-income-page .fin-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #1e293b;
+    background-color: #ffffff;
+    height: 36px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.expense-income-page .fin-select:focus,
+.expense-income-page .fin-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Nút hành động thấp, đều nhau */
+.expense-income-page .fin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.expense-income-page .fin-btn-primary {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.expense-income-page .fin-btn-primary:hover {
+    background-color: #1d4ed8;
+    color: #ffffff;
+}
+
+.expense-income-page .fin-btn-outline {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.expense-income-page .fin-btn-outline:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+/* 6. Bảng dữ liệu gọn gàng (Table Style) */
+.expense-income-page .fin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.expense-income-page .fin-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.expense-income-page .fin-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.expense-income-page .fin-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Badge màu dịu cho trạng thái */
+.expense-income-page .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Phân trang */
+.expense-income-page .fin-pagination .pagination {
+    margin-bottom: 0;
+}
+
+.expense-income-page .fin-pagination .page-link {
+    font-size: 12px;
+    padding: 4px 10px;
+    color: #475569;
+}
+
+.expense-income-page .fin-pagination .page-item.active .page-link {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+/* Empty State */
+.expense-income-page .empty-state-box {
+    padding: 2.5rem 1rem;
+    text-align: center;
+}
+
+.expense-income-page .empty-icon {
+    font-size: 2.5rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.expense-income-page .empty-state-box h6 {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.25rem;
+}
+
+.expense-income-page .empty-state-box p {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+

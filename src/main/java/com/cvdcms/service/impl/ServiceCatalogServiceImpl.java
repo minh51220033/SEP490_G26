@@ -237,6 +237,7 @@ public class ServiceCatalogServiceImpl
         dto.setRequiresTooth(service.getRequiresTooth());
         dto.setIsBookableOnline(service.getIsBookableOnline());
         dto.setWarrantyMonths(service.getWarrantyMonths());
+        dto.setEstimatedDurationMinutes(service.getEstimatedDurationMinutes());
         dto.setDescription(sanitizeDescription(service.getDescription()));
         dto.setImageUrl(service.getImageUrl());
         dto.setStatus(service.getStatus());
@@ -295,6 +296,7 @@ public class ServiceCatalogServiceImpl
 
         service.setIsBookableOnline(dto.getIsBookableOnline());
         service.setWarrantyMonths(dto.getWarrantyMonths());
+        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), 30));
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(validatedImageUrl);
         service.setStatus(dto.getStatus());
@@ -369,6 +371,7 @@ public class ServiceCatalogServiceImpl
         String newImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
 
         service.setWarrantyMonths(dto.getWarrantyMonths());
+        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), service.getEstimatedDurationMinutes()));
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(newImageUrl);
         service.setStatus(dto.getStatus());
@@ -611,6 +614,14 @@ public class ServiceCatalogServiceImpl
         }
     }
 
+    private int validDuration(Integer requested, Integer fallback) {
+        int value = requested == null ? (fallback == null ? 30 : fallback) : requested;
+        if (value < 15 || value > 240 || value % 15 != 0) {
+            throw new IllegalArgumentException("Thời lượng dự kiến phải từ 15 đến 240 phút, theo bước 15 phút.");
+        }
+        return value;
+    }
+
     private void validateCategoryType(
             ServiceCategory category,
             ServiceType serviceType
@@ -819,4 +830,16 @@ public class ServiceCatalogServiceImpl
     }
 
 
+
+    @Override
+    public List<ServiceCategory> searchCategories(String keyword, Boolean isActive) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return categoryRepository.searchAdminCategories(cleanKeyword, isActive);
+    }
+
+    @Override
+    public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status);
+    }
 }

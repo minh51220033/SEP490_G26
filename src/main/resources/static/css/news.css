@@ -500,3 +500,9 @@
     .nw-filters { grid-template-columns: 1fr 1fr; }
     .nw-admin-head h1 { font-size: 24px; }
 }
+
+.nw-action--liked {
+    color: #e11d48 !important;
+    background: #fff1f2 !important;
+    font-weight: 600;
+}

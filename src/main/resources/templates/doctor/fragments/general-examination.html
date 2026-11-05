@@ -343,7 +343,7 @@
     /**
      * Lưu thông tin khám tổng quát vào database
      */
-    async function saveGeneralExamination() {
+    async function saveGeneralExamination(silent = false) {
         const visitId = (typeof getCurrentVisitId === 'function')
             ? getCurrentVisitId()
             : (document.getElementById('visitId')?.value || 1);
@@ -402,7 +402,7 @@
                 const notice = document.getElementById('generalExamSavedNotice');
                 if (notice) notice.textContent = `✓ Đã lưu lúc ${nowStr}`;
 
-                if (typeof showToast === 'function') {
+                if (!silent && typeof showToast === 'function') {
                     showToast('✓ Đã lưu thông tin khám tổng quát thành công!');
                 }
             } else {
@@ -410,7 +410,10 @@
             }
         } catch (err) {
             console.error('Lỗi lưu khám tổng quát:', err);
-            if (typeof showToast === 'function') {
+            if (silent) {
+                const notice = document.getElementById('generalExamSavedNotice');
+                if (notice) notice.textContent = 'Chưa lưu được bản nháp, vui lòng bấm Lưu lại';
+            } else if (typeof showToast === 'function') {
                 showToast(err.message, true);
             } else {
                 alert('Lỗi: ' + err.message);
@@ -426,6 +429,22 @@
     // Khởi tạo trạng thái ban đầu khi tải trang
     document.addEventListener('DOMContentLoaded', function() {
         handleAllergyCheckChange();
+        const fields = ['examSymptomsInput','allergyCheck','allergyDetailsInput','cardioCheck',
+            'diabetesCheck','bleedingCheck','pregnantCheck','underlyingDetailsInput',
+            'tmjSelect','hygieneSelect','gingivaSelect'];
+        let timer;
+        fields.forEach(id => {
+            const field = document.getElementById(id);
+            if (!field) return;
+            const schedule = () => {
+                clearTimeout(timer);
+                const notice = document.getElementById('generalExamSavedNotice');
+                if (notice) notice.textContent = 'Đang chờ tự lưu…';
+                timer = setTimeout(() => saveGeneralExamination(true), 3000);
+            };
+            field.addEventListener('input', schedule);
+            field.addEventListener('change', schedule);
+        });
     });
 </script>
 

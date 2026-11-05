@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head('Danh mục dịch vụ & Bảng giá')}"></head>
+<head th:replace="~{fragments/head :: head('Quản lý danh mục - Danh mục dịch vụ')}"></head>
 
 <body class="app-body service-catalog-page">
 
 <div class="app-shell">
 
-  <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+  <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
   <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
   <div class="app-main">
 
-    <header th:replace="~{fragments/header :: appTopbar('Danh mục dịch vụ & Bảng giá')}"></header>
+    <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
+      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+      <!-- BREADCRUMB -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Danh mục dịch vụ</li>
+        </ol>
+      </nav>
+
+      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
 
       <!-- THÔNG BÁO -->
       <div class="alert alert-success"
@@ -30,23 +43,7 @@
       </div>
 
       <!-- DANH SÁCH DỊCH VỤ -->
-      <section class="panel mb-4">
-
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Danh sách dịch vụ</h3>
-            <p class="panel__subtitle">
-              Quản lý dịch vụ nha khoa, xét nghiệm và X-Ray.
-            </p>
-          </div>
-
-          <a th:href="@{/admin/services/create}"
-             class="btn btn-primary">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm dịch vụ
-          </a>
-        </div>
-
+      <section class="panel catalog-filter-panel p-0 mb-3">
         <!-- LỌC THEO NHÓM -->
         <form th:action="@{/admin/services}"
               method="get"
@@ -54,29 +51,55 @@
 
           <div class="row g-2 align-items-end">
 
-            <div class="col-md-6 col-lg-4">
-              <label for="categoryFilter" class="form-label">
+            <!-- 1. Ô tìm kiếm theo mã dịch vụ hoặc tên dịch vụ -->
+            <div class="col-12 col-md-4 col-lg-3">
+              <label for="serviceKeyword" class="form-label small text-muted mb-1">
+                Tìm kiếm dịch vụ
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input id="serviceKeyword"
+                       type="text"
+                       name="q"
+                       class="form-control"
+                       placeholder="Mã hoặc tên dịch vụ..."
+                       th:value="${keyword}">
+              </div>
+            </div>
+
+            <!-- 2. Bộ lọc theo nhóm dịch vụ -->
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+              <label for="categoryFilter" class="form-label small text-muted mb-1">
                 Nhóm dịch vụ
               </label>
-
               <select id="categoryFilter"
                       name="categoryId"
                       class="form-select">
-
                 <option value="">Tất cả nhóm</option>
-
                 <option th:each="category : ${categories}"
                         th:value="${category.categoryId}"
                         th:selected="${selectedCategoryId == category.categoryId}"
-                        th:text="${category.categoryName
-                                            + (category.isActive == true
-                                                ? ''
-                                                : ' — Ngừng sử dụng')}">
+                        th:text="${category.categoryName + (category.isActive == true ? '' : ' — Ngừng dùng')}">
                 </option>
               </select>
             </div>
 
-            <div class="col-md-auto">
+            <!-- 3. Bộ lọc theo trạng thái -->
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+              <label for="statusFilter" class="form-label small text-muted mb-1">
+                Trạng thái
+              </label>
+              <select id="statusFilter"
+                      name="status"
+                      class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option value="ACTIVE" th:selected="${selectedStatus != null and selectedStatus.name() == 'ACTIVE'}">Đang sử dụng</option>
+                <option value="INACTIVE" th:selected="${selectedStatus != null and selectedStatus.name() == 'INACTIVE'}">Ngừng sử dụng</option>
+              </select>
+            </div>
+
+            <!-- 4. Nút Lọc và Bỏ lọc -->
+            <div class="col-auto d-flex gap-2">
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-funnel" aria-hidden="true"></i>
                 Lọc
@@ -87,9 +110,23 @@
                 Bỏ lọc
               </a>
             </div>
+
+            <!-- 5. Nút Thêm dịch vụ (đặt phía bên phải) -->
+            <div class="col-12 col-md-auto ms-md-auto text-end">
+              <button type="button"
+                      class="btn btn-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#createServiceModal">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Thêm dịch vụ
+              </button>
+            </div>
+
           </div>
         </form>
+      </section>
 
+      <section class="panel p-0 mt-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
 
@@ -101,7 +138,7 @@
               <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
               <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
               <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">Thao tác</th>
             </tr>
             </thead>
 
@@ -179,47 +216,54 @@
                                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-end">
+              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
 
-                  <a th:href="@{/admin/services/{id}/edit(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
+                  <!-- Sửa: icon bút chì, viền xanh -->
+                  <a th:href="@{/admin/services/{id}/edit(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-primary"
+                     title="Sửa"
+                     aria-label="Sửa">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
 
-                  <a th:href="@{/admin/services/{id}/config(
-                                            id=${service.serviceId})}"
-                     class="btn btn-sm btn-outline-secondary">
-                    Cấu hình
+                  <!-- Cấu hình: icon bánh răng, viền xám -->
+                  <a th:href="@{/admin/services/{id}/config(id=${service.serviceId})}"
+                     class="btn btn-sm btn-outline-secondary"
+                     title="Cấu hình"
+                     aria-label="Cấu hình">
+                    <i class="bi bi-gear" aria-hidden="true"></i>
                   </a>
 
-                  <form th:action="@{/admin/services/{id}/toggle(
-                                                id=${service.serviceId})}"
+                  <!-- Ngừng / Kích hoạt: icon tạm dừng (viền vàng) / icon phát (viền xanh lá) -->
+                  <form th:action="@{/admin/services/{id}/toggle(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái dịch vụ này?');">
-
                     <button type="submit"
                             class="btn btn-sm"
-                            th:classappend="${service.status.name() == 'ACTIVE'}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${service.status.name() == 'ACTIVE'}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
+                            th:classappend="${service.status.name() == 'ACTIVE'} ? 'btn-outline-warning' : 'btn-outline-success'"
+                            th:title="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'"
+                            th:aria-label="${service.status.name() == 'ACTIVE'} ? 'Ngừng sử dụng' : 'Kích hoạt'">
+                      <i class="bi"
+                         th:classappend="${service.status.name() == 'ACTIVE'} ? 'bi-pause-circle' : 'bi-play-circle'"
+                         aria-hidden="true"></i>
                     </button>
                   </form>
 
+                  <!-- Xóa: icon thùng rác, viền đỏ -->
                   <form th:action="@{/admin/services/{id}/delete(id=${service.serviceId})}"
                         method="post"
-                        class="m-0"
+                        class="d-inline m-0"
                         data-delete-catalog-form
                         data-delete-kind="dịch vụ"
                         th:attr="data-delete-name=${service.serviceName}">
                     <input type="hidden" name="deleteToken" th:value="${deleteToken}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                      Xóa
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Xóa"
+                            aria-label="Xóa">
+                      <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                   </form>
 
@@ -229,151 +273,65 @@
 
             <tr th:if="${#lists.isEmpty(services)}">
               <td colspan="7" class="text-center py-4">
-                <div class="empty-state-box">
-                  <i class="bi bi-tools empty-icon"></i>
-                  <h6>Ch&#432;a c&#243; d&#7883;ch v&#7903; n&#224;o</h6>
-                  <p>Hi&#7879;n ch&#432;a c&#243; d&#7883;ch v&#7903; n&#224;o trong danh s&#225;ch. B&#7855;t &#273;&#7847;u b&#7857;ng c&#225;ch th&#234;m d&#7883;ch v&#7903; m&#7899;i.</p>
-                  <a th:href="@{/admin/services/create}" class="btn btn-sm btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm dịch vụ mới
-                  </a>
+                <div class="empty-state-box"
+                     th:with="hasFilter=${(keyword != null and keyword != '')
+                       or selectedCategoryId != null
+                       or selectedStatus != null}">
+
+                  <i th:if="${hasFilter}"
+                     class="bi bi-search empty-icon"></i>
+                  <i th:unless="${hasFilter}"
+                     class="bi bi-tools empty-icon"></i>
+
+                  <h6 th:if="${hasFilter}">
+                    Không tìm thấy dịch vụ phù hợp
+                  </h6>
+                  <h6 th:unless="${hasFilter}">
+                    Chưa có dịch vụ nào
+                  </h6>
+
+                  <p th:if="${hasFilter}">
+                    Không có dịch vụ nào khớp với tiêu chí tìm kiếm
+                    hoặc bộ lọc được chọn.
+                  </p>
+                  <p th:unless="${hasFilter}">
+                    Hiện chưa có dịch vụ nào trong danh sách.
+                    Bắt đầu bằng cách thêm dịch vụ mới.
+                  </p>
+
+                  <div class="d-flex justify-content-center gap-2 mt-2">
+                    <a th:if="${hasFilter}"
+                       th:href="@{/admin/services}"
+                       class="btn btn-sm btn-outline-secondary">
+                      <i class="bi bi-arrow-counterclockwise me-1"></i>
+                      Xóa bộ lọc
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-sm btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#createServiceModal">
+                      <i class="bi bi-plus-lg me-1"></i>
+                      Thêm dịch vụ mới
+                    </button>
+                  </div>
+
                 </div>
               </td>
             </tr>
-
             </tbody>
           </table>
         </div>
-      </section>
 
-      <!-- NHÓM DANH MỤC DỊCH VỤ -->
-      <section class="panel" id="service-categories">
-
-        <div class="panel__head flex-wrap gap-3">
-          <div>
-            <h3 class="panel__title">Nhóm danh mục dịch vụ</h3>
-            <p class="panel__subtitle">
-              Các nhóm đang sử dụng và đã ngừng sử dụng.
-            </p>
-          </div>
-
-          <button type="button"
-             class="btn btn-primary"
-             data-bs-toggle="modal"
-             data-bs-target="#createCategoryModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            Thêm nhóm
-          </button>
+        <div class="p-3 border-top text-muted small">
+          <span>
+            Tổng số dịch vụ:
+            <strong th:text="${#lists.size(services)}">0</strong>
+          </span>
         </div>
 
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-categories">
-
-            <thead class="table-light">
-            <tr>
-              <th scope="col" data-column-key="cat_code" data-column-required="true" data-column-pinned="true">Mã nhóm</th>
-              <th scope="col" data-column-key="cat_name" data-column-pinned="true">Tên nhóm</th>
-              <th scope="col" data-column-key="cat_type">Loại</th>
-              <th scope="col" data-column-key="display_order">Thứ tự</th>
-              <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true">Thao tác</th>
-            </tr>
-            </thead>
-
-            <tbody>
-
-            <tr th:each="category : ${categories}">
-              <td data-column-key="cat_code" class="fw-semibold"
-                  th:text="${category.categoryCode}">
-              </td>
-
-              <td data-column-key="cat_name" th:text="${category.categoryName}"></td>
-
-              <td data-column-key="cat_type" th:switch="${category.categoryType.name()}">
-                <span th:case="'PROCEDURE'">Thủ thuật nha khoa</span>
-                <span th:case="'LAB'">Xét nghiệm</span>
-                <span th:case="'XRAY'">X-Ray</span>
-                <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
-                <span th:case="*" th:text="${category.categoryType}"></span>
-              </td>
-
-              <td data-column-key="display_order" th:text="${category.displayOrder}"></td>
-
-              <td data-column-key="status">
-                                <span th:if="${category.isActive == true}"
-                                      class="badge bg-success">
-                                    Đang sử dụng
-                                </span>
-
-                <span th:unless="${category.isActive == true}"
-                      class="badge bg-secondary">
-                                    Ngừng sử dụng
-                                </span>
-              </td>
-
-              <td data-column-key="actions" data-column-action="true" class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
-
-                  <a th:href="@{/admin/services/categories/{id}/edit(
-                                            id=${category.categoryId})}"
-                     class="btn btn-sm btn-outline-primary">
-                    Sửa
-                  </a>
-
-                  <form th:action="@{/admin/services/categories/{id}/toggle(
-                                                id=${category.categoryId})}"
-                        method="post"
-                        class="m-0"
-                        onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái nhóm dịch vụ này?');">
-
-                    <button type="submit"
-                            class="btn btn-sm"
-                            th:classappend="${category.isActive == true}
-                                                    ? 'btn-outline-danger'
-                                                    : 'btn-outline-success'"
-                            th:text="${category.isActive == true}
-                                                    ? 'Ngừng'
-                                                    : 'Kích hoạt'">
-                    </button>
-                  </form>
-
-                  <form th:action="@{/admin/services/categories/{id}/delete(id=${category.categoryId})}"
-                        method="post"
-                        class="m-0"
-                        data-delete-catalog-form
-                        data-delete-kind="nhóm dịch vụ"
-                        th:attr="data-delete-name=${category.categoryName}">
-                    <input type="hidden" name="deleteToken" th:value="${deleteToken}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                      Xóa
-                    </button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-
-            <tr th:if="${#lists.isEmpty(categories)}">
-              <td colspan="6" class="text-center py-4">
-                <div class="empty-state-box">
-                  <i class="bi bi-folder2-open empty-icon"></i>
-                  <h6>Ch&#432;a c&#243; nh&#243;m d&#7883;ch v&#7903; n&#224;o</h6>
-                  <p>T&#7841;o nh&#243;m danh m&#7903;c &#273;&#7875; ph&#226;n lo&#7841;i c&#225;c d&#7883;ch v&#7903; k&#7929; thu&#7853;t v&#224; th&#7911; thu&#7853;t &#273;i&#7873;u tr&#7883;.</p>
-                  <button type="button" class="btn btn-sm btn-primary"
-                          data-bs-toggle="modal" data-bs-target="#createCategoryModal">
-                    <i class="bi bi-plus-lg me-1"></i>Th&#234;m nh&#243;m d&#7883;ch v&#7903;
-                  </button>
-                </div>
-              </td>
-            </tr>
-
-            </tbody>
-          </table>
-        </div>
       </section>
-
     </main>
-
-
-
   </div>
 </div>
 
@@ -512,6 +470,12 @@
               <input id="modalServiceWarranty" type="number" name="warrantyMonths" class="form-control"
                      th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (th&#225;ng)">
             </div>
+            <div class="col-md-6">
+              <label for="modalServiceDuration" class="form-label fw-semibold text-dark small">Thời lượng lịch hẹn (phút)</label>
+              <input id="modalServiceDuration" type="number" name="estimatedDurationMinutes" class="form-control"
+                     th:value="${serviceForm?.estimatedDurationMinutes != null ? serviceForm.estimatedDurationMinutes : 30}"
+                     min="15" max="240" step="15" required>
+            </div>
 
             <!-- Checkbox dieu kien su dung -->
             <div class="col-12">
@@ -559,88 +523,7 @@
   </div>
 </div>
 
-<!-- Modal Them Nhom Dich Vu Moi -->
-<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
-      <form th:action="@{/admin/services/categories}" method="post" id="createCategoryForm">
-        <div class="modal-header border-bottom py-3 px-4">
-          <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createCategoryModalLabel">
-            <i class="bi bi-folder-plus text-primary me-2 fs-5"></i>
-            <span>Th&#234;m nh&#243;m d&#7883;ch v&#7903; m&#7899;i</span>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div class="row g-3">
-            <!-- Ma nhom -->
-            <div class="col-md-5">
-              <label for="modalCategoryCode" class="form-label fw-semibold text-dark small">
-                M&#227; nh&#243;m <span class="text-danger">*</span>
-              </label>
-              <input id="modalCategoryCode" type="text" name="categoryCode" class="form-control"
-                     th:value="${categoryForm?.categoryCode}"
-                     minlength="2" maxlength="30" pattern="[A-Za-z0-9_\-]{2,30}"
-                     title="Nh&#7853;p 2&#8211;30 k&#253; t&#7921;: ch&#7919; kh&#244;ng d&#7845;u, s&#7889;, d&#7845;u - ho&#7863;c _."
-                     placeholder="VD: NHA_CHU" required>
-            </div>
 
-            <!-- Ten nhom -->
-            <div class="col-md-7">
-              <label for="modalCategoryName" class="form-label fw-semibold text-dark small">
-                T&#234;n nh&#243;m <span class="text-danger">*</span>
-              </label>
-              <input id="modalCategoryName" type="text" name="categoryName" class="form-control"
-                     th:value="${categoryForm?.categoryName}"
-                     maxlength="150" placeholder="VD: Nha chu &amp; &#272;i&#7873;u tr&#7883; n&#432;&#7899;u" required>
-            </div>
-
-            <!-- Loai nhom -->
-            <div class="col-md-12">
-              <label for="modalCategoryType" class="form-label fw-semibold text-dark small">
-                Lo&#7841;i nh&#243;m <span class="text-danger">*</span>
-              </label>
-              <select id="modalCategoryType" name="categoryType" class="form-select" required>
-                <option value="">-- Ch&#7885;n lo&#7841;i nh&#243;m --</option>
-                <option value="PROCEDURE" th:selected="${categoryForm?.categoryType?.name() == 'PROCEDURE'}">Th&#7911; thu&#7853;t nha khoa</option>
-                <option value="LAB" th:selected="${categoryForm?.categoryType?.name() == 'LAB'}">X&#233;t nghi&#7879;m</option>
-                <option value="XRAY" th:selected="${categoryForm?.categoryType?.name() == 'XRAY'}">X-Ray</option>
-                <option value="CONSULTATION" th:selected="${categoryForm?.categoryType?.name() == 'CONSULTATION'}">Kh&#225;m / T&#432; v&#7845;n</option>
-              </select>
-            </div>
-
-            <!-- Thu tu hien thi -->
-            <div class="col-md-6">
-              <label for="modalDisplayOrder" class="form-label fw-semibold text-dark small">
-                Th&#7913; t&#7921; hi&#7875;n th&#7883; <span class="text-danger">*</span>
-              </label>
-              <input id="modalDisplayOrder" type="number" name="displayOrder" class="form-control"
-                     th:value="${categoryForm?.displayOrder != null ? categoryForm.displayOrder : 0}"
-                     min="0" step="1" required>
-            </div>
-
-            <!-- Trang thai -->
-            <div class="col-md-6">
-              <label for="modalIsActive" class="form-label fw-semibold text-dark small">
-                Tr&#7841;ng th&#225;i <span class="text-danger">*</span>
-              </label>
-              <select id="modalIsActive" name="isActive" class="form-select" required>
-                <option value="true" th:selected="${categoryForm?.isActive != false}">&#272;ang s&#7911; d&#7909;ng</option>
-                <option value="false" th:selected="${categoryForm?.isActive == false}">Ng&#7915;ng s&#7911; d&#7909;ng</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer border-top py-2 px-4 bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&#272;&#243;ng</button>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i>Th&#234;m nh&#243;m
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">

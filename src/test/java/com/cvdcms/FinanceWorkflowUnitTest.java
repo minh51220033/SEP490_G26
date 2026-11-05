@@ -2269,4 +2269,47 @@ public class FinanceWorkflowUnitTest {
         assertEquals("finance/payments/receipt", view2);
         assertEquals(Boolean.TRUE, model2.get("hasAllocations"));
     }
+
+    @Test
+    @DisplayName("FT16->Invoice: getUnbilledPerformedServices chi nap dich vu COMPLETED, buoc KHDT COMPLETED va chua lap hoa don")
+    void testGetUnbilledPerformedServices_FiltersCorrectly() {
+        Long visitId = 15L;
+
+        // Dich vu 1: COMPLETED, gan buoc KHDT COMPLETED -> HOP LE
+        PerformedService ps1 = new PerformedService();
+        ps1.setPerformedId(23L);
+        ps1.setStatus(PerformedServiceStatus.COMPLETED);
+        TreatmentPlanItem item1 = new TreatmentPlanItem();
+        item1.setStatus(TreatmentPlanItemStatus.COMPLETED);
+        ps1.setPlanItem(item1);
+
+        // Dich vu 2: CANCELLED -> KHONG HOP LE
+        PerformedService ps2 = new PerformedService();
+        ps2.setPerformedId(24L);
+        ps2.setStatus(PerformedServiceStatus.CANCELLED);
+
+        // Dich vu 3: COMPLETED nhung buoc KHDT la PLANNED -> KHONG HOP LE
+        PerformedService ps3 = new PerformedService();
+        ps3.setPerformedId(25L);
+        ps3.setStatus(PerformedServiceStatus.COMPLETED);
+        TreatmentPlanItem item3 = new TreatmentPlanItem();
+        item3.setStatus(TreatmentPlanItemStatus.PLANNED);
+        ps3.setPlanItem(item3);
+
+        // Dich vu 4: COMPLETED nhung da co trong hoa don (billed) -> KHONG HOP LE
+        PerformedService ps4 = new PerformedService();
+        ps4.setPerformedId(26L);
+        ps4.setStatus(PerformedServiceStatus.COMPLETED);
+
+        when(performedServiceRepository.findByVisitIdWithDetails(visitId))
+                .thenReturn(List.of(ps1, ps2, ps3, ps4));
+        when(invoiceItemRepository.findBilledPerformedServiceIdsByVisitId(visitId))
+                .thenReturn(List.of(26L));
+
+        List<PerformedService> result = invoiceService.getUnbilledPerformedServices(visitId);
+
+        assertNotNull(result);
+        assertEquals(1, result.size(), "Chi dung 1 dich vu du dieu kien lap hoa don");
+        assertEquals(23L, result.get(0).getPerformedId());
+    }
 }

@@ -69,6 +69,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByProfileIdWithDetails(@Param("profileId") Long profileId);
     Optional<Appointment> findByAppointmentCode(String appointmentCode);
 
+    @Query("""
+        SELECT a.source, COUNT(a)
+        FROM Appointment a
+        WHERE (:branchIds IS NULL OR a.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR a.appointmentDate >= :startDate)
+          AND (:endDate IS NULL OR a.appointmentDate <= :endDate)
+        GROUP BY a.source
+    """)
+    List<Object[]> countAppointmentsBySourceAndBranches(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
     @Query("SELECT a FROM Appointment a " +
            "LEFT JOIN FETCH a.patientProfile p " +
            "LEFT JOIN FETCH a.doctor d " +
@@ -89,5 +103,25 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("doctorId") Long doctorId,
             @Param("status") AppointmentStatus status,
             @Param("keyword") String keyword
+    );
+
+    // FT42: Tìm các lịch hẹn của bác sĩ trong khoảng ngày nghỉ có trạng thái hoạt động (PENDING, CONFIRMED)
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patientProfile p
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH a.doctor d
+        LEFT JOIN FETCH a.service srv
+        WHERE d.staffId = :doctorId
+          AND a.appointmentDate BETWEEN :startDate AND :endDate
+          AND a.status IN :statuses
+        ORDER BY a.appointmentDate ASC, a.expectedTime ASC
+    """)
+    List<Appointment> findAffectedAppointments(
+            @Param("doctorId") Long doctorId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("statuses") List<AppointmentStatus> statuses
     );
 }
