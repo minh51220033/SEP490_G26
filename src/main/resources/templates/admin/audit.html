@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head th:replace="~{fragments/head :: head('Nhật ký thao tác hệ thống (Audit Log) - CV-DCMS')}"></head>
@@ -20,12 +20,14 @@
                 <link rel="stylesheet" th:href="@{/css/account.css}">
 
                 <style>
-                    /* Ẩn widget chat để không đè vào phân trang MISA */
-                    .cvdcms-chat-widget,
-                    #cvdcmsChatWidgetFab,
-                    .cvdcms-chat-fab,
-                    .cvdcms-chat-drawer {
-                        display: none !important;
+                    /* Tối ưu vị trí widget chat để không che thanh phân trang */
+                    .cvdcms-chat-widget {
+                        bottom: 74px;
+                        right: 24px;
+                    }
+                    .cvdcms-chat-popup {
+                        bottom: 144px;
+                        right: 24px;
                     }
 
                     /* Hàng trong bảng có con trỏ pointer để bấm xem đối chiếu */

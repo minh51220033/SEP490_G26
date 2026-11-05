@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CV-DCMS — Floating Realtime Chat Widget (Góc dưới bên phải toàn hệ thống)
  * - Chỉ hiển thị khi người dùng đã đăng nhập (/api/chat/context -> authenticated === true).
  * - Singleton guard chống gắn trùng sự kiện hoặc nhân đôi DOM.
@@ -665,9 +665,7 @@
         if (document.getElementById('cvdcmsFloatingChatWidget')) {
             return;
         }
-        if (!document.querySelector('.site-header')) {
-            return;
-        }
+
 
         const wrapper = document.createElement('div');
         wrapper.id = 'cvdcmsFloatingChatWidget';
