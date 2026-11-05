@@ -69,6 +69,15 @@
                 <nav class="emr-pagination" aria-label="Trang bệnh án" th:if="${pageCount > 1}"><span th:text="|Trang ${page + 1}/${pageCount} · ${#lists.size(dashboard.records)} bệnh án|">Trang</span><div><a class="btn btn-sm btn-outline-primary" th:if="${page > 0}" th:href="@{/emr/records(page=${page - 1},query=${query},status=${selectedStatus},fromDate=${fromDate},toDate=${toDate},doctor=${doctor},branch=${branch})}">Trang trước</a><a class="btn btn-sm btn-outline-primary" th:if="${page + 1 < pageCount}" th:href="@{/emr/records(page=${page + 1},query=${query},status=${selectedStatus},fromDate=${fromDate},toDate=${toDate},doctor=${doctor},branch=${branch})}">Trang sau</a></div></nav>
                 </div>
             </section>
+            <section class="emr-panel" aria-labelledby="eligibleVisitsTitle">
+                <div class="emr-panel__head"><div><h2 id="eligibleVisitsTitle">Lượt khám chờ lập bệnh án</h2><p>Chọn một lượt khám để tạo bản nháp, hoặc bổ sung dữ liệu còn thiếu.</p></div></div>
+                <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Bệnh nhân</th><th>Lượt khám</th><th>Ngày khám</th><th>Bác sĩ / cơ sở</th><th>Điều kiện</th><th>Thao tác</th></tr></thead>
+                    <tbody>
+                    <tr th:each="visit : ${dashboard.eligibleVisits}"><td><strong th:text="${visit.patientName}">Bệnh nhân</strong><small th:text="${visit.patientCode}">Mã</small></td><td th:text="${visit.visitCode}">Lượt khám</td><td th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày</td><td><span th:text="${visit.doctorName ?: 'Chưa phân bác sĩ'}">Bác sĩ</span><small th:text="${visit.branchName}">Cơ sở</small></td><td><span class="emr-status" th:classappend="${visit.ready ? ' status-SIGNED' : ' status-DRAFT'}" th:text="${visit.ready ? 'Đủ dữ liệu nguồn' : 'Cần bổ sung'}">Điều kiện</span><ul class="small mb-0 mt-1" th:if="${!visit.ready}"><li th:each="missing : ${visit.missing}" th:text="${missing}">Thiếu dữ liệu</li></ul></td><td><form method="post" th:action="@{/emr/records}"><input type="hidden" name="visitId" th:value="${visit.visitId}"><button class="btn btn-sm btn-primary" type="submit">Tạo bản nháp</button></form><a class="btn btn-sm btn-link" th:if="${!visit.ready}" th:href="@{/doctor/examination/{id}/diagnoses(id=${visit.visitId})}">Bổ sung phiếu khám</a></td></tr>
+                    <tr th:if="${#lists.isEmpty(dashboard.eligibleVisits)}"><td colspan="6" class="emr-empty">Không có lượt khám nào đang chờ lập bệnh án trong phạm vi tìm kiếm.</td></tr>
+                    </tbody></table></div>
+            </section>
         </main>
     </div>
 </div>

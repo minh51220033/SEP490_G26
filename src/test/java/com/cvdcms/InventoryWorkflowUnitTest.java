@@ -127,6 +127,7 @@ class InventoryWorkflowUnitTest {
         dto.setBranchId(1L);
         dto.setSupplierId(10L);
         dto.setReceiptDate(LocalDate.now());
+        dto.setAttachmentUrl("/uploads/invoices/inv_test_01.png");
         StockReceiptCreateDTO.Item item = new StockReceiptCreateDTO.Item();
         item.setMaterialId(100L);
         item.setBatchNumber("LO-01");
@@ -168,6 +169,7 @@ class InventoryWorkflowUnitTest {
         dto.setBranchId(1L);
         dto.setSupplierId(10L);
         dto.setReceiptDate(LocalDate.now());
+        dto.setAttachmentUrl("/uploads/invoices/inv_test_01.png");
         StockReceiptCreateDTO.Item item = new StockReceiptCreateDTO.Item();
         item.setMaterialId(100L);
         item.setBatchNumber("LO-01");
@@ -382,6 +384,7 @@ class InventoryWorkflowUnitTest {
         dto.setBranchId(1L);
         dto.setSupplierId(10L);
         dto.setReceiptDate(LocalDate.now());
+        dto.setAttachmentUrl("/uploads/invoices/inv_test_01.png");
         StockReceiptCreateDTO.Item item = new StockReceiptCreateDTO.Item();
         item.setMaterialId(100L);
         item.setBatchNumber("LO CO KHOANG TRANG @@");

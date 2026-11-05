@@ -22,9 +22,11 @@ import java.util.Map;
 public class ClinicalPhotoRestController {
 
     private final ClinicalPhotoService clinicalPhotoService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @GetMapping("/patient/{profileId}")
-    public ResponseEntity<Map<String, Object>> getPhotosByPatient(@PathVariable Long profileId) {
+    public ResponseEntity<Map<String, Object>> getPhotosByPatient(@PathVariable Long profileId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePatient(session, profileId);
         List<ClinicalPhotoResponseDTO> photos = clinicalPhotoService.getPhotosByProfile(profileId);
         Map<String, Object> stats = clinicalPhotoService.getPhotoStatistics(profileId);
 
@@ -36,7 +38,8 @@ public class ClinicalPhotoRestController {
     }
 
     @GetMapping("/visit/{visitId}")
-    public ResponseEntity<Map<String, Object>> getPhotosByVisit(@PathVariable Long visitId) {
+    public ResponseEntity<Map<String, Object>> getPhotosByVisit(@PathVariable Long visitId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         List<ClinicalPhotoResponseDTO> photos = clinicalPhotoService.getPhotosByVisit(visitId);
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -51,7 +54,10 @@ public class ClinicalPhotoRestController {
             @RequestParam(value = "stage", defaultValue = "BEFORE") String stageStr,
             @RequestParam(value = "category", defaultValue = "INTRAORAL") String categoryStr,
             @RequestParam(value = "caption", required = false) String caption,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file, jakarta.servlet.http.HttpSession session) {
+        if (visitId == null) throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, "Ảnh lâm sàng cần gắn ca khám.");
+        doctorVisitAccess.require(session, visitId);
 
         Map<String, Object> response = new HashMap<>();
         try {
@@ -76,7 +82,8 @@ public class ClinicalPhotoRestController {
     }
 
     @DeleteMapping("/{photoId}")
-    public ResponseEntity<Map<String, Object>> deletePhoto(@PathVariable Long photoId) {
+    public ResponseEntity<Map<String, Object>> deletePhoto(@PathVariable Long photoId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePhoto(session, photoId);
         Map<String, Object> response = new HashMap<>();
         try {
             clinicalPhotoService.deletePhoto(photoId);
@@ -94,7 +101,8 @@ public class ClinicalPhotoRestController {
     @PutMapping("/{photoId}")
     public ResponseEntity<Map<String, Object>> updatePhoto(
             @PathVariable Long photoId,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePhoto(session, photoId);
 
         Map<String, Object> response = new HashMap<>();
         try {

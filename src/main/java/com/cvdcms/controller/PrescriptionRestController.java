@@ -21,6 +21,7 @@ import java.util.Map;
 public class PrescriptionRestController {
 
     private final PrescriptionService prescriptionService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     /**
      * Lấy danh mục thuốc nha khoa khả dụng (dùng cho autocomplete / dropdown)
@@ -35,7 +36,8 @@ public class PrescriptionRestController {
      * Lấy danh sách đơn thuốc theo ca khám
      */
     @GetMapping("/prescriptions")
-    public ResponseEntity<List<PrescriptionResponseDTO>> getPrescriptionsByVisit(@RequestParam Long visitId) {
+    public ResponseEntity<List<PrescriptionResponseDTO>> getPrescriptionsByVisit(@RequestParam Long visitId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         List<PrescriptionResponseDTO> list = prescriptionService.getPrescriptionsByVisit(visitId);
         return ResponseEntity.ok(list);
     }
@@ -44,7 +46,8 @@ public class PrescriptionRestController {
      * Lấy chi tiết một đơn thuốc (dùng cho in hoặc xem chi tiết)
      */
     @GetMapping("/prescriptions/{id}")
-    public ResponseEntity<PrescriptionResponseDTO> getPrescriptionById(@PathVariable Long id) {
+    public ResponseEntity<PrescriptionResponseDTO> getPrescriptionById(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePrescription(session, id);
         PrescriptionResponseDTO dto = prescriptionService.getPrescriptionById(id);
         return ResponseEntity.ok(dto);
     }
@@ -53,7 +56,8 @@ public class PrescriptionRestController {
      * Kê đơn thuốc mới cho ca khám (FT18 - SCR-18.3, SCR-18.4)
      */
     @PostMapping("/prescriptions")
-    public ResponseEntity<?> createPrescription(@RequestBody PrescriptionRequestDTO request) {
+    public ResponseEntity<?> createPrescription(@RequestBody PrescriptionRequestDTO request, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, request.getVisitId());
         try {
             PrescriptionResponseDTO created = prescriptionService.createPrescription(request);
             Map<String, Object> response = new HashMap<>();
@@ -80,7 +84,8 @@ public class PrescriptionRestController {
      * Xóa đơn thuốc
      */
     @DeleteMapping("/prescriptions/{id}")
-    public ResponseEntity<?> deletePrescription(@PathVariable Long id) {
+    public ResponseEntity<?> deletePrescription(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePrescription(session, id);
         try {
             prescriptionService.deletePrescription(id);
             Map<String, Object> response = new HashMap<>();

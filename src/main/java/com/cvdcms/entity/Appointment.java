@@ -62,6 +62,9 @@ public class Appointment {
     @Column(name = "expected_time")
     private LocalTime expectedTime;
 
+    @Column(name = "duration_minutes", nullable = false)
+    private Integer durationMinutes = 30;
+
     @Column(name = "initial_symptoms", length = 500)
     private String initialSymptoms;
 

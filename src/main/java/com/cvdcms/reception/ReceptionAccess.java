@@ -43,9 +43,10 @@ public class ReceptionAccess {
             branchIds = List.of(user.getBranch().getBranchId());
         }
         if (!admin && branchIds.isEmpty()) {
-            return new Scope(user, true, List.of());
+            return new Scope(user, true, true, List.of());
         }
-        return new Scope(user, admin, branchIds);
+        boolean canManage = admin || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE");
+        return new Scope(user, admin, canManage, branchIds);
     }
 
     private boolean hasRole(User user, String name) {
@@ -58,7 +59,10 @@ public class ReceptionAccess {
         return false;
     }
 
-    public record Scope(User user, boolean admin, List<Long> branchIds) {
+    public record Scope(User user, boolean admin, boolean canManage, List<Long> branchIds) {
+        public Scope(User user, boolean admin, List<Long> branchIds) {
+            this(user, admin, admin, branchIds);
+        }
         public boolean permits(Long branchId) {
             return admin || branchIds.contains(branchId);
         }

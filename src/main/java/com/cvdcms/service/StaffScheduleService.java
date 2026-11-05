@@ -13,6 +13,8 @@ import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.StaffScheduleRepository;
 import com.cvdcms.repository.AttendanceRecordRepository;
+import com.cvdcms.repository.LeaveRequestRepository;
+import com.cvdcms.entity.enums.LeaveStatus;
 import com.cvdcms.entity.AttendanceRecord;
 import java.util.Optional;
 import com.cvdcms.repository.WorkShiftRepository;
@@ -40,13 +42,16 @@ public class StaffScheduleService {
     private final StaffProfileRepository staffRepository;
     private final BranchRepository branchRepository;
     private final AttendanceRecordRepository attendanceRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
     public StaffScheduleService(WorkShiftRepository shiftRepository,
                                 StaffScheduleRepository scheduleRepository,
                                 StaffBranchAssignmentRepository assignmentRepository,
                                 StaffProfileRepository staffRepository,
                                 BranchRepository branchRepository,
-                                AttendanceRecordRepository attendanceRepository) {
+                                AttendanceRecordRepository attendanceRepository,
+                                LeaveRequestRepository leaveRequestRepository) {
+        this.leaveRequestRepository = leaveRequestRepository;
         this.shiftRepository = shiftRepository;
         this.scheduleRepository = scheduleRepository;
         this.assignmentRepository = assignmentRepository;
@@ -158,6 +163,16 @@ public class StaffScheduleService {
         if (isStaffAdmin) {
             throw new IllegalArgumentException("Không thể xếp ca làm việc cho nhân sự có vai trò Quản trị hệ thống.");
         }
+        // FT42: Chặn phân ca nếu nhân sự/bác sĩ đã được phê duyệt nghỉ phép
+        boolean isOnApprovedLeave = leaveRequestRepository.existsOverlapping(
+                staffId, workDate, workDate, shiftId, List.of(LeaveStatus.APPROVED)
+        );
+        if (isOnApprovedLeave) {
+            throw new IllegalArgumentException(staff.getFullName() + " (" + staff.getStaffCode()
+                    + ") đã được phê duyệt nghỉ phép vào ngày " + workDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    + ". Không thể phân ca làm việc vào ngày nghỉ phép!");
+        }
+
         // Chống xếp trùng giờ: một nhân sự không thể trực 2 ca có khung giờ giao nhau trong cùng một ngày.
         LocalTime newStart = shift.getStartTime();
         LocalTime newEnd = shift.getEndTime();

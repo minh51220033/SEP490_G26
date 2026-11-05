@@ -230,9 +230,29 @@ public class InvoicePageController {
                         .ifPresent(w -> model.addAttribute("loyaltyWallet", w));
 
                 // Bàn giao đơn thuốc của bệnh nhân
-                List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, profileId);
+                Visit autoVisit = visits.stream()
+                        .filter(v -> v.getStatus() == VisitStatus.WAITING_PAYMENT)
+                        .findFirst()
+                        .orElse(null);
+
+                if (autoVisit != null) {
+                    model.addAttribute("selectedVisit", autoVisit);
+                    model.addAttribute("selectedBranch", autoVisit.getBranch());
+                    model.addAttribute("unbilledServices", invoiceService.getUnbilledPerformedServices(autoVisit.getVisitId()));
+                    model.addAttribute("availablePromotions", promotionRepository.findAvailablePromotions(autoVisit.getBranch().getBranchId(), LocalDateTime.now()));
+                    model.addAttribute("availableVouchers", patientVoucherRepository.findAvailableVouchersForPatient(profileId, VoucherStatus.AVAILABLE, LocalDateTime.now()));
+
+                    List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(autoVisit.getBranch().getBranchId(), autoVisit.getVisitId(), profileId);
+                    model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+                } else {
+                    List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, profileId);
+                    model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+                }
+                // old handedOverPrescriptions removed:
+                /*
                 model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
 
+                */
                 // Kế hoạch điều trị tham khảo
                 model.addAttribute("referenceTreatmentPlans", treatmentPlanRepository.findByProfileIdWithDetails(profileId));
             });

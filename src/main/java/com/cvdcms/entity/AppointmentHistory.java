@@ -22,7 +22,7 @@ public class AppointmentHistory {
     @Column(name = "action", nullable = false, length = 30)
     private String action;
 
-    @Column(name = "actor_user_id", nullable = false)
+    @Column(name = "actor_user_id")
     private Long actorUserId;
 
     @Column(name = "old_value", length = 500)

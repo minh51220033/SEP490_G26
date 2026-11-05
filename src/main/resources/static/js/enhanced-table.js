@@ -70,6 +70,15 @@
                 container.appendChild(this.wrapper);
             }
             this.container = container;
+
+            // Khử xung đột cuộn kép khi bảng nằm trong .fin-table-wrapper hoặc .table-responsive
+            const parent = this.container.parentElement;
+            if (parent && (parent.classList.contains('fin-table-wrapper') || parent.classList.contains('table-responsive'))) {
+                parent.style.overflowX = 'visible';
+                parent.style.overflowY = 'visible';
+                parent.style.border = 'none';
+                parent.style.background = 'transparent';
+            }
         }
 
         /* 2. Quét thông tin và khóa ổn định data-column-key của tất cả các cột */
@@ -102,12 +111,16 @@
 
                 const isRequired = th.getAttribute('data-column-required') === 'true' || 
                                    th.getAttribute('data-column-no-hide') === 'true' || 
+                                   isAction ||
                                    idx === 0; // Cột đầu thường là mã/định danh
 
-                const isDefaultPinned = th.getAttribute('data-column-pinned') === 'true' || 
-                                       (idx === 0 && !isAction);
+                const isPinnedAttr = th.getAttribute('data-column-pinned') === 'true' || 
+                                     th.getAttribute('data-pinned') === 'true';
+                const isDefaultPinned = isPinnedAttr || (idx === 0 && !isAction);
 
-                const defaultWidth = th.offsetWidth || 120;
+                const minW = parseInt(th.style.minWidth, 10) || 0;
+                const naturalW = th.offsetWidth || 120;
+                const defaultWidth = minW > 0 ? minW : Math.min(Math.max(naturalW, 80), 240);
 
                 const colDef = {
                     key: key,
@@ -115,6 +128,7 @@
                     visible: true,
                     pinned: isDefaultPinned,
                     width: defaultWidth,
+                    minWidth: minW > 0 ? minW : 60,
                     required: isRequired,
                     isAction: isAction
                 };
@@ -161,11 +175,12 @@
                 savedData.columns.forEach(savedCol => {
                     if (existingKeyMap.has(savedCol.key)) {
                         const original = existingKeyMap.get(savedCol.key);
+                        const effectiveMin = original.minWidth || 60;
                         mergedColumns.push({
                             ...original,
                             visible: original.required ? true : (savedCol.visible !== false),
-                            pinned: !!savedCol.pinned,
-                            width: savedCol.width && savedCol.width >= 60 ? savedCol.width : original.width
+                            pinned: typeof savedCol.pinned === 'boolean' ? savedCol.pinned : original.pinned,
+                            width: Math.max(savedCol.width || 0, effectiveMin)
                         });
                         existingKeyMap.delete(savedCol.key);
                     }
@@ -240,13 +255,15 @@
                     th.style.display = displayVal;
                     if (col.width && col.visible) {
                         th.style.width = col.width + 'px';
-                        th.style.minWidth = col.width + 'px';
+                        th.style.minWidth = (col.minWidth || col.width) + 'px';
                     }
                 }
 
                 tds.forEach(td => {
                     td.style.display = displayVal;
                     if (col.width && col.visible) {
+                        td.style.width = col.width + 'px';
+                        td.style.minWidth = (col.minWidth || 60) + 'px';
                         td.style.maxWidth = (col.width + 40) + 'px';
                     }
                 });
@@ -288,7 +305,8 @@
                 const th = theadTr.querySelector(`th[data-column-key="${col.key}"]`);
                 if (!th) return;
 
-                const thWidth = th.offsetWidth;
+                const thRect = th.getBoundingClientRect();
+                const thWidth = thRect.width > 0 ? thRect.width : (th.offsetWidth || col.width || 100);
                 if (currentOffset + thWidth > maxPinnedWidth && idx > 0) {
                     // Quá giới hạn màn hình hẹp, ngừng ghim các cột tiếp theo để đảm bảo tính khả dụng
                     return;
@@ -416,7 +434,8 @@
             const onMouseMove = (moveEvent) => {
                 if (!this.isResizing) return;
                 const diff = moveEvent.pageX - startX;
-                const newWidth = Math.max(70, startWidth + diff);
+                const minLimit = col.minWidth || 60;
+                const newWidth = Math.max(minLimit, startWidth + diff);
 
                 th.style.width = newWidth + 'px';
                 th.style.minWidth = newWidth + 'px';
@@ -424,6 +443,8 @@
 
                 const tds = this.table.querySelectorAll(`tbody td[data-column-key="${colKey}"]`);
                 tds.forEach(td => {
+                    td.style.width = newWidth + 'px';
+                    td.style.minWidth = minLimit + 'px';
                     td.style.maxWidth = (newWidth + 40) + 'px';
                 });
 
@@ -563,6 +584,16 @@
             if (!row || this.isResizing) return false;
             if (row.querySelector('td[colspan]')) return false;
 
+            // Điều kiện 0: Nếu ô thao tác đã được cố định ở mép phải (sticky right),
+            // nó luôn luôn hiển thị trọn vẹn ở mép phải bảng, không bao giờ cần hiện thanh nổi!
+            const actionCell = this.getActionCell(row);
+            if (!actionCell) return false;
+
+            const compStyle = window.getComputedStyle(actionCell);
+            if (compStyle.position === 'sticky') {
+                return false;
+            }
+
             // Điều kiện 1: Bảng phải có cuộn ngang
             const wrapper = this.wrapper;
             const hasHorizontalScroll = wrapper.scrollWidth > wrapper.clientWidth + 2;
@@ -570,10 +601,6 @@
                 // Bảng vừa khung nhìn -> KHÔNG HIỆN thanh nổi
                 return false;
             }
-
-            // Điều kiện 2: Ô thao tác gốc tồn tại
-            const actionCell = this.getActionCell(row);
-            if (!actionCell) return false;
 
             // Điều kiện 3: Có ít nhất một hành động hợp lệ theo quyền / trạng thái bản ghi
             const actionElements = this.getRowActionElements(actionCell);
@@ -700,9 +727,18 @@
             // Vị trí ngang: Luôn nằm sát mép phải PHẦN BẢNG ĐANG NHÌN THẤY
             const scrollLeft = this.wrapper.scrollLeft;
             const visibleWidth = this.wrapper.clientWidth;
-            const barWidth = this.floatingBar.offsetWidth || 180;
+            const barRect = this.floatingBar.getBoundingClientRect();
+            const barWidth = barRect.width > 0 ? barRect.width : (this.floatingBar.offsetWidth || 180);
 
-            const leftPos = scrollLeft + visibleWidth - barWidth - 8;
+            // Tính toán mép phải cột ghim bên trái để không bao giờ đè lên
+            let leftPinnedOffset = 0;
+            const lastPinnedTh = this.table.querySelector('thead th.enhanced-col-pinned-last');
+            if (lastPinnedTh) {
+                leftPinnedOffset = lastPinnedTh.offsetLeft + lastPinnedTh.offsetWidth;
+            }
+
+            const maxLeft = scrollLeft + visibleWidth - barWidth - 12;
+            const leftPos = Math.max(leftPinnedOffset + 10, maxLeft);
             this.floatingBar.style.left = `${Math.max(0, leftPos)}px`;
         }
 

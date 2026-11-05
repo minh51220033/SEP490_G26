@@ -11,7 +11,7 @@
             <link rel="stylesheet" th:href="@{/css/portal-appointments.css}">
             <div class="patient-page-heading"><div><a th:href="@{/portal/appointments}">← Lịch hẹn của tôi</a>
                 <h1 th:text="${appointmentId == null ? 'Đặt lịch khám' : 'Đổi lịch hẹn'}">Đặt lịch khám</h1>
-                <p>Phòng khám tiếp nhận theo ngày và buổi; giờ đến cụ thể không được ấn định trước.</p></div></div>
+                <p>Chọn giờ đến dự kiến. Phòng khám sẽ xác nhận lịch và hướng dẫn nếu thời gian khám thay đổi.</p></div></div>
             <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
             <form id="appointmentForm" class="panel patient-form appointment-form" th:attr="data-appointment-id=${appointmentId}">
                 <h2>Người khám và lịch mong muốn</h2>
@@ -26,6 +26,7 @@
                         <small>Nếu chọn đích danh, bạn sẽ chờ đúng bác sĩ này. Thời gian chờ thực tế tùy tình hình khám.</small></div>
                     <div id="serviceField"><label for="serviceId">Dịch vụ quan tâm</label><select id="serviceId" class="form-select"></select>
                         <small>Dịch vụ sẽ được bác sĩ xác định sau khi khám; lựa chọn này chưa phát sinh phí.</small></div>
+                    <div><label for="slotTime">Giờ hẹn dự kiến *</label><select id="slotTime" class="form-select" required disabled><option value="">Chọn ngày và buổi trước</option></select><small>Giờ trống có thể thay đổi trước khi phòng khám xác nhận.</small></div>
                 </div>
                 <p id="availabilityMessage" class="appointment-availability" role="status">Chọn chi nhánh, ngày và buổi để xem khả năng tiếp nhận.</p>
                 <section id="symptomsSection"><h2>Tình trạng ban đầu</h2>

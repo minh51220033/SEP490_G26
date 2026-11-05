@@ -7,6 +7,7 @@ import com.cvdcms.DTO.ServiceUpdateDTO;
 import com.cvdcms.entity.Service;
 import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.enums.ServiceType;
+import com.cvdcms.entity.enums.ServiceStatus;
 
 import java.util.List;
 
@@ -33,11 +34,15 @@ public interface ServiceCatalogService {
 
     void deleteCategory(Long categoryId);
 
+    List<ServiceCategory> searchCategories(String keyword, Boolean isActive);
+
     // =====================================================
     // DỊCH VỤ VÀ BẢNG GIÁ
     // =====================================================
 
     List<Service> getAllServices();
+
+    List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status);
 
     List<Service> getServicesByCategory(Long categoryId);
 
@@ -80,10 +85,14 @@ public interface ServiceCatalogService {
             Long categoryId,
             ServiceType serviceType
     );
+
     // Bảng giá công khai: tìm theo tên/mã và kết hợp bộ lọc.
     List<Service> getPublicServices(
             Long categoryId,
             ServiceType serviceType,
             String keyword
     );
+
+    // Lấy chi tiết 1 dịch vụ công khai (chỉ trả về khi dịch vụ ACTIVE và nhóm ACTIVE).
+    Service getPublicServiceById(Long serviceId);
 }

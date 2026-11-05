@@ -1,0 +1,1397 @@
+﻿<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Nhật ký thao tác hệ thống (Audit Log) - CV-DCMS')}"></head>
+
+<body class="app-body account-page-body staff-page-body">
+
+    <div class="app-shell">
+
+        <!-- SIDEBAR DÙNG CHUNG -->
+        <aside th:replace="~{fragments/sidebar :: sidebar('audit')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+        <div class="app-main">
+            <!-- TOPBAR HEADER -->
+            <header th:replace="~{fragments/header :: appTopbar('Nhật ký thao tác')}"></header>
+
+            <main class="app-content">
+                <link rel="stylesheet" th:href="@{/css/staff.css}">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
+
+                <style>
+                    /* Tối ưu vị trí widget chat để không che thanh phân trang */
+                    .cvdcms-chat-widget {
+                        bottom: 74px;
+                        right: 24px;
+                    }
+                    .cvdcms-chat-popup {
+                        bottom: 144px;
+                        right: 24px;
+                    }
+
+                    /* Hàng trong bảng có con trỏ pointer để bấm xem đối chiếu */
+                    #auditTable tbody tr {
+                        cursor: pointer;
+                    }
+
+                    /* User Avatar Circle */
+                    .audit-user-avatar {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                        color: #ffffff;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 11.5px;
+                        font-weight: 700;
+                        flex-shrink: 0;
+                    }
+
+                    /* Diff Visual Table (SCR-31.2) */
+                    .diff-table th {
+                        font-size: 12px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        background: #f8fafc;
+                        padding: 10px 14px;
+                        border-bottom: 1px solid #e2e8f0;
+                        color: #475569;
+                    }
+                    .diff-table td {
+                        font-size: 13px;
+                        padding: 11px 14px;
+                        vertical-align: middle;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+
+                    /* Summary KPI pill strip */
+                    .audit-kpi-pill {
+                        font-size: 0.8rem;
+                        font-weight: 500;
+                        padding: 4px 10px;
+                        border-radius: 20px;
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        color: #475569;
+                    }
+                    .audit-kpi-pill strong {
+                        color: #0f172a;
+                    }
+                </style>
+
+                <!-- TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
+                <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h1 class="staff-page-title mb-0">Nhật ký thao tác</h1>
+                            <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 fw-bold" style="font-size: 11px;">FT31 / UC-25</span>
+                        </div>
+                        <p class="staff-page-subtitle">Giám sát, kiểm toán và truy vết toàn bộ thay đổi dữ liệu, tài chính và phân quyền hệ thống</p>
+                    </div>
+
+                    <!-- Nút Thao tác Header & Thống kê nhanh -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- KPI Pills nhanh -->
+                        <div class="audit-kpi-pill" title="Tổng nhật ký">
+                            <i class="bi bi-collection text-primary"></i>
+                            <span>Tổng:</span>
+                            <strong th:text="${stats.totalLogs}">0</strong>
+                        </div>
+                        <div class="audit-kpi-pill" title="Phát sinh hôm nay">
+                            <i class="bi bi-calendar-check text-info"></i>
+                            <span>Hôm nay:</span>
+                            <strong class="text-info" th:text="${stats.todayLogs}">0</strong>
+                        </div>
+                        <div class="audit-kpi-pill" title="Thao tác chỉnh sửa">
+                            <i class="bi bi-pencil-square text-success"></i>
+                            <span>Sửa:</span>
+                            <strong class="text-success" th:text="${stats.updateLogs}">0</strong>
+                        </div>
+                        <div class="audit-kpi-pill" title="Thao tác nhạy cảm (Xóa, Ban, Khóa)">
+                            <i class="bi bi-shield-exclamation text-danger"></i>
+                            <span>Nhạy cảm:</span>
+                            <strong class="text-danger" th:text="${stats.sensitiveLogs}">0</strong>
+                        </div>
+
+                        <!-- Nút Làm mới -->
+                        <a th:href="@{/admin/audit}" class="btn btn-secondary-custom btn-vua ms-1" title="Làm mới danh sách">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới
+                        </a>
+                        <!-- Nút Xuất dữ liệu -->
+                        <button type="button" class="btn btn-primary btn-vua" onclick="exportAuditCsv()">
+                            <i class="bi bi-download"></i> Xuất dữ liệu
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
+                <section class="staff-toolbar-card">
+                    <form th:action="@{/admin/audit}" method="get" id="auditFilterForm" class="staff-toolbar-form">
+                        <!-- Bên trái: Ô tìm kiếm gọn + Dropdowns nhanh + Nút Lọc nâng cao + Xóa lọc -->
+                        <div class="staff-toolbar-left">
+                            <!-- 1. Ô tìm kiếm từ khóa -->
+                            <div class="staff-search-box-compact">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="keyword" name="keyword" th:value="${filter.keyword}"
+                                       class="form-control" placeholder="Tìm kiếm nhật ký, NV, IP...">
+                            </div>
+
+                            <!-- 2. Dropdown Thao tác (hay dùng nhất) -->
+                            <div>
+                                <select id="action" name="action" class="form-select staff-select-compact" aria-label="Hành động" onchange="this.form.submit()">
+                                    <option value="">Thao tác: Tất cả</option>
+                                    <option th:each="act : ${actions}" th:value="${act}" th:text="${act}"
+                                            th:selected="${filter.action != null and filter.action == act}"></option>
+                                </select>
+                            </div>
+
+                            <!-- 3. Dropdown Cơ sở / Chi nhánh (hay dùng) -->
+                            <div>
+                                <select id="branchId" name="branchId" class="form-select staff-select-compact" aria-label="Cơ sở" onchange="this.form.submit()">
+                                    <option value="">Cơ sở: Tất cả</option>
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                            th:selected="${filter.branchId != null and filter.branchId == b.branchId}"></option>
+                                </select>
+                            </div>
+
+                            <!-- Ẩn các trường lọc nâng cao & phân trang -->
+                            <input type="hidden" id="entityTableInput" name="entityTable" th:value="${filter.entityTable}">
+                            <input type="hidden" id="fromDateInput" name="fromDate" th:value="${filter.fromDate}">
+                            <input type="hidden" id="toDateInput" name="toDate" th:value="${filter.toDate}">
+                            <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                            <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+
+                            <!-- 4. Nút Lọc nâng cao (có badge hiển thị số lượng tiêu chí đang lọc) -->
+                            <button type="button" class="btn btn-secondary-custom btn-vua position-relative" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                                <i class="bi bi-funnel"></i> Lọc nâng cao
+                                <span th:if="${(filter.entityTable != null and filter.entityTable != '') or filter.fromDate != null or filter.toDate != null}"
+                                      class="filter-badge-count ms-1"
+                                      th:text="${(filter.entityTable != null and filter.entityTable != '' ? 1 : 0) + (filter.fromDate != null ? 1 : 0) + (filter.toDate != null ? 1 : 0)}">
+                                    1
+                                </span>
+                            </button>
+
+                            <!-- Nút Xóa nhanh bộ lọc khi có điều kiện lọc -->
+                            <a th:if="${(filter.keyword != null and filter.keyword != '') or (filter.action != null and filter.action != '') or filter.branchId != null or (filter.entityTable != null and filter.entityTable != '') or filter.fromDate != null or filter.toDate != null}"
+                               th:href="@{/admin/audit}"
+                               class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                               title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                            </a>
+                        </div>
+
+                        <!-- Bên phải: Bánh răng Tùy chỉnh cột (Popover xổ dưới bánh răng) -->
+                        <div class="staff-toolbar-right">
+                            <div class="custom-col-dropdown position-relative d-inline-block">
+                                <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                    <i class="bi bi-gear"></i>
+                                </button>
+
+                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG (Không làm đen màn hình) -->
+                                <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                    <div class="custom-column-header">
+                                        <h6 class="custom-column-title">
+                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                        </h6>
+                                        <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                    </div>
+
+                                    <!-- Ô tìm kiếm tên trường -->
+                                    <div class="custom-column-search">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tiêu đề danh sách cột -->
+                                    <div class="custom-column-table-head">
+                                        <div class="flex-grow-1">Tên trường</div>
+                                    </div>
+
+                                    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                        <!-- 1. STT -->
+                                        <div class="custom-col-item" data-col-target="stt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                        </div>
+
+                                        <!-- 2. Thời gian -->
+                                        <div class="custom-col-item" data-col-target="time">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-time" checked>
+                                            <label for="chk-col-time" class="custom-col-name">Thời gian</label>
+                                        </div>
+
+                                        <!-- 3. Người thực hiện -->
+                                        <div class="custom-col-item" data-col-target="user">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-user" checked>
+                                            <label for="chk-col-user" class="custom-col-name">Người thực hiện</label>
+                                        </div>
+
+                                        <!-- 4. Cơ sở / Chi nhánh -->
+                                        <div class="custom-col-item" data-col-target="branch">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+                                            <label for="chk-col-branch" class="custom-col-name">Cơ sở / Chi nhánh</label>
+                                        </div>
+
+                                        <!-- 5. Hành động -->
+                                        <div class="custom-col-item" data-col-target="action">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-action" checked>
+                                            <label for="chk-col-action" class="custom-col-name">Hành động</label>
+                                        </div>
+
+                                        <!-- 6. Đối tượng bị tác động -->
+                                        <div class="custom-col-item" data-col-target="entity">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-entity" checked>
+                                            <label for="chk-col-entity" class="custom-col-name">Đối tượng bị tác động</label>
+                                        </div>
+
+                                        <!-- 7. Địa chỉ IP -->
+                                        <div class="custom-col-item" data-col-target="ip">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-ip" checked>
+                                            <label for="chk-col-ip" class="custom-col-name">Địa chỉ IP</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Nút Thao tác Footer -->
+                                    <div class="custom-column-footer">
+                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                            Lấy lại mặc định
+                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- BẢNG DỮ LIỆU NHẬT KÝ MISA (Hỗ trợ kéo giãn cột & cuộn nội bộ) -->
+                <section class="staff-table-card">
+                    <div class="staff-table-wrapper">
+                        <table class="table staff-modern-table align-middle" id="auditTable">
+                            <colgroup>
+                                <col data-col="stt" style="width: 60px;">
+                                <col data-col="time" style="width: 180px;">
+                                <col data-col="user" style="width: 250px;">
+                                <col data-col="branch" style="width: 180px;">
+                                <col data-col="action" style="width: 180px;">
+                                <col data-col="entity" style="width: 220px;">
+                                <col data-col="ip" style="width: 150px;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <!-- 1. STT -->
+                                    <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                        <span>#</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 2. Thời gian -->
+                                    <th data-col="time" style="width: 180px; min-width: 150px;">
+                                        <span>Thời gian</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 3. Người thực hiện -->
+                                    <th data-col="user" style="width: 250px; min-width: 190px;">
+                                        <span>Người thực hiện</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 4. Cơ sở / Chi nhánh -->
+                                    <th data-col="branch" style="width: 180px; min-width: 140px;">
+                                        <span>Cơ sở / Chi nhánh</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 5. Hành động -->
+                                    <th data-col="action" style="width: 180px; min-width: 140px;">
+                                        <span>Hành động</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 6. Đối tượng bị tác động -->
+                                    <th data-col="entity" style="width: 220px; min-width: 170px;">
+                                        <span>Đối tượng bị tác động</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+
+                                    <!-- 7. Địa chỉ IP -->
+                                    <th data-col="ip" style="width: 150px; min-width: 120px;">
+                                        <span>Địa chỉ IP</span>
+                                        <div class="col-resizer"></div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="log, iter : ${logs}"
+                                    th:data-log-id="${log.logId}"
+                                    title="Bấm vào dòng để xem chi tiết đối chiếu dữ liệu thay đổi">
+
+                                    <!-- 1. STT -->
+                                    <td data-col="stt" class="text-muted fw-semibold">
+                                        <span th:text="${currentPage * pageSize + iter.count}">1</span>
+                                    </td>
+
+                                    <!-- 2. Thời gian -->
+                                    <td data-col="time">
+                                        <div class="d-flex flex-column">
+                                            <span class="staff-name" th:text="${log.formattedCreatedAt}">01/11/2026 10:00:00</span>
+                                            <span class="staff-sub" th:text="${log.timeAgo}">Vừa xong</span>
+                                        </div>
+                                    </td>
+
+                                    <!-- 3. Người thực hiện -->
+                                    <td data-col="user">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="audit-user-avatar" th:text="${log.userAvatarText}">U</span>
+                                            <div class="text-truncate" style="max-width: 190px;">
+                                                <div class="staff-name text-truncate" th:text="${log.userFullName}">Nguyễn Văn A</div>
+                                                <div class="staff-sub text-truncate">
+                                                    <span th:text="${log.username}">admin</span>
+                                                    <span class="ms-1" th:if="${log.userRoleName != null}" th:text="'• ' + ${log.userRoleName}">• Quản trị</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- 4. Cơ sở / Chi nhánh -->
+                                    <td data-col="branch">
+                                        <span class="chip chip--role" th:title="${log.branchName}">
+                                            <i class="bi bi-buildings me-1 text-danger"></i>
+                                            <span th:text="${log.branchName}">Toàn hệ thống</span>
+                                        </span>
+                                    </td>
+
+                                    <!-- 5. Hành động -->
+                                    <td data-col="action">
+                                        <span th:class="'badge rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 bg-' + ${log.actionBadgeClass} + '-subtle text-' + ${log.actionBadgeClass} + ' border border-' + ${log.actionBadgeClass} + '-subtle'" style="font-size: 11.5px;">
+                                            <i th:class="'bi ' + ${log.actionIcon}"></i>
+                                            <span th:text="${log.action}">UPDATE</span>
+                                        </span>
+                                    </td>
+
+                                    <!-- 6. Đối tượng bị tác động -->
+                                    <td data-col="entity">
+                                        <div class="d-flex flex-column">
+                                            <span class="staff-name text-truncate" style="max-width: 200px;" th:text="${log.entityTableLabel}">Tài khoản người dùng</span>
+                                            <div class="mt-0.5">
+                                                <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace" style="font-size: 11px;" th:text="'Mã: #' + ${log.entityId}">Mã: #3</span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- 7. Địa chỉ IP -->
+                                    <td data-col="ip">
+                                        <span class="badge bg-light text-secondary border px-2 py-0.5 font-monospace" style="font-size: 11px;" th:text="${log.ipAddress}">127.0.0.1</span>
+                                    </td>
+                                </tr>
+
+                                <!-- Empty State khi không có dữ liệu (Chuẩn Quản lý tài khoản) -->
+                                <tr th:if="${logs == null or logs.isEmpty()}">
+                                    <td colspan="7" class="p-0">
+                                        <div class="account-empty-state">
+                                            <div class="account-empty-icon">
+                                                <i class="bi bi-journal-x"></i>
+                                            </div>
+                                            <h5 class="account-empty-title">Không tìm thấy bản ghi nhật ký nào</h5>
+                                            <p class="account-empty-desc">
+                                                Không có dữ liệu nhật ký thao tác nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                            </p>
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <a th:href="@{/admin/audit}" class="btn btn-secondary-custom btn-be">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS Table) -->
+                    <div id="tableHoverFloatingActions" class="staff-row-floating-actions-bar">
+                        <button type="button" id="btnFloatingDiff"
+                                class="staff-action-icon-btn btn-view"
+                                title="Xem chi tiết & đối chiếu dữ liệu">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+
+                    <!-- FOOTER PHÂN TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
+                    <div class="misa-pagination-footer">
+                        <!-- Bên trái: Tổng số -->
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${totalItems}">0</strong>
+                        </div>
+
+                        <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                        <div class="misa-pagination-right">
+                            <!-- Chọn số dòng/trang -->
+                            <div class="misa-page-size-wrapper">
+                                <span>Số dòng/trang</span>
+                                <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                                    <option value="25" th:selected="${pageSize == 25}">25</option>
+                                    <option value="50" th:selected="${pageSize == 50}">50</option>
+                                    <option value="100" th:selected="${pageSize == 100}">100</option>
+                                </select>
+                            </div>
+
+                            <!-- Khoảng hiển thị (1 - 10) -->
+                            <div class="misa-page-range">
+                                <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                            </div>
+
+                            <!-- Nút phân trang (|< < > >|) -->
+                            <div class="d-flex align-items-center gap-1">
+                                <!-- Về trang đầu -->
+                                <a th:href="@{/admin/audit(page=0, size=${pageSize}, keyword=${filter.keyword}, branchId=${filter.branchId}, action=${filter.action}, entityTable=${filter.entityTable}, fromDate=${filter.fromDate}, toDate=${filter.toDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang đầu">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </a>
+
+                                <!-- Trang trước -->
+                                <a th:href="@{/admin/audit(page=${currentPage - 1}, size=${pageSize}, keyword=${filter.keyword}, branchId=${filter.branchId}, action=${filter.action}, entityTable=${filter.entityTable}, fromDate=${filter.fromDate}, toDate=${filter.toDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+
+                                <!-- Trang kế tiếp -->
+                                <a th:href="@{/admin/audit(page=${currentPage + 1}, size=${pageSize}, keyword=${filter.keyword}, branchId=${filter.branchId}, action=${filter.action}, entityTable=${filter.entityTable}, fromDate=${filter.fromDate}, toDate=${filter.toDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+
+                                <!-- Đến trang cuối -->
+                                <a th:href="@{/admin/audit(page=${totalPages - 1}, size=${pageSize}, keyword=${filter.keyword}, branchId=${filter.branchId}, action=${filter.action}, entityTable=${filter.entityTable}, fromDate=${filter.fromDate}, toDate=${filter.toDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang cuối">
+                                    <i class="bi bi-chevron-bar-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== POPUP 2: MODAL BỘ LỌC NÂNG CAO (CHI TIẾT ĐẦY ĐỦ) ==================== -->
+    <div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                    <h5 class="modal-title fw-bold text-dark fs-6" id="advancedFilterModalLabel">
+                        <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                    <!-- 1. Đối tượng bị tác động -->
+                    <div class="mb-3">
+                        <label for="advEntityTable" class="form-label small fw-semibold text-muted">Đối tượng bị tác động</label>
+                        <select id="advEntityTable" class="form-select">
+                            <option value="">Tất cả đối tượng</option>
+                            <option th:each="entry : ${entityTableMap}" th:value="${entry.key}" th:text="${entry.value}"
+                                    th:selected="${filter.entityTable != null and filter.entityTable == entry.key}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Khoảng thời gian: Từ ngày -->
+                    <div class="mb-3">
+                        <label for="advFromDate" class="form-label small fw-semibold text-muted">Từ ngày</label>
+                        <input type="date" id="advFromDate" class="form-control" th:value="${filter.fromDate}">
+                    </div>
+
+                    <!-- 3. Khoảng thời gian: Đến ngày -->
+                    <div class="mb-3">
+                        <label for="advToDate" class="form-label small fw-semibold text-muted">Đến ngày</label>
+                        <input type="date" id="advToDate" class="form-control" th:value="${filter.toDate}">
+                    </div>
+                </div>
+                <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
+                    <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                        Đặt lại
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" id="btnApplyAdvancedFilter" class="btn btn-primary btn-vua">Áp dụng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         MODAL SCR-31.2: CHI TIẾT THAO TÁC & ĐỐI CHIẾU DỮ LIỆU THAY ĐỔI (VISUAL DIFF)
+         ========================================================================= -->
+    <div class="modal fade" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" style="max-width: 860px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <!-- Modal Header -->
+                <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="background: rgba(255, 255, 255, 0.1); width: 40px; height: 40px;">
+                            <i class="bi bi-file-earmark-diff fs-5 text-info"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold mb-0 text-white fs-6" id="auditDetailModalLabel">
+                                    Chi tiết Đối chiếu Dữ liệu Thay đổi
+                                </h5>
+                                <span class="badge font-monospace px-2 py-0.5" id="modalLogIdBadge" style="background: rgba(255, 255, 255, 0.15); font-size: 12px;">#LOG-0</span>
+                                <span class="badge rounded-pill px-2.5 py-0.5 fw-bold" id="modalActionBadge" style="font-size: 11px;">ACTION</span>
+                            </div>
+                            <span class="text-white-50 small" id="modalHeaderSubtitle">So sánh chi tiết các trường dữ liệu trước và sau khi thực hiện thao tác</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4" style="background: #f8fafc;">
+
+                    <!-- Metadata Grid -->
+                    <div class="row g-3 mb-3">
+                        <!-- Thời điểm -->
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <span class="text-muted small fw-semibold d-block mb-1">
+                                    <i class="bi bi-clock-history me-1 text-primary"></i>Thời điểm ghi nhận
+                                </span>
+                                <span class="fw-bold text-dark d-block" id="modalTime">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Người thực hiện -->
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <span class="text-muted small fw-semibold d-block mb-1">
+                                    <i class="bi bi-person-fill me-1 text-success"></i>Người thực hiện
+                                </span>
+                                <span class="fw-bold text-dark d-block text-truncate" id="modalUser">—</span>
+                                <span class="text-muted small text-truncate d-block" id="modalUserSub">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Cơ sở & IP -->
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <span class="text-muted small fw-semibold d-block mb-1">
+                                    <i class="bi bi-geo-alt-fill me-1 text-danger"></i>Chi nhánh &amp; IP máy
+                                </span>
+                                <span class="fw-bold text-dark d-block text-truncate" id="modalBranch">—</span>
+                                <span class="badge bg-light text-secondary border font-monospace mt-1" id="modalIp">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Đối tượng bị tác động -->
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <span class="text-muted small fw-semibold d-block mb-1">
+                                    <i class="bi bi-database-fill me-1 text-info"></i>Đối tượng bị tác động
+                                </span>
+                                <span class="fw-bold text-dark d-block text-truncate" id="modalEntityLabel">—</span>
+                                <span class="badge bg-light text-secondary border font-monospace mt-1" id="modalEntityTable">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG ĐỐI CHIẾU DỮ LIỆU TRỰC QUAN (VISUAL DIFF) -->
+                    <div class="card border rounded-3 overflow-hidden shadow-sm">
+                        <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex align-items-center justify-content-between">
+                            <span class="fw-bold text-dark small">
+                                <i class="bi bi-layout-split text-primary me-1.5"></i>Bảng đối chiếu giá trị thay đổi
+                            </span>
+                            <span class="badge bg-light text-muted border small font-monospace">Old ➔ New</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table diff-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 28%;">Trường dữ liệu</th>
+                                        <th style="width: 33%;">Giá trị trước thay đổi (Cũ)</th>
+                                        <th class="text-center" style="width: 6%;"></th>
+                                        <th style="width: 33%;">Giá trị sau thay đổi (Mới)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="diffTableBody">
+                                    <!-- Dynamic Rows injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2.5 px-4 bg-white border-top">
+                    <span class="text-muted small me-auto">
+                        <i class="bi bi-shield-check text-success me-1"></i>Kiểm toán tamper-proof: Dữ liệu bất biến, ghi nhận tức thời.
+                    </span>
+                    <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let currentDetailData = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
+            });
+
+            // 2. Xử lý đổi số dòng / trang (PageSize)
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+            const filterForm = document.getElementById('auditFilterForm');
+            const pageSizeInput = document.getElementById('pageSizeInput');
+            const pageIndexInput = document.getElementById('pageIndexInput');
+
+            if (pageSizeSelect && filterForm && pageSizeInput) {
+                pageSizeSelect.addEventListener('change', function () {
+                    pageSizeInput.value = this.value;
+                    if (pageIndexInput) {
+                        pageIndexInput.value = '0'; // reset về trang 1
+                    }
+                    filterForm.submit();
+                });
+            }
+
+            // 3. Xử lý Bộ lọc nâng cao (Modal chi tiết)
+            const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
+            const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+            const advEntityTable = document.getElementById('advEntityTable');
+            const advFromDate = document.getElementById('advFromDate');
+            const advToDate = document.getElementById('advToDate');
+
+            const entityTableInput = document.getElementById('entityTableInput');
+            const fromDateInput = document.getElementById('fromDateInput');
+            const toDateInput = document.getElementById('toDateInput');
+
+            if (btnApplyAdv) {
+                btnApplyAdv.addEventListener('click', function () {
+                    if (entityTableInput && advEntityTable) entityTableInput.value = advEntityTable.value;
+                    if (fromDateInput && advFromDate) fromDateInput.value = advFromDate.value;
+                    if (toDateInput && advToDate) toDateInput.value = advToDate.value;
+                    if (pageIndexInput) pageIndexInput.value = '0';
+                    filterForm.submit();
+                });
+            }
+
+            if (btnResetAdv) {
+                btnResetAdv.addEventListener('click', function () {
+                    if (advEntityTable) advEntityTable.value = '';
+                    if (advFromDate) advFromDate.value = '';
+                    if (advToDate) advToDate.value = '';
+
+                    if (entityTableInput) entityTableInput.value = '';
+                    if (fromDateInput) fromDateInput.value = '';
+                    if (toDateInput) toDateInput.value = '';
+                    if (pageIndexInput) pageIndexInput.value = '0';
+                    filterForm.submit();
+                });
+            }
+
+            // 4. Kéo dãn kích thước cột (Column Resizer chuẩn MISA)
+            const table = document.getElementById('auditTable');
+            const STORAGE_WIDTH_KEY = 'cv_audit_table_widths_v4';
+            const STORAGE_CONFIG_KEY = 'cv_audit_cols_v4';
+
+            const defaultColOrder = ['stt', 'time', 'user', 'branch', 'action', 'entity', 'ip'];
+            const defaultColWidths = {
+                stt: 60,
+                time: 180,
+                user: 250,
+                branch: 180,
+                action: 180,
+                entity: 220,
+                ip: 150
+            };
+
+            let currentWidths = loadColWidths();
+            let currentConfig = getColConfig();
+
+            function loadColWidths() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                    return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+                } catch (e) {
+                    return Object.assign({}, defaultColWidths);
+                }
+            }
+
+            function saveColWidths(widths) {
+                localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+            }
+
+            function getColConfig() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                    if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                    const parsed = JSON.parse(raw);
+                    const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                    defaultColOrder.forEach(col => {
+                        if (!order.includes(col)) order.push(col);
+                    });
+                    const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                    return { order, hidden };
+                } catch (e) {
+                    return { order: defaultColOrder.slice(), hidden: [] };
+                }
+            }
+
+            function saveColConfig(config) {
+                localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+            }
+
+            function applyColOrder(order) {
+                if (!order || !Array.isArray(order) || !table) return;
+
+                const customColList = document.getElementById('customColList');
+                if (customColList) {
+                    order.forEach(colKey => {
+                        const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                        if (item) customColList.appendChild(item);
+                    });
+                }
+
+                const colgroup = table.querySelector('colgroup');
+                if (colgroup) {
+                    order.forEach(colKey => {
+                        const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                        if (col) colgroup.appendChild(col);
+                    });
+                }
+
+                const theadTr = table.querySelector('thead tr');
+                if (theadTr) {
+                    order.forEach(colKey => {
+                        const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                        if (th) theadTr.appendChild(th);
+                    });
+                }
+
+                const tbodyRows = table.querySelectorAll('tbody tr');
+                tbodyRows.forEach(tr => {
+                    order.forEach(colKey => {
+                        const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                        if (td) tr.appendChild(td);
+                    });
+                });
+            }
+
+            function applyColWidths() {
+                if (!table) return;
+                currentWidths = loadColWidths();
+                let totalColsWidth = 0;
+
+                const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+                order.forEach(col => {
+                    const w = currentWidths[col] || defaultColWidths[col] || 180;
+                    currentWidths[col] = w;
+
+                    const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                    if (colEl) colEl.style.width = w + 'px';
+
+                    const th = table.querySelector(`thead th[data-col="${col}"]`);
+                    if (th) {
+                        th.style.width = w + 'px';
+                        th.style.minWidth = w + 'px';
+                        if (!th.classList.contains('d-none')) {
+                            totalColsWidth += w;
+                        }
+                    }
+                });
+
+                const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                table.style.width = Math.max(totalColsWidth, containerW) + 'px';
+            }
+
+            function applyColConfig(config) {
+                if (!table) return;
+
+                const order = (config && config.order) ? config.order : defaultColOrder;
+                let visibleTotalW = 0;
+
+                order.forEach(col => {
+                    const isHidden = config.hidden.includes(col);
+                    const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                    cells.forEach(cell => {
+                        if (isHidden) {
+                            cell.classList.add('d-none');
+                        } else {
+                            cell.classList.remove('d-none');
+                        }
+                    });
+
+                    const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                    if (colEl) {
+                        colEl.style.display = isHidden ? 'none' : '';
+                    }
+
+                    if (!isHidden) {
+                        visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 180);
+                    }
+
+                    const chk = document.getElementById(`chk-col-${col}`);
+                    if (chk) chk.checked = !isHidden;
+                });
+
+                const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                table.style.width = Math.max(visibleTotalW, containerW) + 'px';
+            }
+
+            function initDrawerDragAndDrop() {
+                const colList = document.getElementById('customColList');
+                if (!colList) return;
+
+                let draggedItem = null;
+
+                colList.querySelectorAll('.custom-col-item').forEach(item => {
+                    item.setAttribute('draggable', 'true');
+
+                    item.addEventListener('dragstart', function () {
+                        draggedItem = this;
+                        this.classList.add('is-dragging');
+                    });
+
+                    item.addEventListener('dragend', function () {
+                        this.classList.remove('is-dragging');
+                        draggedItem = null;
+                    });
+
+                    item.addEventListener('dragover', function (e) {
+                        e.preventDefault();
+                        if (draggedItem && draggedItem !== this) {
+                            const rect = this.getBoundingClientRect();
+                            const mid = rect.top + rect.height / 2;
+                            if (e.clientY < mid) {
+                                colList.insertBefore(draggedItem, this);
+                            } else {
+                                colList.insertBefore(draggedItem, this.nextSibling);
+                            }
+                        }
+                    });
+                });
+            }
+
+            let isResizingCol = false;
+
+            function initColumnResizers() {
+                if (!table) return;
+                const resizers = table.querySelectorAll('.col-resizer');
+                const floatingBar = document.getElementById('tableHoverFloatingActions');
+
+                resizers.forEach(resizer => {
+                    let startX, startW, colKey, colEl, thEl;
+
+                    resizer.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        isResizingCol = true;
+                        if (floatingBar) floatingBar.classList.remove('is-visible');
+
+                        thEl = resizer.parentElement;
+                        colKey = thEl.getAttribute('data-col');
+                        colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
+
+                        startX = e.pageX;
+                        startW = thEl.offsetWidth;
+
+                        resizer.classList.add('is-resizing');
+                        document.body.style.cursor = 'col-resize';
+                        document.body.style.userSelect = 'none';
+
+                        function onMouseMove(e) {
+                            const diff = e.pageX - startX;
+                            const minW = (colKey === 'stt') ? 50 : 80;
+                            const newW = Math.max(startW + diff, minW);
+
+                            if (thEl) {
+                                thEl.style.width = newW + 'px';
+                                thEl.style.minWidth = newW + 'px';
+                            }
+                            if (colEl) {
+                                colEl.style.width = newW + 'px';
+                            }
+                            currentWidths[colKey] = newW;
+
+                            let totalW = 0;
+                            defaultColOrder.forEach(col => {
+                                if (!currentConfig.hidden.includes(col)) {
+                                    totalW += (currentWidths[col] || defaultColWidths[col] || 180);
+                                }
+                            });
+
+                            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                            table.style.width = Math.max(totalW, containerW) + 'px';
+                        }
+
+                        function onMouseUp() {
+                            isResizingCol = false;
+                            resizer.classList.remove('is-resizing');
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+
+                            saveColWidths(currentWidths);
+
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        }
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    });
+                });
+            }
+
+            // Quản lý Popover Tùy chỉnh cột
+            const popoverEl = document.getElementById('customColumnPopover');
+            const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+            const btnCloseCol = document.getElementById('btnCloseColPopover');
+            const btnCancelCol = document.getElementById('btnCancelCols');
+            const colSearchInput = document.getElementById('colSearchInput');
+
+            function openCustomColPopover() {
+                if (!popoverEl) return;
+                popoverEl.style.display = 'block';
+                if (btnToggleCol) {
+                    btnToggleCol.setAttribute('aria-expanded', 'true');
+                    btnToggleCol.classList.add('active');
+                }
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk) {
+                        chk.checked = !currentConfig.hidden.includes(colKey);
+                    }
+                });
+                if (colSearchInput) {
+                    colSearchInput.value = '';
+                    const items = document.querySelectorAll('#customColList .custom-col-item');
+                    items.forEach(it => it.style.display = '');
+                    setTimeout(() => colSearchInput.focus(), 60);
+                }
+            }
+
+            function closeCustomColPopover() {
+                if (!popoverEl) return;
+                popoverEl.style.display = 'none';
+                if (btnToggleCol) {
+                    btnToggleCol.setAttribute('aria-expanded', 'false');
+                    btnToggleCol.classList.remove('active');
+                }
+            }
+
+            if (btnToggleCol) {
+                btnToggleCol.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                        openCustomColPopover();
+                    } else {
+                        closeCustomColPopover();
+                    }
+                });
+            }
+
+            if (btnCloseCol) {
+                btnCloseCol.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    closeCustomColPopover();
+                });
+            }
+
+            if (btnCancelCol) {
+                btnCancelCol.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    closeCustomColPopover();
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                if (popoverEl && popoverEl.style.display !== 'none') {
+                    if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                        closeCustomColPopover();
+                    }
+                }
+            });
+
+            if (colSearchInput) {
+                colSearchInput.addEventListener('input', function () {
+                    const term = this.value.toLowerCase().trim();
+                    const items = document.querySelectorAll('#customColList .custom-col-item');
+                    items.forEach(item => {
+                        const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                        item.style.display = label.includes(term) ? '' : 'none';
+                    });
+                });
+            }
+
+            const btnSaveCols = document.getElementById('btnSaveCols');
+            if (btnSaveCols) {
+                btnSaveCols.addEventListener('click', function () {
+                    const items = document.querySelectorAll('#customColList .custom-col-item');
+                    const order = [];
+                    const hidden = [];
+
+                    items.forEach(item => {
+                        const colKey = item.getAttribute('data-col-target');
+                        order.push(colKey);
+                        const chk = item.querySelector('.custom-col-check');
+                        if (chk && !chk.checked) {
+                            hidden.push(colKey);
+                        }
+                    });
+
+                    currentConfig = { order, hidden };
+                    saveColConfig(currentConfig);
+
+                    applyColOrder(order);
+                    applyColConfig(currentConfig);
+
+                    closeCustomColPopover();
+                });
+            }
+
+            const btnResetCols = document.getElementById('btnResetCols');
+            if (btnResetCols) {
+                btnResetCols.addEventListener('click', function () {
+                    localStorage.removeItem(STORAGE_WIDTH_KEY);
+                    localStorage.removeItem(STORAGE_CONFIG_KEY);
+
+                    currentWidths = Object.assign({}, defaultColWidths);
+                    currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+
+                    applyColOrder(currentConfig.order);
+                    applyColConfig(currentConfig);
+                    applyColWidths();
+
+                    closeCustomColPopover();
+                });
+            }
+
+            // 5. Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS Table)
+            function initFixedHoverActions() {
+                const tableCard = document.querySelector('.staff-table-card');
+                const tableWrapper = document.querySelector('.staff-table-wrapper');
+                const floatingBar = document.getElementById('tableHoverFloatingActions');
+                const btnFloatingDiff = document.getElementById('btnFloatingDiff');
+                if (!tableCard || !tableWrapper || !floatingBar || !table) return;
+
+                const tableThead = table.querySelector('thead');
+                const tableTbody = table.querySelector('tbody');
+                if (!tableTbody) return;
+
+                let activeRow = null;
+                let hideTimer = null;
+
+                function updateBarPosition(row) {
+                    if (!row || isResizingCol) {
+                        floatingBar.classList.remove('is-visible');
+                        return;
+                    }
+                    const rowRect = row.getBoundingClientRect();
+                    const cardRect = tableCard.getBoundingClientRect();
+                    const theadRect = tableThead.getBoundingClientRect();
+                    const wrapperRect = tableWrapper.getBoundingClientRect();
+
+                    if (rowRect.bottom <= theadRect.bottom + 2 || rowRect.top >= wrapperRect.bottom - 2) {
+                        floatingBar.classList.remove('is-visible');
+                        return;
+                    }
+
+                    const barH = floatingBar.offsetHeight || 32;
+                    const top = (rowRect.top - cardRect.top) + (rowRect.height - barH) / 2;
+                    floatingBar.style.top = top + 'px';
+                    floatingBar.classList.add('is-visible');
+                }
+
+                function showBarForRow(row) {
+                    if (isResizingCol) return;
+                    const logId = row.getAttribute('data-log-id');
+                    if (!logId) {
+                        hideBar();
+                        return;
+                    }
+
+                    activeRow = row;
+                    tableTbody.querySelectorAll('tr.is-row-hovered').forEach(r => {
+                        if (r !== row) r.classList.remove('is-row-hovered');
+                    });
+                    row.classList.add('is-row-hovered');
+
+                    if (btnFloatingDiff) {
+                        btnFloatingDiff.onclick = function (e) {
+                            e.stopPropagation();
+                            openAuditDetailModal(logId);
+                        };
+                    }
+
+                    updateBarPosition(row);
+                }
+
+                function hideBar() {
+                    floatingBar.classList.remove('is-visible');
+                    if (activeRow) {
+                        activeRow.classList.remove('is-row-hovered');
+                        activeRow = null;
+                    }
+                }
+
+                tableTbody.addEventListener('mousemove', function (e) {
+                    if (isResizingCol) return;
+                    const row = e.target.closest('tr[data-log-id]');
+                    if (row) {
+                        clearTimeout(hideTimer);
+                        if (row !== activeRow) {
+                            showBarForRow(row);
+                        } else {
+                            updateBarPosition(row);
+                        }
+                    }
+                });
+
+                // Hỗ trợ bấm trực tiếp vào bất kỳ điểm nào trên dòng để xem chi tiết
+                tableTbody.addEventListener('click', function (e) {
+                    if (e.target.closest('#tableHoverFloatingActions')) return;
+                    const row = e.target.closest('tr[data-log-id]');
+                    if (row) {
+                        const logId = row.getAttribute('data-log-id');
+                        if (logId) {
+                            openAuditDetailModal(logId);
+                        }
+                    }
+                });
+
+                tableWrapper.addEventListener('mouseleave', function (e) {
+                    if (e.relatedTarget && floatingBar.contains(e.relatedTarget)) {
+                        return;
+                    }
+                    hideTimer = setTimeout(hideBar, 120);
+                });
+
+                floatingBar.addEventListener('mouseenter', function () {
+                    clearTimeout(hideTimer);
+                    if (activeRow) {
+                        activeRow.classList.add('is-row-hovered');
+                    }
+                    floatingBar.classList.add('is-visible');
+                });
+
+                floatingBar.addEventListener('mouseleave', function (e) {
+                    if (e.relatedTarget && activeRow && activeRow.contains(e.relatedTarget)) {
+                        return;
+                    }
+                    hideTimer = setTimeout(hideBar, 120);
+                });
+
+                tableCard.addEventListener('mouseleave', function () {
+                    hideBar();
+                });
+
+                tableWrapper.addEventListener('scroll', function () {
+                    if (activeRow) {
+                        updateBarPosition(activeRow);
+                    }
+                });
+
+                window.addEventListener('resize', function () {
+                    if (activeRow) {
+                        updateBarPosition(activeRow);
+                    }
+                });
+            }
+
+            // Khởi tạo bảng
+            if (table) {
+                applyColOrder(currentConfig.order);
+                applyColWidths();
+                applyColConfig(currentConfig);
+                initColumnResizers();
+                initDrawerDragAndDrop();
+                initFixedHoverActions();
+            }
+
+            // Dismiss buttons for modal
+            document.querySelectorAll('#auditDetailModal [data-bs-dismiss="modal"]').forEach(btn => {
+                btn.addEventListener('click', closeModalSafe);
+            });
+        });
+
+        // Safe Modal Helper
+        function showModalSafe(modalEl) {
+            if (window.bootstrap && window.bootstrap.Modal) {
+                let instance = bootstrap.Modal.getInstance(modalEl);
+                if (!instance) {
+                    instance = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
+                }
+                instance.show();
+            } else {
+                modalEl.classList.add('show');
+                modalEl.style.display = 'block';
+                document.body.classList.add('modal-open');
+                if (!document.getElementById('manual-audit-backdrop')) {
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    backdrop.id = 'manual-audit-backdrop';
+                    document.body.appendChild(backdrop);
+                    backdrop.addEventListener('click', closeModalSafe);
+                }
+            }
+        }
+
+        function closeModalSafe() {
+            const modalEl = document.getElementById('auditDetailModal');
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            }
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            const backdrop = document.getElementById('manual-audit-backdrop');
+            if (backdrop) backdrop.remove();
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        }
+
+        async function openAuditDetailModal(logId) {
+            try {
+                const modalEl = document.getElementById('auditDetailModal');
+                showModalSafe(modalEl);
+
+                // Reset state
+                document.getElementById('modalLogIdBadge').innerText = '#LOG-' + logId;
+                document.getElementById('modalTime').innerText = 'Đang tải...';
+                document.getElementById('modalUser').innerText = 'Đang tải...';
+                document.getElementById('diffTableBody').innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm me-2"></div>Đang tải chi tiết kiểm toán...</td></tr>';
+
+                // Fetch detail
+                const response = await fetch('/admin/audit/detail/' + logId);
+                if (!response.ok) {
+                    throw new Error('Không thể tải chi tiết nhật ký: ' + response.statusText);
+                }
+
+                const data = await response.json();
+                currentDetailData = data;
+
+                // Bind Metadata
+                document.getElementById('modalLogIdBadge').innerText = '#LOG-' + data.logId;
+                document.getElementById('modalTime').innerText = data.formattedCreatedAt || 'N/A';
+                document.getElementById('modalUser').innerText = data.userFullName || 'Hệ thống';
+                document.getElementById('modalUserSub').innerText = (data.username ? '@' + data.username : '') + (data.userRoleName ? ' • ' + data.userRoleName : '');
+                document.getElementById('modalBranch').innerText = data.branchName || 'Toàn hệ thống';
+                document.getElementById('modalIp').innerText = data.ipAddress || '127.0.0.1';
+                document.getElementById('modalEntityLabel').innerText = data.entityTableLabel || data.entityTable;
+                document.getElementById('modalEntityTable').innerText = '#' + data.entityId + ' (' + data.entityTable + ')';
+
+                // Action badge
+                const actionBadge = document.getElementById('modalActionBadge');
+                actionBadge.className = 'badge rounded-pill px-2.5 py-1 fw-bold bg-' + data.actionBadgeClass;
+                actionBadge.innerText = data.action;
+
+                // Render Visual Diff Table
+                renderDiffTable(data);
+
+            } catch (error) {
+                console.error('Lỗi khi mở modal:', error);
+                document.getElementById('diffTableBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle-fill me-2"></i>' + error.message + '</td></tr>';
+            }
+        }
+
+        function renderDiffTable(data) {
+            const tbody = document.getElementById('diffTableBody');
+            tbody.innerHTML = '';
+
+            if (!data.fieldDiffs || data.fieldDiffs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i>Thao tác này ghi nhận thành công, không phát sinh thay đổi cấu trúc dữ liệu cụ thể.</td></tr>';
+                return;
+            }
+
+            data.fieldDiffs.forEach(diff => {
+                const tr = document.createElement('tr');
+
+                let fieldHtml = `<div><strong class="text-dark">${diff.fieldLabel || diff.fieldName}</strong><br><code class="text-muted small" style="font-size: 11px;">${diff.fieldName}</code></div>`;
+
+                let oldValHtml = '';
+                let arrowHtml = '<i class="bi bi-arrow-right text-muted fs-6"></i>';
+                let newValHtml = '';
+
+                if (diff.diffType === 'ADDED') {
+                    oldValHtml = `<span class="badge bg-light text-muted border">Không có</span>`;
+                    newValHtml = `<div class="p-1.5 rounded bg-success-subtle text-success fw-bold border border-success-subtle"><i class="bi bi-plus-lg me-1"></i>${escapeHtml(diff.newValue)}</div>`;
+                } else if (diff.diffType === 'REMOVED') {
+                    oldValHtml = `<div class="p-1.5 rounded bg-danger-subtle text-danger text-decoration-line-through border border-danger-subtle"><i class="bi bi-dash-lg me-1"></i>${escapeHtml(diff.oldValue)}</div>`;
+                    newValHtml = `<span class="badge bg-light text-muted border">Đã xóa</span>`;
+                } else if (diff.diffType === 'MODIFIED') {
+                    oldValHtml = `<div class="p-1.5 rounded bg-danger-subtle text-danger border border-danger-subtle text-decoration-line-through">${escapeHtml(diff.oldValue)}</div>`;
+                    newValHtml = `<div class="p-1.5 rounded bg-success-subtle text-success fw-bold border border-success-subtle">${escapeHtml(diff.newValue)}</div>`;
+                } else {
+                    oldValHtml = `<span class="text-muted">${escapeHtml(diff.oldValue)}</span>`;
+                    newValHtml = `<span class="text-secondary">${escapeHtml(diff.newValue)}</span>`;
+                    arrowHtml = '<i class="bi bi-dash text-muted"></i>';
+                }
+
+                tr.innerHTML = `
+                    <td>${fieldHtml}</td>
+                    <td>${oldValHtml}</td>
+                    <td class="text-center">${arrowHtml}</td>
+                    <td>${newValHtml}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportAuditCsv() {
+            alert('Tính năng xuất báo cáo kiểm toán (Audit Trail Export) đang được chuẩn bị file CSV/Excel cho toàn viện.');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>

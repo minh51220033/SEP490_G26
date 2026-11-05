@@ -11,5 +11,13 @@ public interface ClinicalExaminationRepository extends JpaRepository<ClinicalExa
 
     Optional<ClinicalExamination> findByVisit_VisitId(Long visitId);
 
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT ce FROM ClinicalExamination ce
+        JOIN FETCH ce.visit v
+        WHERE v.patientProfile.profileId = :profileId
+        ORDER BY v.checkInAt DESC
+    """)
+    java.util.List<ClinicalExamination> findByProfileIdWithDetails(@org.springframework.data.repository.query.Param("profileId") Long profileId);
+
     boolean existsByVisit_VisitId(Long visitId);
 }

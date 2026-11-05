@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head(${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'})}"></head>
+<head th:replace="~{fragments/head :: head(${categoryEditingId == null ? 'Quản lý danh mục - Thêm nhóm dịch vụ' : 'Quản lý danh mục - Sửa nhóm dịch vụ'})}"></head>
 
 <body class="app-body">
 <div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('service-catalog')}"></aside>
+    <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar(${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'})}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
         <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+
+            <!-- BREADCRUMB -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/admin/services/categories}">Nhóm dịch vụ</a></li>
+                    <li class="breadcrumb-item active" aria-current="page" th:text="${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Chỉnh sửa nhóm dịch vụ'}">Chỉnh sửa nhóm dịch vụ</li>
+                </ol>
+            </nav>
+
+            <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+            <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <h2 class="h4 mb-0"
                     th:text="${categoryEditingId == null ? 'Thêm nhóm dịch vụ' : 'Sửa nhóm dịch vụ'}">
                 </h2>
-                <a th:href="@{/admin/services}" class="btn btn-outline-secondary">
+                <a th:href="@{/admin/services/categories}" class="btn btn-outline-secondary">
                     Quay lại danh sách
                 </a>
             </div>
@@ -168,7 +182,7 @@
                                     : 'Lưu thay đổi'">
                         </button>
 
-                        <a th:href="@{/admin/services}"
+                        <a th:href="@{/admin/services/categories}"
                            class="btn btn-outline-secondary">
                             Hủy
                         </a>

@@ -21,6 +21,8 @@ public interface TreatmentPlanService {
 
     TreatmentPlanResponseDTO updateItemStatus(Long planItemId, String status);
 
+    TreatmentPlanResponseDTO syncPlanProgressAndStatus(Long planId);
+
     void deletePlan(Long planId);
 
     AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request);

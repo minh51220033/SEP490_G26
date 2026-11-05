@@ -220,6 +220,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                     throw new IllegalStateException("Dịch vụ thực hiện ID " + ps.getPerformedId() + " chưa được bác sĩ hoàn thành (trạng thái: " + ps.getStatus() + ").");
                 }
 
+                if (ps.getPlanItem() != null && ps.getPlanItem().getStatus() != TreatmentPlanItemStatus.COMPLETED) {
+                    throw new IllegalStateException("Dịch vụ thực hiện ID " + ps.getPerformedId() + " thuộc bước kế hoạch điều trị chưa hoàn thành.");
+                }
+
                 if (itemDto.getServiceId() != null && !itemDto.getServiceId().equals(ps.getService().getServiceId())) {
                     throw new IllegalArgumentException("Mã dịch vụ không khớp với dịch vụ đã thực hiện trên lâm sàng.");
                 }
@@ -947,13 +951,18 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public List<PerformedService> getUnbilledPerformedServices(Long visitId) {
+        if (visitId == null) {
+            return Collections.emptyList();
+        }
         List<PerformedService> allServices = performedServiceRepository.findByVisitIdWithDetails(visitId);
         List<Long> billedIds = invoiceItemRepository.findBilledPerformedServiceIdsByVisitId(visitId);
-        if (billedIds.isEmpty()) {
+        if (false) {
             return allServices;
         }
         return allServices.stream()
-                .filter(ps -> !billedIds.contains(ps.getPerformedId()))
+                .filter(ps -> ps.getStatus() == PerformedServiceStatus.COMPLETED)
+                .filter(ps -> ps.getPlanItem() == null || ps.getPlanItem().getStatus() == TreatmentPlanItemStatus.COMPLETED)
+                .filter(ps -> billedIds.isEmpty() || !billedIds.contains(ps.getPerformedId()))
                 .toList();
     }
 

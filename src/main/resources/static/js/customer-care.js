@@ -3,6 +3,15 @@
 
     const $ = (id) => document.getElementById(id);
 
+    const safeOn = (id, event, handler, options) => {
+        const el = typeof id === "string" ? $(id) : id;
+        if (el && typeof el.addEventListener === "function") {
+            el.addEventListener(event, handler, options);
+            return el;
+        }
+        return null;
+    };
+
     const state = {
         branchId: null,
         careRole: "ADMIN",
@@ -1379,17 +1388,18 @@
         });
 
         const isHistory = tab === "HISTORY";
-        $("tasksPanel").hidden = isHistory;
-        $("filterToolbarSection").hidden = isHistory;
-        $("historyPanel").hidden = !isHistory;
+        if ($("tasksPanel")) $("tasksPanel").hidden = isHistory;
+        if ($("filterToolbarSection")) $("filterToolbarSection").hidden = isHistory;
+        if ($("historyPanel")) $("historyPanel").hidden = !isHistory;
 
         if (!isHistory) {
             const meta = TAB_META[tab] || TAB_META.ALL;
-            if ($("tasksPanelTitle")) $("tasksPanelTitle").textContent = meta.title;
-            if ($("tasksPanelSubtitle")) $("tasksPanelSubtitle").textContent = meta.subtitle;
+            if ($("tasksPanelTitle")) $("tasksPanelTitle").textContent = meta.title || "";
+            if ($("tasksPanelSubtitle")) $("tasksPanelSubtitle").textContent = meta.subtitle || "";
             loadTasks(0);
         } else {
-            const selectedPatient = $("historyPatientSelect").value
+            const histSelect = $("historyPatientSelect");
+            const selectedPatient = (histSelect ? histSelect.value : "")
                 || (state.lookups.patients[0]?.profileId ? String(state.lookups.patients[0].profileId) : "");
             if (selectedPatient) {
                 loadPatientHistory(selectedPatient);
@@ -1400,7 +1410,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".tab").forEach(btn => {
             btn.addEventListener("click", () => {
-                $("filterStatus").value = "";
+                if ($("filterStatus")) $("filterStatus").value = "";
                 switchTab(btn.dataset.tab);
             });
         });
@@ -1409,10 +1419,10 @@
             const activate = () => {
                 const target = card.dataset.kpiTab;
                 if (target === "COMPLETED_FILTER") {
-                    $("filterStatus").value = "COMPLETED";
+                    if ($("filterStatus")) $("filterStatus").value = "COMPLETED";
                     switchTab("ALL");
                 } else {
-                    $("filterStatus").value = "";
+                    if ($("filterStatus")) $("filterStatus").value = "";
                     switchTab(target);
                 }
             };
@@ -1425,81 +1435,81 @@
             });
         });
 
-        $("branchId").addEventListener("change", async () => {
+        safeOn("branchId", "change", async () => {
             state.branchId = $("branchId").value ? Number($("branchId").value) : null;
             await refreshAllData();
         });
 
-        $("searchBtn").addEventListener("click", () => loadTasks(0));
-        $("clearFilterBtn").addEventListener("click", () => {
-            $("keyword").value = "";
-            $("filterStaffId").value = "";
-            $("filterStatus").value = "";
-            $("filterFromDate").value = "";
-            $("filterToDate").value = "";
+        safeOn("searchBtn", "click", () => loadTasks(0));
+        safeOn("clearFilterBtn", "click", () => {
+            if ($("keyword")) $("keyword").value = "";
+            if ($("filterStaffId")) $("filterStaffId").value = "";
+            if ($("filterStatus")) $("filterStatus").value = "";
+            if ($("filterFromDate")) $("filterFromDate").value = "";
+            if ($("filterToDate")) $("filterToDate").value = "";
             loadTasks(0);
         });
 
-        $("keyword").addEventListener("input", () => {
+        safeOn("keyword", "input", () => {
             clearTimeout(state.keywordDebounceTimer);
             state.keywordDebounceTimer = setTimeout(() => {
                 loadTasks(0);
             }, 350);
         });
 
-        $("keyword").addEventListener("keydown", (e) => {
+        safeOn("keyword", "keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
                 clearTimeout(state.keywordDebounceTimer);
                 loadTasks(0);
             }
         });
-        $("filterStaffId").addEventListener("change", () => loadTasks(0));
-        $("filterStatus").addEventListener("change", () => loadTasks(0));
+        safeOn("filterStaffId", "change", () => loadTasks(0));
+        safeOn("filterStatus", "change", () => loadTasks(0));
 
-        $("tasksPrevBtn").addEventListener("click", () => loadTasks(Math.max(0, state.page - 1)));
-        $("tasksNextBtn").addEventListener("click", () => loadTasks(state.page + 1));
+        safeOn("tasksPrevBtn", "click", () => loadTasks(Math.max(0, state.page - 1)));
+        safeOn("tasksNextBtn", "click", () => loadTasks(state.page + 1));
 
-        $("openCreateTaskBtn").addEventListener("click", () => openTaskFormModal());
-        $("autoGenerateBtn").addEventListener("click", handleAutoGenerateTasks);
-        $("refreshBtn").addEventListener("click", async () => {
+        safeOn("openCreateTaskBtn", "click", () => openTaskFormModal());
+        safeOn("autoGenerateBtn", "click", handleAutoGenerateTasks);
+        safeOn("refreshBtn", "click", async () => {
             await refreshAllData();
             showMessage("Đã làm mới dữ liệu Chăm sóc khách hàng.", "success");
         });
 
-        $("formProfileId").addEventListener("change", (e) => populatePatientLinkedRecords(e.target.value));
+        safeOn("formProfileId", "change", (e) => populatePatientLinkedRecords(e.target.value));
         if ($("formVisitId")) {
-            $("formVisitId").addEventListener("change", (e) => previewSelectedVisitExamination(e.target.value));
+            safeOn("formVisitId", "change", (e) => previewSelectedVisitExamination(e.target.value));
         }
-        $("intContactResult").addEventListener("change", updateRetryFieldRequirement);
+        safeOn("intContactResult", "change", updateRetryFieldRequirement);
 
-        $("loadHistoryBtn").addEventListener("click", () => loadPatientHistory($("historyPatientSelect").value));
-        $("historyPatientSelect").addEventListener("change", (e) => {
+        safeOn("loadHistoryBtn", "click", () => loadPatientHistory($("historyPatientSelect").value));
+        safeOn("historyPatientSelect", "change", (e) => {
             if (e.target.value) loadPatientHistory(e.target.value);
         });
 
         // Form Submits
-        $("taskForm").addEventListener("submit", submitTaskForm);
-        $("interactionForm").addEventListener("submit", submitInteractionForm);
-        $("escalateForm").addEventListener("submit", submitEscalateForm);
-        $("doctorResponseForm").addEventListener("submit", submitDoctorResponseForm);
+        safeOn("taskForm", "submit", submitTaskForm);
+        safeOn("interactionForm", "submit", submitInteractionForm);
+        safeOn("escalateForm", "submit", submitEscalateForm);
+        safeOn("doctorResponseForm", "submit", submitDoctorResponseForm);
 
         // Chuyển nhanh từ Modal Ghi kết quả sang Modal Chuyển Bác sĩ
-        $("switchToEscalateFromIntBtn").addEventListener("click", async () => {
+        safeOn("switchToEscalateFromIntBtn", "click", async () => {
             const taskId = $("intTaskId").value;
             $("interactionModal").hidden = true;
             if (taskId) await openEscalateModal(taskId);
         });
 
         // Close modal buttons
-        $("closeTaskFormModalBtn").addEventListener("click", () => { $("taskFormModal").hidden = true; });
-        $("cancelTaskFormModalBtn").addEventListener("click", () => { $("taskFormModal").hidden = true; });
-        $("closeInteractionModalBtn").addEventListener("click", () => { $("interactionModal").hidden = true; });
-        $("cancelInteractionModalBtn").addEventListener("click", () => { $("interactionModal").hidden = true; });
-        $("closeEscalateModalBtn").addEventListener("click", () => { $("escalateModal").hidden = true; });
-        $("cancelEscalateModalBtn").addEventListener("click", () => { $("escalateModal").hidden = true; });
-        $("closeDoctorResponseModalBtn").addEventListener("click", () => { $("doctorResponseModal").hidden = true; });
-        $("cancelDoctorResponseModalBtn").addEventListener("click", () => { $("doctorResponseModal").hidden = true; });
+        safeOn("closeTaskFormModalBtn", "click", () => { $("taskFormModal").hidden = true; });
+        safeOn("cancelTaskFormModalBtn", "click", () => { $("taskFormModal").hidden = true; });
+        safeOn("closeInteractionModalBtn", "click", () => { $("interactionModal").hidden = true; });
+        safeOn("cancelInteractionModalBtn", "click", () => { $("interactionModal").hidden = true; });
+        safeOn("closeEscalateModalBtn", "click", () => { $("escalateModal").hidden = true; });
+        safeOn("cancelEscalateModalBtn", "click", () => { $("escalateModal").hidden = true; });
+        safeOn("closeDoctorResponseModalBtn", "click", () => { $("doctorResponseModal").hidden = true; });
+        safeOn("cancelDoctorResponseModalBtn", "click", () => { $("doctorResponseModal").hidden = true; });
 
         // Đảm bảo click vào bên trong dialog không bao giờ kích hoạt đóng backdrop
         document.querySelectorAll(".cc-modal-dialog, .modal-dialog").forEach(dialog => {
