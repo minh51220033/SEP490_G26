@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface CashierOverviewService {
 
+    java.util.Optional<CashierPendingPatientDTO> findDebtDetail(Long profileId, List<Long> allowedBranchIds);
+
     /**
      * Tra cứu danh sách bệnh nhân trên tab Tổng quan Thu ngân.
      * 

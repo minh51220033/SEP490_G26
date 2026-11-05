@@ -1,0 +1,185 @@
+diff --git a/src/main/java/com/cvdcms/controller/PaymentPageController.java b/src/main/java/com/cvdcms/controller/PaymentPageController.java
+index 6665bc6..b917715 100644
+--- a/src/main/java/com/cvdcms/controller/PaymentPageController.java
++++ b/src/main/java/com/cvdcms/controller/PaymentPageController.java
+@@ -708,6 +708,25 @@ public class PaymentPageController {
+         }
+     }
+ 
++    @GetMapping("/debts/{profileId}")
++    public String viewDebtDetail(@PathVariable Long profileId, @RequestParam(required = false) Long branchId,
++                                 Model model, HttpSession session) {
++        Long userId = getCurrentUserId(session);
++        List<Long> scope = null;
++        if (branchId != null) {
++            scope = List.of(resolveBranchId(branchId, userId));
++        } else if (!userRepository.hasActiveAdminRole(userId)) {
++            scope = resolveAllowedBranches(userId).stream().map(Branch::getBranchId).toList();
++        }
++        var detail = cashierOverviewService.findDebtDetail(profileId, scope)
++                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
++                        org.springframework.http.HttpStatus.NOT_FOUND, "Không có khoản cần xử lý trong phạm vi chi nhánh."));
++        populateUserAndSidebar(model, session, "debts");
++        model.addAttribute("detail", detail);
++        model.addAttribute("branchId", branchId);
++        return "finance/payments/debt-detail";
++    }
++
+     @GetMapping("/debts")
+     public String listDebts(
+             @RequestParam(required = false) Long branchId,
+diff --git a/src/main/java/com/cvdcms/service/CashierOverviewService.java b/src/main/java/com/cvdcms/service/CashierOverviewService.java
+index e01d3e6..43b45c3 100644
+--- a/src/main/java/com/cvdcms/service/CashierOverviewService.java
++++ b/src/main/java/com/cvdcms/service/CashierOverviewService.java
+@@ -8,6 +8,8 @@ import java.util.List;
+ 
+ public interface CashierOverviewService {
+ 
++    java.util.Optional<CashierPendingPatientDTO> findDebtDetail(Long profileId, List<Long> allowedBranchIds);
++
+     /**
+      * Tra cứu danh sách bệnh nhân trên tab Tổng quan Thu ngân.
+      * 
+diff --git a/src/main/java/com/cvdcms/service/impl/CashierOverviewServiceImpl.java b/src/main/java/com/cvdcms/service/impl/CashierOverviewServiceImpl.java
+index 1a39a02..e857218 100644
+--- a/src/main/java/com/cvdcms/service/impl/CashierOverviewServiceImpl.java
++++ b/src/main/java/com/cvdcms/service/impl/CashierOverviewServiceImpl.java
+@@ -135,6 +135,16 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
+         return new PageImpl<>(pageContent, pageable, total);
+     }
+ 
++    @Override
++    public Optional<CashierPendingPatientDTO> findDebtDetail(Long profileId, List<Long> allowedBranchIds) {
++        if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
++            return Optional.empty();
++        }
++        return patientProfileRepository.findById(profileId)
++                .map(patient -> buildPatientDTO(patient, allowedBranchIds))
++                .filter(detail -> !detail.getUnpaidInvoices().isEmpty() || !detail.getPendingVisits().isEmpty());
++    }
++
+     private CashierPendingPatientDTO buildPatientDTO(PatientProfile patient, List<Long> allowedBranchIds) {
+         CashierPendingPatientDTO dto = new CashierPendingPatientDTO();
+         dto.setProfileId(patient.getProfileId());
+diff --git a/src/main/resources/templates/finance/invoices/create.html b/src/main/resources/templates/finance/invoices/create.html
+index a20bebb..6ab4c41 100644
+--- a/src/main/resources/templates/finance/invoices/create.html
++++ b/src/main/resources/templates/finance/invoices/create.html
+@@ -695,9 +695,9 @@
+     }
+ 
+     async function triggerRecalculate() {
+-        const profileId = document.getElementById('profileId').value;
+-        const visitId = document.getElementById('visitId').value;
+-        const prescInput = document.getElementById('prescriptionId');
++        const profileId = document.getElementById('hiddenProfileId').value;
++        const visitId = document.getElementById('hiddenVisitId').value;
++        const prescInput = document.getElementById('hiddenPrescriptionId');
+         const prescriptionId = prescInput ? prescInput.value : null;
+         const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
+         const buyMedicine = chkBuyMed && chkBuyMed.checked;
+@@ -711,11 +711,11 @@
+         document.querySelectorAll('.item-row').forEach(row => {
+             const cb = row.querySelector('.item-checkbox');
+             if (cb && cb.checked) {
+-                const psId = cb.value;
+-                const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+-                const qty = parseFloat(row.querySelector('.item-quantity').value) || 1;
++                const psId = row.querySelector('.prop-performed-id').value;
++                const unitPrice = parseFloat(row.querySelector('.item-price').value) || 0;
++                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+                 items.push({
+-                    performedServiceId: parseInt(psId),
++                    performedId: parseInt(psId),
+                     unitPrice: unitPrice,
+                     quantity: qty
+                 });
+@@ -727,7 +727,7 @@
+             document.querySelectorAll('.med-item-row').forEach(row => {
+                 const cb = row.querySelector('.med-item-checkbox');
+                 if (cb && cb.checked) {
+-                    const prescItemId = cb.value;
++                    const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
+                     const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
+                     medicineItems.push({
+                         prescriptionItemId: parseInt(prescItemId),
+diff --git a/src/main/resources/templates/finance/payments/debt-detail.html b/src/main/resources/templates/finance/payments/debt-detail.html
+new file mode 100644
+index 0000000..9d689cb
+--- /dev/null
++++ b/src/main/resources/templates/finance/payments/debt-detail.html
+@@ -0,0 +1,58 @@
++<!DOCTYPE html>
++<html lang="vi" xmlns:th="http://www.thymeleaf.org">
++<head>
++    <th:block th:replace="~{fragments/head :: head('Chi tiết công nợ bệnh nhân')}"></th:block>
++    <link rel="stylesheet" th:href="@{/css/finance.css}">
++    <link rel="stylesheet" th:href="@{/css/cashier.css}">
++</head>
++<body class="app-body">
++<div class="app-shell">
++    <aside th:replace="~{fragments/sidebar :: sidebar('debts')}"></aside>
++    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
++    <div class="app-main">
++        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
++        <main class="app-content finance-page cashier-page">
++            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('debts')}"></div>
++            <div class="cashier-subhead">
++                <div>
++                    <h2 class="cashier-subhead-title">Chi tiết công nợ · <span th:text="${detail.fullName}"></span></h2>
++                    <p class="cashier-subhead-desc"><span th:text="${detail.patientCode}"></span> · Còn nợ
++                        <strong th:text="${#numbers.formatDecimal(detail.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong></p>
++                </div>
++                <a class="fin-btn fin-btn-outline" th:href="@{/payments/debts(branchId=${branchId})}">Danh sách công nợ</a>
++            </div>
++            <section class="fin-card">
++                <h3 class="h5">Lượt khám chờ lập hóa đơn</h3>
++                <p th:if="${detail.pendingVisits.isEmpty()}" class="text-muted mb-0">Bệnh nhân chưa có lượt khám chờ lập hóa đơn tại cơ sở đang xem.</p>
++                <div class="fin-table-wrapper" th:unless="${detail.pendingVisits.isEmpty()}">
++                    <table class="fin-table"><thead><tr><th>Mã lượt khám</th><th>Cơ sở</th><th>Bác sĩ</th><th>Dịch vụ</th><th>Đơn thuốc</th><th>Thao tác</th></tr></thead>
++                        <tbody><tr th:each="v : ${detail.pendingVisits}">
++                            <td th:text="${v.visitCode}"></td><td th:text="${v.branchName}"></td><td th:text="${v.doctorName}"></td>
++                            <td th:text="${v.unbilledServiceCount}"></td><td th:text="${v.unbilledPrescriptionCount}"></td>
++                            <td><a class="fin-btn fin-btn-primary fin-btn-sm" th:href="@{/invoices/create(visitId=${v.visitId},branchId=${v.branchId})}">Lập hóa đơn</a></td>
++                        </tr></tbody>
++                    </table>
++                </div>
++            </section>
++            <section class="fin-card">
++                <h3 class="h5">Hóa đơn đã phát hành còn nợ</h3>
++                <p th:if="${detail.unpaidInvoices.isEmpty()}" class="text-muted mb-0">Bệnh nhân đã thanh toán hết hóa đơn tại cơ sở đang xem.</p>
++                <div class="fin-table-wrapper" th:unless="${detail.unpaidInvoices.isEmpty()}">
++                    <table class="fin-table"><thead><tr><th>Mã hóa đơn</th><th>Cơ sở</th><th>Tổng tiền</th><th>Đã trả</th><th>Còn nợ</th><th>Thao tác</th></tr></thead>
++                        <tbody><tr th:each="i : ${detail.unpaidInvoices}">
++                            <td><a th:href="@{/invoices/{id}(id=${i.invoiceId})}" th:text="${i.invoiceCode}"></a></td>
++                            <td th:text="${i.branchName}"></td>
++                            <td th:text="${#numbers.formatDecimal(i.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
++                            <td th:text="${#numbers.formatDecimal(i.paidAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
++                            <td th:text="${#numbers.formatDecimal(i.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
++                            <td><a class="fin-btn fin-btn-success fin-btn-sm" th:href="@{/payments/create(invoiceId=${i.invoiceId})}">Thu tiền</a></td>
++                        </tr></tbody>
++                    </table>
++                </div>
++            </section>
++        </main>
++    </div>
++</div>
++<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
++</body>
++</html>
+diff --git a/src/main/resources/templates/finance/payments/debts.html b/src/main/resources/templates/finance/payments/debts.html
+index b07940c..6ef4ccc 100644
+--- a/src/main/resources/templates/finance/payments/debts.html
++++ b/src/main/resources/templates/finance/payments/debts.html
+@@ -124,6 +124,10 @@
+                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
+                             </td>
+                             <td data-column-key="actions" data-column-action="true" class="text-center">
++                                <a class="fin-table-btn fin-table-btn-view"
++                                   th:href="@{/payments/debts/{id}(id=${d.profileId},branchId=${selectedBranchId})}">
++                                    <i class="bi bi-eye"></i> <span>Chi tiết</span>
++                                </a>
+                                 <button type="button"
+                                         class="fin-table-btn fin-table-btn-pay"
+                                         th:data-profile-id="${d.profileId}"
