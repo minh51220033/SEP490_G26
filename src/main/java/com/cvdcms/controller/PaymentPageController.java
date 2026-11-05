@@ -53,6 +53,12 @@ public class PaymentPageController {
     private com.cvdcms.repository.TreatmentPlanRepository treatmentPlanRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.CashierOverviewService cashierOverviewService;
+
+    public void setCashierOverviewService(com.cvdcms.service.CashierOverviewService cashierOverviewService) {
+        this.cashierOverviewService = cashierOverviewService;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentPageController(
@@ -181,11 +187,31 @@ public class PaymentPageController {
         return "finance/payments/list";
     }
 
+    // Overload for backward compatibility
+    public String patientFinancialDashboard(
+            Long profileId,
+            Long patientId,
+            int paymentPageNumber,
+            int invoicePageNumber,
+            LocalDate invoiceFromDate,
+            LocalDate invoiceToDate,
+            LocalDate paymentFromDate,
+            LocalDate paymentToDate,
+            Model model,
+            HttpSession session
+    ) {
+        return patientFinancialDashboard(profileId, patientId, null, 0, paymentPageNumber, invoicePageNumber,
+                invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
+    }
+
     // SCR-22.1: Dashboard tài chính theo bệnh nhân
     @GetMapping({"/dashboard", "/patient/{profileId}"})
     public String patientFinancialDashboard(
             @PathVariable(required = false) Long profileId,
             @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(name = "pendingPage", defaultValue = "0")
+            int pendingPageNumber,
             @RequestParam(name = "paymentPage", defaultValue = "0")
             int paymentPageNumber,
             @RequestParam(name = "invoicePage", defaultValue = "0")
@@ -214,6 +240,20 @@ public class PaymentPageController {
 
         Long targetProfileId = profileId != null ? profileId : patientId;
         model.addAttribute("branches", allowedBranches);
+
+        // Bổ sung bảng danh sách bệnh nhân chờ lập hóa đơn / thu tiền trên tab Tổng quan (Requirement 2 & 7)
+        int effectivePendingPage = Math.max(0, pendingPageNumber);
+        Pageable pendingPageable = PageRequest.of(effectivePendingPage, 10);
+        if (cashierOverviewService != null) {
+            Page<com.cvdcms.DTO.CashierPendingPatientDTO> pendingPatientsPage = cashierOverviewService.getPendingCashierPatients(keyword, allowedBranchIds, pendingPageable);
+            model.addAttribute("pendingPatientsPage", pendingPatientsPage);
+            model.addAttribute("pendingPatients", pendingPatientsPage.getContent());
+        } else {
+            model.addAttribute("pendingPatientsPage", Page.empty(pendingPageable));
+            model.addAttribute("pendingPatients", java.util.Collections.emptyList());
+        }
+        model.addAttribute("pendingKeyword", (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null);
+        model.addAttribute("currentPendingPage", effectivePendingPage);
 
         // Kiểm tra hợp lệ khoảng ngày cho bộ lọc Hóa đơn
         final boolean invoiceDateRangeInvalid = (invoiceFromDate != null && invoiceToDate != null && invoiceFromDate.isAfter(invoiceToDate));
@@ -454,6 +494,7 @@ public class PaymentPageController {
     @PostMapping("/create")
     public String processPayment(
             @ModelAttribute PaymentRequestDTO request,
+            @RequestParam(name = "returnUrl", required = false) String returnUrl,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
@@ -461,13 +502,47 @@ public class PaymentPageController {
             Long cashierUserId = getCurrentUserId(session);
             Payment payment = paymentService.processPayment(request, cashierUserId);
             redirectAttributes.addFlashAttribute("successMessage", "Ghi nhận thanh toán " + payment.getPaymentCode() + " thành công (" + payment.getAmount() + " đ)!");
+            if (returnUrl != null && !returnUrl.isBlank()) {
+                return "redirect:" + returnUrl;
+            }
             if (payment.getInvoice() != null) {
                 return "redirect:/invoices/" + payment.getInvoice().getInvoiceId();
             }
             return "redirect:/payments";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi thanh toán: " + e.getMessage());
+            if (returnUrl != null && !returnUrl.isBlank()) {
+                return "redirect:" + returnUrl;
+            }
             return "redirect:/payments/create" + (request.getInvoiceId() != null ? "?invoiceId=" + request.getInvoiceId() : "");
+        }
+    }
+
+    @GetMapping("/api/patients/{profileId}/unpaid-invoices")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> getPatientUnpaidInvoices(
+            @PathVariable Long profileId,
+            HttpSession session
+    ) {
+        try {
+            Long currentUserId = getCurrentUserId(session);
+            boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
+            List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+            List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+            List<Invoice> unpaid = debtService.getUnpaidInvoicesForPatient(profileId, allowedBranchIds);
+            List<java.util.Map<String, Object>> data = unpaid.stream().map(inv -> {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("invoiceId", inv.getInvoiceId());
+                map.put("invoiceCode", inv.getInvoiceCode());
+                map.put("remainingDebt", inv.getRemainingDebt() != null ? inv.getRemainingDebt() : java.math.BigDecimal.ZERO);
+                map.put("totalAmount", inv.getTotalAmount() != null ? inv.getTotalAmount() : java.math.BigDecimal.ZERO);
+                map.put("paidAmount", inv.getPaidAmount() != null ? inv.getPaidAmount() : java.math.BigDecimal.ZERO);
+                map.put("issuedAt", inv.getIssuedAt() != null ? inv.getIssuedAt().toString() : "");
+                return map;
+            }).toList();
+            return org.springframework.http.ResponseEntity.ok(data);
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(java.util.Map.of("success", false, "error", e.getMessage()));
         }
     }
 

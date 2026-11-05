@@ -96,8 +96,8 @@
                                     <i class="bi bi-shield-check text-success empty-icon"></i>
                                     <h6>Kh&#244;ng c&#243; c&#244;ng n&#7907; t&#7891;n &#273;&#7885;ng</h6>
                                     <p>Hi&#7879;n kh&#244;ng c&#243; b&#7879;nh nh&#226;n n&#224;o c&#243; c&#244;ng n&#7907; vi&#7879;n ph&#237; c&#7847;n thu trong ph&#7841;m vi l&#7885;c.</p>
-                                    <a th:href="@{/payments/create}" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-plus-lg me-1"></i>Thu ti&#7873;n vi&#7879;n ph&#237;
+                                    <a th:href="@{/payments/dashboard}" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-plus-lg me-1"></i>Thu tiền viện phí
                                     </a>
                                 </div>
                             </td>
@@ -124,9 +124,17 @@
                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
                             </td>
                             <td data-column-key="actions" data-column-action="true" class="text-center">
-                                <a th:href="@{/payments/create(profileId=${d.profileId})}" class="fin-table-btn fin-table-btn-pay" title="Thu n&#7907;">
-                                    <i class="bi bi-cash-stack"></i> <span>Thu n&#7907;</span>
-                                </a>
+                                <button type="button"
+                                        class="fin-table-btn fin-table-btn-pay"
+                                        th:data-profile-id="${d.profileId}"
+                                        th:data-patient-code="${d.patientCode}"
+                                        th:data-patient-name="${d.fullName}"
+                                        th:data-total-debt="${d.totalDebt}"
+                                        th:data-deposit-balance="${d.depositBalance}"
+                                        onclick="openDebtQuickPay(this)"
+                                        title="Thu nợ">
+                                    <i class="bi bi-cash-stack"></i> <span>Thu nợ</span>
+                                </button>
                             </td>
                         </tr>
                         </tbody>
@@ -156,5 +164,231 @@
         </main>
     </div>
 </div>
+
+<!-- MODAL GHI NHẬN THANH TOÁN VIỆN PHÍ (SCR-22.2) -->
+<div class="modal fade" id="quickPayModal" tabindex="-1" aria-labelledby="quickPayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow">
+            <form th:action="@{/payments/create}" method="post">
+                <input type="hidden" name="returnUrl" value="/payments/debts">
+                <input type="hidden" id="quickPayIdempotencyKey" name="idempotencyKey">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="quickPayModalLabel"><i class="bi bi-cash-coin me-2"></i> Ghi nhận Thanh toán Viện phí</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="modalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần thu:</label>
+                        <select id="modalInvoiceSelect" name="invoiceId" class="form-select" onchange="onModalInvoiceChange(this)" required>
+                            <option value="">-- Đang tải hóa đơn còn nợ... --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">SỐ TIỀN CÒN NỢ CỦA HÓA ĐƠN:</label>
+                        <input type="text" id="modalDebtDisplay" class="form-control bg-light fw-bold text-danger" readonly value="0 đ">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này (VNĐ):</label>
+                        <input type="number" id="modalPayAmount" name="amount" class="form-control" required min="1000" step="1000" oninput="triggerAllocationPreview()">
+                    </div>
+                    <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (FIFO) -->
+                    <div id="quickPayAllocationPreviewBox" class="mb-3" style="display: none;">
+                        <div class="card border border-primary-subtle shadow-sm bg-white">
+                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                <span class="small fw-bold text-primary"><i class="bi bi-diagram-3-fill me-1"></i> Dự kiến phân bổ khoản thu (FIFO):</span>
+                                <span id="previewRemainingDebtBadge" class="badge bg-danger">Còn nợ: 0 đ</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 200px;">
+                                    <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 11.5px;">
+                                        <thead class="table-light">
+                                            <tr class="text-center">
+                                                <th style="width: 28px;">#</th>
+                                                <th>Khoản thu</th>
+                                                <th style="width: 70px;">Loại</th>
+                                                <th class="text-end" style="width: 85px;">Phải trả</th>
+                                                <th class="text-end" style="width: 75px;">Đã trả</th>
+                                                <th class="text-end text-success" style="width: 85px;">Thu đợt này</th>
+                                                <th class="text-end text-danger" style="width: 80px;">Còn nợ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="quickPayAllocationPreviewTbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPayMethod" class="form-label fw-bold">Phương thức thanh toán:</label>
+                        <select id="modalPayMethod" name="paymentMethod" class="form-select">
+                            <option value="CASH">Tiền mặt</option>
+                            <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                            <option id="modalDepositOption" value="DEPOSIT_WALLET">Ví tạm ứng</option>
+                            <option value="POS_CARD">Thẻ POS</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalTransRef" class="form-label fw-bold">Mã giao dịch / Tham chiếu:</label>
+                        <input type="text" id="modalTransRef" name="transactionRef" class="form-control" placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPayNotes" class="form-label">Ghi chú thanh toán:</label>
+                        <textarea id="modalPayNotes" name="notes" class="form-control" rows="2" placeholder="Ghi chú đợt thanh toán..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Xác nhận Thu tiền</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/cashier-tabs.js}"></script>
+<script th:inline="javascript">
+    function generateUUID() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        return 'id-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+    }
+    function formatMoney(num) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
+    }
+    let allocationDebounceTimer = null;
+    function triggerAllocationPreview() {
+        clearTimeout(allocationDebounceTimer);
+        allocationDebounceTimer = setTimeout(fetchAllocationPreview, 200);
+    }
+
+    function fetchAllocationPreview() {
+        const invSelect = document.getElementById('modalInvoiceSelect');
+        const invoiceId = invSelect ? invSelect.value : null;
+        const amountInput = document.getElementById('modalPayAmount');
+        const amount = amountInput ? parseFloat(amountInput.value) : 0;
+        const box = document.getElementById('quickPayAllocationPreviewBox');
+        const tbody = document.getElementById('quickPayAllocationPreviewTbody');
+        const badge = document.getElementById('previewRemainingDebtBadge');
+
+        if (!box || !tbody) return;
+        if (!invoiceId || !amount || amount <= 0) {
+            box.style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/payments/allocation-preview?invoiceId=${invoiceId}&amount=${amount}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Không thể tải preview phân bổ');
+                return res.json();
+            })
+            .then(data => {
+                if (!data.lines || data.lines.length === 0) {
+                    box.style.display = 'none';
+                    return;
+                }
+                box.style.display = 'block';
+                if (badge) {
+                    badge.textContent = 'Còn nợ sau thu: ' + formatMoney(data.remainingInvoiceDebtAfter);
+                }
+                let html = '';
+                data.lines.forEach(l => {
+                    let typeBadge = '';
+                    if (l.itemType === 'SERVICE') {
+                        typeBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Dịch vụ</span>';
+                    } else if (l.itemType === 'MEDICINE') {
+                        typeBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle">Thuốc</span>';
+                    } else {
+                        typeBadge = '<span class="badge bg-secondary-subtle text-secondary border">Phụ thu</span>';
+                    }
+                    const allocText = l.allocatedAmount > 0
+                        ? `<span class="fw-bold text-success">+${formatMoney(l.allocatedAmount)}</span>`
+                        : '<span class="text-muted">0 đ</span>';
+                    const debtClass = l.remainingDebtAfter > 0 ? 'text-danger fw-bold' : 'text-success';
+                    html += `
+                        <tr>
+                            <td class="text-center">${l.order}</td>
+                            <td>${l.itemName}</td>
+                            <td class="text-center">${typeBadge}</td>
+                            <td class="text-end">${formatMoney(l.payableAmount)}</td>
+                            <td class="text-end text-muted">${formatMoney(l.previouslyPaid)}</td>
+                            <td class="text-end">${allocText}</td>
+                            <td class="text-end ${debtClass}">${formatMoney(l.remainingDebtAfter)}</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            })
+            .catch(err => {
+                box.style.display = 'none';
+            });
+    }
+
+    function onModalInvoiceChange(select) {
+        if (!select || select.selectedIndex < 0) return;
+        const option = select.options[select.selectedIndex];
+        if (!option) return;
+        const debt = parseFloat(option.getAttribute('data-debt')) || 0;
+        document.getElementById('modalDebtDisplay').value = formatMoney(debt);
+        document.getElementById('modalPayAmount').value = debt;
+        document.getElementById('modalPayAmount').max = debt;
+        triggerAllocationPreview();
+    }
+
+    function openDebtQuickPay(btn) {
+        const profileId = btn.getAttribute('data-profile-id');
+        const patientName = btn.getAttribute('data-patient-name') || '';
+        const patientCode = btn.getAttribute('data-patient-code') || '';
+        const depositBalance = parseFloat(btn.getAttribute('data-deposit-balance')) || 0;
+
+        const select = document.getElementById('modalInvoiceSelect');
+        const debtDisplay = document.getElementById('modalDebtDisplay');
+        const payAmount = document.getElementById('modalPayAmount');
+        const depositOpt = document.getElementById('modalDepositOption');
+        const payKey = document.getElementById('quickPayIdempotencyKey');
+
+        if (payKey) {
+            payKey.value = 'pay-' + generateUUID();
+        }
+
+        if (depositOpt) {
+            depositOpt.textContent = `Ví tiền tạm ứng (Số dư: ${formatMoney(depositBalance)})`;
+            depositOpt.disabled = (depositBalance <= 0);
+        }
+
+        select.innerHTML = '<option value="">-- Đang nạp danh sách hóa đơn... --</option>';
+        debtDisplay.value = '0 đ';
+        payAmount.value = '';
+
+        const modalEl = document.getElementById('quickPayModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        fetch(`/payments/api/patients/${profileId}/unpaid-invoices`)
+            .then(res => res.json())
+            .then(invoices => {
+                select.innerHTML = '';
+                if (!invoices || invoices.length === 0) {
+                    select.innerHTML = '<option value="">-- Không có hóa đơn còn nợ --</option>';
+                    debtDisplay.value = '0 đ';
+                    payAmount.value = 0;
+                    return;
+                }
+                invoices.forEach((inv, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = inv.invoiceId;
+                    opt.setAttribute('data-debt', inv.remainingDebt);
+                    opt.textContent = `${inv.invoiceCode} - Còn nợ: ${formatMoney(inv.remainingDebt)}`;
+                    select.appendChild(opt);
+                });
+                select.selectedIndex = 0;
+                onModalInvoiceChange(select);
+            })
+            .catch(err => {
+                select.innerHTML = '<option value="">-- Lỗi tải danh sách hóa đơn --</option>';
+            });
+    }
+</script>
 </body>
 </html>

@@ -38,4 +38,14 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
         ORDER BY p.createdAt DESC
     """)
     List<Prescription> findByBranchOrderByCreatedAtDesc(@org.springframework.data.repository.query.Param("branchId") Long branchId);
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT DISTINCT p.patientProfile.profileId FROM Prescription p
+        WHERE p.status NOT IN (:excludedStatuses)
+          AND (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+    """)
+    List<Long> findPatientProfileIdsByStatusNotInAndBranches(
+            @org.springframework.data.repository.query.Param("excludedStatuses") java.util.Collection<com.cvdcms.entity.enums.PrescriptionStatus> excludedStatuses,
+            @org.springframework.data.repository.query.Param("branchIds") java.util.Collection<Long> branchIds
+    );
 }

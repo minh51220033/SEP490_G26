@@ -455,4 +455,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<com.cvdcms.DTO.PatientDebtSummaryDTO> findAllPatientDebtsByBranches(
             @Param("branchIds") Collection<Long> branchIds
     );
+
+    @Query("""
+        SELECT DISTINCT i.patientProfile.profileId FROM Invoice i
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
+    """)
+    List<Long> findPatientProfileIdsWithDebtInBranches(@Param("branchIds") Collection<Long> branchIds);
 }

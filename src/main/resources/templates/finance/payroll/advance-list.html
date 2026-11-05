@@ -335,13 +335,13 @@
                         document.getElementById('payAdvStaff').textContent = staff || '';
                         document.getElementById('payAdvAmount').textContent = amount || '';
                         document.getElementById('payAdvanceForm').action = '/payroll/advances/' + id + '/pay';
-                        new bootstrap.Modal(document.getElementById('payAdvanceModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('payAdvanceModal')).show();
                     }
 
                     function openRejectModal(id, code) {
                         document.getElementById('rejectAdvCode').textContent = code || '';
                         document.getElementById('rejectAdvanceForm').action = '/payroll/advances/' + id + '/reject';
-                        new bootstrap.Modal(document.getElementById('rejectAdvanceModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectAdvanceModal')).show();
                     }
                 </script>
             </div>

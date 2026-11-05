@@ -463,13 +463,13 @@
                             if (payrollSection) payrollSection.classList.add('d-none');
                         }
 
-                        new bootstrap.Modal(document.getElementById('expenseDetailModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('expenseDetailModal')).show();
                     }
 
                     function openCancelModal(id, code) {
                         document.getElementById('cancelExpenseCode').textContent = code || '';
                         document.getElementById('cancelExpenseForm').action = '/expenses/' + id + '/cancel';
-                        new bootstrap.Modal(document.getElementById('cancelExpenseModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('cancelExpenseModal')).show();
                     }
                 </script>
             </div>

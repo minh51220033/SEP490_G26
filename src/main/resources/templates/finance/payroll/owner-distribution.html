@@ -405,7 +405,7 @@
                         document.getElementById('mDistCode').textContent = code || '';
                         document.getElementById('mDistAmount').textContent = amount || '';
                         document.getElementById('payDistForm').action = '/payroll/owner-distributions/' + id + '/pay';
-                        new bootstrap.Modal(document.getElementById('payDistModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('payDistModal')).show();
                     }
                     /*]]>*/
                 </script>
