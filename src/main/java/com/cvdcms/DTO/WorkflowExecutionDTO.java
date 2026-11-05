@@ -26,6 +26,21 @@ public class WorkflowExecutionDTO {
     private Integer progressPercent;
     private String startedAt;
     private String completedAt;
+
+    // FT43: thông tin liên kết với lượt khám / hàng chờ
+    private Long branchId;
+    private String branchName;
+    private String patientName;
+    private String patientCode;
+    private String doctorName;
+    private String visitStatus;
+    private String flowMode;
+    private Integer skippedSteps;
+    private Long currentStepId;
+    private String currentStepName;
+    private String nextQueueType;
+    private Boolean locked;
+    private String lockedReason;
 
     @Builder.Default
     private List<WorkflowStepDTO> steps = new ArrayList<>();
