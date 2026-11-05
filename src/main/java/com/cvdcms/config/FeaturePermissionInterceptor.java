@@ -123,6 +123,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/reception/queue") || uri.startsWith("/api/reception/queue")) {
             return List.of("APPOINTMENT_VIEW");
         }
+        if (uri.startsWith("/reception/workflow-progress") || uri.startsWith("/api/reception/workflow-progress")) {
+            return List.of("APPOINTMENT_VIEW");
+        }
         if (uri.startsWith("/reception/dispatch") || uri.startsWith("/api/reception/dispatch")) {
             return List.of("RECEPTION_DISPATCH", "CLINICAL_DISPATCH");
         }
@@ -141,6 +144,10 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/doctor/visits")
                 || uri.startsWith("/api/doctor/patients/daily-visits")) {
             return List.of("CLINICAL_DAILY_VISITS");
+        }
+        // FT43: thực hiện quy trình ngay trong màn khám nên bác sĩ khám trong ngày cũng được dùng
+        if (uri.startsWith("/api/doctor/workflows/execution")) {
+            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/doctor/workflows") || uri.startsWith("/api/doctor/workflows")) {
             return List.of("CLINICAL_WORKFLOWS");

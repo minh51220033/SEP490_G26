@@ -237,7 +237,7 @@
         <!-- LỄ TÂN -->
         <div class="side-group" data-accordion
              th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS') or #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE')))}"
-             th:classappend="${#strings.contains(',reception-memberships,appointments,checkin,queue,accounts,dispatch,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+             th:classappend="${#strings.contains(',reception-memberships,appointments,checkin,queue,accounts,dispatch,workflow-progress,', ',' + activeMenu + ',')} ? 'is-open' : ''">
             <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgReception">
                 <i class="bi bi-person-workspace" aria-hidden="true"></i>
                 <span class="side-group__label">Lễ tân</span>
@@ -272,6 +272,13 @@
                        title="Bảng điều phối ghế &amp; hàng chờ">
                         <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
                     </a>
+                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_VIEW'))}"
+                        th:href="@{/reception/workflow-progress}" class="side-link side-sublink"
+                        th:classappend="${activeMenu == 'workflow-progress'} ? 'is-active' : ''"
+                        title="Theo dõi tiến độ quy trình khám của bệnh nhân (FT43)">
+                         <i class="bi bi-list-check" aria-hidden="true"></i><span class="side-link__label">Tiến độ quy trình khám</span>
+                         <span class="side-badge side-badge--info">FT43</span>
+                     </a>
                 </div>
             </div>
         </div>
@@ -401,8 +408,6 @@
                         <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công</span>
                     </a>
                     <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
-                    <a th:if="${(roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'ROLE_BAC_SI'))) and (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
-=======
                     <!-- Đơn xin nghỉ / Khóa lịch -->
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS'))}"
                        th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
