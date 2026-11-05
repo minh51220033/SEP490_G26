@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ===================================================================== -->
+<!-- TAB: THỰC HIỆN QUY TRÌNH KHÁM & ĐIỀU TRỊ (FT43 / UC-13)               -->
+<!-- Màn hình: SCR-43.1, SCR-43.2, SCR-43.3, SCR-43.4                      -->
+<!-- Liên kết chặt chẽ với FT34 (Mẫu quy trình), FT16 (Dịch vụ), FT11-13   -->
+<!-- ===================================================================== -->
+<div th:fragment="workflowExecutionSection">
+    <div class="df-treatment-card" id="workflowExecutionSection"
+         th:attr="data-visit-id=${visit != null ? visit.visitId : ''},data-locked=${isClinicalLocked}">
+
+        <!-- HEADER CHUẨN ĐỒNG BỘ MISA & DENTALFLOW -->
+        <div class="df-treatment-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
+            <div class="df-treatment-title-box d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-list-check fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Tiến độ &amp; Thực hiện Quy trình Khám – Điều trị (FT43)</h4>
+                    <span class="text-secondary small">Khởi chạy quy trình theo mẫu (FT34), cập nhật từng bước, tạm dừng chuyển cận lâm sàng &amp; lưu lịch sử</span>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="ft43ExecCountBadge">
+                    0 quy trình
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-performed-services')"
+                        title="Chuyển sang Dịch vụ thực hiện tại ghế (FT16)">
+                    <i class="bi bi-tools text-primary"></i>
+                    <span>Dịch vụ thực hiện (FT16)</span>
+                </button>
+                <a th:href="@{/doctor/workflows}" target="_blank" class="df-btn-white-plan text-decoration-none"
+                   title="Mở trang cấu hình mẫu quy trình chuẩn (FT34)">
+                    <i class="bi bi-sliders text-secondary"></i>
+                    <span>Mẫu quy trình (FT34)</span>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
+                        onclick="window.FT43 && window.FT43.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+                </button>
+            </div>
+        </div>
+
+        <!-- BANNER LIÊN KẾT NGHIỆP VỤ & TOOLBAR KHỞI TẠO QUY TRÌNH (SCR-43.1) -->
+        <div class="p-3 bg-white border-bottom">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-lg-7">
+                    <div class="d-flex align-items-start gap-2 small text-secondary">
+                        <i class="bi bi-info-circle-fill text-primary mt-0.5"></i>
+                        <div>
+                            <strong class="text-dark">Quy tắc vận hành (UC-13):</strong>
+                            Các bước được thực hiện tuần tự theo phiên bản mẫu đã áp dụng cho lượt khám. Bước <em>Tùy chọn</em> có thể bỏ qua; quy trình <em>Ngắt quãng (INTERRUPTIBLE)</em> cho phép tạm dừng khi bệnh nhân đi chụp X-Quang/Xét nghiệm; bước <em>Cận lâm sàng</em> chỉ hoàn tất khi chỉ định ở tab Khám bệnh đã có kết quả.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5" th:if="${!isClinicalLocked}">
+                    <div class="d-flex align-items-center gap-2 justify-content-lg-end">
+                        <select id="ft43ServiceSelect" class="form-select form-select-sm rounded-3" style="max-width: 310px;">
+                            <option value="">-- Chọn dịch vụ để khởi tạo quy trình --</option>
+                        </select>
+                        <button type="button" id="ft43StartBtn" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold text-nowrap shadow-xs"
+                                onclick="window.FT43 && window.FT43.startSelectedService()">
+                            <i class="bi bi-play-fill me-1"></i>Khởi tạo quy trình
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THÔNG BÁO TRẠNG THÁI / LỖI TRONG TAB -->
+            <div id="ft43AlertBox" class="alert d-none mt-3 mb-0 py-2 px-3 small d-flex align-items-center justify-content-between" role="alert">
+                <span id="ft43AlertText"></span>
+                <button type="button" class="btn-close btn-sm" onclick="document.getElementById('ft43AlertBox').classList.add('d-none')"></button>
+            </div>
+        </div>
+
+        <!-- THỐNG KÊ NHANH TIẾN ĐỘ CA KHÁM -->
+        <div class="px-3 pt-3 pb-2 bg-light border-bottom">
+            <div class="row g-2">
+                <div class="col-6 col-md-3">
+                    <div class="bg-white border rounded-3 p-2.5 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted" style="font-size: 11.5px;">Tổng quy trình ca khám</div>
+                            <div class="fw-bold fs-5 text-dark" id="ft43KpiTotal">0</div>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary rounded-circle p-2"><i class="bi bi-diagram-3"></i></span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="bg-white border rounded-3 p-2.5 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted" style="font-size: 11.5px;">Đang thực hiện</div>
+                            <div class="fw-bold fs-5 text-success" id="ft43KpiInProgress">0</div>
+                        </div>
+                        <span class="badge bg-success-subtle text-success rounded-circle p-2"><i class="bi bi-play-circle"></i></span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="bg-white border rounded-3 p-2.5 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted" style="font-size: 11.5px;">Tạm dừng (chờ CLS)</div>
+                            <div class="fw-bold fs-5 text-warning" id="ft43KpiPaused">0</div>
+                        </div>
+                        <span class="badge bg-warning-subtle text-warning rounded-circle p-2"><i class="bi bi-pause-circle"></i></span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="bg-white border rounded-3 p-2.5 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted" style="font-size: 11.5px;">Đã hoàn tất</div>
+                            <div class="fw-bold fs-5 text-secondary" id="ft43KpiCompleted">0</div>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary rounded-circle p-2"><i class="bi bi-check2-circle"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DANH SÁCH QUY TRÌNH ĐANG THỰC HIỆN CỦA LƯỢT KHÁM (SCR-43.1, 43.2, 43.3) -->
+        <div class="p-3" id="ft43ExecutionsContainer">
+            <div class="text-center text-muted py-4" id="ft43LoadingState">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                Đang tải tiến độ quy trình của ca khám...
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL CẬP NHẬT BƯỚC / TẠM DỪNG / BỎ QUA (SCR-43.2 & SCR-43.3)     -->
+    <!-- ================================================================= -->
+    <div class="modal fade" id="ft43StepActionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0" id="ft43ModalTitle">Cập nhật bước thực hiện</h6>
+                        <div class="small opacity-75" id="ft43ModalStepSub"></div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="ft43ModalExecId">
+                    <input type="hidden" id="ft43ModalStepId">
+                    <input type="hidden" id="ft43ModalAction">
+
+                    <div id="ft43ModalDescBox" class="alert alert-light border small mb-3 d-none">
+                        <div class="fw-semibold text-dark mb-1"><i class="bi bi-journal-text me-1 text-primary"></i>Hướng dẫn chuyên môn:</div>
+                        <div id="ft43ModalDescText" class="text-secondary"></div>
+                    </div>
+
+                    <!-- Khối xác nhận điều kiện hoàn tất (SCR-43.2) -->
+                    <div id="ft43ModalCriteriaBox" class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle mb-3 d-none">
+                        <div class="fw-bold text-primary small mb-1">
+                            <i class="bi bi-check2-square me-1"></i>Điều kiện hoàn tất bước bắt buộc:
+                        </div>
+                        <div class="small text-dark mb-2" id="ft43ModalCriteriaText"></div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ft43ModalCriteriaCheck">
+                            <label class="form-check-label small fw-semibold text-dark" for="ft43ModalCriteriaCheck">
+                                Tôi xác nhận đã kiểm tra và đạt đầy đủ điều kiện hoàn tất nêu trên
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-dark" id="ft43ModalNoteLabel" for="ft43ModalNoteInput">
+                            Ghi chú kết quả / Nhận xét bước thực hiện
+                        </label>
+                        <textarea id="ft43ModalNoteInput" class="form-control form-control-sm rounded-3" rows="3"
+                                  placeholder="Nhập ghi chú kết quả thực hiện hoặc lý do tạm dừng/bỏ qua..."></textarea>
+                    </div>
+
+                    <div id="ft43ModalError" class="alert alert-danger py-2 px-3 small mt-2 mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer bg-light py-2.5 px-4">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold" id="ft43ModalSubmitBtn"
+                            onclick="window.FT43 && window.FT43.submitStepModal()">
+                        <i class="bi bi-check2-circle me-1"></i>Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL LỊCH SỬ THỰC HIỆN QUY TRÌNH (SCR-43.4)                      -->
+    <!-- ================================================================= -->
+    <div class="modal fade" id="ft43HistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f172a, #1e3a8a);">
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Lịch sử thực hiện quy trình (SCR-43.4)
+                        </h6>
+                        <div class="small opacity-75" id="ft43HistorySubtitle"></div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="ft43HistoryBody"></div>
+                </div>
+                <div class="modal-footer bg-light py-2 px-4">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var QUEUE_LABELS = {
+                RECEPTION: 'Quầy Tiếp đón',
+                EXAM: 'Phòng Khám',
+                PARACLINICAL: 'Phòng Cận lâm sàng / X-Quang',
+                RESULT_READING: 'Đọc kết quả CLS',
+                TREATMENT: 'Ghế Điều trị / Thủ thuật',
+                PAYMENT: 'Quầy Thu ngân'
+            };
+            var STEP_TYPE_LABELS = {
+                CLINICAL: ['Lâm sàng', 'bg-primary-subtle text-primary border-primary-subtle'],
+                PARACLINICAL: ['Cận lâm sàng', 'bg-info-subtle text-info-emphasis border-info-subtle'],
+                TREATMENT: ['Thủ thuật điều trị', 'bg-success-subtle text-success border-success-subtle'],
+                FOLLOW_UP: ['Dặn dò / Tái khám', 'bg-secondary-subtle text-secondary border-secondary-subtle'],
+                DECISION: ['Quyết định chuyên môn', 'bg-warning-subtle text-warning-emphasis border-warning-subtle']
+            };
+            var EXEC_STATUS_BADGE = {
+                IN_PROGRESS: ['Đang thực hiện', 'bg-success-subtle text-success border-success'],
+                PAUSED: ['Đang tạm dừng', 'bg-warning-subtle text-warning-emphasis border-warning'],
+                COMPLETED: ['Đã hoàn tất', 'bg-primary-subtle text-primary border-primary'],
+                CANCELLED: ['Đã hủy', 'bg-danger-subtle text-danger border-danger']
+            };
+            var STEP_STATUS_BADGE = {
+                PENDING: ['Chờ thực hiện', 'bg-light text-secondary border'],
+                IN_PROGRESS: ['Đang thực hiện', 'bg-success-subtle text-success border border-success'],
+                PAUSED: ['Tạm dừng', 'bg-warning-subtle text-warning-emphasis border border-warning'],
+                SKIPPED: ['Đã bỏ qua', 'bg-secondary-subtle text-secondary border'],
+                COMPLETED: ['Hoàn tất', 'bg-primary-subtle text-primary border border-primary']
+            };
+
+            var state = {
+                visitId: null,
+                locked: false,
+                executions: [],
+                availableServices: []
+            };
+
+            function esc(v) {
+                var d = document.createElement('div');
+                d.textContent = v == null ? '' : String(v);
+                return d.innerHTML;
+            }
+
+            function csrfHeaders() {
+                var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                var tokenMeta = document.querySelector('meta[name="_csrf"]');
+                var headerMeta = document.querySelector('meta[name="_csrf_header"]');
+                if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
+                    headers[headerMeta.content] = tokenMeta.content;
+                }
+                return headers;
+            }
+
+            function showNotice(msg, isError) {
+                var box = document.getElementById('ft43AlertBox');
+                var txt = document.getElementById('ft43AlertText');
+                if (!box || !txt) return;
+                box.className = 'alert mt-3 mb-0 py-2 px-3 small d-flex align-items-center justify-content-between '
+                    + (isError ? 'alert-danger' : 'alert-success');
+                txt.innerHTML = '<i class="bi ' + (isError ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill')
+                    + ' me-2"></i>' + esc(msg);
+            }
+
+            function reload() {
+                var root = document.getElementById('workflowExecutionSection');
+                if (!root) return;
+                state.visitId = root.getAttribute('data-visit-id');
+                if (!state.visitId) return;
+
+                fetch('/api/doctor/workflows/execution/visit/' + encodeURIComponent(state.visitId), {
+                    headers: { 'Accept': 'application/json' }
+                })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Không thể tải dữ liệu quy trình (' + res.status + ').');
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        state.locked = !!data.locked;
+                        state.executions = data.executions || [];
+                        state.availableServices = data.availableServices || [];
+                        renderOverview();
+                    })
+                    .catch(function (err) {
+                        var c = document.getElementById('ft43ExecutionsContainer');
+                        if (c) {
+                            c.innerHTML = '<div class="alert alert-danger mb-0 small">' + esc(err.message) + '</div>';
+                        }
+                    });
+            }
+
+            function renderOverview() {
+                var execs = state.executions;
+                var badge = document.getElementById('ft43ExecCountBadge');
+                if (badge) badge.textContent = execs.length + ' quy trình';
+
+                var subnavBadge = document.getElementById('ft43SubnavCount');
+                if (subnavBadge) {
+                    subnavBadge.textContent = execs.length;
+                    subnavBadge.classList.toggle('d-none', execs.length === 0);
+                }
+
+                var inProg = execs.filter(function (e) { return e.status === 'IN_PROGRESS'; }).length;
+                var paused = execs.filter(function (e) { return e.status === 'PAUSED'; }).length;
+                var comp = execs.filter(function (e) { return e.status === 'COMPLETED'; }).length;
+
+                var elTotal = document.getElementById('ft43KpiTotal');
+                var elInProg = document.getElementById('ft43KpiInProgress');
+                var elPaused = document.getElementById('ft43KpiPaused');
+                var elComp = document.getElementById('ft43KpiCompleted');
+                if (elTotal) elTotal.textContent = execs.length;
+                if (elInProg) elInProg.textContent = inProg;
+                if (elPaused) elPaused.textContent = paused;
+                if (elComp) elComp.textContent = comp;
+
+                // Dropdown dịch vụ khởi tạo quy trình
+                var sel = document.getElementById('ft43ServiceSelect');
+                var startBtn = document.getElementById('ft43StartBtn');
+                if (sel) {
+                    var opts = ['<option value="">-- Chọn dịch vụ để khởi tạo quy trình (' + state.availableServices.length + ') --</option>'];
+                    state.availableServices.forEach(function (s) {
+                        var prefix = s.suggested ? '★ [Dịch vụ trong ca khám] ' : '';
+                        opts.push('<option value="' + esc(s.serviceId) + '">'
+                            + prefix + esc(s.serviceName) + ' — ' + esc(s.templateName)
+                            + ' (' + esc(s.stepCount) + ' bước)</option>');
+                    });
+                    sel.innerHTML = opts.join('');
+                    sel.disabled = state.locked || state.availableServices.length === 0;
+                    if (startBtn) startBtn.disabled = state.locked || state.availableServices.length === 0;
+                }
+
+                var container = document.getElementById('ft43ExecutionsContainer');
+                if (!container) return;
+
+                if (execs.length === 0) {
+                    var suggestedBtns = state.availableServices.filter(function (s) { return s.suggested; }).map(function (s) {
+                        return '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold" '
+                            + 'onclick="window.FT43.startService(' + Number(s.serviceId) + ')">'
+                            + '<i class="bi bi-lightning-charge-fill text-warning me-1"></i>Khởi chạy: '
+                            + esc(s.serviceName) + ' (' + esc(s.stepCount) + ' bước)</button>';
+                    }).join(' ');
+
+                    container.innerHTML = '<div class="text-center py-4 px-3 bg-light rounded-3 border border-dashed">'
+                        + '<i class="bi bi-diagram-3 fs-2 text-primary d-block mb-2"></i>'
+                        + '<div class="fw-bold text-dark mb-1">Chưa có quy trình khám &amp; điều trị nào được khởi tạo cho lượt khám này</div>'
+                        + '<div class="text-muted small mb-3">Chọn một dịch vụ có mẫu quy trình ở thanh công cụ phía trên để bắt đầu theo dõi từng bước thực hiện tại ghế.</div>'
+                        + (suggestedBtns ? '<div class="d-flex flex-wrap justify-content-center gap-2">' + suggestedBtns + '</div>' : '')
+                        + '</div>';
+                    return;
+                }
+
+                container.innerHTML = execs.map(renderExecutionCard).join('');
+            }
+
+            function renderExecutionCard(ex) {
+                var stBadge = EXEC_STATUS_BADGE[ex.status] || [ex.status, 'bg-secondary-subtle text-secondary'];
+                var flowBadge = ex.flowMode === 'INTERRUPTIBLE'
+                    ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" title="Cho phép tạm dừng bước để chuyển bệnh nhân đi chụp phim / xét nghiệm"><i class="bi bi-arrow-left-right me-1"></i>Luồng ngắt quãng (INTERRUPTIBLE)</span>'
+                    : '<span class="badge bg-light text-secondary border ms-1" title="Thực hiện liên tục tại ghế"><i class="bi bi-arrow-right me-1"></i>Luồng liên tục (CONTINUOUS)</span>';
+
+                var nextQueueHtml = ex.nextQueueType
+                    ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1"><i class="bi bi-signpost-split me-1"></i>Đích điều phối: '
+                        + esc(QUEUE_LABELS[ex.nextQueueType] || ex.nextQueueType) + '</span>'
+                    : '';
+
+                var rows = (ex.steps || []).map(function (step) {
+                    return renderStepRow(ex, step);
+                }).join('');
+
+                return '<div class="card border shadow-xs rounded-3 mb-3 overflow-hidden">'
+                    + '<div class="card-header bg-white p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">'
+                    + '  <div>'
+                    + '    <div class="d-flex flex-wrap align-items-center gap-1.5">'
+                    + '      <span class="fw-bold text-dark fs-6"><i class="bi bi-clipboard2-pulse text-primary me-1.5"></i>'
+                    +          esc(ex.serviceName || ex.templateName) + '</span>'
+                    + '      <span class="badge border ' + stBadge[1] + ' ms-1">' + esc(stBadge[0]) + '</span>'
+                    +        flowBadge + nextQueueHtml
+                    + '    </div>'
+                    + '    <div class="small text-muted mt-1">'
+                    + '      Mẫu áp dụng: <strong>' + esc(ex.templateName) + '</strong> (' + esc(ex.templateCode) + ')'
+                    +        (ex.startedAt ? ' · Khởi tạo: ' + esc(ex.startedAt) : '')
+                    +        (ex.completedAt ? ' · Hoàn tất: ' + esc(ex.completedAt) : '')
+                    +        (ex.currentStepName ? ' · Bước hiện tại: <strong class="text-primary">' + esc(ex.currentStepName) + '</strong>' : '')
+                    + '    </div>'
+                    + '  </div>'
+                    + '  <div class="d-flex align-items-center gap-3">'
+                    + '    <div style="min-width: 160px;">'
+                    + '      <div class="d-flex justify-content-between small mb-1">'
+                    + '        <span class="text-muted">Tiến độ bước</span>'
+                    + '        <span class="fw-bold text-dark">' + esc((ex.completedSteps || 0) + (ex.skippedSteps || 0)) + '/' + esc(ex.totalSteps || 0) + ' (' + esc(ex.progressPercent || 0) + '%)</span>'
+                    + '      </div>'
+                    + '      <div class="progress" style="height: 8px;">'
+                    + '        <div class="progress-bar bg-success" role="progressbar" style="width: ' + Number(ex.progressPercent || 0) + '%;"></div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1 fw-semibold text-nowrap" '
+                    + '            onclick="window.FT43.openHistory(' + Number(ex.executionId) + ')">'
+                    + '      <i class="bi bi-clock-history me-1"></i>Lịch sử (SCR-43.4)'
+                    + '    </button>'
+                    + '  </div>'
+                    + '</div>'
+                    + '<div class="table-responsive">'
+                    + '  <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">'
+                    + '    <thead class="table-light">'
+                    + '      <tr>'
+                    + '        <th style="width: 55px;" class="text-center">Bước</th>'
+                    + '        <th style="min-width: 240px;">Nội dung bước &amp; Điều kiện hoàn tất</th>'
+                    + '        <th style="width: 145px;">Phân loại &amp; Hàng chờ</th>'
+                    + '        <th style="width: 165px;">Người phụ trách &amp; Giờ</th>'
+                    + '        <th style="width: 130px;" class="text-center">Trạng thái</th>'
+                    + '        <th style="width: 250px;" class="text-end pe-3">Thao tác (SCR-43.2 / 43.3)</th>'
+                    + '      </tr>'
+                    + '    </thead>'
+                    + '    <tbody>' + rows + '</tbody>'
+                    + '  </table>'
+                    + '</div>'
+                    + '</div>';
+            }
+
+            function renderStepRow(ex, s) {
+                var isCurrent = ex.currentStepId && Number(ex.currentStepId) === Number(s.stepId);
+                var stBadge = STEP_STATUS_BADGE[s.executionStatus] || [s.executionStatus, 'bg-light text-secondary border'];
+                var typeInfo = STEP_TYPE_LABELS[s.stepType] || [s.stepType || 'Lâm sàng', 'bg-light text-secondary border'];
+
+                var badges = '';
+                if (s.isOptional) {
+                    badges += '<span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size: 10.5px;">Tùy chọn</span>';
+                } else {
+                    badges += '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10.5px;">Bắt buộc</span>';
+                }
+                if (s.requiresClinicalApproval) {
+                    badges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-shield-check me-0.5"></i>BS duyệt</span>';
+                }
+
+                var criteriaHtml = s.completionCriteria
+                    ? '<div class="small text-primary mt-1"><i class="bi bi-check2-square me-1"></i><strong>Tiêu chí hoàn tất:</strong> ' + esc(s.completionCriteria) + '</div>'
+                    : '';
+                var noteHtml = s.resultNote
+                    ? '<div class="small text-dark bg-light border rounded px-2 py-1 mt-1"><i class="bi bi-chat-left-text text-secondary me-1"></i>' + esc(s.resultNote) + '</div>'
+                    : '';
+
+                var queueBadge = s.targetQueueType
+                    ? '<div class="small text-muted mt-1"><i class="bi bi-box-arrow-right me-1"></i>' + esc(QUEUE_LABELS[s.targetQueueType] || s.targetQueueType) + '</div>'
+                    : '';
+
+                var staffTime = [];
+                if (s.staffName) staffTime.push('<div><i class="bi bi-person-check text-primary me-1"></i>' + esc(s.staffName) + '</div>');
+                if (s.startedAt) staffTime.push('<div class="text-muted" style="font-size:11.5px;">BĐ: ' + esc(s.startedAt) + '</div>');
+                if (s.completedAt) staffTime.push('<div class="text-muted" style="font-size:11.5px;">KT: ' + esc(s.completedAt) + '</div>');
+
+                var actions = s.allowedActions || [];
+                var btns = [];
+                if (actions.indexOf('START') >= 0) {
+                    btns.push('<button type="button" class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 fw-semibold" '
+                        + 'onclick="window.FT43.quickAction(' + Number(ex.executionId) + ',' + Number(s.stepId) + ',\'START\')">'
+                        + '<i class="bi bi-play-fill me-0.5"></i>Bắt đầu</button>');
+                }
+                if (actions.indexOf('COMPLETE') >= 0) {
+                    btns.push('<button type="button" class="btn btn-sm btn-success rounded-pill px-2.5 py-1 fw-semibold" '
+                        + 'onclick="window.FT43.openStepModal(' + Number(ex.executionId) + ',' + Number(s.stepId) + ',\'COMPLETE\')">'
+                        + '<i class="bi bi-check2-circle me-0.5"></i>Hoàn tất</button>');
+                }
+                if (actions.indexOf('PAUSE') >= 0) {
+                    btns.push('<button type="button" class="btn btn-sm btn-warning rounded-pill px-2.5 py-1 fw-semibold text-dark" '
+                        + 'onclick="window.FT43.openStepModal(' + Number(ex.executionId) + ',' + Number(s.stepId) + ',\'PAUSE\')">'
+                        + '<i class="bi bi-pause-fill me-0.5"></i>Tạm dừng</button>');
+                }
+                if (actions.indexOf('RESUME') >= 0) {
+                    btns.push('<button type="button" class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 fw-semibold" '
+                        + 'onclick="window.FT43.quickAction(' + Number(ex.executionId) + ',' + Number(s.stepId) + ',\'RESUME\')">'
+                        + '<i class="bi bi-play-circle me-0.5"></i>Tiếp tục</button>');
+                }
+                if (actions.indexOf('SKIP') >= 0) {
+                    btns.push('<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold" '
+                        + 'onclick="window.FT43.openStepModal(' + Number(ex.executionId) + ',' + Number(s.stepId) + ',\'SKIP\')">'
+                        + '<i class="bi bi-skip-forward me-0.5"></i>Bỏ qua</button>');
+                }
+
+                var rowClass = isCurrent ? 'table-primary bg-opacity-10' : '';
+                return '<tr class="' + rowClass + '">'
+                    + '<td class="text-center fw-bold">'
+                    + '  <span class="badge rounded-circle ' + (isCurrent ? 'bg-primary text-white' : 'bg-light text-dark border') + '" style="width:26px;height:26px;line-height:18px;">'
+                    +      esc(s.sequenceOrder) + '</span>'
+                    + '</td>'
+                    + '<td>'
+                    + '  <div class="fw-semibold text-dark">' + esc(s.stepName) + badges + '</div>'
+                    +    (s.stepDescription ? '<div class="small text-secondary mt-0.5">' + esc(s.stepDescription) + '</div>' : '')
+                    +    criteriaHtml + noteHtml
+                    + '</td>'
+                    + '<td>'
+                    + '  <span class="badge border ' + typeInfo[1] + '">' + esc(typeInfo[0]) + '</span>'
+                    +    queueBadge
+                    + '</td>'
+                    + '<td class="small">' + (staffTime.length ? staffTime.join('') : '<span class="text-muted">—</span>') + '</td>'
+                    + '<td class="text-center"><span class="badge ' + stBadge[1] + ' px-2.5 py-1">' + esc(stBadge[0]) + '</span></td>'
+                    + '<td class="text-end pe-3">'
+                    +    (btns.length ? '<div class="d-inline-flex flex-wrap gap-1 justify-content-end">' + btns.join('') + '</div>'
+                                      : '<span class="text-muted small">—</span>')
+                    + '</td>'
+                    + '</tr>';
+            }
+
+            function findStep(execId, stepId) {
+                var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
+                if (!ex) return null;
+                var st = (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(stepId); });
+                return st ? { execution: ex, step: st } : null;
+            }
+
+            function startSelectedService() {
+                var sel = document.getElementById('ft43ServiceSelect');
+                if (!sel || !sel.value) {
+                    showNotice('Vui lòng chọn một dịch vụ có mẫu quy trình để khởi tạo.', true);
+                    return;
+                }
+                startService(Number(sel.value));
+            }
+
+            function startService(serviceId) {
+                if (!state.visitId || !serviceId) return;
+                fetch('/api/doctor/workflows/execution/start', {
+                    method: 'POST',
+                    headers: csrfHeaders(),
+                    body: JSON.stringify({ visitId: Number(state.visitId), serviceId: Number(serviceId) })
+                })
+                    .then(function (res) {
+                        return res.json().then(function (body) {
+                            if (!res.ok) throw new Error(body.message || 'Không thể khởi tạo quy trình.');
+                            return body;
+                        });
+                    })
+                    .then(function (dto) {
+                        showNotice('Đã khởi tạo quy trình "' + (dto.templateName || dto.serviceName) + '" cho ca khám.', false);
+                        reload();
+                    })
+                    .catch(function (err) {
+                        showNotice(err.message, true);
+                    });
+            }
+
+            function quickAction(execId, stepId, action) {
+                sendStepAction(execId, stepId, action, '', true, null);
+            }
+
+            function openStepModal(execId, stepId, action) {
+                var found = findStep(execId, stepId);
+                if (!found) return;
+                var step = found.step;
+
+                document.getElementById('ft43ModalExecId').value = execId;
+                document.getElementById('ft43ModalStepId').value = stepId;
+                document.getElementById('ft43ModalAction').value = action;
+                document.getElementById('ft43ModalNoteInput').value = step.resultNote || '';
+                document.getElementById('ft43ModalError').classList.add('d-none');
+
+                var titleMap = {
+                    COMPLETE: 'Hoàn tất bước thực hiện (SCR-43.2)',
+                    PAUSE: 'Tạm dừng quy trình & Điều phối (SCR-43.3)',
+                    SKIP: 'Bỏ qua bước tùy chọn (SCR-43.3)'
+                };
+                document.getElementById('ft43ModalTitle').textContent = titleMap[action] || 'Cập nhật bước';
+                document.getElementById('ft43ModalStepSub').textContent =
+                    'Bước ' + step.sequenceOrder + ': ' + step.stepName;
+
+                var descBox = document.getElementById('ft43ModalDescBox');
+                if (step.stepDescription) {
+                    document.getElementById('ft43ModalDescText').textContent = step.stepDescription;
+                    descBox.classList.remove('d-none');
+                } else {
+                    descBox.classList.add('d-none');
+                }
+
+                var critBox = document.getElementById('ft43ModalCriteriaBox');
+                var critCheck = document.getElementById('ft43ModalCriteriaCheck');
+                critCheck.checked = false;
+                if (action === 'COMPLETE' && step.completionCriteria) {
+                    document.getElementById('ft43ModalCriteriaText').textContent = step.completionCriteria;
+                    critBox.classList.remove('d-none');
+                } else {
+                    critBox.classList.add('d-none');
+                }
+
+                var noteLabel = document.getElementById('ft43ModalNoteLabel');
+                if (action === 'PAUSE') {
+                    noteLabel.innerHTML = 'Lý do tạm dừng / Phòng chuyển đến <span class="text-danger">*</span>';
+                } else if (action === 'SKIP') {
+                    noteLabel.textContent = 'Ghi chú lý do bỏ qua bước tùy chọn';
+                } else {
+                    noteLabel.textContent = 'Ghi chú kết quả thực hiện bước';
+                }
+
+                var modalEl = document.getElementById('ft43StepActionModal');
+                if (modalEl && modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+
+            function submitStepModal() {
+                var execId = Number(document.getElementById('ft43ModalExecId').value);
+                var stepId = Number(document.getElementById('ft43ModalStepId').value);
+                var action = document.getElementById('ft43ModalAction').value;
+                var note = document.getElementById('ft43ModalNoteInput').value;
+                var critBox = document.getElementById('ft43ModalCriteriaBox');
+                var confirmed = critBox.classList.contains('d-none')
+                    || document.getElementById('ft43ModalCriteriaCheck').checked;
+
+                var errEl = document.getElementById('ft43ModalError');
+                sendStepAction(execId, stepId, action, note, confirmed, errEl);
+            }
+
+            function sendStepAction(execId, stepId, action, note, criteriaConfirmed, modalErrorEl) {
+                fetch('/api/doctor/workflows/execution/step', {
+                    method: 'POST',
+                    headers: csrfHeaders(),
+                    body: JSON.stringify({
+                        executionId: Number(execId),
+                        stepId: Number(stepId),
+                        action: action,
+                        note: note,
+                        criteriaConfirmed: !!criteriaConfirmed
+                    })
+                })
+                    .then(function (res) {
+                        return res.json().then(function (body) {
+                            if (!res.ok) throw new Error(body.message || 'Không thể cập nhật bước quy trình.');
+                            return body;
+                        });
+                    })
+                    .then(function () {
+                        var modalEl = document.getElementById('ft43StepActionModal');
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                        showNotice('Đã cập nhật tiến độ bước quy trình thành công.', false);
+                        reload();
+                    })
+                    .catch(function (err) {
+                        if (modalErrorEl) {
+                            modalErrorEl.textContent = err.message;
+                            modalErrorEl.classList.remove('d-none');
+                        } else {
+                            showNotice(err.message, true);
+                        }
+                    });
+            }
+
+            function openHistory(execId) {
+                var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
+                document.getElementById('ft43HistorySubtitle').textContent = ex
+                    ? (ex.serviceName || ex.templateName) + ' — ' + (ex.templateCode || '')
+                    : ('Execution #' + execId);
+                var body = document.getElementById('ft43HistoryBody');
+                body.innerHTML = '<div class="text-center text-muted py-4">Đang tải lịch sử thực hiện...</div>';
+                var histModalEl = document.getElementById('ft43HistoryModal');
+                if (histModalEl && histModalEl.parentElement !== document.body) {
+                    document.body.appendChild(histModalEl);
+                }
+                bootstrap.Modal.getOrCreateInstance(histModalEl).show();
+
+                fetch('/api/doctor/workflows/execution/' + encodeURIComponent(execId) + '/history', {
+                    headers: { 'Accept': 'application/json' }
+                })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Không thể tải lịch sử quy trình (' + res.status + ').');
+                        return res.json();
+                    })
+                    .then(function (items) {
+                        if (!items || items.length === 0) {
+                            body.innerHTML = '<div class="text-center text-muted py-4">Chưa có bản ghi lịch sử nào.</div>';
+                            return;
+                        }
+                        body.innerHTML = '<div class="list-group list-group-flush">'
+                            + items.map(function (h) {
+                                var trans = (h.fromStatus || h.toStatus)
+                                    ? '<span class="badge bg-light text-dark border ms-2">'
+                                        + esc(h.fromStatus || '—') + ' &rarr; ' + esc(h.toStatus || '—') + '</span>'
+                                    : '';
+                                return '<div class="list-group-item px-0 py-2.5 d-flex align-items-start gap-3">'
+                                    + '<div class="text-muted small text-nowrap" style="min-width: 125px;"><i class="bi bi-clock me-1"></i>' + esc(h.time) + '</div>'
+                                    + '<div class="flex-grow-1">'
+                                    + '  <div class="fw-semibold text-dark">' + esc(h.actionLabel)
+                                    +      (h.stepName ? ' — <span class="text-primary">' + esc(h.stepName) + '</span>' : '')
+                                    +      trans + '</div>'
+                                    + '  <div class="small text-muted">Thực hiện bởi: <strong>' + esc(h.actorName) + '</strong></div>'
+                                    +    (h.note ? '<div class="small text-dark bg-light border rounded px-2 py-1 mt-1">' + esc(h.note) + '</div>' : '')
+                                    + '</div>'
+                                    + '</div>';
+                            }).join('')
+                            + '</div>';
+                    })
+                    .catch(function (err) {
+                        body.innerHTML = '<div class="alert alert-danger mb-0 small">' + esc(err.message) + '</div>';
+                    });
+            }
+
+            window.FT43 = {
+                reload: reload,
+                startSelectedService: startSelectedService,
+                startService: startService,
+                quickAction: quickAction,
+                openStepModal: openStepModal,
+                submitStepModal: submitStepModal,
+                openHistory: openHistory
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                reload();
+            });
+        })();
+    </script>
+</div>
+
+</body>
+</html>
+
