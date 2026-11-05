@@ -123,10 +123,83 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             item.setResultSummary(dto.getNotes().trim());
         }
 
+        if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+            ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
+            att.setOrderItem(item);
+            att.setFileName("Phim chụp / Kết quả CLS");
+            att.setFileUrl(dto.getImageUrl().trim());
+            att.setFileType(ParaclinicalFileType.IMAGE);
+            att.setCaption(service.getServiceName());
+            item.getAttachments().add(att);
+            item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
+            item.setPerformedAt(LocalDateTime.now());
+        }
+
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, Service={}, Tooth={}",
                 savedItem.getOrderItemId(), service.getServiceName(), savedItem.getToothNumbers());
 
+        return mapToDTO(savedItem);
+    }
+
+    @Override
+    @Transactional
+    public ParaclinicalOrderItemResponseDTO updateOrder(Long orderItemId, ParaclinicalOrderCreateDTO dto) {
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
+
+        Visit visit = item.getOrder().getVisit();
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02).");
+        }
+
+        if (dto.getServiceId() != null) {
+            serviceRepository.findById(dto.getServiceId()).ifPresent(item::setService);
+        }
+
+        if (dto.getToothNumbers() != null) {
+            item.setToothNumbers(dto.getToothNumbers().isBlank() ? "Toàn hàm" : dto.getToothNumbers().trim());
+        }
+
+        String summary = dto.getResultSummary() != null ? dto.getResultSummary() : dto.getNotes();
+        if (summary != null) {
+            item.setResultSummary(summary.trim());
+        }
+
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            ParaclinicalOrderItemStatus st = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim());
+            item.setStatus(st);
+            if (st == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedAt() == null) {
+                item.setPerformedAt(LocalDateTime.now());
+            }
+        }
+
+        if (dto.getImageUrl() != null) {
+            String trimmedUrl = dto.getImageUrl().trim();
+            if (trimmedUrl.isEmpty()) {
+                item.getAttachments().clear();
+            } else {
+                if (item.getAttachments().isEmpty()) {
+                    ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
+                    att.setOrderItem(item);
+                    att.setFileName("Phim chụp / Kết quả CLS");
+                    att.setFileUrl(trimmedUrl);
+                    att.setFileType(ParaclinicalFileType.IMAGE);
+                    att.setCaption(item.getService() != null ? item.getService().getServiceName() : "Ảnh CLS");
+                    item.getAttachments().add(att);
+                } else {
+                    item.getAttachments().get(0).setFileUrl(trimmedUrl);
+                }
+                if (dto.getStatus() == null || dto.getStatus().isBlank()) {
+                    item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
+                    if (item.getPerformedAt() == null) {
+                        item.setPerformedAt(LocalDateTime.now());
+                    }
+                }
+            }
+        }
+
+        ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         return mapToDTO(savedItem);
     }
 
@@ -270,6 +343,14 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         String performedAtStr = (item.getPerformedAt() != null)
                 ? item.getPerformedAt().format(DATE_TIME_FORMATTER) : null;
 
+        String imageUrl = "";
+        if (item.getAttachments() != null && !item.getAttachments().isEmpty()) {
+            String url = item.getAttachments().get(0).getFileUrl();
+            if (url != null) {
+                imageUrl = url;
+            }
+        }
+
         return ParaclinicalOrderItemResponseDTO.builder()
                 .orderItemId(item.getOrderItemId())
                 .orderId(item.getOrder().getOrderId())
@@ -286,6 +367,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orderTime(orderTimeStr)
                 .performedAt(performedAtStr)
                 .resultSummary(item.getResultSummary() != null ? item.getResultSummary() : "")
+                .imageUrl(imageUrl)
                 .attachmentsCount(item.getAttachments() != null ? item.getAttachments().size() : 0)
                 .build();
     }

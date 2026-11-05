@@ -63,7 +63,7 @@
                             <th style="width: 170px;">Bác sĩ chỉ định</th>
                             <th style="width: 140px;">Thời gian</th>
                             <th style="width: 130px;" class="text-center">Trạng thái</th>
-                            <th style="width: 120px;" class="text-center">Thao tác</th>
+                            <th style="width: 150px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="clinicalOrdersTableBody">
@@ -89,7 +89,19 @@
                                       th:text="${ord.statusLabel}">Chờ thực hiện</span>
                             </td>
                             <td class="text-center">
-                                <div class="btn-group btn-group-sm">
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            title="Chỉnh sửa chỉ định &amp; gắn link ảnh phim"
+                                            th:disabled="${isClinicalLocked}"
+                                            th:data-id="${ord.orderItemId}"
+                                            th:data-code="${ord.orderCode}"
+                                            th:data-name="${ord.serviceName}"
+                                            th:data-tooth="${ord.toothNumbers}"
+                                            th:data-status="${ord.status}"
+                                            th:data-result="${ord.resultSummary}"
+                                            onclick="openEditParaclinicalModalFromBtn(this)">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
                                     <button type="button" class="btn btn-sm"
                                             th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'btn-outline-primary'"
                                             th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
@@ -99,7 +111,7 @@
                                             onclick="toggleOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))">
                                         <i class="bi" th:classappend="${ord.status == 'COMPLETED'} ? 'bi-check2-circle' : 'bi-check-lg'"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1"
                                             title="Xóa chỉ định này"
                                             th:if="${!isClinicalLocked}"
                                             th:data-id="${ord.orderItemId}"
@@ -117,9 +129,10 @@
 </div>
 
 <!-- ===================================================================== -->
-<!-- MODAL: TẠO CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2)       -->
+<!-- MODAL: TẠO & CHỈNH SỬA CHỈ ĐỊNH CẬN LÂM SÀNG & HÌNH ẢNH (SCR-11.2)     -->
 <!-- ===================================================================== -->
 <div th:fragment="paraclinicalOrdersModal">
+    <!-- MODAL 1: THÊM MỚI CHỈ ĐỊNH -->
     <div class="modal fade" id="addParaclinicalModal" tabindex="-1" aria-labelledby="addParaclinicalModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
@@ -162,7 +175,20 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark small mb-1">
-                                Mục đích / Yêu cầu chẩn đoán
+                                <i class="bi bi-link-45deg text-primary me-1"></i>Link ảnh phim chụp / kết quả (URL)
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="pcoImageUrlInput"
+                                   placeholder="Dán link ảnh phim Panorama / X-Quang / Kết quả xét nghiệm (https://...)"
+                                   oninput="previewModalParaclinicalImage(this.value, 'pcoAddImagePreviewWrap', 'pcoAddImagePreviewImg')">
+                            <div class="form-text text-muted small">Ảnh sẽ tự động hiển thị sang khung <strong>Phim Panorama Toàn Cảnh (2D Số Hóa)</strong> bên dưới.</div>
+                            <div id="pcoAddImagePreviewWrap" class="mt-2 p-2 rounded-3 border bg-dark text-center" style="display: none;">
+                                <img id="pcoAddImagePreviewImg" src="" alt="Preview" style="max-height: 120px; max-width: 100%; object-fit: contain; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small mb-1">
+                                Mục đích / Kết quả chẩn đoán
                             </label>
                             <textarea class="form-control form-control-sm" id="pcoNotesInput" rows="2"
                                       placeholder="Ghi chú lâm sàng: Khảo sát chóp răng, đo mật độ xương, kiểm tra đông máu..."></textarea>
@@ -179,12 +205,166 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL 2: CHỈNH SỬA CHỈ ĐỊNH & GẮN LINK ẢNH PHIM PANORAMA -->
+    <div class="modal fade" id="editParaclinicalModal" tabindex="-1" aria-labelledby="editParaclinicalModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0 text-white" id="editParaclinicalModalLabel">Chỉnh sửa Chỉ định &amp; Gắn Link Ảnh</h5>
+                            <small class="text-white-50" id="editParaclinicalModalSubtitle">Cập nhật kết quả và đồng bộ sang khung Phim Panorama Toàn Cảnh</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="editParaclinicalForm" onsubmit="event.preventDefault(); submitEditParaclinicalModal();">
+                        <input type="hidden" id="pcoEditOrderItemId">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Tên chỉ định cận lâm sàng</label>
+                            <input type="text" class="form-control form-control-sm bg-light fw-semibold" id="pcoEditServiceName" readonly>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small mb-1">Vị trí / Vùng</label>
+                                <input type="text" class="form-control form-control-sm" id="pcoEditToothInput"
+                                       placeholder="VD: Toàn hàm, R16, Máu...">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small mb-1">Trạng thái</label>
+                                <select class="form-select form-select-sm" id="pcoEditStatusSelect">
+                                    <option value="COMPLETED">Đã có kết quả</option>
+                                    <option value="WAITING">Chờ thực hiện</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-link-45deg text-primary me-1"></i>Link ảnh phim chụp / kết quả (Hiển thị sang Phim Panorama)
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="pcoEditImageUrlInput"
+                                   placeholder="Dán link ảnh (https://... hoặc /images/...)"
+                                   oninput="previewModalParaclinicalImage(this.value, 'pcoEditImagePreviewWrap', 'pcoEditImagePreviewImg')">
+                            <div class="form-text text-muted small">Khi lưu, ảnh này sẽ hiển thị trực tiếp vào khung <strong>PHIM PANORAMA TOÀN CẢNH (2D SỐ HÓA)</strong>.</div>
+                            <div id="pcoEditImagePreviewWrap" class="mt-2 p-2 rounded-3 border bg-dark text-center" style="display: none;">
+                                <img id="pcoEditImagePreviewImg" src="" alt="Preview" style="max-height: 140px; max-width: 100%; object-fit: contain; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small mb-1">Kết quả / Nhận xét cận lâm sàng</label>
+                            <textarea class="form-control form-control-sm" id="pcoEditResultInput" rows="2"
+                                      placeholder="Nhập kết quả chụp phim / xét nghiệm..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitEditParaclinical">
+                                <i class="bi bi-check2-circle me-1"></i>Lưu cập nhật &amp; Hiển thị ảnh
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ===================================================================== -->
 <!-- SCRIPT: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2, 11.3)   -->
 <!-- ===================================================================== -->
 <script th:fragment="paraclinicalOrdersScript">
+    window.__paraclinicalOrdersCache = [];
+
+    function extractPcoMeta(ord) {
+        let rawSummary = ord.resultSummary || '';
+        let imgUrl = ord.imageUrl || '';
+        let tooth = ord.toothNumbers || 'Toàn hàm';
+
+        // Kiểm tra tag [IMG:...] nếu lưu qua resultSummary
+        const imgMatch = rawSummary.match(/\[IMG:([^\]]+)\]/);
+        if (imgMatch && imgMatch[1]) {
+            if (!imgUrl) imgUrl = imgMatch[1].trim();
+            rawSummary = rawSummary.replace(imgMatch[0], '').trim();
+        }
+        // Kiểm tra tag [TOOTH:...] nếu lưu qua resultSummary
+        const toothMatch = rawSummary.match(/\[TOOTH:([^\]]+)\]/);
+        if (toothMatch && toothMatch[1]) {
+            tooth = toothMatch[1].trim();
+            rawSummary = rawSummary.replace(toothMatch[0], '').trim();
+        }
+        // Fallback từ localStorage nếu vừa lưu
+        try {
+            const localImg = localStorage.getItem('pco_img_' + ord.orderItemId);
+            if (!imgUrl && localImg) imgUrl = localImg;
+            const localTooth = localStorage.getItem('pco_tooth_' + ord.orderItemId);
+            if (localTooth) tooth = localTooth;
+        } catch (e) {}
+
+        return {
+            cleanSummary: rawSummary,
+            imageUrl: imgUrl,
+            toothNumbers: tooth
+        };
+    }
+
+    function previewModalParaclinicalImage(url, wrapId, imgId) {
+        const wrap = document.getElementById(wrapId);
+        const img = document.getElementById(imgId);
+        if (!wrap || !img) return;
+        const trimmed = (url || '').trim();
+        if (trimmed.length > 0) {
+            img.src = trimmed;
+            wrap.style.display = 'block';
+        } else {
+            img.src = '';
+            wrap.style.display = 'none';
+        }
+    }
+
+    function syncParaclinicalImageToPanorama(imageUrl, serviceName, toothNumbers) {
+        const realWrap = document.getElementById('panoRealImageWrap');
+        const realImg = document.getElementById('panoRealImage');
+        const realCaption = document.getElementById('panoRealImageCaption');
+        const defaultSvg = document.getElementById('panoDefaultSvg');
+        const footerStatus = document.getElementById('panoFooterStatus');
+
+        const trimmed = (imageUrl || '').trim();
+        if (trimmed && realWrap && realImg) {
+            realImg.src = trimmed;
+            realWrap.style.display = 'block';
+            if (defaultSvg) defaultSvg.style.display = 'none';
+            if (realCaption) {
+                const label = serviceName ? `${serviceName}${toothNumbers ? ' (' + toothNumbers + ')' : ''}` : 'Ảnh cận lâm sàng đã đồng bộ';
+                realCaption.textContent = label;
+            }
+            if (footerStatus) {
+                footerStatus.innerHTML = `<i class="bi bi-check-circle-fill me-1 text-success"></i>Đã hiển thị ảnh CLS`;
+            }
+        } else {
+            if (realWrap) realWrap.style.display = 'none';
+            if (defaultSvg) defaultSvg.style.display = '';
+            if (footerStatus) {
+                footerStatus.innerHTML = `<i class="bi bi-info-circle me-1 text-info"></i>Đồng bộ ảnh ca khám`;
+            }
+        }
+    }
+
+    function handlePanoImageError() {
+        const realCaption = document.getElementById('panoRealImageCaption');
+        if (realCaption) {
+            realCaption.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Không tải được ảnh từ đường dẫn này</span>';
+        }
+    }
+
     function openAddParaclinicalModal() {
         if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
@@ -194,23 +374,166 @@
         if (modalEl) {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             document.getElementById('addParaclinicalForm')?.reset();
+            previewModalParaclinicalImage('', 'pcoAddImagePreviewWrap', 'pcoAddImagePreviewImg');
             modal.show();
+        }
+    }
+
+    function openEditParaclinicalModalFromBtn(btn) {
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const cached = (window.__paraclinicalOrdersCache || []).find(o => String(o.orderItemId) === String(id));
+        if (cached) {
+            openEditParaclinicalModal(cached.orderItemId);
+            return;
+        }
+        const fakeOrd = {
+            orderItemId: id,
+            orderCode: btn.getAttribute('data-code') || '',
+            serviceName: btn.getAttribute('data-name') || '',
+            toothNumbers: btn.getAttribute('data-tooth') || 'Toàn hàm',
+            status: btn.getAttribute('data-status') || 'WAITING',
+            resultSummary: btn.getAttribute('data-result') || '',
+            imageUrl: ''
+        };
+        openEditParaclinicalModalWithObject(fakeOrd);
+    }
+
+    function openEditParaclinicalModal(orderItemId) {
+        if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể chỉnh sửa chỉ định.');
+            return;
+        }
+        const ord = (window.__paraclinicalOrdersCache || []).find(o => String(o.orderItemId) === String(orderItemId));
+        if (!ord) return;
+        openEditParaclinicalModalWithObject(ord);
+    }
+
+    function openEditParaclinicalModalWithObject(ord) {
+        const meta = extractPcoMeta(ord);
+        document.getElementById('pcoEditOrderItemId').value = ord.orderItemId;
+        document.getElementById('pcoEditServiceName').value = `${ord.orderCode ? '[' + ord.orderCode + '] ' : ''}${ord.serviceName || 'Chỉ định cận lâm sàng'}`;
+        document.getElementById('pcoEditToothInput').value = meta.toothNumbers || 'Toàn hàm';
+        document.getElementById('pcoEditStatusSelect').value = (ord.status === 'COMPLETED') ? 'COMPLETED' : 'WAITING';
+        document.getElementById('pcoEditImageUrlInput').value = meta.imageUrl || '';
+        document.getElementById('pcoEditResultInput').value = meta.cleanSummary || '';
+
+        previewModalParaclinicalImage(meta.imageUrl || '', 'pcoEditImagePreviewWrap', 'pcoEditImagePreviewImg');
+
+        const modalEl = document.getElementById('editParaclinicalModal');
+        if (modalEl) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    async function submitEditParaclinicalModal() {
+        const orderItemId = document.getElementById('pcoEditOrderItemId')?.value;
+        const toothNumbers = (document.getElementById('pcoEditToothInput')?.value || '').trim() || 'Toàn hàm';
+        const status = document.getElementById('pcoEditStatusSelect')?.value || 'COMPLETED';
+        const imageUrl = (document.getElementById('pcoEditImageUrlInput')?.value || '').trim();
+        const cleanResult = (document.getElementById('pcoEditResultInput')?.value || '').trim();
+        const serviceName = document.getElementById('pcoEditServiceName')?.value || '';
+        const submitBtn = document.getElementById('btnSubmitEditParaclinical');
+
+        if (!orderItemId) return;
+
+        const finalStatus = imageUrl ? 'COMPLETED' : status;
+
+        try {
+            if (imageUrl) {
+                localStorage.setItem('pco_img_' + orderItemId, imageUrl);
+            } else {
+                localStorage.removeItem('pco_img_' + orderItemId);
+            }
+            localStorage.setItem('pco_tooth_' + orderItemId, toothNumbers);
+        } catch (e) {}
+
+        let packedSummary = cleanResult || (finalStatus === 'COMPLETED' ? 'Đã chụp phim/xét nghiệm đạt chuẩn, không có bất thường' : '');
+        if (imageUrl) {
+            packedSummary += ` [IMG:${imageUrl}]`;
+        }
+        if (toothNumbers) {
+            packedSummary += ` [TOOTH:${toothNumbers}]`;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+        }
+
+        try {
+            let res = await fetch(`/api/doctor/paraclinical-orders/${orderItemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    toothNumbers: toothNumbers,
+                    status: finalStatus,
+                    resultSummary: packedSummary,
+                    imageUrl: imageUrl
+                })
+            });
+
+            if (!res.ok && (res.status === 404 || res.status === 405 || res.status === 500)) {
+                res = await fetch(`/api/doctor/paraclinical-orders/${orderItemId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: finalStatus,
+                        resultSummary: packedSummary,
+                        toothNumbers: toothNumbers,
+                        imageUrl: imageUrl
+                    })
+                });
+            }
+
+            if (res.ok) {
+                const modalEl = document.getElementById('editParaclinicalModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                if (imageUrl) {
+                    syncParaclinicalImageToPanorama(imageUrl, serviceName, toothNumbers);
+                }
+                if (typeof showToast === 'function') {
+                    showToast('✓ Đã cập nhật chỉ định & đồng bộ ảnh sang khung Phim Panorama!');
+                }
+                await loadParaclinicalOrders();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert('Không thể cập nhật chỉ định: ' + (data.message || 'Lỗi không xác định'));
+            }
+        } catch (err) {
+            console.error('Error updating paraclinical order:', err);
+            alert('Lỗi khi cập nhật chỉ định: ' + err.message);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Lưu cập nhật & Hiển thị ảnh';
+            }
         }
     }
 
     async function submitParaclinicalOrderModal() {
         const serviceSelect = document.getElementById('pcoServiceSelect');
         const toothInput = document.getElementById('pcoToothInput');
+        const imageUrlInput = document.getElementById('pcoImageUrlInput');
         const notesInput = document.getElementById('pcoNotesInput');
         const submitBtn = document.getElementById('btnSubmitParaclinical');
 
         const serviceId = serviceSelect ? serviceSelect.value : null;
         const toothNumbers = toothInput ? toothInput.value.trim() : '';
+        const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
         const notes = notesInput ? notesInput.value.trim() : '';
 
         if (!serviceId) {
             alert('Vui lòng chọn dịch vụ cận lâm sàng!');
             return;
+        }
+
+        let packedNotes = notes;
+        if (imageUrl) {
+            packedNotes = (packedNotes ? packedNotes + ' ' : '') + `[IMG:${imageUrl}]`;
         }
 
         if (submitBtn) {
@@ -226,16 +549,23 @@
                 body: JSON.stringify({
                     serviceId: parseInt(serviceId),
                     toothNumbers: toothNumbers,
-                    notes: notes
+                    notes: packedNotes,
+                    imageUrl: imageUrl
                 })
             });
 
             const data = await res.json();
             if (res.ok) {
+                if (data && data.orderItemId && imageUrl) {
+                    try { localStorage.setItem('pco_img_' + data.orderItemId, imageUrl); } catch (e) {}
+                }
                 const modalEl = document.getElementById('addParaclinicalModal');
                 if (modalEl) {
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
+                }
+                if (imageUrl) {
+                    syncParaclinicalImageToPanorama(imageUrl, data.serviceName || 'Phim Cận lâm sàng', toothNumbers || 'Toàn hàm');
                 }
                 if (typeof showToast === 'function') {
                     showToast('✓ Đã lưu chỉ định cận lâm sàng vào cơ sở dữ liệu!');
@@ -295,9 +625,14 @@
         const newStatus = (currentStatus === 'COMPLETED') ? 'WAITING' : 'COMPLETED';
         let resultSummary = '';
         if (newStatus === 'COMPLETED') {
-            const promptText = prompt('Nhập tóm tắt kết quả cận lâm sàng / chẩn đoán hình ảnh:', 'Đã chụp phim/xét nghiệm đạt chuẩn, không có bất thường');
+            const cached = (window.__paraclinicalOrdersCache || []).find(o => String(o.orderItemId) === String(orderItemId));
+            const meta = cached ? extractPcoMeta(cached) : { cleanSummary: '', imageUrl: '', toothNumbers: '' };
+            const promptText = prompt('Nhập tóm tắt kết quả cận lâm sàng / chẩn đoán hình ảnh:', meta.cleanSummary || 'Đã chụp phim/xét nghiệm đạt chuẩn, không có bất thường');
             if (promptText === null) return;
             resultSummary = promptText;
+            if (meta.imageUrl) {
+                resultSummary += ` [IMG:${meta.imageUrl}]`;
+            }
         }
 
         try {
@@ -341,6 +676,10 @@
 
             const data = await res.json();
             if (res.ok) {
+                try {
+                    localStorage.removeItem('pco_img_' + orderItemId);
+                    localStorage.removeItem('pco_tooth_' + orderItemId);
+                } catch (e) {}
                 if (typeof showToast === 'function') {
                     showToast('✓ Đã xóa chỉ định cận lâm sàng thành công!');
                 }
@@ -360,6 +699,7 @@
             const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`);
             if (!res.ok) return;
             const orders = await res.json();
+            window.__paraclinicalOrdersCache = orders || [];
             renderParaclinicalOrdersTable(orders);
         } catch (err) {
             console.error('Error loading paraclinical orders:', err);
@@ -372,7 +712,7 @@
         if (!tbody) return;
 
         if (badge) {
-            badge.innerText = `${orders.length} chỉ định`;
+            badge.innerText = `${orders ? orders.length : 0} chỉ định`;
         }
 
         if (!orders || orders.length === 0) {
@@ -384,27 +724,57 @@
                     </td>
                 </tr>
             `;
+            syncParaclinicalImageToPanorama('', '', '');
             return;
         }
 
         const isLocked = typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal;
         let rowsHtml = '';
+        let firstImageOrder = null;
+
         orders.forEach(ord => {
             const isDone = ord.status === 'COMPLETED';
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => s || '');
-            const resultHtml = (ord.resultSummary && ord.resultSummary.trim().length > 0)
-                ? `<div class="small text-muted">KQ: ${esc(ord.resultSummary)}</div>`
+            const meta = extractPcoMeta(ord);
+
+            if (meta.imageUrl && !firstImageOrder) {
+                firstImageOrder = {
+                    imageUrl: meta.imageUrl,
+                    serviceName: ord.serviceName,
+                    toothNumbers: meta.toothNumbers
+                };
+            }
+
+            const resultHtml = (meta.cleanSummary && meta.cleanSummary.trim().length > 0)
+                ? `<div class="small text-muted">KQ: ${esc(meta.cleanSummary)}</div>`
                 : '';
+
+            const imgBadgeHtml = meta.imageUrl ? `
+                <div class="mt-1">
+                    <button type="button" class="badge bg-info-subtle text-info-emphasis border border-info-subtle py-1 px-2"
+                            style="cursor: pointer; font-weight: 600;"
+                            title="Nhấn để hiển thị ảnh này lên khung Phim Panorama Toàn Cảnh"
+                            onclick="syncParaclinicalImageToPanorama('${esc(meta.imageUrl)}', '${esc(ord.serviceName)}', '${esc(meta.toothNumbers)}')">
+                        <i class="bi bi-image me-1"></i>Đã gắn link ảnh (Xem Panorama)
+                    </button>
+                </div>
+            ` : '';
+
             const actionButtons = isLocked ? `
                 <span class="text-muted small" title="Bệnh án đã khóa (BR-EMR-02)">Đã khóa</span>
             ` : `
-                <div class="btn-group btn-group-sm">
+                <div class="d-inline-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            title="Chỉnh sửa chỉ định & gắn link ảnh phim"
+                            onclick="openEditParaclinicalModal(${ord.orderItemId})">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
                     <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
                             title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
                             onclick="toggleOrderStatus(${ord.orderItemId}, '${ord.status}')">
                         <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1"
                             title="Xóa chỉ định này"
                             onclick="deleteOrder(${ord.orderItemId})">
                         <i class="bi bi-trash3-fill"></i>
@@ -418,8 +788,9 @@
                         <strong class="text-dark">${esc(ord.serviceName)}</strong>
                         <span class="badge bg-secondary-subtle text-secondary small ms-1">${esc(ord.serviceType || 'CLS')}</span>
                         ${resultHtml}
+                        ${imgBadgeHtml}
                     </td>
-                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${esc(ord.toothNumbers || 'Toàn hàm')}</span></td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${esc(meta.toothNumbers || 'Toàn hàm')}</span></td>
                     <td><div class="small fw-semibold text-dark">${esc(ord.doctorName || 'BS. Điều trị')}</div></td>
                     <td><span class="small text-muted">${esc(ord.orderTime || '')}</span></td>
                     <td class="text-center">
@@ -434,7 +805,17 @@
             `;
         });
         tbody.innerHTML = rowsHtml;
+
+        if (firstImageOrder) {
+            syncParaclinicalImageToPanorama(firstImageOrder.imageUrl, firstImageOrder.serviceName, firstImageOrder.toothNumbers);
+        } else {
+            syncParaclinicalImageToPanorama('', '', '');
+        }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadParaclinicalOrders();
+    });
 </script>
 
 </body>
