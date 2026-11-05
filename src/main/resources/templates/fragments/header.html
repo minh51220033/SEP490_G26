@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
 
@@ -327,6 +327,11 @@
             <span class="topbar-chip topbar-chip--solid"
                   th:if="${roleNames != null and !#lists.isEmpty(roleNames)}"
                   th:text="${#strings.listJoin(roleNames, ', ')}">ADMIN</span>
+
+            <!-- TIN NHẮN TRỰC TUYẾN -->
+            <a th:href="@{/chat}" class="topbar-btn text-decoration-none" title="Tin nhắn trực tuyến" aria-label="Tin nhắn trực tuyến">
+                <i class="bi bi-chat-dots" aria-hidden="true"></i>
+            </a>
 
             <!-- THÔNG BÁO -->
             <div class="topbar-dropdown" data-dropdown>
