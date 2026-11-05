@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -104,5 +105,21 @@ public interface OperatingExpenseRepository extends JpaRepository<OperatingExpen
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("keyword") String keyword
+    );
+
+    @Query("""
+        SELECT e FROM OperatingExpense e
+        JOIN FETCH e.branch b
+        JOIN FETCH e.createdBy u
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND (:startDate IS NULL OR e.expenseDate >= :startDate)
+          AND (:endDate IS NULL OR e.expenseDate <= :endDate)
+          AND e.isCancelled = false
+        ORDER BY e.expenseDate DESC
+    """)
+    List<OperatingExpense> findAllActiveExpensesForReport(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
 }

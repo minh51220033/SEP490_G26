@@ -123,6 +123,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/reception/queue") || uri.startsWith("/api/reception/queue")) {
             return List.of("APPOINTMENT_VIEW");
         }
+        if (uri.startsWith("/reception/workflow-progress") || uri.startsWith("/api/reception/workflow-progress")) {
+            return List.of("APPOINTMENT_VIEW");
+        }
         if (uri.startsWith("/reception/dispatch") || uri.startsWith("/api/reception/dispatch")) {
             return List.of("RECEPTION_DISPATCH", "CLINICAL_DISPATCH");
         }
@@ -141,6 +144,10 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/doctor/visits")
                 || uri.startsWith("/api/doctor/patients/daily-visits")) {
             return List.of("CLINICAL_DAILY_VISITS");
+        }
+        // FT43: thực hiện quy trình ngay trong màn khám nên bác sĩ khám trong ngày cũng được dùng
+        if (uri.startsWith("/api/doctor/workflows/execution")) {
+            return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/doctor/workflows") || uri.startsWith("/api/doctor/workflows")) {
             return List.of("CLINICAL_WORKFLOWS");
@@ -229,6 +236,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/attendance") || uri.startsWith("/api/attendance")) {
             return List.of("HR_BRANCH_ATTENDANCE");
         }
+        if (uri.startsWith("/admin/leave-requests") || uri.startsWith("/api/admin/leave-requests")) {
+            return List.of("SCHEDULE_MANAGE", "STAFF_MANAGE");
+        }
         if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
             return List.of("SCHEDULE_MANAGE");
         }
@@ -260,14 +270,17 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/bans")) {
             return List.of("SYSTEM_BANS");
         }
+        if (uri.startsWith("/admin/catalogs") || uri.startsWith("/admin/catalog")) {
+            return List.of("CATALOG_SERVICES", "CATALOG_MEDICATIONS", "CATALOG_ICD10", "CATALOG_MANAGE");
+        }
         if (uri.startsWith("/admin/services")) {
-            return List.of("CATALOG_SERVICES");
+            return List.of("CATALOG_SERVICES", "CATALOG_MANAGE");
         }
         if (uri.startsWith("/admin/medications")) {
-            return List.of("CATALOG_MEDICATIONS");
+            return List.of("CATALOG_MEDICATIONS", "CATALOG_MANAGE");
         }
         if (uri.startsWith("/admin/icd10")) {
-            return List.of("CATALOG_ICD10");
+            return List.of("CATALOG_ICD10", "CATALOG_MANAGE");
         }
         if (uri.startsWith("/admin/membership-tiers")) {
             return List.of("CATALOG_MEMBERSHIP_TIERS");

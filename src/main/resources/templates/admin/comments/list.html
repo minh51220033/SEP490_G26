@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Kiểm duyệt bình luận')}"></head>
+
+<body class="app-body account-page-body staff-page-body">
+
+    <div class="app-shell">
+
+        <aside th:replace="~{fragments/sidebar :: sidebar('admin-comments')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+        <div class="app-main">
+
+            <header th:replace="~{fragments/header :: appTopbar('Kiểm duyệt bình luận')}"></header>
+
+            <main class="app-content">
+                <link rel="stylesheet" th:href="@{/css/staff.css}">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
+
+                <!-- THÔNG BÁO FLASH -->
+                <div th:if="${commentSuccess != null}" class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                    <span th:text="${commentSuccess}">Thao tác thành công!</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${commentError != null}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <span th:text="${commentError}">Có lỗi xảy ra trong quá trình xử lý.</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <!-- TIÊU ĐỀ TRANG CHUẨN MISA -->
+                <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <h1 class="staff-page-title">Kiểm duyệt bình luận</h1>
+                        <p class="staff-page-subtitle">
+                            Theo dõi, kiểm duyệt nội dung và xử lý vi phạm tiêu chuẩn cộng đồng
+                            <span class="text-muted ms-1" th:if="${totalComments != null}">
+                                (Tổng: <strong th:text="${totalComments}">0</strong> | Đang hiển thị: <strong class="text-success" th:text="${activeComments}">0</strong> | Đã ẩn/xóa: <strong class="text-danger" th:text="${deletedComments}">0</strong>)
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- TOOLBAR / BỘ LỌC CHUẨN MISA -->
+                <section class="staff-toolbar-card">
+                    <form th:action="@{/admin/comments}" method="get" id="commentFilterForm" class="staff-toolbar-form">
+                        <!-- Bên trái: Ô tìm kiếm + Dropdowns lọc -->
+                        <div class="staff-toolbar-left">
+                            <!-- 1. Ô tìm kiếm -->
+                            <div class="staff-search-box-compact">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                                       class="form-control" placeholder="Tìm nội dung, người dùng, bài viết...">
+                            </div>
+
+                            <!-- 2. Dropdown Trạng thái -->
+                            <div>
+                                <select id="status" name="status" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
+                                    <option value="" th:selected="${status == null || status == ''}">Trạng thái: Tất cả</option>
+                                    <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hiển thị</option>
+                                    <option value="DELETED" th:selected="${status == 'DELETED'}">Đã ẩn / xóa</option>
+                                </select>
+                            </div>
+
+                            <!-- Hidden fields cho phân trang -->
+                            <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                            <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+                            <input type="hidden" th:if="${newsId != null}" name="newsId" th:value="${newsId}">
+
+                            <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
+                            <a th:if="${(keyword != null and keyword != '') or (status != null and status != '') or (newsId != null)}"
+                               th:href="@{/admin/comments}"
+                               class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                               title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                            </a>
+                        </div>
+
+                        <!-- Bên phải: Nút Danh sách bị cấm + Quản lý tin tức + Tùy chỉnh cột -->
+                        <div class="staff-toolbar-right">
+                            <a th:href="@{/admin/bans}" class="btn btn-secondary-custom btn-vua text-danger">
+                                <i class="bi bi-person-slash me-1"></i> Danh sách bị cấm
+                            </a>
+                            <a th:href="@{/admin/news}" class="btn btn-secondary-custom btn-vua text-primary">
+                                <i class="bi bi-newspaper me-1"></i> Quản lý tin tức
+                            </a>
+
+                            <!-- Bánh răng mở Dropdown Tùy chỉnh cột -->
+                            <div class="custom-col-dropdown position-relative d-inline-block">
+                                <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                    <i class="bi bi-gear"></i>
+                                </button>
+
+                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                                <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                    <div class="custom-column-header">
+                                        <h6 class="custom-column-title">
+                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                        </h6>
+                                        <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                    </div>
+
+                                    <!-- Ô tìm kiếm tên trường -->
+                                    <div class="custom-column-search">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tiêu đề danh sách cột -->
+                                    <div class="custom-column-table-head">
+                                        <div class="flex-grow-1">Tên trường</div>
+                                    </div>
+
+                                    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="custom-col-item" data-col-target="stt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="article">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-article" checked>
+                                            <label for="chk-col-article" class="custom-col-name">Bài viết</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="author">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-author" checked>
+                                            <label for="chk-col-author" class="custom-col-name">Người gửi</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="content">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-content" checked>
+                                            <label for="chk-col-content" class="custom-col-name">Nội dung</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="createdAt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-createdAt" checked>
+                                            <label for="chk-col-createdAt" class="custom-col-name">Thời gian</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="status">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="actions">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-actions" checked>
+                                            <label for="chk-col-actions" class="custom-col-name">Thao tác</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Nút Thao tác Footer -->
+                                    <div class="custom-column-footer">
+                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                            Lấy lại mặc định
+                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- BẢNG DỮ LIỆU BÌNH LUẬN CHUẨN MISA -->
+                <section class="staff-table-card">
+                    <div class="staff-table-wrapper">
+                        <table class="table staff-modern-table align-middle" id="commentTable">
+                            <colgroup>
+                                <col data-col="stt" style="width: 60px;">
+                                <col data-col="article" style="width: 230px;">
+                                <col data-col="author" style="width: 190px;">
+                                <col data-col="content" style="width: 320px;">
+                                <col data-col="createdAt" style="width: 150px;">
+                                <col data-col="status" style="width: 140px;">
+                                <col data-col="actions" style="width: 140px;">
+                            </colgroup>
+                            <thead>
+                            <tr>
+                                <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                    <span>#</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="article" style="width: 230px; min-width: 180px;">
+                                    <span>Bài viết</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="author" style="width: 190px; min-width: 150px;">
+                                    <span>Người gửi</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="content" style="width: 320px; min-width: 220px;">
+                                    <span>Nội dung</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="createdAt" style="width: 150px; min-width: 130px;">
+                                    <span>Thời gian</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="status" style="width: 140px; min-width: 120px;">
+                                    <span>Trạng thái</span>
+                                    <div class="col-resizer"></div>
+                                </th>
+                                <th data-col="actions" style="width: 140px; min-width: 120px;">
+                                    <span>Thao tác</span>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="comment, iter : ${comments}"
+                                th:data-comment-id="${comment.commentId}">
+
+                                <!-- 1. STT -->
+                                <td data-col="stt" class="text-muted fw-semibold">
+                                    <span th:text="${currentPage * pageSize + iter.count}">1</span>
+                                </td>
+
+                                <!-- 2. Bài viết -->
+                                <td data-col="article">
+                                    <div class="text-truncate" style="max-width: 220px;">
+                                        <a th:if="${comment.news != null}"
+                                           th:href="@{'/news/' + ${comment.news.slug}}"
+                                           target="_blank" rel="noopener"
+                                           class="text-primary text-decoration-none fw-semibold"
+                                           th:title="${comment.news.title}"
+                                           th:text="${comment.news.title}">Tiêu đề bài viết</a>
+                                        <span th:unless="${comment.news != null}" class="text-muted small">Bài viết không tồn tại</span>
+                                    </div>
+                                </td>
+
+                                <!-- 3. Người gửi -->
+                                <td data-col="author">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="staff-avatar bg-secondary text-white"
+                                              th:text="${comment.user != null and !#strings.isEmpty(comment.user.username) ? #strings.toUpperCase(#strings.substring(comment.user.username, 0, 1)) : 'U'}">U</span>
+                                        <div class="text-truncate" style="max-width: 140px;">
+                                            <div class="fw-semibold text-dark text-truncate small"
+                                                 th:text="${comment.user != null ? comment.user.username : 'Ẩn danh'}">User</div>
+                                            <div class="text-muted small text-truncate"
+                                                 th:if="${comment.user != null and comment.user.email != null}"
+                                                 th:text="${comment.user.email}">email</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 4. Nội dung -->
+                                <td data-col="content">
+                                    <div>
+                                        <span th:if="${comment.parentComment != null}" class="badge bg-light text-primary border mb-1">
+                                            <i class="bi bi-reply-fill me-1"></i>Phản hồi #<span th:text="${comment.parentComment.commentId}"></span>
+                                        </span>
+                                        <p class="mb-0 text-dark small" style="white-space: pre-wrap; word-break: break-word;" th:text="${comment.content}">Nội dung bình luận</p>
+                                    </div>
+                                </td>
+
+                                <!-- 5. Thời gian -->
+                                <td data-col="createdAt">
+                                    <span class="small text-muted"
+                                          th:text="${comment.createdAt != null ? #temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                                </td>
+
+                                <!-- 6. Trạng thái -->
+                                <td data-col="status">
+                                    <span th:if="${comment.status == 'ACTIVE'}" class="misa-status-badge misa-status-badge--active">
+                                        Đang hiển thị
+                                    </span>
+                                    <span th:if="${comment.status == 'DELETED'}" class="misa-status-badge misa-status-badge--inactive">
+                                        Đã ẩn / xóa
+                                    </span>
+                                </td>
+
+                                <!-- 7. Thao tác -->
+                                <td data-col="actions">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <!-- Xem trên bài viết -->
+                                        <a th:if="${comment.news != null}"
+                                           th:href="@{'/news/' + ${comment.news.slug}}" target="_blank" rel="noopener"
+                                           class="btn btn-sm btn-outline-secondary py-0 px-2" title="Xem trên bài viết">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        <!-- Nút Xóa (nếu đang ACTIVE) -->
+                                        <form th:if="${comment.status == 'ACTIVE'}"
+                                              th:action="@{'/admin/comments/' + ${comment.commentId} + '/delete'}" method="post" class="d-inline"
+                                              onsubmit="return confirm('Bạn có chắc muốn ẩn/xóa bình luận này không?');">
+                                            <input type="hidden" name="returnUrl" value="/admin/comments">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Ẩn/Xóa bình luận vi phạm">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Nút Khôi phục (nếu đã DELETED) -->
+                                        <form th:if="${comment.status == 'DELETED'}"
+                                              th:action="@{'/admin/comments/' + ${comment.commentId} + '/restore'}" method="post" class="d-inline"
+                                              onsubmit="return confirm('Khôi phục lại bình luận này?');">
+                                            <input type="hidden" name="returnUrl" value="/admin/comments">
+                                            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Khôi phục bình luận">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Nút Cấm tài khoản -->
+                                        <button th:if="${comment.user != null and (session.loggedInUser == null or comment.user.userId != session.loggedInUser.userId)}"
+                                                type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                th:data-comment-id="${comment.commentId}"
+                                                th:data-username="${comment.user.username}"
+                                                onclick="openBanModal(this.getAttribute('data-comment-id'), this.getAttribute('data-username'))"
+                                                title="Cấm tài khoản bình luận">
+                                            <i class="bi bi-slash-circle"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Empty State khi không có dữ liệu -->
+                            <tr th:if="${#lists.isEmpty(comments)}">
+                                <td colspan="7" class="p-0">
+                                    <div class="account-empty-state">
+                                        <div class="account-empty-icon">
+                                            <i class="bi bi-chat-left-dots"></i>
+                                        </div>
+                                        <h5 class="account-empty-title">Không tìm thấy bình luận nào</h5>
+                                        <p class="account-empty-desc">
+                                            Không có bình luận nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                        </p>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a th:href="@{/admin/comments}" class="btn btn-secondary-custom btn-be">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- FOOTER PHÂN TRANG CHUẨN MISA -->
+                    <div class="misa-pagination-footer">
+                        <!-- Bên trái: Tổng số -->
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${totalItems}">0</strong>
+                        </div>
+
+                        <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                        <div class="misa-pagination-right">
+                            <!-- Chọn số dòng/trang -->
+                            <div class="misa-page-size-wrapper">
+                                <span>Số dòng/trang</span>
+                                <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                                    <option value="25" th:selected="${pageSize == 25}">25</option>
+                                    <option value="50" th:selected="${pageSize == 50}">50</option>
+                                    <option value="100" th:selected="${pageSize == 100}">100</option>
+                                </select>
+                            </div>
+
+                            <!-- Khoảng hiển thị -->
+                            <div class="misa-page-range">
+                                <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                            </div>
+
+                            <!-- Nút phân trang (|< < > >|) -->
+                            <div class="d-flex align-items-center gap-1">
+                                <!-- Về trang đầu -->
+                                <a th:href="@{/admin/comments(page=0, size=${pageSize}, keyword=${keyword}, status=${status}, newsId=${newsId})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang đầu">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </a>
+
+                                <!-- Trang trước -->
+                                <a th:href="@{/admin/comments(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, status=${status}, newsId=${newsId})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+
+                                <!-- Trang kế tiếp -->
+                                <a th:href="@{/admin/comments(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, status=${status}, newsId=${newsId})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+
+                                <!-- Đến trang cuối -->
+                                <a th:href="@{/admin/comments(page=${totalPages - 1}, size=${pageSize}, keyword=${keyword}, status=${status}, newsId=${newsId})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
+                                   title="Trang cuối">
+                                    <i class="bi bi-chevron-bar-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL CẤM TÀI KHOẢN (SCR-39.4) THEO PHONG CÁCH BOOTSTRAP CHUẨN -->
+    <div class="modal fade" id="banModal" tabindex="-1" aria-labelledby="banModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                    <h5 class="modal-title fw-bold text-danger fs-6" id="banModalLabel">
+                        <i class="bi bi-slash-circle me-2"></i>Cấm người dùng bình luận
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <form id="banForm" method="post">
+                    <input type="hidden" name="returnUrl" value="/admin/comments">
+                    <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                        <p class="small text-muted mb-3">
+                            Áp dụng hình phạt cấm bình luận đối với tài khoản: <strong id="modalUsername" class="text-danger"></strong>. Bình luận vi phạm này cũng sẽ tự động được ẩn.
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Lý do cấm <span class="text-danger">*</span></label>
+                            <input type="text" name="reason" class="form-control form-control-sm" required
+                                   placeholder="Ví dụ: Ngôn từ thù địch, spam, xúc phạm...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Thời hạn cấm</label>
+                            <select name="durationDays" class="form-select form-select-sm">
+                                <option value="3">3 ngày</option>
+                                <option value="7" selected>7 ngày</option>
+                                <option value="30">30 ngày</option>
+                                <option value="0">Vĩnh viễn</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white" style="border-top: 1px solid #e2e8f0;">
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger btn-vua">Xác nhận cấm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    let banModalInstance = null;
+
+    function openBanModal(commentId, username) {
+        document.getElementById('banForm').action = '/admin/comments/' + commentId + '/ban';
+        document.getElementById('modalUsername').innerText = username;
+        if (!banModalInstance) {
+            banModalInstance = new bootstrap.Modal(document.getElementById('banModal'));
+        }
+        banModalInstance.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Phân trang & Đổi số dòng / trang
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('commentFilterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+                filterForm.submit();
+            });
+        }
+
+        // 2. Kéo dãn cột & Tùy chỉnh cột chuẩn MISA
+        const table = document.getElementById('commentTable');
+        const STORAGE_WIDTH_KEY = 'cv_comment_table_widths_v1';
+        const STORAGE_CONFIG_KEY = 'cv_comment_cols_v1';
+
+        const defaultColOrder = ['stt', 'article', 'author', 'content', 'createdAt', 'status', 'actions'];
+        const defaultColWidths = {
+            stt: 60,
+            article: 230,
+            author: 190,
+            content: 320,
+            createdAt: 150,
+            status: 140,
+            actions: 140
+        };
+
+        let currentWidths = loadColWidths();
+        let currentConfig = getColConfig();
+
+        function loadColWidths() {
+            try {
+                const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultColWidths);
+            }
+        }
+
+        function saveColWidths(widths) {
+            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+        }
+
+        function getColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                defaultColOrder.forEach(col => {
+                    if (!order.includes(col)) order.push(col);
+                });
+                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                return { order, hidden };
+            } catch (e) {
+                return { order: defaultColOrder.slice(), hidden: [] };
+            }
+        }
+
+        function saveColConfig(config) {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function applyColOrder(order) {
+            if (!order || !Array.isArray(order) || !table) return;
+
+            const customColList = document.getElementById('customColList');
+            if (customColList) {
+                order.forEach(colKey => {
+                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                    if (item) customColList.appendChild(item);
+                });
+            }
+
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+                order.forEach(colKey => {
+                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                    if (col) colgroup.appendChild(col);
+                });
+            }
+
+            const theadTr = table.querySelector('thead tr');
+            if (theadTr) {
+                order.forEach(colKey => {
+                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                    if (th) theadTr.appendChild(th);
+                });
+            }
+
+            const tbodyRows = table.querySelectorAll('tbody tr');
+            tbodyRows.forEach(tr => {
+                order.forEach(colKey => {
+                    const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                    if (td) tr.appendChild(td);
+                });
+            });
+        }
+
+        function applyColWidths() {
+            if (!table) return;
+            currentWidths = loadColWidths();
+            let totalColsWidth = 0;
+
+            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+            order.forEach(col => {
+                const w = currentWidths[col] || defaultColWidths[col] || 150;
+                currentWidths[col] = w;
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    if (!th.classList.contains('d-none')) {
+                        totalColsWidth += w;
+                    }
+                }
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
+        }
+
+        function applyColConfig(config) {
+            if (!table) return;
+
+            const order = (config && config.order) ? config.order : defaultColOrder;
+            let visibleTotalW = 0;
+
+            order.forEach(col => {
+                const isHidden = config.hidden.includes(col);
+                const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                cells.forEach(cell => {
+                    if (isHidden) {
+                        cell.classList.add('d-none');
+                    } else {
+                        cell.classList.remove('d-none');
+                    }
+                });
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) {
+                    colEl.style.display = isHidden ? 'none' : '';
+                }
+
+                if (!isHidden) {
+                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 150);
+                }
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(visibleTotalW, containerW) + 'px';
+        }
+
+        function initDrawerDragAndDrop() {
+            const colList = document.getElementById('customColList');
+            if (!colList) return;
+
+            let draggedItem = null;
+
+            colList.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function () {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                });
+
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem !== this) {
+                        const rect = this.getBoundingClientRect();
+                        const mid = rect.top + rect.height / 2;
+                        if (e.clientY < mid) {
+                            colList.insertBefore(draggedItem, this);
+                        } else {
+                            colList.insertBefore(draggedItem, this.nextSibling);
+                        }
+                    }
+                });
+            });
+        }
+
+        function initColumnResizers() {
+            if (!table) return;
+            const resizers = table.querySelectorAll('.col-resizer');
+
+            resizers.forEach(resizer => {
+                let startX, startW, colKey, colEl, thEl;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    thEl = resizer.parentElement;
+                    colKey = thEl.getAttribute('data-col');
+                    colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
+
+                    startX = e.pageX;
+                    startW = thEl.offsetWidth;
+
+                    resizer.classList.add('is-resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const minW = 60;
+                        const newW = Math.max(startW + diff, minW);
+
+                        if (thEl) {
+                            thEl.style.width = newW + 'px';
+                            thEl.style.minWidth = newW + 'px';
+                        }
+                        if (colEl) {
+                            colEl.style.width = newW + 'px';
+                        }
+                        currentWidths[colKey] = newW;
+
+                        let totalW = 0;
+                        defaultColOrder.forEach(col => {
+                            if (!currentConfig.hidden.includes(col)) {
+                                totalW += (currentWidths[col] || defaultColWidths[col] || 150);
+                            }
+                        });
+
+                        const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                        table.style.width = Math.max(totalW, containerW) + 'px';
+                    }
+
+                    function onMouseUp() {
+                        resizer.classList.remove('is-resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+
+                        saveColWidths(currentWidths);
+
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Quản lý Popover Tùy chỉnh cột
+        const popoverEl = document.getElementById('customColumnPopover');
+        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        const btnCloseCol = document.getElementById('btnCloseColPopover');
+        const btnCancelCol = document.getElementById('btnCancelCols');
+        const colSearchInput = document.getElementById('colSearchInput');
+
+        function openCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'block';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'true');
+                btnToggleCol.classList.add('active');
+            }
+            document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                const colKey = item.getAttribute('data-col-target');
+                const chk = item.querySelector('.custom-col-check');
+                if (chk) {
+                    chk.checked = !currentConfig.hidden.includes(colKey);
+                }
+            });
+            if (colSearchInput) {
+                colSearchInput.value = '';
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(it => it.style.display = '');
+                setTimeout(() => colSearchInput.focus(), 60);
+            }
+        }
+
+        function closeCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'false');
+                btnToggleCol.classList.remove('active');
+            }
+        }
+
+        if (btnToggleCol) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                    openCustomColPopover();
+                } else {
+                    closeCustomColPopover();
+                }
+            });
+        }
+
+        if (btnCloseCol) btnCloseCol.addEventListener('click', closeCustomColPopover);
+        if (btnCancelCol) btnCancelCol.addEventListener('click', closeCustomColPopover);
+
+        document.addEventListener('click', function (e) {
+            if (popoverEl && popoverEl.style.display !== 'none') {
+                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                    closeCustomColPopover();
+                }
+            }
+        });
+
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const term = this.value.toLowerCase().trim();
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                items.forEach(item => {
+                    const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = label.includes(term) ? '' : 'none';
+                });
+            });
+        }
+
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                const order = [];
+                const hidden = [];
+
+                items.forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    order.push(colKey);
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+
+                currentConfig = { order, hidden };
+                saveColConfig(currentConfig);
+
+                applyColOrder(order);
+                applyColConfig(currentConfig);
+
+                closeCustomColPopover();
+            });
+        }
+
+        const btnResetCols = document.getElementById('btnResetCols');
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                localStorage.removeItem(STORAGE_CONFIG_KEY);
+
+                currentWidths = Object.assign({}, defaultColWidths);
+                currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+
+                applyColOrder(currentConfig.order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+
+                closeCustomColPopover();
+            });
+        }
+
+        // Khởi tạo
+        applyColOrder(currentConfig.order);
+        applyColConfig(currentConfig);
+        applyColWidths();
+        initColumnResizers();
+        initDrawerDragAndDrop();
+    });
+    </script>
+</body>
+</html>

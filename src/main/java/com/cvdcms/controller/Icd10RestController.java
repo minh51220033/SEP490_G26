@@ -24,6 +24,7 @@ public class Icd10RestController {
 
     private final Icd10DiseaseService icd10DiseaseService;
     private final DiagnosisService diagnosisService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @GetMapping("/icd10/search")
     public ResponseEntity<List<Icd10DiseaseDTO>> searchIcd10(
@@ -40,12 +41,14 @@ public class Icd10RestController {
     }
 
     @GetMapping("/diagnoses/visit/{visitId}")
-    public ResponseEntity<List<DiagnosisResponseDTO>> getDiagnosesByVisit(@PathVariable Long visitId) {
+    public ResponseEntity<List<DiagnosisResponseDTO>> getDiagnosesByVisit(@PathVariable Long visitId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
         return ResponseEntity.ok(diagnosisService.getDiagnosesByVisitId(visitId));
     }
 
     @PostMapping("/diagnoses")
-    public ResponseEntity<?> addDiagnosis(@Valid @RequestBody DiagnosisRequestDTO request) {
+    public ResponseEntity<?> addDiagnosis(@Valid @RequestBody DiagnosisRequestDTO request, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, request.getVisitId());
         try {
             DiagnosisResponseDTO response = diagnosisService.addDiagnosis(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -62,7 +65,8 @@ public class Icd10RestController {
     }
 
     @DeleteMapping("/diagnoses/{diagnosisId}")
-    public ResponseEntity<?> deleteDiagnosis(@PathVariable Long diagnosisId) {
+    public ResponseEntity<?> deleteDiagnosis(@PathVariable Long diagnosisId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requireDiagnosis(session, diagnosisId);
         try {
             diagnosisService.deleteDiagnosis(diagnosisId);
             Map<String, Object> res = new HashMap<>();

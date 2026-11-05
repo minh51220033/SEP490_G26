@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    THANH TAB NGANG CHO PHÂN HỆ THU NGÂN (CV-DCMS CASHIER TABS)
+    activeTab: 'dashboard' | 'invoices' | 'payments' | 'debts' | 'deposits' | 'refunds'
+-->
+<div th:fragment="cashierTabs(activeTab)" class="cashier-tabs-wrapper" id="cashierTabsWrapper">
+    <!-- Tiêu đề phân hệ thu ngân -->
+    <div class="cashier-header-bar">
+        <div class="cashier-title-group">
+            <h1 class="cashier-main-title">
+                <i class="bi bi-cash-coin text-primary" aria-hidden="true"></i> Thu ngân
+            </h1>
+            <p class="cashier-main-desc">Quản lý hóa đơn, thanh toán, công nợ viện phí, tạm ứng và hoàn tiền</p>
+        </div>
+    </div>
+
+    <!-- Hàng tab ngang dạng nút gọn (DentalSoft Compact Pill Style) -->
+    <nav class="cashier-tabs-nav" aria-label="Phân hệ Thu ngân">
+        <ul class="cashier-tabs-list" id="cashierTabsList">
+            <!-- 1. Tổng quan -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DASHBOARD'))}">
+                <a th:href="@{/payments/dashboard}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'dashboard'} ? 'active' : ''"
+                   data-tab="dashboard">
+                    <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                    <span>Tổng quan</span>
+                </a>
+            </li>
+
+            <!-- 2. Hóa đơn -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}">
+                <a th:href="@{/invoices}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'invoices'} ? 'active' : ''"
+                   data-tab="invoices">
+                    <i class="bi bi-receipt" aria-hidden="true"></i>
+                    <span>Hóa đơn</span>
+                </a>
+            </li>
+
+            <!-- 3. Lịch sử thanh toán -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
+                <a th:href="@{/payments}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'payments'} ? 'active' : ''"
+                   data-tab="payments">
+                    <i class="bi bi-credit-card-2-front" aria-hidden="true"></i>
+                    <span>Lịch sử thanh toán</span>
+                </a>
+            </li>
+
+            <!-- 4. Công nợ -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DEBT'))}">
+                <a th:href="@{/payments/debts}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'debts'} ? 'active' : ''"
+                   data-tab="debts">
+                    <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                    <span>Công nợ</span>
+                </a>
+            </li>
+
+            <!-- 5. Đặt cọc (màn hình độc lập SCR-22.2, đặt trước Hoàn tiền) -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
+                <a th:href="@{/payments/deposits}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'deposits'} ? 'active' : ''"
+                   data-tab="deposits">
+                    <i class="bi bi-wallet2" aria-hidden="true"></i>
+                    <span>Đặt cọc</span>
+                </a>
+            </li>
+
+            <!-- 6. Hoàn tiền -->
+            <li class="cashier-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REFUND_MANAGE'))}">
+                <a th:href="@{/payments/refunds}"
+                   class="cashier-tab-btn"
+                   th:classappend="${activeTab == 'refunds'} ? 'active' : ''"
+                   data-tab="refunds">
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    <span>Hoàn tiền</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+</body>
+</html>
+

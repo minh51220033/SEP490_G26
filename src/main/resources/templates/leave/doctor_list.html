@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Đơn xin nghỉ phép & Khóa lịch')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('leave-requests')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Đơn xin nghỉ phép & Khóa lịch')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/schedule.css}">
+
+            <div class="schedule-container">
+
+                <!-- 1. HEADER CARD (SCR-42.2) -->
+                <div class="schedule-header-card d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="schedule-header-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h1 class="schedule-title">Đơn xin nghỉ phép &amp; Khóa lịch Bác sĩ</h1>
+                                <span class="badge bg-primary text-white" style="font-size: 0.72rem; font-weight: 600;">FT42</span>
+                            </div>
+                            <p class="schedule-subtitle mb-0">
+                                <span th:if="${doctor != null}">
+                                    Bác sĩ: <strong class="text-dark" th:text="${doctor.fullName}">Bác sĩ</strong>
+                                    (<span th:text="${doctor.staffCode}">BS001</span>) ·
+                                    Chuyên khoa: <span class="badge bg-light text-primary border" th:text="${doctor.specialty != null ? doctor.specialty : 'Nha khoa tổng quát'}">Tổng quát</span>
+                                </span>
+                                <span th:if="${doctor == null}" class="text-danger">Tài khoản chưa liên kết hồ sơ Bác sĩ</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/schedules/my}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-calendar3"></i> Lịch trực của tôi
+                        </a>
+                        <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1"
+                                data-bs-toggle="modal" data-bs-target="#createLeaveModal"
+                                th:disabled="${doctor == null}">
+                            <i class="bi bi-plus-lg"></i> Gửi yêu cầu nghỉ / Khóa lịch
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ALERT THÔNG BÁO -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                    <div th:text="${successMessage}">Thao tác thành công.</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <div th:text="${errorMessage}">Đã xảy ra lỗi.</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <!-- 2. STAT COUNTERS -->
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small fw-medium">Tổng số đơn</span>
+                                <span class="badge rounded-pill bg-light text-primary fs-6 p-2">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </span>
+                            </div>
+                            <h3 class="fw-bold mt-2 mb-0" style="color: #0f172a;" th:text="${summary.total}">0</h3>
+                            <span class="text-muted" style="font-size: 0.75rem;">Toàn bộ yêu cầu đã gửi</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small fw-medium">Đang chờ duyệt</span>
+                                <span class="badge rounded-pill bg-warning-subtle text-warning fs-6 p-2">
+                                    <i class="bi bi-hourglass-split"></i>
+                                </span>
+                            </div>
+                            <h3 class="fw-bold mt-2 mb-0 text-warning" th:text="${summary.pending}">0</h3>
+                            <span class="text-muted" style="font-size: 0.75rem;">Chờ Quản lý/Admin xét duyệt</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small fw-medium">Đã phê duyệt</span>
+                                <span class="badge rounded-pill bg-success-subtle text-success fs-6 p-2">
+                                    <i class="bi bi-check-circle"></i>
+                                </span>
+                            </div>
+                            <h3 class="fw-bold mt-2 mb-0 text-success" th:text="${summary.approved}">0</h3>
+                            <span class="text-muted" style="font-size: 0.75rem;">Đã khóa lịch &amp; miễn ca trực</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small fw-medium">Bị từ chối</span>
+                                <span class="badge rounded-pill bg-danger-subtle text-danger fs-6 p-2">
+                                    <i class="bi bi-x-circle"></i>
+                                </span>
+                            </div>
+                            <h3 class="fw-bold mt-2 mb-0 text-danger" th:text="${summary.rejected}">0</h3>
+                            <span class="text-muted" style="font-size: 0.75rem;">Không được chấp thuận</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. BẢNG DANH SÁCH YÊU CẦU NGHỈ (SCR-42.2) -->
+                <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
+                    <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-list-task text-primary"></i>
+                            <h6 class="mb-0 fw-bold" style="color: #1e293b;">Lịch sử đơn xin nghỉ phép &amp; khóa lịch</h6>
+                        </div>
+                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.75rem;"
+                              th:text="'Hiển thị ' + ${requests.size()} + ' đơn'">Hiển thị 0 đơn</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.86rem;">
+                            <thead class="table-light text-secondary" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.3px;">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">#</th>
+                                <th>Cơ sở</th>
+                                <th>Thời gian nghỉ</th>
+                                <th>Ca trực</th>
+                                <th>Loại nghỉ</th>
+                                <th>Lý do</th>
+                                <th>Ngày gửi</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th>Phản hồi / Ghi chú</th>
+                                <th class="text-end" style="width: 100px;">Thao tác</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(requests)}">
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <div class="d-flex flex-column align-items-center gap-2">
+                                        <i class="bi bi-calendar-check text-secondary" style="font-size: 2.2rem; opacity: 0.5;"></i>
+                                        <span>Bạn chưa có đơn xin nghỉ phép nào.</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary mt-1"
+                                                data-bs-toggle="modal" data-bs-target="#createLeaveModal"
+                                                th:disabled="${doctor == null}">
+                                            <i class="bi bi-plus-lg"></i> Tạo đơn ngay
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:each="r, iter : ${requests}">
+                                <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
+                                <td>
+                                    <span class="fw-semibold text-dark" th:text="${r.branch.branchName}">Cơ sở Đống Đa</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <i class="bi bi-calendar-event text-primary"></i>
+                                        <strong th:text="${#temporals.format(r.startDate, 'dd/MM/yyyy')}">01/01/2026</strong>
+                                        <span th:if="${!r.startDate.isEqual(r.endDate)}" class="text-muted">
+                                            đến <strong th:text="${#temporals.format(r.endDate, 'dd/MM/yyyy')}">03/01/2026</strong>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${r.shift != null}" class="badge bg-light text-dark border">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span th:text="${r.shift.shiftName}">Ca sáng</span>
+                                        (<span th:text="${#temporals.format(r.shift.startTime, 'HH:mm')}">08:00</span> -
+                                         <span th:text="${#temporals.format(r.shift.endTime, 'HH:mm')}">12:00</span>)
+                                    </span>
+                                    <span th:if="${r.shift == null}" class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                        <i class="bi bi-brightness-high me-1"></i> Cả ngày
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="badge bg-info-subtle text-info border border-info-subtle">Phép năm</span>
+                                    <span th:if="${r.leaveType.name() == 'SICK'}" class="badge bg-warning-subtle text-warning border border-warning-subtle">Nghỉ ốm</span>
+                                    <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="badge bg-secondary-subtle text-secondary border">Việc riêng</span>
+                                    <span th:if="${r.leaveType.name() == 'UNPAID'}" class="badge bg-light text-dark border">Không lương</span>
+
+                                    <span th:if="${r.isEmergency}" class="badge bg-danger text-white ms-1" title="Đơn nộp gấp dưới 3 ngày (Quy tắc R8)">
+                                        <i class="bi bi-lightning-fill"></i> Đột xuất
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-inline-block" style="max-width: 220px;" th:text="${r.reason}" th:title="${r.reason}">
+                                        Lý do nghỉ
+                                    </span>
+                                </td>
+                                <td class="text-muted" style="font-size: 0.8rem;" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                                    01/01/2026 09:30
+                                </td>
+                                <td class="text-center">
+                                    <span th:if="${r.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-hourglass-split me-1"></i> Chờ duyệt
+                                    </span>
+                                    <span th:if="${r.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Đã duyệt
+                                    </span>
+                                    <span th:if="${r.status.name() == 'REJECTED'}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                        <i class="bi bi-x-circle-fill me-1"></i> Từ chối
+                                    </span>
+                                    <span th:if="${r.status.name() == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        <i class="bi bi-slash-circle me-1"></i> Đã hủy
+                                    </span>
+                                </td>
+                                <td>
+                                    <div th:if="${r.reviewNote != null and !r.reviewNote.isBlank()}">
+                                        <span class="fst-italic text-dark small" th:text="${r.reviewNote}">Ghi chú</span>
+                                        <span th:if="${r.reviewedBy != null}" class="text-muted small d-block" style="font-size: 0.72rem;">
+                                            (bởi <span th:text="${r.reviewedBy.username}">admin</span> lúc <span th:text="${#temporals.format(r.reviewedAt, 'dd/MM HH:mm')}"></span>)
+                                        </span>
+                                    </div>
+                                    <span th:if="${r.reviewNote == null or r.reviewNote.isBlank()}" class="text-muted small">—</span>
+                                </td>
+                                <td class="text-end">
+                                    <form th:if="${r.status.name() == 'PENDING'}"
+                                          th:action="@{/doctor/leave-requests/{id}/cancel(id=${r.leaveId})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn xin nghỉ phép này?');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2" style="font-size: 0.78rem;">
+                                            <i class="bi bi-trash"></i> Hủy đơn
+                                        </button>
+                                    </form>
+                                    <span th:if="${r.status.name() != 'PENDING'}" class="text-muted small">—</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+                    </main>
+    </div>
+</div>
+
+<!-- ============================================================= -->
+            <!-- 4. MODAL GỬI YÊU CẦU NGHỈ PHÉP / KHÓA LỊCH (SCR-42.1) -->
+            <!-- ============================================================= -->
+            <div class="modal fade" id="createLeaveModal" tabindex="-1" aria-labelledby="createLeaveModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content border-0 shadow">
+                        <form th:action="@{/doctor/leave-requests}" method="post" id="leaveRequestForm">
+                            <div class="modal-header bg-light border-bottom py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="bi bi-calendar-plus fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold text-dark" id="createLeaveModalLabel" style="font-size: 1.05rem;">
+                                            Gửi yêu cầu nghỉ phép / Khóa lịch khám (SCR-42.1)
+                                        </h5>
+                                        <p class="text-muted small mb-0">Hệ thống sẽ cập nhật trạng thái ca trực và chặn bệnh nhân đặt lịch sau khi được phê duyệt</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body p-4">
+
+                                <!-- QUY TẮC R8 BANNER -->
+                                <div class="alert alert-warning d-flex align-items-start gap-2 py-2 px-3 mb-3 border-warning" style="background: #fffbeb;">
+                                    <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0 mt-1"></i>
+                                    <div style="font-size: 0.82rem; color: #92400e;">
+                                        <strong>Quy định R8:</strong> Yêu cầu nghỉ phép phải được nộp trước <strong>ít nhất 3 ngày</strong> (kể từ ngày hiện tại <span th:text="${#temporals.format(today, 'dd/MM/yyyy')}"></span>).
+                                        Nếu nộp gấp trong vòng 3 ngày tới, bạn bắt buộc phải đánh dấu <em>"Nghỉ đột xuất / Khẩn cấp"</em> và giải trình rõ lý do.
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <!-- CHỌN CƠ SỞ -->
+                                    <div class="col-md-6">
+                                        <label for="branchSelect" class="form-label fw-semibold small text-dark">
+                                            Cơ sở / Chi nhánh làm việc <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select form-select-sm" id="branchSelect" name="branchId" required>
+                                            <option value="">-- Chọn cơ sở áp dụng --</option>
+                                            <option th:each="b : ${branches}"
+                                                    th:value="${b.branchId}"
+                                                    th:text="${b.branchName + ' (' + b.branchCode + ')'}"
+                                                    th:selected="${prevBranchId != null and prevBranchId == b.branchId}"></option>
+                                        </select>
+                                    </div>
+
+                                    <!-- LOẠI HÌNH NGHỈ PHÉP -->
+                                    <div class="col-md-6">
+                                        <label for="leaveTypeSelect" class="form-label fw-semibold small text-dark">
+                                            Loại nghỉ phép <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select form-select-sm" id="leaveTypeSelect" name="leaveType" required>
+                                            <option value="ANNUAL">Nghỉ phép năm (ANNUAL)</option>
+                                            <option value="SICK">Nghỉ ốm đau (SICK)</option>
+                                            <option value="PERSONAL">Việc riêng (PERSONAL)</option>
+                                            <option value="UNPAID">Nghỉ không lương (UNPAID)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- TỪ NGÀY -->
+                                    <div class="col-md-6">
+                                        <label for="startDateInput" class="form-label fw-semibold small text-dark">
+                                            Từ ngày <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control form-control-sm" id="startDateInput" name="startDate"
+                                               th:min="${today}" required>
+                                    </div>
+
+                                    <!-- ĐẾN NGÀY -->
+                                    <div class="col-md-6">
+                                        <label for="endDateInput" class="form-label fw-semibold small text-dark">
+                                            Đến ngày <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control form-control-sm" id="endDateInput" name="endDate"
+                                               th:min="${today}" required>
+                                    </div>
+
+                                    <!-- CA TRỰC / KHÓA LỊCH -->
+                                    <div class="col-md-12">
+                                        <label for="shiftSelect" class="form-label fw-semibold small text-dark">
+                                            Khung giờ / Ca nghỉ
+                                        </label>
+                                        <select class="form-select form-select-sm" id="shiftSelect" name="shiftId">
+                                            <option value="">-- Nghỉ cả ngày (Khóa toàn bộ ca trong ngày) --</option>
+                                        </select>
+                                        <div class="form-text text-muted" style="font-size: 0.75rem;">
+                                            * Lưu ý: Nếu bạn chọn ca trực cụ thể, "Từ ngày" và "Đến ngày" phải là cùng một ngày.
+                                        </div>
+                                    </div>
+
+                                    <!-- CẢNH BÁO NGHỈ GẤP DƯỚI 3 NGÀY -->
+                                    <div class="col-12" id="emergencyNoticeBox" style="display: none;">
+                                        <div class="p-3 rounded-2 border border-danger-subtle bg-danger-subtle d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-exclamation-octagon-fill text-danger fs-5"></i>
+                                                <div style="font-size: 0.82rem; color: #991b1b;">
+                                                    <strong>Lưu ý nộp gấp:</strong> Ngày bạn chọn nghỉ cách hiện tại dưới 3 ngày.
+                                                    Vui lòng đánh dấu chọn <strong>"Nghỉ đột xuất / Khẩn cấp"</strong> dưới đây.
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-danger py-1 px-2" id="autoCheckEmergencyBtn" style="font-size: 0.75rem;">
+                                                Đồng ý đánh dấu
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- CHECKBOX NGHỈ ĐỘT XUẤT -->
+                                    <div class="col-12">
+                                        <div class="form-check p-2 bg-light rounded border">
+                                            <input class="form-check-input ms-0 me-2" type="checkbox" id="isEmergencyCheck" name="isEmergency" value="true">
+                                            <label class="form-check-label fw-semibold text-danger small" for="isEmergencyCheck">
+                                                Nghỉ đột xuất / Khẩn cấp (Trường hợp phát sinh sự cố hoặc báo trước dưới 3 ngày)
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- LÝ DO NGHỈ -->
+                                    <div class="col-12">
+                                        <label for="reasonInput" class="form-label fw-semibold small text-dark">
+                                            Lý do xin nghỉ / Khóa lịch khám <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea class="form-control form-control-sm" id="reasonInput" name="reason" rows="3"
+                                                  placeholder="Nhập chi tiết lý do xin nghỉ phép (tối thiểu 5 ký tự)..." required></textarea>
+                                        <div class="form-text text-muted" style="font-size: 0.75rem;">
+                                            Thông tin này sẽ được gửi tới Ban Quản lý / Admin cơ sở để kiểm duyệt.
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="modal-footer bg-light border-top py-2 px-3">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                                <button type="submit" class="btn btn-primary btn-sm px-3">
+                                    <i class="bi bi-send me-1"></i> Gửi đơn xin nghỉ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCRIPTS XỬ LÝ FORM & DYNAMIC SELECT -->
+            <script th:inline="javascript">
+                document.addEventListener('DOMContentLoaded', function () {
+                    const branchSelect = document.getElementById('branchSelect');
+                    const shiftSelect = document.getElementById('shiftSelect');
+                    const startDateInput = document.getElementById('startDateInput');
+                    const endDateInput = document.getElementById('endDateInput');
+                    const isEmergencyCheck = document.getElementById('isEmergencyCheck');
+                    const emergencyNoticeBox = document.getElementById('emergencyNoticeBox');
+                    const autoCheckEmergencyBtn = document.getElementById('autoCheckEmergencyBtn');
+
+                    // Ngày hôm nay và mốc 3 ngày
+                    const todayStr = /*[[${today.toString()}]]*/ '2026-01-01';
+                    const rule8NoticeStr = /*[[${rule8NoticeDate.toString()}]]*/ '2026-01-04';
+
+                    function checkRule8() {
+                        const startVal = startDateInput.value;
+                        if (!startVal) {
+                            emergencyNoticeBox.style.display = 'none';
+                            return;
+                        }
+                        if (startVal < rule8NoticeStr) {
+                            emergencyNoticeBox.style.display = 'block';
+                            if (!isEmergencyCheck.checked) {
+                                isEmergencyCheck.checked = true;
+                            }
+                        } else {
+                            emergencyNoticeBox.style.display = 'none';
+                        }
+                    }
+
+                    startDateInput.addEventListener('change', function () {
+                        if (!endDateInput.value || endDateInput.value < startDateInput.value) {
+                            endDateInput.value = startDateInput.value;
+                        }
+                        checkRule8();
+                    });
+
+                    endDateInput.addEventListener('change', function () {
+                        if (startDateInput.value && endDateInput.value < startDateInput.value) {
+                            alert('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
+                            endDateInput.value = startDateInput.value;
+                        }
+                    });
+
+                    autoCheckEmergencyBtn.addEventListener('click', function () {
+                        isEmergencyCheck.checked = true;
+                        emergencyNoticeBox.style.display = 'none';
+                    });
+
+                    // Tải ca làm việc theo chi nhánh
+                    function loadShifts(branchId) {
+                        shiftSelect.innerHTML = '<option value="">-- Nghỉ cả ngày (Khóa toàn bộ ca trong ngày) --</option>';
+                        if (!branchId) return;
+
+                        fetch('/api/doctor/shifts?branchId=' + branchId)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (Array.isArray(data)) {
+                                    data.forEach(s => {
+                                        const opt = document.createElement('option');
+                                        opt.value = s.shiftId;
+                                        opt.textContent = `${s.shiftName} (${s.startTime} - ${s.endTime})`;
+                                        shiftSelect.appendChild(opt);
+                                    });
+                                }
+                            })
+                            .catch(err => console.error('Lỗi tải ca làm việc:', err));
+                    }
+
+                    branchSelect.addEventListener('change', function () {
+                        loadShifts(this.value);
+                    });
+
+                    // Nếu có chi nhánh được chọn mặc định
+                    if (branchSelect.value) {
+                        loadShifts(branchSelect.value);
+                    } else if (branchSelect.options.length > 1) {
+                        branchSelect.selectedIndex = 1;
+                        loadShifts(branchSelect.value);
+                    }
+
+                    // Tự động mở lại modal nếu server trả về lỗi
+                    const hasError = /*[[${errorMessage != null}]]*/ false;
+                    if (hasError) {
+                        const modalElem = document.getElementById('createLeaveModal');
+                        if (modalElem) {
+                            const modal = new bootstrap.Modal(modalElem);
+                            modal.show();
+                        }
+                    }
+                });
+            </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

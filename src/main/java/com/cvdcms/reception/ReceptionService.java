@@ -7,6 +7,7 @@ import com.cvdcms.repository.AppointmentHistoryRepository;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.service.AppointmentLifecycleService;
 import com.cvdcms.service.AppointmentPolicyService;
+import com.cvdcms.service.ClinicalExaminationBootstrapService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
@@ -37,6 +38,9 @@ public class ReceptionService {
     private final AppointmentLifecycleService lifecycle;
     private final AppointmentHistoryRepository histories;
     private final AppointmentPolicyService policyService;
+    private final ClinicalExaminationBootstrapService examinations;
+    @Autowired(required = false)
+    private DispatchTicketRepository tickets;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.ClinicalExaminationRepository clinicalExamRepository;
@@ -48,7 +52,8 @@ public class ReceptionService {
                             ReceptionAuditRepository audits, BranchRepository branches,
                             ObjectMapper mapper, AppointmentBookingLockRepository lockedBranches,
                             AppointmentLifecycleService lifecycle, AppointmentHistoryRepository histories,
-                            AppointmentPolicyService policyService) {
+                            AppointmentPolicyService policyService,
+                            ClinicalExaminationBootstrapService examinations) {
         this.access = access;
         this.profiles = profiles;
         this.appointments = appointments;
@@ -61,6 +66,7 @@ public class ReceptionService {
         this.lifecycle = lifecycle;
         this.histories = histories;
         this.policyService = policyService;
+        this.examinations = examinations;
     }
 
     public ReceptionService(ReceptionAccess access, ReceptionProfileRepository profiles,
@@ -70,7 +76,11 @@ public class ReceptionService {
                             ObjectMapper mapper, AppointmentBookingLockRepository lockedBranches,
                             AppointmentLifecycleService lifecycle, AppointmentHistoryRepository histories) {
         this(access, profiles, appointments, visits, keys, audits, branches, mapper,
-                lockedBranches, lifecycle, histories, null);
+                lockedBranches, lifecycle, histories, null, null);
+    }
+
+    public void setTickets(DispatchTicketRepository tickets) {
+        this.tickets = tickets;
     }
 
     public VisitResult checkInAppointment(HttpSession session, Long appointmentId, String symptoms, String requestKey) {
@@ -91,7 +101,7 @@ public class ReceptionService {
         }
 
         Visit existing = visits.findByAppointmentId(appointmentId).orElse(null);
-        if (existing != null) return result(existing);
+        if (existing != null && existing.getStatus() != VisitStatus.CANCELLED) return result(existing);
 
         if (keys.findByRequestKey(requestKey).isPresent()) {
             throw error(HttpStatus.CONFLICT, "Mã yêu cầu check-in đã dùng cho lượt khám khác.");
@@ -159,7 +169,7 @@ public class ReceptionService {
         }
 
         Visit existing = visits.findByAppointmentId(appointmentId).orElse(null);
-        if (existing != null) return result(existing);
+        if (existing != null && existing.getStatus() != VisitStatus.CANCELLED) return result(existing);
 
         if (keys.findByRequestKey(requestKey).isPresent()) {
             throw error(HttpStatus.CONFLICT, "Mã yêu cầu check-in đã dùng cho lượt khám khác.");
@@ -228,6 +238,61 @@ public class ReceptionService {
         return result(visit);
     }
 
+    @Transactional
+    public VisitResult revertCheckIn(HttpSession session, Long appointmentId) {
+        Appointment reference = appointments.findById(appointmentId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
+        Branch branch = allowedBranch(session, reference.getBranch().getBranchId());
+
+        lockBranchForBooking(branch.getBranchId());
+        PatientProfile patient = lockedActiveProfile(reference.getPatientProfile().getProfileId());
+        Appointment appointment = appointments.lockById(appointmentId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
+
+        if (appointment.getStatus() != AppointmentStatus.CHECKED_IN) {
+            throw error(HttpStatus.CONFLICT, "Chỉ có thể hoàn tác lịch hẹn đang ở trạng thái Đã check-in.");
+        }
+
+        Visit visit = visits.findByAppointmentId(appointmentId).orElse(null);
+        if (visit != null) {
+            if (visit.getStatus() != VisitStatus.WAITING) {
+                throw error(HttpStatus.CONFLICT, "Lượt khám đã bắt đầu khám hoặc hoàn thành, không thể hoàn tác tiếp đón.");
+            }
+            visit.setStatus(VisitStatus.CANCELLED);
+            visit.setAppointmentId(null);
+            visits.saveAndFlush(visit);
+            if (examinations != null) {
+                examinations.cleanupOnRevertCheckIn(visit.getVisitId());
+            }
+
+            // Hủy toàn bộ QueueTicket liên quan để tránh ghost ticket trên hàng chờ và màn hình TV
+            if (tickets != null) {
+                List<QueueTicket> visitTickets = tickets.findAllByVisitAndType(visit.getVisitId(), QueueType.EXAM);
+                for (QueueTicket t : visitTickets) {
+                    t.setStatus(QueueStatus.CANCELLED);
+                }
+                if (!visitTickets.isEmpty()) {
+                    tickets.saveAll(visitTickets);
+                }
+            }
+            keys.findByVisit_VisitId(visit.getVisitId()).ifPresent(keys::delete);
+        }
+
+        String oldSnapshot = snapshot(appointment);
+        ReceptionTransitionPolicy.appointment(appointment.getStatus(), AppointmentStatus.CONFIRMED);
+        lifecycle.transition(appointment, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.REVERT_CHECK_IN);
+        appointments.save(appointment);
+
+        Long actorId = access.require(session).user().getUserId();
+        recordHistory(appointment, actorId, "REVERT_CHECK_IN", oldSnapshot, snapshot(appointment),
+                "Hoàn tác tiếp đón: Bệnh nhân chưa đến hoặc bấm nhầm");
+
+        audit(session, branch, "REVERT_CHECK_IN_APPOINTMENT", visit,
+                Map.of("appointmentId", appointmentId, "profileId", patient.getProfileId(),
+                        "appointmentStatusAfter", "CONFIRMED"));
+        return visit != null ? result(visit) : new VisitResult(appointment.getAppointmentId(), appointment.getAppointmentCode(), patient.getFullName(), branch.getBranchName(), VisitType.APPOINTMENT, VisitStatus.CANCELLED, appointment.getCreatedAt());
+    }
+
     public VisitResult checkInWalkIn(HttpSession session, Long branchId, Long profileId,
                                     String symptoms, boolean emergency, String requestKey) {
         requireKey(requestKey);
@@ -276,8 +341,18 @@ public class ReceptionService {
         List<AppointmentRow> appointmentRows = appointments.forDay(branchId, day,
                 List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN))
                 .stream().map(this::appointmentRow).toList();
+        Map<Long, QueueTicket> ticketMap = new HashMap<>();
+        if (tickets != null) {
+            try {
+                tickets.board(branchId, day, QueueType.EXAM).forEach(t -> {
+                    if (t.getVisit() != null) {
+                        ticketMap.put(t.getVisit().getVisitId(), t);
+                    }
+                });
+            } catch (Exception ignored) {}
+        }
         List<VisitRow> visitRows = visits.forDay(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay())
-                .stream().map(this::visitRow).toList();
+                .stream().map(v -> visitRow(v, ticketMap)).toList();
         String term = query == null ? "" : query.trim();
         List<PatientRow> matches = term.length() < 2 ? List.of()
                 : profiles.search(term, PageRequest.of(0, 20)).stream().map(this::patientRow).toList();
@@ -311,9 +386,22 @@ public class ReceptionService {
     }
 
     private void rejectActiveVisit(PatientProfile patient) {
-        var active = visits.activeForProfile(patient.getProfileId(), ReceptionTransitionPolicy.activeVisits());
-        if (!active.isEmpty()) {
-            throw error(HttpStatus.CONFLICT, "Bệnh nhân đã có lượt khám đang hoạt động: " + active.get(0).getVisitCode());
+        LocalDate today = today();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime endOfToday = today.plusDays(1).atStartOfDay();
+        var allActive = visits.activeForProfile(patient.getProfileId(), ReceptionTransitionPolicy.activeVisits());
+        var activeToday = allActive.stream()
+                .filter(v -> v.getCheckInAt() == null || (!v.getCheckInAt().isBefore(startOfToday) && v.getCheckInAt().isBefore(endOfToday)))
+                .toList();
+        if (!activeToday.isEmpty()) {
+            throw error(HttpStatus.CONFLICT, "Bệnh nhân đã có lượt khám đang hoạt động: " + activeToday.get(0).getVisitCode());
+        }
+        for (Visit past : allActive) {
+            if (past.getCheckInAt() != null && past.getCheckInAt().isBefore(startOfToday) && past.getStatus() == VisitStatus.WAITING) {
+                past.setStatus(VisitStatus.CANCELLED);
+                past.setNotes((past.getNotes() != null ? past.getNotes() + " | " : "") + "Tự động đóng lượt khám chưa hoàn tất từ ngày trước (" + past.getCheckInAt().toLocalDate() + ")");
+                visits.save(past);
+            }
         }
     }
 
@@ -409,10 +497,25 @@ public class ReceptionService {
     }
 
     private AppointmentRow appointmentRow(Appointment a) {
+        long lateMinutes = a.getExpectedTime() == null || a.getStatus() == AppointmentStatus.CHECKED_IN
+                ? 0 : Math.max(0, Duration.between(a.getExpectedTime(), LocalTime.now(CLINIC_ZONE)).toMinutes());
         return new AppointmentRow(a.getAppointmentId(), a.getAppointmentCode(), patientRow(a.getPatientProfile()),
                 a.getExpectedTime(), a.getInitialSymptoms(),
                 a.getDoctor() == null ? "Chưa chỉ định" : a.getDoctor().getFullName(),
-                a.getStatus(), UUID.randomUUID().toString());
+                a.getStatus(), UUID.randomUUID().toString(), lateMinutes);
+    }
+
+    private VisitRow visitRow(Visit v, Map<Long, QueueTicket> ticketMap) {
+        QueueTicket t = ticketMap != null ? ticketMap.get(v.getVisitId()) : null;
+        String doctorName = v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName()
+                : (t != null && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null ? t.getVisit().getPrimaryDoctor().getFullName() : null);
+        return new VisitRow(v.getVisitId(), v.getVisitCode(), patientRow(v.getPatientProfile()),
+                v.getVisitType(), v.getStatus(), v.getCheckInAt(), v.getInitialSymptoms(),
+                t != null ? t.getTicketId() : null,
+                t != null ? t.getDisplayNumber() : null,
+                doctorName,
+                t != null && Boolean.TRUE.equals(t.getIsPriority()),
+                t != null && Boolean.TRUE.equals(t.getIsEmergency()));
     }
 
     private VisitRow visitRow(Visit v) {
@@ -426,9 +529,19 @@ public class ReceptionService {
                              boolean allergies, String allergyDetails, boolean underlyingDisease,
                              String underlyingDiseaseDetails) { }
     public record AppointmentRow(Long id, String code, PatientRow patient, LocalTime expectedTime,
-                                 String symptoms, String doctorName, AppointmentStatus status, String requestKey) { }
+                                 String symptoms, String doctorName, AppointmentStatus status, String requestKey,
+                                 long lateMinutes) { }
     public record VisitRow(Long id, String code, PatientRow patient, VisitType type,
-                           VisitStatus status, LocalDateTime checkedInAt, String symptoms) { }
+                           VisitStatus status, LocalDateTime checkedInAt, String symptoms,
+                           Long ticketId, String ticketDisplayNumber, String doctorName,
+                           boolean priority, boolean emergency) {
+        public VisitRow(Long id, String code, PatientRow patient, VisitType type,
+                        VisitStatus status, LocalDateTime checkedInAt, String symptoms) {
+            this(id, code, patient, type, status, checkedInAt, symptoms, null, null, null, false, false);
+        }
+    }
+
+
     public record Dashboard(Long branchId, String branchName, LocalDate day, List<Branch> branches,
                             List<AppointmentRow> appointments, List<VisitRow> visits, List<PatientRow> matches,
                             String query, String walkInKey) { }

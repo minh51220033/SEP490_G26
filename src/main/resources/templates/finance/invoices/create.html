@@ -144,7 +144,7 @@
                                     <tbody id="itemsBody">
                                     <tr th:if="${#lists.isEmpty(unbilledServices)}">
                                         <td colspan="7" class="text-center py-4 text-muted">
-                                            Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.
+                                            <span th:if="${selectedVisit == null}"><i class="bi bi-exclamation-triangle me-1 text-warning"></i> Vui lòng chọn ca khám đang chờ thanh toán ở menu phía trên để tải dịch vụ thực hiện.</span><span th:if="${selectedVisit != null}"><i class="bi bi-info-circle me-1"></i> Không có dịch vụ nào đang chờ lập hóa đơn trong ca khám này.</span>
                                         </td>
                                     </tr>
                                     <tr th:each="ps, iterStat : ${unbilledServices}" class="item-row"
@@ -463,13 +463,13 @@
                             <td class="fw-bold text-dark" th:text="${plan.planCode}">KH001</td>
                             <td th:text="${plan.planName}">Chỉnh nha niềng răng</td>
                             <td th:text="${plan.doctor != null ? plan.doctor.fullName : 'Bác sĩ'}">BS Nam</td>
-                            <td th:text="${#temporals.format(plan.createdAt, 'dd/MM/yyyy')}">20/10/2026</td>
+                            <td th:text="${plan.createdAt != null ? #temporals.format(plan.createdAt, 'dd/MM/yyyy') : '-'}">20/10/2026</td>
                             <td class="text-end fw-bold text-secondary"
-                                th:text="${#numbers.formatDecimal(plan.estimatedCost, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                th:text="${#numbers.formatDecimal(plan.estimatedCost != null ? plan.estimatedCost : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 15.000.000 đ
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-light text-dark border" th:text="${plan.status}">ACTIVE</span>
+                                <span class="badge bg-light text-dark border" th:text="${plan.status != null ? plan.status : 'DRAFT'}">ACTIVE</span>
                             </td>
                         </tr>
                         </tbody>

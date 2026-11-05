@@ -21,14 +21,16 @@ import java.util.Map;
 public class DoctorParaclinicalRestController {
 
     private final ParaclinicalOrderService paraclinicalOrderService;
+    private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     /**
      * SCR-11.3: Lấy danh sách chỉ định cận lâm sàng theo lượt khám
      */
     @GetMapping("/visits/{visitId}/paraclinical-orders")
     public ResponseEntity<List<ParaclinicalOrderItemResponseDTO>> getOrdersByVisit(
-            @PathVariable("visitId") Long visitId
+            @PathVariable("visitId") Long visitId, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         List<ParaclinicalOrderItemResponseDTO> list = paraclinicalOrderService.getOrdersByVisit(visitId);
         return ResponseEntity.ok(list);
     }
@@ -48,8 +50,9 @@ public class DoctorParaclinicalRestController {
     @PostMapping("/visits/{visitId}/paraclinical-orders")
     public ResponseEntity<?> createOrder(
             @PathVariable("visitId") Long visitId,
-            @RequestBody ParaclinicalOrderCreateDTO dto
+            @RequestBody ParaclinicalOrderCreateDTO dto, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.require(session, visitId);
         try {
             ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, null);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -88,8 +91,9 @@ public class DoctorParaclinicalRestController {
     @PutMapping("/paraclinical-orders/{orderItemId}/status")
     public ResponseEntity<?> updateStatus(
             @PathVariable("orderItemId") Long orderItemId,
-            @RequestBody Map<String, String> payload
+            @RequestBody Map<String, String> payload, jakarta.servlet.http.HttpSession session
     ) {
+        doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
         try {
             if (payload.containsKey("imageUrl") || payload.containsKey("toothNumbers") || payload.containsKey("serviceId")) {
                 ParaclinicalOrderCreateDTO dto = ParaclinicalOrderCreateDTO.builder()
@@ -120,7 +124,8 @@ public class DoctorParaclinicalRestController {
      * Xóa chỉ định cận lâm sàng khỏi cơ sở dữ liệu
      */
     @DeleteMapping("/paraclinical-orders/{orderItemId}")
-    public ResponseEntity<?> deleteOrder(@PathVariable("orderItemId") Long orderItemId) {
+    public ResponseEntity<?> deleteOrder(@PathVariable("orderItemId") Long orderItemId, jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
         try {
             paraclinicalOrderService.deleteOrder(orderItemId);
             return ResponseEntity.ok(Map.of("message", "Đã xóa chỉ định thành công."));

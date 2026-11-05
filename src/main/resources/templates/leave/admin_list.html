@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Quản lý & Duyệt nghỉ phép Bác sĩ')}"></head>
+
+<body class="app-body account-page-body staff-page-body">
+
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('admin-leaves')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+
+        <header th:replace="~{fragments/header :: appTopbar('Quản lý & Duyệt nghỉ phép Bác sĩ')}"></header>
+
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/account.css}">
+
+            <!-- THÔNG BÁO THÀNH CÔNG / THẤT BẠI -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div th:text="${successMessage}">Thao tác thành công!</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <div th:text="${errorMessage}">Có lỗi xảy ra trong quá trình xử lý.</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
+            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h1 class="staff-page-title">Quản lý &amp; Duyệt yêu cầu nghỉ phép Bác sĩ</h1>
+                    <p class="staff-page-subtitle">Kiểm duyệt đơn xin nghỉ, tự động khóa lịch trực và rà soát lịch hẹn bệnh nhân bị ảnh hưởng</p>
+                </div>
+
+                <!-- Thống kê nhanh dạng chip đồng bộ MISA -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a th:href="@{/admin/leave-requests}" class="text-decoration-none">
+                        <span class="chip chip--role" style="max-width: none; padding: 4px 10px; font-size: 0.78rem;">
+                            <i class="bi bi-collection me-1"></i>Tổng: <strong th:text="${summary.total}">0</strong>
+                        </span>
+                    </a>
+                    <a th:href="@{/admin/leave-requests(status='PENDING')}" class="text-decoration-none">
+                        <span class="misa-status-badge misa-status-badge--on_leave" style="padding: 4px 10px; font-size: 0.78rem;">
+                            <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt: <strong class="ms-1" th:text="${summary.pending}">0</strong>
+                        </span>
+                    </a>
+                    <a th:href="@{/admin/leave-requests(status='APPROVED')}" class="text-decoration-none">
+                        <span class="misa-status-badge misa-status-badge--active" style="padding: 4px 10px; font-size: 0.78rem;">
+                            <i class="bi bi-check-circle me-1"></i>Đã duyệt: <strong class="ms-1" th:text="${summary.approved}">0</strong>
+                        </span>
+                    </a>
+                    <a th:href="@{/admin/leave-requests(status='REJECTED')}" class="text-decoration-none">
+                        <span class="misa-status-badge misa-status-badge--inactive" style="padding: 4px 10px; font-size: 0.78rem; background: #fef2f2; color: #dc2626; border-color: #fecaca;">
+                            <i class="bi bi-x-circle me-1"></i>Từ chối: <strong class="ms-1" th:text="${summary.rejected}">0</strong>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ 100% với Quản lý tài khoản) -->
+            <section class="staff-toolbar-card">
+                <form th:action="@{/admin/leave-requests}" method="get" id="leaveFilterForm" class="staff-toolbar-form">
+                    <!-- Bên trái: Tìm kiếm gọn + Dropdown Trạng thái + Lọc nâng cao -->
+                    <div class="staff-toolbar-left">
+                        <!-- 1. Ô tìm kiếm từ khóa -->
+                        <div class="staff-search-box-compact">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="keyword" name="keyword" th:value="${selectedKeyword}"
+                                   class="form-control" placeholder="Tìm tên BS hoặc mã BS...">
+                        </div>
+
+                        <!-- 2. Dropdown Trạng thái (hay dùng nhất) -->
+                        <div>
+                            <select id="status" name="status" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
+                                <option value="">Trạng thái: Tất cả</option>
+                                <option value="PENDING" th:selected="${selectedStatus != null and selectedStatus.name() == 'PENDING'}">Chờ duyệt</option>
+                                <option value="APPROVED" th:selected="${selectedStatus != null and selectedStatus.name() == 'APPROVED'}">Đã duyệt</option>
+                                <option value="REJECTED" th:selected="${selectedStatus != null and selectedStatus.name() == 'REJECTED'}">Từ chối</option>
+                                <option value="CANCELLED" th:selected="${selectedStatus != null and selectedStatus.name() == 'CANCELLED'}">Đã hủy</option>
+                            </select>
+                        </div>
+
+                        <!-- Ẩn các trường lọc nâng cao (chuyển vào popup Lọc nâng cao) -->
+                        <input type="hidden" id="branchIdInput" name="branchId" th:value="${selectedBranchId}">
+                        <input type="hidden" id="staffIdInput" name="staffId" th:value="${selectedStaffId}">
+                        <input type="hidden" id="startDateInput" name="startDate" th:value="${selectedStartDate}">
+                        <input type="hidden" id="endDateInput" name="endDate" th:value="${selectedEndDate}">
+
+                        <!-- 3. Nút Lọc nâng cao (có badge hiển thị số lượng tiêu chí đang lọc) -->
+                        <button type="button" class="btn btn-secondary-custom btn-vua position-relative" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                            <i class="bi bi-funnel"></i> Lọc nâng cao
+                            <span th:if="${(selectedBranchId != null) or (selectedStaffId != null) or (selectedStartDate != null) or (selectedEndDate != null)}"
+                                  class="filter-badge-count ms-1"
+                                  th:text="${(selectedBranchId != null ? 1 : 0) + (selectedStaffId != null ? 1 : 0) + (selectedStartDate != null ? 1 : 0) + (selectedEndDate != null ? 1 : 0)}">
+                                1
+                            </span>
+                        </button>
+
+                        <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
+                        <a th:if="${(selectedKeyword != null and selectedKeyword != '') or selectedStatus != null or selectedBranchId != null or selectedStaffId != null or selectedStartDate != null or selectedEndDate != null}"
+                           th:href="@{/admin/leave-requests}"
+                           class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                           title="Xóa tất cả bộ lọc">
+                            <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                        </a>
+                    </div>
+
+                    <!-- Bên phải: Nút Bảng phân ca tuần + Bánh răng Tùy chỉnh cột -->
+                    <div class="staff-toolbar-right">
+                        <a th:href="@{/admin/schedules}" class="btn btn-secondary-custom btn-vua text-primary">
+                            <i class="bi bi-calendar-range me-1"></i> Bảng phân ca tuần
+                        </a>
+
+                        <!-- Bánh răng mở Dropdown Tùy chỉnh cột -->
+                        <div class="custom-col-dropdown position-relative d-inline-block">
+                            <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
+                                <i class="bi bi-gear"></i>
+                            </button>
+
+                            <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                            <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                <div class="custom-column-header">
+                                    <h6 class="custom-column-title">
+                                        <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                    </h6>
+                                    <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                </div>
+
+                                <!-- Ô tìm kiếm tên trường -->
+                                <div class="custom-column-search">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                        <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                    </div>
+                                </div>
+
+                                <!-- Tiêu đề danh sách cột -->
+                                <div class="custom-column-table-head">
+                                    <div class="flex-grow-1">Tên trường</div>
+                                </div>
+
+                                <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
+                                <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                    <div class="custom-col-item" data-col-target="stt">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                        <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="doctor">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-doctor" checked>
+                                        <label for="chk-col-doctor" class="custom-col-name">Bác sĩ yêu cầu</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="branch">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+                                        <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="daterange">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-daterange" checked>
+                                        <label for="chk-col-daterange" class="custom-col-name">Thời gian nghỉ</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="shift">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-shift" checked>
+                                        <label for="chk-col-shift" class="custom-col-name">Ca trực</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="type">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-type" checked>
+                                        <label for="chk-col-type" class="custom-col-name">Loại nghỉ</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="reason">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-reason" checked>
+                                        <label for="chk-col-reason" class="custom-col-name">Lý do</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="submitted">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-submitted" checked>
+                                        <label for="chk-col-submitted" class="custom-col-name">Ngày gửi</label>
+                                    </div>
+
+                                    <div class="custom-col-item" data-col-target="status">
+                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                        <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                    </div>
+                                </div>
+
+                                <!-- Nút Thao tác Footer -->
+                                <div class="custom-column-footer">
+                                    <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                        Lấy lại mặc định
+                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                        <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- BẢNG DỮ LIỆU ĐƠN NGHỈ PHÉP MISA (Hỗ trợ kéo giãn độ rộng cột & cuộn nội bộ) -->
+            <section class="staff-table-card">
+                <div class="staff-table-wrapper">
+                    <table class="table staff-modern-table align-middle" id="leaveTable">
+                        <colgroup>
+                            <col data-col="stt" style="width: 60px;">
+                            <col data-col="doctor" style="width: 220px;">
+                            <col data-col="branch" style="width: 170px;">
+                            <col data-col="daterange" style="width: 195px;">
+                            <col data-col="shift" style="width: 155px;">
+                            <col data-col="type" style="width: 170px;">
+                            <col data-col="reason" style="width: 220px;">
+                            <col data-col="submitted" style="width: 150px;">
+                            <col data-col="status" style="width: 160px;">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th data-col="stt" style="width: 60px; min-width: 50px;">
+                                <span>#</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="doctor" style="width: 220px; min-width: 180px;">
+                                <span>Bác sĩ yêu cầu</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="branch" style="width: 170px; min-width: 140px;">
+                                <span>Chi nhánh</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="daterange" style="width: 195px; min-width: 165px;">
+                                <span>Thời gian nghỉ</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="shift" style="width: 155px; min-width: 130px;">
+                                <span>Ca trực</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="type" style="width: 170px; min-width: 140px;">
+                                <span>Loại nghỉ</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="reason" style="width: 220px; min-width: 160px;">
+                                <span>Lý do</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="submitted" style="width: 150px; min-width: 135px;">
+                                <span>Ngày gửi</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th data-col="status" style="width: 160px; min-width: 140px;">
+                                <span>Trạng thái</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="r, iter : ${requests}"
+                            class="leave-data-row"
+                            th:data-leave-id="${r.leaveId}"
+                            th:data-doctor-name="${r.staff.fullName}"
+                            th:data-doctor-code="${r.staff.staffCode}"
+                            th:data-branch-name="${r.branch.branchName}"
+                            th:data-start-date="${#temporals.format(r.startDate, 'dd/MM/yyyy')}"
+                            th:data-end-date="${#temporals.format(r.endDate, 'dd/MM/yyyy')}"
+                            th:data-shift-info="${r.shift != null ? (r.shift.shiftName + ' (' + #temporals.format(r.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(r.shift.endTime, 'HH:mm') + ')') : 'Nghỉ cả ngày'}"
+                            th:data-leave-type="${r.leaveType.name()}"
+                            th:data-is-emergency="${r.isEmergency}"
+                            th:data-reason="${r.reason}"
+                            th:data-status="${r.status.name()}"
+                            th:data-submitted-at="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}"
+                            th:data-review-note="${r.reviewNote != null ? r.reviewNote : ''}"
+                            th:data-reviewed-by="${r.reviewedBy != null ? r.reviewedBy.username : ''}"
+                            th:data-reviewed-at="${r.reviewedAt != null ? #temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm') : ''}">
+
+                            <!-- 1. STT -->
+                            <td data-col="stt" class="text-muted fw-semibold">
+                                <span class="row-stt-index" th:text="${iter.count}">1</span>
+                            </td>
+
+                            <!-- 2. Bác sĩ yêu cầu -->
+                            <td data-col="doctor">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="staff-avatar bg-primary text-white"
+                                          th:text="${#strings.toUpperCase(#strings.substring(r.staff.fullName, 0, 1))}">B</span>
+                                    <div class="text-truncate">
+                                        <div class="staff-name text-truncate">
+                                            <a href="javascript:void(0)"
+                                               class="text-dark text-decoration-none fw-semibold btn-trigger-review"
+                                               th:text="${r.staff.fullName}">Bác sĩ A</a>
+                                        </div>
+                                        <div class="staff-sub text-truncate">
+                                            <span th:text="${r.staff.staffCode}">BS001</span> ·
+                                            <span th:text="${r.staff.specialty != null ? r.staff.specialty : 'Nha khoa'}">Chuyên khoa</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- 3. Chi nhánh -->
+                            <td data-col="branch">
+                                <span th:if="${r.branch != null}" class="chip chip--primary" th:title="${r.branch.branchName}">
+                                    <i class="bi bi-buildings me-1"></i>
+                                    <span th:text="${r.branch.branchName}">Chi nhánh</span>
+                                </span>
+                                <span th:unless="${r.branch != null}" class="text-muted small">—</span>
+                            </td>
+
+                            <!-- 4. Thời gian nghỉ -->
+                            <td data-col="daterange">
+                                <div class="text-truncate">
+                                    <i class="bi bi-calendar3 text-muted me-1"></i>
+                                    <span class="fw-semibold text-dark" th:text="${#temporals.format(r.startDate, 'dd/MM/yyyy')}">01/01/2026</span>
+                                    <span th:if="${!r.startDate.isEqual(r.endDate)}" class="text-muted small">
+                                        → <strong class="text-dark" th:text="${#temporals.format(r.endDate, 'dd/MM/yyyy')}">03/01/2026</strong>
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- 5. Ca trực -->
+                            <td data-col="shift">
+                                <span th:if="${r.shift != null}" class="chip chip--role" style="max-width: 150px;"
+                                      th:title="${r.shift.shiftName + ' (' + #temporals.format(r.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(r.shift.endTime, 'HH:mm') + ')'}">
+                                    <i class="bi bi-clock me-1"></i>
+                                    <span th:text="${r.shift.shiftName}">Ca sáng</span>
+                                </span>
+                                <span th:if="${r.shift == null}" class="chip">
+                                    <i class="bi bi-brightness-high me-1"></i>Cả ngày
+                                </span>
+                            </td>
+
+                            <!-- 6. Loại nghỉ -->
+                            <td data-col="type">
+                                <div class="d-flex align-items-center gap-1">
+                                    <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="chip">Phép năm</span>
+                                    <span th:if="${r.leaveType.name() == 'SICK'}" class="chip" style="background: #fffbeb; color: #b45309; border-color: #fde68a;">Nghỉ ốm</span>
+                                    <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="chip chip--role">Việc riêng</span>
+                                    <span th:if="${r.leaveType.name() == 'UNPAID'}" class="chip chip--role">Không lương</span>
+
+                                    <span th:if="${r.isEmergency}" class="chip"
+                                          style="background: #fef2f2; color: #dc2626; border-color: #fecaca;"
+                                          title="Nghỉ đột xuất (Báo trước dưới 3 ngày - Quy tắc R8)">
+                                        <i class="bi bi-lightning-fill"></i>Đột xuất
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- 7. Lý do -->
+                            <td data-col="reason">
+                                <span class="text-truncate d-inline-block text-dark" style="max-width: 200px;"
+                                      th:text="${r.reason}" th:title="${r.reason}">
+                                    Lý do xin nghỉ
+                                </span>
+                            </td>
+
+                            <!-- 8. Ngày gửi -->
+                            <td data-col="submitted">
+                                <span class="text-muted small" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                                    01/01/2026 09:30
+                                </span>
+                            </td>
+
+                            <!-- 9. Trạng thái -->
+                            <td data-col="status">
+                                <span th:if="${r.status.name() == 'PENDING'}" class="misa-status-badge misa-status-badge--on_leave">
+                                    Chờ duyệt
+                                </span>
+                                <span th:if="${r.status.name() == 'APPROVED'}" class="misa-status-badge misa-status-badge--active">
+                                    Đã duyệt
+                                </span>
+                                <span th:if="${r.status.name() == 'REJECTED'}" class="misa-status-badge"
+                                      style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+                                    Từ chối
+                                </span>
+                                <span th:if="${r.status.name() == 'CANCELLED'}" class="misa-status-badge misa-status-badge--inactive">
+                                    Đã hủy
+                                </span>
+                            </td>
+                        </tr>
+
+                        <!-- Empty State khi không có dữ liệu (Đồng bộ Quản lý tài khoản) -->
+                        <tr th:if="${#lists.isEmpty(requests)}">
+                            <td colspan="9" class="p-0">
+                                <div class="account-empty-state">
+                                    <div class="account-empty-icon">
+                                        <i class="bi bi-calendar-x"></i>
+                                    </div>
+                                    <h5 class="account-empty-title">Không tìm thấy đơn xin nghỉ phép nào</h5>
+                                    <p class="account-empty-desc">
+                                        Không có dữ liệu đơn xin nghỉ phép nào phù hợp với bộ lọc hiện tại. Thử thay đổi từ khóa hoặc đặt lại bộ lọc.
+                                    </p>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <a th:href="@{/admin/leave-requests}" class="btn btn-secondary-custom btn-be">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS Table) -->
+                <div id="tableHoverFloatingActions" class="staff-row-floating-actions-bar">
+                    <button type="button" id="btnFloatingReview"
+                            class="staff-action-icon-btn btn-view"
+                            title="Xem chi tiết & Xét duyệt">
+                        <i class="bi bi-eye" id="btnFloatingReviewIcon"></i>
+                    </button>
+                </div>
+
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="totalItemsCount" th:text="${requests.size()}">0</strong> bản ghi
+                    </div>
+
+                    <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+
+                        <div class="misa-page-range">
+                            <span id="fromItemText">0</span> - <span id="toItemText">0</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" id="btnFirstPage" class="misa-nav-btn disabled" title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </button>
+                            <button type="button" id="btnPrevPage" class="misa-nav-btn disabled" title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" id="btnNextPage" class="misa-nav-btn disabled" title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" id="btnLastPage" class="misa-nav-btn disabled" title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<!-- ==================== POPUP 1: MODAL BỘ LỌC NÂNG CAO (ĐỒNG BỘ QUẢN LÝ TÀI KHOẢN) ==================== -->
+<div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="advancedFilterModalLabel">
+                    <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                <!-- 1. Chi nhánh -->
+                <div class="mb-3">
+                    <label for="advBranchId" class="form-label small fw-semibold text-muted">Cơ sở / Chi nhánh</label>
+                    <select id="advBranchId" class="form-select">
+                        <option value="">Tất cả chi nhánh</option>
+                        <option th:each="b : ${branches}"
+                                th:value="${b.branchId}"
+                                th:text="${b.branchName}"
+                                th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 2. Bác sĩ -->
+                <div class="mb-3">
+                    <label for="advStaffId" class="form-label small fw-semibold text-muted">Bác sĩ</label>
+                    <select id="advStaffId" class="form-select">
+                        <option value="">Tất cả bác sĩ</option>
+                        <option th:each="d : ${doctors}"
+                                th:value="${d.staffId}"
+                                th:text="${d.fullName + ' (' + d.staffCode + ')'}"
+                                th:selected="${selectedStaffId != null and selectedStaffId == d.staffId}">
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 3. Khoảng thời gian nghỉ -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="advStartDate" class="form-label small fw-semibold text-muted">Nghỉ từ ngày</label>
+                        <input type="date" id="advStartDate" class="form-control" th:value="${selectedStartDate}">
+                    </div>
+                    <div class="col-6">
+                        <label for="advEndDate" class="form-label small fw-semibold text-muted">Đến ngày</label>
+                        <input type="date" id="advEndDate" class="form-control" th:value="${selectedEndDate}">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                    Đặt lại
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnApplyAdvancedFilter" class="btn btn-primary btn-vua">Áp dụng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== POPUP 2: MODAL CHI TIẾT, DUYỆT ĐƠN & LỊCH HẸN ẢNH HƯỞNG (SCR-42.4, SCR-42.5) ==================== -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header bg-light border-bottom py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-file-earmark-check fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark" id="reviewModalLabel" style="font-size: 1.05rem;">
+                            Chi tiết Yêu cầu Nghỉ phép / Khóa lịch Bác sĩ
+                        </h5>
+                        <span class="text-muted small" id="mLeaveIdDisplay">Đơn #LR-0</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+
+                <!-- BÁO CÁO CẢNH BÁO NGHỈ ĐỘT XUẤT -->
+                <div id="mEmergencyAlert" class="alert alert-danger d-flex align-items-start gap-2 py-2 px-3 mb-3" style="display: none;">
+                    <i class="bi bi-lightning-fill text-danger fs-5 flex-shrink-0 mt-1"></i>
+                    <div style="font-size: 0.82rem;">
+                        <strong>Đơn nộp đột xuất (Quy tắc R8):</strong> Bác sĩ nộp đơn sát ngày (dưới 3 ngày).
+                        Vui lòng kiểm tra kỹ danh sách lịch hẹn của bệnh nhân bị ảnh hưởng bên dưới trước khi phê duyệt!
+                    </div>
+                </div>
+
+                <!-- THÔNG TIN ĐƠN NGHỈ -->
+                <div class="row g-3 p-3 bg-light rounded-3 mb-3 border">
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Bác sĩ đề xuất:</span>
+                        <strong class="text-dark fs-6" id="mDoctorName">Bác sĩ</strong>
+                        <span class="text-muted small" id="mDoctorCode">(BS001)</span>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Cơ sở áp dụng:</span>
+                        <strong class="text-dark fs-6" id="mBranchName">Cơ sở</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Thời gian xin nghỉ:</span>
+                        <strong class="text-primary fs-6" id="mDateRange">01/01/2026 - 02/01/2026</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Khung giờ / Ca trực:</span>
+                        <strong class="text-dark" id="mShiftInfo">Cả ngày</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Loại hình nghỉ:</span>
+                        <span class="badge bg-secondary" id="mLeaveType">Phép năm</span>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Thời điểm gửi đơn:</span>
+                        <span class="text-dark small" id="mSubmittedAt">01/01/2026 09:00</span>
+                    </div>
+                    <div class="col-12">
+                        <span class="text-muted small d-block">Lý do xin nghỉ:</span>
+                        <div class="p-2 bg-white rounded border text-dark small" id="mReason" style="min-height: 48px;">
+                            Lý do nghỉ phép...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SCR-42.5: DANH SÁCH LỊCH HẸN BỆNH NHÂN BỊ ẢNH HƯỞNG -->
+                <div class="card border border-warning-subtle rounded-3 mb-3 overflow-hidden">
+                    <div class="card-header bg-warning-subtle py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-people-fill text-warning fs-5"></i>
+                            <span class="fw-bold text-dark small">Lịch hẹn bệnh nhân bị ảnh hưởng</span>
+                        </div>
+                        <span id="mAffectedBadge" class="badge bg-warning text-dark">Đang kiểm tra...</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="mAffectedLoading" class="text-center py-3 text-muted small">
+                            <div class="spinner-border spinner-border-sm text-primary me-1" role="status"></div>
+                            Đang quét lịch hẹn bệnh nhân trùng ca nghỉ...
+                        </div>
+
+                        <div id="mAffectedEmpty" class="text-center py-3 text-success small" style="display: none;">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            Không có lịch hẹn bệnh nhân nào bị trùng trong thời gian này. Bác sĩ hoàn toàn khả dụng để nghỉ!
+                        </div>
+
+                        <div id="mAffectedTableWrapper" style="display: none; max-height: 200px; overflow-y: auto;">
+                            <div class="p-2 bg-danger-subtle text-danger small border-bottom">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                <strong>Thông báo Lễ tân (FT05):</strong> Cần liên hệ đổi lịch hoặc phân bổ bác sĩ khác cho các bệnh nhân sau:
+                            </div>
+                            <table class="table table-sm table-striped align-middle mb-0" style="font-size: 0.8rem;">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Mã LH</th>
+                                    <th>Bệnh nhân</th>
+                                    <th>SĐT</th>
+                                    <th>Ngày &amp; Giờ</th>
+                                    <th>Dịch vụ khám</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                                </thead>
+                                <tbody id="mAffectedTableBody">
+                                <!-- Dữ liệu đổ từ API qua AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LỊCH SỬ PHÊ DUYỆT (NẾU ĐÃ DUYỆT HOẶC TỪ CHỐI) -->
+                <div id="mHistoryBox" class="p-3 rounded-2 border bg-white mb-3" style="display: none;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-clock-history text-muted"></i>
+                        <strong class="small text-dark">Kết quả xét duyệt trước đó:</strong>
+                        <span class="badge" id="mStatusBadge">Đã duyệt</span>
+                    </div>
+                    <div class="small text-muted" id="mHistoryDetail">
+                        Xử lý bởi admin lúc 01/01/2026 10:00. Ghi chú: Đã duyệt
+                    </div>
+                </div>
+
+                <!-- FORM DUYỆT / TỪ CHỐI (CHO ADMIN KHI ĐƠN PENDING) -->
+                <div id="mActionBox">
+                    <div class="mb-3">
+                        <label for="reviewNoteInput" class="form-label fw-semibold small text-dark">
+                            Ghi chú xét duyệt / Lý do từ chối
+                        </label>
+                        <textarea class="form-control form-control-sm" id="reviewNoteInput" rows="2"
+                                  placeholder="Nhập ghi chú phản hồi cho Bác sĩ (Bắt buộc nếu Từ chối)..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer bg-light border-top py-2 px-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+
+                <div id="mActionButtons" class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-vua px-3" id="btnReject">
+                        <i class="bi bi-x-circle me-1"></i> Từ chối
+                    </button>
+                    <button type="button" class="btn btn-success btn-vua px-3" id="btnApprove">
+                        <i class="bi bi-check-circle-fill me-1"></i> Phê duyệt &amp; Khóa lịch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('leaveFilterForm');
+
+        // 1. Xử lý Bộ lọc nâng cao (Modal chi tiết)
+        const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
+        const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+        const advBranchId = document.getElementById('advBranchId');
+        const advStaffId = document.getElementById('advStaffId');
+        const advStartDate = document.getElementById('advStartDate');
+        const advEndDate = document.getElementById('advEndDate');
+
+        const branchIdInput = document.getElementById('branchIdInput');
+        const staffIdInput = document.getElementById('staffIdInput');
+        const startDateInput = document.getElementById('startDateInput');
+        const endDateInput = document.getElementById('endDateInput');
+
+        if (btnApplyAdv && filterForm) {
+            btnApplyAdv.addEventListener('click', function () {
+                if (branchIdInput && advBranchId) branchIdInput.value = advBranchId.value;
+                if (staffIdInput && advStaffId) staffIdInput.value = advStaffId.value;
+                if (startDateInput && advStartDate) startDateInput.value = advStartDate.value;
+                if (endDateInput && advEndDate) endDateInput.value = advEndDate.value;
+                filterForm.submit();
+            });
+        }
+
+        if (btnResetAdv && filterForm) {
+            btnResetAdv.addEventListener('click', function () {
+                if (advBranchId) advBranchId.value = '';
+                if (advStaffId) advStaffId.value = '';
+                if (advStartDate) advStartDate.value = '';
+                if (advEndDate) advEndDate.value = '';
+
+                if (branchIdInput) branchIdInput.value = '';
+                if (staffIdInput) staffIdInput.value = '';
+                if (startDateInput) startDateInput.value = '';
+                if (endDateInput) endDateInput.value = '';
+                filterForm.submit();
+            });
+        }
+
+        // 2. Kéo giãn kích thước cột & Tùy chỉnh cột (Chuẩn MISA AMIS đồng bộ Quản lý tài khoản)
+        const table = document.getElementById('leaveTable');
+        const STORAGE_WIDTH_KEY = 'cv_leave_admin_table_widths_v1';
+        const STORAGE_CONFIG_KEY = 'cv_leave_admin_cols_v1';
+
+        const defaultColOrder = ['stt', 'doctor', 'branch', 'daterange', 'shift', 'type', 'reason', 'submitted', 'status'];
+        const defaultColWidths = {
+            stt: 60,
+            doctor: 220,
+            branch: 170,
+            daterange: 195,
+            shift: 155,
+            type: 170,
+            reason: 220,
+            submitted: 150,
+            status: 160
+        };
+
+        let currentWidths = loadColWidths();
+        let currentConfig = getColConfig();
+
+        function loadColWidths() {
+            try {
+                const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+            } catch (e) {
+                return Object.assign({}, defaultColWidths);
+            }
+        }
+
+        function saveColWidths(widths) {
+            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
+        }
+
+        function getColConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                defaultColOrder.forEach(col => {
+                    if (!order.includes(col)) order.push(col);
+                });
+                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                return { order, hidden };
+            } catch (e) {
+                return { order: defaultColOrder.slice(), hidden: [] };
+            }
+        }
+
+        function saveColConfig(config) {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function applyColOrder(order) {
+            if (!order || !Array.isArray(order) || !table) return;
+
+            const customColList = document.getElementById('customColList');
+            if (customColList) {
+                order.forEach(colKey => {
+                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
+                    if (item) customColList.appendChild(item);
+                });
+            }
+
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+                order.forEach(colKey => {
+                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
+                    if (col) colgroup.appendChild(col);
+                });
+            }
+
+            const theadTr = table.querySelector('thead tr');
+            if (theadTr) {
+                order.forEach(colKey => {
+                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                    if (th) theadTr.appendChild(th);
+                });
+            }
+
+            const tbodyRows = table.querySelectorAll('tbody tr.leave-data-row');
+            tbodyRows.forEach(tr => {
+                order.forEach(colKey => {
+                    const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                    if (td) tr.appendChild(td);
+                });
+            });
+        }
+
+        function applyColWidths() {
+            if (!table) return;
+            currentWidths = loadColWidths();
+            let totalColsWidth = 0;
+
+            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
+            order.forEach(col => {
+                const w = currentWidths[col] || defaultColWidths[col] || 160;
+                currentWidths[col] = w;
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) colEl.style.width = w + 'px';
+
+                const th = table.querySelector(`thead th[data-col="${col}"]`);
+                if (th) {
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    if (!th.classList.contains('d-none')) {
+                        totalColsWidth += w;
+                    }
+                }
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
+        }
+
+        function applyColConfig(config) {
+            if (!table) return;
+
+            const order = (config && config.order) ? config.order : defaultColOrder;
+            let visibleTotalW = 0;
+
+            order.forEach(col => {
+                const isHidden = config.hidden.includes(col);
+                const cells = table.querySelectorAll(`[data-col="${col}"]`);
+                cells.forEach(cell => {
+                    if (isHidden) {
+                        cell.classList.add('d-none');
+                    } else {
+                        cell.classList.remove('d-none');
+                    }
+                });
+
+                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
+                if (colEl) {
+                    colEl.style.display = isHidden ? 'none' : '';
+                }
+
+                if (!isHidden) {
+                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 160);
+                }
+
+                const chk = document.getElementById(`chk-col-${col}`);
+                if (chk) chk.checked = !isHidden;
+            });
+
+            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+            table.style.width = Math.max(visibleTotalW, containerW) + 'px';
+        }
+
+        function initDrawerDragAndDrop() {
+            const colList = document.getElementById('customColList');
+            if (!colList) return;
+
+            let draggedItem = null;
+
+            colList.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function () {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                });
+
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem !== this) {
+                        const rect = this.getBoundingClientRect();
+                        const mid = rect.top + rect.height / 2;
+                        if (e.clientY < mid) {
+                            colList.insertBefore(draggedItem, this);
+                        } else {
+                            colList.insertBefore(draggedItem, this.nextSibling);
+                        }
+                    }
+                });
+            });
+        }
+
+        let isResizingCol = false;
+
+        function initColumnResizers() {
+            if (!table) return;
+            const resizers = table.querySelectorAll('.col-resizer');
+            const floatingBar = document.getElementById('tableHoverFloatingActions');
+
+            resizers.forEach(resizer => {
+                let startX, startW, colKey, colEl, thEl;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isResizingCol = true;
+                    if (floatingBar) floatingBar.classList.remove('is-visible');
+
+                    thEl = resizer.parentElement;
+                    colKey = thEl.getAttribute('data-col');
+                    colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
+
+                    startX = e.pageX;
+                    startW = thEl.offsetWidth;
+
+                    resizer.classList.add('is-resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const minW = (colKey === 'status') ? 140 : 60;
+                        const newW = Math.max(startW + diff, minW);
+
+                        if (thEl) {
+                            thEl.style.width = newW + 'px';
+                            thEl.style.minWidth = newW + 'px';
+                        }
+                        if (colEl) {
+                            colEl.style.width = newW + 'px';
+                        }
+                        currentWidths[colKey] = newW;
+
+                        let totalW = 0;
+                        defaultColOrder.forEach(col => {
+                            if (!currentConfig.hidden.includes(col)) {
+                                totalW += (currentWidths[col] || defaultColWidths[col] || 160);
+                            }
+                        });
+
+                        const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                        table.style.width = Math.max(totalW, containerW) + 'px';
+                    }
+
+                    function onMouseUp() {
+                        isResizingCol = false;
+                        resizer.classList.remove('is-resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+
+                        saveColWidths(currentWidths);
+
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Quản lý Popover Tùy chỉnh cột
+        const popoverEl = document.getElementById('customColumnPopover');
+        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        const btnCloseCol = document.getElementById('btnCloseColPopover');
+        const btnCancelCol = document.getElementById('btnCancelCols');
+        const colSearchInput = document.getElementById('colSearchInput');
+
+        function openCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'block';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'true');
+                btnToggleCol.classList.add('active');
+            }
+            document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                const colKey = item.getAttribute('data-col-target');
+                const chk = item.querySelector('.custom-col-check');
+                if (chk) {
+                    chk.checked = !currentConfig.hidden.includes(colKey);
+                }
+            });
+            if (colSearchInput) {
+                colSearchInput.value = '';
+                document.querySelectorAll('#customColList .custom-col-item').forEach(it => it.style.display = '');
+                setTimeout(() => colSearchInput.focus(), 60);
+            }
+        }
+
+        function closeCustomColPopover() {
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) {
+                btnToggleCol.setAttribute('aria-expanded', 'false');
+                btnToggleCol.classList.remove('active');
+            }
+        }
+
+        if (btnToggleCol) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
+                    openCustomColPopover();
+                } else {
+                    closeCustomColPopover();
+                }
+            });
+        }
+
+        if (btnCloseCol) {
+            btnCloseCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeCustomColPopover();
+            });
+        }
+
+        if (btnCancelCol) {
+            btnCancelCol.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeCustomColPopover();
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (popoverEl && popoverEl.style.display !== 'none') {
+                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                    closeCustomColPopover();
+                }
+            }
+        });
+
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                const term = this.value.toLowerCase().trim();
+                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                    const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                    item.style.display = label.includes(term) ? '' : 'none';
+                });
+            });
+        }
+
+        const btnSaveCols = document.getElementById('btnSaveCols');
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                const items = document.querySelectorAll('#customColList .custom-col-item');
+                const order = [];
+                const hidden = [];
+
+                items.forEach(item => {
+                    const colKey = item.getAttribute('data-col-target');
+                    order.push(colKey);
+                    const chk = item.querySelector('.custom-col-check');
+                    if (chk && !chk.checked) {
+                        hidden.push(colKey);
+                    }
+                });
+
+                currentConfig = { order, hidden };
+                saveColConfig(currentConfig);
+
+                applyColOrder(order);
+                applyColConfig(currentConfig);
+
+                closeCustomColPopover();
+            });
+        }
+
+        const btnResetCols = document.getElementById('btnResetCols');
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                localStorage.removeItem(STORAGE_WIDTH_KEY);
+                localStorage.removeItem(STORAGE_CONFIG_KEY);
+
+                currentWidths = Object.assign({}, defaultColWidths);
+                currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+
+                applyColOrder(currentConfig.order);
+                applyColConfig(currentConfig);
+                applyColWidths();
+
+                closeCustomColPopover();
+            });
+        }
+
+        // 3. Xử lý Modal Chi tiết & Phê duyệt đơn nghỉ phép (SCR-42.4, SCR-42.5)
+        let currentLeaveId = null;
+        const reviewModalElem = document.getElementById('reviewModal');
+        const reviewModalInstance = reviewModalElem ? new bootstrap.Modal(reviewModalElem) : null;
+
+        const mLeaveIdDisplay = document.getElementById('mLeaveIdDisplay');
+        const mDoctorName = document.getElementById('mDoctorName');
+        const mDoctorCode = document.getElementById('mDoctorCode');
+        const mBranchName = document.getElementById('mBranchName');
+        const mDateRange = document.getElementById('mDateRange');
+        const mShiftInfo = document.getElementById('mShiftInfo');
+        const mLeaveType = document.getElementById('mLeaveType');
+        const mSubmittedAt = document.getElementById('mSubmittedAt');
+        const mReason = document.getElementById('mReason');
+        const mEmergencyAlert = document.getElementById('mEmergencyAlert');
+
+        const mAffectedBadge = document.getElementById('mAffectedBadge');
+        const mAffectedLoading = document.getElementById('mAffectedLoading');
+        const mAffectedEmpty = document.getElementById('mAffectedEmpty');
+        const mAffectedTableWrapper = document.getElementById('mAffectedTableWrapper');
+        const mAffectedTableBody = document.getElementById('mAffectedTableBody');
+
+        const mHistoryBox = document.getElementById('mHistoryBox');
+        const mStatusBadge = document.getElementById('mStatusBadge');
+        const mHistoryDetail = document.getElementById('mHistoryDetail');
+
+        const mActionBox = document.getElementById('mActionBox');
+        const mActionButtons = document.getElementById('mActionButtons');
+        const reviewNoteInput = document.getElementById('reviewNoteInput');
+        const btnApprove = document.getElementById('btnApprove');
+        const btnReject = document.getElementById('btnReject');
+
+        function openReviewModalForRow(row) {
+            if (!row || !reviewModalInstance) return;
+
+            currentLeaveId = row.getAttribute('data-leave-id');
+            const docName = row.getAttribute('data-doctor-name');
+            const docCode = row.getAttribute('data-doctor-code');
+            const branchName = row.getAttribute('data-branch-name');
+            const startDate = row.getAttribute('data-start-date');
+            const endDate = row.getAttribute('data-end-date');
+            const shiftInfo = row.getAttribute('data-shift-info');
+            const leaveType = row.getAttribute('data-leave-type');
+            const isEmergency = row.getAttribute('data-is-emergency') === 'true';
+            const reason = row.getAttribute('data-reason');
+            const status = row.getAttribute('data-status');
+            const submittedAt = row.getAttribute('data-submitted-at');
+            const reviewNote = row.getAttribute('data-review-note');
+            const reviewedBy = row.getAttribute('data-reviewed-by');
+            const reviewedAt = row.getAttribute('data-reviewed-at');
+
+            mLeaveIdDisplay.textContent = 'Đơn #' + currentLeaveId;
+            mDoctorName.textContent = docName;
+            mDoctorCode.textContent = '(' + docCode + ')';
+            mBranchName.textContent = branchName;
+            mDateRange.textContent = startDate === endDate ? startDate : (startDate + ' đến ' + endDate);
+            mShiftInfo.textContent = shiftInfo;
+            mLeaveType.textContent = leaveType;
+            mSubmittedAt.textContent = submittedAt;
+            mReason.textContent = reason;
+
+            mEmergencyAlert.style.display = isEmergency ? 'flex' : 'none';
+            reviewNoteInput.value = '';
+
+            if (status === 'PENDING') {
+                mActionBox.style.display = 'block';
+                mActionButtons.style.display = 'flex';
+                mHistoryBox.style.display = 'none';
+            } else {
+                mActionBox.style.display = 'none';
+                mActionButtons.style.display = 'none';
+                mHistoryBox.style.display = 'block';
+
+                if (status === 'APPROVED') {
+                    mStatusBadge.className = 'badge bg-success';
+                    mStatusBadge.textContent = 'Đã phê duyệt';
+                } else if (status === 'REJECTED') {
+                    mStatusBadge.className = 'badge bg-danger';
+                    mStatusBadge.textContent = 'Đã từ chối';
+                } else {
+                    mStatusBadge.className = 'badge bg-secondary';
+                    mStatusBadge.textContent = 'Đã hủy';
+                }
+
+                mHistoryDetail.textContent = 'Xử lý bởi: ' + (reviewedBy || 'Hệ thống') +
+                    (reviewedAt ? (' lúc ' + reviewedAt) : '') +
+                    (reviewNote ? (' · Ghi chú: ' + reviewNote) : '');
+            }
+
+            mAffectedBadge.className = 'badge bg-secondary';
+            mAffectedBadge.textContent = 'Đang quét...';
+            mAffectedLoading.style.display = 'block';
+            mAffectedEmpty.style.display = 'none';
+            mAffectedTableWrapper.style.display = 'none';
+            mAffectedTableBody.innerHTML = '';
+
+            reviewModalInstance.show();
+
+            fetch('/admin/leave-requests/' + currentLeaveId + '/affected-appointments')
+                .then(res => res.json())
+                .then(data => {
+                    mAffectedLoading.style.display = 'none';
+                    if (Array.isArray(data) && data.length > 0) {
+                        mAffectedBadge.className = 'badge bg-danger text-white';
+                        mAffectedBadge.textContent = data.length + ' lịch hẹn bị ảnh hưởng';
+                        mAffectedTableWrapper.style.display = 'block';
+
+                        data.forEach(item => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="badge bg-light text-dark border">${item.appointmentCode}</span></td>
+                                <td><strong>${item.patientName}</strong> (${item.patientCode || ''})</td>
+                                <td><a href="tel:${item.phoneNumber}" class="text-decoration-none">${item.phoneNumber}</a></td>
+                                <td>${item.appointmentDate} <span class="badge bg-info-subtle text-info">${item.expectedTime}</span></td>
+                                <td>${item.serviceName}</td>
+                                <td><span class="badge bg-warning-subtle text-warning">${item.status}</span></td>
+                            `;
+                            mAffectedTableBody.appendChild(tr);
+                        });
+                    } else {
+                        mAffectedBadge.className = 'badge bg-success text-white';
+                        mAffectedBadge.textContent = '0 lịch hẹn ảnh hưởng';
+                        mAffectedEmpty.style.display = 'block';
+                    }
+                })
+                .catch(err => {
+                    console.error('Lỗi quét lịch hẹn:', err);
+                    mAffectedLoading.style.display = 'none';
+                    mAffectedBadge.className = 'badge bg-secondary';
+                    mAffectedBadge.textContent = 'Không có dữ liệu';
+                    mAffectedEmpty.style.display = 'block';
+                });
+        }
+
+        // Bấm vào tên bác sĩ mở modal chi tiết
+        document.querySelectorAll('.btn-trigger-review').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const row = this.closest('tr.leave-data-row');
+                if (row) openReviewModalForRow(row);
+            });
+        });
+
+        if (btnApprove) {
+            btnApprove.addEventListener('click', function () {
+                if (!currentLeaveId) return;
+                if (!confirm('Bạn có chắc chắn muốn PHÊ DUYỆT đơn xin nghỉ phép này?\nLịch làm việc của Bác sĩ sẽ được tự động khóa sang trạng thái Nghỉ phép.')) {
+                    return;
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/leave-requests/' + currentLeaveId + '/approve';
+
+                const noteInput = document.createElement('input');
+                noteInput.type = 'hidden';
+                noteInput.name = 'reviewNote';
+                noteInput.value = reviewNoteInput.value;
+                form.appendChild(noteInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
+
+        if (btnReject) {
+            btnReject.addEventListener('click', function () {
+                if (!currentLeaveId) return;
+                const note = reviewNoteInput.value.trim();
+                if (!note) {
+                    alert('Vui lòng nhập lý do từ chối vào ô Ghi chú phản hồi.');
+                    reviewNoteInput.focus();
+                    return;
+                }
+
+                if (!confirm('Bạn có chắc chắn muốn TỪ CHỐI đơn xin nghỉ phép này?')) {
+                    return;
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/leave-requests/' + currentLeaveId + '/reject';
+
+                const noteInput = document.createElement('input');
+                noteInput.type = 'hidden';
+                noteInput.name = 'reviewNote';
+                noteInput.value = note;
+                form.appendChild(noteInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
+
+        // 4. Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS)
+        function initFixedHoverActions() {
+            const tableCard = document.querySelector('.staff-table-card');
+            const tableWrapper = document.querySelector('.staff-table-wrapper');
+            const floatingBar = document.getElementById('tableHoverFloatingActions');
+            const btnFloatingReview = document.getElementById('btnFloatingReview');
+            const btnFloatingReviewIcon = document.getElementById('btnFloatingReviewIcon');
+            if (!tableCard || !tableWrapper || !floatingBar || !table) return;
+
+            const tableThead = table.querySelector('thead');
+            const tableTbody = table.querySelector('tbody');
+            if (!tableTbody) return;
+
+            let activeRow = null;
+            let hideTimer = null;
+
+            function updateBarPosition(row) {
+                if (!row || isResizingCol) {
+                    floatingBar.classList.remove('is-visible');
+                    return;
+                }
+                const rowRect = row.getBoundingClientRect();
+                const cardRect = tableCard.getBoundingClientRect();
+                const theadRect = tableThead.getBoundingClientRect();
+                const wrapperRect = tableWrapper.getBoundingClientRect();
+
+                if (rowRect.bottom <= theadRect.bottom + 2 || rowRect.top >= wrapperRect.bottom - 2) {
+                    floatingBar.classList.remove('is-visible');
+                    return;
+                }
+
+                const barH = floatingBar.offsetHeight || 32;
+                const top = (rowRect.top - cardRect.top) + (rowRect.height - barH) / 2;
+                floatingBar.style.top = top + 'px';
+                floatingBar.classList.add('is-visible');
+            }
+
+            function showBarForRow(row) {
+                if (isResizingCol) return;
+                const leaveId = row.getAttribute('data-leave-id');
+                if (!leaveId) {
+                    hideBar();
+                    return;
+                }
+
+                activeRow = row;
+                tableTbody.querySelectorAll('tr.is-row-hovered').forEach(r => {
+                    if (r !== row) r.classList.remove('is-row-hovered');
+                });
+                row.classList.add('is-row-hovered');
+
+                const status = row.getAttribute('data-status');
+                if (btnFloatingReview && btnFloatingReviewIcon) {
+                    if (status === 'PENDING') {
+                        btnFloatingReviewIcon.className = 'bi bi-check2-circle';
+                        btnFloatingReview.title = 'Xem & Phê duyệt đơn';
+                    } else {
+                        btnFloatingReviewIcon.className = 'bi bi-eye';
+                        btnFloatingReview.title = 'Xem chi tiết đơn';
+                    }
+                }
+
+                updateBarPosition(row);
+            }
+
+            function hideBar() {
+                floatingBar.classList.remove('is-visible');
+                if (activeRow) {
+                    activeRow.classList.remove('is-row-hovered');
+                    activeRow = null;
+                }
+            }
+
+            if (btnFloatingReview) {
+                btnFloatingReview.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (activeRow) {
+                        openReviewModalForRow(activeRow);
+                    }
+                });
+            }
+
+            tableTbody.addEventListener('mousemove', function (e) {
+                if (isResizingCol) return;
+                const row = e.target.closest('tr.leave-data-row');
+                if (row) {
+                    clearTimeout(hideTimer);
+                    if (row !== activeRow) {
+                        showBarForRow(row);
+                    } else {
+                        updateBarPosition(row);
+                    }
+                }
+            });
+
+            tableWrapper.addEventListener('mouseleave', function (e) {
+                if (e.relatedTarget && floatingBar.contains(e.relatedTarget)) {
+                    return;
+                }
+                hideTimer = setTimeout(hideBar, 120);
+            });
+
+            floatingBar.addEventListener('mouseenter', function () {
+                clearTimeout(hideTimer);
+                if (activeRow) {
+                    activeRow.classList.add('is-row-hovered');
+                }
+                floatingBar.classList.add('is-visible');
+            });
+
+            floatingBar.addEventListener('mouseleave', function (e) {
+                if (e.relatedTarget && activeRow && activeRow.contains(e.relatedTarget)) {
+                    return;
+                }
+                hideTimer = setTimeout(hideBar, 120);
+            });
+
+            tableCard.addEventListener('mouseleave', function () {
+                hideBar();
+            });
+
+            tableWrapper.addEventListener('scroll', function () {
+                if (activeRow) {
+                    updateBarPosition(activeRow);
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (activeRow) {
+                    updateBarPosition(activeRow);
+                }
+            });
+        }
+
+        // 5. Phân trang phía Client cho bảng MISA
+        function initClientPagination() {
+            const allRows = Array.from(document.querySelectorAll('#leaveTable tbody tr.leave-data-row'));
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+            const fromItemText = document.getElementById('fromItemText');
+            const toItemText = document.getElementById('toItemText');
+            const btnFirst = document.getElementById('btnFirstPage');
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+            const btnLast = document.getElementById('btnLastPage');
+
+            const total = allRows.length;
+            let pageSize = pageSizeSelect ? parseInt(pageSizeSelect.value, 10) : 10;
+            let currentPage = 0;
+
+            function renderPage() {
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                if (currentPage >= totalPages) currentPage = totalPages - 1;
+                if (currentPage < 0) currentPage = 0;
+
+                const startIdx = currentPage * pageSize;
+                const endIdx = Math.min(startIdx + pageSize, total);
+
+                allRows.forEach((row, idx) => {
+                    if (idx >= startIdx && idx < endIdx) {
+                        row.style.display = '';
+                        const sttEl = row.querySelector('.row-stt-index');
+                        if (sttEl) sttEl.textContent = (idx + 1);
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                if (fromItemText) fromItemText.textContent = total === 0 ? 0 : (startIdx + 1);
+                if (toItemText) toItemText.textContent = endIdx;
+
+                const setDisabled = (btn, cond) => {
+                    if (!btn) return;
+                    if (cond) btn.classList.add('disabled');
+                    else btn.classList.remove('disabled');
+                };
+
+                setDisabled(btnFirst, currentPage === 0);
+                setDisabled(btnPrev, currentPage === 0);
+                setDisabled(btnNext, currentPage >= totalPages - 1);
+                setDisabled(btnLast, currentPage >= totalPages - 1);
+            }
+
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function () {
+                    pageSize = parseInt(this.value, 10) || 10;
+                    currentPage = 0;
+                    renderPage();
+                });
+            }
+            if (btnFirst) btnFirst.addEventListener('click', () => { currentPage = 0; renderPage(); });
+            if (btnPrev) btnPrev.addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderPage(); } });
+            if (btnNext) btnNext.addEventListener('click', () => { currentPage++; renderPage(); });
+            if (btnLast) btnLast.addEventListener('click', () => { currentPage = Math.max(0, Math.ceil(total / pageSize) - 1); renderPage(); });
+
+            renderPage();
+        }
+
+        if (table) {
+            applyColOrder(currentConfig.order);
+            applyColWidths();
+            applyColConfig(currentConfig);
+            initColumnResizers();
+            initDrawerDragAndDrop();
+            initFixedHoverActions();
+            initClientPagination();
+        }
+    });
+</script>
+
+</body>
+</html>

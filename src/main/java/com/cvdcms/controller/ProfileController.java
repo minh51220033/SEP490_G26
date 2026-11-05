@@ -27,6 +27,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.cvdcms.entity.SystemAuditLog;
+import com.cvdcms.repository.SystemAuditLogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +52,9 @@ public class ProfileController {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final AccountPatientProfileRepository accountPatientProfileRepository;
     private final TokenRepository tokenRepository;
+
+    @Autowired(required = false)
+    private SystemAuditLogRepository systemAuditLogRepository;
 
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
@@ -545,10 +552,36 @@ public class ProfileController {
             return "profile/edit";
         }
 
+        String oldEmail = user.getEmail();
+
         // 1. Cập nhật thông tin thuộc User.
         user.setEmail(email);
         user.setPhoneNumber(phoneNumber);
         User updatedUser = userRepository.save(user);
+
+        if (systemAuditLogRepository != null) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                Map<String, Object> oldVal = new LinkedHashMap<>();
+                oldVal.put("email", oldEmail);
+                oldVal.put("phoneNumber", oldPhone != null ? oldPhone : "");
+
+                Map<String, Object> newVal = new LinkedHashMap<>();
+                newVal.put("email", email);
+                newVal.put("phoneNumber", phoneNumber);
+
+                SystemAuditLog audit = new SystemAuditLog();
+                audit.setUser(updatedUser);
+                audit.setBranch(updatedUser.getBranch());
+                audit.setAction("UPDATE_PROFILE");
+                audit.setEntityTable("users");
+                audit.setEntityId(updatedUser.getUserId());
+                audit.setOldValuesJson(mapper.writeValueAsString(oldVal));
+                audit.setNewValuesJson(mapper.writeValueAsString(newVal));
+                audit.setIpAddress("127.0.0.1");
+                systemAuditLogRepository.save(audit);
+            } catch (Exception ignored) {}
+        }
 
         // 2. Liên kết móc nối: Đồng bộ Email & SĐT sang Hồ sơ Nhân sự (StaffProfile)
         // nếu có
@@ -673,6 +706,21 @@ public class ProfileController {
         // 1. Mã hóa BCrypt trước khi lưu database
         user.setPassword(passwordEncoder.encode(newPassword));
         User updatedUser = userRepository.save(user);
+
+        if (systemAuditLogRepository != null) {
+            try {
+                SystemAuditLog audit = new SystemAuditLog();
+                audit.setUser(updatedUser);
+                audit.setBranch(updatedUser.getBranch());
+                audit.setAction("CHANGE_PASSWORD");
+                audit.setEntityTable("users");
+                audit.setEntityId(updatedUser.getUserId());
+                audit.setOldValuesJson("{\"passwordChanged\":false}");
+                audit.setNewValuesJson("{\"passwordChanged\":true,\"method\":\"SELF_SERVICE\"}");
+                audit.setIpAddress("127.0.0.1");
+                systemAuditLogRepository.save(audit);
+            } catch (Exception ignored) {}
+        }
 
         // 2. Thu hồi toàn bộ Refresh Token cũ và cấp mới Refresh Token cho phiên hiện
         // tại

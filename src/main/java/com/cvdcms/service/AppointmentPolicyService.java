@@ -17,9 +17,13 @@ public interface AppointmentPolicyService {
     record DoctorOption(Long id, String name, String specialty, int remaining) { }
     record Availability(boolean available, String reason, int remainingBranch,
                         List<DoctorOption> doctors) { }
+    record SessionLoadSummary(PreferredSession session, String sessionName, int bookedCount,
+                              int capacity, int remaining, String loadStatus, String recommendation) { }
 
     Availability availability(Branch branch, LocalDate date, PreferredSession session,
                               Long excludeAppointmentId, AppointmentActorType actorType);
+
+    List<SessionLoadSummary> dayLoadOverview(Branch branch, LocalDate date, AppointmentActorType actorType);
 
     void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
                         PreferredSession session, Long doctorId, Long excludeAppointmentId,

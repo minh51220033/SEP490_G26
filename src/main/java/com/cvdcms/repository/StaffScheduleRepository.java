@@ -52,4 +52,16 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, Lo
     @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.staff JOIN FETCH s.shift WHERE s.branch.branchId = :branchId AND s.workDate = :date AND s.status = :status")
     List<StaffSchedule> findForBooking(@Param("branchId") Long branchId, @Param("date") LocalDate date,
                                        @Param("status") ScheduleStatus status);
+
+    // FT42: Tìm các ca làm việc của nhân sự trong khoảng ngày để cập nhật trạng thái khi nghỉ phép
+    @Query("SELECT s FROM StaffSchedule s WHERE s.staff.staffId = :staffId AND s.workDate BETWEEN :from AND :to")
+    List<StaffSchedule> findByStaffStaffIdAndWorkDateBetween(@Param("staffId") Long staffId,
+                                                             @Param("from") LocalDate from,
+                                                             @Param("to") LocalDate to);
+
+    @Query("SELECT s FROM StaffSchedule s WHERE s.staff.staffId = :staffId AND s.shift.shiftId = :shiftId AND s.workDate BETWEEN :from AND :to")
+    List<StaffSchedule> findByStaffStaffIdAndShiftShiftIdAndWorkDateBetween(@Param("staffId") Long staffId,
+                                                                           @Param("shiftId") Long shiftId,
+                                                                           @Param("from") LocalDate from,
+                                                                           @Param("to") LocalDate to);
 }

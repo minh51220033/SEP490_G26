@@ -13,10 +13,11 @@ interface QueueWorkflowRepository extends JpaRepository<QueueTicket, Long> {
     @Query("select t from QueueTicket t where t.ticketId = :id")
     Optional<QueueTicket> lock(@Param("id") Long id);
 
-    @Query("select t from QueueTicket t join fetch t.visit v join fetch v.patientProfile join fetch t.branch where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type")
+    @Query("select t from QueueTicket t join fetch t.visit v join fetch v.patientProfile left join fetch v.primaryDoctor join fetch t.branch where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type")
     List<QueueTicket> forBoard(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("type") QueueType type);
 
-    @Query("select count(t) from QueueTicket t where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type and t.status = :status and t.ticketId <> :id")
-    long countOther(@Param("branch") Long branch, @Param("day") LocalDate day,
-                    @Param("type") QueueType type, @Param("status") QueueStatus status, @Param("id") Long id);
+    @Query("select count(t) from QueueTicket t where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type and t.visit.primaryDoctor.staffId = :doctor and t.status = :status and t.ticketId <> :id")
+    long countOtherForDoctor(@Param("branch") Long branch, @Param("day") LocalDate day,
+                    @Param("type") QueueType type, @Param("doctor") Long doctor,
+                    @Param("status") QueueStatus status, @Param("id") Long id);
 }

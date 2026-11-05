@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    FT41 - Quản lý hồ sơ nhân sự (Thiết kế chuẩn MISA AMIS theo Ảnh 2)
    Tông màu chủ đạo: Xanh dương (#2563eb) & Đen/Slate (#0f172a).
    Font chữ: Thống nhất "Be Vietnam Pro", system-ui, sans-serif.
@@ -704,12 +704,6 @@ body.staff-page-body .app-content {
     color: #475569;
 }
 
-/* Ẩn widget chat nổi trên màn hình Quản lý nhân sự theo yêu cầu */
-#cvdcmsChatWidgetFab,
-.cvdcms-chat-fab,
-.cvdcms-chat-drawer {
-    display: none !important;
-}
 
 .custom-col-item {
     display: flex;

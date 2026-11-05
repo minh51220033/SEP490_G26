@@ -740,6 +740,10 @@
     color: #9aa5b6;
 }
 
+.fin-pagination {
+    padding-right: 90px !important; /* Tránh icon Chat nổi góc dưới phải che mất số trang */
+}
+
 /* Dashboard Table Date Filters (SCR-22.1) */
 .patient-finance-dashboard .dashboard-table-filter {
     background: #ffffff;

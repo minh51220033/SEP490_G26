@@ -84,4 +84,33 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(r.amount), 0) FROM Refund r
+        WHERE (:branchIds IS NULL OR r.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR r.refundedAt >= :startDate)
+          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+    """)
+    BigDecimal sumRefundAmountByBranches(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT r FROM Refund r
+        JOIN FETCH r.patientProfile pp
+        JOIN FETCH r.branch b
+        JOIN FETCH r.refundedBy st
+        LEFT JOIN FETCH r.invoice inv
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND (:startDate IS NULL OR r.refundedAt >= :startDate)
+          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+        ORDER BY r.refundedAt DESC
+    """)
+    List<Refund> findAllRefundsForReport(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }

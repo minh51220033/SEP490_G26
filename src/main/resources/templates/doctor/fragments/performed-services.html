@@ -37,6 +37,12 @@
                     <span>Kế hoạch điều trị (FT15)</span>
                 </button>
 
+                <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-workflow-execution')"
+                        title="Mở bảng thực hiện quy trình khám & điều trị cho lượt khám (FT43)">
+                    <i class="bi bi-list-check text-success"></i>
+                    <span>Quy trình thực hiện (FT43)</span>
+                </button>
+
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>

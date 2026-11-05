@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CV-DCMS — Floating Realtime Chat Widget (Góc dưới bên phải toàn hệ thống)
  * - Chỉ hiển thị khi người dùng đã đăng nhập (/api/chat/context -> authenticated === true).
  * - Singleton guard chống gắn trùng sự kiện hoặc nhân đôi DOM.
@@ -661,6 +661,77 @@
         }, delay);
     }
 
+    function buildGuestWidgetDom() {
+        if (document.getElementById('cvdcmsFloatingChatWidget')) {
+            return;
+        }
+
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'cvdcmsFloatingChatWidget';
+        wrapper.className = 'cvdcms-chat-widget';
+        wrapper.innerHTML = `
+            <div id="cvdcmsChatPopup" class="cvdcms-chat-popup" aria-hidden="true">
+                <div class="cvdcms-chat-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle bg-white text-primary d-inline-flex align-items-center justify-content-center fw-bold"
+                                  style="width:34px;height:34px;font-size:15px;">
+                                <i class="bi bi-chat-heart-fill"></i>
+                            </span>
+                            <div>
+                                <div class="fw-bold text-white" style="font-size:13.5px;line-height:1.2;">Tư vấn trực tuyến CV-DCMS</div>
+                                <div class="text-white-50" style="font-size:11.5px;">Đội ngũ Lễ tân &amp; Bác sĩ Nha khoa Cường Việt</div>
+                            </div>
+                        </div>
+                        <button type="button" id="cvdcmsChatCloseBtn" class="btn btn-sm text-white p-1" aria-label="Đóng khung chat">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="cvdcms-chat-body p-3 d-flex flex-column justify-content-between" style="min-height:260px;background:#f8fafc;">
+                    <div class="bg-white border rounded-3 p-3 shadow-sm">
+                        <div class="fw-bold text-dark mb-1" style="font-size:13.5px;">
+                            <i class="bi bi-stars text-primary me-1"></i>Xin chào Quý khách!
+                        </div>
+                        <p class="text-muted mb-2" style="font-size:12.5px;line-height:1.55;">
+                            Hệ thống hỗ trợ trò chuyện trực tuyến thời gian thực với đội ngũ Lễ tân và Bác sĩ theo từng cơ sở phòng khám.
+                        </p>
+                        <p class="text-muted mb-0" style="font-size:12.5px;line-height:1.55;">
+                            Vui lòng đăng nhập tài khoản để gửi tin nhắn và lưu lịch sử tư vấn nha khoa của bạn.
+                        </p>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="/login" class="btn btn-primary fw-semibold btn-sm py-2">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập để trò chuyện ngay
+                        </a>
+                        <a href="/register" class="btn btn-outline-primary fw-semibold btn-sm py-2">
+                            <i class="bi bi-person-plus me-1"></i>Đăng ký tài khoản bệnh nhân
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="cvdcmsChatFabBtn" class="cvdcms-chat-fab" aria-label="Mở khung hỗ trợ trực tuyến" title="Chat tư vấn trực tuyến">
+                <i class="bi bi-chat-dots-fill"></i>
+            </button>
+        `;
+        document.body.appendChild(wrapper);
+
+        const fabBtn = document.getElementById('cvdcmsChatFabBtn');
+        const closeBtn = document.getElementById('cvdcmsChatCloseBtn');
+        const popup = document.getElementById('cvdcmsChatPopup');
+
+        function toggleGuestPopup(forceState) {
+            state.isOpen = typeof forceState === 'boolean' ? forceState : !state.isOpen;
+            if (popup) {
+                popup.classList.toggle('is-open', state.isOpen);
+                popup.setAttribute('aria-hidden', String(!state.isOpen));
+            }
+        }
+        if (fabBtn) fabBtn.addEventListener('click', () => toggleGuestPopup());
+        if (closeBtn) closeBtn.addEventListener('click', () => toggleGuestPopup(false));
+    }
+
     async function initWidget() {
         try {
             const resp = await fetch('/api/chat/context', {
@@ -669,6 +740,7 @@
             if (!resp.ok) return;
             const ctx = await resp.json();
             if (!ctx || ctx.authenticated !== true) {
+                buildGuestWidgetDom();
                 return;
             }
 
