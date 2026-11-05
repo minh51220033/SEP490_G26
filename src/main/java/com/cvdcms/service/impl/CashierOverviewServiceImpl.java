@@ -135,6 +135,16 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return new PageImpl<>(pageContent, pageable, total);
     }
 
+    @Override
+    public Optional<CashierPendingPatientDTO> findDebtDetail(Long profileId, List<Long> allowedBranchIds) {
+        if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return patientProfileRepository.findById(profileId)
+                .map(patient -> buildPatientDTO(patient, allowedBranchIds))
+                .filter(detail -> !detail.getUnpaidInvoices().isEmpty() || !detail.getPendingVisits().isEmpty());
+    }
+
     private CashierPendingPatientDTO buildPatientDTO(PatientProfile patient, List<Long> allowedBranchIds) {
         CashierPendingPatientDTO dto = new CashierPendingPatientDTO();
         dto.setProfileId(patient.getProfileId());

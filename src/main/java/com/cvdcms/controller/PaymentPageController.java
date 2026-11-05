@@ -522,6 +522,8 @@ public class PaymentPageController {
     @ResponseBody
     public org.springframework.http.ResponseEntity<?> getPatientUnpaidInvoices(
             @PathVariable Long profileId,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) InvoicePaymentStatus paymentStatus,
             HttpSession session
     ) {
         try {
@@ -529,8 +531,13 @@ public class PaymentPageController {
             boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
             List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
             List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+            if (branchId != null) {
+                allowedBranchIds = List.of(resolveBranchId(branchId, currentUserId));
+            }
             List<Invoice> unpaid = debtService.getUnpaidInvoicesForPatient(profileId, allowedBranchIds);
-            List<java.util.Map<String, Object>> data = unpaid.stream().map(inv -> {
+            List<java.util.Map<String, Object>> data = unpaid.stream()
+                    .filter(inv -> paymentStatus == null || inv.getPaymentStatus() == paymentStatus)
+                    .map(inv -> {
                 java.util.Map<String, Object> map = new java.util.HashMap<>();
                 map.put("invoiceId", inv.getInvoiceId());
                 map.put("invoiceCode", inv.getInvoiceCode());
@@ -538,6 +545,7 @@ public class PaymentPageController {
                 map.put("totalAmount", inv.getTotalAmount() != null ? inv.getTotalAmount() : java.math.BigDecimal.ZERO);
                 map.put("paidAmount", inv.getPaidAmount() != null ? inv.getPaidAmount() : java.math.BigDecimal.ZERO);
                 map.put("issuedAt", inv.getIssuedAt() != null ? inv.getIssuedAt().toString() : "");
+                map.put("branchName", inv.getBranch() != null ? inv.getBranch().getBranchName() : "");
                 return map;
             }).toList();
             return org.springframework.http.ResponseEntity.ok(data);
@@ -698,6 +706,25 @@ public class PaymentPageController {
 
             return "redirect:/payments/refunds";
         }
+    }
+
+    @GetMapping("/debts/{profileId}")
+    public String viewDebtDetail(@PathVariable Long profileId, @RequestParam(required = false) Long branchId,
+                                 Model model, HttpSession session) {
+        Long userId = getCurrentUserId(session);
+        List<Long> scope = null;
+        if (branchId != null) {
+            scope = List.of(resolveBranchId(branchId, userId));
+        } else if (!userRepository.hasActiveAdminRole(userId)) {
+            scope = resolveAllowedBranches(userId).stream().map(Branch::getBranchId).toList();
+        }
+        var detail = cashierOverviewService.findDebtDetail(profileId, scope)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Không có khoản cần xử lý trong phạm vi chi nhánh."));
+        populateUserAndSidebar(model, session, "debts");
+        model.addAttribute("detail", detail);
+        model.addAttribute("branchId", branchId);
+        return "finance/payments/debt-detail";
     }
 
     @GetMapping("/debts")
