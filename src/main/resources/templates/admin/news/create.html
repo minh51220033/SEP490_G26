@@ -7,11 +7,10 @@
 <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
 <link rel="stylesheet" th:href="@{/css/news.css}">
 
-<header th:replace="~{fragments/header :: siteHeader}"></header>
 
 <div class="app-shell">
 
-    <aside th:replace="~{fragments/sidebar :: sidebar('news')}"></aside>
+    <aside th:replace="~{fragments/sidebar :: sidebar('admin-news')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
@@ -145,7 +144,6 @@
 
         </main>
 
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 
