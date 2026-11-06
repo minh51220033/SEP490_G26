@@ -147,6 +147,12 @@
 
                         <!-- === CALLED ACTIONS === -->
                         <th:block th:if="${t.status.name() == 'CALLED'}">
+                            <form th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post" class="m-0">
+                                <input type="hidden" name="branchId" th:value="${board.branchId}">
+                                <button class="btn btn-outline-primary btn-sm fw-semibold" type="submit" title="Nhắc lại thông báo gọi số trên màn hình TV sảnh chờ">
+                                    <i class="bi bi-megaphone me-1"></i>Gọi lại
+                                </button>
+                            </form>
                             <form th:action="@{/reception/queue/{id}/START(id=${t.ticketId})}" method="post" class="m-0 d-flex align-items-center gap-1">
                                 <input type="hidden" name="branchId" th:value="${board.branchId}">
                                 <select th:if="${!#lists.isEmpty(board.chairs)}" name="chairId" class="form-select form-select-sm d-inline-block w-auto" style="font-size: 11px;" title="Đổi ghế nếu ghế dự kiến bị chiếm">

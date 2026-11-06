@@ -10,32 +10,6 @@
         <main class="app-content queue-page">
             <link rel="stylesheet" th:href="@{/css/reception-queue.css}">
 
-            <!-- Breadcrumb & Page Heading -->
-            <div class="queue-heading d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                <div>
-                    <nav aria-label="breadcrumb" class="mb-1">
-                        <ol class="breadcrumb mb-0 small">
-                            <li class="breadcrumb-item"><a th:href="@{/reception/appointments}" class="text-decoration-none">Lịch hẹn</a></li>
-                            <li class="breadcrumb-item"><a th:href="@{/reception/check-in}" class="text-decoration-none">Tiếp đón &amp; Check-in</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Hàng chờ khám</li>
-                        </ol>
-                    </nav>
-                    <h1 class="h3 fw-bold text-dark mb-1">Hàng chờ khám bệnh</h1>
-                    <p class="text-muted small mb-0">Theo dõi hàng chờ thời gian thực theo từng bác sĩ. Điều dưỡng và lễ tân có thể gọi số, tạm dừng hoặc kích hoạt cấp cứu.</p>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a class="btn btn-outline-success btn-sm" th:href="@{/reception/check-in(branchId=${board.branchId})}">
-                        <i class="bi bi-person-check me-1"></i>Tiếp đón &amp; Check-in
-                    </a>
-                    <a class="btn btn-outline-primary btn-sm" th:href="@{/reception/dispatch(branchId=${board.branchId})}">
-                        <i class="bi bi-diagram-3 me-1"></i>Điều phối ghế nha
-                    </a>
-                    <a class="btn btn-outline-secondary btn-sm" th:href="@{/reception/queue/tv/{id}(id=${board.branchId})}" target="_blank" rel="noopener" title="Mở màn hình Tivi công cộng sảnh chờ">
-                        <i class="bi bi-display me-1"></i>Màn hình Tivi
-                    </a>
-                </div>
-            </div>
-
             <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
             <nav class="card border-0 shadow-sm rounded-4 mb-3 p-2 bg-white" aria-label="Quy trình tiếp đón">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
