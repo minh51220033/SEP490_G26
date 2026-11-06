@@ -72,7 +72,7 @@ public class SalaryAdvance {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by")
-    private StaffProfile approvedBy;
+    private User approvedBy;
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
