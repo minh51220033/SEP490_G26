@@ -162,6 +162,12 @@
             gap: 10px;
         }
 
+        @media screen {
+            body { background: #f8fafc; }
+            .ticket-card { border-radius: 12px; box-shadow: 0 4px 18px rgba(15,23,42,.08); }
+            .ticket-header { background: #0284c7; }
+            .action-toolbar .btn { border-radius: 8px; }
+        }
         /* PRINT STYLES - THERMAL POS 80mm OR CLEAN PRINT */
         @media print {
             body {
@@ -311,10 +317,10 @@
         </button>
         <div class="d-flex gap-2">
             <a th:href="@{/reception/queue(branchId=${ticket.branch.branchId})}" class="btn btn-success flex-grow-1 fw-semibold">
-                <i class="bi bi-list-ol me-1"></i> Sang hàng chờ (FT10) &rarr;
+                <i class="bi bi-list-ol me-1"></i> Sang hàng chờ &rarr;
             </a>
             <a th:href="@{/reception/dispatch(branchId=${ticket.branch.branchId})}" class="btn btn-outline-secondary flex-grow-1 fw-semibold">
-                <i class="bi bi-kanban me-1"></i> Về điều phối (FT08)
+                <i class="bi bi-kanban me-1"></i> Về điều phối ghế nha
             </a>
         </div>
     </div>
@@ -372,12 +378,6 @@
             setTimeout(function() {
                 window.print();
             }, 300);
-        }
-    });
-    // Keyboard shortcut Ctrl+P is handled natively, but also provide 'P' key convenience
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-            window.print();
         }
     });
 </script>
