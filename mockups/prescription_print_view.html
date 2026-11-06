@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản in Đơn thuốc chuẩn A5 y tế (SCR-18.5) - DentalSoft</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --primary-ocean: #0284c7;
+      --primary-hover: #0369a1;
+      --dark-heading: #0f172a;
+      --body-text: #1e293b;
+      --secondary-text: #334155;
+      --muted-text: #64748b;
+      --border-light: #e2e8f0;
+      --border-medium: #cbd5e1;
+      --page-bg: #f1f5f9;
+      --paper-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--page-bg);
+      color: var(--body-text);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 60px;
+    }
+
+    /* Top Preview Bar */
+    .preview-header-bar {
+      background-color: #ffffff;
+      border-bottom: 1px solid var(--border-light);
+      padding: 12px 28px !important;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      width: 100% !important;
+    }
+
+    .preview-toolbar {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+    }
+
+    .preview-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .preview-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-badge-status {
+      background-color: #e0f2fe;
+      color: var(--primary-ocean);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .toolbar-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    .btn-ocean {
+      background-color: var(--primary-ocean);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.15s;
+    }
+
+    .btn-ocean:hover {
+      background-color: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    .btn-outline-secondary {
+      background-color: #ffffff;
+      color: var(--body-text);
+      border: 1px solid var(--border-medium);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .btn-outline-secondary:hover {
+      background-color: #f8fafc;
+      color: var(--dark-heading);
+    }
+
+    /* Khung giấy chuẩn A5 (595px) */
+    .print-sheet-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 24px 28px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+    }
+
+    .a5-paper-sheet {
+      width: 595px;
+      background-color: var(--paper-bg);
+      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      padding: 32px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Header phòng khám trên đơn */
+    .print-clinic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--primary-ocean);
+      padding-bottom: 12px;
+    }
+
+    .print-clinic-info {
+      max-width: 380px;
+    }
+
+    .print-clinic-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .print-clinic-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--primary-ocean);
+      text-transform: uppercase;
+      letter-spacing: -0.2px;
+    }
+
+    .print-clinic-sub {
+      font-size: 11px;
+      color: var(--muted-text);
+      line-height: 1.4;
+    }
+
+    .print-meta-corner {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted-text);
+    }
+
+    .print-meta-corner strong {
+      color: var(--dark-heading);
+    }
+
+    .print-barcode {
+      font-family: monospace;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      letter-spacing: 1px;
+      background-color: #f8fafc;
+      padding: 3px 6px;
+      border: 1px dashed var(--border-medium);
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    /* Tiêu đề đơn */
+    .print-title-area {
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .print-title-main {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-heading);
+      letter-spacing: 0.5px;
+    }
+
+    .print-title-sub {
+      font-size: 11.5px;
+      color: var(--muted-text);
+      font-weight: 500;
+    }
+
+    /* Thông tin bệnh nhân 2 cột */
+    .print-info-grid {
+      background-color: #f8fafc;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      row-gap: 5px;
+      column-gap: 16px;
+      font-size: 12px;
+    }
+
+    .info-cell {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .info-cell-label {
+      color: var(--muted-text);
+      white-space: nowrap;
+      min-width: 75px;
+    }
+
+    .info-cell-value {
+      font-weight: 600;
+      color: var(--dark-heading);
+    }
+
+    .cell-full {
+      grid-column: span 2;
+    }
+
+    /* Danh sách thuốc kê */
+    .print-drugs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .drug-item-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .drug-item-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .drug-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .drug-name-bold {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dark-heading);
+    }
+
+    .drug-qty-badge {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-ocean);
+      white-space: nowrap;
+    }
+
+    .drug-instruction-line {
+      font-size: 12px;
+      color: var(--body-text);
+      padding-left: 16px;
+      position: relative;
+      line-height: 1.45;
+    }
+
+    .drug-instruction-line::before {
+      content: "-";
+      position: absolute;
+      left: 6px;
+      color: var(--muted-text);
+    }
+
+    /* Lời dặn & Hẹn tái khám */
+    .print-advice-card {
+      border: 1px solid var(--border-light);
+      background-color: #fafafa;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .advice-heading {
+      font-weight: 700;
+      color: var(--dark-heading);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .advice-list {
+      list-style-type: none;
+      padding-left: 0;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .advice-list li {
+      position: relative;
+      padding-left: 14px;
+      line-height: 1.4;
+    }
+
+    .advice-list li::before {
+      content: "•";
+      position: absolute;
+      left: 2px;
+      color: var(--primary-ocean);
+      font-weight: bold;
+    }
+
+    .followup-highlight-badge {
+      background-color: #e0f2fe;
+      color: var(--primary-ocean);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11.5px;
+      display: inline-block;
+      margin-top: 2px;
+    }
+
+    /* Chữ ký & Con dấu */
+    .print-signature-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      text-align: center;
+      margin-top: 8px;
+      padding-top: 6px;
+    }
+
+    .sig-label-role {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--dark-heading);
+    }
+
+    .sig-label-sub {
+      font-size: 11px;
+      color: var(--muted-text);
+      font-style: italic;
+    }
+
+    .sig-blank-space {
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .stamp-seal-badge {
+      border: 2px solid #dc2626;
+      color: #dc2626;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transform: rotate(-6deg);
+      opacity: 0.85;
+      position: absolute;
+      right: 25px;
+    }
+
+    .sig-doctor-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dark-heading);
+    }
+
+    /* Chân trang đơn thuốc */
+    .print-paper-footer {
+      border-top: 1px solid var(--border-light);
+      padding-top: 8px;
+      font-size: 10px;
+      color: var(--muted-text);
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff;
+        padding: 0;
+      }
+      .preview-header-bar {
+      background-color: #ffffff;
+      border-bottom: 1px solid var(--border-light);
+      padding: 12px 28px !important;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      width: 100% !important;
+    }
+      .print-sheet-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 24px 28px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+    }
+      .a5-paper-sheet {
+        box-shadow: none;
+        border: none;
+        padding: 8mm;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Preview Bar -->
+  <header class="preview-header-bar">
+    <div class="preview-toolbar">
+      <div class="preview-title-group">
+        <a href="prescription_instruction_form.html" class="btn-outline-secondary" style="padding: 6px 12px;">
+          <i class="bi bi-arrow-left"></i>
+          Quay lại chỉnh sửa đơn
+        </a>
+        <div class="preview-title">
+          <i class="bi bi-printer text-primary"></i>
+          Xem trước bản in: Đơn thuốc y tế chuẩn A5 (SCR-18.5)
+        </div>
+        <span class="preview-badge-status">Khổ A5 (595px)</span>
+      </div>
+
+      <div class="toolbar-actions">
+        <button type="button" class="btn-outline-secondary">
+          <i class="bi bi-file-earmark-pdf text-danger"></i>
+          Tải PDF
+        </button>
+        <button type="button" class="btn-ocean" onclick="window.print()">
+          <i class="bi bi-printer-fill"></i>
+          In đơn thuốc (A5)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sheet khổ A5 đứng căn giữa (595px) -->
+  <main class="print-sheet-wrapper">
+    <div class="a5-paper-sheet">
+
+      <!-- 1. Header Phòng Khám & Mã đơn (Chuẩn CV-DCMS / DentalSoft) -->
+      <div class="print-clinic-header">
+        <div class="print-clinic-info">
+          <div class="print-clinic-logo">
+            <i class="bi bi-hospital fs-5 text-primary"></i>
+            <div class="print-clinic-name">NHA KHOA QUỐC TẾ DENTALSOFT</div>
+          </div>
+          <div class="print-clinic-sub">
+            Cơ sở 1: 123 Nguyễn Tri Phương, Phường 5, Quận 10, TP. Hồ Chí Minh<br>
+            Hotline đặt hẹn: <strong>1900 6868</strong> &bull; Cấp cứu: 028 3838 9999<br>
+            Giấy phép hoạt động KBCB số: <strong>08868 / BYT - GPHĐ</strong>
+          </div>
+        </div>
+
+        <div class="print-meta-corner">
+          <div>Mã đơn thuốc: <strong>TOA10001</strong></div>
+          <div>Mã ca khám: <strong>#VISIT-2026-089</strong></div>
+          <div>Ngày kê: <strong>04/11/2026 10:30</strong></div>
+          <div class="print-barcode">*TOA10001*</div>
+        </div>
+      </div>
+
+      <!-- 2. Tiêu đề đơn thuốc -->
+      <div class="print-title-area">
+        <div class="print-title-main">ĐƠN THUỐC ĐIỀU TRỊ</div>
+        <div class="print-title-sub">(Dành cho bệnh nhân ngoại trú theo quy chuẩn Bộ Y Tế)</div>
+      </div>
+
+      <!-- 3. Thông tin người bệnh (Grid 2 cột) -->
+      <div class="print-info-grid">
+        <div class="info-cell">
+          <span class="info-cell-label">Họ và tên:</span>
+          <span class="info-cell-value" style="font-size: 13px; text-transform: uppercase;">Nguyễn Văn An</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-cell-label">Mã bệnh nhân:</span>
+          <span class="info-cell-value">BN-2026-089 (KH1001)</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-cell-label">Tuổi / Năm sinh:</span>
+          <span class="info-cell-value">32 tuổi (1994) &bull; Nam</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-cell-label">Số điện thoại:</span>
+          <span class="info-cell-value">0912 345 678</span>
+        </div>
+        <div class="info-cell cell-full">
+          <span class="info-cell-label">Địa chỉ:</span>
+          <span class="info-cell-value">45/12 Lê Hồng Phong, Phường 2, Quận 5, TP. Hồ Chí Minh</span>
+        </div>
+        <div class="info-cell cell-full">
+          <span class="info-cell-label">Chẩn đoán:</span>
+          <span class="info-cell-value">K02.1 - Sâu ngà răng R36; K04.0 - Viêm tủy răng R36</span>
+        </div>
+      </div>
+
+      <!-- 4. Chỉ định dùng thuốc chi tiết -->
+      <div class="print-drugs-list">
+        <div style="font-weight: 800; font-size: 12.5px; color: var(--dark-heading); border-bottom: 1.5px solid var(--border-light); padding-bottom: 4px;">
+          CHỈ ĐỊNH DÙNG THUỐC:
+        </div>
+
+        <!-- Thuốc 1 -->
+        <div class="drug-item-row">
+          <div class="drug-header-line">
+            <div class="drug-name-bold">1. Augmentin 1g (Amoxicillin 875mg + Acid Clavulanic 125mg)</div>
+            <div class="drug-qty-badge">10 Viên</div>
+          </div>
+          <div class="drug-instruction-line">
+            Ngày uống 2 lần, mỗi lần 1 viên sáng/chiều sau khi ăn no. Uống đều đặn liên tục trong 5 ngày.
+          </div>
+        </div>
+
+        <!-- Thuốc 2 -->
+        <div class="drug-item-row">
+          <div class="drug-header-line">
+            <div class="drug-name-bold">2. Ibuprofen 400mg</div>
+            <div class="drug-qty-badge">08 Viên</div>
+          </div>
+          <div class="drug-instruction-line">
+            Ngày uống 2 lần, mỗi lần 1 viên sau ăn no khi có triệu chứng đau nhức. Mỗi lần uống cách nhau tối thiểu 6 giờ.
+          </div>
+        </div>
+
+        <!-- Thuốc 3 -->
+        <div class="drug-item-row">
+          <div class="drug-header-line">
+            <div class="drug-name-bold">3. Alphachymotrypsin 4.2mg (Choay)</div>
+            <div class="drug-qty-badge">15 Viên</div>
+          </div>
+          <div class="drug-instruction-line">
+            Ngậm dưới lưỡi ngày 3 lần, mỗi lần 1 viên sau bữa ăn để chống phù nề mô mềm quanh chân răng.
+          </div>
+        </div>
+
+        <!-- Thuốc 4 -->
+        <div class="drug-item-row">
+          <div class="drug-header-line">
+            <div class="drug-name-bold">4. Nước súc miệng Kin Gingival 0.12% (Chai 250ml)</div>
+            <div class="drug-qty-badge">01 Chai</div>
+          </div>
+          <div class="drug-instruction-line">
+            Súc miệng nhẹ nhàng từ ngày thứ 2 sau can thiệp, ngày 2 lần (Sáng - Tối) sau đánh răng, ngậm 30 giây rồi nhổ bỏ.
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Lời dặn Bác sĩ & Hẹn tái khám -->
+      <div class="print-advice-card">
+        <div class="advice-heading">
+          <i class="bi bi-card-checklist text-primary"></i>
+          Lời dặn của Bác sĩ điều trị:
+        </div>
+        <ul class="advice-list">
+          <li>Cắn chặt bông gòn trong 45-60 phút. Tuyệt đối không khạc nhổ, không mút chíp huyệt ổ răng trong 24 giờ đầu.</li>
+          <li>Chườm đá lạnh ngoài má ngày đầu giảm sưng (15 phút chườm, 15 phút nghỉ). Ngày thứ 2 trở đi chườm ấm.</li>
+          <li>Ăn thức ăn mềm, nguội, lỏng (cháo, súp). Tránh đồ ăn cay nóng, đồ cứng/dai. Không uống rượu bia, không hút thuốc lá.</li>
+          <li>Uống thuốc đúng liều lượng chỉ định. Nếu đau tăng dữ dội hoặc sốt cao &gt; 38.5°C cần liên hệ phòng khám ngay.</li>
+        </ul>
+        <div>
+          <span class="followup-highlight-badge">
+            <i class="bi bi-calendar2-check me-1"></i>
+            Hẹn tái khám: 09:30 ngày 11/11/2026 (Tái khám kiểm tra tủy & trám bít phục hồi thẩm mỹ R36)
+          </span>
+        </div>
+      </div>
+
+      <!-- 6. Ký tên & Mộc y tế -->
+      <div class="print-signature-section">
+        <div>
+          <div class="sig-label-role">Người bệnh / Thân nhân</div>
+          <div class="sig-label-sub">(Ký và ghi rõ họ tên)</div>
+          <div class="sig-blank-space"></div>
+          <div class="sig-doctor-name">Nguyễn Văn An</div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; color: var(--muted-text); margin-bottom: 2px;">TP. Hồ Chí Minh, ngày 04 tháng 11 năm 2026</div>
+          <div class="sig-label-role">BÁC SĨ ĐIỀU TRỊ</div>
+          <div class="sig-label-sub">(Ký, đóng dấu và ghi rõ họ tên)</div>
+          <div class="sig-blank-space">
+            <div class="stamp-seal-badge">ĐÃ DUYỆT ĐƠN<br>DENTALSOFT</div>
+          </div>
+          <div class="sig-doctor-name">BS. CK1 Lê Hoàng Nam</div>
+        </div>
+      </div>
+
+      <!-- 7. Ghi chú chân trang -->
+      <div class="print-paper-footer">
+        Đơn thuốc có giá trị mua trong vòng 05 ngày kể từ ngày kê đơn &bull; Khám lại xin mang theo đơn này &bull; Hotline hỗ trợ y tế khẩn cấp 24/7: 1900 6868
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

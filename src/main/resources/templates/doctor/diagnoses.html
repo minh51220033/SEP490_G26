@@ -304,16 +304,16 @@
                                         style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
                                         th:data-visit-id="${visit.visitId}"
                                         onclick="confirmDirectHandover(this.getAttribute('data-visit-id'))"
-                                        title="Khóa bệnh án lâm sàng (BR-EMR-02) và chuyển thông tin giá dự kiến sang hàng chờ của Kế toán">
+                                        title="Hoàn tất ca khám lâm sàng và khóa hồ sơ bệnh án (BR-EMR-02)">
                                     <i class="bi bi-check2-circle fs-5"></i>
-                                    <span>Hoàn tất khám (Chuyển Kế toán)</span>
+                                    <span>Hoàn tất khám</span>
                                 </button>
                             </th:block>
 
                             <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
                                 <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                                    <i class="bi bi-send-check-fill text-warning"></i>
-                                    <span>Đã chuyển Kế toán xử lý (Khóa BR-EMR-02)</span>
+                                    <i class="bi bi-hourglass-split text-warning"></i>
+                                    <span>Chờ thanh toán (Khóa BR-EMR-02)</span>
                                 </span>
                                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
                                         th:data-visit-id="${visit.visitId}"
@@ -338,7 +338,7 @@
                             </th:block>
                         </div>
                         <small class="text-muted" style="font-size: 11px;">
-                            <i class="bi bi-shield-check text-primary me-1"></i>Giá dự kiến KHDT &amp; Đơn thuốc tự động đồng bộ sang Kế toán xử lý
+                            <i class="bi bi-shield-check text-primary me-1"></i>Khóa bệnh án lâm sàng bất biến (BR-EMR-02) khi hoàn tất ca khám
                         </small>
                     </div>
                 </div>
@@ -1354,6 +1354,19 @@
                 : '<span class="text-primary"><i class="bi bi-gender-male"></i> Nam</span>';
 
             const ageText = v.age ? ` • ${v.age} tuổi` : '';
+            const dispNum = v.ticketDisplayNumber || '01';
+            let turnBadgeHtml = `<span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px;" title="Số thứ tự lượt khám trong ngày">#${escapeHtml(dispNum)}</span>`;
+            if (v.isEmergency) {
+                turnBadgeHtml = `
+                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca cấp cứu khẩn cấp (FT10)')}">#${escapeHtml(dispNum)}</span>
+                    <span class="badge bg-danger text-white" style="font-size:10px;"><i class="bi bi-lightning-charge-fill"></i> Cấp cứu</span>
+                `;
+            } else if (v.isPriority) {
+                turnBadgeHtml = `
+                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca khám ưu tiên (FT09 / FT10)')}">#${escapeHtml(dispNum)}</span>
+                    <span class="badge bg-warning text-dark" style="font-size:10px;"><i class="bi bi-star-fill"></i> Ưu tiên</span>
+                `;
+            }
 
             html += `
                 <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId}, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
@@ -1364,6 +1377,7 @@
                             </div>
                             <div class="dvd-card-info">
                                 <h6 class="dvd-patient-name">
+                                    ${turnBadgeHtml}
                                     <span>${escapeHtml(v.fullName)}</span>
                                     ${isCurrent ? '<span class="badge bg-primary text-white" style="font-size: 10px;">Đang khám ca này</span>' : ''}
                                 </h6>
@@ -1525,14 +1539,14 @@
         const notesInput = document.getElementById('paymentHandoverNotes');
         const doctorNotes = notesInput ? notesInput.value.trim() : '';
 
-        if (!confirm('Xác nhận Hoàn tất khám & chuyển ca khám sang hàng chờ của Kế toán?\n\n• Toàn bộ Giá dự kiến của Kế hoạch điều trị, Dịch vụ thực hiện và Đơn thuốc (Tạm tính) sẽ được gửi sang Kế toán xử lý.\n• Bệnh án lâm sàng sẽ được khóa bất biến theo quy tắc BR-EMR-02.')) {
+        if (!confirm('Xác nhận Hoàn tất ca khám lâm sàng?\n\n• Hồ sơ bệnh án sẽ được khóa bất biến theo quy chuẩn BR-EMR-02.\n• Các dịch vụ thực hiện, chỉ định cận lâm sàng và đơn thuốc sẽ được chuyển sang Kế toán nếu có phát sinh chi phí.')) {
             return;
         }
 
         const btn = document.getElementById('btnDirectHandover');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang chuyển Kế toán...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang hoàn tất khám...';
         }
 
         try {
@@ -1545,26 +1559,26 @@
             const result = await res.json();
             if (res.ok && result.success) {
                 if (typeof showToast === 'function') {
-                    showToast('✓ ' + (result.message || 'Đã hoàn tất khám và chuyển thông tin giá dự kiến sang Kế toán thành công!'));
+                    showToast('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!'));
                 } else {
-                    alert('✓ ' + (result.message || 'Đã hoàn tất khám và chuyển thông tin giá dự kiến sang Kế toán thành công!'));
+                    alert('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!'));
                 }
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
             } else {
-                alert('Không thể hoàn tất khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng trước khi chuyển Kế toán.'));
+                alert('Không thể hoàn tất khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.'));
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám (Chuyển Kế toán)</span>';
+                    btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
                 }
             }
         } catch (err) {
             console.error('Error completing clinical exam:', err);
-            alert('Lỗi kết nối khi bàn giao: ' + err.message);
+            alert('Lỗi kết nối khi hoàn tất khám: ' + err.message);
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám (Chuyển Kế toán)</span>';
+                btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
             }
         }
     }

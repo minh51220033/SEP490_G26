@@ -249,6 +249,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
     @Override
     @Transactional
+    public TreatmentPlanResponseDTO handoverToAccounting(Long planId) {
+        TreatmentPlan plan = treatmentPlanRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị ID: " + planId));
+        plan.setSentToAccounting(true);
+        plan.setSentToAccountingAt(LocalDateTime.now());
+        TreatmentPlan saved = treatmentPlanRepository.save(plan);
+        log.info("Kế hoạch điều trị {} (ID: {}) đã được chuyển sang Kế toán thành công.", saved.getPlanCode(), planId);
+        return mapToResponseDTO(saved);
+    }
+
+    @Override
+    @Transactional
     public TreatmentPlanResponseDTO updateStageStatus(Long stageId, String statusStr) {
         TreatmentPlanStage stage = treatmentPlanStageRepository.findById(stageId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giai đoạn với ID: " + stageId));
@@ -526,6 +538,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .startDate(p.getStartDate() != null ? p.getStartDate().format(DATE_FORMATTER) : null)
                 .expectedEndDate(p.getExpectedEndDate() != null ? p.getExpectedEndDate().format(DATE_FORMATTER) : null)
                 .notes(p.getNotes())
+                .sentToAccounting(Boolean.TRUE.equals(p.getSentToAccounting()))
+                .sentToAccountingAt(p.getSentToAccountingAt() != null ? p.getSentToAccountingAt().format(DATE_TIME_FORMATTER) : null)
                 .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_TIME_FORMATTER) : null)
                 .totalStages(totalStages)
                 .completedStages(completedStages)

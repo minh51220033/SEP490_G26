@@ -34,6 +34,8 @@ public class TreatmentPlanResponseDTO {
     private String expectedEndDate;
     private String diagnosisText;
     private String notes;
+    private Boolean sentToAccounting;
+    private String sentToAccountingAt;
     private String createdAt;
     private Integer totalStages;
     private Integer completedStages;

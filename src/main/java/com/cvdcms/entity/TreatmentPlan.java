@@ -67,6 +67,12 @@ public class TreatmentPlan {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "sent_to_accounting")
+    private Boolean sentToAccounting = false;
+
+    @Column(name = "sent_to_accounting_at")
+    private LocalDateTime sentToAccountingAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
