@@ -6,7 +6,7 @@
     <link rel="stylesheet" th:href="@{/css/cashier.css}">
     <script th:src="@{/js/cashier-tabs.js}" defer></script>
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('debts')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -96,8 +96,8 @@
                                     <i class="bi bi-shield-check text-success empty-icon"></i>
                                     <h6>Kh&#244;ng c&#243; c&#244;ng n&#7907; t&#7891;n &#273;&#7885;ng</h6>
                                     <p>Hi&#7879;n kh&#244;ng c&#243; b&#7879;nh nh&#226;n n&#224;o c&#243; c&#244;ng n&#7907; vi&#7879;n ph&#237; c&#7847;n thu trong ph&#7841;m vi l&#7885;c.</p>
-                                    <a th:href="@{/payments/create}" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-plus-lg me-1"></i>Thu ti&#7873;n vi&#7879;n ph&#237;
+                                    <a th:href="@{/payments/dashboard}" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-plus-lg me-1"></i>Thu tiền viện phí
                                     </a>
                                 </div>
                             </td>
@@ -124,9 +124,22 @@
                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
                             </td>
                             <td data-column-key="actions" data-column-action="true" class="text-center">
-                                <a th:href="@{/payments/create(profileId=${d.profileId})}" class="fin-table-btn fin-table-btn-pay" title="Thu n&#7907;">
-                                    <i class="bi bi-cash-stack"></i> <span>Thu n&#7907;</span>
+                                <a class="fin-table-btn fin-table-btn-view"
+                                   th:href="@{/payments/debts/{id}(id=${d.profileId},branchId=${selectedBranchId})}">
+                                    <i class="bi bi-eye"></i> <span>Chi tiết</span>
                                 </a>
+                                <button type="button"
+                                        class="fin-table-btn fin-table-btn-pay"
+                                        th:data-profile-id="${d.profileId}"
+                                        th:data-invoices-url="@{/payments/api/patients/{id}/unpaid-invoices(id=${d.profileId},branchId=${selectedBranchId},paymentStatus=${selectedPaymentStatus})}"
+                                        th:data-patient-code="${d.patientCode}"
+                                        th:data-patient-name="${d.fullName}"
+                                        th:data-total-debt="${d.totalDebt}"
+                                        th:data-deposit-balance="${d.depositBalance}"
+                                        onclick="openDebtQuickPay(this)"
+                                        title="Thu nợ">
+                                    <i class="bi bi-cash-stack"></i> <span>Thu nợ</span>
+                                </button>
                             </td>
                         </tr>
                         </tbody>
@@ -152,9 +165,108 @@
                     </nav>
                 </div>
             </div>
+            <template id="debtCollectionTemplate">
+                <div class="modal fade" tabindex="-1" aria-label="Thu nợ bệnh nhân">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content shadow">
+                            <section data-invoice-picker>
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Chọn hóa đơn cần thu tiền</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Bệnh nhân: <strong data-patient></strong></p>
+                                    <p data-feedback role="status">Đang tải hóa đơn còn nợ…</p>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover align-middle mb-0">
+                                            <thead><tr><th>Mã hóa đơn</th><th>Ngày phát hành</th><th>Cơ sở</th><th>Tổng tiền</th><th>Đã thanh toán</th><th>Còn nợ</th><th>Thao tác</th></tr></thead>
+                                            <tbody data-invoice-list></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button></div>
+                            </section>
+            <form hidden th:data-preview-url="@{/api/payments/allocation-preview}" th:action="@{/payments/create}" method="post">
+                <input type="hidden" name="returnUrl" value="/payments/debts">
+                <input type="hidden" id="debtPayIdempotencyKey" name="idempotencyKey">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="debtPayModalLabel"><i class="bi bi-cash-coin me-2"></i> Ghi nhận Thanh toán Viện phí</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="debtModalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần thu:</label>
+                        <select id="debtModalInvoiceSelect" name="invoiceId" class="form-select" required>
+                            <option value="">-- Đang tải hóa đơn còn nợ... --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">SỐ TIỀN CÒN NỢ CỦA HÓA ĐƠN:</label>
+                        <input type="text" id="debtModalDebtDisplay" class="form-control bg-light fw-bold text-danger" readonly value="0 đ">
+                    </div>
+                    <div class="mb-3">
+                        <label for="debtModalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này (VNĐ):</label>
+                        <input type="number" id="debtModalPayAmount" name="amount" class="form-control" required min="1000" step="1000">
+                    </div>
+                    <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (FIFO) -->
+                    <div id="debtPayAllocationPreviewBox" class="mb-3" style="display: none;">
+                        <div class="card border border-primary-subtle shadow-sm bg-white">
+                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                <span class="small fw-bold text-primary"><i class="bi bi-diagram-3-fill me-1"></i> Dự kiến phân bổ khoản thu (FIFO):</span>
+                                <span id="debtPayRemainingBadge" class="badge bg-danger">Còn nợ: 0 đ</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 200px;">
+                                    <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 11.5px;">
+                                        <thead class="table-light">
+                                            <tr class="text-center">
+                                                <th style="width: 28px;">#</th>
+                                                <th>Khoản thu</th>
+                                                <th style="width: 70px;">Loại</th>
+                                                <th class="text-end" style="width: 85px;">Phải trả</th>
+                                                <th class="text-end" style="width: 75px;">Đã trả</th>
+                                                <th class="text-end text-success" style="width: 85px;">Thu đợt này</th>
+                                                <th class="text-end text-danger" style="width: 80px;">Còn nợ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="debtPayAllocationPreviewTbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="debtModalPayMethod" class="form-label fw-bold">Phương thức thanh toán:</label>
+                        <select id="debtModalPayMethod" name="paymentMethod" class="form-select">
+                            <option value="CASH">Tiền mặt</option>
+                            <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                            <option id="debtModalDepositOption" value="DEPOSIT_WALLET">Ví tạm ứng</option>
+                            <option value="POS_CARD">Thẻ POS</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="debtModalTransRef" class="form-label fw-bold">Mã giao dịch / Tham chiếu:</label>
+                        <input type="text" id="debtModalTransRef" name="transactionRef" class="form-control" placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="debtModalPayNotes" class="form-label">Ghi chú thanh toán:</label>
+                        <textarea id="debtModalPayNotes" name="notes" class="form-control" rows="2" placeholder="Ghi chú đợt thanh toán..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Xác nhận Thu tiền</button>
+                </div>
+            </form>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <script th:src="@{/js/debt-collection.js}"></script>
             </div> <!-- end #cashierTabContent -->
         </main>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
 import jakarta.persistence.*;
@@ -68,6 +69,25 @@ public class StaffProfile {
 
     @Column(name = "practice_license_no", length = 50)
     private String practiceLicenseNo;
+
+    @Column(name = "tax_code", length = 30)
+    private String taxCode;
+
+    @Column(name = "is_tax_resident", nullable = false)
+    private Boolean isTaxResident = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contract_type", nullable = false, length = 30)
+    private StaffContractType contractType = StaffContractType.FULL_CONTRACT;
+
+    @Column(name = "has_personal_deduction", nullable = false)
+    private Boolean hasPersonalDeduction = true;
+
+    @Column(name = "dependent_count", nullable = false)
+    private Integer dependentCount = 0;
+
+    @Column(name = "has_tax_commitment", nullable = false)
+    private Boolean hasTaxCommitment = false;
 
     @Column(name = "moh_doctor_code", length = 50)
     private String mohDoctorCode;

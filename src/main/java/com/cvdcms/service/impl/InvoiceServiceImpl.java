@@ -266,6 +266,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 item.setQuantity(quantity);
                 item.setUnitPrice(unitPrice);
                 item.setFinalAmount(lineTotal);
+                item.setVatRate(BigDecimal.ZERO);
+                item.setVatAmount(BigDecimal.ZERO);
                 item.setPerformedService(ps);
 
                 invoiceItems.add(item);
@@ -398,6 +400,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                         medItem.setUnitPrice(unitPrice);
                         BigDecimal lineTotal = unitPrice.multiply(takeFromBatch).setScale(2, RoundingMode.HALF_UP);
                         medItem.setFinalAmount(lineTotal);
+                        medItem.setVatRate(BigDecimal.valueOf(5.0));
+                        medItem.setVatAmount(lineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
 
                         invoiceItems.add(medItem);
                         totalMedicineAmount = totalMedicineAmount.add(lineTotal);
@@ -426,6 +430,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                     medItem.setUnitPrice(unitPrice);
                     BigDecimal lineTotal = unitPrice.multiply(requestedQty).setScale(2, RoundingMode.HALF_UP);
                     medItem.setFinalAmount(lineTotal);
+                    medItem.setVatRate(BigDecimal.valueOf(5.0));
+                    medItem.setVatAmount(lineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
 
                     invoiceItems.add(medItem);
                     totalMedicineAmount = totalMedicineAmount.add(lineTotal);
@@ -495,6 +501,11 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         // Tổng phải thanh toán = (Tiền dịch vụ - Các khoản giảm) + Tiền thuốc
         BigDecimal netPayable = benefit.netAmount.add(totalMedicineAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalVat = invoiceItems.stream()
+                .map(InvoiceItem::getVatAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        invoice.setTotalVatAmount(totalVat);
         invoice.setTotalAmount(netPayable);
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setRemainingDebt(netPayable);
@@ -1419,6 +1430,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoiceItem.setQuantity(takeFromBatch);
                 invoiceItem.setUnitPrice(unitPrice);
                 invoiceItem.setFinalAmount(batchLineTotal);
+                invoiceItem.setVatRate(BigDecimal.valueOf(5.0));
+                invoiceItem.setVatAmount(batchLineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
                 invoiceItem.setPrescriptionItem(prescItem);
                 invoiceItem.setMedication(med);
                 invoiceItem.setBatch(b);
@@ -1468,6 +1481,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setDiscountAmount(BigDecimal.ZERO);
         invoice.setPromotionDiscount(BigDecimal.ZERO);
         invoice.setPointDiscount(BigDecimal.ZERO);
+        BigDecimal totalMedVat = invoiceItems.stream()
+                .map(InvoiceItem::getVatAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        invoice.setTotalVatAmount(totalMedVat);
         invoice.setTotalAmount(totalMedicineAmount);
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setRemainingDebt(totalMedicineAmount);

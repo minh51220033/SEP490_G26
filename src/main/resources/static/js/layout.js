@@ -542,4 +542,30 @@
     window.requestAnimationFrame(function () {
         window.requestAnimationFrame(function () { root.classList.remove("is-preload"); });
     });
+
+    /* =============================================================
+       10. BOOTSTRAP MODAL GLOBAL FIX
+       - Đảm bảo toàn bộ modal luôn là con trực tiếp của <body>
+         để không bị kẹt trong stacking context của .app-content hoặc tab containers.
+       - Tự động dọn dẹp modal-backdrop và khôi phục scroll body khi đóng.
+       ============================================================= */
+    document.addEventListener("show.bs.modal", function (event) {
+        var modal = event.target;
+        if (modal && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+    });
+
+    document.addEventListener("hidden.bs.modal", function () {
+        var openModals = document.querySelectorAll(".modal.show");
+        if (openModals.length === 0) {
+            var backdrops = document.querySelectorAll(".modal-backdrop");
+            backdrops.forEach(function (bd) {
+                bd.remove();
+            });
+            document.body.classList.remove("modal-open");
+            document.body.style.removeProperty("overflow");
+            document.body.style.removeProperty("padding-right");
+        }
+    });
 })();

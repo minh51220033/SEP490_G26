@@ -2,12 +2,12 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Chi tiết hồ sơ')}"></head>
 <body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Hồ sơ của tôi')}"></header>
         <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
             <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ.</div>
             <div class="patient-page-heading"><div><a th:href="@{/portal/records}">← Hồ sơ của tôi</a>
                 <h1 th:text="${record.fullName}">Họ tên</h1><p><span th:text="${record.code}">BN</span> · <span th:text="${record.gender}">Giới tính</span></p></div>
@@ -132,6 +132,6 @@
                         </article></div></div>
                 </div>
             </section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+        </main>
     </div>
 </div><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
