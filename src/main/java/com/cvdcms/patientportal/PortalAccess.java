@@ -32,17 +32,22 @@ public class PortalAccess {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         User user = users.findById(sessionUser.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus())
-                || user.getUserType() != UserType.PATIENT
-                || user.getRoles().stream().noneMatch(this::isPatientRole))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (Boolean.FALSE.equals(user.getIsActive())
+                || (user.getStatus() != null && !"ACTIVE".equalsIgnoreCase(user.getStatus()) && !"ACTIVED".equalsIgnoreCase(user.getStatus())))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
+        if (user.getUserType() != null && user.getUserType() != UserType.PATIENT) {
+            if (user.getRoles() == null || user.getRoles().stream().noneMatch(this::isPatientRole))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không có quyền truy cập cổng bệnh nhân.");
+        }
         return user;
     }
 
     private boolean isPatientRole(Role role) {
-        return role != null && Boolean.TRUE.equals(role.getIsActive()) && role.getRoleName() != null
+        return role != null && !Boolean.FALSE.equals(role.getIsActive()) && role.getRoleName() != null
                 && ("BENH_NHAN".equalsIgnoreCase(role.getRoleName())
-                    || "ROLE_BENH_NHAN".equalsIgnoreCase(role.getRoleName()));
+                    || "ROLE_BENH_NHAN".equalsIgnoreCase(role.getRoleName())
+                    || "PATIENT".equalsIgnoreCase(role.getRoleName())
+                    || "ROLE_PATIENT".equalsIgnoreCase(role.getRoleName()));
     }
 
     public PatientProfile requireProfile(User user, Long profileId) {

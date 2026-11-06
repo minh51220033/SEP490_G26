@@ -6,15 +6,17 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Lịch hẹn tuần tháng')}"></header>
         <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
-            <div class="patient-page-heading"><div><h1>Lịch hẹn tuần / tháng</h1><p>Xem số lịch theo từng ngày; chọn ngày để về dashboard.</p></div>
-                <a class="btn btn-primary" th:href="@{/reception/appointments/new}">Tạo lịch hẹn</a></div>
-            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn"><a th:href="@{/reception/appointments}">Dashboard</a><a th:href="@{/reception/appointments/day}">Lịch ngày theo bác sĩ</a>
-                <a class="is-current" th:href="@{/reception/appointments/calendar}">Lịch tuần / tháng</a>
+            <div class="patient-page-heading"><div><h1>Quản lý lịch hẹn</h1><p>Theo dõi lịch hẹn theo tuần hoặc tháng.</p></div>
+                <a class="btn btn-primary" th:href="@{/reception/appointments/new}">+ Thêm lịch hẹn</a></div>
+            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn"><a th:href="@{/reception/appointments}">Danh sách</a><a th:href="@{/reception/appointments/day}">Ngày</a>
+                <a id="calendarWeekLink" th:href="@{/reception/appointments/calendar(view='week')}">Tuần</a><a id="calendarMonthLink" th:href="@{/reception/appointments/calendar(view='month')}">Tháng</a>
                 <a th:href="@{/reception/appointments/no-shows}">Không đến &amp; cần nhắc</a></nav>
             <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
             <section class="panel appointment-panel">
                 <div class="appointment-filter"><div><label for="calendarBranch">Chi nhánh</label><select id="calendarBranch" class="form-select"></select></div>
                     <div><label for="calendarView">Kiểu xem</label><select id="calendarView" class="form-select"><option value="week">Tuần</option><option value="month">Tháng</option></select></div>
+                    <div><label for="calendarSearch">Tìm khách hàng</label><input id="calendarSearch" type="search" class="form-control" placeholder="Tên, mã KH, số điện thoại"></div>
+                    <div><label for="calendarDoctor">Bác sĩ</label><select id="calendarDoctor" class="form-select"><option value="">Tất cả bác sĩ</option></select></div>
                     <div><label for="calendarDate">Ngày tham chiếu</label><input id="calendarDate" type="date" class="form-control"></div></div>
                 <div class="appointment-calendar-heading"><button id="calendarPrevious" type="button" class="btn btn-outline-secondary">← Trước</button>
                     <strong id="calendarTitle"></strong><button id="calendarNext" type="button" class="btn btn-outline-secondary">Sau →</button></div>

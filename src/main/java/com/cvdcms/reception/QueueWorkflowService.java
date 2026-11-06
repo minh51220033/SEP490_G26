@@ -72,11 +72,13 @@ public class QueueWorkflowService {
                         .thenComparing(QueueTicket::getTicketId, Comparator.reverseOrder()))
                 .map(t -> new PublicNumber(t.getTicketId(), t.getDisplayNumber(), doctorName(t),
                         t.getVisit().getRoomId() == null ? "" : rooms.findById(t.getVisit().getRoomId()).map(Room::getRoomName).orElse(""),
-                        t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""))).toList();
+                        t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""),
+                        t.getCalledAt() != null ? t.getCalledAt().atZone(ZONE).toInstant().toEpochMilli() : null)).toList();
         List<PublicNumber> serving = all.stream().filter(t -> t.getStatus() == QueueStatus.IN_SERVICE)
                 .map(t -> new PublicNumber(t.getTicketId(), t.getDisplayNumber(), doctorName(t),
                         t.getVisit().getRoomId() == null ? "" : rooms.findById(t.getVisit().getRoomId()).map(Room::getRoomName).orElse(""),
-                        t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""))).toList();
+                        t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""),
+                        null)).toList();
         long waiting = all.stream().filter(t -> t.getStatus() == QueueStatus.WAITING
                 && t.getVisit().getStatus() == VisitStatus.WAITING).count();
         List<String> next = all.stream().filter(t -> t.getStatus() == QueueStatus.WAITING
@@ -141,21 +143,23 @@ public class QueueWorkflowService {
         QueueStatus before = ticket.getStatus();
         switch (action) {
             case CALL -> {
-                require(before == QueueStatus.WAITING && visit.getStatus() == VisitStatus.WAITING, "Chỉ gọi số đang chờ.");
+                require((before == QueueStatus.WAITING || before == QueueStatus.CALLED) && visit.getStatus() == VisitStatus.WAITING, "Chỉ gọi số đang chờ hoặc đang gọi.");
                 require(visit.getPrimaryDoctor() != null, "Lượt khám chưa được phân bác sĩ.");
                 Long doctorId = visit.getPrimaryDoctor().getStaffId();
                 require(tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId, QueueStatus.CALLED, id) == 0,
                         "Bác sĩ này đã có số được gọi; hãy bắt đầu hoặc tạm dừng số đó.");
-                Long nextId = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
-                        .filter(t -> t.getStatus() == QueueStatus.WAITING
-                                && t.getVisit().getStatus() == VisitStatus.WAITING
-                                && t.getVisit().getPrimaryDoctor() != null
-                                && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
-                        .min(waitingOrder()).map(QueueTicket::getTicketId).orElse(null);
-                if (!Objects.equals(nextId, id)) {
-                    var scope = access.require(session);
-                    require(scope.canManage(), "Chỉ quản lý hoặc nhân viên có quyền điều phối mới được gọi vượt thứ tự.");
-                    require(validReason(reason), "Gọi vượt thứ tự cần ghi lý do từ 10 đến 255 ký tự.");
+                if (before != QueueStatus.CALLED) {
+                    Long nextId = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
+                            .filter(t -> t.getStatus() == QueueStatus.WAITING
+                                    && t.getVisit().getStatus() == VisitStatus.WAITING
+                                    && t.getVisit().getPrimaryDoctor() != null
+                                    && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
+                            .min(waitingOrder()).map(QueueTicket::getTicketId).orElse(null);
+                    if (!Objects.equals(nextId, id)) {
+                        var scope = access.require(session);
+                        require(scope.canManage(), "Chỉ quản lý hoặc nhân viên có quyền điều phối mới được gọi vượt thứ tự.");
+                        require(validReason(reason), "Gọi vượt thứ tự cần ghi lý do từ 10 đến 255 ký tự.");
+                    }
                 }
                 ticket.setStatus(QueueStatus.CALLED); ticket.setCalledAt(LocalDateTime.now(ZONE));
             }
@@ -305,9 +309,12 @@ public class QueueWorkflowService {
             this(branchId, branches, tickets, doctors, List.of());
         }
     }
-    public record PublicNumber(Long ticketId, String number, String doctor, String room, String chair) {
+    public record PublicNumber(Long ticketId, String number, String doctor, String room, String chair, Long callTime) {
+        public PublicNumber(Long ticketId, String number, String doctor, String room, String chair) {
+            this(ticketId, number, doctor, room, chair, null);
+        }
         public PublicNumber(String number, String doctor, String room, String chair) {
-            this(null, number, doctor, room, chair);
+            this(null, number, doctor, room, chair, null);
         }
     }
     public record PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,

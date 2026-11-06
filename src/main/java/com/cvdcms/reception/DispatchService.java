@@ -63,7 +63,8 @@ public class DispatchService {
         checkBranch(session, branchId);
         LocalDate day = LocalDate.now(ZONE);
         List<Visit> dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
-        List<StaffProfile> availableDoctors = doctors.eligible(branchId, day).stream()
+        List<StaffProfile> eligible = doctors.eligible(branchId, day);
+        List<StaffProfile> availableDoctors = eligible.stream()
                 .filter(d -> schedules.working(d.getStaffId(), branchId, day, LocalTime.now(ZONE)) > 0).toList();
         List<DoctorOption> doctorRows = availableDoctors.stream()
                 .map(d -> new DoctorOption(d.getStaffId(), d.getFullName(), load(d.getStaffId(), branchId, day, -1L)))
@@ -108,8 +109,12 @@ public class DispatchService {
             throw fail(HttpStatus.CONFLICT, "Chỉ phân công lượt khám đang chờ hoặc chờ kết quả cận lâm sàng.");
         LocalDate today = LocalDate.now(ZONE);
         LocalTime now = LocalTime.now(ZONE);
-        List<StaffProfile> available = doctors.eligible(branchId, today).stream()
+        List<StaffProfile> eligible = doctors.eligible(branchId, today);
+        List<StaffProfile> available = eligible.stream()
                 .filter(d -> schedules.working(d.getStaffId(), branchId, today, now) > 0).toList();
+        if (available.isEmpty()) {
+            throw fail(HttpStatus.CONFLICT, "Chi nhánh hiện không có bác sĩ nào đang trong ca trực để tiếp nhận khám.");
+        }
         Long requestedDoctor = requestedDoctor(visit);
         if (doctorId == null) {
             if (requestedDoctor != null && available.stream().anyMatch(d -> d.getStaffId().equals(requestedDoctor))) {
