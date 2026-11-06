@@ -9,6 +9,7 @@ import com.cvdcms.service.NanopixXrayService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,9 @@ import java.util.Map;
 public class NanopixXrayRestController {
 
     private final NanopixXrayService nanopixXrayService;
+
+    @Value("${nanopix.agent.api-key:cvdcms-nanopix-secret-key-change-me}")
+    private String configuredApiKey = "cvdcms-nanopix-secret-key-change-me";
 
     /**
      * Lấy danh sách cơ sở mà tài khoản hiện tại được phép truy cập.
@@ -135,26 +139,47 @@ public class NanopixXrayRestController {
 
     /**
      * SCR-12.4: Nạp phim X-quang mới từ máy NanoPix hoặc form nạp kiểm soát (Controlled Ingestion).
+     * Hỗ trợ xác thực qua session người dùng (Web UI) HOẶC qua header X-API-KEY (Windows Background Sync Worker).
+     * Giới hạn API Key chỉ có duy nhất quyền ingest ảnh X-quang, tuyệt đối không cấp quyền đọc hồ sơ bệnh nhân.
      */
     @PostMapping(value = "/ingest", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<NanopixXrayResponseDTO> ingestXray(
             @RequestParam("externalStudyUid") String externalStudyUid,
             @RequestParam(value = "rawPatientName", required = false) String rawPatientName,
             @RequestParam(value = "externalPatientId", required = false) String externalPatientId,
+            @RequestParam(value = "orderItemId", required = false) Long orderItemId,
+            @RequestParam(value = "orderCode", required = false) String orderCode,
+            @RequestParam(value = "visitCode", required = false) String visitCode,
+            @RequestParam(value = "branchId", required = false) Long branchId,
             @RequestParam(value = "capturedAt", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime capturedAt,
             @RequestParam(value = "deviceSerialNumber", required = false, defaultValue = "EN1E0408A032") String deviceSerialNumber,
             @RequestParam(value = "deviceModel", required = false, defaultValue = "NanoPix1") String deviceModel,
             @RequestParam(value = "toothNumbers", required = false) String toothNumbers,
             @RequestParam(value = "notes", required = false) String notes,
             @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "X-API-KEY", required = false) String apiKey,
             HttpSession session
     ) throws IOException {
-        User user = requireUser(session);
+        Long userId = null;
+        if (apiKey != null && !apiKey.isBlank()) {
+            if (!apiKey.equals(configuredApiKey)) {
+                log.warn("Từ chối X-API-KEY không hợp lệ khi gọi /api/xray/ingest cho studyUid: {}", externalStudyUid);
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mã xác thực X-API-KEY của thiết bị không hợp lệ.");
+            }
+            log.info("NanoPix X-ray ingest authorized via X-API-KEY for externalStudyUid: {}", externalStudyUid);
+        } else {
+            User user = requireUser(session);
+            userId = user.getUserId();
+        }
 
         NanopixSyncRequestDTO requestDTO = NanopixSyncRequestDTO.builder()
                 .externalStudyUid(externalStudyUid)
                 .rawPatientName(rawPatientName)
                 .externalPatientId(externalPatientId)
+                .orderItemId(orderItemId)
+                .orderCode(orderCode)
+                .visitCode(visitCode)
+                .branchId(branchId)
                 .capturedAt(capturedAt != null ? capturedAt : LocalDateTime.now())
                 .deviceSerialNumber(deviceSerialNumber)
                 .deviceModel(deviceModel)
@@ -162,8 +187,18 @@ public class NanopixXrayRestController {
                 .notes(notes)
                 .build();
 
-        NanopixXrayResponseDTO response = nanopixXrayService.ingestXray(requestDTO, file, user.getUserId());
+        NanopixXrayResponseDTO response = nanopixXrayService.ingestXray(requestDTO, file, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleConflict(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
     }
 
     /**

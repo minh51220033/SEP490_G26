@@ -1,194 +1,409 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nha khoa Cường Việt – Trao niềm tin, Nở nụ cười</title>
+    <meta name="description" content="Phòng khám Răng Hàm Mặt Cường Việt tại 906 Lê Lợi, TP Bắc Giang." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#fbf9f5",
+                        card: "#ffffff",
+                        primary: { DEFAULT: "#1f56c4", foreground: "#fbfcff" },
+                        secondary: { DEFAULT: "#eaf1fb", foreground: "#1e3f87" },
+                        muted: { DEFAULT: "#f3f1ec", foreground: "#5f6b80" },
+                        accent: { DEFAULT: "#4fb8ad", foreground: "#0f2f33" },
+                        warm: { DEFAULT: "#f3e7d6", foreground: "#6b4a26" },
+                        ink: { DEFAULT: "#14213f", foreground: "#f7f5f0" },
+                        border: "#e6e2da",
+                    },
+                    fontFamily: {
+                        sans: ['"Be Vietnam Pro"', "system-ui", "sans-serif"],
+                        display: ['"Lora"', "Georgia", "serif"],
+                    },
+                    boxShadow: {
+                        soft: "0 1px 2px rgba(20,33,63,.06), 0 12px 32px -12px rgba(20,33,63,.18)",
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body { -webkit-font-smoothing: antialiased; }
+        h1, h2, h3 { font-family: "Lora", Georgia, serif; letter-spacing: -0.01em; }
+        .tab-active { background:#1f56c4; color:#fff; border-color:#1f56c4; }
+        .skeleton { background: linear-gradient(90deg,#f3f1ec 25%,#ebe8e1 50%,#f3f1ec 75%); background-size:200% 100%; animation: sk 1.2s infinite; }
+        @keyframes sk { to { background-position:-200% 0; } }
+    </style>
+</head>
+<body class="bg-background font-sans text-ink">
 
-<head th:replace="~{fragments/head :: head('Trang chủ')}"></head>
+<!-- HEADER: giữ nguyên header có sẵn của bạn tại đây -->
 
-<body class="app-body">
+<main>
+    <!-- ===================== HERO ===================== -->
+    <section class="mx-auto grid max-w-7xl gap-10 px-5 pt-10 pb-16 sm:px-8 md:pt-16 lg:grid-cols-12 lg:gap-12 lg:pb-24">
+        <div class="flex flex-col justify-center lg:col-span-6">
+        <span class="inline-flex w-fit items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-secondary-foreground">
+          <span class="h-1.5 w-1.5 rounded-full bg-accent"></span> Răng – Hàm – Mặt · Bắc Giang
+        </span>
+            <h1 class="mt-5 text-4xl font-semibold leading-[1.1] sm:text-5xl lg:text-6xl">
+                Trao niềm tin,<br /><em class="font-medium text-primary">nở nụ cười.</em>
+            </h1>
+            <p class="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+                Phòng khám Cường Việt do BS. Nguyễn Đình Toàn phụ trách — chăm sóc răng miệng cho cả gia đình, từ trẻ nhỏ đến ông bà.
+            </p>
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                <button type="button" data-open-booking class="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90">
+                    Đặt lịch khám
+                </button>
+                <a href="#lien-he" class="inline-flex items-center justify-center rounded-full border border-border bg-card px-6 py-3.5 text-sm font-semibold transition hover:bg-muted">
+                    Xem giờ làm việc
+                </a>
+            </div>
+        </div>
 
-<!-- Header công khai: logo, menu dịch vụ, tin tức -->
+        <div class="relative lg:col-span-6">
+            <div class="grid grid-cols-5 gap-3 sm:gap-4">
+                <img src="images/clinic_treatment.png" alt="Bác sĩ đang khám răng cho trẻ em" class="col-span-3 aspect-[3/4] w-full rounded-2xl object-cover shadow-soft" />
+                <div class="col-span-2 flex flex-col gap-3 sm:gap-4">
+                    <img src="images/waiting_area.png" alt="Khu vực chờ của phòng khám" class="aspect-[3/4] w-full rounded-2xl object-cover" />
+                    <div class="flex flex-1 flex-col justify-end rounded-2xl bg-warm p-4 text-warm-foreground">
+                        <p class="font-display text-2xl font-semibold sm:text-3xl">7 ngày</p>
+                        <p class="text-xs sm:text-sm">mở cửa mỗi tuần</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-
-<!-- Khu vực quản trị: giữ nguyên sidebar và dashboard -->
-<div class="app-shell">
-
-    <!-- Sidebar và Backdrop -->
-    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-
-    <div class="app-main">
-
-        <!-- Topbar / Header -->
-        <header th:replace="~{fragments/header :: appTopbar('Trang chủ')}"></header>
-
-        <main class="app-content">
-
-            <!-- CHÀO MỪNG + CƠ SỞ HIỆN TẠI -->
-            <section class="welcome-card">
+    <!-- ===================== SERVICES (tabs) ===================== -->
+    <section class="border-y border-border bg-card">
+        <div class="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <span class="eyebrow">Hệ thống quản lý nha khoa</span>
-                    <h2 class="welcome-card__title">
-                        Xin chào,
-                        <span class="text-brand"
-                              th:text="${displayName != null and !#strings.isEmpty(displayName)
-                                      ? displayName
-                                      : (session.loggedInUser != null ? session.loggedInUser.username : 'bạn')}">admin</span>
-                    </h2>
-                    <p class="welcome-card__desc">Chúc bạn một ngày làm việc hiệu quả cùng CV-DCMS.</p>
-                    <div class="mt-3">
-                        <a th:href="@{/}" class="btn-outline-brand">
-                            <i class="bi bi-globe2" aria-hidden="true"></i> Xem Cổng thông tin Khách hàng
-                        </a>
-                    </div>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-primary">Dịch vụ</p>
+                    <h2 class="mt-2 text-3xl font-semibold sm:text-4xl">Chúng tôi điều trị gì</h2>
                 </div>
+                <p class="max-w-md text-muted-foreground">Các dịch vụ chính đang thực hiện tại phòng khám. Liên hệ để được tư vấn cụ thể.</p>
+            </div>
 
-                <div class="branch-box">
-                    <span class="icon-tile icon-tile--lg"><i class="bi bi-hospital" aria-hidden="true"></i></span>
-                    <div>
-                        <span class="branch-box__label">Cơ sở hiện tại</span>
-                        <p class="branch-box__name" th:text="${currentBranchName}">Chưa xác định cơ sở</p>
-                        <small class="branch-box__address"
-                               th:text="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)
-                                       ? currentBranchAddress : 'Chưa có thông tin địa chỉ'}">Địa chỉ cơ sở</small>
-                    </div>
+            <div id="service-tabs" role="tablist" class="mt-8 flex flex-wrap gap-2"></div>
+
+            <ul id="service-list" class="mt-6 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+                <li class="skeleton h-40"></li><li class="skeleton h-40"></li><li class="skeleton h-40"></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- ===================== GALLERY ===================== -->
+    <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
+        <p class="text-sm font-semibold uppercase tracking-wider text-primary">Không gian phòng khám</p>
+        <h2 class="mt-2 max-w-xl text-3xl font-semibold sm:text-4xl">Sạch sẽ, rộng rãi, đầy đủ trang thiết bị</h2>
+        <div class="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:grid-rows-[260px_200px] lg:grid-rows-[300px_220px]">
+            <img src="images/clinic_room.png" alt="Ghế nha khoa và khu điều trị" class="col-span-2 row-span-2 h-full min-h-64 w-full rounded-2xl object-cover" />
+            <img src="images/whitening.png" alt="Tẩy trắng răng bằng đèn chuyên dụng" class="col-span-2 aspect-[4/3] w-full rounded-2xl object-cover md:aspect-auto md:h-full" />
+            <figure class="col-span-2 flex items-center rounded-2xl bg-ink p-6 text-ink-foreground">
+                <blockquote class="font-display text-lg italic leading-snug sm:text-xl">“Mỗi bệnh nhân ra về với nụ cười là điều chúng tôi trân trọng nhất.”</blockquote>
+            </figure>
+        </div>
+    </section>
+
+    <!-- ===================== BRANCHES + HOURS ===================== -->
+    <section id="lien-he" class="bg-secondary">
+        <div class="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:py-24">
+            <img id="branch-image" src="images/storefront.png" alt="Mặt tiền phòng khám Cường Việt" class="aspect-[4/3] w-full rounded-2xl object-cover shadow-soft" />
+            <div class="flex flex-col justify-center">
+                <p class="text-sm font-semibold uppercase tracking-wider text-primary">Ghé thăm</p>
+
+                <label for="branch-filter" class="sr-only">Chọn cơ sở</label>
+                <select id="branch-filter" class="mt-3 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary sm:w-auto"></select>
+
+                <h2 id="branch-name" class="mt-4 text-3xl font-semibold sm:text-4xl">Đang tải…</h2>
+                <p id="branch-address" class="mt-1 text-muted-foreground"></p>
+
+                <dl id="branch-hours" class="mt-8 divide-y divide-border rounded-2xl bg-card shadow-soft"></dl>
+
+                <button type="button" data-open-booking class="mt-6 inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 sm:w-fit">
+                    Đặt lịch tại cơ sở này
+                </button>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- FOOTER: giữ nguyên footer có sẵn của bạn tại đây -->
+
+<!-- ===================== BOOKING MODAL ===================== -->
+<div id="booking-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-ink/60 p-0 sm:items-center sm:p-4" aria-hidden="true">
+    <div role="dialog" aria-modal="true" aria-labelledby="booking-title" class="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-card p-6 shadow-soft sm:max-w-lg sm:rounded-3xl sm:p-8">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-wider text-primary">Đặt lịch</p>
+                <h3 id="booking-title" class="mt-1 text-2xl font-semibold">Hẹn lịch khám</h3>
+            </div>
+            <button type="button" data-close-booking aria-label="Đóng" class="rounded-full p-2 text-2xl leading-none text-muted-foreground hover:bg-muted">&times;</button>
+        </div>
+
+        <form id="booking-form" class="mt-6 grid gap-4" novalidate>
+            <div>
+                <label class="text-sm font-medium" for="bk-name">Họ và tên *</label>
+                <input id="bk-name" name="fullName" required class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+                <label class="text-sm font-medium" for="bk-phone">Số điện thoại *</label>
+                <input id="bk-phone" name="phone" type="tel" required pattern="0\d{9}" placeholder="09xx xxx xxx" class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="text-sm font-medium" for="bk-branch">Cơ sở</label>
+                    <select id="bk-branch" name="branchId" class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm"></select>
                 </div>
-            </section>
-
-            <!-- THẺ SỐ LIỆU -->
-            <section class="stat-grid" aria-label="Số liệu hôm nay">
-                <article class="stat-card">
-                    <p class="stat-card__label">Lịch hẹn hôm nay</p>
-                    <p class="stat-card__value" th:text="${todayAppointments ?: 0}">0</p>
-                    <span class="stat-card__icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                </article>
-                <article class="stat-card">
-                    <p class="stat-card__label">Bệnh nhân đang chờ</p>
-                    <p class="stat-card__value" th:text="${waitingPatients ?: 0}">0</p>
-                    <span class="stat-card__icon"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
-                </article>
-                <article class="stat-card">
-                    <p class="stat-card__label">Bệnh nhân mới</p>
-                    <p class="stat-card__value" th:text="${newPatients ?: 0}">0</p>
-                    <span class="stat-card__icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
-                </article>
-                <article class="stat-card">
-                    <p class="stat-card__label">Tài khoản hoạt động</p>
-                    <p class="stat-card__value" th:text="${activeAccounts ?: 0}">0</p>
-                    <span class="stat-card__icon"><i class="bi bi-people" aria-hidden="true"></i></span>
-                </article>
-            </section>
-
-            <!-- CHỨC NĂNG QUẢN TRỊ -->
-            <section class="panel" th:if="${roleNames != null and #lists.contains(roleNames, 'ADMIN')}">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Chức năng quản trị</h3>
-                        <p class="panel__subtitle">Quản lý toàn bộ hệ thống phòng khám</p>
-                    </div>
+                <div>
+                    <label class="text-sm font-medium" for="bk-service">Dịch vụ</label>
+                    <select id="bk-service" name="serviceId" class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm"></select>
                 </div>
-
-                <div class="feature-grid">
-                    <a th:href="@{/accounts}" class="feature-card">
-                        <span class="icon-tile"><i class="bi bi-people" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Quản lý tài khoản</span>
-                            <span class="feature-card__desc">Tạo, sửa, khoá / mở khoá và phân quyền tài khoản.</span>
-                            <span class="feature-card__link">Xem danh sách <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-                        </span>
-                    </a>
-                    <a th:href="@{admin/services}" class="feature-card">
-                        <span class="icon-tile"><i class="bi bi-tags" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Dịch vụ &amp; Bảng giá</span>
-                            <span class="feature-card__desc">Quản lý dịch vụ nha khoa và giá </span>
-                            <span class="feature-card__link">Xem danh sách <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-                        </span>
-                    </a>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Quản lý bệnh nhân</span>
-                            <span class="feature-card__desc">Quản lý hồ sơ và thông tin bệnh nhân.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Quản lý nhân viên</span>
-                            <span class="feature-card__desc">Quản lý thông tin nhân viên và phân công công việc.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Báo cáo &amp; Thống kê</span>
-                            <span class="feature-card__desc">Theo dõi doanh thu và hoạt động của phòng khám.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Nhật ký thao tác</span>
-                            <span class="feature-card__desc">Lưu vết các thao tác quan trọng trong hệ thống.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="text-sm font-medium" for="bk-date">Ngày *</label>
+                    <input id="bk-date" name="date" type="date" required class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm" />
                 </div>
-            </section>
-
-            <!-- CHỨC NĂNG LỄ TÂN -->
-            <section class="panel" th:if="${roleNames != null and #lists.contains(roleNames, 'LE_TAN')}">
-                <div class="panel__head">
-                    <div>
-                        <h3 class="panel__title">Chức năng lễ tân</h3>
-                        <p class="panel__subtitle">Tiếp đón và hỗ trợ bệnh nhân</p>
-                    </div>
+                <div>
+                    <label class="text-sm font-medium" for="bk-time">Giờ *</label>
+                    <input id="bk-time" name="time" type="time" required class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm" />
                 </div>
-
-                <div class="feature-grid">
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Hồ sơ bệnh nhân</span>
-                            <span class="feature-card__desc">Tra cứu và quản lý hồ sơ bệnh nhân.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Quản lý lịch hẹn</span>
-                            <span class="feature-card__desc">Tạo, chỉnh sửa và quản lý lịch hẹn bệnh nhân.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-person-check" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Tiếp đón &amp; Check-in</span>
-                            <span class="feature-card__desc">Tiếp nhận bệnh nhân khi đến phòng khám.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                    <div class="feature-card is-disabled">
-                        <span class="icon-tile"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
-                        <span class="feature-card__body">
-                            <span class="feature-card__title">Hàng chờ khám</span>
-                            <span class="feature-card__desc">Quản lý số thứ tự và hàng chờ bệnh nhân.</span>
-                            <span class="badge-soon">Đang phát triển</span>
-                        </span>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-
-        <!-- Footer -->
-
+            </div>
+            <div>
+                <label class="text-sm font-medium" for="bk-note">Ghi chú</label>
+                <textarea id="bk-note" name="note" rows="3" class="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm"></textarea>
+            </div>
+            <p id="booking-msg" class="hidden rounded-xl px-4 py-3 text-sm"></p>
+            <button type="submit" class="rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">Gửi yêu cầu đặt lịch</button>
+        </form>
     </div>
 </div>
 
+<script>
+    /* =========================================================
+       CẤU HÌNH API
+       Đổi API_BASE thành địa chỉ Backend của bạn.
+       Các endpoint mẫu:
+         GET  http://localhost:8080/api/services          -> [{ id, category, title, desc }]
+         GET  http://localhost:8080/api/branches          -> [{ id, name, address, image, phones:[], hours:[{label, time}] }]
+         GET  http://localhost:8080/api/branches/{id}/hours -> [{ label, time }]   (tuỳ chọn)
+         POST http://localhost:8080/api/appointments      -> body: { fullName, phone, branchId, serviceId, date, time, note }
+       Nếu API chưa chạy, trang sẽ tự dùng dữ liệu mẫu (FALLBACK) bên dưới.
+       ========================================================= */
+    const API_BASE = "http://localhost:8080/api";
+    const USE_MOCK_ON_ERROR = true;
+
+    const FALLBACK = {
+        services: [
+            { id: 1, category: "tham-my", title: "Răng sứ thẩm mỹ", desc: "Phục hình răng sứ tự nhiên, khớp màu với hàm răng thật." },
+            { id: 2, category: "chinh-nha", title: "Nắn chỉnh răng", desc: "Chỉnh răng lệch, hô, móm cho trẻ em và người lớn." },
+            { id: 3, category: "dieu-tri", title: "Điều trị tủy", desc: "Xử lý viêm tủy, giữ lại răng thật lâu dài." },
+            { id: 4, category: "phuc-hinh", title: "Hàm tháo lắp", desc: "Giải pháp phục hình tiết kiệm, dễ vệ sinh." },
+            { id: 5, category: "tham-my", title: "Tẩy trắng răng", desc: "Làm trắng bằng đèn chuyên dụng ngay tại phòng khám." },
+        ],
+        branches: [
+            {
+                id: 1, name: "Số 906 Đường Lê Lợi", address: "P. Dĩnh Kế, TP Bắc Giang",
+                image: "images/storefront.png", phones: ["0985 575 838", "0982 557 584"],
+                hours: [ { label: "Thứ 2 – Thứ 6", time: "17:00 – 20:00" }, { label: "Thứ 7, Chủ nhật", time: "08:00 – 20:00" } ],
+            },
+        ],
+    };
+
+    const CATEGORIES = [
+        { key: "all", label: "Tất cả" },
+        { key: "tham-my", label: "Thẩm mỹ" },
+        { key: "chinh-nha", label: "Chỉnh nha" },
+        { key: "dieu-tri", label: "Điều trị" },
+        { key: "phuc-hinh", label: "Phục hình" },
+    ];
+
+    /* ---------- Hàm gọi API dùng chung ---------- */
+    async function apiGet(path, fallback) {
+        try {
+            const res = await fetch(`${API_BASE}${path}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000) });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (err) {
+            console.warn(`[API] GET ${path} lỗi, dùng dữ liệu mẫu:`, err.message);
+            if (USE_MOCK_ON_ERROR) return fallback;
+            throw err;
+        }
+    }
+
+    // GET http://localhost:8080/api/services
+    const fetchServices = () => apiGet("/services", FALLBACK.services);
+    // GET http://localhost:8080/api/branches
+    const fetchBranches = () => apiGet("/branches", FALLBACK.branches);
+    // GET http://localhost:8080/api/branches/{id}/hours
+    const fetchBranchHours = (id, fallback) => apiGet(`/branches/${id}/hours`, fallback);
+
+    // POST http://localhost:8080/api/appointments
+    async function createAppointment(payload) {
+        const res = await fetch(`${API_BASE}/appointments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json().catch(() => ({}));
+    }
+
+    /* ---------- Tiện ích ---------- */
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const tel = (p) => p.replace(/\s/g, "");
+
+    const state = { services: [], branches: [], activeTab: "all", branchId: null };
+
+    /* ---------- Dịch vụ + Tabs ---------- */
+    function renderTabs() {
+        $("#service-tabs").innerHTML = CATEGORIES.map((c) => `
+    <button type="button" role="tab" data-tab="${c.key}" aria-selected="${c.key === state.activeTab}"
+      class="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-secondary ${c.key === state.activeTab ? "tab-active" : ""}">
+      ${esc(c.label)}
+    </button>`).join("");
+    }
+
+    function renderServices() {
+        const list = state.activeTab === "all" ? state.services : state.services.filter((s) => s.category === state.activeTab);
+        const phone = state.branches[0]?.phones?.[1] || state.branches[0]?.phones?.[0] || "";
+        const items = list.map((s, i) => `
+    <li class="bg-card p-6 transition hover:bg-secondary sm:p-8">
+      <span class="font-display text-sm text-accent-foreground/60">${String(i + 1).padStart(2, "0")}</span>
+      <h3 class="mt-3 text-xl font-semibold">${esc(s.title)}</h3>
+      <p class="mt-2 text-sm leading-relaxed text-muted-foreground">${esc(s.desc)}</p>
+      <button type="button" data-open-booking data-service="${s.id}" class="mt-4 text-sm font-semibold text-primary underline-offset-4 hover:underline">Đặt lịch dịch vụ này →</button>
+    </li>`).join("");
+        const empty = list.length ? "" : `<li class="bg-card p-8 text-muted-foreground sm:col-span-2 lg:col-span-3">Chưa có dịch vụ trong nhóm này.</li>`;
+        $("#service-list").innerHTML = items + empty + `
+    <li class="flex flex-col justify-between bg-primary p-6 text-primary-foreground sm:p-8">
+      <h3 class="text-xl font-semibold">Chưa rõ cần làm gì?</h3>
+      <p class="mt-2 text-sm opacity-85">Đến khám và nhận tư vấn trực tiếp từ bác sĩ.</p>
+      ${phone ? `<a href="tel:${tel(phone)}" class="mt-5 text-sm font-semibold underline underline-offset-4">Gọi ${esc(phone)}</a>` : ""}
+    </li>`;
+    }
+
+    $("#service-tabs").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-tab]");
+        if (!btn) return;
+        state.activeTab = btn.dataset.tab;
+        renderTabs();
+        renderServices();
+    });
+
+    /* ---------- Cơ sở + Giờ làm việc ---------- */
+    function renderBranchOptions() {
+        const opts = state.branches.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join("");
+        $("#branch-filter").innerHTML = opts;
+        $("#bk-branch").innerHTML = opts;
+        $("#branch-filter").classList.toggle("hidden", state.branches.length < 2);
+    }
+
+    async function renderBranch(id) {
+        const b = state.branches.find((x) => String(x.id) === String(id));
+        if (!b) return;
+        state.branchId = b.id;
+        $("#branch-filter").value = b.id;
+        $("#branch-name").textContent = b.name;
+        $("#branch-address").textContent = b.address || "";
+        if (b.image) $("#branch-image").src = b.image;
+
+        const hours = b.hours?.length ? b.hours : await fetchBranchHours(b.id, []);
+        const rows = hours.map((h) => `
+    <div class="flex flex-wrap justify-between gap-2 p-5">
+      <dt class="font-medium">${esc(h.label)}</dt><dd class="text-muted-foreground">${esc(h.time)}</dd>
+    </div>`).join("");
+        const phones = (b.phones || []).map((p) => `<a href="tel:${tel(p)}">${esc(p)}</a>`).join("");
+        $("#branch-hours").innerHTML = rows + (phones ? `
+    <div class="flex flex-wrap justify-between gap-2 p-5">
+      <dt class="font-medium">Điện thoại</dt><dd class="flex flex-col text-right font-semibold text-primary">${phones}</dd>
+    </div>` : "");
+    }
+
+    $("#branch-filter").addEventListener("change", (e) => renderBranch(e.target.value));
+
+    /* ---------- Modal đặt lịch ---------- */
+    const modal = $("#booking-modal");
+    let lastFocus = null;
+
+    function openBooking(serviceId) {
+        lastFocus = document.activeElement;
+        $("#bk-service").innerHTML = state.services.map((s) => `<option value="${s.id}">${esc(s.title)}</option>`).join("");
+        if (serviceId) $("#bk-service").value = serviceId;
+        if (state.branchId) $("#bk-branch").value = state.branchId;
+        $("#bk-date").min = new Date().toISOString().slice(0, 10);
+        $("#booking-msg").classList.add("hidden");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        setTimeout(() => $("#bk-name").focus(), 50);
+    }
+
+    function closeBooking() {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        lastFocus?.focus();
+    }
+
+    document.addEventListener("click", (e) => {
+        const opener = e.target.closest("[data-open-booking]");
+        if (opener) return openBooking(opener.dataset.service);
+        if (e.target.closest("[data-close-booking]") || e.target === modal) closeBooking();
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.classList.contains("hidden")) closeBooking(); });
+
+    function showMsg(text, ok) {
+        const el = $("#booking-msg");
+        el.textContent = text;
+        el.className = `rounded-xl px-4 py-3 text-sm ${ok ? "bg-secondary text-secondary-foreground" : "bg-red-50 text-red-700"}`;
+    }
+
+    $("#booking-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        if (!form.checkValidity()) { showMsg("Vui lòng điền đủ họ tên, số điện thoại (10 số), ngày và giờ.", false); return; }
+        const payload = Object.fromEntries(new FormData(form));
+        const btn = form.querySelector("[type=submit]");
+        btn.disabled = true; btn.textContent = "Đang gửi…";
+        try {
+            await createAppointment(payload);
+            showMsg("Đã gửi yêu cầu! Phòng khám sẽ gọi lại để xác nhận lịch.", true);
+            form.reset();
+        } catch (err) {
+            console.error(err);
+            showMsg("Chưa gửi được. Vui lòng thử lại hoặc gọi trực tiếp cho phòng khám.", false);
+        } finally {
+            btn.disabled = false; btn.textContent = "Gửi yêu cầu đặt lịch";
+        }
+    });
+
+    /* ---------- Khởi tạo ---------- */
+    (async function init() {
+        const [services, branches] = await Promise.all([fetchServices(), fetchBranches()]);
+        state.services = services || [];
+        state.branches = branches || [];
+        renderTabs();
+        renderServices();
+        renderBranchOptions();
+        if (state.branches.length) renderBranch(state.branches[0].id);
+    })();
+</script>
 </body>
 </html>

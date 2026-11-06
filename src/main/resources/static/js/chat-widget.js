@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CV-DCMS — Floating Realtime Chat Widget (Góc dưới bên phải toàn hệ thống)
  * - Chỉ hiển thị khi người dùng đã đăng nhập (/api/chat/context -> authenticated === true).
  * - Singleton guard chống gắn trùng sự kiện hoặc nhân đôi DOM.
@@ -620,7 +620,10 @@
             return;
         }
 
-        const socket = new window.SockJS('/ws-chat');
+        // Giới hạn transport an toàn hỗ trợ CORS / Origin header (loại trừ JSONP lỗi thời gây cảnh báo phía máy chủ)
+        const socket = new window.SockJS('/ws-chat', null, {
+            transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+        });
         const stomp = window.Stomp.over(socket);
         stomp.debug = null;
 

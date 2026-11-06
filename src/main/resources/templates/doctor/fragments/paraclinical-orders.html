@@ -11,7 +11,7 @@
         <div class="d-flex align-items-center">
             <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
             <span class="df-foldable-title">2. CHỈ ĐỊNH CẬN LÂM SÀNG &amp; CHẨN ĐOÁN HÌNH ẢNH</span>
-            <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Chụp X-Quang, CT ConeBeam 3D, Xét nghiệm máu)</span>
+            <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Chụp X-Quang NanoPix, CT ConeBeam 3D, Xét nghiệm máu)</span>
         </div>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-light text-primary border small" id="ordersCountBadge"
@@ -45,11 +45,18 @@
                         + Xét nghiệm đông máu
                     </button>
                 </div>
-                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs"
-                        th:disabled="${isClinicalLocked}"
-                        onclick="openAddParaclinicalModal()">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 small"
+                            onclick="loadParaclinicalOrders()"
+                            title="Làm mới danh sách kết quả đồng bộ từ máy X-quang NanoPix">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Làm mới KQ
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs"
+                            th:disabled="${isClinicalLocked}"
+                            onclick="openAddParaclinicalModal()">
+                        <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
+                    </button>
+                </div>
             </div>
 
             <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
@@ -57,13 +64,13 @@
                 <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 110px;">Mã CĐ</th>
-                            <th>Tên chỉ định cận lâm sàng</th>
+                            <th style="width: 125px;">Mã CĐ / Mã XQ</th>
+                            <th>Tên chỉ định &amp; Kết quả hình ảnh</th>
                             <th style="width: 110px;" class="text-center">Vị trí / Vùng</th>
-                            <th style="width: 170px;">Bác sĩ chỉ định</th>
-                            <th style="width: 140px;">Thời gian</th>
-                            <th style="width: 130px;" class="text-center">Trạng thái</th>
-                            <th style="width: 120px;" class="text-center">Thao tác</th>
+                            <th style="width: 160px;">Bác sĩ chỉ định</th>
+                            <th style="width: 145px;">Thời gian</th>
+                            <th style="width: 135px;" class="text-center">Trạng thái</th>
+                            <th style="width: 150px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="clinicalOrdersTableBody">
@@ -74,22 +81,76 @@
                             </td>
                         </tr>
                         <tr th:each="ord : ${paraclinicalOrders}" th:id="'order-row-' + ${ord.orderItemId}">
-                            <td><span class="badge bg-light text-dark border fw-bold" th:text="${ord.orderCode}">CĐ1001</span></td>
                             <td>
-                                <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
-                                <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
-                                <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
+                                <span class="badge bg-light text-dark border fw-bold d-inline-block" th:text="${ord.orderCode}">CĐ1001</span>
+                                <div th:if="${ord.externalRefId != null and !#strings.isEmpty(ord.externalRefId)}" class="mt-1">
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"
+                                          style="font-size: 10.5px;"
+                                          title="Mã tham chiếu chụp trên máy X-quang NanoPix"
+                                          th:text="'Mã chụp: ' + ${ord.externalRefId}">Mã chụp: XQ101</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-start gap-2">
+                                    <img th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}"
+                                         th:src="${ord.primaryImageUrl}"
+                                         alt="X-ray thumbnail"
+                                         class="rounded border shadow-xs"
+                                         style="width: 48px; height: 48px; object-fit: cover; cursor: pointer; background: #0f172a;"
+                                         th:data-url="${ord.primaryImageUrl}"
+                                         th:data-service="${ord.serviceName}"
+                                         th:data-ref="${ord.externalRefId != null ? ord.externalRefId : ord.orderCode}"
+                                         th:data-tooth="${ord.toothNumbers}"
+                                         th:data-time="${ord.performedAt != null ? ord.performedAt : ord.orderTime}"
+                                         th:data-summary="${ord.resultSummary}"
+                                         onclick="openDoctorXrayViewerFromEl(this)"
+                                         title="Nhấn để phóng to &amp; soi phim X-quang">
+                                    <div>
+                                        <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
+                                        <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
+                                        <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
+                                        <div class="mt-1" th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}">
+                                            <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 small"
+                                                    style="font-size: 11px;"
+                                                    th:data-url="${ord.primaryImageUrl}"
+                                                    th:data-service="${ord.serviceName}"
+                                                    th:data-ref="${ord.externalRefId != null ? ord.externalRefId : ord.orderCode}"
+                                                    th:data-tooth="${ord.toothNumbers}"
+                                                    th:data-time="${ord.performedAt != null ? ord.performedAt : ord.orderTime}"
+                                                    th:data-summary="${ord.resultSummary}"
+                                                    onclick="openDoctorXrayViewerFromEl(this)">
+                                                <i class="bi bi-zoom-in me-1"></i>Soi phim X-quang
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                             <td class="text-center"><span class="badge bg-primary-subtle text-primary border" th:text="${ord.toothNumbers}">R16</span></td>
                             <td><div class="small fw-semibold text-dark" th:text="${ord.doctorName}">BS. Điều trị</div></td>
-                            <td><span class="small text-muted" th:text="${ord.orderTime}">24/10/2026 15:30</span></td>
-                            <td class="text-center">
-                                <span class="badge"
-                                      th:classappend="${ord.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
-                                      th:text="${ord.statusLabel}">Chờ thực hiện</span>
+                            <td>
+                                <div class="small text-muted" title="Thời điểm chỉ định" th:text="'CĐ: ' + ${ord.orderTime}">24/10/2026 15:30</div>
+                                <div class="small text-success fw-semibold" th:if="${ord.performedAt != null and !#strings.isEmpty(ord.performedAt)}"
+                                     title="Thời điểm nhận kết quả chụp" th:text="'KQ: ' + ${ord.performedAt}"></div>
                             </td>
                             <td class="text-center">
-                                <div class="btn-group btn-group-sm">
+                                <span class="badge"
+                                      th:classappend="${ord.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : (${ord.status == 'IN_PROGRESS'} ? 'bg-info-subtle text-info-emphasis border border-info' : 'bg-warning-subtle text-dark border border-warning')"
+                                      th:text="${ord.status == 'WAITING' and ord.serviceType == 'XRAY'} ? 'Chờ chụp' : ${ord.statusLabel}">Chờ chụp</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm align-items-center">
+                                    <button type="button" class="btn btn-sm btn-outline-info me-1"
+                                            th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}"
+                                            title="Mở trình soi phim X-quang"
+                                            th:data-url="${ord.primaryImageUrl}"
+                                            th:data-service="${ord.serviceName}"
+                                            th:data-ref="${ord.externalRefId != null ? ord.externalRefId : ord.orderCode}"
+                                            th:data-tooth="${ord.toothNumbers}"
+                                            th:data-time="${ord.performedAt != null ? ord.performedAt : ord.orderTime}"
+                                            th:data-summary="${ord.resultSummary}"
+                                            onclick="openDoctorXrayViewerFromEl(this)">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </button>
                                     <button type="button" class="btn btn-sm"
                                             th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'btn-outline-primary'"
                                             th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
@@ -117,9 +178,10 @@
 </div>
 
 <!-- ===================================================================== -->
-<!-- MODAL: TẠO CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2)       -->
+<!-- MODAL: TẠO CHỈ ĐỊNH CẬN LÂM SÀNG & TRÌNH SOI PHIM X-QUANG TẠI GHẾ      -->
 <!-- ===================================================================== -->
 <div th:fragment="paraclinicalOrdersModal">
+    <!-- Modal 1: Tạo chỉ định mới -->
     <div class="modal fade" id="addParaclinicalModal" tabindex="-1" aria-labelledby="addParaclinicalModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
@@ -179,12 +241,124 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal 2: Trình soi phim X-quang kỹ thuật số tại ghế khám (Phóng to, Thu nhỏ, Xoay, Đảo màu âm bản) -->
+    <div class="modal fade" id="doctorXrayViewerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg bg-dark text-white" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header border-secondary py-2.5 px-4" style="background: #0f172a;">
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0 text-info" id="docXrayModalTitle">
+                            <i class="bi bi-person-bounding-box me-1.5"></i>Trình soi phim X-quang kỹ thuật số NanoPix
+                        </h6>
+                        <small class="text-white-50" id="docXrayModalMeta">Mã CĐ: — | Vị trí: — | Thời gian: —</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-1.5 ms-auto me-3">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="docXrayZoom(0.25)" title="Phóng to (+)">
+                            <i class="bi bi-zoom-in"></i> Phóng to
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="docXrayZoom(-0.25)" title="Thu nhỏ (-)">
+                            <i class="bi bi-zoom-out"></i> Thu nhỏ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="docXrayRotate(-90)" title="Xoay trái 90°">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="docXrayRotate(90)" title="Xoay phải 90°">
+                            <i class="bi bi-arrow-clockwise"></i> Xoay 90°
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" id="btnDocXrayInvert" onclick="docXrayToggleInvert()" title="Đảo màu âm bản (Negative)">
+                            <i class="bi bi-circle-half"></i> Đảo màu
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary text-white" onclick="docXrayReset()" title="Đặt lại mặc định">
+                            Mặc định
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 d-flex align-items-center justify-content-center position-relative"
+                     style="background: #020617; min-height: 520px; max-height: 75vh; overflow: hidden;">
+                    <img id="docXrayViewerImg" src="" alt="Phim X-quang bệnh nhân"
+                         style="max-width: 92%; max-height: 70vh; object-fit: contain; transition: transform 0.15s ease, filter 0.15s ease;" />
+                </div>
+                <div class="modal-footer border-secondary justify-content-between py-2 px-4" style="background: #0f172a;">
+                    <div class="small text-light" id="docXrayModalSummary">Kết quả: Đã đồng bộ từ cảm biến NanoPix</div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ===================================================================== -->
 <!-- SCRIPT: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2, 11.3)   -->
 <!-- ===================================================================== -->
 <script th:fragment="paraclinicalOrdersScript">
+    const docXrayViewerState = {
+        zoom: 1.0,
+        rotation: 0,
+        invert: false
+    };
+
+    function openDoctorXrayViewerFromEl(el) {
+        if (!el) return;
+        openDoctorXrayViewer(
+            el.getAttribute('data-url'),
+            el.getAttribute('data-service'),
+            el.getAttribute('data-ref'),
+            el.getAttribute('data-tooth'),
+            el.getAttribute('data-time'),
+            el.getAttribute('data-summary')
+        );
+    }
+
+    function openDoctorXrayViewer(imageUrl, serviceName, refCode, toothNumbers, timeStr, summaryText) {
+        if (!imageUrl) return;
+        const imgEl = document.getElementById('docXrayViewerImg');
+        const titleEl = document.getElementById('docXrayModalTitle');
+        const metaEl = document.getElementById('docXrayModalMeta');
+        const summaryEl = document.getElementById('docXrayModalSummary');
+
+        if (imgEl) imgEl.src = imageUrl;
+        if (titleEl) titleEl.textContent = serviceName || 'Phim X-quang kỹ thuật số NanoPix';
+        if (metaEl) metaEl.textContent = `Mã chụp: ${refCode || '—'} | Vị trí răng: ${toothNumbers || 'Toàn hàm'} | Thời gian: ${timeStr || '—'}`;
+        if (summaryEl) summaryEl.textContent = summaryText ? `Ghi chú / Kết luận: ${summaryText}` : 'Ảnh phim X-quang gắn trực tiếp với phiếu chỉ định của ca khám hiện tại.';
+
+        docXrayReset();
+        const modalEl = document.getElementById('doctorXrayViewerModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    function applyDocXrayTransform() {
+        const imgEl = document.getElementById('docXrayViewerImg');
+        if (!imgEl) return;
+        imgEl.style.transform = `scale(${docXrayViewerState.zoom}) rotate(${docXrayViewerState.rotation}deg)`;
+        imgEl.style.filter = docXrayViewerState.invert ? 'invert(1) contrast(1.15)' : 'none';
+    }
+
+    function docXrayZoom(delta) {
+        docXrayViewerState.zoom = Math.min(4.0, Math.max(0.4, +(docXrayViewerState.zoom + delta).toFixed(2)));
+        applyDocXrayTransform();
+    }
+
+    function docXrayRotate(deg) {
+        docXrayViewerState.rotation = (docXrayViewerState.rotation + deg) % 360;
+        applyDocXrayTransform();
+    }
+
+    function docXrayToggleInvert() {
+        docXrayViewerState.invert = !docXrayViewerState.invert;
+        applyDocXrayTransform();
+    }
+
+    function docXrayReset() {
+        docXrayViewerState.zoom = 1.0;
+        docXrayViewerState.rotation = 0;
+        docXrayViewerState.invert = false;
+        applyDocXrayTransform();
+    }
+
     function openAddParaclinicalModal() {
         if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
@@ -238,7 +412,7 @@
                     if (modal) modal.hide();
                 }
                 if (typeof showToast === 'function') {
-                    showToast('✓ Đã lưu chỉ định cận lâm sàng vào cơ sở dữ liệu!');
+                    showToast(`✓ Đã lưu chỉ định cận lâm sàng (Mã chụp: ${data.externalRefId || data.orderCode})`);
                 }
                 await loadParaclinicalOrders();
             } else {
@@ -275,7 +449,7 @@
             const data = await res.json();
             if (res.ok) {
                 if (typeof showToast === 'function') {
-                    showToast(`✓ Đã thêm chỉ định: ${defaultName}`);
+                    showToast(`✓ Đã thêm chỉ định: ${defaultName} (${data.externalRefId || data.orderCode})`);
                 }
                 await loadParaclinicalOrders();
             } else {
@@ -391,14 +565,66 @@
         let rowsHtml = '';
         orders.forEach(ord => {
             const isDone = ord.status === 'COMPLETED';
+            const isSyncing = ord.status === 'IN_PROGRESS';
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => s || '');
+            const hasImg = ord.primaryImageUrl && ord.primaryImageUrl.trim().length > 0;
+            const refCode = ord.externalRefId || ord.orderCode || '';
+
             const resultHtml = (ord.resultSummary && ord.resultSummary.trim().length > 0)
                 ? `<div class="small text-muted">KQ: ${esc(ord.resultSummary)}</div>`
                 : '';
+
+            const thumbHtml = hasImg ? `
+                <img src="${esc(ord.primaryImageUrl)}"
+                     alt="X-ray"
+                     class="rounded border shadow-xs"
+                     style="width: 48px; height: 48px; object-fit: cover; cursor: pointer; background: #0f172a;"
+                     data-url="${esc(ord.primaryImageUrl)}"
+                     data-service="${esc(ord.serviceName)}"
+                     data-ref="${esc(refCode)}"
+                     data-tooth="${esc(ord.toothNumbers || 'Toàn hàm')}"
+                     data-time="${esc(ord.performedAt || ord.orderTime || '')}"
+                     data-summary="${esc(ord.resultSummary || '')}"
+                     onclick="openDoctorXrayViewerFromEl(this)"
+                     title="Nhấn để phóng to & soi phim X-quang">
+            ` : '';
+
+            const viewBtnInline = hasImg ? `
+                <div class="mt-1">
+                    <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 small"
+                            style="font-size: 11px;"
+                            data-url="${esc(ord.primaryImageUrl)}"
+                            data-service="${esc(ord.serviceName)}"
+                            data-ref="${esc(refCode)}"
+                            data-tooth="${esc(ord.toothNumbers || 'Toàn hàm')}"
+                            data-time="${esc(ord.performedAt || ord.orderTime || '')}"
+                            data-summary="${esc(ord.resultSummary || '')}"
+                            onclick="openDoctorXrayViewerFromEl(this)">
+                        <i class="bi bi-zoom-in me-1"></i>Soi phim X-quang
+                    </button>
+                </div>
+            ` : '';
+
+            const viewIconBtn = hasImg ? `
+                <button type="button" class="btn btn-sm btn-outline-info me-1"
+                        title="Mở trình soi phim X-quang"
+                        data-url="${esc(ord.primaryImageUrl)}"
+                        data-service="${esc(ord.serviceName)}"
+                        data-ref="${esc(refCode)}"
+                        data-tooth="${esc(ord.toothNumbers || 'Toàn hàm')}"
+                        data-time="${esc(ord.performedAt || ord.orderTime || '')}"
+                        data-summary="${esc(ord.resultSummary || '')}"
+                        onclick="openDoctorXrayViewerFromEl(this)">
+                    <i class="bi bi-eye-fill"></i>
+                </button>
+            ` : '';
+
             const actionButtons = isLocked ? `
+                ${viewIconBtn}
                 <span class="text-muted small" title="Bệnh án đã khóa (BR-EMR-02)">Đã khóa</span>
             ` : `
-                <div class="btn-group btn-group-sm">
+                <div class="btn-group btn-group-sm align-items-center">
+                    ${viewIconBtn}
                     <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
                             title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
                             onclick="toggleOrderStatus(${ord.orderItemId}, '${ord.status}')">
@@ -411,20 +637,40 @@
                     </button>
                 </div>
             `;
+
+            const badgeClass = isDone
+                ? 'bg-success-subtle text-success border border-success'
+                : (isSyncing ? 'bg-info-subtle text-info-emphasis border border-info' : 'bg-warning-subtle text-dark border border-warning');
+            const statusText = (ord.status === 'WAITING' && ord.serviceType === 'XRAY')
+                ? 'Chờ chụp'
+                : (ord.statusLabel || (isDone ? 'Đã có kết quả' : 'Chờ thực hiện'));
+
             rowsHtml += `
                 <tr id="order-row-${ord.orderItemId}">
-                    <td><span class="badge bg-light text-dark border fw-bold">${esc(ord.orderCode)}</span></td>
                     <td>
-                        <strong class="text-dark">${esc(ord.serviceName)}</strong>
-                        <span class="badge bg-secondary-subtle text-secondary small ms-1">${esc(ord.serviceType || 'CLS')}</span>
-                        ${resultHtml}
+                        <span class="badge bg-light text-dark border fw-bold d-inline-block">${esc(ord.orderCode)}</span>
+                        ${ord.externalRefId ? `<div class="mt-1"><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:10.5px;" title="Mã tham chiếu chụp trên máy X-quang NanoPix">Mã chụp: ${esc(ord.externalRefId)}</span></div>` : ''}
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-start gap-2">
+                            ${thumbHtml}
+                            <div>
+                                <strong class="text-dark">${esc(ord.serviceName)}</strong>
+                                <span class="badge bg-secondary-subtle text-secondary small ms-1">${esc(ord.serviceType || 'CLS')}</span>
+                                ${resultHtml}
+                                ${viewBtnInline}
+                            </div>
+                        </div>
                     </td>
                     <td class="text-center"><span class="badge bg-primary-subtle text-primary border">${esc(ord.toothNumbers || 'Toàn hàm')}</span></td>
                     <td><div class="small fw-semibold text-dark">${esc(ord.doctorName || 'BS. Điều trị')}</div></td>
-                    <td><span class="small text-muted">${esc(ord.orderTime || '')}</span></td>
+                    <td>
+                        <div class="small text-muted">CĐ: ${esc(ord.orderTime || '')}</div>
+                        ${ord.performedAt ? `<div class="small text-success fw-semibold">KQ: ${esc(ord.performedAt)}</div>` : ''}
+                    </td>
                     <td class="text-center">
-                        <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
-                            ${esc(ord.statusLabel || (isDone ? 'Đã có kết quả' : 'Chờ thực hiện'))}
+                        <span class="badge ${badgeClass}">
+                            ${esc(statusText)}
                         </span>
                     </td>
                     <td class="text-center">
