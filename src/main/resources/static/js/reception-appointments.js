@@ -49,9 +49,38 @@
         return { date, session, doctorText, statusText, timeText };
     }
 
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="_csrf"]');
+        if (meta && meta.getAttribute('content')) {
+            return {
+                header: document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN',
+                token: meta.getAttribute('content')
+            };
+        }
+        const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+        if (match) {
+            return {
+                header: 'X-XSRF-TOKEN',
+                token: decodeURIComponent(match[1])
+            };
+        }
+        return null;
+    }
+
     async function request(path, config = {}) {
-        const response = await fetch(api + path, {credentials: 'same-origin',
-            headers: {'Content-Type': 'application/json', ...(config.headers || {})}, ...config});
+        const headers = {'Content-Type': 'application/json', ...(config.headers || {})};
+        const method = (config.method || 'GET').toUpperCase();
+        if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+            const csrf = getCsrfToken();
+            if (csrf && csrf.token) {
+                headers[csrf.header] = csrf.token;
+            }
+        }
+        const response = await fetch(api + path, {
+            credentials: 'same-origin',
+            headers,
+            ...config
+        });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.message || body.detail || body.error || `Không thể xử lý (${response.status}).`);
         return body;
@@ -343,20 +372,43 @@
 
                 // 3. Mã KH (Màu xanh dương)
                 const tdCode = document.createElement('td');
-                tdCode.innerHTML = `<a href="/reception/patients/${a.profileId}" class="customer-code-badge">${escapeHtml(a.patientCode || 'DEMO')}</a>`;
+                const codeLink = document.createElement('a');
+                codeLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                codeLink.className = 'customer-code-badge';
+                codeLink.textContent = a.patientCode || (a.profileId ? `BN#${a.profileId}` : '—');
+                tdCode.appendChild(codeLink);
                 tr.appendChild(tdCode);
 
-                // 4. Khách hàng (Tên đậm + tag DEMO)
+                // 4. Khách hàng
                 const tdPatient = document.createElement('td');
-                tdPatient.innerHTML = `
-                    <a href="/reception/patients/${a.profileId}" class="customer-name-link">${escapeHtml(a.patientName || 'Khách hàng')}</a>
-                    <span class="demo-chip">DEMO</span>
-                `;
+                const nameLink = document.createElement('a');
+                nameLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                nameLink.className = 'customer-name-link';
+                nameLink.textContent = a.patientName || 'Khách hàng';
+                tdPatient.appendChild(nameLink);
                 tr.appendChild(tdPatient);
 
-                // 5. Số điện thoại
+                // 5. Số điện thoại (Xử lý an toàn DOM API & validate regex chống attribute injection - CV-07)
                 const tdPhone = document.createElement('td');
-                tdPhone.innerHTML = a.patientPhone ? `<a href="tel:${a.patientPhone}" class="phone-link">${escapeHtml(a.patientPhone)}</a>` : '<span class="text-muted">—</span>';
+                const rawPhone = a.patientPhone ? String(a.patientPhone).trim() : '';
+                const cleanPhone = rawPhone.replace(/[^\d+]/g, '');
+                if (/^\+?0?\d{9,11}$/.test(cleanPhone)) {
+                    const phoneLink = document.createElement('a');
+                    phoneLink.setAttribute('href', `tel:${cleanPhone}`);
+                    phoneLink.className = 'phone-link';
+                    phoneLink.textContent = rawPhone;
+                    tdPhone.appendChild(phoneLink);
+                } else if (rawPhone) {
+                    const phoneSpan = document.createElement('span');
+                    phoneSpan.className = 'text-dark';
+                    phoneSpan.textContent = rawPhone;
+                    tdPhone.appendChild(phoneSpan);
+                } else {
+                    const emptySpan = document.createElement('span');
+                    emptySpan.className = 'text-muted';
+                    emptySpan.textContent = '—';
+                    tdPhone.appendChild(emptySpan);
+                }
                 tr.appendChild(tdPhone);
 
                 // 6. Nội dung
@@ -394,11 +446,13 @@
                 tdStatus.appendChild(statusBtn);
                 tr.appendChild(tdStatus);
 
-                // 9. Thao tác (Icon sửa, in, hủy)
+                // 9. Thao tác (Icon tiếp đón, sửa, in, hủy)
                 const tdAction = document.createElement('td');
                 tdAction.className = 'text-center';
+                const canCheckIn = a.status !== 'CHECKED_IN' && a.status !== 'CANCELLED';
                 tdAction.innerHTML = `
                     <div class="d-inline-flex align-items-center gap-1.5">
+                        ${canCheckIn ? `<a href="/reception/check-in?branchId=${$('branchSelect')?.value || ''}&appointmentId=${a.id}" class="btn-action-icon text-success" title="Tiếp đón & Check-in ngay"><i class="bi bi-person-check-fill"></i></a>` : ''}
                         <a href="/reception/appointments/${a.id}/edit" class="btn-action-icon text-primary" title="Sửa lịch hẹn"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn-action-icon text-dark btn-print" title="In phiếu khám"><i class="bi bi-printer"></i></button>
                         <button type="button" class="btn-action-icon text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i></button>
@@ -446,53 +500,127 @@
         }
 
         // =========================================================
-        // MODAL 1: ĐỔI TRẠNG THÁI LỊCH HẸN
+        // MODAL 1: THAO TÁC NGHIỆP VỤ LỊCH HẸN (FT05)
         // =========================================================
         const statusModalEl = $('statusQuickChangeModal');
         const statusModal = statusModalEl ? new bootstrap.Modal(statusModalEl) : null;
+        let activeAppointmentForAction = null;
 
         function openQuickStatusModal(appointment) {
             if (!statusModal) return;
+            activeAppointmentForAction = appointment;
             activeAppointmentIdForStatus = appointment.id;
+
             $('modalStatusPatientName').textContent = appointment.patientName || 'Khách hàng';
             $('modalStatusDoctorName').textContent = appointment.doctorName ? (appointment.doctorName.startsWith('BS') ? appointment.doctorName : `BS. ${appointment.doctorName}`) : 'Chưa chỉ định';
             $('modalStatusContent').textContent = appointment.serviceName || appointment.symptoms || 'Khám & tư vấn';
-            $('modalStatusNote').value = '';
 
-            // Pre-select appropriate radio button
-            const radios = document.querySelectorAll('input[name="quickStatusOpt"]');
-            radios.forEach(r => {
-                if (appointment.status === 'CHECKED_IN' && r.dataset.label === 'Khách hàng đến') r.checked = true;
-                else if (appointment.status === 'COMPLETED' && r.dataset.label === 'Đã xong') r.checked = true;
-                else if (appointment.status === 'CONFIRMED' && r.dataset.label === 'KH chưa đến') r.checked = true;
-                else if (appointment.status === 'CANCELLED' && r.dataset.label === 'Hủy lịch hẹn') r.checked = true;
-                else if (appointment.status === 'NO_SHOW' && r.dataset.label === 'KH không đến') r.checked = true;
-                else if (appointment.status === 'PENDING' && r.dataset.label === 'Đang chờ') r.checked = true;
-            });
+            const badgeEl = $('modalStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = `badge rounded-pill ${statusStyle[appointment.status] || 'bg-secondary'}`;
+                badgeEl.textContent = statusName[appointment.status] || appointment.status;
+            }
+
+            // Hide all action panels and cancel reason box
+            document.querySelectorAll('.status-action-panel').forEach(p => p.style.display = 'none');
+            if ($('cancelReasonSection')) $('cancelReasonSection').style.display = 'none';
+
+            // Show relevant panel based on appointment status
+            switch (appointment.status) {
+                case 'PENDING':
+                    if ($('statusActionsPending')) $('statusActionsPending').style.display = 'block';
+                    break;
+                case 'CONFIRMED':
+                    if ($('statusActionsConfirmed')) {
+                        $('statusActionsConfirmed').style.display = 'block';
+                        const checkInBtn = $('btnActionCheckIn');
+                        if (checkInBtn) {
+                            checkInBtn.href = `/reception/check-in?branchId=${encodeURIComponent(branch.value || '')}&appointmentId=${appointment.id}`;
+                        }
+                        const rescheduleBtn = $('btnActionReschedule');
+                        if (rescheduleBtn) {
+                            rescheduleBtn.href = `/reception/appointments/${appointment.id}/edit`;
+                        }
+                    }
+                    break;
+                case 'CHECKED_IN':
+                    if ($('statusActionsCheckedIn')) $('statusActionsCheckedIn').style.display = 'block';
+                    break;
+                case 'CANCELLED':
+                    if ($('statusActionsCancelled')) $('statusActionsCancelled').style.display = 'block';
+                    break;
+                case 'NO_SHOW':
+                    if ($('statusActionsNoShow')) $('statusActionsNoShow').style.display = 'block';
+                    break;
+            }
 
             statusModal.show();
         }
 
-        $('saveQuickStatusBtn')?.addEventListener('click', async () => {
-            if (!activeAppointmentIdForStatus) return;
-            const selectedRadio = document.querySelector('input[name="quickStatusOpt"]:checked');
-            if (!selectedRadio) return;
-            const targetStatus = selectedRadio.value;
-            const statusLabel = selectedRadio.dataset.label;
-            const note = $('modalStatusNote').value.trim();
-
+        // Action: Xác nhận lịch hẹn (PENDING -> CONFIRMED)
+        $('btnActionConfirm')?.addEventListener('click', async () => {
+            if (!activeAppointmentForAction) return;
             try {
-                await request(`/${activeAppointmentIdForStatus}/quick-status`, {
+                await request(`/${activeAppointmentForAction.id}/confirm`, {
                     method: 'POST',
                     body: JSON.stringify({
-                        status: targetStatus,
-                        note: note ? `[${statusLabel}] ${note}` : `Đổi trạng thái sang ${statusLabel}`
+                        doctorId: activeAppointmentForAction.doctorId || null
                     })
                 });
                 statusModal.hide();
                 await load();
             } catch (err) {
-                alert('Không thể cập nhật trạng thái: ' + err.message);
+                alert('Không thể xác nhận lịch hẹn: ' + err.message);
+            }
+        });
+
+        // Toggle Cancel Reason Section
+        $('btnToggleCancelPanel')?.addEventListener('click', () => {
+            if ($('cancelReasonSection')) $('cancelReasonSection').style.display = 'block';
+        });
+        $('btnToggleCancelPanelConfirmed')?.addEventListener('click', () => {
+            if ($('cancelReasonSection')) $('cancelReasonSection').style.display = 'block';
+        });
+        $('btnCancelDismiss')?.addEventListener('click', () => {
+            if ($('cancelReasonSection')) $('cancelReasonSection').style.display = 'none';
+        });
+
+        // Action: Hủy lịch hẹn (với lý do chuẩn nghiệp vụ)
+        $('btnConfirmCancelAppointment')?.addEventListener('click', async () => {
+            if (!activeAppointmentForAction) return;
+            const reasonCode = $('modalCancelReasonCode')?.value || 'Bệnh nhân đổi kế hoạch';
+            const note = $('modalCancelReasonNote')?.value.trim() || '';
+            try {
+                await request(`/${activeAppointmentForAction.id}/cancel`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        reasonCode: reasonCode,
+                        note: note
+                    })
+                });
+                statusModal.hide();
+                await load();
+            } catch (err) {
+                alert('Không thể hủy lịch hẹn: ' + err.message);
+            }
+        });
+
+        // Action: Đánh dấu không đến
+        $('btnActionNoShow')?.addEventListener('click', async () => {
+            if (!activeAppointmentForAction) return;
+            if (!confirm(`Xác nhận đánh dấu khách hàng "${activeAppointmentForAction.patientName}" không đến theo lịch?`)) return;
+            try {
+                await request(`/${activeAppointmentForAction.id}/quick-status`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        status: 'NO_SHOW',
+                        note: 'Lễ tân đánh dấu khách không đến'
+                    })
+                });
+                statusModal.hide();
+                await load();
+            } catch (err) {
+                alert('Không thể cập nhật: ' + err.message);
             }
         });
 
@@ -501,6 +629,25 @@
         // =========================================================
         const createModalEl = $('createAppointmentModal');
         const createModal = createModalEl ? new bootstrap.Modal(createModalEl) : null;
+
+        // Minor guardian toggle based on DOB
+        $('modalPatientDob')?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const guardianContainer = $('modalGuardianContainer');
+            if (!val || !guardianContainer) return;
+            const birthDate = new Date(val);
+            const now = new Date();
+            let age = now.getFullYear() - birthDate.getFullYear();
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age < 18) {
+                guardianContainer.style.display = 'block';
+            } else {
+                guardianContainer.style.display = 'none';
+            }
+        });
 
         // Load doctors for Modal
         async function loadModalDoctors() {
@@ -525,6 +672,8 @@
             $('createAppointmentForm')?.reset();
             $('modalProfileId').value = '';
             $('selectedPatientChip').style.display = 'none';
+            if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
+            if ($('modalGuardianContainer')) $('modalGuardianContainer').style.display = 'none';
             $('modalPatientSearch').value = '';
             $('modalAppointmentDate').value = dateInput.value || today();
             $('createModalSubtitle').textContent = `Ngày ${dateLabel(dateInput.value || today())}`;
@@ -562,6 +711,7 @@
                                 $('selectedPatientName').textContent = p.name;
                                 $('selectedPatientCode').textContent = `(${p.code})`;
                                 $('selectedPatientChip').style.display = 'flex';
+                                if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
                                 resultsBox.style.display = 'none';
                             });
                             resultsBox.appendChild(item);
@@ -577,10 +727,14 @@
         $('clearSelectedPatientBtn')?.addEventListener('click', () => {
             $('modalProfileId').value = '';
             $('selectedPatientChip').style.display = 'none';
+            if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
             $('modalPatientSearch').value = '';
             $('modalPatientName').value = '';
             $('modalPatientPhone').value = '';
             $('modalPatientAddress').value = '';
+            if ($('modalPatientDob')) $('modalPatientDob').value = '';
+            if ($('modalPatientGender')) $('modalPatientGender').value = '';
+            if ($('modalGuardianContainer')) $('modalGuardianContainer').style.display = 'none';
         });
 
         // Close search results when clicking outside
@@ -600,11 +754,6 @@
             const profileId = $('modalProfileId').value ? Number($('modalProfileId').value) : null;
             const isTentative = $('modalIsTentative')?.checked || false;
 
-            if (!patientName) {
-                alert('Vui lòng nhập họ tên khách hàng.');
-                $('modalPatientName').focus();
-                return;
-            }
             if (!date) {
                 alert('Vui lòng chọn ngày hẹn.');
                 return;
@@ -615,7 +764,68 @@
                 return;
             }
 
-            // Expected Time (Linh hoạt: nếu chọn giờ thì ghép, nếu chọn Cả ngày thì null)
+            let patientDob = null;
+            let patientGender = null;
+            let guardianName = null;
+            let guardianPhone = null;
+            let guardianRelationship = null;
+
+            if (!profileId) {
+                // Đăng ký bệnh nhân mới: BẮT BUỘC cung cấp thông tin chuẩn (chống tạo dữ liệu giả - CV-01)
+                const dobVal = $('modalPatientDob')?.value;
+                const genderVal = $('modalPatientGender')?.value;
+                const phoneVal = $('modalPatientPhone')?.value.trim();
+
+                if (!patientName) {
+                    alert('Vui lòng nhập họ tên khách hàng.');
+                    $('modalPatientName').focus();
+                    return;
+                }
+                if (!dobVal) {
+                    alert('Vui lòng chọn ngày sinh cho bệnh nhân mới.');
+                    $('modalPatientDob').focus();
+                    return;
+                }
+                if (!genderVal) {
+                    alert('Vui lòng chọn giới tính cho bệnh nhân mới.');
+                    $('modalPatientGender').focus();
+                    return;
+                }
+                if (!phoneVal || !/^0\d{9,10}$/.test(phoneVal)) {
+                    alert('Số điện thoại bệnh nhân phải gồm 10 hoặc 11 chữ số và bắt đầu bằng 0.');
+                    $('modalPatientPhone').focus();
+                    return;
+                }
+
+                patientDob = dobVal;
+                patientGender = genderVal;
+
+                // Kiểm tra người giám hộ nếu dưới 18 tuổi (BR-PAT-09)
+                const birthDate = new Date(dobVal);
+                const now = new Date();
+                let age = now.getFullYear() - birthDate.getFullYear();
+                const m = now.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                if (age < 18) {
+                    guardianName = $('modalGuardianName')?.value.trim();
+                    guardianPhone = $('modalGuardianPhone')?.value.trim();
+                    guardianRelationship = $('modalGuardianRelationship')?.value.trim();
+                    if (!guardianName || !guardianPhone || !guardianRelationship) {
+                        alert('Bệnh nhân dưới 18 tuổi bắt buộc nhập họ tên, số điện thoại và quan hệ của người giám hộ (BR-PAT-09).');
+                        $('modalGuardianName')?.focus();
+                        return;
+                    }
+                    if (!/^0\d{9,10}$/.test(guardianPhone)) {
+                        alert('Số điện thoại người giám hộ phải gồm 10 hoặc 11 chữ số và bắt đầu bằng 0.');
+                        $('modalGuardianPhone')?.focus();
+                        return;
+                    }
+                }
+            }
+
+            // Expected Time
             const hour = $('modalHour')?.value;
             const minute = $('modalMinute')?.value || '00';
             const expectedTime = hour ? `${hour}:${minute}:00` : null;
@@ -627,6 +837,11 @@
                 patientPhone: $('modalPatientPhone').value.trim(),
                 patientAddress: $('modalPatientAddress').value.trim(),
                 customerSource: $('modalCustomerSource').value || 'Vãng lai',
+                patientDob: patientDob,
+                patientGender: patientGender,
+                guardianName: guardianName,
+                guardianPhone: guardianPhone,
+                guardianRelationship: guardianRelationship,
                 doctorId: doctorId,
                 date: date,
                 session: hour && parseInt(hour) >= 12 ? 'AFTERNOON' : 'MORNING',
@@ -637,6 +852,11 @@
                 isTentative: isTentative
             };
 
+            const saveBtn = $('saveAppointmentBtn');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu...';
+
             try {
                 await request('', {
                     method: 'POST',
@@ -645,7 +865,27 @@
                 createModal.hide();
                 await load();
             } catch (err) {
+                if (err.message && err.message.includes('trùng khớp')) {
+                    if (confirm(err.message + '\n\nBạn có muốn xác nhận tiếp tục tạo hồ sơ mới cho bệnh nhân này không?')) {
+                        payload.confirmDuplicate = true;
+                        try {
+                            await request('', {
+                                method: 'POST',
+                                body: JSON.stringify(payload)
+                            });
+                            createModal.hide();
+                            await load();
+                            return;
+                        } catch (retryErr) {
+                            alert('Không thể tạo lịch hẹn: ' + retryErr.message);
+                            return;
+                        }
+                    }
+                }
                 alert('Không thể tạo lịch hẹn: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
             }
         });
 

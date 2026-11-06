@@ -9,15 +9,35 @@
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,
         char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
 
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="_csrf"]');
+        if (meta && meta.getAttribute('content')) {
+            return {
+                header: document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN',
+                token: meta.getAttribute('content')
+            };
+        }
+        const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+        if (match) {
+            return {
+                header: 'X-XSRF-TOKEN',
+                token: decodeURIComponent(match[1])
+            };
+        }
+        return null;
+    }
+
     async function request(path, options = {}) {
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+        const csrf = getCsrfToken();
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(csrf && csrf.token ? {[csrf.header]: csrf.token} : {}),
+            ...(options.headers || {})
+        };
         const response = await fetch(api + path, {
             credentials: 'same-origin',
             ...options,
-            headers: {'Content-Type': 'application/json',
-                ...(csrfToken && csrfHeader ? {[csrfHeader]: csrfToken} : {}),
-                ...(options.headers || {})}
+            headers
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.detail || body.message || body.error || `Không thể xử lý yêu cầu (${response.status}).`);
@@ -246,19 +266,41 @@
             if ($('doctorId').value) params.set('doctorId', $('doctorId').value);
             if (!editing && $('serviceId').value) params.set('serviceId', $('serviceId').value);
             if (editing) params.set('excludeAppointmentId', id);
-            const list = await request(`/slots?${params}`);
-            if (token !== sequence) return;
-            select.replaceChildren(option('', 'Chọn giờ hẹn'));
-            list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
-            if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
-                select.value = previous;
-            } else if (list.length > 0) {
-                select.value = list[0].time.slice(0, 5);
+            let list = [];
+            try {
+                list = await request(`/slots?${params}`);
+            } catch (err) {
+                console.warn('Cannot load granular slots:', err);
             }
-            select.disabled = !list.length;
-            $('submitAppointment').disabled = !list.length;
-            if (!list.length) { available = false; $('availabilityMessage').textContent = 'Không còn giờ phù hợp. Hãy chọn buổi hoặc bác sĩ khác.';
-                $('availabilityMessage').classList.remove('is-success'); $('availabilityMessage').classList.add('is-error'); }
+            if (token !== sequence) return;
+            select.replaceChildren();
+            if (list && list.length > 0) {
+                select.appendChild(option('', 'Chọn giờ hẹn (hoặc linh hoạt)'));
+                list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
+                if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
+                    select.value = previous;
+                } else {
+                    select.value = list[0].time.slice(0, 5);
+                }
+                select.disabled = false;
+                $('submitAppointment').disabled = false;
+            } else if (available) {
+                // Buổi khám vẫn còn chỗ, cho phép đặt lịch linh hoạt (lễ tân sắp xếp giờ khi tiếp đón)
+                select.appendChild(option('', 'Linh hoạt trong buổi khám (Lễ tân sắp xếp khi đến)'));
+                select.value = '';
+                select.disabled = false;
+                $('submitAppointment').disabled = false;
+                $('availabilityMessage').textContent = 'Buổi khám còn chỗ. Giờ khám chính xác sẽ được lễ tân điều phối linh hoạt khi tiếp đón.';
+                $('availabilityMessage').classList.remove('is-error');
+                $('availabilityMessage').classList.add('is-success');
+            } else {
+                select.appendChild(option('', 'Không còn giờ phù hợp'));
+                select.disabled = true;
+                $('submitAppointment').disabled = true;
+                $('availabilityMessage').textContent = 'Không còn giờ phù hợp. Hãy chọn buổi hoặc bác sĩ khác.';
+                $('availabilityMessage').classList.remove('is-success');
+                $('availabilityMessage').classList.add('is-error');
+            }
         }
         async function availability() {
             const token = ++sequence;
@@ -302,15 +344,29 @@
             await availability().catch(e => error(e.message));
         }
         let key = sessionStorage.getItem('ft06-booking-key');
-        if (!key) { key = crypto.randomUUID(); sessionStorage.setItem('ft06-booking-key', key); }
+        if (!key) {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                key = crypto.randomUUID();
+            } else {
+                key = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                    const r = Math.random() * 16 | 0;
+                    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                });
+            }
+            sessionStorage.setItem('ft06-booking-key', key);
+        }
         form.addEventListener('submit', async event => {
             event.preventDefault(); clearError();
             if (!form.reportValidity() || !available) return;
             const button = $('submitAppointment'); button.disabled = true;
             try {
-                const payload = {date: $('appointmentDate').value, session: $('preferredSession').value,
-                    expectedTime: $('slotTime').value,
-                    doctorId: $('doctorId').value ? Number($('doctorId').value) : null};
+                const rawTime = $('slotTime')?.value?.trim();
+                const payload = {
+                    date: $('appointmentDate').value,
+                    session: $('preferredSession').value,
+                    expectedTime: rawTime && rawTime.length >= 4 ? rawTime : null,
+                    doctorId: $('doctorId').value ? Number($('doctorId').value) : null
+                };
                 let saved;
                 if (editing) {
                     saved = await request(`/${id}/reschedule`, {method: 'PUT', body: JSON.stringify({...payload, reason: 'Bệnh nhân đổi lịch trực tuyến'})});

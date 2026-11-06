@@ -2,43 +2,138 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Màn hình Gọi số - Hàng chờ khám</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Màn hình Gọi số - Hàng chờ khám bệnh | CV-DCMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" th:href="@{/css/reception-queue-tv.css}">
 </head>
 <body th:attr="data-branch=${branchId}">
-<main>
-  <header>
-    <div>
-      <span>THÔNG TIN HÀNG CHỜ PHÒNG KHÁM</span>
-      <h1 id="branch" th:text="${board.branch}">Cơ sở Quận 1</h1>
+<div class="tv-container">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="tv-header">
+    <div class="tv-brand">
+      <div class="tv-logo-box">
+        <i class="bi bi-hospital fs-2"></i>
+      </div>
+      <div>
+        <span class="tv-brand-sub">HỆ THỐNG GỌI SỐ THỨ TỰ TỰ ĐỘNG · NHA KHOA CV-DCMS</span>
+        <h1 id="branch" class="tv-branch-name" th:text="${board.branch}">Cơ sở Quận 1</h1>
+      </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <button id="soundToggle" class="tv-sound-btn" type="button" title="Bật/Tắt âm thanh đọc số" aria-pressed="false">
-        <span id="soundIcon">🔈</span> <span id="soundText">Bật âm thanh</span>
+
+    <!-- Digital Clock -->
+    <div class="tv-clock-box">
+      <div id="tvClockTime" class="tv-clock-time">00:00:00</div>
+      <div id="tvClockDate" class="tv-clock-date">Đang cập nhật...</div>
+    </div>
+
+    <!-- Top Actions: Sound & Live status & Fullscreen -->
+    <div class="tv-header-actions">
+      <button id="soundToggle" class="tv-pill-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số" aria-pressed="false">
+        <span id="soundIcon" class="me-1">🔈</span>
+        <span id="soundText">Bật âm thanh</span>
       </button>
-      <div class="live-indicator"><i></i>Trực tiếp</div>
+
+      <button id="fullscreenToggle" class="tv-pill-btn tv-fullscreen-btn" type="button" title="Bật/thoát chế độ toàn màn hình">
+        <i class="bi bi-arrows-fullscreen me-1"></i><span>Toàn màn hình</span>
+      </button>
+
+      <div class="tv-live-badge">
+        <span class="live-dot"></span>
+        <span>TRỰC TIẾP</span>
+      </div>
     </div>
   </header>
-  <div class="tv-grid">
-    <section class="tv-panel tv-main">
-      <div class="tv-panel-title">ĐANG GỌI VÀO KHÁM</div>
-      <div id="called" class="called-list">
-        <div class="tv-empty">Chưa có số được gọi</div>
+
+  <!-- ================= 3-COLUMN MAIN GRID ================= -->
+  <main class="tv-grid">
+
+    <!-- CỘT 1: ĐANG GỌI VÀO KHÁM (LÀN CHÍNH - RỘNG NHẤT) -->
+    <section class="tv-panel tv-panel-calling">
+      <div class="tv-panel-header">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-megaphone-fill text-primary fs-4"></i>
+          <h2 class="tv-panel-title">ĐANG GỌI VÀO KHÁM</h2>
+        </div>
+        <span class="tv-badge tv-badge-calling animate-pulse"><i class="bi bi-broadcast me-1"></i>PHÁT LOA</span>
+      </div>
+
+      <div id="called" class="called-list" aria-live="assertive">
+        <div class="tv-empty-calling">
+          <i class="bi bi-bell-slash fs-1 d-block mb-2 opacity-50"></i>
+          <strong>Chưa có số được gọi</strong>
+          <span>Quý khách vui lòng chú ý lắng nghe loa và theo dõi màn hình khi đến lượt.</span>
+        </div>
       </div>
     </section>
-    <section class="tv-panel tv-side">
-      <div class="tv-panel-title">ĐANG CHỜ</div>
-      <strong id="waiting" class="waiting-count" th:text="${board.waiting}">0</strong>
-      <div class="tv-panel-title next-title">SỐ TIẾP THEO</div>
-      <div id="next" class="next-list" aria-live="polite">—</div>
+
+    <!-- CỘT 2: ĐANG CHỜ & SỐ TIẾP THEO -->
+    <section class="tv-panel tv-panel-waiting">
+      <div class="tv-subpanel-waiting mb-4">
+        <div class="tv-panel-header mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-hourglass-split text-warning fs-4"></i>
+            <h2 class="tv-panel-title">ĐANG CHỜ</h2>
+          </div>
+          <span class="badge-waiting-tag">Sảnh tiếp đón</span>
+        </div>
+        <div class="waiting-display">
+          <strong id="waiting" class="waiting-number" th:text="${board.waiting}">0</strong>
+          <span class="waiting-unit">bệnh nhân đang chờ</span>
+        </div>
+      </div>
+
+      <div class="tv-subpanel-next">
+        <div class="tv-panel-header mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-card-list text-info fs-4"></i>
+            <h2 class="tv-panel-title">SỐ TIẾP THEO (CHUẨN BỊ)</h2>
+          </div>
+        </div>
+        <div id="next" class="next-list" aria-live="polite">
+          <div class="text-muted text-center py-3">—</div>
+        </div>
+        <small class="text-muted d-block mt-2 text-center" style="font-size: 13px;">
+          <i class="bi bi-info-circle me-1"></i>Quý khách có số trên vui lòng chuẩn bị sẵn sàng
+        </small>
+      </div>
     </section>
-    <section class="tv-panel tv-serving">
-      <div class="tv-panel-title">ĐANG KHÁM TẠI GHẾ</div>
-      <div id="serving" class="serving-list">—</div>
+
+    <!-- CỘT 3: ĐANG KHÁM TẠI GHẾ -->
+    <section class="tv-panel tv-panel-serving">
+      <div class="tv-panel-header mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-heart-pulse-fill text-success fs-4"></i>
+          <h2 class="tv-panel-title">ĐANG KHÁM TẠI GHẾ</h2>
+        </div>
+        <span class="badge-serving-tag">Phòng khám</span>
+      </div>
+
+      <div id="serving" class="serving-list">
+        <div class="text-muted text-center py-4">—</div>
+      </div>
     </section>
-  </div>
-</main>
+
+  </main>
+
+  <!-- ================= BOTTOM NOTICE TICKER ================= -->
+  <footer class="tv-footer-ticker">
+    <div class="ticker-badge">
+      <i class="bi bi-volume-up-fill me-1"></i> THÔNG BÁO SẢNH
+    </div>
+    <div class="ticker-content">
+      <marquee behavior="scroll" direction="left" scrollamount="6">
+        Chào mừng Quý khách đến với Phòng khám Nha khoa CV-DCMS · Quý khách vui lòng giữ phiếu thứ tự, chú ý lắng nghe số gọi trên loa và theo dõi vị trí phòng/ghế nha hiển thị trên màn hình · Nếu cần hỗ trợ đổi lịch hoặc tư vấn, xin vui lòng liên hệ trực tiếp Bàn tiếp đón lễ tân · Chúc Quý khách một buổi thăm khám an tâm và thoải mái!
+      </marquee>
+    </div>
+  </footer>
+
+</div>
+
 <script th:src="@{/js/reception-queue-tv.js}" defer></script>
 </body>
 </html>

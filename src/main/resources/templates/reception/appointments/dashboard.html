@@ -11,6 +11,33 @@
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
 
+            <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
+            <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" aria-label="Quy trình tiếp đón">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
+                    <div class="d-flex align-items-center gap-2 small">
+                        <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
+                        <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 small">
+                        <span class="btn btn-sm btn-primary rounded-pill px-3 py-0.5 fw-bold shadow-sm" title="Bước 1: Quản lý lịch hẹn">
+                            <span class="badge bg-white text-primary rounded-circle me-1">1</span> Lịch hẹn
+                        </span>
+                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                        <a th:href="@{/reception/check-in}" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-0.5 text-decoration-none fw-semibold" title="Bước 2: Tiếp đón &amp; Check-in">
+                            <span class="badge bg-success text-white rounded-circle me-1">2</span> Tiếp đón &amp; Check-in
+                        </a>
+                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                        <a th:href="@{/reception/dispatch}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-0.5 text-decoration-none fw-semibold" title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
+                            <span class="badge bg-primary text-white rounded-circle me-1">3</span> Điều phối ghế nha
+                        </a>
+                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                        <a th:href="@{/reception/queue}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 text-decoration-none" title="Bước 4: Hàng chờ gọi số">
+                            <span class="badge bg-secondary rounded-circle me-1">4</span> Hàng chờ gọi số
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
             <!-- DENTALSOFT TOP TOOLBAR (DÒNG 1) -->
             <div class="dentalsoft-apt-toolbar mb-2">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
@@ -162,22 +189,25 @@
             </div>
 
             <!-- =========================================================
-                 MODAL 1: ĐỔI TRẠNG THÁI LỊCH HẸN (IMAGE 2 DENTALSOFT)
+                 MODAL 1: THAO TÁC NGHIỆP VỤ LỊCH HẸN (FT05)
                  ========================================================= -->
             <div class="modal fade" id="statusQuickChangeModal" tabindex="-1" aria-labelledby="statusModalTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
                     <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
                         <div class="modal-header modal-header-dentalsoft">
-                            <h6 class="modal-title fw-bold" id="statusModalTitle">Đổi trạng thái lịch hẹn</h6>
+                            <h6 class="modal-title fw-bold" id="statusModalTitle">Thao tác lịch hẹn</h6>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body p-4 bg-white">
                             <!-- Customer Info Summary -->
-                            <div class="mb-3 pb-2 border-bottom">
+                            <div class="mb-3 pb-3 border-bottom">
                                 <div class="row g-2 small">
-                                    <div class="col-12 d-flex">
-                                        <span class="text-muted" style="min-width: 90px;">Khách hàng:</span>
-                                        <strong class="text-dark" id="modalStatusPatientName">—</strong>
+                                    <div class="col-12 d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <span class="text-muted" style="min-width: 90px;">Khách hàng:</span>
+                                            <strong class="text-dark" id="modalStatusPatientName">—</strong>
+                                        </div>
+                                        <span class="badge" id="modalStatusBadge">—</span>
                                     </div>
                                     <div class="col-12 d-flex">
                                         <span class="text-muted" style="min-width: 90px;">Bác sĩ:</span>
@@ -190,67 +220,94 @@
                                 </div>
                             </div>
 
-                            <!-- 9 Status Radio Options in 3x3 Grid (Chuẩn như ảnh Image 2) -->
-                            <label class="form-label fw-bold text-dark small mb-2">Trạng thái:</label>
-                            <div class="status-radio-grid">
-                                <!-- Cột 1 -->
-                                <div class="d-flex flex-column gap-2.5">
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="PENDING" data-label="Tạm hẹn">
-                                        <span>Tạm hẹn</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="CHECKED_IN" data-label="Khách hàng đến">
-                                        <span>Khách hàng đến</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="PENDING" data-label="Hẹn lại sau">
-                                        <span>Hẹn lại sau</span>
-                                    </label>
+                            <!-- Contextual Business Action Panels -->
+                            <div id="statusActionsPending" class="status-action-panel" style="display: none;">
+                                <div class="alert alert-info py-2 px-3 small rounded-3 mb-3">
+                                    <i class="bi bi-hourglass-split me-1"></i>Lịch hẹn đang ở trạng thái <strong>Chờ xác nhận</strong>.
                                 </div>
-
-                                <!-- Cột 2 -->
-                                <div class="d-flex flex-column gap-2.5">
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="CONFIRMED" data-label="KH chưa đến">
-                                        <span>KH chưa đến</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="CHECKED_IN" data-label="Điều trị">
-                                        <span>Điều trị</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="CANCELLED" data-label="Hủy lịch hẹn">
-                                        <span>Hủy lịch hẹn</span>
-                                    </label>
-                                </div>
-
-                                <!-- Cột 3 -->
-                                <div class="d-flex flex-column gap-2.5">
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="NO_SHOW" data-label="KH không đến">
-                                        <span>KH không đến</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="COMPLETED" data-label="Đã xong">
-                                        <span>Đã xong</span>
-                                    </label>
-                                    <label class="status-radio-item">
-                                        <input type="radio" name="quickStatusOpt" value="PENDING" data-label="Đang chờ" checked>
-                                        <span>Đang chờ</span>
-                                    </label>
+                                <div class="d-flex flex-column gap-2">
+                                    <button type="button" class="btn btn-primary fw-semibold rounded-3 py-2 shadow-xs" id="btnActionConfirm">
+                                        <i class="bi bi-check2-circle me-1.5"></i>Xác nhận lịch hẹn
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger fw-semibold rounded-3 py-2" id="btnToggleCancelPanel">
+                                        <i class="bi bi-x-circle me-1.5"></i>Hủy lịch hẹn
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Ghi chú nội bộ -->
-                            <div class="mt-3">
-                                <label for="modalStatusNote" class="form-label small fw-semibold text-secondary mb-1">Ghi chú:</label>
-                                <textarea id="modalStatusNote" class="form-control rounded-3" rows="3" placeholder="Nhập ghi chú đổi trạng thái (nếu có)..."></textarea>
+                            <div id="statusActionsConfirmed" class="status-action-panel" style="display: none;">
+                                <div class="alert alert-success py-2 px-3 small rounded-3 mb-3">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Lịch hẹn đã <strong>Xác nhận</strong>. Bệnh nhân có thể tiến hành check-in khi có mặt.
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    <a href="#" id="btnActionCheckIn" class="btn btn-success fw-semibold rounded-3 py-2 shadow-xs text-white">
+                                        <i class="bi bi-person-check-fill me-1.5"></i>Tiếp đón &amp; Check-in ngay (FT07)
+                                    </a>
+                                    <div class="d-flex gap-2">
+                                        <a href="#" id="btnActionReschedule" class="btn btn-outline-primary fw-semibold rounded-3 py-2 flex-grow-1">
+                                            <i class="bi bi-arrow-repeat me-1.5"></i>Đổi lịch khám
+                                        </a>
+                                        <button type="button" class="btn btn-outline-warning fw-semibold rounded-3 py-2 flex-grow-1 text-dark" id="btnActionNoShow">
+                                            <i class="bi bi-person-dash me-1.5"></i>Khách không đến
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-danger fw-semibold rounded-3 py-1.5 mt-1" id="btnToggleCancelPanelConfirmed">
+                                        <i class="bi bi-x-circle me-1.5"></i>Hủy lịch hẹn
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="statusActionsCheckedIn" class="status-action-panel" style="display: none;">
+                                <div class="alert alert-primary py-2 px-3 small rounded-3 mb-3">
+                                    <i class="bi bi-info-circle-fill me-1"></i>Bệnh nhân <strong>đã được tiếp đón</strong> và đưa vào quy trình khám.
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    <a th:href="@{/reception/dispatch}" class="btn btn-primary fw-semibold rounded-3 py-2 shadow-xs">
+                                        <i class="bi bi-diagram-3 me-1.5"></i>Đến Bàn điều phối ghế nha (FT08)
+                                    </a>
+                                    <a th:href="@{/reception/queue}" class="btn btn-outline-primary fw-semibold rounded-3 py-2">
+                                        <i class="bi bi-clock-history me-1.5"></i>Đến Hàng chờ gọi số (FT10)
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div id="statusActionsCancelled" class="status-action-panel" style="display: none;">
+                                <div class="alert alert-secondary py-2 px-3 small rounded-3 mb-0">
+                                    <i class="bi bi-x-circle me-1"></i>Lịch hẹn đã <strong>Hủy</strong>. Không thể thực hiện thêm thao tác.
+                                </div>
+                            </div>
+
+                            <div id="statusActionsNoShow" class="status-action-panel" style="display: none;">
+                                <div class="alert alert-warning py-2 px-3 small rounded-3 mb-0">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Lịch hẹn đã ghi nhận <strong>Khách không đến</strong> và đưa vào danh sách cần liên hệ lại.
+                                </div>
+                            </div>
+
+                            <!-- Cancellation Reason Form (Revealed when clicking Cancel) -->
+                            <div id="cancelReasonSection" class="mt-3 p-3 bg-light rounded-3 border" style="display: none;">
+                                <h6 class="small fw-bold text-danger mb-2"><i class="bi bi-x-circle me-1"></i>Lý do hủy lịch hẹn</h6>
+                                <div class="mb-2">
+                                    <label for="modalCancelReasonCode" class="form-label small fw-semibold text-secondary mb-1">Lý do hủy <span class="text-danger">*</span></label>
+                                    <select id="modalCancelReasonCode" class="form-select form-select-sm rounded-3">
+                                        <option value="Bệnh nhân đổi kế hoạch">Bệnh nhân đổi kế hoạch</option>
+                                        <option value="Bệnh nhân không còn nhu cầu">Bệnh nhân không còn nhu cầu</option>
+                                        <option value="Trùng lịch">Trùng lịch</option>
+                                        <option value="Bác sĩ không khả dụng">Bác sĩ không khả dụng</option>
+                                        <option value="Khác">Khác</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2.5">
+                                    <label for="modalCancelReasonNote" class="form-label small fw-semibold text-secondary mb-1">Ghi chú chi tiết</label>
+                                    <textarea id="modalCancelReasonNote" class="form-control form-control-sm rounded-3" rows="2" placeholder="Ghi chú lý do hủy..."></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-sm btn-secondary px-3 rounded-3" id="btnCancelDismiss">Bỏ qua</button>
+                                    <button type="button" class="btn btn-sm btn-danger px-3 fw-semibold rounded-3" id="btnConfirmCancelAppointment">Xác nhận hủy lịch</button>
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-start gap-2">
-                            <button type="button" class="btn btn-primary px-4 fw-semibold rounded-3 shadow-xs" id="saveQuickStatusBtn" style="background-color: #2563eb; border-color: #2563eb;">Lưu</button>
-                            <button type="button" class="btn btn-secondary px-4 fw-medium rounded-3" data-bs-dismiss="modal" style="background-color: #64748b; border-color: #64748b;">Thoát</button>
+                        <div class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary px-4 fw-medium rounded-3" data-bs-dismiss="modal">Đóng</button>
                         </div>
                     </div>
                 </div>
@@ -297,7 +354,7 @@
                                             <div id="selectedPatientChip" class="alert alert-primary py-1.5 px-2.5 mt-2 mb-0 rounded-3 d-flex align-items-center justify-content-between small" style="display: none;">
                                                 <div>
                                                     <strong id="selectedPatientName">Nguyễn Văn A</strong>
-                                                    <span class="text-muted ms-1" id="selectedPatientCode">(DEMO0001)</span>
+                                                    <span class="text-muted ms-1" id="selectedPatientCode">(Mã BN)</span>
                                                 </div>
                                                 <button type="button" class="btn-close btn-close-sm" id="clearSelectedPatientBtn" aria-label="Bỏ chọn"></button>
                                             </div>
@@ -308,37 +365,82 @@
                                             <hr class="position-absolute w-100 top-50 start-0 m-0" style="z-index: 0; opacity: 0.15;">
                                         </div>
 
-                                        <!-- Họ tên khách hàng -->
-                                        <div class="mb-2.5">
-                                            <label for="modalPatientName" class="form-label small fw-semibold text-dark mb-1">HỌ TÊN KHÁCH HÀNG <span class="text-danger">*</span></label>
-                                            <input type="text" id="modalPatientName" class="form-control form-control-sm rounded-3" placeholder="Nguyễn Văn A" required>
-                                        </div>
+                                        <!-- Khối nhập khách mới (khi chưa chọn khách cũ) -->
+                                        <div id="newPatientFieldsContainer">
+                                            <!-- Họ tên khách hàng -->
+                                            <div class="mb-2.5">
+                                                <label for="modalPatientName" class="form-label small fw-semibold text-dark mb-1">HỌ TÊN KHÁCH HÀNG <span class="text-danger">*</span></label>
+                                                <input type="text" id="modalPatientName" class="form-control form-control-sm rounded-3" placeholder="Nguyễn Văn A">
+                                            </div>
 
-                                        <!-- Điện thoại -->
-                                        <div class="mb-2.5">
-                                            <label for="modalPatientPhone" class="form-label small fw-semibold text-secondary mb-1">ĐIỆN THOẠI</label>
-                                            <input type="tel" id="modalPatientPhone" class="form-control form-control-sm rounded-3" placeholder="0901234567">
-                                        </div>
+                                            <div class="row g-2 mb-2.5">
+                                                <div class="col-6">
+                                                    <label for="modalPatientDob" class="form-label small fw-semibold text-dark mb-1">NGÀY SINH <span class="text-danger">*</span></label>
+                                                    <input type="date" id="modalPatientDob" class="form-control form-control-sm rounded-3">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="modalPatientGender" class="form-label small fw-semibold text-dark mb-1">GIỚI TÍNH <span class="text-danger">*</span></label>
+                                                    <select id="modalPatientGender" class="form-select form-select-sm rounded-3">
+                                                        <option value="">-- Chọn --</option>
+                                                        <option value="Nam">Nam</option>
+                                                        <option value="Nữ">Nữ</option>
+                                                        <option value="Khác">Khác</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                                        <!-- Địa chỉ -->
-                                        <div class="mb-2.5">
-                                            <label for="modalPatientAddress" class="form-label small fw-semibold text-secondary mb-1">ĐỊA CHỈ</label>
-                                            <input type="text" id="modalPatientAddress" class="form-control form-control-sm rounded-3" placeholder="Số nhà, đường, phường...">
-                                        </div>
+                                            <!-- Điện thoại -->
+                                            <div class="mb-2.5">
+                                                <label for="modalPatientPhone" class="form-label small fw-semibold text-dark mb-1">ĐIỆN THOẠI <span class="text-danger">*</span></label>
+                                                <input type="tel" id="modalPatientPhone" class="form-control form-control-sm rounded-3" placeholder="0901234567" pattern="^0\d{9,10}$">
+                                                <small class="text-muted" style="font-size: 11px;">Số điện thoại 10-11 chữ số bắt đầu bằng 0</small>
+                                            </div>
 
-                                        <!-- Nguồn khách -->
-                                        <div>
-                                            <label for="modalCustomerSource" class="form-label small fw-semibold text-secondary mb-1">NGUỒN KHÁCH</label>
-                                            <select id="modalCustomerSource" class="form-select form-select-sm rounded-3">
-                                                <option value="">-- Chọn --</option>
-                                                <option value="Google">Google</option>
-                                                <option value="Facebook">Facebook</option>
-                                                <option value="Giới thiệu">Giới thiệu</option>
-                                                <option value="Vãng lai">Vãng lai</option>
-                                                <option value="Hotline">Hotline</option>
-                                                <option value="TikTok">TikTok</option>
-                                                <option value="Zalo">Zalo</option>
-                                            </select>
+                                            <!-- Khối người giám hộ cho bệnh nhân < 18 tuổi (BR-PAT-09) -->
+                                            <div id="modalGuardianContainer" class="p-2.5 bg-light rounded-3 border mb-2.5" style="display: none;">
+                                                <div class="small fw-bold text-primary mb-1.5"><i class="bi bi-shield-check me-1"></i>Người giám hộ (bắt buộc với BN &lt; 18 tuổi)</div>
+                                                <div class="mb-2">
+                                                    <label for="modalGuardianName" class="form-label small text-secondary mb-0.5">Họ tên người giám hộ</label>
+                                                    <input type="text" id="modalGuardianName" class="form-control form-control-sm rounded-2" placeholder="Nguyễn Văn B">
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-7">
+                                                        <label for="modalGuardianPhone" class="form-label small text-secondary mb-0.5">SĐT người giám hộ</label>
+                                                        <input type="tel" id="modalGuardianPhone" class="form-control form-control-sm rounded-2" placeholder="0912345678">
+                                                    </div>
+                                                    <div class="col-5">
+                                                        <label for="modalGuardianRelationship" class="form-label small text-secondary mb-0.5">Quan hệ</label>
+                                                        <input type="text" id="modalGuardianRelationship" class="form-control form-control-sm rounded-2" placeholder="Bố/Mẹ">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Địa chỉ -->
+                                            <div class="mb-2.5">
+                                                <label for="modalPatientAddress" class="form-label small fw-semibold text-secondary mb-1">ĐỊA CHỈ</label>
+                                                <input type="text" id="modalPatientAddress" class="form-control form-control-sm rounded-3" placeholder="Số nhà, đường, phường...">
+                                            </div>
+
+                                            <!-- Nguồn khách -->
+                                            <div class="mb-2.5">
+                                                <label for="modalCustomerSource" class="form-label small fw-semibold text-secondary mb-1">NGUỒN KHÁCH</label>
+                                                <select id="modalCustomerSource" class="form-select form-select-sm rounded-3">
+                                                    <option value="">-- Chọn --</option>
+                                                    <option value="Google">Google</option>
+                                                    <option value="Facebook">Facebook</option>
+                                                    <option value="Giới thiệu">Giới thiệu</option>
+                                                    <option value="Vãng lai">Vãng lai</option>
+                                                    <option value="Hotline">Hotline</option>
+                                                    <option value="TikTok">TikTok</option>
+                                                    <option value="Zalo">Zalo</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="mt-2 text-end">
+                                                <a th:href="@{/reception/patients/new(returnUrl='/reception/appointments')}" class="small text-primary text-decoration-none">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i> Mở trang tạo hồ sơ chi tiết đầy đủ
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
 
