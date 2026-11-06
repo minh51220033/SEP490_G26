@@ -217,7 +217,7 @@ public class UserController {
     @GetMapping("/home")
     public String home(@RequestParam(value = "view", required = false) String view, HttpSession session, Model model) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
-            return populateCustomerPortalHome(model);
+            return "redirect:/login";
         }
 
         // 1. Kiểm tra người dùng đã đăng nhập chưa
