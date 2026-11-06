@@ -135,6 +135,27 @@ class AppointmentPolicyServiceTest {
         assertEquals("Chi nhánh không hoạt động.", exception.getReason());
     }
 
+    @Test
+    void noScheduledDoctorDoesNotFallbackToAssignedOrOtherBranchDoctors() {
+        when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of());
+        var result = policy.availability(branch, date, PreferredSession.MORNING, null, AppointmentActorType.PATIENT);
+        assertFalse(result.available());
+        assertTrue(result.doctors().isEmpty());
+        assertThrows(ResponseStatusException.class, () -> policy.ensureBookable(branch, patient, date,
+                PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
+    }
+
+    @Test
+    void scheduleForDoctorNotAssignedToBranchIsExcluded() {
+        StaffProfile other = new StaffProfile(); other.setStaffId(99L); other.setStatus(StaffStatus.ACTIVE);
+        WorkShift shift = new WorkShift(); shift.setShiftId(55L); shift.setIsActive(true);
+        shift.setStartTime(LocalTime.of(8, 0)); shift.setEndTime(LocalTime.NOON);
+        StaffSchedule schedule = new StaffSchedule(); schedule.setStaff(other); schedule.setShift(shift);
+        when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(schedule));
+        assertTrue(policy.availability(branch, date, PreferredSession.MORNING, null,
+                AppointmentActorType.PATIENT).doctors().isEmpty());
+    }
+
     private Appointment appointment(Long id, StaffProfile assignedDoctor) {
         Appointment appointment = new Appointment();
         appointment.setAppointmentId(id); appointment.setPatientProfile(patient); appointment.setBranch(branch);

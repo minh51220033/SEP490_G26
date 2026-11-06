@@ -1,77 +1,174 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></head>
+<head th:replace="~{fragments/head :: head(${sidebarMenu == 'doctor-records' ? 'Quản Lý Khách Hàng' : 'Hồ sơ bệnh nhân'})}"></head>
 <body class="app-body">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></header>
+        <header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Khách Hàng' : 'Hồ sơ bệnh nhân'})}"></header>
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
-            <div class="patient-page-heading">
-                <div><h1 th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'}">Hồ sơ bệnh nhân</h1></div>
-                <a th:if="${canManageAdministrative}" class="btn btn-primary"
-                   th:href="${recordBasePath + '/new'}"><i class="bi bi-plus-lg"></i> Thêm bệnh nhân</a>
-            </div>
-            <section class="panel patient-list-panel" data-record-list>
-                <div class="patient-list-toolbar"><strong data-list-count th:text="|${patients.totalElements} hồ sơ bệnh nhân|">Danh sách hồ sơ</strong><span>Chọn hồ sơ để xem lịch sử khám và bệnh án</span></div>
-                <form class="patient-filter" method="get" th:action="${recordBasePath}" data-live-search>
-                    <div class="patient-filter-search"><label for="query">Tìm bệnh nhân</label><input id="query" class="form-control" name="query" th:value="${query}" placeholder="Họ tên, mã bệnh nhân hoặc số điện thoại"></div>
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
-                    <a class="btn btn-outline-secondary" th:href="${recordBasePath}">Xóa lọc</a>
-                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#patientAdvancedFilters" aria-expanded="false" aria-controls="patientAdvancedFilters"><i class="bi bi-sliders"></i> Lọc nâng cao</button>
-                    <div class="collapse patient-filter-advanced" id="patientAdvancedFilters" th:classappend="${dob != null or status != null and !status.isBlank() or branchId != null} ? ' show' : ''">
-                    <div><label for="dob">Ngày sinh</label><input id="dob" class="form-control" type="date" name="dob" th:value="${dob}"></div>
-                    <div th:if="${#lists.size(branches) > 1}"><label for="branchId">Chi nhánh</label><select id="branchId" class="form-select" name="branchId"><option value="">Tất cả</option><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}">Chi nhánh</option></select></div>
-                    <div><label for="status">Trạng thái</label><select id="status" class="form-select" name="status"><option value="">Tất cả</option><option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hoạt động</option><option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option></select></div>
+
+            <!-- DENTALSOFT TOP TOOLBAR (CHUẨN THEO ẢNH MẪU) -->
+            <section class="panel mb-3 p-0 border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+                <form id="patientFilterForm" method="get" th:action="${recordBasePath}" class="dentalsoft-patient-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2.5">
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                        <!-- Search Box -->
+                        <div class="position-relative" style="min-width: 280px; max-width: 360px;">
+                            <i class="bi bi-search position-absolute text-muted" style="left: 12px; top: 9px; font-size: 13px;"></i>
+                            <input id="query" class="form-control form-control-sm ps-4 rounded-3" name="query" th:value="${query}" placeholder="Tìm tên, SĐT, mã số...">
+                        </div>
+
+                        <!-- Date Filter -->
+                        <div style="width: 150px;">
+                            <input id="dob" class="form-control form-control-sm rounded-3" type="date" name="dob" th:value="${dob}" title="Lọc theo ngày sinh">
+                        </div>
+
+                        <!-- Filter Toggle Button -->
+                        <button class="btn btn-sm btn-outline-secondary rounded-3 px-2.5 py-1" type="button" data-bs-toggle="collapse" data-bs-target="#patientAdvancedFilters" aria-expanded="false">
+                            <i class="bi bi-funnel me-1"></i> Bộ lọc
+                        </button>
+
+                        <!-- Counter Pill -->
+                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-3 fw-normal" style="font-size: 12.5px;">
+                            <i class="bi bi-eye me-1"></i> Hiển thị <span th:text="${patients.numberOfElements}">12</span>/<span th:text="${patients.totalElements}">28</span>
+                        </span>
+                    </div>
+
+                    <!-- Right Side: Add Patient Button & Branch Selector (Chuẩn DentalSoft) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:if="${canManageAdministrative}" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold shadow-sm d-flex align-items-center gap-1.5" th:href="${recordBasePath + '/new'}" style="background-color: #1e40af; border-color: #1e40af;">
+                            <i class="bi bi-plus-lg"></i> Thêm bệnh nhân
+                        </a>
+                        <div th:if="${branches != null and #lists.size(branches) > 0}" style="min-width: 120px;">
+                            <select id="branchId" class="form-select form-select-sm rounded-3 fw-medium text-dark" name="branchId" onchange="document.getElementById('patientFilterForm').submit()">
+                                <option value="">Tất cả</option>
+                                <option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}"></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Advanced Filters -->
+                    <div class="collapse w-100 mt-2 pt-2 border-top" id="patientAdvancedFilters" th:classappend="${status != null and !status.isBlank()} ? ' show' : ''">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div style="min-width: 170px;">
+                                <label for="status" class="small text-muted mb-1 d-block">Trạng thái</label>
+                                <select id="status" class="form-select form-select-sm" name="status">
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang hoạt động</option>
+                                    <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option>
+                                </select>
+                            </div>
+                            <div class="align-self-end">
+                                <button class="btn btn-sm btn-primary px-3" type="submit">Áp dụng</button>
+                                <a class="btn btn-sm btn-light border text-muted ms-1" th:href="${recordBasePath}">Đặt lại</a>
+                            </div>
+                        </div>
                     </div>
                 </form>
-                <div class="patient-active-filters" data-filter-chips th:if="${query != null and !query.isBlank() or dob != null or status != null and !status.isBlank() or branchId != null}"><span>Đang lọc:</span><strong th:if="${query != null and !query.isBlank()}" th:text="|Từ khóa: ${query}|">Từ khóa</strong><strong th:if="${dob != null}" th:text="|Ngày sinh: ${#temporals.format(dob, 'dd/MM/yyyy')}|">Ngày sinh</strong><strong th:if="${status != null and !status.isBlank()}" th:text="${@emrViewText.label(status)}">Trạng thái</strong><strong th:if="${branchId != null}">Chi nhánh đã chọn</strong></div>
-                <div data-list-results>
-                <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-                    <thead><tr><th>Bệnh nhân</th><th>Ngày sinh</th><th>Liên hệ</th><th>Chi nhánh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-                    <tbody>
-                    <tr th:each="patient : ${patients.content}">
-                        <td class="patient-name-cell">
-                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                <strong th:text="${patient.fullName}">Họ tên</strong>
-                                <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}"
-                                      class="badge bg-danger-subtle text-danger border border-danger-subtle"
-                                      style="font-size: 0.72rem; cursor: help;"
-                                      th:title="${'Cảnh báo dị ứng: ' + patient.allergyDetails}">
-                                    <i class="bi bi-shield-fill-exclamation me-0.5"></i><span th:text="${'Dị ứng: ' + (#strings.length(patient.allergyDetails) > 25 ? #strings.substring(patient.allergyDetails, 0, 22) + '…' : patient.allergyDetails)}">Dị ứng</span>
-                                </span>
-                                <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}"
-                                      class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"
-                                      style="font-size: 0.72rem; cursor: help;"
-                                      th:title="${'Bệnh nền cần lưu ý: ' + patient.underlyingDiseaseDetails}">
-                                    <i class="bi bi-heart-pulse-fill me-0.5"></i><span th:text="${'Bệnh nền: ' + (#strings.length(patient.underlyingDiseaseDetails) > 25 ? #strings.substring(patient.underlyingDiseaseDetails, 0, 22) + '…' : patient.underlyingDiseaseDetails)}">Bệnh nền</span>
-                                </span>
-                            </div>
-                            <small th:text="${patient.code}">BN001</small>
-                        </td>
-                        <td th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : '—'}">—</td>
-                        <td th:text="${patient.phoneNumber ?: 'Chưa cập nhật'}">—</td><td th:text="${patient.branchName}">—</td>
-                        <td><span class="badge" th:classappend="${patient.status == 'ACTIVE'} ? 'bg-success' : 'bg-secondary'" th:text="${patient.status == 'ACTIVE'} ? 'Đang hoạt động' : 'Ngừng hoạt động'">—</span></td>
-                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="${recordBasePath + '/' + patient.id}">Xem hồ sơ</a></td>
-                    </tr>
-                    <tr th:if="${patients.empty}"><td colspan="6" class="text-center text-muted py-5">Không tìm thấy hồ sơ phù hợp. Hãy đổi hoặc xóa bộ lọc.</td></tr>
-                    </tbody>
-                </table></div>
-                <div class="patient-pagination" th:if="${patients.totalPages > 1}">
-                    <span th:text="|Trang ${patients.number + 1} / ${patients.totalPages}|">Trang 1</span>
-                    <div class="btn-group">
-                        <a class="btn btn-outline-secondary" th:if="${patients.hasPrevious()}" th:href="@{${recordBasePath}(page=${patients.number - 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Trước</a>
-                        <a class="btn btn-outline-secondary" th:if="${patients.hasNext()}" th:href="@{${recordBasePath}(page=${patients.number + 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Sau</a>
-                    </div>
+
+                <!-- DENTALSOFT PATIENT DATA TABLE (BẢNG THẲNG THEO CỘT NHƯ ẢNH) -->
+                <div class="table-responsive">
+                    <table class="dentalsoft-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 45px;">TT</th>
+                                <th style="width: 90px;">GIỜ ĐẾN</th>
+                                <th style="min-width: 220px;">HỌ VÀ TÊN</th>
+                                <th style="width: 110px;">MÃ SỐ</th>
+                                <th class="text-center" style="width: 50px;">G.T</th>
+                                <th class="text-center" style="width: 85px;">NĂM SINH</th>
+                                <th style="width: 125px;">ĐIỆN THOẠI</th>
+                                <th class="text-center" style="width: 120px;">THANH TOÁN</th>
+                                <th style="width: 130px;">NGUỒN</th>
+                                <th class="text-center" style="width: 85px;">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="patient, stat : ${patients.content}">
+                                <!-- 1. TT -->
+                                <td class="text-center text-muted" th:text="${stat.count}">1</td>
+
+                                <!-- 2. GIỜ ĐẾN -->
+                                <td class="text-muted small">—</td>
+
+                                <!-- 3. HỌ VÀ TÊN (BỎ CẢNH BÁO/GHI CHÚ CẠNH TÊN, TÊN ĐẬM + ĐỊA CHỈ NHỎ) -->
+                                <td>
+                                    <a th:href="${recordBasePath + '/' + patient.id}" class="fw-bold text-dark text-decoration-none d-block text-truncate" style="max-width: 240px; font-size: 14px;" th:text="${patient.fullName}">Vũ Phương Anh</a>
+                                    <div class="text-muted small text-truncate" style="max-width: 250px; font-size: 12px;" th:text="${patient.address != null and !patient.address.isBlank() ? patient.address : 'Chưa cập nhật địa chỉ'}">Số 15 đường Demo, Quận 6...</div>
+                                </td>
+
+                                <!-- 4. MÃ SỐ -->
+                                <td>
+                                    <span class="patient-code-badge" th:text="${patient.code}">DEMO0006</span>
+                                </td>
+
+                                <!-- 5. G.T -->
+                                <td class="text-center">
+                                    <span th:if="${patient.gender == 'Nữ' or patient.gender == 'Female'}" class="gender-pill female" title="Nữ">N</span>
+                                    <span th:unless="${patient.gender == 'Nữ' or patient.gender == 'Female'}" class="gender-pill male" title="Nam">M</span>
+                                </td>
+
+                                <!-- 6. NĂM SINH -->
+                                <td class="text-center text-dark fw-medium" th:text="${patient.dob != null ? patient.dob.year : '—'}">1985</td>
+
+                                <!-- 7. ĐIỆN THOẠI -->
+                                <td>
+                                    <a th:if="${patient.phoneNumber != null}" th:href="${'tel:' + patient.phoneNumber}" class="text-decoration-none fw-medium" style="color: #0284c7;" th:text="${patient.phoneNumber}">0910000685</a>
+                                    <span th:unless="${patient.phoneNumber != null}" class="text-muted">—</span>
+                                </td>
+
+                                <!-- 8. THANH TOÁN -->
+                                <td class="text-center">
+                                    <span th:if="${patient.paymentStatus == 'Chưa TT hết'}" class="badge-payment warning">Chưa TT hết</span>
+                                    <span th:elseif="${patient.paymentStatus == 'Đã TT hết'}" class="badge-payment success">Đã TT hết</span>
+                                    <span th:else class="badge-payment none">Chưa có DV</span>
+                                </td>
+
+                                <!-- 9. NGUỒN -->
+                                <td>
+                                    <span th:if="${patient.customerSourceDisplay == 'Google'}" class="source-tag text-danger"><i class="bi bi-google"></i> Google</span>
+                                    <span th:elseif="${patient.customerSourceDisplay == 'Facebook'}" class="source-tag text-primary"><i class="bi bi-facebook"></i> Facebook</span>
+                                    <span th:elseif="${patient.customerSourceDisplay == 'Giới thiệu'}" class="source-tag" style="color: #7c3aed;"><i class="bi bi-person-heart"></i> Giới thiệu</span>
+                                    <span th:else class="source-tag text-secondary"><i class="bi bi-person"></i> Vãng lai</span>
+                                </td>
+
+                                <!-- 10. THAO TÁC -->
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <a th:if="${canManageAdministrative}" th:href="${recordBasePath + '/' + patient.id + '/edit'}" class="btn-action-icon" title="Chỉnh sửa hồ sơ">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a th:href="${recordBasePath + '/' + patient.id}" class="btn-action-icon text-secondary" title="Xem chi tiết / Bệnh án">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${patients.empty}">
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <i class="bi bi-people display-6 d-block mb-2 text-secondary opacity-50"></i>
+                                    Không tìm thấy hồ sơ khách hàng phù hợp.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+
+                <!-- PAGINATION -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center px-3 py-2.5 border-top bg-light" th:if="${patients.totalPages > 1}">
+                    <span class="small text-muted" th:text="|Trang ${patients.number + 1} / ${patients.totalPages} · Tổng ${patients.totalElements} hồ sơ|">Trang 1</span>
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-secondary" th:if="${patients.hasPrevious()}" th:href="@{${recordBasePath}(page=${patients.number - 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">← Trang trước</a>
+                        <a class="btn btn-outline-secondary" th:if="${patients.hasNext()}" th:href="@{${recordBasePath}(page=${patients.number + 1},query=${query},dob=${dob},status=${status},branchId=${branchId})}">Trang sau →</a>
+                    </div>
                 </div>
             </section>
         </main>
+        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/record-list-search.js}"></script>
 </body>
 </html>

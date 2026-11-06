@@ -80,6 +80,53 @@ public class PortalPatientService {
                                 PortalProfileView.from(profile, Boolean.TRUE.equals(profile.getIsDefault())));
                     }
                 });
+
+        // 1. Tự động liên kết nếu tìm thấy hồ sơ có cùng số điện thoại và chưa thuộc tài khoản nào
+        if (owned.isEmpty() && user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
+            for (PatientProfile p : profiles.findByPhoneNumber(user.getPhoneNumber())) {
+                if (p.getUser() == null && links.findByProfile_ProfileId(p.getProfileId()).isEmpty()) {
+                    p.setUser(user);
+                    if (owned.isEmpty()) p.setIsDefault(true);
+                    profiles.save(p);
+                    AccountPatientProfile link = new AccountPatientProfile();
+                    link.setAccount(user);
+                    link.setProfile(p);
+                    link.setAccessType(Boolean.TRUE.equals(p.getIsDefault())
+                            ? AccountPatientProfile.AccessType.SELF
+                            : AccountPatientProfile.AccessType.DEPENDENT);
+                    links.save(link);
+                    owned.putIfAbsent(p.getProfileId(),
+                            PortalProfileView.from(p, Boolean.TRUE.equals(p.getIsDefault())));
+                }
+            }
+        }
+
+        // 2. Nếu tài khoản bệnh nhân vẫn chưa có bất kỳ hồ sơ nào, tự động khởi tạo hồ sơ cá nhân ban đầu
+        if (owned.isEmpty()) {
+            Branch defaultBranch = branches.findByIsActiveTrueOrderByBranchNameAsc().stream().findFirst().orElse(null);
+            if (defaultBranch != null) {
+                PatientProfile starter = new PatientProfile();
+                starter.setUser(user);
+                starter.setPatientCode("BN" + String.format("%06d", user.getUserId()));
+                starter.setFullName(user.getUsername() != null ? user.getUsername() : "Bệnh nhân");
+                starter.setPhoneNumber(user.getPhoneNumber() != null ? user.getPhoneNumber() : "0900000000");
+                starter.setDob(LocalDate.of(2000, 1, 1));
+                starter.setGender("Khác");
+                starter.setAddress("Chưa cập nhật địa chỉ");
+                starter.setPreferredBranch(defaultBranch);
+                starter.setIsDefault(true);
+                starter.setStatus("ACTIVE");
+                starter = profiles.save(starter);
+
+                AccountPatientProfile link = new AccountPatientProfile();
+                link.setAccount(user);
+                link.setProfile(starter);
+                link.setAccessType(AccountPatientProfile.AccessType.SELF);
+                links.save(link);
+                owned.put(starter.getProfileId(), PortalProfileView.from(starter, true));
+            }
+        }
+
         return List.copyOf(owned.values());
     }
 

@@ -4,6 +4,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentPolicyService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,16 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     private final StaffBranchAssignmentRepository assignments;
     private final StaffScheduleRepository schedules;
     private final LeaveRequestRepository leaves;
+    private final StaffProfileRepository staffProfiles;
     private final int defaultBranchCapacity;
     private final int defaultDoctorCapacity;
 
+    @Autowired
     public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
             AppointmentSessionWindowRepository windows, AppointmentSessionPolicyRepository policies,
             StaffBranchAssignmentRepository assignments, StaffScheduleRepository schedules,
             LeaveRequestRepository leaves,
+            StaffProfileRepository staffProfiles,
             @Value("${appointments.branch-capacity:24}") int defaultBranchCapacity,
             @Value("${appointments.doctor-capacity:10}") int defaultDoctorCapacity) {
         this.appointments = appointments;
@@ -39,8 +43,19 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         this.assignments = assignments;
         this.schedules = schedules;
         this.leaves = leaves;
+        this.staffProfiles = staffProfiles;
         this.defaultBranchCapacity = defaultBranchCapacity;
         this.defaultDoctorCapacity = defaultDoctorCapacity;
+    }
+
+    public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
+            AppointmentSessionWindowRepository windows, AppointmentSessionPolicyRepository policies,
+            StaffBranchAssignmentRepository assignments, StaffScheduleRepository schedules,
+            LeaveRequestRepository leaves,
+            int defaultBranchCapacity,
+            int defaultDoctorCapacity) {
+        this(appointments, windows, policies, assignments, schedules, leaves, null,
+                defaultBranchCapacity, defaultDoctorCapacity);
     }
 
     @Override
@@ -51,16 +66,16 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
+        int doctorCap = doctorCapacity(policy);
+        int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCap);
         int remaining = Math.max(0, capacity - booked.size());
         List<DoctorOption> options = doctors.stream().map(doctor -> {
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
                     && doctor.getStaffId().equals(a.getDoctor().getStaffId())).count();
             return new DoctorOption(doctor.getStaffId(), doctor.getFullName(), doctor.getSpecialty(),
-                    Math.max(0, doctorCapacity(policy) - (int) doctorBooked));
+                    Math.max(0, doctorCap - (int) doctorBooked));
         }).filter(option -> option.remaining() > 0).toList();
-        String reason = doctors.isEmpty() ? "Chưa có bác sĩ trực buổi này."
-                : remaining == 0 ? "Buổi khám đã đầy." : null;
+        String reason = doctors.isEmpty() ? "Chưa có bác sĩ trực buổi này." : remaining == 0 ? "Buổi khám đã đầy." : null;
         return new Availability(remaining > 0, reason, remaining, options);
     }
 
@@ -267,6 +282,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                             || leave.getShift().getShiftId().equals(shift.getShiftId())));
             if (!absent) result.put(doctor.getStaffId(), doctor);
         }
+
         return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
     }
 

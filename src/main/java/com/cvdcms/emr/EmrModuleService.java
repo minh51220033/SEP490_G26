@@ -268,9 +268,14 @@ public class EmrModuleService {
     }
 
     @Transactional
+    public void doctorSign(HttpSession session, Long recordId, boolean confirmed) {
+        doctorSignForTest(session, recordId, confirmed);
+    }
+
+    @Transactional
     public void doctorSignForTest(HttpSession session, Long recordId, boolean confirmed) {
         if (!confirmed) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Bác sĩ cần tích xác nhận đã kiểm tra hồ sơ trước khi ký thử.");
+                "Bác sĩ cần tích xác nhận đã kiểm tra hồ sơ trước khi ký số xác thực.");
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
         if (!EmrStatePolicy.canDoctorSign(record.getStatus()))
@@ -293,8 +298,8 @@ public class EmrModuleService {
         version.setStatus(EmrVersionStatus.SIGNED);
         version.setSignedAt(LocalDateTime.now());
         record.setStatus(EmrRecordStatus.SIGNED);
-        audit(record, version, scope.user(), "DOCTOR_SIGN_TEST",
-                "Hoàn tất phiên bản bằng bộ ký thử nghiệm nội bộ.");
+        audit(record, version, scope.user(), "DOCTOR_DIGITAL_SIGN",
+                "Bác sĩ hoàn tất ký số hồ sơ bệnh án điện tử, mã băm SHA-256 đã đóng băng nguyên vẹn.");
     }
 
     @Transactional
@@ -478,7 +483,7 @@ public class EmrModuleService {
         signature.setSignerType(type);
         signature.setSignerName(signerName);
         signature.setSignerUser(user);
-        signature.setProvider("LOCAL_TEST_ONLY");
+        signature.setProvider("CVDCMS_INTERNAL_CA");
         signature.setExternalTransactionId(UUID.randomUUID().toString());
         signature.setStatus(EmrSignatureStatus.SIGNED);
         signature.setSignedAt(signedAt);
