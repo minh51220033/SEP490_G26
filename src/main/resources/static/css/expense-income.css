@@ -190,13 +190,84 @@
 }
 
 .expense-income-page .fin-btn-primary {
-    background-color: #2563eb;
+    background-color: #1a2f6e;
     color: #ffffff;
+    border-color: #1a2f6e;
 }
 
 .expense-income-page .fin-btn-primary:hover {
-    background-color: #1d4ed8;
+    background-color: #2b4fb3;
     color: #ffffff;
+    border-color: #2b4fb3;
+}
+
+.expense-income-page .fin-btn-primary:active,
+.expense-income-page .fin-btn-primary:focus {
+    background-color: #15265b;
+    border-color: #15265b;
+    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25);
+}
+
+.expense-income-page .fin-btn-primary:disabled {
+    background-color: #1a2f6e;
+    border-color: #1a2f6e;
+    opacity: 0.65;
+}
+
+.expense-income-page .btn-primary {
+    background-color: #1a2f6e !important;
+    border-color: #1a2f6e !important;
+    color: #ffffff !important;
+}
+
+.expense-income-page .btn-primary:hover {
+    background-color: #2b4fb3 !important;
+    border-color: #2b4fb3 !important;
+    color: #ffffff !important;
+}
+
+.expense-income-page .btn-primary:active,
+.expense-income-page .btn-primary:focus {
+    background-color: #15265b !important;
+    border-color: #15265b !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+}
+
+.expense-income-page .btn-primary:disabled,
+.expense-income-page .btn-primary.disabled {
+    background-color: #1a2f6e !important;
+    border-color: #1a2f6e !important;
+    color: #ffffff !important;
+    opacity: 0.65 !important;
+}
+
+.expense-income-page .btn-outline-primary {
+    color: #1a2f6e !important;
+    border-color: #1a2f6e !important;
+    background-color: transparent !important;
+}
+
+.expense-income-page .btn-outline-primary:hover {
+    background-color: #1a2f6e !important;
+    border-color: #1a2f6e !important;
+    color: #ffffff !important;
+}
+
+.expense-income-page .btn-outline-primary:active,
+.expense-income-page .btn-outline-primary:focus {
+    background-color: #15265b !important;
+    border-color: #15265b !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+}
+
+.expense-income-page .btn-outline-primary:disabled,
+.expense-income-page .btn-outline-primary.disabled {
+    color: #1a2f6e !important;
+    border-color: #1a2f6e !important;
+    background-color: transparent !important;
+    opacity: 0.65 !important;
 }
 
 .expense-income-page .fin-btn-outline {

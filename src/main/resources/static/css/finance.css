@@ -1077,14 +1077,14 @@
 
 /* 1. Nút Xem chi tiết */
 .fin-table-btn-view {
-    color: #2563eb;
-    background: #eff6ff;
-    border-color: #dbeafe;
+    color: var(--fin-brand, #1a2f6e);
+    background: #f0f4ff;
+    border-color: #d0dbf5;
 }
 .fin-table-btn-view:hover {
     color: #ffffff;
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--fin-brand, #1a2f6e);
+    border-color: var(--fin-brand, #1a2f6e);
 }
 
 /* 2. Nút In hóa đơn / phiếu thu */
@@ -1110,4 +1110,369 @@
     color: #ffffff;
     background: #059669;
     border-color: #059669;
+}
+
+/* ============================================================================
+   Synchronized Brand Dark Navy Button Theme (FT19-22, FT24-25, FT29-30, FT32)
+   Matches "Lọc dữ liệu" dark navy brand color (#1a2f6e / var(--fin-brand))
+   ============================================================================ */
+.fin-brand-theme .btn-primary,
+.fin-brand-theme .fin-btn-primary,
+#tierModal .btn-primary,
+#tierModal .fin-btn-primary,
+#issueModal .btn-primary,
+#issueModal .fin-btn-primary,
+#exportExcelModal .btn-primary,
+#expenseDetailModal .btn-primary,
+#cancelExpenseModal .btn-primary,
+#modalChoiceExternal .btn-primary,
+#paymentAllocationModal .btn-primary,
+#quickPayModal .btn-primary,
+#depositModal .btn-primary,
+#dashboardRefundModal .btn-primary,
+#refundModal .btn-primary,
+#createAdvanceModal .btn-primary,
+#payAdvanceModal .btn-primary,
+#rejectAdvanceModal .btn-primary,
+#createPolicyModal .btn-primary,
+#editItemModal .btn-primary,
+#rejectModal .btn-primary,
+#pitDetailModal .btn-primary,
+#payModal .btn-primary,
+#createPeriodModal .btn-primary,
+#createDistributionModal .btn-primary,
+#payDistModal .btn-primary,
+[id^="visitSelectModal_"] .btn-primary,
+[id^="invoiceSelectModal_"] .btn-primary {
+    background-color: var(--fin-brand, #1a2f6e) !important;
+    border-color: var(--fin-brand, #1a2f6e) !important;
+    color: #ffffff !important;
+}
+
+.fin-brand-theme .btn-primary:hover,
+.fin-brand-theme .fin-btn-primary:hover,
+#tierModal .btn-primary:hover,
+#tierModal .fin-btn-primary:hover,
+#issueModal .btn-primary:hover,
+#issueModal .fin-btn-primary:hover,
+#exportExcelModal .btn-primary:hover,
+#expenseDetailModal .btn-primary:hover,
+#cancelExpenseModal .btn-primary:hover,
+#modalChoiceExternal .btn-primary:hover,
+#paymentAllocationModal .btn-primary:hover,
+#quickPayModal .btn-primary:hover,
+#depositModal .btn-primary:hover,
+#dashboardRefundModal .btn-primary:hover,
+#refundModal .btn-primary:hover,
+#createAdvanceModal .btn-primary:hover,
+#payAdvanceModal .btn-primary:hover,
+#rejectAdvanceModal .btn-primary:hover,
+#createPolicyModal .btn-primary:hover,
+#editItemModal .btn-primary:hover,
+#rejectModal .btn-primary:hover,
+#pitDetailModal .btn-primary:hover,
+#payModal .btn-primary:hover,
+#createPeriodModal .btn-primary:hover,
+#createDistributionModal .btn-primary:hover,
+#payDistModal .btn-primary:hover,
+[id^="visitSelectModal_"] .btn-primary:hover,
+[id^="invoiceSelectModal_"] .btn-primary:hover {
+    background-color: var(--fin-brand-light, #2b4fb3) !important;
+    border-color: var(--fin-brand-light, #2b4fb3) !important;
+    color: #ffffff !important;
+}
+
+.fin-brand-theme .btn-primary:focus,
+.fin-brand-theme .btn-primary:active,
+.fin-brand-theme .fin-btn-primary:focus,
+.fin-brand-theme .fin-btn-primary:active,
+#tierModal .btn-primary:focus,
+#tierModal .btn-primary:active,
+#issueModal .btn-primary:focus,
+#issueModal .btn-primary:active,
+#exportExcelModal .btn-primary:focus,
+#exportExcelModal .btn-primary:active,
+#expenseDetailModal .btn-primary:focus,
+#expenseDetailModal .btn-primary:active,
+#cancelExpenseModal .btn-primary:focus,
+#cancelExpenseModal .btn-primary:active,
+#modalChoiceExternal .btn-primary:focus,
+#modalChoiceExternal .btn-primary:active,
+#paymentAllocationModal .btn-primary:focus,
+#paymentAllocationModal .btn-primary:active,
+#quickPayModal .btn-primary:focus,
+#quickPayModal .btn-primary:active,
+#depositModal .btn-primary:focus,
+#depositModal .btn-primary:active,
+#dashboardRefundModal .btn-primary:focus,
+#dashboardRefundModal .btn-primary:active,
+#refundModal .btn-primary:focus,
+#refundModal .btn-primary:active,
+#createAdvanceModal .btn-primary:focus,
+#createAdvanceModal .btn-primary:active,
+#payAdvanceModal .btn-primary:focus,
+#payAdvanceModal .btn-primary:active,
+#rejectAdvanceModal .btn-primary:focus,
+#rejectAdvanceModal .btn-primary:active,
+#createPolicyModal .btn-primary:focus,
+#createPolicyModal .btn-primary:active,
+#editItemModal .btn-primary:focus,
+#editItemModal .btn-primary:active,
+#rejectModal .btn-primary:focus,
+#rejectModal .btn-primary:active,
+#pitDetailModal .btn-primary:focus,
+#pitDetailModal .btn-primary:active,
+#payModal .btn-primary:focus,
+#payModal .btn-primary:active,
+#createPeriodModal .btn-primary:focus,
+#createPeriodModal .btn-primary:active,
+#createDistributionModal .btn-primary:focus,
+#createDistributionModal .btn-primary:active,
+#payDistModal .btn-primary:focus,
+#payDistModal .btn-primary:active,
+[id^="visitSelectModal_"] .btn-primary:focus,
+[id^="visitSelectModal_"] .btn-primary:active,
+[id^="invoiceSelectModal_"] .btn-primary:focus,
+[id^="invoiceSelectModal_"] .btn-primary:active {
+    background-color: #15265b !important;
+    border-color: #15265b !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+}
+
+.fin-brand-theme .btn-primary:disabled,
+.fin-brand-theme .btn-primary.disabled,
+.fin-brand-theme .fin-btn-primary:disabled,
+.fin-brand-theme .fin-btn-primary.disabled,
+#tierModal .btn-primary:disabled,
+#tierModal .btn-primary.disabled,
+#issueModal .btn-primary:disabled,
+#issueModal .btn-primary.disabled,
+#exportExcelModal .btn-primary:disabled,
+#exportExcelModal .btn-primary.disabled,
+#expenseDetailModal .btn-primary:disabled,
+#expenseDetailModal .btn-primary.disabled,
+#cancelExpenseModal .btn-primary:disabled,
+#cancelExpenseModal .btn-primary.disabled,
+#modalChoiceExternal .btn-primary:disabled,
+#modalChoiceExternal .btn-primary.disabled,
+#paymentAllocationModal .btn-primary:disabled,
+#paymentAllocationModal .btn-primary.disabled,
+#quickPayModal .btn-primary:disabled,
+#quickPayModal .btn-primary.disabled,
+#depositModal .btn-primary:disabled,
+#depositModal .btn-primary.disabled,
+#dashboardRefundModal .btn-primary:disabled,
+#dashboardRefundModal .btn-primary.disabled,
+#refundModal .btn-primary:disabled,
+#refundModal .btn-primary.disabled,
+#createAdvanceModal .btn-primary:disabled,
+#createAdvanceModal .btn-primary.disabled,
+#payAdvanceModal .btn-primary:disabled,
+#payAdvanceModal .btn-primary.disabled,
+#rejectAdvanceModal .btn-primary:disabled,
+#rejectAdvanceModal .btn-primary.disabled,
+#createPolicyModal .btn-primary:disabled,
+#createPolicyModal .btn-primary.disabled,
+#editItemModal .btn-primary:disabled,
+#editItemModal .btn-primary.disabled,
+#rejectModal .btn-primary:disabled,
+#rejectModal .btn-primary.disabled,
+#pitDetailModal .btn-primary:disabled,
+#pitDetailModal .btn-primary.disabled,
+#payModal .btn-primary:disabled,
+#payModal .btn-primary.disabled,
+#createPeriodModal .btn-primary:disabled,
+#createPeriodModal .btn-primary.disabled,
+#createDistributionModal .btn-primary:disabled,
+#createDistributionModal .btn-primary.disabled,
+#payDistModal .btn-primary:disabled,
+#payDistModal .btn-primary.disabled,
+[id^="visitSelectModal_"] .btn-primary:disabled,
+[id^="visitSelectModal_"] .btn-primary.disabled,
+[id^="invoiceSelectModal_"] .btn-primary:disabled,
+[id^="invoiceSelectModal_"] .btn-primary.disabled {
+    background-color: var(--fin-brand, #1a2f6e) !important;
+    border-color: var(--fin-brand, #1a2f6e) !important;
+    color: #ffffff !important;
+    opacity: 0.65 !important;
+}
+
+/* Outline Buttons (FT19-22, FT24-25, FT29-30, FT32) */
+.fin-brand-theme .btn-outline-primary,
+.fin-brand-theme .fin-btn-outline-primary,
+#tierModal .btn-outline-primary,
+#issueModal .btn-outline-primary,
+#exportExcelModal .btn-outline-primary,
+#expenseDetailModal .btn-outline-primary,
+#cancelExpenseModal .btn-outline-primary,
+#modalChoiceExternal .btn-outline-primary,
+#paymentAllocationModal .btn-outline-primary,
+#quickPayModal .btn-outline-primary,
+#depositModal .btn-outline-primary,
+#dashboardRefundModal .btn-outline-primary,
+#refundModal .btn-outline-primary,
+#createAdvanceModal .btn-outline-primary,
+#payAdvanceModal .btn-outline-primary,
+#rejectAdvanceModal .btn-outline-primary,
+#createPolicyModal .btn-outline-primary,
+#editItemModal .btn-outline-primary,
+#rejectModal .btn-outline-primary,
+#pitDetailModal .btn-outline-primary,
+#payModal .btn-outline-primary,
+#createPeriodModal .btn-outline-primary,
+#createDistributionModal .btn-outline-primary,
+#payDistModal .btn-outline-primary,
+[id^="visitSelectModal_"] .btn-outline-primary,
+[id^="invoiceSelectModal_"] .btn-outline-primary {
+    color: var(--fin-brand, #1a2f6e) !important;
+    border-color: var(--fin-brand, #1a2f6e) !important;
+    background-color: transparent !important;
+}
+
+.fin-brand-theme .btn-outline-primary:hover,
+.fin-brand-theme .fin-btn-outline-primary:hover,
+#tierModal .btn-outline-primary:hover,
+#issueModal .btn-outline-primary:hover,
+#exportExcelModal .btn-outline-primary:hover,
+#expenseDetailModal .btn-outline-primary:hover,
+#cancelExpenseModal .btn-outline-primary:hover,
+#modalChoiceExternal .btn-outline-primary:hover,
+#paymentAllocationModal .btn-outline-primary:hover,
+#quickPayModal .btn-outline-primary:hover,
+#depositModal .btn-outline-primary:hover,
+#dashboardRefundModal .btn-outline-primary:hover,
+#refundModal .btn-outline-primary:hover,
+#createAdvanceModal .btn-outline-primary:hover,
+#payAdvanceModal .btn-outline-primary:hover,
+#rejectAdvanceModal .btn-outline-primary:hover,
+#createPolicyModal .btn-outline-primary:hover,
+#editItemModal .btn-outline-primary:hover,
+#rejectModal .btn-outline-primary:hover,
+#pitDetailModal .btn-outline-primary:hover,
+#payModal .btn-outline-primary:hover,
+#createPeriodModal .btn-outline-primary:hover,
+#createDistributionModal .btn-outline-primary:hover,
+#payDistModal .btn-outline-primary:hover,
+[id^="visitSelectModal_"] .btn-outline-primary:hover,
+[id^="invoiceSelectModal_"] .btn-outline-primary:hover {
+    color: #ffffff !important;
+    background-color: var(--fin-brand, #1a2f6e) !important;
+    border-color: var(--fin-brand, #1a2f6e) !important;
+}
+
+.fin-brand-theme .btn-outline-primary:focus,
+.fin-brand-theme .btn-outline-primary:active,
+.fin-brand-theme .fin-btn-outline-primary:focus,
+.fin-brand-theme .fin-btn-outline-primary:active,
+#tierModal .btn-outline-primary:focus,
+#tierModal .btn-outline-primary:active,
+#issueModal .btn-outline-primary:focus,
+#issueModal .btn-outline-primary:active,
+#exportExcelModal .btn-outline-primary:focus,
+#exportExcelModal .btn-outline-primary:active,
+#expenseDetailModal .btn-outline-primary:focus,
+#expenseDetailModal .btn-outline-primary:active,
+#cancelExpenseModal .btn-outline-primary:focus,
+#cancelExpenseModal .btn-outline-primary:active,
+#modalChoiceExternal .btn-outline-primary:focus,
+#modalChoiceExternal .btn-outline-primary:active,
+#paymentAllocationModal .btn-outline-primary:focus,
+#paymentAllocationModal .btn-outline-primary:active,
+#quickPayModal .btn-outline-primary:focus,
+#quickPayModal .btn-outline-primary:active,
+#depositModal .btn-outline-primary:focus,
+#depositModal .btn-outline-primary:active,
+#dashboardRefundModal .btn-outline-primary:focus,
+#dashboardRefundModal .btn-outline-primary:active,
+#refundModal .btn-outline-primary:focus,
+#refundModal .btn-outline-primary:active,
+#createAdvanceModal .btn-outline-primary:focus,
+#createAdvanceModal .btn-outline-primary:active,
+#payAdvanceModal .btn-outline-primary:focus,
+#payAdvanceModal .btn-outline-primary:active,
+#rejectAdvanceModal .btn-outline-primary:focus,
+#rejectAdvanceModal .btn-outline-primary:active,
+#createPolicyModal .btn-outline-primary:focus,
+#createPolicyModal .btn-outline-primary:active,
+#editItemModal .btn-outline-primary:focus,
+#editItemModal .btn-outline-primary:active,
+#rejectModal .btn-outline-primary:focus,
+#rejectModal .btn-outline-primary:active,
+#pitDetailModal .btn-outline-primary:focus,
+#pitDetailModal .btn-outline-primary:active,
+#payModal .btn-outline-primary:focus,
+#payModal .btn-outline-primary:active,
+#createPeriodModal .btn-outline-primary:focus,
+#createPeriodModal .btn-outline-primary:active,
+#createDistributionModal .btn-outline-primary:focus,
+#createDistributionModal .btn-outline-primary:active,
+#payDistModal .btn-outline-primary:focus,
+#payDistModal .btn-outline-primary:active,
+[id^="visitSelectModal_"] .btn-outline-primary:focus,
+[id^="visitSelectModal_"] .btn-outline-primary:active,
+[id^="invoiceSelectModal_"] .btn-outline-primary:focus,
+[id^="invoiceSelectModal_"] .btn-outline-primary:active {
+    color: #ffffff !important;
+    background-color: #15265b !important;
+    border-color: #15265b !important;
+    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+}
+
+.fin-brand-theme .btn-outline-primary:disabled,
+.fin-brand-theme .btn-outline-primary.disabled,
+.fin-brand-theme .fin-btn-outline-primary:disabled,
+.fin-brand-theme .fin-btn-outline-primary.disabled,
+#tierModal .btn-outline-primary:disabled,
+#tierModal .btn-outline-primary.disabled,
+#issueModal .btn-outline-primary:disabled,
+#issueModal .btn-outline-primary.disabled,
+#exportExcelModal .btn-outline-primary:disabled,
+#exportExcelModal .btn-outline-primary.disabled,
+#expenseDetailModal .btn-outline-primary:disabled,
+#expenseDetailModal .btn-outline-primary.disabled,
+#cancelExpenseModal .btn-outline-primary:disabled,
+#cancelExpenseModal .btn-outline-primary.disabled,
+#modalChoiceExternal .btn-outline-primary:disabled,
+#modalChoiceExternal .btn-outline-primary.disabled,
+#paymentAllocationModal .btn-outline-primary:disabled,
+#paymentAllocationModal .btn-outline-primary.disabled,
+#quickPayModal .btn-outline-primary:disabled,
+#quickPayModal .btn-outline-primary.disabled,
+#depositModal .btn-outline-primary:disabled,
+#depositModal .btn-outline-primary.disabled,
+#dashboardRefundModal .btn-outline-primary:disabled,
+#dashboardRefundModal .btn-outline-primary.disabled,
+#refundModal .btn-outline-primary:disabled,
+#refundModal .btn-outline-primary.disabled,
+#createAdvanceModal .btn-outline-primary:disabled,
+#createAdvanceModal .btn-outline-primary.disabled,
+#payAdvanceModal .btn-outline-primary:disabled,
+#payAdvanceModal .btn-outline-primary.disabled,
+#rejectAdvanceModal .btn-outline-primary:disabled,
+#rejectAdvanceModal .btn-outline-primary.disabled,
+#createPolicyModal .btn-outline-primary:disabled,
+#createPolicyModal .btn-outline-primary.disabled,
+#editItemModal .btn-outline-primary:disabled,
+#editItemModal .btn-outline-primary.disabled,
+#rejectModal .btn-outline-primary:disabled,
+#rejectModal .btn-outline-primary.disabled,
+#pitDetailModal .btn-outline-primary:disabled,
+#pitDetailModal .btn-outline-primary.disabled,
+#payModal .btn-outline-primary:disabled,
+#payModal .btn-outline-primary.disabled,
+#createPeriodModal .btn-outline-primary:disabled,
+#createPeriodModal .btn-outline-primary.disabled,
+#createDistributionModal .btn-outline-primary:disabled,
+#createDistributionModal .btn-outline-primary.disabled,
+#payDistModal .btn-outline-primary:disabled,
+#payDistModal .btn-outline-primary.disabled,
+[id^="visitSelectModal_"] .btn-outline-primary:disabled,
+[id^="visitSelectModal_"] .btn-outline-primary.disabled,
+[id^="invoiceSelectModal_"] .btn-outline-primary:disabled,
+[id^="invoiceSelectModal_"] .btn-outline-primary.disabled {
+    color: var(--fin-brand, #1a2f6e) !important;
+    border-color: var(--fin-brand, #1a2f6e) !important;
+    background-color: transparent !important;
+    opacity: 0.65 !important;
 }

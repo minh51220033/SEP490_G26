@@ -201,7 +201,25 @@ public class PaymentPageController {
             HttpSession session
     ) {
         return patientFinancialDashboard(profileId, patientId, null, 0, paymentPageNumber, invoicePageNumber,
-                invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
+                null, invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
+    }
+
+    public String patientFinancialDashboard(
+            Long profileId,
+            Long patientId,
+            String keyword,
+            int pendingPageNumber,
+            int paymentPageNumber,
+            int invoicePageNumber,
+            LocalDate invoiceFromDate,
+            LocalDate invoiceToDate,
+            LocalDate paymentFromDate,
+            LocalDate paymentToDate,
+            Model model,
+            HttpSession session
+    ) {
+        return patientFinancialDashboard(profileId, patientId, keyword, pendingPageNumber, paymentPageNumber, invoicePageNumber,
+                null, invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
     }
 
     // SCR-22.1: Dashboard tài chính theo bệnh nhân
@@ -216,6 +234,8 @@ public class PaymentPageController {
             int paymentPageNumber,
             @RequestParam(name = "invoicePage", defaultValue = "0")
             int invoicePageNumber,
+            @RequestParam(name = "invoicePaymentStatus", required = false)
+            String invoicePaymentStatus,
             @RequestParam(name = "invoiceFromDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate invoiceFromDate,
@@ -260,6 +280,18 @@ public class PaymentPageController {
         if (invoiceDateRangeInvalid) {
             model.addAttribute("invoiceDateError", "Khoảng thời gian không hợp lệ: 'Từ ngày' không được lớn hơn 'Đến ngày'.");
         }
+
+        // Parse trạng thái thanh toán hóa đơn
+        InvoicePaymentStatus tempStatus = null;
+        if (invoicePaymentStatus != null && !invoicePaymentStatus.trim().isEmpty()) {
+            try {
+                tempStatus = InvoicePaymentStatus.valueOf(invoicePaymentStatus.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                tempStatus = null;
+            }
+        }
+        final InvoicePaymentStatus parsedPaymentStatus = tempStatus;
+        model.addAttribute("invoicePaymentStatus", parsedPaymentStatus != null ? parsedPaymentStatus.name() : "");
 
         // Kiểm tra hợp lệ khoảng ngày cho bộ lọc Giao dịch
         final boolean paymentDateRangeInvalid = (paymentFromDate != null && paymentToDate != null && paymentFromDate.isAfter(paymentToDate));
@@ -389,24 +421,39 @@ public class PaymentPageController {
                 if (invoiceDateRangeInvalid) {
                     invoiceResult = Page.empty(invoicePageable);
                 } else if (allowedBranchIds == null) {
-                    invoiceResult = invoiceRepository.findInvoicesByPatientAndDates(
-                            patient.getProfileId(),
-                            InvoiceStatus.CANCELLED,
-                            invoiceStartDt,
-                            invoiceEndDt,
-                            invoicePageable
-                    );
+                    invoiceResult = (parsedPaymentStatus != null)
+                            ? invoiceRepository.findInvoicesByPatientAndDates(
+                                    patient.getProfileId(),
+                                    InvoiceStatus.CANCELLED,
+                                    parsedPaymentStatus,
+                                    invoiceStartDt,
+                                    invoiceEndDt,
+                                    invoicePageable)
+                            : invoiceRepository.findInvoicesByPatientAndDates(
+                                    patient.getProfileId(),
+                                    InvoiceStatus.CANCELLED,
+                                    invoiceStartDt,
+                                    invoiceEndDt,
+                                    invoicePageable);
                 } else if (allowedBranchIds.isEmpty()) {
                     invoiceResult = Page.empty(invoicePageable);
                 } else {
-                    invoiceResult = invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
-                            patient.getProfileId(),
-                            InvoiceStatus.CANCELLED,
-                            allowedBranchIds,
-                            invoiceStartDt,
-                            invoiceEndDt,
-                            invoicePageable
-                    );
+                    invoiceResult = (parsedPaymentStatus != null)
+                            ? invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
+                                    patient.getProfileId(),
+                                    InvoiceStatus.CANCELLED,
+                                    allowedBranchIds,
+                                    parsedPaymentStatus,
+                                    invoiceStartDt,
+                                    invoiceEndDt,
+                                    invoicePageable)
+                            : invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
+                                    patient.getProfileId(),
+                                    InvoiceStatus.CANCELLED,
+                                    allowedBranchIds,
+                                    invoiceStartDt,
+                                    invoiceEndDt,
+                                    invoicePageable);
                 }
 
                 // Nếu số trang vượt giới hạn, chuyển về trang cuối.
@@ -420,20 +467,39 @@ public class PaymentPageController {
                     );
 
                     if (!invoiceDateRangeInvalid) {
-                        invoiceResult = (allowedBranchIds == null)
-                                ? invoiceRepository.findInvoicesByPatientAndDates(
-                                        patient.getProfileId(),
-                                        InvoiceStatus.CANCELLED,
-                                        invoiceStartDt,
-                                        invoiceEndDt,
-                                        invoicePageable)
-                                : invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
-                                        patient.getProfileId(),
-                                        InvoiceStatus.CANCELLED,
-                                        allowedBranchIds,
-                                        invoiceStartDt,
-                                        invoiceEndDt,
-                                        invoicePageable);
+                        if (allowedBranchIds == null) {
+                            invoiceResult = (parsedPaymentStatus != null)
+                                    ? invoiceRepository.findInvoicesByPatientAndDates(
+                                            patient.getProfileId(),
+                                            InvoiceStatus.CANCELLED,
+                                            parsedPaymentStatus,
+                                            invoiceStartDt,
+                                            invoiceEndDt,
+                                            invoicePageable)
+                                    : invoiceRepository.findInvoicesByPatientAndDates(
+                                            patient.getProfileId(),
+                                            InvoiceStatus.CANCELLED,
+                                            invoiceStartDt,
+                                            invoiceEndDt,
+                                            invoicePageable);
+                        } else {
+                            invoiceResult = (parsedPaymentStatus != null)
+                                    ? invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
+                                            patient.getProfileId(),
+                                            InvoiceStatus.CANCELLED,
+                                            allowedBranchIds,
+                                            parsedPaymentStatus,
+                                            invoiceStartDt,
+                                            invoiceEndDt,
+                                            invoicePageable)
+                                    : invoiceRepository.findInvoicesByPatientAndBranchesAndDates(
+                                            patient.getProfileId(),
+                                            InvoiceStatus.CANCELLED,
+                                            allowedBranchIds,
+                                            invoiceStartDt,
+                                            invoiceEndDt,
+                                            invoicePageable);
+                        }
                     }
                 }
 

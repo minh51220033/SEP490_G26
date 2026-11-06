@@ -4,7 +4,7 @@
     <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn mới - FT21')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -234,7 +234,7 @@
 
                                         <!-- Nút đổi lại sang mua tại PK (dùng form an toàn ngoài invoiceForm) -->
                                         <button th:if="${pr.status == 'EXTERNAL_PURCHASE'}"
-                                                type="button" class="fin-btn fin-btn-sm fin-btn-outline text-primary border-primary"
+                                                type="button" class="fin-btn fin-btn-sm btn-outline-primary"
                                                 th:data-presc-id="${pr.prescriptionId}"
                                                 onclick="submitSwitchToClinic(this.getAttribute('data-presc-id'))"
                                                 title="Chuyển sang mua tại phòng khám">

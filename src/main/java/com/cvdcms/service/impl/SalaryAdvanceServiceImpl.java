@@ -165,10 +165,11 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
             throw new IllegalStateException("Đơn tạm ứng không ở trạng thái chờ duyệt (PENDING)");
         }
 
-        StaffProfile approverStaff = staffProfileRepository.findByUser_UserId(approverUserId).orElse(null);
+        User approverUser = userRepository.findById(approverUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin Quản trị viên"));
 
         advance.setStatus(SalaryAdvanceStatus.APPROVED);
-        advance.setApprovedBy(approverStaff);
+        advance.setApprovedBy(approverUser);
         advance.setApprovedAt(LocalDateTime.now());
 
         return salaryAdvanceRepository.save(advance);
