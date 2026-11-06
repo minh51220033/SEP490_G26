@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (soundToggle) {
         soundToggle.addEventListener('click', () => {
             speechEnabled = !speechEnabled;
+            soundToggle.setAttribute('aria-pressed', String(speechEnabled));
             if (speechEnabled) {
                 try {
                     audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (soundText) soundText.textContent = 'Bật âm thanh';
                 speechQueue.length = 0;
                 if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                speaking = false;
             }
         });
     }
@@ -70,7 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
             utterance.rate = 0.92;
             utterance.pitch = 1.05;
             utterance.onend = utterance.onerror = () => { speaking = false; playNext(); };
-            setTimeout(() => window.speechSynthesis.speak(utterance), 500);
+            setTimeout(() => {
+                if (speechEnabled) window.speechSynthesis.speak(utterance);
+                else speaking = false;
+            }, 500);
         } catch (_) { speaking = false; playNext(); }
     }
 
