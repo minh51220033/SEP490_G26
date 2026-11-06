@@ -8,7 +8,7 @@
     <script th:src="@{/js/cashier-tabs.js}" defer></script>
     <script th:src="@{/js/enhanced-table.js}" defer></script>
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar(${activeMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -35,38 +35,7 @@
                         <h2 class="cashier-subhead-title"><i class="bi bi-speedometer2 text-primary"></i> Tổng quan tài chính bệnh nhân</h2>
                         <p class="cashier-subhead-desc">Tổng quan toàn diện tài chính, công nợ viện phí, số dư ví tạm ứng và lịch sử giao dịch thanh toán của bệnh nhân</p>
                     </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <!-- Nút Lập hóa đơn (Requirement 1) -->
-                        <a th:if="${patient != null}"
-                           th:href="@{/invoices/create(profileId=${patient.profileId})}"
-                           class="fin-btn fin-btn-primary fin-btn-sm"
-                           title="Lập hóa đơn cho bệnh nhân đang chọn">
-                            <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn
-                        </a>
-                        <a th:if="${patient == null}"
-                           th:href="@{/invoices/create}"
-                           class="fin-btn fin-btn-primary fin-btn-sm"
-                           title="Chuyển tới màn hình Lập hóa đơn để chọn lượt khám chờ thanh toán">
-                            <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn
-                        </a>
-                        <button type="button" class="fin-btn fin-btn-success fin-btn-sm" onclick="handleTopQuickPayClick()">
-                            <i class="bi bi-cash-coin"></i> Thu tiền hóa đơn
-                        </button>
-                        <button type="button" class="fin-btn fin-btn-warning text-dark fin-btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#depositModal">
-                            <i class="bi bi-wallet2"></i> Nạp tạm ứng
-                        </button>
-                        <button type="button"
-                                class="fin-btn fin-btn-danger fin-btn-sm"
-                                th:disabled="${patient == null}"
-                                data-bs-toggle="modal"
-                                data-bs-target="#dashboardRefundModal">
-                            <i class="bi bi-arrow-counterclockwise"></i> Hoàn tiền
-                        </button>
-                        <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline fin-btn-sm">
-                            <i class="bi bi-list-ul"></i> Danh sách công nợ
-                        </a>
-                    </div>
+
                 </div>
             <!-- 1. Thanh tìm kiếm bệnh nhân (Backend search & pagination - Requirement 3 & 7) -->
             <div class="fin-card mb-3 p-3 border shadow-xs">
@@ -133,6 +102,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 enhanced-table"
                            data-enhanced-table="cashier-pending-patients"
+                           data-config-version="2.0"
                            data-disable-floating-actions="true"
                            style="font-size: 13px;">
                         <thead class="table-light text-nowrap">
@@ -148,7 +118,7 @@
                                 <th class="text-end">Còn nợ</th>
                                 <th class="text-end">Ví tạm ứng</th>
                                 <th class="text-center">Trạng thái xử lý</th>
-                                <th class="text-center cashier-actions-col">Thao tác</th>
+                                <th class="text-center" data-column-key="actions" data-column-action="true" data-column-required="true" data-column-pinnable="true" style="min-width: 130px; width: 140px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -253,58 +223,13 @@
                                     </div>
                                 </td>
 
-                                <!-- Thao tác -->
-                                <td class="text-center cashier-actions-col">
-                                    <div class="cashier-actions-group" role="group">
-                                        <!-- Lập hóa đơn: 1 ca -> link trực tiếp; >1 ca -> modal -->
-                                        <a th:if="${p.unbilledVisitCount == 1 and !p.pendingVisits.isEmpty()}"
-                                           th:href="@{/invoices/create(visitId=${p.pendingVisits[0].visitId})}"
-                                           class="btn btn-outline-primary"
-                                           title="Lập hóa đơn cho ca khám chờ thanh toán">
-                                            <i class="bi bi-file-earmark-plus"></i> Lập HĐ
-                                        </a>
-                                        <button th:if="${p.unbilledVisitCount > 1}"
-                                                type="button"
-                                                class="btn btn-outline-primary"
-                                                data-bs-toggle="modal"
-                                                th:data-bs-target="'#visitSelectModal_' + ${p.profileId}"
-                                                title="Chọn ca khám cần lập hóa đơn">
-                                            <i class="bi bi-file-earmark-plus"></i> Lập HĐ <span class="badge bg-primary text-white ms-1" th:text="${p.unbilledVisitCount}">2</span>
-                                        </button>
-
-                                        <!-- Thu tiền: Khi click mở ngay popup thu tiền với hóa đơn & tiền nợ điền sẵn -->
-                                        <button th:if="${p.unpaidInvoiceCount > 0}"
-                                                type="button"
-                                                class="btn btn-outline-success"
-                                                data-role="cashier-pay-btn"
-                                                th:data-profile-id="${p.profileId}"
-                                                th:data-patient-name="${p.fullName}"
-                                                th:data-patient-code="${p.patientCode}"
-                                                th:data-deposit-balance="${p.depositBalance}"
-                                                th:data-invoice-count="${p.unpaidInvoiceCount}"
-                                                th:data-first-invoice-id="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].invoiceId : ''}"
-                                                th:data-first-invoice-code="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].invoiceCode : ''}"
-                                                th:data-first-debt="${!p.unpaidInvoices.isEmpty() ? p.unpaidInvoices[0].remainingDebt : 0}"
-                                                onclick="openCashierQuickPayFromRow(this)"
-                                                title="Thu tiền cho hóa đơn còn nợ của bệnh nhân này">
-                                            <i class="bi bi-cash-coin"></i> Thu tiền
-                                            <span th:if="${p.unpaidInvoiceCount > 1}" class="badge bg-danger text-white ms-1" th:text="${p.unpaidInvoiceCount}">2</span>
-                                        </button>
-
-                                        <!-- Xem tài chính -->
-                                        <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
-                                           class="btn btn-outline-info"
-                                           title="Xem chi tiết tài chính bệnh nhân này">
-                                            <i class="bi bi-eye"></i> Xem TC
-                                        </a>
-
-                                        <!-- Nộp tạm ứng -->
-                                        <a th:href="@{/payments/deposits(profileId=${p.profileId})}"
-                                           class="btn btn-outline-warning text-dark"
-                                           title="Nộp tiền tạm ứng cho bệnh nhân">
-                                            <i class="bi bi-wallet2"></i> Tạm ứng
-                                        </a>
-                                    </div>
+                                <!-- Thao tác: Chỉ còn một nút "Xem thông tin" -->
+                                <td class="text-center" data-column-key="actions" data-column-action="true">
+                                    <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
+                                       class="fin-table-btn fin-table-btn-view"
+                                       title="Xem thông tin chi tiết tài chính của bệnh nhân này">
+                                        <i class="bi bi-eye"></i> <span>Xem thông tin</span>
+                                    </a>
                                 </td>
                             </tr>
                         </tbody>
@@ -459,23 +384,49 @@
             <!-- 3. Khi chưa chọn bệnh nhân: Gợi ý thao tác bên dưới bảng -->
             <div th:if="${patient == null}" class="alert alert-light border text-center py-4 my-3 text-muted">
                 <i class="bi bi-hand-index-thumb text-primary me-2 fs-5"></i>
-                <span>Bấm <strong>Xem TC</strong> hoặc chọn tên bệnh nhân trong bảng trên để mở chi tiết công nợ, hóa đơn và lịch sử giao dịch.</span>
+                <span>Bấm <strong>Xem thông tin</strong> hoặc chọn tên bệnh nhân trong bảng trên để mở chi tiết công nợ, hóa đơn và lịch sử giao dịch.</span>
             </div>
             <div th:if="${patient != null}">
                 <!-- Patient Profile Summary Card -->
                 <div class="fin-card mb-4 border-primary">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
-                            <i class="bi bi-person-circle me-2"></i> <span
-                                th:text="${patient.fullName}">Nguyễn Văn An</span>
-                            <span class="badge bg-secondary ms-2 fs-6" th:text="${patient.patientCode}">BN000101</span>
-                        </h4>
-                        <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h4 class="fw-bold m-0 text-primary d-flex align-items-center">
+                                <i class="bi bi-person-circle me-2"></i> <span
+                                    th:text="${patient.fullName}">Nguyễn Văn An</span>
+                                <span class="badge bg-secondary ms-2 fs-6" th:text="${patient.patientCode}">BN000101</span>
+                            </h4>
                             <span th:if="${patient.membershipTier != null}"
                                   class="badge bg-warning text-dark fw-bold px-3 py-2"
                                   th:text="${patient.membershipTier.tierName} + ' (Ưu đãi ' + ${patient.membershipTier.discountPercent} + '%)'">Hạng Vàng</span>
                             <span th:if="${patient.membershipTier == null}"
                                   class="badge bg-light text-muted border px-3 py-2">Chưa xếp hạng</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <a th:href="@{/invoices/create(profileId=${patient.profileId})}"
+                               class="fin-btn fin-btn-primary fin-btn-sm"
+                               title="Lập hóa đơn cho bệnh nhân đang chọn">
+                                <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn
+                            </a>
+                            <button th:if="${summary.totalDebt > 0}"
+                                    type="button" class="fin-btn fin-btn-success fin-btn-sm"
+                                    onclick="handleTopQuickPayClick()"
+                                    title="Thu tiền hóa đơn còn nợ của bệnh nhân này">
+                                <i class="bi bi-cash-coin"></i> Thu tiền
+                            </button>
+                            <button type="button" class="fin-btn fin-btn-warning text-dark fin-btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#depositModal"
+                                    title="Nạp tiền vào ví tạm ứng của bệnh nhân">
+                                <i class="bi bi-wallet2"></i> Nạp tạm ứng
+                            </button>
+                            <button type="button"
+                                        class="fin-btn fin-btn-danger fin-btn-sm"
+                                        th:disabled="${patient == null}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#dashboardRefundModal">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Hoàn tiền
+                            </button>
+
                         </div>
                     </div>
                     <div class="row g-3">
@@ -562,12 +513,23 @@
                                 <form th:action="@{/payments/dashboard}" method="get">
                                     <input type="hidden" name="patientId" th:value="${patient.profileId}">
                                     <input type="hidden" name="invoicePage" value="0">
-                                    <!-- Giữ trạng thái của bảng giao dịch thanh toán -->
+                                    <!-- Giữ trạng thái của bảng danh sách bệnh nhân và bảng thanh toán -->
+                                    <input type="hidden" name="keyword" th:if="${pendingKeyword != null}" th:value="${pendingKeyword}">
+                                    <input type="hidden" name="pendingPage" th:if="${currentPendingPage != null}" th:value="${currentPendingPage}">
                                     <input type="hidden" name="paymentPage" th:value="${paymentPage.number}">
                                     <input type="hidden" name="paymentFromDate" th:if="${paymentFromDate != null}"
                                            th:value="${paymentFromDate}">
                                     <input type="hidden" name="paymentToDate" th:if="${paymentToDate != null}"
                                            th:value="${paymentToDate}">
+                                    <div class="filter-group">
+                                        <label for="invoicePaymentStatus" class="filter-label">Trạng thái:</label>
+                                        <select id="invoicePaymentStatus" name="invoicePaymentStatus" class="filter-input">
+                                            <option value="" th:selected="${invoicePaymentStatus == null or invoicePaymentStatus == ''}">Tất cả trạng thái</option>
+                                            <option value="UNPAID" th:selected="${invoicePaymentStatus == 'UNPAID'}">Chưa trả</option>
+                                            <option value="PARTIAL" th:selected="${invoicePaymentStatus == 'PARTIAL'}">Trả một phần</option>
+                                            <option value="PAID" th:selected="${invoicePaymentStatus == 'PAID'}">Đã trả</option>
+                                        </select>
+                                    </div>
                                     <div class="filter-group">
                                         <label for="invoiceFromDate" class="filter-label">Từ ngày:</label>
                                         <input type="date" id="invoiceFromDate" name="invoiceFromDate"
@@ -588,7 +550,9 @@
                                                 invoicePage=0,
                                                 paymentPage=${paymentPage.number},
                                                 paymentFromDate=${paymentFromDate},
-                                                paymentToDate=${paymentToDate}
+                                                paymentToDate=${paymentToDate},
+                                                keyword=${pendingKeyword},
+                                                pendingPage=${currentPendingPage}
                                            )}" class="fin-btn fin-btn-sm fin-btn-outline" title="Xóa bộ lọc hóa đơn">
                                             <i class="bi bi-x-circle"></i> Xóa lọc
                                         </a>
@@ -612,8 +576,8 @@
                                     <tr th:if="${#lists.isEmpty(invoiceRows)}">
                                         <td colspan="7" class="text-center py-4 text-muted">
                                             <i class="bi bi-inbox me-1"></i>
-                                            <span th:if="${invoiceFromDate != null or invoiceToDate != null}">Không có hóa đơn nào trong khoảng thời gian đã chọn.</span>
-                                            <span th:unless="${invoiceFromDate != null or invoiceToDate != null}">Bệnh nhân chưa có hóa đơn nào.</span>
+                                            <span th:if="${invoiceFromDate != null or invoiceToDate != null or (invoicePaymentStatus != null and !invoicePaymentStatus.isEmpty())}">Không có hóa đơn nào khớp với bộ lọc đã chọn.</span>
+                                            <span th:unless="${invoiceFromDate != null or invoiceToDate != null or (invoicePaymentStatus != null and !invoicePaymentStatus.isEmpty())}">Bệnh nhân chưa có hóa đơn nào.</span>
                                         </td>
                                     </tr>
                                     <tr th:each="inv : ${invoiceRows}">
@@ -653,17 +617,9 @@
                                         <td class="text-center">
                                             <div class="fin-table-actions">
                                                 <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}"
-                                                   class="fin-table-btn fin-table-btn-view fin-table-btn-icon" title="Xem chi ti&#7871;t"><i
-                                                        class="bi bi-eye"></i></a>
-                                                <button th:if="${inv.remainingDebt > 0}" type="button"
-                                                        class="fin-table-btn fin-table-btn-pay"
-                                                        th:data-invoice-id="${inv.invoiceId}"
-                                                        th:data-code="${inv.invoiceCode}"
-                                                        th:data-debt="${inv.remainingDebt}"
-                                                        th:data-patient="${patient.fullName}"
-                                                        onclick="openInvoicePayModal(this)" title="Thu ti&#7873;n">
-                                                    <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
-                                                </button>
+                                                   class="fin-table-btn fin-table-btn-view" title="Xem thông tin">
+                                                    <i class="bi bi-eye"></i> <span>Xem thông tin</span>
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -696,11 +652,14 @@
                                                th:href="@{/payments/dashboard(
                         patientId=${patient.profileId},
                         invoicePage=${invoicePage.number - 1},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
                         invoiceToDate=${invoiceToDate},
                         paymentPage=${paymentPage.number},
                         paymentFromDate=${paymentFromDate},
-                        paymentToDate=${paymentToDate}
+                        paymentToDate=${paymentToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}">
                                                 Trước
                                             </a>
@@ -720,11 +679,14 @@
                                                th:href="@{/payments/dashboard(
                         patientId=${patient.profileId},
                         invoicePage=${i},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
                         invoiceToDate=${invoiceToDate},
                         paymentPage=${paymentPage.number},
                         paymentFromDate=${paymentFromDate},
-                        paymentToDate=${paymentToDate}
+                        paymentToDate=${paymentToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}"
                                                th:text="${i + 1}">
                                             </a>
@@ -738,11 +700,14 @@
                                                th:href="@{/payments/dashboard(
                         patientId=${patient.profileId},
                         invoicePage=${invoicePage.number + 1},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
                         invoiceToDate=${invoiceToDate},
                         paymentPage=${paymentPage.number},
                         paymentFromDate=${paymentFromDate},
-                        paymentToDate=${paymentToDate}
+                        paymentToDate=${paymentToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}">
                                                 Sau
                                             </a>
@@ -772,8 +737,12 @@
                                 <form th:action="@{/payments/dashboard}" method="get">
                                     <input type="hidden" name="patientId" th:value="${patient.profileId}">
                                     <input type="hidden" name="paymentPage" value="0">
-                                    <!-- Giữ trạng thái của bảng hóa đơn -->
+                                    <!-- Giữ trạng thái của bảng bệnh nhân và bảng hóa đơn -->
+                                    <input type="hidden" name="keyword" th:if="${pendingKeyword != null}" th:value="${pendingKeyword}">
+                                    <input type="hidden" name="pendingPage" th:if="${currentPendingPage != null}" th:value="${currentPendingPage}">
                                     <input type="hidden" name="invoicePage" th:value="${invoicePage.number}">
+                                    <input type="hidden" name="invoicePaymentStatus" th:if="${invoicePaymentStatus != null and !invoicePaymentStatus.isEmpty()}"
+                                           th:value="${invoicePaymentStatus}">
                                     <input type="hidden" name="invoiceFromDate" th:if="${invoiceFromDate != null}"
                                            th:value="${invoiceFromDate}">
                                     <input type="hidden" name="invoiceToDate" th:if="${invoiceToDate != null}"
@@ -797,8 +766,11 @@
                                                 patientId=${patient.profileId},
                                                 paymentPage=0,
                                                 invoicePage=${invoicePage.number},
+                                                invoicePaymentStatus=${invoicePaymentStatus},
                                                 invoiceFromDate=${invoiceFromDate},
-                                                invoiceToDate=${invoiceToDate}
+                                                invoiceToDate=${invoiceToDate},
+                                                keyword=${pendingKeyword},
+                                                pendingPage=${currentPendingPage}
                                            )}" class="fin-btn fin-btn-sm fin-btn-outline" title="Xóa bộ lọc giao dịch">
                                             <i class="bi bi-x-circle"></i> Xóa lọc
                                         </a>
@@ -891,8 +863,11 @@
                         paymentFromDate=${paymentFromDate},
                         paymentToDate=${paymentToDate},
                         invoicePage=${invoicePage.number},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
-                        invoiceToDate=${invoiceToDate}
+                        invoiceToDate=${invoiceToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}">
                                                 Trước
                                             </a>
@@ -915,8 +890,11 @@
                         paymentFromDate=${paymentFromDate},
                         paymentToDate=${paymentToDate},
                         invoicePage=${invoicePage.number},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
-                        invoiceToDate=${invoiceToDate}
+                        invoiceToDate=${invoiceToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}"
                                                th:text="${i + 1}">
                                             </a>
@@ -933,8 +911,11 @@
                         paymentFromDate=${paymentFromDate},
                         paymentToDate=${paymentToDate},
                         invoicePage=${invoicePage.number},
+                        invoicePaymentStatus=${invoicePaymentStatus},
                         invoiceFromDate=${invoiceFromDate},
-                        invoiceToDate=${invoiceToDate}
+                        invoiceToDate=${invoiceToDate},
+                        keyword=${pendingKeyword},
+                        pendingPage=${currentPendingPage}
                     )}">
                                                 Sau
                                             </a>

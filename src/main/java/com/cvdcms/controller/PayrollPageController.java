@@ -25,12 +25,13 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 
 @Controller
 @RequestMapping("/payroll")
@@ -90,9 +91,27 @@ public class PayrollPageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
-    private List<Branch> resolveAllowedBranches(Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+    private boolean isCurrentUserAdmin(Long userId, HttpSession session) {
+        if (userId != null && userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        if (session != null) {
+            if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) {
+                return true;
+            }
+            Object rolesObj = session.getAttribute("roleNames");
+            if (rolesObj instanceof Collection<?> col) {
+                return col.stream()
+                        .filter(Objects::nonNull)
+                        .map(Object::toString)
+                        .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.trim()) || "ROLE_ADMIN".equalsIgnoreCase(r.trim()));
+            }
+        }
+        return false;
+    }
+
+    private List<Branch> resolveAllowedBranches(Long userId, HttpSession session) {
+        if (isCurrentUserAdmin(userId, session)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
@@ -100,6 +119,10 @@ public class PayrollPageController {
             throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
         }
         return branchRepository.findAllById(branchIds);
+    }
+
+    private List<Branch> resolveAllowedBranches(Long userId) {
+        return resolveAllowedBranches(userId, null);
     }
 
     // ==========================================
@@ -341,8 +364,8 @@ public class PayrollPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "payroll");
 
-        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
-        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+        boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
         List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size);
@@ -373,6 +396,40 @@ public class PayrollPageController {
         return "finance/payroll/advance-list";
     }
 
+    @GetMapping("/advances/staff")
+    @ResponseBody
+    public ResponseEntity<?> getActiveStaffByBranch(
+            @RequestParam Long branchId,
+            HttpSession session
+    ) {
+        try {
+            Long currentUserId = getCurrentUserId(session);
+            boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+            if (!isAdmin) {
+                List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE);
+                if (activeBranchIds == null || !activeBranchIds.contains(branchId)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("message", "Bạn không có quyền truy cập chi nhánh này."));
+                }
+            }
+            LocalDate today = LocalDate.now();
+            List<StaffBranchAssignment> assignments = staffBranchAssignmentRepository.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE);
+            List<StaffOptionDTO> staffList = assignments.stream()
+                    .filter(a -> a.getStartDate() != null && !a.getStartDate().isAfter(today) && (a.getEndDate() == null || !a.getEndDate().isBefore(today)))
+                    .map(StaffBranchAssignment::getStaff)
+                    .filter(s -> s != null && s.getStatus() == com.cvdcms.entity.enums.StaffStatus.ACTIVE)
+                    .distinct()
+                    .map(s -> new StaffOptionDTO(s.getStaffId(), s.getStaffCode(), s.getFullName()))
+                    .sorted(Comparator.comparing(StaffOptionDTO::getFullName, String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+            return ResponseEntity.ok(staffList);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/advances/request")
     public String requestAdvance(
             @Valid @ModelAttribute("advanceDTO") SalaryAdvanceRequestDTO dto,
@@ -380,16 +437,23 @@ public class PayrollPageController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        Long currentUserId = getCurrentUserId(session);
-        if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Thông tin phiếu tạm ứng không hợp lệ.");
-            return "redirect:/payroll/advances";
-        }
-
         try {
+            Long currentUserId = getCurrentUserId(session);
+            if (bindingResult.hasErrors()) {
+                String errorMsg = bindingResult.getAllErrors().stream()
+                        .map(e -> e.getDefaultMessage())
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse("Thông tin phiếu tạm ứng không hợp lệ.");
+                redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
+                return "redirect:/payroll/advances";
+            }
+
             SalaryAdvance created = salaryAdvanceService.createAdvanceRequest(dto, currentUserId);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã tạo yêu cầu tạm ứng lương thành công: " + created.getAdvanceCode());
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo yêu cầu tạm ứng: " + e.getMessage());
         }
@@ -402,10 +466,12 @@ public class PayrollPageController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        Long currentUserId = getCurrentUserId(session);
         try {
+            Long currentUserId = getCurrentUserId(session);
             salaryAdvanceService.approveAdvance(id, currentUserId);
             redirectAttributes.addFlashAttribute("successMessage", "Đã phê duyệt đơn tạm ứng!");
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi duyệt: " + e.getMessage());
         }
@@ -419,12 +485,14 @@ public class PayrollPageController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        Long currentUserId = getCurrentUserId(session);
         try {
+            Long currentUserId = getCurrentUserId(session);
             SalaryAdvance paid = salaryAdvanceService.payAdvance(id, paymentMethod, currentUserId);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã chi tạm ứng thành công cho " + paid.getStaff().getFullName()
                     + "! Đã tự động tạo phiếu chi chi phí vận hành.");
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi chi tiền: " + e.getMessage());
         }
@@ -438,10 +506,12 @@ public class PayrollPageController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        Long currentUserId = getCurrentUserId(session);
         try {
+            Long currentUserId = getCurrentUserId(session);
             salaryAdvanceService.rejectAdvance(id, reason, currentUserId);
             redirectAttributes.addFlashAttribute("successMessage", "Đã từ chối đơn tạm ứng.");
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
         }

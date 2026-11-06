@@ -976,4 +976,125 @@ public class FinanceFt24Ft25Ft32UnitTest {
                 commissionPolicyService.deletePolicy(1L, null)
         );
     }
+
+    @Test
+    @DisplayName("Case 24A: Admin duyệt tạm ứng lương lưu đúng danh tính User Admin (không null dù Admin không có StaffProfile)")
+    void testCase24A_AdminApproveAdvanceSetsUserApprover() {
+        SalaryAdvance advance = new SalaryAdvance();
+        advance.setAdvanceId(100L);
+        advance.setStatus(SalaryAdvanceStatus.PENDING);
+        advance.setAmount(new BigDecimal("3000000"));
+        advance.setStaff(mockAccountantStaff);
+        advance.setBranch(mockBranch);
+
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAdminUser));
+        when(salaryAdvanceRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(advance));
+        when(salaryAdvanceRepository.save(any(SalaryAdvance.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        SalaryAdvance approved = salaryAdvanceService.approveAdvance(100L, 1L);
+
+        assertEquals(SalaryAdvanceStatus.APPROVED, approved.getStatus());
+        assertNotNull(approved.getApprovedBy(), "Người duyệt phải được lưu thông tin User Admin, không được để null");
+        assertEquals(mockAdminUser.getUserId(), approved.getApprovedBy().getUserId());
+        assertNotNull(approved.getApprovedAt());
+    }
+
+    @Test
+    @DisplayName("Case 24B: Admin chi tiền tạm ứng lương thành công và tự động tạo phiếu chi chi phí vận hành")
+    void testCase24B_AdminPayAdvanceCreatesOperatingExpense() {
+        SalaryAdvance advance = new SalaryAdvance();
+        advance.setAdvanceId(101L);
+        advance.setAdvanceCode("TU-101");
+        advance.setStatus(SalaryAdvanceStatus.APPROVED);
+        advance.setAmount(new BigDecimal("4000000"));
+        advance.setStaff(mockAccountantStaff);
+        advance.setBranch(mockBranch);
+        advance.setReason("Tạm ứng sinh hoạt gia đình");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAdminUser));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(salaryAdvanceRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(advance));
+        when(salaryAdvanceRepository.save(any(SalaryAdvance.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(operatingExpenseRepository.existsBySalaryAdvance_AdvanceId(101L)).thenReturn(false);
+
+        SalaryAdvance paid = salaryAdvanceService.payAdvance(101L, RefundMethod.BANK_TRANSFER, 1L);
+
+        assertEquals(SalaryAdvanceStatus.PAID, paid.getStatus());
+        assertNotNull(paid.getPaidAt());
+        verify(operatingExpenseRepository).save(argThat(expense ->
+                expense.getAmount().compareTo(new BigDecimal("4000000")) == 0 &&
+                expense.getSourceType() == ExpenseSourceType.SALARY_ADVANCE &&
+                expense.getRecipientName().equals(mockAccountantStaff.getFullName()) &&
+                expense.getBranch().equals(mockBranch) &&
+                expense.getCreatedBy().equals(mockAdminUser)
+        ));
+    }
+
+    @Test
+    @DisplayName("Case 24C: Tạo tạm ứng từ chối nhân viên không hoạt động hoặc không có phân công tại chi nhánh")
+    void testCase24C_CreateAdvanceValidationStaffInactiveOrNoBranchAssignment() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAdminUser));
+        when(branchRepository.findById(1L)).thenReturn(Optional.of(mockBranch));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        // Subcase 1: Nhân viên không ở trạng thái ACTIVE
+        StaffProfile inactiveStaff = new StaffProfile();
+        inactiveStaff.setStaffId(25L);
+        inactiveStaff.setFullName("Nguyễn Văn Inactive");
+        inactiveStaff.setStatus(StaffStatus.INACTIVE);
+        when(staffProfileRepository.findById(25L)).thenReturn(Optional.of(inactiveStaff));
+
+        SalaryAdvanceRequestDTO dto1 = new SalaryAdvanceRequestDTO();
+        dto1.setStaffId(25L);
+        dto1.setBranchId(1L);
+        dto1.setAmount(new BigDecimal("2000000"));
+        dto1.setReason("Cần tiền gấp");
+
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class, () ->
+                salaryAdvanceService.createAdvanceRequest(dto1, 1L)
+        );
+        assertTrue(ex1.getMessage().contains("không ở trạng thái hoạt động"));
+
+        // Subcase 2: Nhân viên ACTIVE nhưng không phân công tại chi nhánh
+        when(staffProfileRepository.findById(20L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(staffBranchAssignmentRepository.hasActiveAssignment(20L, 1L, AssignmentStatus.ACTIVE)).thenReturn(false);
+
+        SalaryAdvanceRequestDTO dto2 = new SalaryAdvanceRequestDTO();
+        dto2.setStaffId(20L);
+        dto2.setBranchId(1L);
+        dto2.setAmount(new BigDecimal("2000000"));
+        dto2.setReason("Cần tiền gấp");
+
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class, () ->
+                salaryAdvanceService.createAdvanceRequest(dto2, 1L)
+        );
+        assertTrue(ex2.getMessage().contains("không có phân công hoạt động"));
+    }
+
+    @Test
+    @DisplayName("Case 24D: Admin tạo hộ yêu cầu tạm ứng cho nhân viên đủ điều kiện thành công")
+    void testCase24D_AdminCanCreateAdvanceOnBehalfOfActiveStaff() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAdminUser));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+        when(staffProfileRepository.findById(20L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(branchRepository.findById(1L)).thenReturn(Optional.of(mockBranch));
+        when(staffBranchAssignmentRepository.hasActiveAssignment(20L, 1L, AssignmentStatus.ACTIVE)).thenReturn(true);
+        when(salaryAdvanceRepository.save(any(SalaryAdvance.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        SalaryAdvanceRequestDTO dto = new SalaryAdvanceRequestDTO();
+        dto.setStaffId(20L);
+        dto.setBranchId(1L);
+        dto.setAmount(new BigDecimal("3500000"));
+        dto.setReason("Tạm ứng sinh hoạt phí");
+        dto.setPaymentMethod(RefundMethod.BANK_TRANSFER);
+
+        SalaryAdvance created = salaryAdvanceService.createAdvanceRequest(dto, 1L);
+
+        assertNotNull(created);
+        assertEquals(new BigDecimal("3500000"), created.getAmount());
+        assertEquals(SalaryAdvanceStatus.PENDING, created.getStatus());
+        assertEquals(mockAccountantStaff, created.getStaff());
+        assertEquals(mockAdminUser, created.getCreatedBy(), "Người tạo phiếu là Admin (tạo hộ)");
+    }
 }
