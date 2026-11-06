@@ -86,7 +86,18 @@ public class CustomerPortalServiceImpl implements CustomerPortalService {
 
     @Override
     public List<Service> getFeaturedServices(int limit) {
-        List<Service> all = serviceCatalogService.getPublicServices();
+        List<Service> all = new ArrayList<>(serviceCatalogService.getPublicServices());
+        // Ưu tiên hiển thị dịch vụ điều trị lâm sàng & khám tư vấn trước dịch vụ cận lâm sàng (X-quang/Labo)
+        all.sort(Comparator.comparingInt(s -> {
+            if (Boolean.TRUE.equals(s.getIsParaclinical())) {
+                return 2;
+            }
+            if (s.getServiceType() != null
+                    && ("XRAY".equals(s.getServiceType().name()) || "LAB".equals(s.getServiceType().name()))) {
+                return 1;
+            }
+            return 0;
+        }));
         if (all.size() <= limit) {
             return all;
         }
@@ -95,10 +106,19 @@ public class CustomerPortalServiceImpl implements CustomerPortalService {
 
     @Override
     public Map<Long, ServicePromotionViewDTO> getActiveServicePromotionsMap() {
+        return getActiveServicePromotionsMap(null);
+    }
+
+    @Override
+    public Map<Long, ServicePromotionViewDTO> getActiveServicePromotionsMap(Long branchId) {
         List<Promotion> activePromos = promotionRepository.findActiveServicePromotions(LocalDateTime.now());
         Map<Long, ServicePromotionViewDTO> bestByServiceId = new HashMap<>();
 
         for (Promotion promo : activePromos) {
+            if (branchId != null && promo.getBranch() != null
+                    && !Objects.equals(promo.getBranch().getBranchId(), branchId)) {
+                continue;
+            }
             Service svc = promo.getApplicableService();
             if (svc == null || svc.getServiceId() == null) {
                 continue;
@@ -258,7 +278,12 @@ public class CustomerPortalServiceImpl implements CustomerPortalService {
 
     @Override
     public List<PublicDoctorCardDTO> getFeaturedDoctors(int limit) {
-        List<PublicDoctorCardDTO> all = getPublicDoctors(null, null, null);
+        return getFeaturedDoctors(limit, null);
+    }
+
+    @Override
+    public List<PublicDoctorCardDTO> getFeaturedDoctors(int limit, Long branchId) {
+        List<PublicDoctorCardDTO> all = getPublicDoctors(null, null, branchId);
         if (all.size() <= limit) {
             return all;
         }
@@ -313,11 +338,16 @@ public class CustomerPortalServiceImpl implements CustomerPortalService {
 
     @Override
     public List<NewsArticle> getLatestPublishedNews(int limit) {
+        return getLatestPublishedNews(limit, null);
+    }
+
+    @Override
+    public List<NewsArticle> getLatestPublishedNews(int limit, Long branchId) {
         if (limit <= 0) {
             return List.of();
         }
         return newsArticleRepository
-                .searchPublishedPublic("", null, PageRequest.of(0, limit))
+                .searchPublishedPublic("", branchId, PageRequest.of(0, limit))
                 .getContent();
     }
 

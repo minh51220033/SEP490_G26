@@ -70,7 +70,8 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/uploads/avatars/**",
                                 "/uploads/news/**",
-                                "/uploads/services/**"
+                                "/uploads/services/**",
+                                "/uploads/images/**"
                         ).permitAll()
 
                         // 2. Các trang xác thực & tài khoản công khai

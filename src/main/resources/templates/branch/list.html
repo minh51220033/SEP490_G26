@@ -235,7 +235,12 @@
                             <!-- 3. Tên chi nhánh & Quản lý -->
                             <td data-col="name">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="staff-avatar-circle" style="background: #e0f2fe; color: #0284c7; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                                    <img th:if="${branch.imageUrl != null and !branch.imageUrl.isBlank()}"
+                                         th:src="${branch.imageUrl}"
+                                         th:alt="${branch.branchName}"
+                                         style="width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0;">
+                                    <div th:if="${branch.imageUrl == null or branch.imageUrl.isBlank()}"
+                                         class="staff-avatar-circle" style="background: #e0f2fe; color: #0284c7; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
                                         <i class="bi bi-buildings"></i>
                                     </div>
                                     <div>
@@ -490,7 +495,7 @@
 <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
         <form class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;"
-              th:action="@{/admin/branches}" th:object="${branchForm}" method="post">
+              th:action="@{/admin/branches}" th:object="${branchForm}" method="post" enctype="multipart/form-data">
             <div class="modal-header py-3 px-4 bg-white" style="border-bottom: 1px solid #e2e8f0;">
                 <h5 class="modal-title fs-6 fw-bold text-dark" id="createBranchTitle">
                     <i class="bi bi-buildings text-primary me-2"></i>Thêm chi nhánh mới
@@ -540,6 +545,16 @@
                             <option value="">-- Chưa chỉ định --</option>
                             <option th:each="m : ${managers}" th:value="${m.userId}" th:text="${m.displayName}">Quản lý</option>
                         </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="createBranchImageFile" class="form-label small fw-semibold text-muted">
+                            <i class="bi bi-image text-primary me-1"></i>Hình ảnh cơ sở (Mặt tiền / Phòng khám)
+                        </label>
+                        <input type="file" id="createBranchImageFile" name="imageFile" class="form-control"
+                               accept="image/jpeg,image/png,image/webp">
+                        <div class="form-text small">
+                            Hỗ trợ JPG, PNG, WEBP (tối đa 5MB). Ảnh này hiển thị tại mục <strong>Ghé thăm cơ sở</strong> trên trang chủ.
+                        </div>
                     </div>
                 </div>
             </div>

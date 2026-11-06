@@ -54,15 +54,77 @@ public class UserController {
     @Autowired(required = false)
     private com.cvdcms.service.CustomerPortalService customerPortalService;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.ServiceCatalogService serviceCatalogService;
+
+    private Branch resolveUserPortalBranch(HttpSession session, List<Branch> activeBranches) {
+        if (session == null) {
+            return null;
+        }
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            PatientProfile defaultProfile = patientProfileRepository
+                    .findFirstByUser_UserIdAndIsDefaultTrue(sessionUser.getUserId())
+                    .orElse(null);
+            if (defaultProfile != null
+                    && defaultProfile.getPreferredBranch() != null
+                    && Boolean.TRUE.equals(defaultProfile.getPreferredBranch().getIsActive())) {
+                return defaultProfile.getPreferredBranch();
+            }
+            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
+                return dbUser.getBranch();
+            }
+        }
+        Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
+        if (selectedBranchIdObj instanceof Long selectedId && activeBranches != null) {
+            for (Branch b : activeBranches) {
+                if (selectedId.equals(b.getBranchId())) {
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+
     private String populateCustomerPortalHome(Model model) {
+        return populateCustomerPortalHome(model, null);
+    }
+
+    private String populateCustomerPortalHome(Model model, HttpSession session) {
         model.addAttribute("activeNav", "home");
         if (customerPortalService != null) {
-            model.addAttribute("featuredServices", customerPortalService.getFeaturedServices(4));
-            model.addAttribute("servicePromotions", customerPortalService.getActiveServicePromotionsMap());
-            model.addAttribute("featuredDoctors", customerPortalService.getFeaturedDoctors(4));
-            model.addAttribute("latestNews", customerPortalService.getLatestPublishedNews(4));
-            model.addAttribute("branches", customerPortalService.getActiveBranches());
+            List<Branch> branches = customerPortalService.getActiveBranches();
+            Branch currentBranch = resolveUserPortalBranch(session, branches);
+            Long targetBranchId = currentBranch != null ? currentBranch.getBranchId() : null;
+
+            boolean isLoggedIn = session != null && session.getAttribute("loggedInUser") != null;
+            String effectivePhone = "0987654321";
+            if (isLoggedIn) {
+                Branch phoneBranch = currentBranch != null ? currentBranch : customerPortalService.getPrimaryBranch();
+                if (phoneBranch != null && phoneBranch.getPhone() != null && !phoneBranch.getPhone().isBlank()) {
+                    effectivePhone = phoneBranch.getPhone().trim();
+                }
+            }
+
+            List<Service> allPortalServices = customerPortalService.getFeaturedServices(30);
+            List<Service> topFeatured = allPortalServices.size() <= 5
+                    ? allPortalServices
+                    : allPortalServices.subList(0, 5);
+
+            model.addAttribute("currentPortalBranch", currentBranch);
+            model.addAttribute("effectiveContactPhone", effectivePhone);
+            model.addAttribute("categories", serviceCatalogService != null ? serviceCatalogService.getActiveCategories() : List.of());
+            model.addAttribute("portalServices", allPortalServices);
+            model.addAttribute("featuredServices", topFeatured);
+            model.addAttribute("servicePromotions", customerPortalService.getActiveServicePromotionsMap(targetBranchId));
+            model.addAttribute("featuredDoctors", customerPortalService.getFeaturedDoctors(4, targetBranchId));
+            model.addAttribute("latestNews", customerPortalService.getLatestPublishedNews(4, targetBranchId));
+            model.addAttribute("branches", branches);
         } else {
+            model.addAttribute("currentPortalBranch", null);
+            model.addAttribute("effectiveContactPhone", "0987654321");
+            model.addAttribute("categories", List.of());
+            model.addAttribute("portalServices", List.of());
             model.addAttribute("featuredServices", List.of());
             model.addAttribute("servicePromotions", java.util.Map.of());
             model.addAttribute("featuredDoctors", List.of());
@@ -210,14 +272,14 @@ public class UserController {
                 }
             }
         }
-        return populateCustomerPortalHome(model);
+        return populateCustomerPortalHome(model, session);
     }
 
 
     @GetMapping("/home")
     public String home(@RequestParam(value = "view", required = false) String view, HttpSession session, Model model) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
-            return populateCustomerPortalHome(model);
+            return populateCustomerPortalHome(model, session);
         }
 
         // 1. Kiểm tra người dùng đã đăng nhập chưa
@@ -325,7 +387,7 @@ public class UserController {
         session.setAttribute("currentBranchName", currentBranchName);
 
         if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
-            return populateCustomerPortalHome(model);
+            return populateCustomerPortalHome(model, session);
         }
         return "user/home";
     }

@@ -50,6 +50,9 @@ public class Branch {
     @Column(name = "tax_code", length = 20)
     private String taxCode;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_user_id")
     private User managerUser;

@@ -263,8 +263,41 @@ public class GlobalModelAttributesAdvice {
         }
     }
 
+    @ModelAttribute("currentPortalBranch")
+    public Branch populateCurrentPortalBranch(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        List<Branch> activeBranches = populatePublicBranches();
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân hoặc cơ sở của tài khoản
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            PatientProfile pp = populateDefaultPatientProfile(session);
+            if (pp != null && pp.getPreferredBranch() != null && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+                return pp.getPreferredBranch();
+            }
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser) : sessionUser;
+            if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+                return user.getBranch();
+            }
+        }
+        // 2. Nếu có chọn cơ sở trong session (khi bấm "Chuyển sang cơ sở này")
+        Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
+        if (selectedBranchIdObj instanceof Long selectedId) {
+            for (Branch b : activeBranches) {
+                if (selectedId.equals(b.getBranchId())) {
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+
     @ModelAttribute("primaryBranch")
-    public Branch populatePrimaryBranch() {
+    public Branch populatePrimaryBranch(HttpSession session) {
+        Branch current = populateCurrentPortalBranch(session);
+        if (current != null) {
+            return current;
+        }
         CustomerPortalService portalService = customerPortalServiceProvider != null
                 ? customerPortalServiceProvider.getIfAvailable()
                 : null;
@@ -276,6 +309,20 @@ public class GlobalModelAttributesAdvice {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    @ModelAttribute("effectiveContactPhone")
+    public String populateEffectiveContactPhone(HttpSession session) {
+        if (session != null && session.getAttribute("loggedInUser") != null) {
+            Branch current = populateCurrentPortalBranch(session);
+            if (current == null) {
+                current = populatePrimaryBranch(session);
+            }
+            if (current != null && current.getPhone() != null && !current.getPhone().isBlank()) {
+                return current.getPhone().trim();
+            }
+        }
+        return "0987654321";
     }
 
     @ModelAttribute("footerServices")

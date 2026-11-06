@@ -24,6 +24,24 @@
 <main class="cp-section cp-section--soft">
     <div class="container-xl">
 
+        <!-- THÔNG BÁO CƠ SỞ ĐANG XEM (KHI NGƯỜI DÙNG ĐÃ CHỌN CƠ SỞ) -->
+        <div class="alert border-0 shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4"
+             style="background: #eef4ff; color: #164ec8; border-radius: 14px; padding: 14px 20px;"
+             th:if="${currentPortalBranch != null}">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-hospital-fill fs-5"></i>
+                <div>
+                    <span class="small fw-semibold text-uppercase d-block" style="letter-spacing: 0.05em; opacity: 0.85;">Cơ sở đang chọn</span>
+                    <strong th:text="${currentPortalBranch.branchName}">Cơ sở Cường Việt</strong>
+                    <span class="text-muted small ms-1" th:if="${currentPortalBranch.address != null}"
+                          th:text="'· ' + ${currentPortalBranch.address}">Địa chỉ</span>
+                </div>
+            </div>
+            <a th:href="@{/#lien-he}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                <i class="bi bi-arrow-left-right me-1"></i>Đổi cơ sở
+            </a>
+        </div>
+
         <!-- THANH TÌM KIẾM & BỘ LỌC BÁC SĨ -->
         <div class="cp-filter-box">
             <form method="get" th:action="@{/doctors}" class="row g-3 align-items-end">
@@ -57,9 +75,16 @@
                     <label for="branchSelect" class="form-label small fw-bold text-secondary mb-1">
                         <i class="bi bi-buildings me-1 text-primary"></i>Cơ sở công tác
                     </label>
-                    <select id="branchSelect" name="branchId" class="form-select">
-                        <option value="">Tất cả cơ sở</option>
-                        <option th:each="br : ${branches}"
+                    <select id="branchSelect" name="branchId" class="form-select"
+                            th:disabled="${currentPortalBranch != null}">
+                        <option value="" th:if="${currentPortalBranch == null}">Tất cả cơ sở</option>
+                        <option th:if="${currentPortalBranch != null}"
+                                th:value="${currentPortalBranch.branchId}"
+                                th:text="${currentPortalBranch.branchName}"
+                                selected>
+                        </option>
+                        <option th:if="${currentPortalBranch == null}"
+                                th:each="br : ${branches}"
                                 th:value="${br.branchId}"
                                 th:text="${br.branchName}"
                                 th:selected="${selectedBranchId != null and selectedBranchId == br.branchId}">
