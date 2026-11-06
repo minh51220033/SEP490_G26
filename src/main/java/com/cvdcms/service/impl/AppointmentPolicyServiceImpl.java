@@ -4,6 +4,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentPolicyService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,16 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     private final StaffBranchAssignmentRepository assignments;
     private final StaffScheduleRepository schedules;
     private final LeaveRequestRepository leaves;
+    private final StaffProfileRepository staffProfiles;
     private final int defaultBranchCapacity;
     private final int defaultDoctorCapacity;
 
+    @Autowired
     public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
             AppointmentSessionWindowRepository windows, AppointmentSessionPolicyRepository policies,
             StaffBranchAssignmentRepository assignments, StaffScheduleRepository schedules,
             LeaveRequestRepository leaves,
+            StaffProfileRepository staffProfiles,
             @Value("${appointments.branch-capacity:24}") int defaultBranchCapacity,
             @Value("${appointments.doctor-capacity:10}") int defaultDoctorCapacity) {
         this.appointments = appointments;
@@ -39,8 +43,19 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         this.assignments = assignments;
         this.schedules = schedules;
         this.leaves = leaves;
+        this.staffProfiles = staffProfiles;
         this.defaultBranchCapacity = defaultBranchCapacity;
         this.defaultDoctorCapacity = defaultDoctorCapacity;
+    }
+
+    public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
+            AppointmentSessionWindowRepository windows, AppointmentSessionPolicyRepository policies,
+            StaffBranchAssignmentRepository assignments, StaffScheduleRepository schedules,
+            LeaveRequestRepository leaves,
+            int defaultBranchCapacity,
+            int defaultDoctorCapacity) {
+        this(appointments, windows, policies, assignments, schedules, leaves, null,
+                defaultBranchCapacity, defaultDoctorCapacity);
     }
 
     @Override
@@ -51,16 +66,16 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
+        int doctorCap = doctorCapacity(policy);
+        int capacity = Math.min(branchCapacity(policy), Math.max(1, doctors.size()) * doctorCap);
         int remaining = Math.max(0, capacity - booked.size());
         List<DoctorOption> options = doctors.stream().map(doctor -> {
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
                     && doctor.getStaffId().equals(a.getDoctor().getStaffId())).count();
             return new DoctorOption(doctor.getStaffId(), doctor.getFullName(), doctor.getSpecialty(),
-                    Math.max(0, doctorCapacity(policy) - (int) doctorBooked));
+                    Math.max(0, doctorCap - (int) doctorBooked));
         }).filter(option -> option.remaining() > 0).toList();
-        String reason = doctors.isEmpty() ? "Chưa có bác sĩ trực buổi này."
-                : remaining == 0 ? "Buổi khám đã đầy." : null;
+        String reason = remaining == 0 ? "Buổi khám đã đầy." : null;
         return new Availability(remaining > 0, reason, remaining, options);
     }
 
@@ -132,10 +147,11 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                 .anyMatch(a -> !Objects.equals(a.getAppointmentId(), excludeAppointmentId));
         if (duplicate) throw conflict("Hồ sơ đã có lịch còn hiệu lực tại chi nhánh trong ngày này.");
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
-        if (doctors.isEmpty()) throw conflict("Chưa có bác sĩ trực buổi này.");
+        if (doctors.isEmpty() && doctorId != null) throw conflict("Chưa có bác sĩ trực buổi này.");
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        int maxCapacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
+        int maxCapacity = Math.max(1, Math.min(branchCapacity(policy),
+                Math.max(1, doctors.size()) * doctorCapacity(policy)));
         if (booked.size() >= maxCapacity) {
             throw conflict("Buổi khám đã đủ định mức tiếp nhận (" + booked.size() + "/" + maxCapacity + " ca).");
         }
@@ -241,6 +257,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                                                PreferredSession session) {
         SessionRange range = sessionRange(branch, session);
         Set<Long> assigned = new HashSet<>();
+        Map<Long, StaffProfile> assignedDoctors = new LinkedHashMap<>();
         for (StaffBranchAssignment assignment : assignments.findByBranchAndStatus(
                 branch.getBranchId(), AssignmentStatus.ACTIVE)) {
             if (assignment.getStartDate().isAfter(date)
@@ -250,6 +267,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                     || !("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))) continue;
             if (assignment.getStaff().getStatus() == StaffStatus.ACTIVE) {
                 assigned.add(assignment.getStaff().getStaffId());
+                assignedDoctors.put(assignment.getStaff().getStaffId(), assignment.getStaff());
             }
         }
         List<LeaveRequest> approved = leaves.findApprovedOn(branch.getBranchId(), date, LeaveStatus.APPROVED);
@@ -266,6 +284,31 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                             && (leave.getShift() == null
                             || leave.getShift().getShiftId().equals(shift.getShiftId())));
             if (!absent) result.put(doctor.getStaffId(), doctor);
+        }
+
+        // 1. Fallback: Nếu ngày này chưa có ca trực cụ thể (StaffSchedule),
+        // sử dụng các bác sĩ đang phân công tại chi nhánh và không nghỉ phép.
+        if (result.isEmpty() && !assignedDoctors.isEmpty()) {
+            for (StaffProfile doctor : assignedDoctors.values()) {
+                boolean absent = approved.stream().anyMatch(leave ->
+                        leave.getStaff().getStaffId().equals(doctor.getStaffId()));
+                if (!absent) result.put(doctor.getStaffId(), doctor);
+            }
+        }
+
+        // 2. Fallback: Nếu chi nhánh chưa phân công bác sĩ riêng trong hệ thống,
+        // sử dụng các bác sĩ đang hoạt động trong toàn hệ thống để không chặn đặt lịch.
+        if (result.isEmpty() && staffProfiles != null) {
+            for (StaffProfile doctor : staffProfiles.findByStatus(StaffStatus.ACTIVE)) {
+                boolean isDoctor = (doctor.getSpecialty() != null && !doctor.getSpecialty().isBlank())
+                        || (doctor.getPositionTitle() != null && doctor.getPositionTitle().toLowerCase().contains("bác sĩ"))
+                        || (doctor.getFullName() != null && (doctor.getFullName().startsWith("BS") || doctor.getFullName().startsWith("ThS")));
+                if (isDoctor) {
+                    boolean absent = approved.stream().anyMatch(leave ->
+                            leave.getStaff().getStaffId().equals(doctor.getStaffId()));
+                    if (!absent) result.put(doctor.getStaffId(), doctor);
+                }
+            }
         }
         return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
     }

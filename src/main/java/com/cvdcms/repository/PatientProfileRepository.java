@@ -25,6 +25,8 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
 
     Optional<PatientProfile> findByPatientCode(String patientCode);
 
+    List<PatientProfile> findByPhoneNumber(String phoneNumber);
+
     // Lấy danh sách tất cả hồ sơ thuộc tài khoản đang đăng nhập
     List<PatientProfile> findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(Long userId);
 

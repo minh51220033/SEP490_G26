@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Tiếp đón & Check-in - FT07')}"></head>
+<head th:replace="~{fragments/head :: head('Tiếp đón & Check-in')}"></head>
 <body class="app-body">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('checkin')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Tiếp đón & Check-in')}"></header>
-        <main class="app-content">
+        <main class="app-content" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/check-in.css}">
 
@@ -21,17 +21,18 @@
                             <li class="breadcrumb-item active" aria-current="page">Tiếp đón &amp; Check-in</li>
                         </ol>
                     </nav>
-                    <h1 class="h3 fw-bold text-dark mb-1">Tiếp đón &amp; Check-in (FT07)</h1>
-                    <p class="text-muted small mb-0">Xác nhận bệnh nhân có mặt tại phòng khám, ghi nhận triệu chứng ban đầu và cấp số điều phối hoặc vào khám ngay.</p>
+                    <h1 class="h3 fw-bold text-dark mb-1">Tiếp đón &amp; Check-in</h1>
+                    <p class="text-muted small mb-0">Xác nhận bệnh nhân có mặt tại phòng khám, ghi nhận triệu chứng ban đầu và điều phối vào hàng chờ.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a th:href="@{/reception/appointments}" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar3 me-1"></i> Quản lý lịch hẹn</a>
-                    <a th:href="@{/reception/dispatch}" class="btn btn-outline-info btn-sm"><i class="bi bi-people-fill me-1"></i> Điều phối F08</a>
+                    <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-outline-info btn-sm text-dark"><i class="bi bi-diagram-3 me-1 text-primary"></i> Điều phối ghế nha</a>
+                    <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-ol me-1"></i> Hàng chờ khám</a>
                     <a th:href="@{/doctor/daily-visits}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-table me-1"></i> Bàn khám trong ngày</a>
                 </div>
             </div>
 
-            <!-- Thanh dẫn hướng quy trình liên tục FT05 -> FT07 -> FT08 -> FT10 -->
+            <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
             <div class="card border-0 shadow-sm rounded-3 mb-3 p-2 bg-white">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
                     <div class="d-flex align-items-center gap-2 small">
@@ -40,39 +41,56 @@
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-1.5 small">
                         <a th:href="@{/reception/appointments}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
-                            <span class="badge bg-secondary rounded-circle me-1">1</span> Lịch hẹn (FT05)
+                            <span class="badge bg-secondary rounded-circle me-1">1</span> Lịch hẹn
                         </a>
                         <i class="bi bi-chevron-right text-muted mx-0.5" style="font-size: 11px;"></i>
-                        <span class="btn btn-sm btn-primary rounded-pill px-3 py-0.5 fw-bold shadow-sm" title="Bước 2: Đang ở màn hình này">
-                            <span class="badge bg-white text-primary rounded-circle me-1">2</span> Tiếp đón &amp; Check-in (FT07)
+                        <span class="btn btn-sm btn-primary rounded-pill px-3 py-0.5 fw-bold shadow-sm" title="Bước 2: Đang ở màn hình Tiếp đón & Check-in">
+                            <span class="badge bg-white text-primary rounded-circle me-1">2</span> Tiếp đón &amp; Check-in
                         </span>
                         <i class="bi bi-chevron-right text-muted mx-0.5" style="font-size: 11px;"></i>
                         <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-0.5 text-decoration-none text-dark fw-semibold" title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
-                            <span class="badge bg-info text-dark rounded-circle me-1">3</span> Điều phối ghế (FT08)
+                            <span class="badge bg-info text-dark rounded-circle me-1">3</span> Điều phối ghế nha
                         </a>
                         <i class="bi bi-chevron-right text-muted mx-0.5" style="font-size: 11px;"></i>
                         <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 text-decoration-none" title="Bước 4: Hàng chờ gọi số">
-                            <span class="badge bg-secondary rounded-circle me-1">4</span> Hàng chờ (FT10)
+                            <span class="badge bg-secondary rounded-circle me-1">4</span> Hàng chờ gọi số
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Flash Success Alert with Quick Action Buttons -->
-            <div th:if="${notice}" class="alert alert-success border-0 shadow-sm rounded-3 mb-3 p-3">
-                <div class="d-flex align-items-start gap-3">
-                    <i class="bi bi-check-circle-fill text-success fs-4 mt-0.5"></i>
-                    <div class="flex-grow-1">
-                        <strong class="text-success-emphasis d-block mb-1" th:text="${notice}"></strong>
-                        <div th:if="${checkedInVisitId != null}" class="d-flex flex-wrap align-items-center gap-2 mt-2 pt-2 border-top border-success-subtle">
-                            <span class="small text-muted fw-semibold me-1"><i class="bi bi-arrow-return-right me-1"></i>Bước tiếp theo:</span>
-                            <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 shadow-sm">
-                                <i class="bi bi-diagram-3-fill me-1"></i> Chuyển sang Điều phối ghế &amp; Bác sĩ (FT08) <i class="bi bi-chevron-right ms-1"></i>
-                            </a>
-                            <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-sm btn-outline-secondary py-1 px-2.5 bg-white">
-                                <i class="bi bi-list-ol me-1"></i> Xem hàng chờ (FT10)
-                            </a>
+            <!-- Flash Success Action Bar with 4 Quick Action Buttons -->
+            <div th:if="${notice}" class="flash-success-action-bar shadow-sm mb-3">
+                <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="flash-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px; font-size: 20px;">
+                            <i class="bi bi-check2"></i>
                         </div>
+                        <div>
+                            <span class="badge bg-success-subtle text-success fw-bold px-2 py-0.5 rounded-pill mb-1" style="font-size: 11px;">
+                                <i class="bi bi-check-circle-fill me-1"></i>TIẾP ĐÓN THÀNH CÔNG
+                            </span>
+                            <strong class="text-dark d-block fs-6" th:text="${notice}"></strong>
+                        </div>
+                    </div>
+                    <div th:if="${checkedInVisitId != null}" class="d-flex flex-wrap align-items-center gap-2 flash-actions-group">
+                        <a th:href="@{/doctor/examination/{id}/treatment(id=${checkedInVisitId})}" class="btn btn-primary fw-bold shadow-sm" title="Vào thẳng bàn khám của Bác sĩ">
+                            <i class="bi bi-stethoscope me-1.5"></i>Vào khám ngay
+                        </a>
+                        <a th:href="@{/doctor/examination/{id}/treatment-plans/create(id=${checkedInVisitId})}" class="btn btn-outline-primary bg-white fw-bold shadow-sm" title="Lập phác đồ điều trị cho bệnh nhân">
+                            <i class="bi bi-clipboard2-pulse me-1.5"></i>Lập phác đồ
+                        </a>
+                        <a th:href="@{/reception/patients(query=${checkedInPatientName != null ? checkedInPatientName : checkedInCode})}" class="btn btn-outline-secondary bg-white fw-semibold shadow-sm" title="Xem hồ sơ thông tin bệnh nhân">
+                            <i class="bi bi-folder2-open me-1.5"></i>Xem hồ sơ
+                        </a>
+                        <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-outline-info bg-white text-dark fw-bold shadow-sm" title="Chuyển sang bàn điều phối phân ghế và cấp số">
+                            <i class="bi bi-diagram-3-fill me-1.5 text-primary"></i>Chuyển điều phối
+                        </a>
+                    </div>
+                    <div th:unless="${checkedInVisitId != null}" class="d-flex align-items-center gap-2">
+                        <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-outline-info bg-white text-dark fw-bold btn-sm shadow-sm">
+                            <i class="bi bi-diagram-3-fill me-1 text-primary"></i>Chuyển điều phối
+                        </a>
                     </div>
                 </div>
             </div>
@@ -139,7 +157,7 @@
                                     <button type="button" class="btn btn-sm btn-primary active py-0.5 px-2" data-filter="ALL" style="font-size: 11.5px;">Tất cả</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2" data-filter="PENDING" style="font-size: 11.5px;">Chờ xác nhận</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2" data-filter="CONFIRMED" style="font-size: 11.5px;">Đã xác nhận</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2" data-filter="TK" style="font-size: 11.5px;">Tái khám (FT18)</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2" data-filter="TK" style="font-size: 11.5px;">Tái khám</button>
                                 </div>
                             </div>
                         </div>
@@ -153,6 +171,7 @@
                             <div class="appointment-scroll-container" id="appointmentListContainer" th:if="${!#lists.isEmpty(dashboard.appointments)}">
                                 <div th:each="a : ${dashboard.appointments}"
                                      class="patient-card-block appointment-card-item"
+                                     th:id="|appointment-${a.id}|"
                                      th:classappend="${#strings.startsWith(a.code, 'TK')} ? ' is-reexam' : ''"
                                      th:data-status="${a.status.name()}"
                                      th:data-is-tk="${#strings.startsWith(a.code, 'TK')}"
@@ -164,12 +183,12 @@
                                             <div class="patient-card-avatar" th:text="${#strings.substring(a.patient.name, 0, 1)}">N</div>
                                             <div>
                                                 <h6 class="fw-bold text-dark mb-0" th:text="${a.patient.name}">Nguyễn Minh An</h6>
-                                                <span class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;" th:text="${a.patient.code}">BNFT0601</span>
+                                                <span class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;" th:text="${a.patient.code}">BN10001</span>
                                             </div>
                                         </div>
                                         <div class="d-flex flex-column align-items-end gap-1">
                                             <span th:if="${#strings.startsWith(a.code, 'TK')}" class="badge badge-purple" style="font-size: 11px;">
-                                                <i class="bi bi-calendar2-check-fill me-0.5"></i>Tái khám (FT18)
+                                                <i class="bi bi-calendar2-check-fill me-0.5"></i>Tái khám
                                             </span>
                                             <span class="badge" th:classappend="${a.status.name() == 'PENDING' ? 'bg-warning text-dark' : (a.status.name() == 'CONFIRMED' ? 'bg-primary' : 'bg-success')}" style="font-size: 11px;" th:text="${a.status.name() == 'PENDING' ? 'Chờ xác nhận' : (a.status.name() == 'CONFIRMED' ? 'Đã xác nhận' : 'Đã check-in')}">CONFIRMED</span>
                                             <span th:if="${a.lateMinutes >= 15}" class="badge bg-warning text-dark" th:text="|Đến trễ ${a.lateMinutes} phút|">Đến trễ</span>
@@ -179,7 +198,7 @@
                                     <!-- Appointment Meta Info -->
                                     <div class="small text-muted mb-2 ps-1">
                                         <div class="d-flex flex-wrap gap-x-3 gap-y-1">
-                                            <span><i class="bi bi-ticket-perforated me-1 text-primary"></i>Mã: <strong class="text-dark" th:text="${a.code}">LHFT0501REC</strong></span>
+                                            <span><i class="bi bi-ticket-perforated me-1 text-primary"></i>Mã: <strong class="text-dark" th:text="${a.code}">LH10001</strong></span>
                                             <span class="text-muted">·</span>
                                             <span><i class="bi bi-clock me-1 text-primary"></i><span th:text="${a.expectedTime != null ? a.expectedTime : 'Chưa định giờ'}">Chưa xác định giờ</span></span>
                                             <span class="text-muted">·</span>
@@ -201,7 +220,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- FT18 Doctor Re-examination Note -->
+                                    <!-- Doctor Re-examination Note -->
                                     <div th:if="${#strings.startsWith(a.code, 'TK') and a.symptoms != null and !a.symptoms.isBlank()}" class="p-2 rounded-2 small mb-2" style="background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6;">
                                         <i class="bi bi-chat-left-quote-fill me-1 text-purple"></i>
                                         <strong>Dặn dò tái khám từ bác sĩ:</strong> <span th:text="${a.symptoms}"></span>
@@ -268,7 +287,7 @@
                                 <p class="small text-muted mb-0">Hãy nhập Họ tên, Mã bệnh nhân, Số điện thoại hoặc CCCD ở ô tìm kiếm phía trên để tiếp đón khách vãng lai.</p>
                             </div>
 
-                            <!-- Scenario 2: Searched but NOT FOUND -> Show button to jump to FT03 (Create patient) -->
+                            <!-- Scenario 2: Searched but NOT FOUND -> Show button to create patient -->
                             <div th:if="${dashboard.query != null and dashboard.query.length() >= 2 and #lists.isEmpty(dashboard.matches)}" class="p-4 text-center rounded-3 bg-light border border-dashed my-3">
                                 <div class="mb-3">
                                     <i class="bi bi-person-x text-secondary opacity-75 display-5"></i>
@@ -279,7 +298,7 @@
                                     Nếu đây là bệnh nhân mới, vui lòng tạo hồ sơ bệnh nhân trước.
                                 </p>
                                 <a th:href="@{/reception/patients/new(branchId=${dashboard.branchId}, phone=${dashboard.query})}" class="btn btn-primary btn-sm px-3 py-2 shadow-sm">
-                                    <i class="bi bi-person-plus-fill me-1.5"></i> Tạo hồ sơ bệnh nhân mới (FT03)
+                                    <i class="bi bi-person-plus-fill me-1.5"></i> Tạo hồ sơ bệnh nhân mới
                                 </a>
                             </div>
 
@@ -397,7 +416,7 @@
                                 <th class="ps-3" style="width: 130px;">Mã lượt</th>
                                 <th>Bệnh nhân</th>
                                 <th style="width: 100px;">Giờ đến</th>
-                                <th style="width: 130px;">Số thứ tự (FT09)</th>
+                                <th style="width: 130px;">Số thứ tự</th>
                                 <th style="width: 120px;">Loại khám</th>
                                 <th style="width: 150px;">Trạng thái</th>
                                 <th>Ghi nhận ban đầu</th>
@@ -470,6 +489,15 @@
 <!-- Inline Client Script for Quick Appointment Filter -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const selectedAppointmentId = document.querySelector('main[data-selected-appointment-id]')?.dataset.selectedAppointmentId;
+        if (selectedAppointmentId) {
+            const selectedCard = document.getElementById(`appointment-${selectedAppointmentId}`);
+            if (selectedCard) {
+                selectedCard.classList.add('is-selected');
+                selectedCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+                selectedCard.querySelector('textarea')?.focus({preventScroll: true});
+            }
+        }
         const searchInput = document.getElementById('appointmentQuickSearch');
         const filterContainer = document.getElementById('appointmentFilterPills');
         const cards = document.querySelectorAll('.appointment-card-item');

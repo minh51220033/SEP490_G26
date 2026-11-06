@@ -17,11 +17,11 @@
                     <div><label for="fullName">Họ và tên *</label><input id="fullName" name="fullName" class="form-control" required maxlength="100" th:value="${patient != null ? patient.fullName : ''}"></div>
                     <div><label for="dob">Ngày sinh *</label><input id="dob" name="dob" class="form-control" type="date" required th:value="${patient != null ? patient.dob : ''}"><small>Không được nhập ngày trong tương lai.</small></div>
                     <div><label for="gender">Giới tính *</label><select id="gender" name="gender" class="form-select" required><option value="">Chọn giới tính</option><option value="Nam" th:selected="${patient != null and patient.gender == 'Nam'}">Nam</option><option value="Nữ" th:selected="${patient != null and patient.gender == 'Nữ'}">Nữ</option><option value="Khác" th:selected="${patient != null and patient.gender == 'Khác'}">Khác</option></select></div>
-                    <div><label for="branchId">Chi nhánh quản lý *</label><select id="branchId" name="branchId" class="form-select" required><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${patient != null and patient.branchId == branch.branchId}">Chi nhánh</option></select></div>
+                    <div><label for="branchId">Chi nhánh quản lý *</label><select id="branchId" name="branchId" class="form-select" required><option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${patient != null ? patient.branchId == branch.branchId : prefillBranchId == branch.branchId}">Chi nhánh</option></select></div>
                 </div>
                 <h2>Liên hệ</h2>
                 <div class="patient-form-grid">
-                    <div><label for="phoneNumber">Số điện thoại liên hệ *</label><input id="phoneNumber" name="phoneNumber" type="tel" pattern="0[0-9]{9,10}" maxlength="11" class="form-control" required th:value="${patient != null ? patient.phoneNumber : ''}"><small>Có thể dùng chung số điện thoại với người thân.</small></div>
+                    <div><label for="phoneNumber">Số điện thoại liên hệ *</label><input id="phoneNumber" name="phoneNumber" type="tel" pattern="0[0-9]{9,10}" maxlength="11" class="form-control" required th:value="${patient != null ? patient.phoneNumber : prefillPhone}"><small>Có thể dùng chung số điện thoại với người thân.</small></div>
                     <div><label for="address">Địa chỉ</label><input id="address" name="address" class="form-control" maxlength="255" th:value="${patient != null ? patient.address : ''}"></div>
                     <div><label for="guardianName">Người giám hộ</label><input id="guardianName" name="guardianName" class="form-control" maxlength="100" th:value="${patient != null ? patient.guardianName : ''}"></div>
                     <div><label for="guardianPhone">Số điện thoại người giám hộ</label><input id="guardianPhone" name="guardianPhone" type="tel" pattern="0[0-9]{9,10}" maxlength="11" class="form-control" th:value="${patient != null ? patient.guardianPhone : ''}"></div>
@@ -39,7 +39,6 @@
                 <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${patient == null} ? @{/reception/patients} : @{/reception/patients/{id}(id=${patient.id})}">Hủy</a><button class="btn btn-primary" type="submit" id="saveButton">Lưu hồ sơ</button></div>
             </form>
         </main>
-        <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
     </div>
 </div>
 <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateTitle" aria-hidden="true">
