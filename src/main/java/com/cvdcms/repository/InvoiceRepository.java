@@ -238,6 +238,30 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
         SELECT i FROM Invoice i
         WHERE i.patientProfile.profileId = :profileId
           AND i.status != :status
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(i) FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """)
+    Page<Invoice> findInvoicesByPatientAndDates(
+            @Param("profileId") Long profileId,
+            @Param("status") InvoiceStatus status,
+            @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT i FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
           AND (:startDate IS NULL OR i.issuedAt >= :startDate)
           AND (:endDate IS NULL OR i.issuedAt < :endDate)
     """, countQuery = """
@@ -250,6 +274,33 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Page<Invoice> findInvoicesByPatientAndDates(
             @Param("profileId") Long profileId,
             @Param("status") InvoiceStatus status,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+        SELECT i FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND i.branch.branchId IN :branchIds
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """, countQuery = """
+        SELECT COUNT(i) FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != :status
+          AND i.branch.branchId IN :branchIds
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt < :endDate)
+    """)
+    Page<Invoice> findInvoicesByPatientAndBranchesAndDates(
+            @Param("profileId") Long profileId,
+            @Param("status") InvoiceStatus status,
+            @Param("branchIds") List<Long> branchIds,
+            @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
@@ -385,7 +436,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                COALESCE(SUM(i.promotionDiscount), 0),
                COALESCE(SUM(i.pointDiscount), 0),
                COALESCE(SUM(i.totalAmount), 0),
-               COALESCE(SUM(i.remainingDebt), 0)
+               COALESCE(SUM(i.remainingDebt), 0),
+               COALESCE(SUM(i.totalVatAmount), 0)
         FROM Invoice i
         WHERE (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
           AND i.status != 'CANCELLED'
@@ -454,4 +506,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<com.cvdcms.DTO.PatientDebtSummaryDTO> findAllPatientDebtsByBranches(
             @Param("branchIds") Collection<Long> branchIds
     );
+
+    @Query("""
+        SELECT DISTINCT i.patientProfile.profileId FROM Invoice i
+        WHERE i.status != 'CANCELLED'
+          AND i.remainingDebt > 0
+          AND (:branchIds IS NULL OR i.branch.branchId IN :branchIds)
+    """)
+    List<Long> findPatientProfileIdsWithDebtInBranches(@Param("branchIds") Collection<Long> branchIds);
 }

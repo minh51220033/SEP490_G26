@@ -467,7 +467,7 @@ a { color: inherit; text-decoration: none; }
     flex-direction: column;
     gap: 16px;
     min-width: 0;
-    animation: fade-up var(--dur-slow) var(--ease) both;
+    animation: fade-up var(--dur-slow) var(--ease);
 }
 
 

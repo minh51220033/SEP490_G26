@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     promotion_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     point_discount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     total_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    total_vat_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     paid_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     remaining_debt DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
@@ -62,6 +63,8 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     unit VARCHAR(30) NULL,
     usage_instruction VARCHAR(255) NULL,
     unit_price DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    vat_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    vat_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     final_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     INDEX idx_item_invoice (invoice_id),
     INDEX idx_item_performed (performed_id),
@@ -248,6 +251,44 @@ CREATE TABLE IF NOT EXISTS patient_vouchers (
     INDEX idx_pv_profile_status (profile_id, status),
     CONSTRAINT fk_pv_promo FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id) ON DELETE CASCADE,
     CONSTRAINT fk_pv_profile FOREIGN KEY (profile_id) REFERENCES patient_profiles(profile_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 11. CHÍNH SÁCH THUẾ TNCN & BẢO HIỂM THEO THỜI KỲ (TAX_POLICIES - FT32)
+CREATE TABLE IF NOT EXISTS tax_policies (
+    policy_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    policy_code VARCHAR(50) NOT NULL UNIQUE,
+    policy_name VARCHAR(150) NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE NULL,
+    personal_relief DECIMAL(15,2) NOT NULL DEFAULT 11000000.00,
+    dependent_relief DECIMAL(15,2) NOT NULL DEFAULT 4400000.00,
+    casual_tax_rate DECIMAL(5,2) NOT NULL DEFAULT 10.00,
+    non_resident_tax_rate DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    insurance_employee_rate DECIMAL(5,2) NOT NULL DEFAULT 10.50,
+    insurance_employer_rate DECIMAL(5,2) NOT NULL DEFAULT 21.50,
+    legal_reference VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_tp_dates (effective_from, effective_to)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. CẤU HÌNH NGHĨA VỤ THUẾ DOANH NGHIỆP / HKD THEO CHI NHÁNH (BRANCH_TAX_CONFIGS - FT29)
+CREATE TABLE IF NOT EXISTS branch_tax_configs (
+    config_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id BIGINT NOT NULL,
+    entity_type VARCHAR(30) NOT NULL DEFAULT 'ENTERPRISE',
+    tax_regime VARCHAR(30) NOT NULL DEFAULT 'CIT_STANDARD',
+    cit_rate DECIMAL(5,2) NULL DEFAULT 20.00,
+    service_tax_rate DECIMAL(5,2) NULL DEFAULT 2.00,
+    medicine_tax_rate DECIMAL(5,2) NULL DEFAULT 0.50,
+    effective_from DATE NOT NULL,
+    effective_to DATE NULL,
+    legal_reference VARCHAR(255) NULL,
+    notes VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_btc_branch_dates (branch_id, effective_from, effective_to),
+    CONSTRAINT fk_btc_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
