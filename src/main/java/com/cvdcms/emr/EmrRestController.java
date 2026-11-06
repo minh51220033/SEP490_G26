@@ -46,10 +46,10 @@ public class EmrRestController {
         service.lock(session, recordId);
     }
 
-    @PostMapping("/{recordId}/test-signatures/doctor")
+    @PostMapping(path = {"/{recordId}/signatures/doctor", "/{recordId}/test-signatures/doctor"})
     public void doctorSign(HttpSession session, @PathVariable Long recordId,
             @RequestBody TestSignRequest request) {
-        service.doctorSignForTest(session, recordId, request != null && request.confirmed());
+        service.doctorSign(session, recordId, request != null && request.confirmed());
     }
 
     @PostMapping("/{recordId}/amendments")

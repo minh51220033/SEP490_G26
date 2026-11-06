@@ -36,23 +36,22 @@
                         </span>
                     </div>
 
-                    <!-- Right Side: Add Patient Button -->
-                    <div>
-                        <a th:if="${canManageAdministrative}" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold shadow-sm" th:href="${recordBasePath + '/new'}">
-                            <i class="bi bi-plus-lg me-1"></i> Thêm bệnh nhân
+                    <!-- Right Side: Add Patient Button & Branch Selector (Chuẩn DentalSoft) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:if="${canManageAdministrative}" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold shadow-sm d-flex align-items-center gap-1.5" th:href="${recordBasePath + '/new'}" style="background-color: #1e40af; border-color: #1e40af;">
+                            <i class="bi bi-plus-lg"></i> Thêm bệnh nhân
                         </a>
+                        <div th:if="${branches != null and #lists.size(branches) > 0}" style="min-width: 120px;">
+                            <select id="branchId" class="form-select form-select-sm rounded-3 fw-medium text-dark" name="branchId" onchange="document.getElementById('patientFilterForm').submit()">
+                                <option value="">Tất cả</option>
+                                <option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}"></option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Collapsible Advanced Filters -->
-                    <div class="collapse w-100 mt-2 pt-2 border-top" id="patientAdvancedFilters" th:classappend="${status != null and !status.isBlank() or branchId != null} ? ' show' : ''">
+                    <div class="collapse w-100 mt-2 pt-2 border-top" id="patientAdvancedFilters" th:classappend="${status != null and !status.isBlank()} ? ' show' : ''">
                         <div class="d-flex flex-wrap align-items-center gap-3">
-                            <div th:if="${#lists.size(branches) > 1}" style="min-width: 200px;">
-                                <label for="branchId" class="small text-muted mb-1 d-block">Chi nhánh</label>
-                                <select id="branchId" class="form-select form-select-sm" name="branchId">
-                                    <option value="">Tất cả chi nhánh</option>
-                                    <option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}"></option>
-                                </select>
-                            </div>
                             <div style="min-width: 170px;">
                                 <label for="status" class="small text-muted mb-1 d-block">Trạng thái</label>
                                 <select id="status" class="form-select form-select-sm" name="status">
