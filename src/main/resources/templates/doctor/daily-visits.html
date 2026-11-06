@@ -1096,6 +1096,10 @@
                                 <i class="bi bi-calendar2-check-fill"></i>
                             </span>
                             <span>Danh sách ca khám &amp; Điều phối ghế khám</span>
+                            <span th:if="${isDoctorAccount and currentDoctorName != ''}" 
+                                  class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 py-1.5 px-3 ms-2 align-middle">
+                                <i class="bi bi-person-badge-fill me-1"></i>Hàng chờ cá nhân: <span th:text="${currentDoctorName}">Bác sĩ</span>
+                            </span>
                         </h1>
                     </div>
 
@@ -1215,7 +1219,7 @@
                         <div class="dv-search-box">
                             <i class="bi bi-search search-lead-icon"></i>
                             <input type="text" id="dvSearchInput"
-                                placeholder="Tìm nhanh theo Họ tên BN, Mã BN (BN00...), Số điện thoại, Mã ca khám..."
+                                placeholder="Tìm nhanh theo STT (01, P-01), Họ tên BN, Mã BN (BN00...), Số điện thoại, Mã ca khám..."
                                 oninput="handleSearchDebounce(this.value)">
                             <button type="button" class="search-clear-btn" id="dvClearSearchBtn"
                                 onclick="clearSearchInput()" title="Xóa từ khóa">
@@ -1424,11 +1428,6 @@
                                 <span class="text-secondary fw-semibold" id="currentDateRangeLabel">Tất cả các
                                     ngày</span>
                             </div>
-                            <span class="badge rounded-pill px-3 py-1.5"
-                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
-                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh
-                                (Không cần cuộn ngang)
-                            </span>
                         </div>
 
                         <!-- Nút Tùy biến cột & Ghim cột (Pin Column) -->
@@ -1606,6 +1605,9 @@
         const isDoctorRestricted = /*[[${isDoctorRestricted}]]*/ false;
         const doctorAssignedBranchId = /*[[${doctorAssignedBranchId}]]*/ null;
         const doctorAssignedBranchFullName = /*[[${doctorAssignedBranchFullName}]]*/ '';
+        const currentDoctorStaffId = /*[[${currentDoctorStaffId}]]*/ null;
+        const currentDoctorName = /*[[${currentDoctorName}]]*/ '';
+        const isDoctorAccount = /*[[${isDoctorAccount}]]*/ false;
 
         function showBranchWarningModal(targetBranchName) {
             const modalEl = document.getElementById('branchWarningModal');
@@ -1661,19 +1663,27 @@
             }
         }
 
-        function handleVisitActionClick(event, visitBranchId, visitBranchName) {
+        function handleVisitActionClick(event, visitBranchId, visitBranchName, visitDoctorId) {
             if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
                 if (event) {
                     event.preventDefault();
                     event.stopPropagation();
                 }
                 showBranchWarningModal(visitBranchName || 'cơ sở khác');
+                return false;
+            }
+            if (isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                alert('⚠️ Ca khám này được phân công cho Bác sĩ khác. Bạn chỉ có quyền thao tác trên ca khám của chính mình!');
                 return false;
             }
             return true;
         }
 
-        function handleVisitRowDblClick(event, visitId, visitBranchId, visitBranchName) {
+        function handleVisitRowDblClick(event, visitId, visitBranchId, visitBranchName, visitDoctorId) {
             if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
                 if (event) {
                     event.preventDefault();
@@ -1682,21 +1692,30 @@
                 showBranchWarningModal(visitBranchName || 'cơ sở khác');
                 return false;
             }
+            if (isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                alert('⚠️ Ca khám này được phân công cho Bác sĩ khác. Bạn chỉ có quyền thao tác trên ca khám của chính mình!');
+                return false;
+            }
             window.location.href = `/doctor/examination/${visitId}/diagnoses`;
         }
 
-        const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v10';
+        const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v11';
 
-        // Cấu hình cột mặc định: Ghim cột Họ tên bên trái VÀ Cột 'Nút ấn nhanh' ở cuối bảng giống bao cột khác
+        // Cấu hình cột mặc định: Ghim cột STT Lượt khám & Họ tên bên trái VÀ Cột 'Nút ấn nhanh' ở cuối bảng
         const DEFAULT_COLUMNS = [
-            { id: 'patient',   label: 'Họ và tên Bệnh nhân',       visible: true, pinned: 'left', minWidth: 580 },
-            { id: 'visitCode', label: 'Mã ca khám',                visible: true, pinned: false,  minWidth: 145 },
-            { id: 'checkIn',   label: 'Giờ tiếp đón',              visible: true, pinned: false,  minWidth: 165 },
-            { id: 'symptoms',  label: 'Lý do khám / Triệu chứng',  visible: true, pinned: false,  minWidth: 320 },
-            { id: 'chair',     label: 'Ghế khám',                  visible: true, pinned: false,  minWidth: 155 },
-            { id: 'doctor',    label: 'Bác sĩ phụ trách',          visible: true, pinned: false,  minWidth: 210 },
-            { id: 'status',    label: 'Trạng thái ca khám',        visible: true, pinned: false,  minWidth: 200 },
-            { id: 'actions',   label: 'Nút ấn nhanh',              visible: true, pinned: false,  minWidth: 390, nonHidable: true }
+            { id: 'turnNumber', label: 'STT Lượt khám',             visible: true, pinned: 'left', minWidth: 165 },
+            { id: 'patient',    label: 'Họ và tên Bệnh nhân',       visible: true, pinned: 'left', minWidth: 560 },
+            { id: 'visitCode',  label: 'Mã ca khám',                visible: true, pinned: false,  minWidth: 145 },
+            { id: 'checkIn',    label: 'Giờ tiếp đón',              visible: true, pinned: false,  minWidth: 165 },
+            { id: 'symptoms',   label: 'Lý do khám / Triệu chứng',  visible: true, pinned: false,  minWidth: 320 },
+            { id: 'chair',      label: 'Ghế khám',                  visible: true, pinned: false,  minWidth: 155 },
+            { id: 'doctor',     label: 'Bác sĩ phụ trách',          visible: true, pinned: false,  minWidth: 210 },
+            { id: 'status',     label: 'Trạng thái ca khám',        visible: true, pinned: false,  minWidth: 200 },
+            { id: 'actions',    label: 'Nút ấn nhanh',              visible: true, pinned: false,  minWidth: 390, nonHidable: true }
         ];
 
         let columnConfig = loadColumnConfig();
@@ -2025,12 +2044,15 @@
             const doctors = Array.from(new Set(visits.map(v => v.doctorName).filter(Boolean))).sort();
             const chairs = Array.from(new Set(visits.map(v => v.chairName).filter(Boolean))).sort();
 
-            docSelect.innerHTML = '<option value="ALL">-- Tất cả Bác sĩ --</option>' +
-                doctors.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-            chairSelect.innerHTML = '<option value="ALL">-- Tất cả Ghế khám --</option>' +
-                chairs.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-
-            if (doctors.includes(currentDoc)) docSelect.value = currentDoc;
+            if (isDoctorAccount && currentDoctorName) {
+                docSelect.innerHTML = `<option value="${escapeHtml(currentDoctorName)}" selected>${escapeHtml(currentDoctorName)} (Cá nhân tôi)</option>`;
+                docSelect.disabled = true;
+            } else {
+                docSelect.disabled = false;
+                docSelect.innerHTML = '<option value="ALL">-- Tất cả Bác sĩ --</option>' +
+                    doctors.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+                if (doctors.includes(currentDoc)) docSelect.value = currentDoc;
+            }
             if (chairs.includes(currentChair)) chairSelect.value = currentChair;
         }
 
@@ -2131,7 +2153,8 @@
                 if (filterState.search) {
                     const q = filterState.search.toLowerCase();
                     const haystack = [
-                        v.fullName, v.patientCode, v.phoneNumber, v.visitCode, v.initialSymptoms, v.doctorName
+                        v.fullName, v.patientCode, v.phoneNumber, v.visitCode, v.initialSymptoms, v.doctorName,
+                        v.ticketDisplayNumber, v.ticketDisplayNumber ? ('#' + v.ticketDisplayNumber) : ''
                     ].filter(Boolean).join(' ').toLowerCase();
                     if (!haystack.includes(q)) return false;
                 }
@@ -2470,7 +2493,11 @@
             let tbodyHtml = '';
             visits.forEach((v, rowIdx) => {
                 const targetBranchName = escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác');
-                tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, ${v.visitId}, ${v.branchId || 'null'}, '${targetBranchName}')">`;
+                const isOtherDoctor = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                const patientProfileUrl = v.profileId
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    : '#';
+                tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, ${v.visitId}, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">`;
 
                 orderedCols.forEach(col => {
                     const meta = colStickyMeta[col.id] || { type: 'normal' };
@@ -2490,30 +2517,110 @@
                 });
 
                 // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn demo-table.html)
-                tbodyHtml += `
-                    <td class="dv-floating-actions-track">
+                let floatingActionsHtml = '';
+                if (isOtherDoctor) {
+                    floatingActionsHtml = `
                         <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                            <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
-                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}')">
-                                <i class="bi bi-heart-pulse-fill"></i>
-                                <span>Vào khám ngay</span>
-                            </a>
-                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
-                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}')">
-                                <i class="bi bi-diagram-3-fill text-primary"></i>
-                                <span>Lập phác đồ</span>
-                            </a>
-                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-patient-info" class="dv-equal-btn-secondary" title="Xem hồ sơ hành chính & bệnh sử"
-                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}')">
+                            <span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12.5px;">
+                                <i class="bi bi-lock-fill me-1"></i>BS khác phụ trách
+                            </span>
+                            <a href="${patientProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
                                 <i class="bi bi-person-vcard text-secondary"></i>
                                 <span>Xem hồ sơ</span>
                             </a>
                         </div>
+                    `;
+                } else {
+                    floatingActionsHtml = `
+                        <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                            <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
+                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
+                                <i class="bi bi-heart-pulse-fill"></i>
+                                <span>Vào khám ngay</span>
+                            </a>
+                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
+                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
+                                <i class="bi bi-diagram-3-fill text-primary"></i>
+                                <span>Lập phác đồ</span>
+                            </a>
+                            <a href="${patientProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
+                                <i class="bi bi-person-vcard text-secondary"></i>
+                                <span>Xem hồ sơ</span>
+                            </a>
+                        </div>
+                    `;
+                }
+
+                tbodyHtml += `
+                    <td class="dv-floating-actions-track">
+                        ${floatingActionsHtml}
                     </td>
                 </tr>`;
             });
 
             tbody.innerHTML = tbodyHtml;
+        }
+
+        function renderTurnBadge(v) {
+            const dispNum = v.ticketDisplayNumber || '01';
+            const isEmergency = Boolean(v.isEmergency);
+            const isPriority = Boolean(v.isPriority);
+            const shortDate = v.checkInDate ? v.checkInDate.slice(0, 5) : '';
+            const reasonTitle = v.priorityReason
+                ? escapeHtml(v.priorityReason)
+                : (isEmergency ? 'Ca cấp cứu khẩn cấp (FT10)' : (isPriority ? 'Ca khám ưu tiên (FT09 / FT10)' : `Số thứ tự lượt khám ngày ${escapeHtml(v.checkInDate || '')}`));
+
+            if (isEmergency) {
+                return `
+                    <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
+                        <div class="d-inline-flex align-items-center gap-1.5">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
+                                  style="background:#fee2e2;color:#b91c1c;border:1.5px solid #f87171;font-size:14.5px;letter-spacing:0.3px;">
+                                #${escapeHtml(dispNum)}
+                            </span>
+                            <span class="badge rounded-pill px-2 py-1 fw-bold"
+                                  style="background:#dc2626;color:#ffffff;font-size:11px;">
+                                <i class="bi bi-lightning-charge-fill me-0.5"></i>Cấp cứu
+                            </span>
+                        </div>
+                        ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            if (isPriority) {
+                return `
+                    <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
+                        <div class="d-inline-flex align-items-center gap-1.5">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
+                                  style="background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;font-size:14.5px;letter-spacing:0.3px;">
+                                #${escapeHtml(dispNum)}
+                            </span>
+                            <span class="badge rounded-pill px-2 py-1 fw-bold"
+                                  style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;font-size:11px;">
+                                <i class="bi bi-star-fill me-0.5"></i>Ưu tiên
+                            </span>
+                        </div>
+                        ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
+                    <div class="d-inline-flex align-items-center gap-1.5">
+                        <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
+                              style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;font-size:14.5px;letter-spacing:0.3px;">
+                            #${escapeHtml(dispNum)}
+                        </span>
+                        <span class="badge rounded-pill px-2 py-1 fw-semibold"
+                              style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:11px;">
+                            Khám thường
+                        </span>
+                    </div>
+                    ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
+                </div>
+            `;
         }
 
         function renderCellByColumnId(colId, v) {
@@ -2524,12 +2631,14 @@
             const ageHtml = v.age ? `<span class="text-secondary fw-semibold">${v.age} tuổi</span>` : '';
 
             switch (colId) {
+                case 'turnNumber':
+                    return renderTurnBadge(v);
                 case 'patient':
                     return `
                     <div class="d-flex align-items-center gap-3" style="white-space: nowrap; padding-right: 12px;">
                         <div class="dv-patient-avatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 16px; border-radius: 11px;">${escapeHtml(firstLetter)}</div>
                         <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap;"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">${escapeHtml(v.fullName)}</a>
+                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
                         <span class="dv-code-pill" style="font-size: 12.5px; padding: 4px 10px;">${escapeHtml(v.patientCode)}</span>
                         ${genderHtml}
                         ${ageHtml ? `<span class="text-secondary fw-bold" style="font-size: 13.5px;"><span class="text-muted mx-1">•</span>${ageHtml}</span>` : ''}
@@ -2537,20 +2646,35 @@
                     </div>
                 `;
                 case 'actions':
+                    const isOther = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                    const cellProfileUrl = v.profileId
+                        ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                        : '#';
+                    if (isOther) {
+                        return `
+                        <div class="dv-actions-cell-always d-flex align-items-center gap-1.5" onclick="event.stopPropagation()">
+                            <span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12.5px;">
+                                <i class="bi bi-lock-fill me-1"></i>BS khác phụ trách
+                            </span>
+                            <a href="${cellProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
+                                <i class="bi bi-person-vcard text-secondary"></i>
+                                <span>Xem hồ sơ</span>
+                            </a>
+                        </div>`;
+                    }
                     return `
                     <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                         <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
+                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
                             <i class="bi bi-heart-pulse-fill"></i>
                             <span>Vào khám ngay</span>
                         </a>
                         <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
+                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
                             <i class="bi bi-diagram-3-fill text-primary"></i>
                             <span>Lập phác đồ</span>
                         </a>
-                        <a href="/doctor/examination/${v.visitId}/diagnoses#tab-patient-info" class="dv-equal-btn-secondary" title="Xem hồ sơ hành chính & bệnh sử"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
+                        <a href="${cellProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
                             <i class="bi bi-person-vcard text-secondary"></i>
                             <span>Xem hồ sơ</span>
                         </a>
@@ -2627,6 +2751,16 @@
             let html = '';
             visits.forEach(v => {
                 const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
+                const isOtherCard = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                const cardProfileUrl = v.profileId
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    : '#';
+                const actionBtnHtml = isOtherCard
+                    ? `<span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12px;"><i class="bi bi-lock-fill me-1"></i>BS khác phụ trách</span>`
+                    : `<a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-hover-btn-primary"
+                          onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
+                           <i class="bi bi-heart-pulse-fill"></i> Vào khám ngay
+                       </a>`;
                 html += `
                 <div class="dv-visit-card-item">
                     <div>
@@ -2635,7 +2769,7 @@
                                 <div class="dv-patient-avatar">${escapeHtml(firstLetter)}</div>
                                 <div>
                                     <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name d-block"
-                                       onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">${escapeHtml(v.fullName)}</a>
+                                       onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
                                     <div class="mt-1 d-flex align-items-center gap-2">
                                         <span class="dv-code-pill">${escapeHtml(v.patientCode)}</span>
                                         <span class="text-secondary small fw-semibold">${v.age ? v.age + ' tuổi' : ''}</span>
@@ -2645,6 +2779,10 @@
                             ${renderStatusBadge(v)}
                         </div>
                         <div class="p-3 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                <span class="text-secondary">STT Lượt khám:</span>
+                                <span>${renderTurnBadge(v)}</span>
+                            </div>
                             <div class="d-flex justify-content-between mb-1.5">
                                 <span class="text-secondary">Mã ca khám:</span>
                                 <strong class="font-monospace text-dark">${escapeHtml(v.visitCode)}</strong>
@@ -2663,14 +2801,16 @@
                             <span class="text-dark fw-semibold ms-1">${escapeHtml(v.initialSymptoms || 'Khám và tư vấn theo yêu cầu')}</span>
                         </div>
                     </div>
-                    <div class="pt-3 border-top d-flex align-items-center justify-content-between">
+                    <div class="pt-3 border-top d-flex align-items-center justify-content-between gap-2">
                         <span class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:12.5px;">
                             <i class="bi bi-geo-alt-fill text-primary me-1"></i>${escapeHtml(v.chairName)}
                         </span>
-                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-hover-btn-primary"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
-                            <i class="bi bi-heart-pulse-fill"></i> Vào khám ngay
-                        </a>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <a href="${cardProfileUrl}" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2.5 rounded-3 d-inline-flex align-items-center gap-1" style="font-size:12.5px;" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
+                                <i class="bi bi-person-vcard text-secondary"></i> Hồ sơ
+                            </a>
+                            ${actionBtnHtml}
+                        </div>
                     </div>
                 </div>
             `;

@@ -46,9 +46,13 @@ public class DoctorExaminationRestController {
         try {
             Visit updatedVisit = diagnosisService.completeClinicalExamination(visitId, doctorNotes);
 
+            String message = (updatedVisit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED)
+                    ? "Đã hoàn tất ca khám lâm sàng thành công (Khóa bệnh án BR-EMR-02)!"
+                    : "Đã hoàn tất ca khám và chuyển viện phí sang Kế toán (Chờ thanh toán) thành công!";
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Đã hoàn tất ca khám và chuyển sang bộ phận Kế toán (Chờ thanh toán) thành công!");
+            response.put("message", message);
             response.put("visitId", updatedVisit.getVisitId());
             response.put("visitCode", updatedVisit.getVisitCode());
             response.put("status", updatedVisit.getStatus().name());

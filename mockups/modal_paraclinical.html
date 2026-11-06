@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo chỉ định Cận lâm sàng - DentalFlow Modal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: rgba(15, 23, 42, 0.55) !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            margin: 0;
+            padding: 40px 16px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-dialog-exact {
+            max-width: 760px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid #cbd5e1;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-dialog-exact">
+        <!-- MODAL HEADER -->
+        <div class="p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 rounded bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                    <i class="bi bi-images fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="modal-title fw-bold text-dark fs-6 mb-0">Tạo chỉ định Cận lâm sàng & Chẩn đoán hình ảnh</h5>
+                    <small class="text-secondary" style="font-size: 11.5px;">Chụp X-quang, CT ConeBeam 3D hoặc xét nghiệm máu (SCR-11.2)</small>
+                </div>
+            </div>
+            <a href="clinical_exam_workspace.html" class="btn-close" aria-label="Close"></a>
+        </div>
+
+        <!-- PATIENT SUB-BAR -->
+        <div class="px-4 py-2 bg-light border-bottom d-flex align-items-center justify-content-between small">
+            <div>
+                Bệnh nhân: <strong class="text-dark">Nguyễn Văn An</strong> (BN-1082) - Nam, 36t
+            </div>
+            <div>
+                Bác sĩ chỉ định: <strong class="text-primary">BS. CK1 Nguyễn Văn Tuấn</strong>
+            </div>
+        </div>
+
+        <!-- MODAL BODY -->
+        <div class="p-4 bg-white">
+            <!-- 1. Chọn dịch vụ CLS từ catalog -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">Dịch vụ Cận lâm sàng <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm">
+                    <option value="" disabled>-- Chọn dịch vụ cận lâm sàng từ danh mục --</option>
+                    <option value="1" selected>Chụp X-quang quanh chóp kỹ thuật số (NanoPix Sensor) - 100.000 đ</option>
+                    <option value="2">Chụp X-quang Panorama toàn cảnh hàm răng - 250.000 đ</option>
+                    <option value="3">Chụp CT ConeBeam 3D khảo sát xương cấy ghép Implant - 600.000 đ</option>
+                    <option value="4">Xét nghiệm thời gian máu chảy máu đông (TC - TS) - 80.000 đ</option>
+                    <option value="5">Bộ xét nghiệm đông máu toàn bộ (PT, APTT, INR) - 250.000 đ</option>
+                </select>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <!-- 2. Vị trí răng / Vùng chụp -->
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-dark">Vị trí răng / Vùng chụp</label>
+                    <input type="text" class="form-control form-control-sm" placeholder="VD: R46 hoặc Cung 4..." value="R46">
+                    <small class="text-muted" style="font-size: 11px;">Nhập số răng FDI cần khảo sát (bỏ trống nếu chụp toàn hàm / lấy máu)</small>
+                </div>
+
+                <!-- 3. Mức độ ưu tiên -->
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-dark">Mức độ ưu tiên thực hiện</label>
+                    <select class="form-select form-select-sm">
+                        <option value="NORMAL" selected>Thường quy (Bình thường)</option>
+                        <option value="URGENT">Khẩn cấp / Cấp cứu</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 4. Yêu cầu chuyên môn -->
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-dark">Yêu cầu chuyên môn gửi Kỹ thuật viên X-quang / Xét nghiệm</label>
+                <textarea class="form-control form-control-sm" rows="3" placeholder="Nhập ghi chú yêu cầu kỹ thuật (Ví dụ: Khảo sát số lượng ống tủy răng 46, nghi ngờ nứt chân răng hoặc tổn thương cuống)..."></textarea>
+            </div>
+        </div>
+
+        <!-- MODAL FOOTER -->
+        <div class="p-3 px-4 bg-light border-top d-flex align-items-center justify-content-between">
+            <span class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>Chỉ định sẽ được đồng bộ ngay sang phòng Chụp phim / Xét nghiệm
+            </span>
+            <div class="d-flex gap-2">
+                <a href="clinical_exam_workspace.html" class="btn btn-sm btn-outline-secondary px-3">Hủy bỏ</a>
+                <a href="clinical_exam_workspace.html" class="btn btn-sm btn-primary fw-bold px-3.5 shadow-xs" style="background: #0284c7; border-color: #0284c7;">
+                    <i class="bi bi-send-fill me-1"></i> Gửi chỉ định CLS
+                </a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

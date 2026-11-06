@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Lịch hẹn & Nhắc tái khám (SCR-18.2 / FT18) - DentalSoft</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --primary-ocean: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-active: #0c4a6e;
+      --ocean-light: #e0f2fe;
+      --ocean-subtle: #f0f9ff;
+      --dark-heading: #0f172a;
+      --body-text: #1e293b;
+      --secondary-text: #334155;
+      --muted-text: #64748b;
+      --border-light: #e2e8f0;
+      --border-medium: #cbd5e1;
+      --page-bg: #f8fafc;
+      --card-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--page-bg);
+      color: var(--body-text);
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Topbar thanh mảnh không sidebar */
+    .app-topbar {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border-light);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-topbar-inner {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 28px !important;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 18px;
+    }
+
+    .brand-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-logo-text span {
+      color: var(--primary-ocean);
+    }
+
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted-text);
+    }
+
+    .breadcrumb-nav a {
+      color: var(--muted-text);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .breadcrumb-nav a:hover {
+      color: var(--primary-ocean);
+    }
+
+    .breadcrumb-nav .active {
+      color: var(--dark-heading);
+      font-weight: 600;
+    }
+
+    .doctor-badge {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 12px;
+      background-color: var(--ocean-subtle);
+      border: 1px solid var(--ocean-light);
+      border-radius: 20px;
+    }
+
+    .doctor-avatar {
+      width: 28px;
+      height: 28px;
+      background-color: var(--primary-ocean);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .doctor-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dark-heading);
+    }
+
+    /* 1. BỎ GIỚI HẠN CHIỀU RỘNG 1240PX — CHUYỂN SANG FULL-WIDTH 100% */
+    .workspace-wrapper {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 20px 28px !important;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 2. THANH TIÊU ĐỀ TRANG NẰM TRÊN 1 HÀNG NGANG DUY NHẤT */
+    .rc-page-header-row {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+      width: 100% !important;
+    }
+
+    .rc-header-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    /* Header Title Bar */
+    .rc-page-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--dark-heading);
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* 4 KPI Stat Cards */
+    .rc-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 100% !important;
+    }
+
+    .rc-stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .rc-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+      border-color: var(--border-medium);
+    }
+
+    .rc-stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .rc-stat-card.card-blue::before {
+      background: #0284c7;
+    }
+
+    .rc-stat-card.card-amber::before {
+      background: #f59e0b;
+    }
+
+    .rc-stat-card.card-green::before {
+      background: #10b981;
+    }
+
+    .rc-stat-card.card-rose::before {
+      background: #ef4444;
+    }
+
+    .rc-stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted-text);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+
+    .rc-stat-val {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--dark-heading);
+    }
+
+    .rc-stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    /* 3. THANH TÌM KIẾM & BỘ LỌC (FILTER TOOLBAR) NẰM TRÊN 1 HÀNG NGANG DUY NHẤT */
+    .rc-toolbar {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 12px 18px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      width: 100% !important;
+    }
+
+    .rc-toolbar-left {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 6px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    .rc-toolbar-right {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex: 1 1 auto !important;
+      justify-content: flex-end !important;
+      min-width: 0 !important;
+    }
+
+    .rc-search-box {
+      flex: 1 1 240px !important;
+      min-width: 200px !important;
+      max-width: 360px !important;
+    }
+
+    .rc-filter-btn {
+      border: 1.5px solid var(--border-light);
+      background: #ffffff;
+      color: #475569;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .rc-filter-btn:hover {
+      background: #f1f5f9;
+      border-color: var(--border-medium);
+      color: var(--dark-heading);
+    }
+
+    .rc-filter-btn.is-active {
+      background: var(--primary-ocean);
+      border-color: var(--primary-ocean);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+    }
+
+    /* Table Card */
+    .rc-table-card {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      width: 100% !important;
+    }
+
+    .rc-table {
+      width: 100% !important;
+      table-layout: auto;
+    }
+
+    .rc-table th {
+      background: #f8fafc;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #475569;
+      font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 1.5px solid var(--border-light);
+      white-space: nowrap;
+    }
+
+    .rc-table td {
+      padding: 14px 16px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13.5px;
+      white-space: nowrap;
+    }
+
+    .rc-table th.col-expand,
+    .rc-table td.col-expand {
+      white-space: normal !important;
+      width: auto !important;
+    }
+
+    
+
+    .rc-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .rc-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Badges */
+    .rc-badge-overdue {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+
+    .rc-badge-today {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+
+    .rc-badge-upcoming {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+
+    /* Modal Styling */
+    .modal-content-custom {
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .df-btn-add-plan {
+      background: var(--primary-ocean);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .df-btn-add-plan:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    .df-btn-white-plan {
+      background: #ffffff;
+      color: var(--primary-ocean);
+      border: 1.5px solid var(--primary-ocean);
+      border-radius: 8px;
+      padding: 6.5px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .df-btn-white-plan:hover {
+      background: var(--ocean-subtle);
+      color: var(--primary-hover);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Topbar: Không Sidebar, Breadcrumb & Profile Bác sĩ -->
+  <header class="app-topbar">
+    <div class="app-topbar-inner">
+      <div class="d-flex align-items-center gap-4">
+        <a href="#" class="brand-logo">
+          <div class="brand-logo-icon">
+            <i class="bi bi-hospital"></i>
+          </div>
+          <div class="brand-logo-text">Dental<span>Soft</span></div>
+        </a>
+        <div class="breadcrumb-nav">
+          <a href="#">DS Khám Trong Ngày</a>
+          <i class="bi bi-chevron-right"></i>
+          <a href="#">Hồ sơ &amp; Tái khám</a>
+          <i class="bi bi-chevron-right"></i>
+          <span class="active">Nhắc hẹn tái khám (SCR-18.2)</span>
+        </div>
+      </div>
+
+      <div class="doctor-badge">
+        <div class="doctor-avatar">N</div>
+        <div>
+          <div class="doctor-name">BS. CK1 Lê Hoàng Nam</div>
+          <div style="font-size: 11px; color: #64748b;">Khoa Răng Hàm Mặt</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace Container 1240px -->
+  <main class="workspace-wrapper">
+
+    <!-- Header Section -->
+    <div class="rc-page-header-row">
+      <div>
+        <div class="rc-page-title">
+          <i class="bi bi-bell-fill text-warning"></i>
+          <span>Quản lý Lịch hẹn &amp; Nhắc tái khám</span>
+          <span
+            class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-6 px-3 py-1">FT18</span>
+        </div>
+        <div class="text-muted small mt-1">
+          Theo dõi danh sách bệnh nhân đến hạn tái khám sau điều trị, dặn dò và điều phối gọi điện CSKH.
+        </div>
+      </div>
+
+      <div class="rc-header-actions">
+        <a href="modal_re_examination.html" class="df-btn-white-plan" title="Xem modal độc lập">
+          <i class="bi bi-window"></i>
+          <span>Xem Modal riêng (680px)</span>
+        </a>
+        <button type="button" class="df-btn-add-plan" data-bs-toggle="modal" data-bs-target="#reExamBookingModal">
+          <i class="bi bi-calendar2-plus-fill"></i>
+          <span>Đặt lịch hẹn tái khám mới</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 KPI Stat Cards (Chuẩn mã gốc recalls.html) -->
+    <div class="rc-stat-grid">
+      <!-- Card 1 -->
+      <div class="rc-stat-card card-blue">
+        <div>
+          <div class="rc-stat-label">Tổng ca tái khám</div>
+          <div class="rc-stat-val">38</div>
+          <small class="text-muted">Được tạo sau điều trị</small>
+        </div>
+        <div class="rc-stat-icon bg-primary-subtle text-primary">
+          <i class="bi bi-calendar-check-fill"></i>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="rc-stat-card card-amber" style="cursor: pointer;">
+        <div>
+          <div class="rc-stat-label text-warning-emphasis">Hẹn tái khám hôm nay</div>
+          <div class="rc-stat-val text-warning-emphasis">06</div>
+          <small class="text-warning-emphasis fw-semibold">Bấm để lọc hôm nay</small>
+        </div>
+        <div class="rc-stat-icon bg-warning-subtle text-warning-emphasis">
+          <i class="bi bi-alarm-fill"></i>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="rc-stat-card card-green" style="cursor: pointer;">
+        <div>
+          <div class="rc-stat-label text-success">Sắp tới (7 ngày tới)</div>
+          <div class="rc-stat-val text-success">19</div>
+          <small class="text-success fw-semibold">Cần gửi tin / gọi nhắc</small>
+        </div>
+        <div class="rc-stat-icon bg-success-subtle text-success">
+          <i class="bi bi-calendar3-range-fill"></i>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="rc-stat-card card-rose" style="cursor: pointer;">
+        <div>
+          <div class="rc-stat-label text-danger">Quá hạn chưa đến</div>
+          <div class="rc-stat-val text-danger">05</div>
+          <small class="text-danger fw-semibold">Bấm để xử lý gọi lại</small>
+        </div>
+        <div class="rc-stat-icon bg-danger-subtle text-danger">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar Bộ lọc chuẩn -->
+    <div class="rc-toolbar">
+      <div class="rc-toolbar-left">
+        <button type="button" class="rc-filter-btn is-active">
+          <i class="bi bi-grid-fill me-1"></i>Tất cả
+        </button>
+        <button type="button" class="rc-filter-btn">
+          <i class="bi bi-calendar-event me-1"></i>Hôm nay
+        </button>
+        <button type="button" class="rc-filter-btn">
+          <i class="bi bi-calendar-week me-1"></i>7 ngày tới
+        </button>
+        <button type="button" class="rc-filter-btn">
+          <i class="bi bi-calendar-month me-1"></i>Tháng này
+        </button>
+        <button type="button" class="rc-filter-btn text-danger border-danger-subtle">
+          <i class="bi bi-exclamation-circle-fill me-1"></i>Quá hạn
+        </button>
+      </div>
+
+      <div class="rc-toolbar-right">
+        <select class="form-select form-select-sm rounded-pill flex-shrink-0" style="width: 180px;">
+          <option value="">-- Tất cả Bác sĩ --</option>
+          <option value="1" selected>BS. CK1 Lê Hoàng Nam</option>
+          <option value="2">BS. Trần Minh Tâm</option>
+          <option value="3">BS. Lê Thu Trang</option>
+        </select>
+
+        <select class="form-select form-select-sm rounded-pill flex-shrink-0" style="width: 160px;">
+          <option value="ALL">-- Tất cả trạng thái --</option>
+          <option value="CONFIRMED" selected>Đã xác nhận</option>
+          <option value="PENDING">Chờ xác nhận</option>
+          <option value="COMPLETED">Đã hoàn thành</option>
+          <option value="CANCELLED">Đã hủy</option>
+        </select>
+
+        <div class="input-group input-group-sm rounded-pill border rc-search-box"
+          style="overflow: hidden; background: #ffffff;">
+          <span class="input-group-text bg-white border-0 text-muted ps-2.5">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="text" class="form-control border-0 ps-1" placeholder="Tìm tên, Mã BN, SĐT...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="rc-table-card">
+      <div class="p-3 border-bottom d-flex align-items-center justify-content-between bg-white">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-list-task text-primary fs-5"></i>
+          <span class="fw-bold text-dark">Danh sách bệnh nhân hẹn tái khám</span>
+          <span class="badge bg-primary text-white rounded-pill px-2.5">5 ca hiển thị</span>
+        </div>
+        <div class="small text-muted">
+          Đang hiển thị các lịch hẹn tái khám đã đồng bộ sang CSKH
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table rc-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 110px;">Mã hẹn</th>
+              <th style="width: 240px;">Bệnh nhân</th>
+              <th style="width: 170px;">Bác sĩ phụ trách</th>
+              <th style="width: 180px;">Thời gian hẹn</th>
+              <th class="col-expand">Nội dung / Lý do tái khám</th>
+              <th style="width: 130px;" class="text-center">Trạng thái hẹn</th>
+              <th style="width: 140px;" class="text-center">Tình trạng CSKH</th>
+              <th style="width: 170px;" class="text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1 -->
+            <tr>
+              <td>
+                <strong class="text-primary font-monospace" style="font-size: 13px;">TK-10089</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2.5">
+                  <div class="rc-avatar">A</div>
+                  <div>
+                    <div class="fw-bold text-dark">Nguyễn Văn An</div>
+                    <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                      <span class="badge bg-light text-secondary border">KH1001</span>
+                      <span>&bull;</span>
+                      <a href="tel:0912345678" class="text-decoration-none text-primary fw-semibold">
+                        <i class="bi bi-telephone-fill small"></i> 0912 345 678
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark">BS. CK1 Lê Hoàng Nam</div>
+                <div class="small text-muted">Cơ sở 1 - Quận 10</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5 mb-1">
+                  <span class="fw-bold text-dark">11/11/2026</span>
+                  <span class="rc-badge-upcoming">Sắp tới</span>
+                </div>
+                <div class="small text-secondary">
+                  <i class="bi bi-clock me-1"></i>09:30 (Sáng)
+                </div>
+              </td>
+              <td class="col-expand">
+                <div class="fw-semibold text-dark text-break">Kiểm tra tủy răng &amp; trám bít phục hồi R36</div>
+                <div class="small text-muted">Điều trị tủy răng buồng</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning-subtle text-warning-emphasis border"><i
+                    class="bi bi-bell-fill me-1"></i>Cần gọi nhắc</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                    title="Ghi nhận CSKH" data-bs-toggle="modal" data-bs-target="#careTaskModal">
+                    <i class="bi bi-telephone-outbound"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                    title="Dời ngày hẹn" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <i class="bi bi-calendar-event"></i>
+                  </button>
+                  <a href="prescription_instruction_form.html"
+                    class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold" title="Vào khám">
+                    <i class="bi bi-play-circle-fill"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr>
+              <td>
+                <strong class="text-primary font-monospace" style="font-size: 13px;">TK-10064</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2.5">
+                  <div class="rc-avatar">Q</div>
+                  <div>
+                    <div class="fw-bold text-dark">Đỗ Quỳnh Anh</div>
+                    <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                      <span class="badge bg-light text-secondary border">KH1024</span>
+                      <span>&bull;</span>
+                      <a href="tel:0982334455" class="text-decoration-none text-primary fw-semibold">
+                        <i class="bi bi-telephone-fill small"></i> 0982 334 455
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark">BS. CK1 Lê Hoàng Nam</div>
+                <div class="small text-muted">Cơ sở 1 - Quận 10</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5 mb-1">
+                  <span class="fw-bold text-dark">04/11/2026</span>
+                  <span class="rc-badge-today">Hôm nay</span>
+                </div>
+                <div class="small text-secondary">
+                  <i class="bi bi-clock me-1"></i>10:00 (Sáng)
+                </div>
+              </td>
+              <td class="col-expand">
+                <div class="fw-semibold text-dark text-break">Tái khám cắt chỉ R38 &amp; kiểm tra lành thương</div>
+                <div class="small text-muted">Nhổ răng khôn tiểu phẫu</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success-subtle text-success border border-success-subtle"><i
+                    class="bi bi-telephone-check-fill me-1"></i>Đã gọi nhắc</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                    title="Ghi nhận CSKH" data-bs-toggle="modal" data-bs-target="#careTaskModal">
+                    <i class="bi bi-telephone-outbound"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                    title="Dời ngày hẹn" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <i class="bi bi-calendar-event"></i>
+                  </button>
+                  <a href="#" class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold" title="Vào khám">
+                    <i class="bi bi-play-circle-fill"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr>
+              <td>
+                <strong class="text-primary font-monospace" style="font-size: 13px;">TK-10052</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2.5">
+                  <div class="rc-avatar">L</div>
+                  <div>
+                    <div class="fw-bold text-dark">Lê Hoàng Long</div>
+                    <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                      <span class="badge bg-light text-secondary border">KH1035</span>
+                      <span>&bull;</span>
+                      <a href="tel:0903112233" class="text-decoration-none text-primary fw-semibold">
+                        <i class="bi bi-telephone-fill small"></i> 0903 112 233
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark">BS. Trần Minh Tâm</div>
+                <div class="small text-muted">Cơ sở 1 - Quận 10</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5 mb-1">
+                  <span class="fw-bold text-dark">02/11/2026</span>
+                  <span class="rc-badge-overdue">Quá hạn</span>
+                </div>
+                <div class="small text-secondary">
+                  <i class="bi bi-clock me-1"></i>14:30 (Chiều)
+                </div>
+              </td>
+              <td class="col-expand">
+                <div class="fw-semibold text-dark text-break">Thử sườn sứ Zirconia 4 răng cửa hàm trên</div>
+                <div class="small text-muted">Phục hình răng sứ thẩm mỹ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Chờ xác
+                  nhận</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-info-subtle text-info-emphasis border"><i
+                    class="bi bi-telephone-forward-fill me-1"></i>Đang liên hệ</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                    title="Ghi nhận CSKH" data-bs-toggle="modal" data-bs-target="#careTaskModal">
+                    <i class="bi bi-telephone-outbound"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                    title="Dời ngày hẹn" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <i class="bi bi-calendar-event"></i>
+                  </button>
+                  <a href="#" class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold" title="Vào khám">
+                    <i class="bi bi-play-circle-fill"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 4 -->
+            <tr>
+              <td>
+                <strong class="text-primary font-monospace" style="font-size: 13px;">TK-10041</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2.5">
+                  <div class="rc-avatar">Đ</div>
+                  <div>
+                    <div class="fw-bold text-dark">Phạm Minh Đức</div>
+                    <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                      <span class="badge bg-light text-secondary border">KH1042</span>
+                      <span>&bull;</span>
+                      <a href="tel:0934556789" class="text-decoration-none text-primary fw-semibold">
+                        <i class="bi bi-telephone-fill small"></i> 0934 556 789
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark">BS. Lê Thu Trang</div>
+                <div class="small text-muted">Cơ sở 1 - Quận 10</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5 mb-1">
+                  <span class="fw-bold text-dark">09/11/2026</span>
+                  <span class="rc-badge-upcoming">Sắp tới</span>
+                </div>
+                <div class="small text-secondary">
+                  <i class="bi bi-clock me-1"></i>16:00 (Chiều)
+                </div>
+              </td>
+              <td class="col-expand">
+                <div class="fw-semibold text-dark text-break">Siết cung định kỳ đợt 4 &amp; thay thun chuỗi</div>
+                <div class="small text-muted">Chỉnh nha mắc cài kim loại</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success-subtle text-success border border-success-subtle"><i
+                    class="bi bi-telephone-check-fill me-1"></i>Đã gọi nhắc</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                    title="Ghi nhận CSKH" data-bs-toggle="modal" data-bs-target="#careTaskModal">
+                    <i class="bi bi-telephone-outbound"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                    title="Dời ngày hẹn" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <i class="bi bi-calendar-event"></i>
+                  </button>
+                  <a href="#" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" title="Xem chi tiết">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 5 -->
+            <tr>
+              <td>
+                <strong class="text-primary font-monospace" style="font-size: 13px;">TK-10033</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2.5">
+                  <div class="rc-avatar">Y</div>
+                  <div>
+                    <div class="fw-bold text-dark">Vũ Hải Yến</div>
+                    <div class="small text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                      <span class="badge bg-light text-secondary border">KH1055</span>
+                      <span>&bull;</span>
+                      <a href="tel:0979889900" class="text-decoration-none text-primary fw-semibold">
+                        <i class="bi bi-telephone-fill small"></i> 0979 889 900
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark">BS. CK1 Lê Hoàng Nam</div>
+                <div class="small text-muted">Cơ sở 1 - Quận 10</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5 mb-1">
+                  <span class="fw-bold text-dark">12/11/2026</span>
+                  <span class="rc-badge-upcoming">Sắp tới</span>
+                </div>
+                <div class="small text-secondary">
+                  <i class="bi bi-clock me-1"></i>08:30 (Sáng)
+                </div>
+              </td>
+              <td class="col-expand">
+                <div class="fw-semibold text-dark text-break">Kiểm tra tích hợp xương Implant sau 1 tháng</div>
+                <div class="small text-muted">Cấy ghép trụ Implant R46</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning-subtle text-warning-emphasis border"><i
+                    class="bi bi-bell-fill me-1"></i>Cần gọi nhắc</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill fw-semibold"
+                    title="Ghi nhận CSKH" data-bs-toggle="modal" data-bs-target="#careTaskModal">
+                    <i class="bi bi-telephone-outbound"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill"
+                    title="Dời ngày hẹn" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <i class="bi bi-calendar-event"></i>
+                  </button>
+                  <a href="#" class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold" title="Vào khám">
+                    <i class="bi bi-play-circle-fill"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Phân trang chuẩn -->
+      <div class="p-3 border-top d-flex align-items-center justify-content-between small text-muted bg-white">
+        <div>Hiển thị <strong>1 - 5</strong> trên tổng số <strong>38</strong> ca hẹn tái khám</div>
+        <div class="d-flex align-items-center gap-1">
+          <button class="btn btn-sm btn-outline-secondary py-0 px-2" disabled><i
+              class="bi bi-chevron-left"></i></button>
+          <button class="btn btn-sm btn-primary py-0 px-2 fw-bold">1</button>
+          <button class="btn btn-sm btn-outline-secondary py-0 px-2">2</button>
+          <button class="btn btn-sm btn-outline-secondary py-0 px-2">3</button>
+          <button class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: GHI NHẬN KẾT QUẢ GỌI ĐIỆN CSKH (SCR-44.5 / FT18)            -->
+  <!-- ===================================================================== -->
+  <div class="modal fade" id="careTaskModal" tabindex="-1" aria-labelledby="careTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom border-0 shadow-lg">
+        <div class="modal-header py-3"
+          style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+          <div>
+            <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="careTaskModalLabel">
+              <i class="bi bi-telephone-outbound-fill"></i>
+              <span>Ghi nhận kết quả liên hệ CSKH</span>
+            </h5>
+            <small class="text-white-50">Cập nhật phản hồi từ bệnh nhân sau cuộc gọi nhắc lịch</small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 bg-white">
+          <div class="p-3 rounded-3 mb-3" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+            <div class="fw-bold text-dark fs-6">Nguyễn Văn An</div>
+            <div class="small text-secondary mt-1">
+              <span>SĐT: <strong class="text-primary">0912 345 678</strong></span>
+              <span class="mx-2">&bull;</span>
+              <span>Ngày hẹn: <strong class="text-dark">11/11/2026 (09:30)</strong></span>
+            </div>
+            <div class="small text-muted mt-1">Nội dung: Kiểm tra tủy răng &amp; trám bít phục hồi R36</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary mb-1">Kết quả cuộc gọi / Phản hồi của bệnh
+              nhân:</label>
+            <select class="form-select">
+              <option value="1" selected>Đã nghe máy - Xác nhận sẽ đến đúng giờ</option>
+              <option value="2">Đã nghe máy - Bận việc, xin đổi sang ngày khác</option>
+              <option value="3">Không nghe máy / Máy bận (Cần gọi lại sau)</option>
+              <option value="4">Khách xin hủy lịch tái khám này</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary mb-1">Trạng thái nhiệm vụ:</label>
+            <select class="form-select form-select-sm">
+              <option value="COMPLETED" selected>Hoàn thành nhiệm vụ nhắc hẹn</option>
+              <option value="IN_PROGRESS">Đang xử lý / Cần theo dõi tiếp</option>
+              <option value="PENDING">Chưa xong (Giữ trạng thái chờ)</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary mb-1">Ghi chú chi tiết cuộc trao đổi:</label>
+            <textarea class="form-control" rows="3"
+              placeholder="Nhập dặn dò thêm hoặc yêu cầu của khách hàng..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2 px-3">
+          <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" data-bs-dismiss="modal">
+            <i class="bi bi-check-circle-fill me-1"></i>Lưu kết quả
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 2: DỜI NGÀY HẸN TÁI KHÁM (RESCHEDULE)                          -->
+  <!-- ===================================================================== -->
+  <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-labelledby="rescheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom border-0 shadow-lg">
+        <div class="modal-header py-3"
+          style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+          <div>
+            <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="rescheduleModalLabel">
+              <i class="bi bi-calendar-range-fill"></i>
+              <span>Dời ngày hẹn tái khám</span>
+            </h5>
+            <small class="text-white-50">Cập nhật ngày giờ hẹn mới theo yêu cầu của bệnh nhân</small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 bg-white">
+          <div class="p-3 rounded-3 mb-3 bg-light border">
+            <div class="fw-bold text-dark">Nguyễn Văn An</div>
+            <div class="small text-muted mt-1">Lịch hẹn hiện tại: 11/11/2026 - Buổi Sáng (09:30)</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary mb-1">Chọn ngày tái khám mới: <span
+                class="text-danger">*</span></label>
+            <input type="date" class="form-control" value="2026-11-14">
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Buổi hẹn:</label>
+              <select class="form-select">
+                <option value="MORNING" selected>Buổi Sáng (08:00 - 12:00)</option>
+                <option value="AFTERNOON">Buổi Chiều (13:30 - 17:30)</option>
+                <option value="EVENING">Buổi Tối (17:30 - 20:30)</option>
+                <option value="ANY">Bất kỳ thời điểm nào</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Giờ dự kiến:</label>
+              <input type="time" class="form-control" value="09:30">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2 px-3">
+          <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" data-bs-dismiss="modal">
+            <i class="bi bi-calendar-check me-1"></i>Xác nhận dời ngày
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 3: ĐẶT LỊCH HẸN TÁI KHÁM MỚI (SCR-18.1)                       -->
+  <!-- ===================================================================== -->
+  <div class="modal fade" id="reExamBookingModal" tabindex="-1" aria-labelledby="reExamBookingModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content modal-content-custom border-0 shadow-lg">
+        <div class="modal-header py-3 px-4 bg-white border-bottom">
+          <div class="d-flex align-items-center gap-2.5">
+            <div class="p-2 rounded bg-primary-subtle text-primary d-flex align-items-center justify-content-center"
+              style="width: 38px; height: 38px;">
+              <i class="bi bi-calendar2-plus-fill fs-5"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-dark mb-0" id="reExamBookingModalLabel">
+                Hẹn tái khám sau điều trị (SCR-18.1)
+              </h5>
+              <div class="text-muted small" style="font-size: 12px;">
+                Lập lịch tái khám, kiểm tra vết thương, dặn dò &amp; phân công nhắc hẹn CSKH
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-4 pt-3 bg-white">
+          <div class="p-2.5 px-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2"
+            style="background: #f8fafc; border: 1px solid #e2e8f0;">
+            <div class="d-flex align-items-center gap-2.5">
+              <div class="rc-avatar" style="width: 36px; height: 36px; font-size: 13px;">A</div>
+              <div>
+                <div class="fw-bold text-dark" style="font-size: 14px;">Nguyễn Văn An</div>
+                <div class="small text-secondary" style="font-size: 12px;">
+                  <span>Mã KH: KH1001</span>
+                  <span class="mx-1">&bull;</span>
+                  <span>SĐT: 0912 345 678</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-end small">
+              <div>Bác sĩ: <strong class="text-primary">BS. CK1 Lê Hoàng Nam</strong></div>
+              <div class="text-muted">Cơ sở: Chi nhánh 1 - Quận 10</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Chọn nhanh mốc hẹn:</label>
+              <select class="form-select rounded-3">
+                <option value="">-- Tự chọn ngày cụ thể --</option>
+                <option value="3">+3 ngày</option>
+                <option value="7" selected>+7 ngày</option>
+                <option value="14">+14 ngày</option>
+                <option value="30">+1 tháng</option>
+                <option value="90">+3 tháng</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Ngày hẹn tái khám <span
+                  class="text-danger">*</span>:</label>
+              <input type="date" class="form-control rounded-3" value="2026-11-11">
+              <div class="mt-1 small text-primary fw-semibold" style="font-size: 12px;">
+                <i class="bi bi-calendar-event me-1"></i> Thứ Tư, ngày 11/11/2026
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Buổi hẹn:</label>
+              <select class="form-select rounded-3">
+                <option value="MORNING" selected>Sáng (08:00 - 12:00)</option>
+                <option value="AFTERNOON">Chiều (13:30 - 17:30)</option>
+                <option value="EVENING">Tối (17:30 - 20:30)</option>
+                <option value="ANY">Bất kỳ giờ nào</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-secondary mb-1">Bác sĩ phụ trách tái khám:</label>
+              <select class="form-select rounded-3">
+                <option value="1" selected>BS. CK1 Lê Hoàng Nam</option>
+                <option value="2">BS. Trần Minh Tâm</option>
+                <option value="3">BS. Lê Thu Trang</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary mb-1">Nội dung / Thủ thuật tái khám &amp; Lời dặn
+              <span class="text-danger">*</span>:</label>
+            <select class="form-select rounded-3 mb-2" style="background-color: #f8fafc;">
+              <option value="">-- Chọn nhanh thủ thuật tái khám --</option>
+              <option value="1" selected>Kiểm tra tủy lần 2 &amp; trám bít ống tủy R36</option>
+              <option value="2">Tái khám cắt chỉ R38 &amp; kiểm tra lành thương</option>
+              <option value="3">Tái khám chỉnh nha: Thay chun &amp; siết dây cung</option>
+              <option value="4">Thử sườn &amp; lắp răng sứ vĩnh viễn</option>
+            </select>
+            <input type="text" class="form-control rounded-3"
+              value="Kiểm tra tủy lần 2 &amp; trám bít ống tủy vĩnh viễn R36"
+              placeholder="Nhập dặn dò chi tiết cho bệnh nhân...">
+          </div>
+
+          <div class="p-2.5 px-3 rounded-3 mb-3 d-flex align-items-center justify-content-between"
+            style="background: #f8fafc; border: 1px solid #e2e8f0;">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-headset text-primary fs-5"></i>
+              <div>
+                <span class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1
+                  ngày</span>
+                <div class="text-muted" style="font-size: 11.5px;">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng
+                  khám</div>
+              </div>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" checked
+                style="cursor: pointer; width: 36px; height: 18px;">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer py-2.5 px-4 bg-white border-top d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-light btn-sm px-3.5 rounded-pill text-secondary fw-semibold border"
+            data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs"
+            data-bs-dismiss="modal">
+            <i class="bi bi-check-circle-fill me-1"></i> Xác nhận đặt hẹn tái khám
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5.3 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>
