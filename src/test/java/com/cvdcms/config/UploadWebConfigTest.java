@@ -27,7 +27,7 @@ class UploadWebConfigTest {
         config.initStorageDirectories();
 
         String[] expectedDirs = {
-                "avatars", "news", "services",
+                "avatars", "news", "services", "images",
                 "nanopix", "clinical_photos", "invoices", "signatures", "labo"
         };
 
@@ -51,6 +51,7 @@ class UploadWebConfigTest {
         verify(registry).addResourceHandler("/uploads/avatars/**");
         verify(registry).addResourceHandler("/uploads/news/**");
         verify(registry).addResourceHandler("/uploads/services/**");
+        verify(registry).addResourceHandler("/uploads/images/**");
         verifyNoMoreInteractions(registry);
     }
 }

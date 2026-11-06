@@ -23,7 +23,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class UploadWebConfig implements WebMvcConfigurer {
 
     private static final List<String> REQUIRED_STORAGE_DIRECTORIES = List.of(
-            "avatars", "news", "services",
+            "avatars", "news", "services", "images",
             "nanopix", "clinical_photos", "invoices", "signatures", "labo"
     );
 
@@ -74,5 +74,12 @@ public class UploadWebConfig implements WebMvcConfigurer {
         if (!servicesLocation.endsWith("/")) servicesLocation += "/";
         registry.addResourceHandler("/uploads/services/**")
                 .addResourceLocations(servicesLocation);
+
+        // 4. Ảnh giao diện trang chủ và không gian phòng khám công khai
+        Path imagesPath = root.resolve("images").normalize();
+        String imagesLocation = imagesPath.toUri().toString();
+        if (!imagesLocation.endsWith("/")) imagesLocation += "/";
+        registry.addResourceHandler("/uploads/images/**")
+                .addResourceLocations(imagesLocation);
     }
 }
