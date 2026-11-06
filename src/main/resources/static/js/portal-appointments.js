@@ -4,16 +4,20 @@
     const sessionLabel = {MORNING: 'Buổi sáng', AFTERNOON: 'Buổi chiều', EVENING: 'Buổi tối'};
     const statusLabel = {PENDING: 'Đang chờ phòng khám xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã đến',
         COMPLETED: 'Đã hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Không đến'};
-    const statusClass = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-info text-dark',
-        COMPLETED: 'bg-success', CANCELLED: 'bg-secondary', NO_SHOW: 'bg-danger'};
+    const statusClass = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-success',
+        COMPLETED: 'bg-success', CANCELLED: 'bg-danger', NO_SHOW: 'bg-warning text-dark'};
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,
         char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
 
     async function request(path, options = {}) {
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
         const response = await fetch(api + path, {
             credentials: 'same-origin',
-            headers: {'Content-Type': 'application/json', ...(options.headers || {})},
-            ...options
+            ...options,
+            headers: {'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader ? {[csrfHeader]: csrfToken} : {}),
+                ...(options.headers || {})}
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.detail || body.message || body.error || `Không thể xử lý yêu cầu (${response.status}).`);
@@ -191,8 +195,45 @@
             $('symptomsSection').hidden = true;
             $('submitAppointment').textContent = 'Lưu lịch mới';
         } else {
-            const profileParam = new URLSearchParams(location.search).get('profileId');
-            if (profileParam && options.profiles.some(p => String(p.id) === profileParam)) $('profileId').value = profileParam;
+            if (!options.profiles || options.profiles.length === 0) {
+                const noProfileAlert = document.createElement('div');
+                noProfileAlert.className = 'alert alert-warning d-flex align-items-center justify-content-between p-3 mb-4';
+                noProfileAlert.style.borderRadius = '10px';
+                noProfileAlert.innerHTML = `
+                    <div>
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-warning"></i>
+                        <strong>Bạn chưa có hồ sơ bệnh nhân:</strong> Vui lòng tạo hồ sơ bệnh nhân trước khi đăng ký lịch khám.
+                    </div>
+                    <a href="/portal/records/new" class="btn btn-sm btn-primary ms-3 text-nowrap">
+                        <i class="bi bi-person-plus me-1"></i>Tạo hồ sơ ngay
+                    </a>
+                `;
+                form.insertBefore(noProfileAlert, form.querySelector('.patient-form-grid') || form.firstChild);
+                $('submitAppointment').disabled = true;
+            } else {
+                const profileParam = new URLSearchParams(location.search).get('profileId');
+                if (profileParam && options.profiles.some(p => String(p.id) === profileParam)) {
+                    $('profileId').value = profileParam;
+                } else {
+                    $('profileId').value = String(options.profiles[0].id);
+                }
+            }
+
+            if (options.branches && options.branches.length > 0 && !$('branchId').value) {
+                $('branchId').value = String(options.branches[0].id);
+            }
+
+            if (!$('appointmentDate').value) {
+                const now = new Date();
+                const offset = now.getHours() >= 17 ? 1 : 0;
+                $('appointmentDate').value = localDate(offset);
+            }
+            if (!$('preferredSession').value) {
+                const hour = new Date().getHours();
+                if (hour < 11) $('preferredSession').value = 'MORNING';
+                else if (hour < 16) $('preferredSession').value = 'AFTERNOON';
+                else $('preferredSession').value = 'EVENING';
+            }
         }
         let available = false;
         let sequence = 0;
@@ -209,7 +250,11 @@
             if (token !== sequence) return;
             select.replaceChildren(option('', 'Chọn giờ hẹn'));
             list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
-            if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) select.value = previous;
+            if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
+                select.value = previous;
+            } else if (list.length > 0) {
+                select.value = list[0].time.slice(0, 5);
+            }
             select.disabled = !list.length;
             $('submitAppointment').disabled = !list.length;
             if (!list.length) { available = false; $('availabilityMessage').textContent = 'Không còn giờ phù hợp. Hãy chọn buổi hoặc bác sĩ khác.';
@@ -251,7 +296,11 @@
         ['doctorId', 'serviceId'].forEach(field => $(field).addEventListener('change', () => {
             if (available) loadSlots(sequence).catch(e => error(e.message));
         }));
-        if (editing) await availability();
+        if (editing) {
+            await availability();
+        } else if ($('branchId').value && $('appointmentDate').value && $('preferredSession').value) {
+            await availability().catch(e => error(e.message));
+        }
         let key = sessionStorage.getItem('ft06-booking-key');
         if (!key) { key = crypto.randomUUID(); sessionStorage.setItem('ft06-booking-key', key); }
         form.addEventListener('submit', async event => {

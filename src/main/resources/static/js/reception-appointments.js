@@ -4,8 +4,8 @@
     const sessionName = {MORNING: 'Buổi sáng', AFTERNOON: 'Buổi chiều', EVENING: 'Buổi tối', ANY: 'Chưa chốt'};
     const statusName = {PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã đến',
         COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Không đến'};
-    const statusStyle = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-info text-dark',
-        COMPLETED: 'bg-success', CANCELLED: 'bg-secondary', NO_SHOW: 'bg-danger'};
+    const statusStyle = {PENDING: 'bg-warning text-dark', CONFIRMED: 'bg-primary', CHECKED_IN: 'bg-success',
+        COMPLETED: 'bg-success', CANCELLED: 'bg-danger', NO_SHOW: 'bg-warning text-dark'};
     const today = () => new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Bangkok'}).format(new Date());
     const fromDate = value => new Date(`${value}T00:00:00Z`);
     const iso = date => date.toISOString().slice(0, 10);
@@ -81,164 +81,729 @@
 
     async function dashboardPage() {
         const options = await request('/options');
-        const date = $('filterDate'), branch = $('filterBranch'), doctor = $('filterDoctor'), type = $('filterType');
-        date.value = new URLSearchParams(location.search).get('date') || today();
+        const dateInput = $('filterDate'), branch = $('filterBranch'), doctor = $('filterDoctor');
+        const searchInput = $('appointmentSearch');
+        const dateDisplay = $('dateDisplayLabel');
+        const scopeDropdownLabel = $('currentScopeLabel');
+        
+        // Initial parameters
+        const urlParams = new URLSearchParams(location.search);
+        dateInput.value = urlParams.get('date') || today();
         branches(branch, options, true);
-        const branchParam = new URLSearchParams(location.search).get('branchId');
-        if (branchParam && options.branches.some(b => String(b.id) === branchParam)) branch.value = branchParam;
+        const branchParam = urlParams.get('branchId');
+        if (branchParam && options.branches.some(b => String(b.id) === branchParam)) {
+            branch.value = branchParam;
+        }
+
+        let currentScope = 'CURRENT'; // CURRENT | ALL | CHECKED_IN | NO_SHOW | CANCELLED
+        let currentKpiFilter = null; // null | 'ALL' | 'CHECKED_IN' | 'NO_SHOW' | 'CANCELLED'
+        let currentAppointments = [];
+        let sortDoctorAsc = true;
+        let activeAppointmentIdForStatus = null;
+        let currentViewMode = 'list'; // 'list' | 'week' | 'month'
+
+        // Date Display Formatting (Thứ X  dd/MM/yyyy)
+        const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+        function updateDateDisplay() {
+            if (!dateInput.value) return;
+            const parts = dateInput.value.split('-');
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            const dayName = dayNames[d.getDay()];
+            const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            if (dateDisplay) {
+                dateDisplay.textContent = `${dayName}  ${formatted}`;
+            }
+        }
+        updateDateDisplay();
+
+        // Date navigation buttons
+        $('prevDateBtn')?.addEventListener('click', () => {
+            const d = fromDate(dateInput.value);
+            dateInput.value = iso(addDays(d, -1));
+            updateDateDisplay();
+            load().catch(e => error(e.message));
+        });
+
+        $('nextDateBtn')?.addEventListener('click', () => {
+            const d = fromDate(dateInput.value);
+            dateInput.value = iso(addDays(d, 1));
+            updateDateDisplay();
+            load().catch(e => error(e.message));
+        });
+
+        dateInput.addEventListener('change', () => {
+            updateDateDisplay();
+            load().catch(e => error(e.message));
+        });
+
+        // Date View Tabs
+        $('tabToday')?.addEventListener('click', () => {
+            dateInput.value = today();
+            updateDateDisplay();
+            switchView('list');
+            load().catch(e => error(e.message));
+        });
+
+        $('tabWeek')?.addEventListener('click', () => {
+            switchView('week');
+        });
+
+        $('tabMonth')?.addEventListener('click', () => {
+            switchView('month');
+        });
+
+        // Scope Dropdown Items
+        document.querySelectorAll('[data-scope]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('[data-scope]').forEach(item => item.classList.remove('active'));
+                el.classList.add('active');
+                currentScope = el.getAttribute('data-scope');
+                if (scopeDropdownLabel) scopeDropdownLabel.textContent = el.textContent.trim();
+                applyFiltersAndRender();
+            });
+        });
+
+        // KPI Pills Click -> Filter Table
+        const kpiPills = [
+            { id: 'kpiTotalPill', filter: 'ALL' },
+            { id: 'kpiCheckedInPill', filter: 'CHECKED_IN' },
+            { id: 'kpiNoShowPill', filter: 'NO_SHOW' },
+            { id: 'kpiCancelledPill', filter: 'CANCELLED' }
+        ];
+        kpiPills.forEach(({ id, filter }) => {
+            $(id)?.addEventListener('click', () => {
+                if (currentKpiFilter === filter) {
+                    currentKpiFilter = null;
+                    $(id).classList.remove('active');
+                    $('kpiTotalPill')?.classList.add('active');
+                } else {
+                    currentKpiFilter = filter;
+                    document.querySelectorAll('.kpi-pill').forEach(p => p.classList.remove('active'));
+                    $(id).classList.add('active');
+                }
+                applyFiltersAndRender();
+            });
+        });
+
+        // Doctor list
         async function loadDoctors() {
             doctor.replaceChildren(option('', 'Tất cả bác sĩ'));
             if (!branch.value) { doctor.disabled = true; return; }
             doctor.disabled = false;
-            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${date.value}`);
+            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
             list.forEach(d => doctor.appendChild(option(d.id, d.name)));
         }
+
+        // Sort BS Button
+        $('sortDoctorBtn')?.addEventListener('click', () => {
+            sortDoctorAsc = !sortDoctorAsc;
+            currentAppointments.sort((a, b) => {
+                const docA = a.doctorName || '';
+                const docB = b.doctorName || '';
+                return sortDoctorAsc ? docA.localeCompare(docB, 'vi') : docB.localeCompare(docA, 'vi');
+            });
+            applyFiltersAndRender();
+        });
+
+        // Print Button
+        $('printAppointmentBtn')?.addEventListener('click', () => {
+            window.print();
+        });
+
+        // Toggle View Buttons
+        $('viewListBtn')?.addEventListener('click', () => switchView('list'));
+        $('viewCalendarBtn')?.addEventListener('click', () => switchView('week'));
+
+        function switchView(mode) {
+            currentViewMode = mode;
+            if (mode === 'list') {
+                $('listViewContainer').style.display = 'block';
+                $('calendarViewContainer').style.display = 'none';
+                $('viewListBtn')?.classList.add('active', 'btn-primary');
+                $('viewListBtn')?.classList.remove('btn-outline-secondary');
+                $('viewCalendarBtn')?.classList.remove('active', 'btn-primary');
+                $('viewCalendarBtn')?.classList.add('btn-outline-secondary');
+            } else {
+                $('listViewContainer').style.display = 'none';
+                $('calendarViewContainer').style.display = 'block';
+                $('viewCalendarBtn')?.classList.add('active', 'btn-primary');
+                $('viewCalendarBtn')?.classList.remove('btn-outline-secondary');
+                $('viewListBtn')?.classList.remove('active', 'btn-primary');
+                $('viewListBtn')?.classList.add('btn-outline-secondary');
+                renderCalendarView(mode);
+            }
+        }
+
+        // Load dashboard data from API
         async function load() {
             clearError();
-            const params = new URLSearchParams({date: date.value});
+            const params = new URLSearchParams({ date: dateInput.value });
             if (branch.value) params.set('branchId', branch.value);
             if (doctor.value) params.set('doctorId', doctor.value);
+
             const data = await request(`/dashboard?${params}`);
-            const metrics = [
-                ['Tổng lịch', data.total, 'bi-calendar-check', '#0284c7'],
-                ['Chờ xác nhận', data.pending, 'bi-hourglass-split', '#d97706'],
-                ['Đã xác nhận', data.confirmed, 'bi-check2-circle', '#2563eb'],
-                ['Đã đến', data.checkedIn, 'bi-person-check', '#059669'],
-                ['Không đến', data.noShow, 'bi-x-circle', '#dc2626']
-            ];
-            $('appointmentKpis').replaceChildren(...metrics.map(([label, value, icon, color]) => {
-                const box = document.createElement('div');
-                box.className = 'appointment-kpi';
-                box.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-secondary small fw-semibold">${label}</span>
-                        <i class="bi ${icon}" style="color: ${color}; font-size: 1.1rem;"></i>
-                    </div>
-                    <strong style="color: ${color}; font-size: 1.6rem;">${value}</strong>
-                `;
-                return box;
-            }));
-            const rows = $('appointmentRows'); rows.replaceChildren();
-            let appointments = data.appointments;
-            if (type && type.value === 'LH') {
-                appointments = appointments.filter(a => !a.code.startsWith('TK'));
-            } else if (type && type.value === 'TK') {
-                appointments = appointments.filter(a => a.code.startsWith('TK'));
+            currentAppointments = data.appointments || [];
+
+            // Update KPI numbers
+            const totalCount = data.total || currentAppointments.length;
+            const checkedInCount = data.checkedIn || currentAppointments.filter(a => a.status === 'CHECKED_IN').length;
+            const noShowCount = data.noShow || currentAppointments.filter(a => a.status === 'NO_SHOW').length;
+            const cancelledCount = data.cancelled !== undefined ? data.cancelled : currentAppointments.filter(a => a.status === 'CANCELLED').length;
+
+            if ($('kpiTotal')) $('kpiTotal').textContent = totalCount;
+            if ($('kpiCheckedIn')) $('kpiCheckedIn').textContent = checkedInCount;
+            if ($('kpiNoShow')) $('kpiNoShow').textContent = noShowCount;
+            if ($('kpiCancelled')) $('kpiCancelled').textContent = cancelledCount;
+
+            applyFiltersAndRender();
+        }
+
+        // Apply search, scope, KPI, doctor filter and render rows
+        function applyFiltersAndRender() {
+            let list = [...currentAppointments];
+
+            // 1. Doctor filter
+            if (doctor.value) {
+                list = list.filter(a => String(a.doctorId) === doctor.value);
             }
+
+            // 2. Text Search
+            const term = searchInput.value.trim().toLocaleLowerCase('vi');
+            if (term) {
+                list = list.filter(a => [a.patientName, a.patientCode, a.patientPhone, a.serviceName, a.symptoms]
+                    .some(v => String(v || '').toLocaleLowerCase('vi').includes(term)));
+            }
+
+            // 3. KPI Pill Filter
+            if (currentKpiFilter) {
+                if (currentKpiFilter === 'CHECKED_IN') {
+                    list = list.filter(a => a.status === 'CHECKED_IN');
+                } else if (currentKpiFilter === 'NO_SHOW') {
+                    list = list.filter(a => a.status === 'NO_SHOW');
+                } else if (currentKpiFilter === 'CANCELLED') {
+                    list = list.filter(a => a.status === 'CANCELLED');
+                }
+            } else {
+                // 4. Scope Filter (if KPI filter not active)
+                if (currentScope === 'CURRENT') {
+                    list = list.filter(a => a.status === 'PENDING' || a.status === 'CONFIRMED' || a.status === 'CHECKED_IN');
+                } else if (currentScope === 'CHECKED_IN') {
+                    list = list.filter(a => a.status === 'CHECKED_IN' || a.status === 'COMPLETED');
+                } else if (currentScope === 'NO_SHOW') {
+                    list = list.filter(a => a.status === 'NO_SHOW');
+                } else if (currentScope === 'CANCELLED') {
+                    list = list.filter(a => a.status === 'CANCELLED');
+                }
+            }
+
+            renderTableRows(list);
+        }
+
+        // Render Table Rows (DentalSoft Style)
+        function renderTableRows(appointments) {
+            const rows = $('appointmentRows');
+            rows.replaceChildren();
+
             if (!appointments.length) {
-                const row = document.createElement('tr'); cell(row, 'Không có lịch hẹn trong ngày hoặc phù hợp bộ lọc.').colSpan = 7; rows.appendChild(row); return;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x display-6 d-block mb-2 text-secondary opacity-50"></i>
+                        Không có lịch hẹn nào phù hợp bộ lọc.
+                    </td>
+                `;
+                rows.appendChild(tr);
+                return;
             }
-            appointments.forEach(a => {
-                const row = document.createElement('tr');
+
+            appointments.forEach((a, index) => {
+                const tr = document.createElement('tr');
                 if (a.doctorUnavailable || a.conflictNotes) {
-                    row.style.background = '#fffbeb';
+                    tr.style.backgroundColor = '#fffbeb';
                 }
 
-                // Column 1: Mã lịch
-                const codeTd = cell(row);
-                const codeSpan = document.createElement('span');
-                codeSpan.className = 'fw-bold text-dark font-monospace';
-                codeSpan.textContent = a.code;
-                codeTd.appendChild(codeSpan);
-                if (a.code.startsWith('TK')) {
-                    const tkBadge = document.createElement('span');
-                    tkBadge.className = 'badge ms-1.5';
-                    tkBadge.style.cssText = 'background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; font-size: 11px;';
-                    tkBadge.textContent = 'Tái khám (FT18)';
-                    tkBadge.title = 'Lịch hẹn tái khám sau điều trị (FT18)';
-                    codeTd.appendChild(tkBadge);
-                }
+                // 1. #
+                const tdIndex = document.createElement('td');
+                tdIndex.className = 'text-center text-muted fw-medium';
+                tdIndex.textContent = index + 1;
+                tr.appendChild(tdIndex);
 
-                // Column 2: Bệnh nhân
-                const patientTd = cell(row);
-                patientTd.innerHTML = `
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="patient-card-avatar" style="width: 32px; height: 32px; font-size: 13px;">${escapeHtml((a.patientName || 'B').trim().charAt(0).toUpperCase())}</div>
-                        <div>
-                            <strong class="text-dark d-block">${escapeHtml(a.patientName)}</strong>
-                            <span class="badge bg-light text-secondary border font-monospace" style="font-size: 10.5px;">${escapeHtml(a.patientCode)}</span>
-                        </div>
+                // 2. Thời gian (Ngày dd-MM-yyyy, linh hoạt giờ theo yêu cầu "không cần giờ")
+                const tdTime = document.createElement('td');
+                tdTime.className = 'dentalsoft-time-col';
+                const timeStr = a.expectedTime ? a.expectedTime.slice(0, 5) : '';
+                const parts = (a.date || '').split('-');
+                const dateFormatted = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : a.date;
+                tdTime.innerHTML = `
+                    ${timeStr ? `<div class="time-val">${escapeHtml(timeStr)}</div>` : ''}
+                    <div class="date-val">${escapeHtml(dateFormatted)}</div>
+                `;
+                tr.appendChild(tdTime);
+
+                // 3. Mã KH (Màu xanh dương)
+                const tdCode = document.createElement('td');
+                tdCode.innerHTML = `<a href="/reception/patients/${a.profileId}" class="customer-code-badge">${escapeHtml(a.patientCode || 'DEMO')}</a>`;
+                tr.appendChild(tdCode);
+
+                // 4. Khách hàng (Tên đậm + tag DEMO)
+                const tdPatient = document.createElement('td');
+                tdPatient.innerHTML = `
+                    <a href="/reception/patients/${a.profileId}" class="customer-name-link">${escapeHtml(a.patientName || 'Khách hàng')}</a>
+                    <span class="demo-chip">DEMO</span>
+                `;
+                tr.appendChild(tdPatient);
+
+                // 5. Số điện thoại
+                const tdPhone = document.createElement('td');
+                tdPhone.innerHTML = a.patientPhone ? `<a href="tel:${a.patientPhone}" class="phone-link">${escapeHtml(a.patientPhone)}</a>` : '<span class="text-muted">—</span>';
+                tr.appendChild(tdPhone);
+
+                // 6. Nội dung
+                const tdService = document.createElement('td');
+                tdService.className = 'text-dark fw-medium';
+                tdService.textContent = a.serviceName || a.symptoms || 'Khám tổng quát';
+                tr.appendChild(tdService);
+
+                // 7. Bác sĩ
+                const tdDoctor = document.createElement('td');
+                const docName = a.doctorName ? (a.doctorName.startsWith('BS') ? a.doctorName : `BS. ${a.doctorName}`) : 'BS. Chưa chỉ định';
+                tdDoctor.className = 'text-dark';
+                tdDoctor.textContent = docName;
+                if (a.doctorUnavailable) {
+                    tdDoctor.innerHTML += ' <span class="badge bg-danger text-white ms-1" style="font-size: 10px;">Vắng</span>';
+                }
+                tr.appendChild(tdDoctor);
+
+                // 8. Trạng thái (Nút pill đổi trạng thái nhanh chuẩn Image 2)
+                const tdStatus = document.createElement('td');
+                tdStatus.className = 'text-center';
+                const statusMeta = getStatusMeta(a.status);
+                const statusBtn = document.createElement('button');
+                statusBtn.type = 'button';
+                statusBtn.className = `dentalsoft-status-btn ${statusMeta.cssClass}`;
+                statusBtn.title = 'Bấm để đổi trạng thái lịch hẹn';
+                statusBtn.innerHTML = `
+                    <div class="status-top">
+                        <span>${statusMeta.label}</span>
+                        <i class="bi bi-chevron-right" style="font-size: 10.5px;"></i>
+                    </div>
+                    <div class="status-bot">${statusMeta.sub}</div>
+                `;
+                statusBtn.addEventListener('click', () => openQuickStatusModal(a));
+                tdStatus.appendChild(statusBtn);
+                tr.appendChild(tdStatus);
+
+                // 9. Thao tác (Icon sửa, in, hủy)
+                const tdAction = document.createElement('td');
+                tdAction.className = 'text-center';
+                tdAction.innerHTML = `
+                    <div class="d-inline-flex align-items-center gap-1.5">
+                        <a href="/reception/appointments/${a.id}/edit" class="btn-action-icon text-primary" title="Sửa lịch hẹn"><i class="bi bi-pencil"></i></a>
+                        <button type="button" class="btn-action-icon text-dark btn-print" title="In phiếu khám"><i class="bi bi-printer"></i></button>
+                        <button type="button" class="btn-action-icon text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i></button>
                     </div>
                 `;
+                tdAction.querySelector('.btn-print')?.addEventListener('click', () => {
+                    alert(`In phiếu lịch hẹn #${a.code} cho bệnh nhân ${a.patientName}`);
+                });
+                tdAction.querySelector('.btn-delete')?.addEventListener('click', async () => {
+                    if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng ${a.patientName}?`)) {
+                        try {
+                            await request(`/${a.id}/quick-status`, {
+                                method: 'POST',
+                                body: JSON.stringify({ status: 'CANCELLED', note: 'Lễ tân hủy lịch qua danh sách' })
+                            });
+                            await load();
+                        } catch (err) {
+                            error(err.message);
+                        }
+                    }
+                });
+                tr.appendChild(tdAction);
 
-                // Column 3: Buổi
-                const sessionTd = cell(row);
-                sessionTd.innerHTML = `<span class="badge bg-light text-dark border px-2 py-1">${sessionName[a.session] || a.session}</span>`;
-                sessionTd.appendChild(document.createTextNode(` · ${a.expectedTime ? a.expectedTime.slice(0, 5) : 'Chưa chốt giờ'}`));
-
-                // Column 4: Bác sĩ yêu cầu
-                const doctorCell = cell(row);
-                if (a.doctorName) {
-                    doctorCell.innerHTML = `<div><i class="bi bi-person-fill text-primary me-1"></i><span class="fw-medium">${escapeHtml(a.doctorName)}</span>${a.doctorUnavailable ? ' <span class="badge bg-danger text-white ms-1">Vắng</span>' : ''}</div>`;
-                } else {
-                    doctorCell.innerHTML = `<span class="text-muted fst-italic">Không yêu cầu</span>${a.doctorUnavailable ? ' <span class="badge bg-danger text-white ms-1">Đầy chỗ</span>' : ''}`;
-                }
-                if (a.conflictNotes) {
-                    doctorCell.title = a.conflictNotes;
-                    const isCheckedIn = a.status === 'CHECKED_IN';
-                    const textClass = isCheckedIn ? 'text-warning-emphasis fw-medium' : 'text-danger';
-                    const iconClass = isCheckedIn ? 'bi-info-circle-fill text-warning' : 'bi-exclamation-triangle-fill text-danger';
-                    doctorCell.innerHTML += `<small class="${textClass} d-block mt-0.5"><i class="bi ${iconClass} me-0.5"></i>${escapeHtml(a.conflictNotes)}</small>`;
-                }
-
-                // Column 5: Nguồn
-                const sourceTd = cell(row);
-                if (a.code.startsWith('TK')) {
-                    sourceTd.innerHTML = '<span class="badge" style="background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe;"><i class="bi bi-stethoscope me-1"></i>BS (Tái khám)</span>';
-                } else if (a.source === 'ONLINE') {
-                    sourceTd.innerHTML = '<span class="badge bg-light text-primary border"><i class="bi bi-globe me-1"></i>Portal</span>';
-                } else {
-                    sourceTd.innerHTML = '<span class="badge bg-light text-secondary border"><i class="bi bi-person-badge me-1"></i>Lễ tân</span>';
-                }
-
-                // Column 6: Trạng thái
-                badge(a, cell(row));
-
-                // Column 7: Thao tác
-                const actionCell = cell(row);
-                actionCell.className = 'text-end pe-3';
-                const actionGroup = document.createElement('div');
-                actionGroup.className = 'd-inline-flex align-items-center gap-1.5 justify-content-end';
-                detailLink(a, actionGroup);
-                if (a.status === 'CONFIRMED') {
-                    const checkInLink = document.createElement('a');
-                    checkInLink.href = `/reception/check-in?branchId=${a.branchId || ''}`;
-                    checkInLink.className = 'btn btn-sm btn-success py-1 px-2.5 rounded-2 fw-semibold';
-                    checkInLink.title = 'Bệnh nhân đã đến, bấm để Tiếp đón & Check-in ngay';
-                    checkInLink.innerHTML = '<i class="bi bi-person-check-fill me-1"></i>Tiếp đón';
-                    actionGroup.appendChild(checkInLink);
-                } else if (a.status === 'CHECKED_IN') {
-                    const dispatchLink = document.createElement('a');
-                    dispatchLink.href = `/reception/dispatch?branchId=${a.branchId || ''}`;
-                    dispatchLink.className = 'btn btn-sm btn-primary py-1 px-2.5 rounded-2 fw-semibold';
-                    dispatchLink.title = 'Bệnh nhân đã check-in, bấm để vào Bàn điều phối ghế & Bác sĩ';
-                    dispatchLink.innerHTML = '<i class="bi bi-diagram-3 me-1"></i>Điều phối';
-                    actionGroup.appendChild(dispatchLink);
-                }
-                const canFix = (a.status === 'PENDING' || a.status === 'CONFIRMED');
-                if (a.doctorUnavailable || a.conflictNotes) {
-                    const fixLink = document.createElement('a');
-                    fixLink.href = `/reception/appointments/${a.id}/edit`;
-                    fixLink.className = 'btn btn-sm btn-warning text-dark py-1 px-2 rounded-2 fw-semibold';
-                    fixLink.title = `Khắc phục xung đột: ${a.conflictNotes || 'Bác sĩ không khả dụng'}`;
-                    fixLink.innerHTML = '<i class="bi bi-tools me-1"></i>Khắc phục';
-                    if (canFix) actionGroup.appendChild(fixLink);
-                }
-                actionCell.appendChild(actionGroup);
-                rows.appendChild(row);
+                rows.appendChild(tr);
             });
         }
-        branch.addEventListener('change', async () => { try { await loadDoctors(); await load(); } catch (e) { error(e.message); } });
-        date.addEventListener('change', async () => { try { await loadDoctors(); await load(); } catch (e) { error(e.message); } });
-        doctor.addEventListener('change', () => load().catch(e => error(e.message)));
-        if (type) type.addEventListener('change', () => load().catch(e => error(e.message)));
-        await loadDoctors(); await load();
+
+        // Status metadata mapping for DentalSoft pills
+        function getStatusMeta(status) {
+            switch (status) {
+                case 'CHECKED_IN':
+                    return { label: 'Đang làm', sub: 'Đã đến', cssClass: 'checkedin' };
+                case 'COMPLETED':
+                    return { label: 'Đã về', sub: 'Đã xong', cssClass: 'completed' };
+                case 'CONFIRMED':
+                    return { label: 'Hẹn đến', sub: 'Chưa nhắc', cssClass: 'confirmed' };
+                case 'CANCELLED':
+                    return { label: 'Đã hủy', sub: 'Đã hủy', cssClass: 'cancelled' };
+                case 'NO_SHOW':
+                    return { label: 'Không đến', sub: 'Vắng', cssClass: 'noshow' };
+                case 'PENDING':
+                default:
+                    return { label: 'Đang chờ', sub: 'Chưa nhắc', cssClass: 'waiting' };
+            }
+        }
+
+        // =========================================================
+        // MODAL 1: ĐỔI TRẠNG THÁI LỊCH HẸN
+        // =========================================================
+        const statusModalEl = $('statusQuickChangeModal');
+        const statusModal = statusModalEl ? new bootstrap.Modal(statusModalEl) : null;
+
+        function openQuickStatusModal(appointment) {
+            if (!statusModal) return;
+            activeAppointmentIdForStatus = appointment.id;
+            $('modalStatusPatientName').textContent = appointment.patientName || 'Khách hàng';
+            $('modalStatusDoctorName').textContent = appointment.doctorName ? (appointment.doctorName.startsWith('BS') ? appointment.doctorName : `BS. ${appointment.doctorName}`) : 'Chưa chỉ định';
+            $('modalStatusContent').textContent = appointment.serviceName || appointment.symptoms || 'Khám & tư vấn';
+            $('modalStatusNote').value = '';
+
+            // Pre-select appropriate radio button
+            const radios = document.querySelectorAll('input[name="quickStatusOpt"]');
+            radios.forEach(r => {
+                if (appointment.status === 'CHECKED_IN' && r.dataset.label === 'Khách hàng đến') r.checked = true;
+                else if (appointment.status === 'COMPLETED' && r.dataset.label === 'Đã xong') r.checked = true;
+                else if (appointment.status === 'CONFIRMED' && r.dataset.label === 'KH chưa đến') r.checked = true;
+                else if (appointment.status === 'CANCELLED' && r.dataset.label === 'Hủy lịch hẹn') r.checked = true;
+                else if (appointment.status === 'NO_SHOW' && r.dataset.label === 'KH không đến') r.checked = true;
+                else if (appointment.status === 'PENDING' && r.dataset.label === 'Đang chờ') r.checked = true;
+            });
+
+            statusModal.show();
+        }
+
+        $('saveQuickStatusBtn')?.addEventListener('click', async () => {
+            if (!activeAppointmentIdForStatus) return;
+            const selectedRadio = document.querySelector('input[name="quickStatusOpt"]:checked');
+            if (!selectedRadio) return;
+            const targetStatus = selectedRadio.value;
+            const statusLabel = selectedRadio.dataset.label;
+            const note = $('modalStatusNote').value.trim();
+
+            try {
+                await request(`/${activeAppointmentIdForStatus}/quick-status`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        status: targetStatus,
+                        note: note ? `[${statusLabel}] ${note}` : `Đổi trạng thái sang ${statusLabel}`
+                    })
+                });
+                statusModal.hide();
+                await load();
+            } catch (err) {
+                alert('Không thể cập nhật trạng thái: ' + err.message);
+            }
+        });
+
+        // =========================================================
+        // MODAL 2: THÊM LỊCH HẸN (IMAGE 3 DENTALSOFT)
+        // =========================================================
+        const createModalEl = $('createAppointmentModal');
+        const createModal = createModalEl ? new bootstrap.Modal(createModalEl) : null;
+
+        // Load doctors for Modal
+        async function loadModalDoctors() {
+            const select = $('modalDoctorId');
+            if (!select) return;
+            select.replaceChildren(option('', '-- Chọn bác sĩ --'));
+            if (!branch.value) return;
+            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
+            list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}`)));
+        }
+
+        // Load services for Modal
+        function loadModalServices() {
+            const select = $('modalServiceId');
+            if (!select) return;
+            select.replaceChildren(option('', '-- Chọn dịch vụ --'));
+            options.services.forEach(s => select.appendChild(option(s.id, s.name)));
+        }
+
+        $('openCreateModalBtn')?.addEventListener('click', async () => {
+            if (!createModal) return;
+            $('createAppointmentForm')?.reset();
+            $('modalProfileId').value = '';
+            $('selectedPatientChip').style.display = 'none';
+            $('modalPatientSearch').value = '';
+            $('modalAppointmentDate').value = dateInput.value || today();
+            $('createModalSubtitle').textContent = `Ngày ${dateLabel(dateInput.value || today())}`;
+
+            await loadModalDoctors();
+            loadModalServices();
+            createModal.show();
+        });
+
+        // Customer Autocomplete Search
+        let patientSearchTimer;
+        $('modalPatientSearch')?.addEventListener('input', (e) => {
+            clearTimeout(patientSearchTimer);
+            const query = e.target.value.trim();
+            const resultsBox = $('modalPatientResults');
+            if (query.length < 2) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+            patientSearchTimer = setTimeout(async () => {
+                try {
+                    const patients = await request(`/patients?branchId=${encodeURIComponent(branch.value || 1)}&query=${encodeURIComponent(query)}`);
+                    resultsBox.replaceChildren();
+                    if (!patients.length) {
+                        resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy khách hàng cũ. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
+                    } else {
+                        patients.forEach(p => {
+                            const item = document.createElement('div');
+                            item.className = 'patient-autocomplete-item';
+                            item.innerHTML = `<strong>${escapeHtml(p.name)}</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span> <span class="text-muted ms-1">· ${escapeHtml(p.phone)}</span>`;
+                            item.addEventListener('click', () => {
+                                $('modalProfileId').value = p.id;
+                                $('modalPatientName').value = p.name;
+                                $('modalPatientPhone').value = p.phone || '';
+                                $('selectedPatientName').textContent = p.name;
+                                $('selectedPatientCode').textContent = `(${p.code})`;
+                                $('selectedPatientChip').style.display = 'flex';
+                                resultsBox.style.display = 'none';
+                            });
+                            resultsBox.appendChild(item);
+                        });
+                    }
+                    resultsBox.style.display = 'block';
+                } catch (err) {
+                    resultsBox.style.display = 'none';
+                }
+            }, 250);
+        });
+
+        $('clearSelectedPatientBtn')?.addEventListener('click', () => {
+            $('modalProfileId').value = '';
+            $('selectedPatientChip').style.display = 'none';
+            $('modalPatientSearch').value = '';
+            $('modalPatientName').value = '';
+            $('modalPatientPhone').value = '';
+            $('modalPatientAddress').value = '';
+        });
+
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#modalPatientSearch') && !e.target.closest('#modalPatientResults')) {
+                if ($('modalPatientResults')) $('modalPatientResults').style.display = 'none';
+            }
+        });
+
+        // Save Appointment from Modal 2
+        $('saveAppointmentBtn')?.addEventListener('click', async () => {
+            const patientName = $('modalPatientName').value.trim();
+            const date = $('modalAppointmentDate').value;
+            const symptoms = $('modalSymptoms').value.trim();
+            const doctorId = $('modalDoctorId').value ? Number($('modalDoctorId').value) : null;
+            const serviceId = $('modalServiceId').value ? Number($('modalServiceId').value) : null;
+            const profileId = $('modalProfileId').value ? Number($('modalProfileId').value) : null;
+            const isTentative = $('modalIsTentative')?.checked || false;
+
+            if (!patientName) {
+                alert('Vui lòng nhập họ tên khách hàng.');
+                $('modalPatientName').focus();
+                return;
+            }
+            if (!date) {
+                alert('Vui lòng chọn ngày hẹn.');
+                return;
+            }
+            if (!symptoms) {
+                alert('Vui lòng nhập nội dung hẹn khám.');
+                $('modalSymptoms').focus();
+                return;
+            }
+
+            // Expected Time (Linh hoạt: nếu chọn giờ thì ghép, nếu chọn Cả ngày thì null)
+            const hour = $('modalHour')?.value;
+            const minute = $('modalMinute')?.value || '00';
+            const expectedTime = hour ? `${hour}:${minute}:00` : null;
+
+            const payload = {
+                branchId: Number(branch.value || 1),
+                profileId: profileId,
+                patientName: patientName,
+                patientPhone: $('modalPatientPhone').value.trim(),
+                patientAddress: $('modalPatientAddress').value.trim(),
+                customerSource: $('modalCustomerSource').value || 'Vãng lai',
+                doctorId: doctorId,
+                date: date,
+                session: hour && parseInt(hour) >= 12 ? 'AFTERNOON' : 'MORNING',
+                expectedTime: expectedTime,
+                serviceId: serviceId,
+                symptoms: symptoms,
+                internalNote: $('modalInternalNote').value.trim(),
+                isTentative: isTentative
+            };
+
+            try {
+                await request('', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                createModal.hide();
+                await load();
+            } catch (err) {
+                alert('Không thể tạo lịch hẹn: ' + err.message);
+            }
+        });
+
+        // =========================================================
+        // CALENDAR VIEW RENDERING (WEEK / MONTH)
+        // =========================================================
+        async function renderCalendarView(mode) {
+            const reference = fromDate(dateInput.value);
+            const isMonth = mode === 'month';
+            const start = isMonth ? new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1)) : new Date(reference);
+            const dayOfWeek = (start.getUTCDay() + 6) % 7;
+            const first = addDays(start, -dayOfWeek);
+            const last = addDays(first, isMonth ? 41 : 6);
+
+            $('calendarSectionTitle').textContent = isMonth
+                ? `Tháng ${reference.getUTCMonth() + 1}/${reference.getUTCFullYear()}`
+                : `Tuần từ ${dateLabel(iso(first))} đến ${dateLabel(iso(last))}`;
+
+            const params = new URLSearchParams({ start: iso(first), end: iso(last) });
+            if (branch.value) params.set('branchId', branch.value);
+            if (doctor.value) params.set('doctorId', doctor.value);
+
+            const list = await request(`/calendar?${params}`);
+            const grid = $('calendarGrid');
+            grid.replaceChildren();
+            grid.classList.toggle('is-week', !isMonth);
+
+            ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].forEach(label => {
+                const header = document.createElement('div');
+                header.className = 'appointment-calendar-header';
+                header.textContent = label;
+                grid.appendChild(header);
+            });
+
+            let current = new Date(first);
+            while (current <= last) {
+                const dayIso = iso(current);
+                const dayLink = document.createElement('div');
+                dayLink.className = 'appointment-day';
+                if (isMonth && current.getUTCMonth() !== reference.getUTCMonth()) {
+                    dayLink.classList.add('is-outside');
+                }
+                if (dayIso === today()) {
+                    dayLink.classList.add('is-today');
+                }
+
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'd-flex justify-content-between align-items-center mb-1';
+                dayHeader.innerHTML = `<span class="calendar-day-number">${current.getUTCDate()}</span>`;
+                dayLink.appendChild(dayHeader);
+
+                const events = list.filter(a => a.date === dayIso);
+                events.slice(0, isMonth ? 3 : 15).forEach(a => {
+                    const event = document.createElement('div');
+                    event.className = 'calendar-event';
+                    event.dataset.status = a.status;
+                    event.style.cursor = 'pointer';
+                    event.textContent = `${a.expectedTime ? a.expectedTime.slice(0, 5) : '—'} ${a.patientName || a.patientCode}`;
+                    event.title = `${a.patientName} · ${a.doctorName || 'BS Chưa chỉ định'} · ${a.serviceName || a.symptoms || ''}`;
+                    event.addEventListener('click', () => openQuickStatusModal(a));
+                    dayLink.appendChild(event);
+                });
+
+                if (isMonth && events.length > 3) {
+                    const more = document.createElement('div');
+                    more.className = 'calendar-more text-primary small cursor-pointer';
+                    more.textContent = `+${events.length - 3} lịch khác`;
+                    more.addEventListener('click', () => {
+                        dateInput.value = dayIso;
+                        updateDateDisplay();
+                        switchView('list');
+                        load().catch(e => error(e.message));
+                    });
+                    dayLink.appendChild(more);
+                }
+
+                grid.appendChild(dayLink);
+                current = addDays(current, 1);
+            }
+        }
+
+        // Calendar Next/Prev navigation
+        $('calPrev')?.addEventListener('click', () => {
+            const current = fromDate(dateInput.value);
+            if (currentViewMode === 'month') {
+                current.setUTCDate(1);
+                current.setUTCMonth(current.getUTCMonth() - 1);
+            } else {
+                current.setUTCDate(current.getUTCDate() - 7);
+            }
+            dateInput.value = iso(current);
+            updateDateDisplay();
+            renderCalendarView(currentViewMode);
+        });
+
+        $('calNext')?.addEventListener('click', () => {
+            const current = fromDate(dateInput.value);
+            if (currentViewMode === 'month') {
+                current.setUTCDate(1);
+                current.setUTCMonth(current.getUTCMonth() + 1);
+            } else {
+                current.setUTCDate(current.getUTCDate() + 7);
+            }
+            dateInput.value = iso(current);
+            updateDateDisplay();
+            renderCalendarView(currentViewMode);
+        });
+
+        // Search input debounce
+        let searchTimer;
+        searchInput?.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => applyFiltersAndRender(), 200);
+        });
+
+        // Select changes
+        branch.addEventListener('change', async () => {
+            try {
+                await loadDoctors();
+                await load();
+            } catch (e) {
+                error(e.message);
+            }
+        });
+
+        doctor.addEventListener('change', () => {
+            applyFiltersAndRender();
+        });
+
+        // Initial Load
+        await loadDoctors();
+        await load();
     }
 
     async function calendarPage() {
         const options = await request('/options');
         const branch = $('calendarBranch'), view = $('calendarView'), date = $('calendarDate');
-        branches(branch, options, true); date.value = today();
+        const url = new URLSearchParams(location.search);
+        branches(branch, options, true); date.value = url.get('date') || today();
+        if (url.get('branchId') && [...branch.options].some(o => o.value === url.get('branchId'))) branch.value = url.get('branchId');
+        view.value = url.get('view') === 'month' ? 'month' : 'week';
+        async function loadCalendarDoctors() {
+            const select = $('calendarDoctor'); select.replaceChildren(option('', 'Tất cả bác sĩ'));
+            select.disabled = !branch.value;
+            if (!branch.value) return;
+            const doctors = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${encodeURIComponent(date.value)}`);
+            doctors.forEach(d => select.appendChild(option(d.id, d.name)));
+        }
+        function move(direction) {
+            const current = fromDate(date.value);
+            if (view.value === 'month') {
+                current.setUTCDate(1);
+                current.setUTCMonth(current.getUTCMonth() + direction);
+            }
+            else current.setUTCDate(current.getUTCDate() + direction * 7);
+            date.value = iso(current);
+            load().catch(e => error(e.message));
+        }
         async function load() {
             const reference = fromDate(date.value), month = view.value === 'month';
             const start = month ? new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1)) : new Date(reference);
@@ -246,7 +811,9 @@
             const first = addDays(start, -dayOfWeek), last = addDays(first, month ? 41 : 6);
             const params = new URLSearchParams({start: iso(first), end: iso(last)});
             if (branch.value) params.set('branchId', branch.value);
-            const list = await request(`/calendar?${params}`);
+            if ($('calendarDoctor').value) params.set('doctorId', $('calendarDoctor').value);
+            const term = $('calendarSearch').value.trim().toLocaleLowerCase('vi');
+            const list = (await request(`/calendar?${params}`)).filter(a => !term || [a.patientName, a.patientCode, a.patientPhone].some(v => String(v || '').toLocaleLowerCase('vi').includes(term)));
             const counts = new Map();
             list.forEach(a => {
                 const value = counts.get(a.date) || {total: 0, pending: 0, tk: 0};
@@ -256,31 +823,39 @@
                 counts.set(a.date, value);
             });
             const grid = $('calendarGrid'); grid.replaceChildren();
+            grid.classList.toggle('is-week', !month);
+            $('calendarWeekLink').classList.toggle('is-current', !month);
+            $('calendarMonthLink').classList.toggle('is-current', month);
+            $('calendarTitle').textContent = month
+                ? `Tháng ${reference.getUTCMonth() + 1}/${reference.getUTCFullYear()}`
+                : `${dateLabel(iso(first))} – ${dateLabel(iso(last))}`;
+            ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].forEach(label => { const heading = document.createElement('div'); heading.className = 'appointment-calendar-header'; heading.textContent = label; grid.appendChild(heading); });
             let current = new Date(first);
             while (current <= last) {
                 const dayIso = iso(current);
-                const dayLink = document.createElement('a');
+                const dayLink = document.createElement('div');
                 dayLink.className = 'appointment-day';
-                dayLink.href = `/reception/appointments?date=${dayIso}${branch.value ? '&branchId=' + branch.value : ''}`;
                 if (month && current.getUTCMonth() !== reference.getUTCMonth()) dayLink.classList.add('is-outside');
                 if (dayIso === today()) dayLink.classList.add('is-today');
-                const dayNumber = document.createElement('strong'); dayNumber.textContent = String(current.getUTCDate());
-                const dayInfo = document.createElement('span');
+                const dayNumber = document.createElement('a'); dayNumber.className = 'calendar-day-number'; dayNumber.href = `/reception/appointments?date=${dayIso}${branch.value ? '&branchId=' + encodeURIComponent(branch.value) : ''}`; dayNumber.textContent = String(current.getUTCDate());
                 const count = counts.get(dayIso);
-                if (count) {
-                    dayInfo.innerHTML = `<strong>${count.total}</strong> lịch${count.pending ? ` <small class="text-warning">(${count.pending} chờ)</small>` : ''}${count.tk ? ` <small style="color:#7c3aed;">(${count.tk} TK)</small>` : ''}`;
-                } else {
-                    dayInfo.textContent = '0 lịch';
-                }
-                dayLink.append(dayNumber, dayInfo);
+                dayLink.append(dayNumber);
+                const events = list.filter(a => a.date === dayIso).sort((a,b) => (a.expectedTime || '99:99').localeCompare(b.expectedTime || '99:99'));
+                events.slice(0, month ? 3 : 30).forEach(a => { const event = document.createElement('a'); event.className = 'calendar-event'; event.dataset.status = a.status; event.href = `/reception/appointments/${encodeURIComponent(a.id)}`; event.textContent = `${a.expectedTime ? a.expectedTime.slice(0,5) : '—'}  ${a.patientName || a.patientCode}`; event.title = `${a.patientName || ''} · ${a.doctorName || 'Chưa phân bác sĩ'} · ${statusName[a.status] || a.status}`; dayLink.appendChild(event); });
+                if (month && events.length > 3) { const more = document.createElement('a'); more.className = 'calendar-more'; more.href = dayNumber.href; more.textContent = `+${events.length - 3} lịch`; dayLink.appendChild(more); }
+                if (!month && count) { const countLabel = document.createElement('small'); countLabel.className = 'calendar-count'; countLabel.textContent = `${count.total} lịch`; dayNumber.appendChild(countLabel); }
                 grid.appendChild(dayLink);
                 current = addDays(current, 1);
             }
         }
-        branch.addEventListener('change', () => load().catch(e => error(e.message)));
+        branch.addEventListener('change', async () => { try { await loadCalendarDoctors(); await load(); } catch (e) { error(e.message); } });
+        $('calendarDoctor').addEventListener('change', () => load().catch(e => error(e.message)));
+        $('calendarPrevious').addEventListener('click', () => move(-1));
+        $('calendarNext').addEventListener('click', () => move(1));
         view.addEventListener('change', () => load().catch(e => error(e.message)));
         date.addEventListener('change', () => load().catch(e => error(e.message)));
-        await load();
+        let searchTimer; $('calendarSearch').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => load().catch(e => error(e.message)), 250); });
+        await loadCalendarDoctors(); await load();
     }
 
     async function formPage() {
@@ -304,6 +879,8 @@
         } else {
             const branchParam = new URLSearchParams(location.search).get('branchId');
             if (branchParam && options.branches.some(b => String(b.id) === branchParam)) $('branchId').value = branchParam;
+            const dateParam = new URLSearchParams(location.search).get('date');
+            if (dateParam && dateParam >= today()) $('appointmentDate').value = dateParam;
         }
 
         let patientSeq = 0, availabilitySeq = 0, available = false;
@@ -612,17 +1189,23 @@
         $('appointmentActions').hidden = false; $('editLink').href = `/reception/appointments/${id}/edit`;
         if (a.status === 'CONFIRMED') {
             const cLink = $('checkInDirectLink');
-            if (cLink) { cLink.hidden = false; cLink.href = `/reception/check-in?branchId=${a.branchId || ''}`; }
+            if (cLink) {
+                cLink.hidden = false;
+                const params = new URLSearchParams({branchId: String(a.branchId || ''), appointmentId: String(a.id)});
+                cLink.href = `/reception/check-in?${params}`;
+            }
         }
         if (a.status === 'PENDING') $('confirmButton').hidden = false;
         $('confirmButton').addEventListener('click', async () => {
             $('confirmBox').hidden = !$('confirmBox').hidden; $('cancelForm').hidden = true;
             if ($('confirmBox').hidden) return;
+            $('confirmSubmit').disabled = true;
             const select = $('confirmDoctor'); select.replaceChildren(option('', 'Không yêu cầu đích danh'));
             try { const result = await request(`/availability?branchId=${a.branchId}&date=${a.date}&sessionPeriod=${a.session}&excludeAppointmentId=${id}`);
                 result.doctors.forEach(d => select.appendChild(option(d.id, d.name)));
                 if (a.doctorId && result.doctors.some(d => d.id === a.doctorId)) select.value = String(a.doctorId);
                 if (!result.available) error(result.reason || 'Buổi đã đầy.');
+                else $('confirmSubmit').disabled = false;
             } catch (e) { error(e.message); } });
         $('confirmSubmit').addEventListener('click', async () => { clearError(); try {
             await request(`/${id}/confirm`, {method: 'POST', body: JSON.stringify({doctorId: $('confirmDoctor').value ? Number($('confirmDoctor').value) : null})});
