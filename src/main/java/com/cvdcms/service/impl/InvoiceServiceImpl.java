@@ -55,6 +55,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MembershipTierRepository membershipTierRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
 
     public void setMembershipTierRepository(MembershipTierRepository membershipTierRepository) {
         this.membershipTierRepository = membershipTierRepository;
@@ -960,10 +962,17 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PerformedService> getUnbilledPerformedServices(Long visitId) {
         if (visitId == null) {
             return Collections.emptyList();
+        }
+        if (paraclinicalOrderService != null) {
+            try {
+                paraclinicalOrderService.syncParaclinicalOrdersToPerformedServices(visitId);
+            } catch (Exception e) {
+                log.warn("Không thể tự động đồng bộ chỉ định cận lâm sàng sang dịch vụ thực hiện: {}", e.getMessage());
+            }
         }
         List<PerformedService> allServices = performedServiceRepository.findByVisitIdWithDetails(visitId);
         List<Long> billedIds = invoiceItemRepository.findBilledPerformedServiceIdsByVisitId(visitId);

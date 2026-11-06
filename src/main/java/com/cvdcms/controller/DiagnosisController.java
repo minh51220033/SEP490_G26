@@ -65,6 +65,12 @@ public class DiagnosisController {
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository;
+
+    public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
+        this.doctorCoverGrantRepository = doctorCoverGrantRepository;
+    }
 
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
         if (session == null) return null;
@@ -99,6 +105,10 @@ public class DiagnosisController {
     ) {
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+        boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
 
@@ -127,6 +137,9 @@ public class DiagnosisController {
         model.addAttribute("doctorAssignedBranchCode", assignedBranch != null ? assignedBranch.getBranchCode() : "");
         model.addAttribute("doctorAssignedBranchName", assignedBranch != null ? assignedBranch.getBranchName() : "");
         model.addAttribute("doctorAssignedBranchFullName", assignedBranchFullName);
+        model.addAttribute("currentDoctorStaffId", currentDoctor != null ? currentDoctor.getStaffId() : null);
+        model.addAttribute("currentDoctorName", currentDoctor != null ? currentDoctor.getFullName() : "");
+        model.addAttribute("isDoctorAccount", isDoctorAccount);
         if (assignedBranch != null) {
             model.addAttribute("currentBranchName", assignedBranchFullName);
         }
@@ -154,6 +167,10 @@ public class DiagnosisController {
     ) {
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+        boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
 
@@ -179,15 +196,29 @@ public class DiagnosisController {
         }
 
         if (visitId == null) {
-            List<Visit> availableVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId);
-            if (!availableVisits.isEmpty()) {
-                visitId = availableVisits.get(0).getVisitId();
+            if (currentDoctor != null) {
+                final Long docStaffId = currentDoctor.getStaffId();
+                java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
+                        ? doctorCoverGrantRepository.findActiveCoveredVisitIds(docStaffId, java.time.LocalDateTime.now())
+                        : java.util.Collections.<Long>emptySet();
+                List<Visit> myVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
+                        .filter(v -> (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
+                                || coveredIds.contains(v.getVisitId()))
+                        .toList();
+                if (!myVisits.isEmpty()) {
+                    visitId = myVisits.get(0).getVisitId();
+                }
             } else {
-                List<Visit> allVisits = (branchId != null)
-                        ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), branchId)
-                        : visitRepository.findAll();
-                if (!allVisits.isEmpty()) {
-                    visitId = allVisits.get(0).getVisitId();
+                List<Visit> availableVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId);
+                if (!availableVisits.isEmpty()) {
+                    visitId = availableVisits.get(0).getVisitId();
+                } else {
+                    List<Visit> allVisits = (branchId != null)
+                            ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), branchId)
+                            : visitRepository.findAll();
+                    if (!allVisits.isEmpty()) {
+                        visitId = allVisits.get(0).getVisitId();
+                    }
                 }
             }
         }
@@ -257,6 +288,10 @@ public class DiagnosisController {
     ) {
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+        boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
 
@@ -479,6 +514,10 @@ public class DiagnosisController {
 
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+        boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
 
@@ -534,6 +573,10 @@ public class DiagnosisController {
     private String renderEmptyDiagnosisPage(Long branchIdParam, jakarta.servlet.http.HttpSession session, Model model) {
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+        boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
 
