@@ -4,7 +4,7 @@
     <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn mới - FT21')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -238,7 +238,7 @@
 
                                         <!-- Nút đổi lại sang mua tại PK (dùng form an toàn ngoài invoiceForm) -->
                                         <button th:if="${pr.status == 'EXTERNAL_PURCHASE'}"
-                                                type="button" class="fin-btn fin-btn-sm fin-btn-outline text-primary border-primary"
+                                                type="button" class="fin-btn fin-btn-sm btn-outline-primary"
                                                 th:data-presc-id="${pr.prescriptionId}"
                                                 onclick="submitSwitchToClinic(this.getAttribute('data-presc-id'))"
                                                 title="Chuyển sang mua tại phòng khám">
@@ -708,9 +708,9 @@
     }
 
     async function triggerRecalculate() {
-        const profileId = document.getElementById('profileId').value;
-        const visitId = document.getElementById('visitId').value;
-        const prescInput = document.getElementById('prescriptionId');
+        const profileId = document.getElementById('hiddenProfileId').value;
+        const visitId = document.getElementById('hiddenVisitId').value;
+        const prescInput = document.getElementById('hiddenPrescriptionId');
         const prescriptionId = prescInput ? prescInput.value : null;
         const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
         const buyMedicine = chkBuyMed && chkBuyMed.checked;
@@ -724,11 +724,11 @@
         document.querySelectorAll('.item-row').forEach(row => {
             const cb = row.querySelector('.item-checkbox');
             if (cb && cb.checked) {
-                const psId = cb.value;
-                const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
-                const qty = parseFloat(row.querySelector('.item-quantity').value) || 1;
+                const psId = row.querySelector('.prop-performed-id').value;
+                const unitPrice = parseFloat(row.querySelector('.item-price').value) || 0;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
                 items.push({
-                    performedServiceId: parseInt(psId),
+                    performedId: parseInt(psId),
                     unitPrice: unitPrice,
                     quantity: qty
                 });
@@ -740,7 +740,7 @@
             document.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 if (cb && cb.checked) {
-                    const prescItemId = cb.value;
+                    const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
                     const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
                     medicineItems.push({
                         prescriptionItemId: parseInt(prescItemId),

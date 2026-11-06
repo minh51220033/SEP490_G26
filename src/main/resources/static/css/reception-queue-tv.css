@@ -27,3 +27,10 @@ h1 { font-size: clamp(28px,3.4vw,58px); margin: .25em 0 0; }
 .tv-sound-btn:hover { background: #0284c7; color: #ffffff; }
 .tv-sound-btn.is-active { background: #0284c7; color: #ffffff; border-color: #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.5); }
 @media(max-width:800px) { .tv-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } }
+/* Màn hình chờ sáng, tương phản cao để đọc từ xa. */
+body{background:#f4f7fb;color:#17324d}
+header span{color:#0284c7}.live-indicator{color:#475569}
+.tv-panel{background:#fff;border:1px solid #dce6ef;border-radius:14px;box-shadow:0 4px 18px rgba(15,23,42,.05)}
+.tv-panel-title{color:#475569}.called-item{background:#e0f2fe;border-left:5px solid #0284c7;border-radius:10px}.called-item strong{color:#075985}.tv-empty{color:#64748b}
+.waiting-count,.next-item strong{color:#b45309}.next-item,.serving-item{background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
+.tv-sound-btn{background:#fff;color:#0369a1;border-color:#7dd3fc}.tv-sound-btn.is-active,.tv-sound-btn:hover{background:#0284c7;color:#fff}

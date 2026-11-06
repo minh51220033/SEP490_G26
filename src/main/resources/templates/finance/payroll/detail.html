@@ -4,7 +4,7 @@
     <th:block th:replace="~{fragments/head :: head(${period.periodName} + ' - FT32')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('payroll')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -113,36 +113,52 @@
 
             <!-- KPI Totals -->
             <div class="row g-3 mb-4">
-                <div class="col-md-3">
+                <div class="col-md-4 col-xl-2">
                     <div class="fin-stat-card">
-                        <span class="fin-stat-card__label">Tổng lương cơ bản</span>
-                        <div class="fin-stat-card__value"
-                             th:text="${#numbers.formatDecimal(period.totalBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                        <span class="fin-stat-card__hint">Phụ cấp: <b th:text="${#numbers.formatDecimal(period.totalAllowance, 0, 'COMMA', 0, 'POINT')} + ' đ'"></b></span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="fin-stat-card">
-                        <span class="fin-stat-card__label">Tổng thưởng &amp; Hoa hồng</span>
+                        <span class="fin-stat-card__label">Tổng Gross thu nhập</span>
                         <div class="fin-stat-card__value text-primary"
-                             th:text="${#numbers.formatDecimal(period.totalBonus.add(period.totalCommission), 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                        <span class="fin-stat-card__hint">Giảm trừ: <b class="text-danger" th:text="${#numbers.formatDecimal(period.totalDeduction, 0, 'COMMA', 0, 'POINT')} + ' đ'"></b></span>
+                             th:text="${#numbers.formatDecimal(period.totalGrossSalary != null ? period.totalGrossSalary : period.totalBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                        <span class="fin-stat-card__hint">Lương CB + PC + Thưởng + HH</span>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4 col-xl-2">
+                    <div class="fin-stat-card" style="border-left: 4px solid #6366f1;">
+                        <span class="fin-stat-card__label">BHXH NLĐ (10.5%)</span>
+                        <div class="fin-stat-card__value text-indigo" style="color: #6366f1;"
+                             th:text="${#numbers.formatDecimal(period.totalInsuranceEmployee != null ? period.totalInsuranceEmployee : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                        <span class="fin-stat-card__hint">DN đóng 21.5%: <b th:text="${#numbers.formatDecimal(period.totalInsuranceEmployer != null ? period.totalInsuranceEmployer : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></b></span>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2">
+                    <div class="fin-stat-card" style="border-left: 4px solid #ef4444;">
+                        <span class="fin-stat-card__label">Thuế TNCN khấu trừ</span>
+                        <div class="fin-stat-card__value text-danger"
+                             th:text="${#numbers.formatDecimal(period.totalPitAmount != null ? period.totalPitAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                        <span class="fin-stat-card__hint">NQ 954/2020 &amp; TT 111</span>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2">
                     <div class="fin-stat-card" style="border-left: 4px solid #f59e0b;">
-                        <span class="fin-stat-card__label">Đã khấu trừ tạm ứng</span>
+                        <span class="fin-stat-card__label">Khấu trừ tạm ứng</span>
                         <div class="fin-stat-card__value text-warning"
                              th:text="${#numbers.formatDecimal(period.totalAdvanceAllocated, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                        <span class="fin-stat-card__hint">Cấn trừ từ các đơn tạm ứng đã chi</span>
+                        <span class="fin-stat-card__hint">Cấn trừ từ đơn tạm ứng</span>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4 col-xl-2">
+                    <div class="fin-stat-card" style="border-left: 4px solid #0284c7;">
+                        <span class="fin-stat-card__label">Tổng Lương Net</span>
+                        <div class="fin-stat-card__value text-info"
+                             th:text="${#numbers.formatDecimal(period.totalSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                        <span class="fin-stat-card__hint">= Gross - BHXH - TNCN - Phạt</span>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2">
                     <div class="fin-stat-card" style="border-left: 4px solid #10b981;">
                         <span class="fin-stat-card__label">Tổng thực chi còn lại</span>
                         <div class="fin-stat-card__value text-success"
                              th:text="${#numbers.formatDecimal(period.totalRemainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                        <span class="fin-stat-card__hint">Tổng Net: <b th:text="${#numbers.formatDecimal(period.totalSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></b></span>
+                        <span class="fin-stat-card__hint">= Net - Tạm ứng đã chi</span>
                     </div>
                 </div>
             </div>
@@ -158,24 +174,29 @@
                     <table class="fin-table" data-enhanced-table="ft32-payroll-items">
                         <thead>
                         <tr>
-                            <th data-column-key="staff" data-pinned="true" style="min-width: 180px;">Nhân viên</th>
-                            <th data-column-key="position" style="min-width: 140px;">Vị trí / Chuyên khoa</th>
-                            <th data-column-key="workDays" class="text-center" style="min-width: 120px;">Công tham khảo</th>
-                            <th data-column-key="baseSalary" class="text-end" style="min-width: 120px;">Lương cơ bản</th>
-                            <th data-column-key="allowance" class="text-end" style="min-width: 110px;">Phụ cấp</th>
-                            <th data-column-key="bonus" class="text-end" style="min-width: 110px;">Thưởng</th>
-                            <th data-column-key="commission" class="text-end" style="min-width: 110px;">Hoa hồng</th>
-                            <th data-column-key="deduction" class="text-end" style="min-width: 110px;">Giảm trừ</th>
-                            <th data-column-key="netSalary" class="text-end" style="min-width: 130px;">Lương Net</th>
-                            <th data-column-key="advance" class="text-end" style="min-width: 140px;">Khấu trừ tạm ứng</th>
-                            <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Thực trả</th>
-                            <th data-column-key="note" style="min-width: 150px;">Ghi chú</th>
-                            <th data-column-key="actions" class="text-center" style="min-width: 80px;" th:if="${period.status.name() == 'DRAFT'}">Sửa</th>
+                            <th data-column-key="staff" data-pinned="true" style="min-width: 170px;">Nhân viên</th>
+                            <th data-column-key="contract" style="min-width: 130px;">HĐLĐ &amp; MST</th>
+                            <th data-column-key="workDays" class="text-center" style="min-width: 100px;">Công TK</th>
+                            <th data-column-key="baseSalary" class="text-end" style="min-width: 110px;">Lương CB</th>
+                            <th data-column-key="allowance" class="text-end" style="min-width: 100px;">Phụ cấp</th>
+                            <th data-column-key="bonus" class="text-end" style="min-width: 100px;">Thưởng</th>
+                            <th data-column-key="commission" class="text-end" style="min-width: 100px;">Hoa hồng</th>
+                            <th data-column-key="gross" class="text-end" style="min-width: 120px;">Tổng Gross</th>
+                            <th data-column-key="insurance" class="text-end" style="min-width: 110px;">BHXH (10.5%)</th>
+                            <th data-column-key="relief" class="text-end" style="min-width: 120px;">Giảm trừ GTGC</th>
+                            <th data-column-key="taxable" class="text-end" style="min-width: 110px;">TNTT</th>
+                            <th data-column-key="pit" class="text-end" style="min-width: 120px;">Thuế TNCN</th>
+                            <th data-column-key="deduction" class="text-end" style="min-width: 100px;">Giảm trừ khác</th>
+                            <th data-column-key="netSalary" class="text-end" style="min-width: 120px;">Lương Net</th>
+                            <th data-column-key="advance" class="text-end" style="min-width: 120px;">Khấu trừ tạm ứng</th>
+                            <th data-column-key="remaining" class="text-end" style="min-width: 120px;">Thực trả</th>
+                            <th data-column-key="note" style="min-width: 130px;">Ghi chú</th>
+                            <th data-column-key="actions" class="text-center" style="min-width: 70px;" th:if="${period.status.name() == 'DRAFT'}">Sửa</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:if="${items.isEmpty()}">
-                            <td th:colspan="${period.status.name() == 'DRAFT' ? 13 : 12}" class="text-center py-4 text-muted">
+                            <td th:colspan="${period.status.name() == 'DRAFT' ? 18 : 17}" class="text-center py-4 text-muted">
                                 Chưa có nhân viên nào trong bảng lương. (Chi nhánh này chưa có nhân sự hợp lệ được phân công chi nhánh chính).
                             </td>
                         </tr>
@@ -184,20 +205,51 @@
                                 <strong th:text="${it.staff.fullName}"></strong>
                                 <span class="d-block text-muted small" th:text="${it.staff.staffCode}"></span>
                             </td>
-                            <td data-column-key="position">
-                                <span class="badge bg-light text-dark border"
-                                      th:text="${it.staff.positionTitle != null ? it.staff.positionTitle : (it.staff.specialty != null ? it.staff.specialty : 'Nhân sự')}"></span>
+                            <td data-column-key="contract">
+                                <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'FULL_TIME_OFFICIAL'}" class="badge bg-success-subtle text-success border">Chính thức</span>
+                                <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'FULL_TIME_PROBATION'}" class="badge bg-warning-subtle text-warning border">Thử việc (10%)</span>
+                                <span th:if="${it.staff.contractType != null and (it.staff.contractType.name() == 'PART_TIME_HOURLY' or it.staff.contractType.name() == 'COLLABORATOR')}" class="badge bg-info-subtle text-info border">CTV / Vãng lai (10%)</span>
+                                <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'NON_RESIDENT'}" class="badge bg-danger-subtle text-danger border">Không cư trú (20%)</span>
+                                <span th:if="${it.staff.contractType == null}" class="badge bg-light text-dark border">Chính thức</span>
+                                <span th:if="${it.staff.taxCode != null}" class="d-block text-muted small" th:text="'MST: ' + ${it.staff.taxCode}"></span>
+                                <span th:if="${it.staff.taxCode == null}" class="d-block text-muted small">NPT: <b th:text="${it.staff.dependentCount != null ? it.staff.dependentCount : 0}"></b></span>
                             </td>
                             <td data-column-key="workDays" class="text-center">
                                 <span th:if="${it.actualWorkDays != null}" class="fw-semibold" th:text="${it.actualWorkDays} + ' ngày'"></span>
-                                <span th:if="${it.actualWorkDays == null}" class="badge bg-secondary-subtle text-secondary small">Chưa có dữ liệu</span>
+                                <span th:if="${it.actualWorkDays == null}" class="badge bg-secondary-subtle text-secondary small">-</span>
                             </td>
                             <td data-column-key="baseSalary" class="text-end" th:text="${#numbers.formatDecimal(it.actualBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="allowance" class="text-end" th:text="${#numbers.formatDecimal(it.totalAllowance, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="bonus" class="text-end text-primary" th:text="${#numbers.formatDecimal(it.bonusAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="commission" class="text-end text-info" th:text="${#numbers.formatDecimal(it.totalCommission, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="gross" class="text-end fw-semibold text-primary" th:text="${#numbers.formatDecimal(it.grossSalary != null ? it.grossSalary : it.actualBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="insurance" class="text-end text-secondary" th:text="${#numbers.formatDecimal(it.insuranceEmployeeDeduction != null ? it.insuranceEmployeeDeduction : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="relief" class="text-end small text-muted" th:text="${#numbers.formatDecimal((it.personalDeductionAmount != null ? it.personalDeductionAmount : 0).add(it.dependentDeductionAmount != null ? it.dependentDeductionAmount : 0), 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="taxable" class="text-end small" th:text="${#numbers.formatDecimal(it.assessableIncome != null ? it.assessableIncome : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="pit" class="text-end">
+                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                    <span class="fw-semibold text-danger" th:text="${#numbers.formatDecimal(it.pitAmount != null ? it.pitAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                    <button type="button" class="btn btn-sm btn-link text-info p-0" title="Xem chi tiết tính thuế TNCN"
+                                            th:data-staff-name="${it.staff.fullName}"
+                                            th:data-staff-code="${it.staff.staffCode}"
+                                            th:data-tax-code="${it.staff.taxCode != null ? it.staff.taxCode : 'Chưa đăng ký'}"
+                                            th:data-contract-type="${it.staff.contractType != null ? it.staff.contractType.name() : 'FULL_TIME_OFFICIAL'}"
+                                            th:data-gross="${it.grossSalary != null ? it.grossSalary : 0}"
+                                            th:data-insurance="${it.insuranceEmployeeDeduction != null ? it.insuranceEmployeeDeduction : 0}"
+                                            th:data-personal-relief="${it.personalDeductionAmount != null ? it.personalDeductionAmount : 0}"
+                                            th:data-dependent-relief="${it.dependentDeductionAmount != null ? it.dependentDeductionAmount : 0}"
+                                            th:data-dependent-count="${it.staff.dependentCount != null ? it.staff.dependentCount : 0}"
+                                            th:data-taxable="${it.taxableIncome != null ? it.taxableIncome : 0}"
+                                            th:data-assessable="${it.assessableIncome != null ? it.assessableIncome : 0}"
+                                            th:data-pit="${it.pitAmount != null ? it.pitAmount : 0}"
+                                            th:data-detail="${it.taxCalculationDetail != null ? it.taxCalculationDetail : ''}"
+                                            onclick="showPitDetailModal(this)">
+                                        <i class="bi bi-info-circle-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
                             <td data-column-key="deduction" class="text-end text-danger" th:text="${#numbers.formatDecimal(it.deductionAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td data-column-key="netSalary" class="text-end fw-semibold" th:text="${#numbers.formatDecimal(it.netSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="netSalary" class="text-end fw-semibold text-dark" th:text="${#numbers.formatDecimal(it.netSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="advance" class="text-end text-warning fw-semibold" th:text="${#numbers.formatDecimal(it.advanceAllocatedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="remaining" class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(it.remainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="note" class="small text-muted" th:text="${it.note != null ? it.note : '-'}"></td>
@@ -280,6 +332,85 @@
     </div>
 </div>
 
+<!-- Modal Chi tiết Thuế TNCN (FT32) -->
+<div class="modal fade" id="pitDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-calculator me-2"></i>Chi tiết Khấu trừ Thuế TNCN: <span id="pitStaffName" class="fw-bold"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light border small mb-3">
+                    <div class="row g-2">
+                        <div class="col-sm-6"><b>Mã nhân viên:</b> <span id="pitStaffCode"></span></div>
+                        <div class="col-sm-6"><b>Mã số thuế (MST):</b> <span id="pitTaxCode"></span></div>
+                        <div class="col-sm-6"><b>Loại hợp đồng:</b> <span id="pitContractType" class="badge bg-primary"></span></div>
+                        <div class="col-sm-6"><b>Người phụ thuộc:</b> <span id="pitDependentCount" class="fw-bold"></span> người</div>
+                    </div>
+                </div>
+
+                <table class="table table-bordered table-sm align-middle mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Chỉ tiêu tính toán</th>
+                            <th class="text-end" style="width: 180px;">Số tiền (VNĐ)</th>
+                            <th>Căn cứ pháp lý / Diễn giải</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><b>1. Tổng thu nhập Gross</b></td>
+                            <td class="text-end fw-bold text-primary" id="pitGross">0 đ</td>
+                            <td class="small text-muted">Lương CB + Phụ cấp + Thưởng + Hoa hồng</td>
+                        </tr>
+                        <tr>
+                            <td><b>2. BHXH NLĐ đóng (10.5%)</b></td>
+                            <td class="text-end text-secondary" id="pitInsurance">0 đ</td>
+                            <td class="small text-muted">Trừ trước khi tính thuế (8% BHXH, 1.5% BHYT, 1% BHTN)</td>
+                        </tr>
+                        <tr>
+                            <td><b>3. Thu nhập chịu thuế (TNCT)</b></td>
+                            <td class="text-end fw-semibold" id="pitTaxable">0 đ</td>
+                            <td class="small text-muted">= Gross - Các khoản miễn thuế theo luật</td>
+                        </tr>
+                        <tr>
+                            <td><b>4. Giảm trừ bản thân</b></td>
+                            <td class="text-end text-muted" id="pitPersonalRelief">0 đ</td>
+                            <td class="small text-muted">11.000.000 đ/tháng (Nghị quyết 954/2020/UBTVQH14)</td>
+                        </tr>
+                        <tr>
+                            <td><b>5. Giảm trừ người phụ thuộc</b></td>
+                            <td class="text-end text-muted" id="pitDependentRelief">0 đ</td>
+                            <td class="small text-muted">4.400.000 đ/người/tháng (Nghị quyết 954/2020/UBTVQH14)</td>
+                        </tr>
+                        <tr class="table-warning">
+                            <td><b>6. Thu nhập tính thuế (TNTT)</b></td>
+                            <td class="text-end fw-bold fs-6 text-dark" id="pitAssessable">0 đ</td>
+                            <td class="small fw-semibold">= TNCT - BHXH - Giảm trừ gia cảnh</td>
+                        </tr>
+                        <tr class="table-danger">
+                            <td><b>7. Thuế TNCN khấu trừ</b></td>
+                            <td class="text-end fw-bold fs-5 text-danger" id="pitTotalAmount">0 đ</td>
+                            <td class="small fw-bold" id="pitMethod">Biểu thuế lũy tiến từng phần 7 bậc</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="card bg-light border-0">
+                    <div class="card-body py-2">
+                        <h6 class="fw-bold mb-1 small text-dark"><i class="bi bi-file-earmark-text me-1"></i>Diễn giải chi tiết bậc thuế:</h6>
+                        <pre id="pitDetailJson" class="mb-0 small text-secondary" style="white-space: pre-wrap; font-family: inherit; font-size: 0.85rem;"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Xác nhận Chi trả lương -->
 <div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -324,6 +455,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
     function openEditItemModalFromButton(btn) {
         const itemId = btn.getAttribute('data-item-id');
         const staffName = btn.getAttribute('data-staff-name');
@@ -340,6 +472,47 @@
         document.getElementById('mNote').value = note || '';
         document.getElementById('editItemForm').action = '/payroll/items/' + itemId + '/update';
         new bootstrap.Modal(document.getElementById('editItemModal')).show();
+    }
+
+    function formatVnd(val) {
+        if (!val || isNaN(val)) return '0 đ';
+        return Number(val).toLocaleString('vi-VN') + ' đ';
+    }
+
+    function showPitDetailModal(btn) {
+        document.getElementById('pitStaffName').textContent = btn.getAttribute('data-staff-name') || '';
+        document.getElementById('pitStaffCode').textContent = btn.getAttribute('data-staff-code') || '';
+        document.getElementById('pitTaxCode').textContent = btn.getAttribute('data-tax-code') || 'Chưa đăng ký';
+        
+        const contractType = btn.getAttribute('data-contract-type') || '';
+        let contractLabel = 'HĐLĐ Chính thức';
+        let methodLabel = 'Biểu thuế lũy tiến từng phần 7 bậc (Khoản 2 Điều 7 Thông tư 111/2013/TT-BTC)';
+        if (contractType === 'FULL_TIME_PROBATION') {
+            contractLabel = 'Thử việc';
+            methodLabel = 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
+        } else if (contractType === 'PART_TIME_HOURLY' || contractType === 'COLLABORATOR') {
+            contractLabel = 'Cộng tác viên / Vãng lai';
+            methodLabel = 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
+        } else if (contractType === 'NON_RESIDENT') {
+            contractLabel = 'Cá nhân không cư trú';
+            methodLabel = 'Khấu trừ 20% trên thu nhập chịu thuế (Điều 18 Thông tư 111/2013/TT-BTC)';
+        }
+        document.getElementById('pitContractType').textContent = contractLabel;
+        document.getElementById('pitDependentCount').textContent = btn.getAttribute('data-dependent-count') || '0';
+        document.getElementById('pitMethod').textContent = methodLabel;
+
+        document.getElementById('pitGross').textContent = formatVnd(btn.getAttribute('data-gross'));
+        document.getElementById('pitInsurance').textContent = formatVnd(btn.getAttribute('data-insurance'));
+        document.getElementById('pitTaxable').textContent = formatVnd(btn.getAttribute('data-taxable'));
+        document.getElementById('pitPersonalRelief').textContent = formatVnd(btn.getAttribute('data-personal-relief'));
+        document.getElementById('pitDependentRelief').textContent = formatVnd(btn.getAttribute('data-dependent-relief'));
+        document.getElementById('pitAssessable').textContent = formatVnd(btn.getAttribute('data-assessable'));
+        document.getElementById('pitTotalAmount').textContent = formatVnd(btn.getAttribute('data-pit'));
+
+        const detail = btn.getAttribute('data-detail');
+        document.getElementById('pitDetailJson').textContent = detail ? detail : 'Không phát sinh nghĩa vụ thuế trong kỳ.';
+
+        new bootstrap.Modal(document.getElementById('pitDetailModal')).show();
     }
 </script>
 </body>

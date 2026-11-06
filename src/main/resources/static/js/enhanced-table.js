@@ -121,6 +121,9 @@
                 const minW = parseInt(th.style.minWidth, 10) || 0;
                 const naturalW = th.offsetWidth || 120;
                 const defaultWidth = minW > 0 ? minW : Math.min(Math.max(naturalW, 80), 240);
+                const isPinnable = th.getAttribute('data-column-pinnable') === 'true' || 
+                                   th.getAttribute('data-allow-pin') === 'true' || 
+                                   !isAction;
 
                 const colDef = {
                     key: key,
@@ -130,7 +133,8 @@
                     width: defaultWidth,
                     minWidth: minW > 0 ? minW : 60,
                     required: isRequired,
-                    isAction: isAction
+                    isAction: isAction,
+                    pinnable: isPinnable
                 };
 
                 this.columns.push(colDef);
@@ -358,7 +362,7 @@
             thList.forEach(th => {
                 const colKey = th.getAttribute('data-column-key');
                 const colDef = this.columns.find(c => c.key === colKey);
-                if (!colDef || colDef.isAction) return;
+                if (!colDef || !colDef.pinnable) return;
 
                 let pinBtn = th.querySelector('.enhanced-pin-btn');
                 if (!pinBtn) {
@@ -379,10 +383,27 @@
         }
 
         togglePinColumn(colKey) {
-            const col = this.columns.find(c => c.key === colKey);
-            if (!col) return;
+            const colIndex = this.columns.findIndex(c => c.key === colKey);
+            if (colIndex === -1) return;
+            const col = this.columns[colIndex];
 
             col.pinned = !col.pinned;
+
+            if (col.pinned) {
+                // Đưa cột vừa ghim về sau các cột đang ghim khác
+                const lastPinnedIdx = this.columns.reduce((last, c, idx) => (c.pinned && c.key !== colKey ? idx : last), -1);
+                const targetIdx = lastPinnedIdx + 1;
+                if (targetIdx !== colIndex) {
+                    this.columns.splice(colIndex, 1);
+                    this.columns.splice(targetIdx, 0, col);
+                }
+            } else {
+                // Khi bỏ ghim: nếu là cột thao tác, đưa về cuối bảng
+                if (col.isAction) {
+                    this.columns.splice(colIndex, 1);
+                    this.columns.push(col);
+                }
+            }
 
             // Cập nhật icon trên th
             const th = this.table.querySelector(`thead th[data-column-key="${colKey}"]`);
@@ -395,7 +416,7 @@
                 }
             }
 
-            this.updatePinnedOffsets();
+            this.applyPreferencesToDOM();
             this.savePreferences();
             this.updateCustomizerList();
         }
@@ -471,6 +492,9 @@
 
         /* 7. Thanh thao tác nhanh nổi sát mép phải nhìn thấy (Requirement B) */
         setupQuickActionBar() {
+            if (this.table.getAttribute('data-disable-floating-actions') === 'true' || this.table.classList.contains('no-floating-actions')) {
+                return;
+            }
             let floatingBar = this.wrapper.querySelector('.enhanced-floating-actions');
             if (!floatingBar) {
                 floatingBar = document.createElement('div');
@@ -655,6 +679,9 @@
 
         /* Đồng bộ hiển thị / ẩn thanh nổi linh hoạt theo trạng thái cuộn và vị trí */
         checkAndSyncFloatingActionBar(row) {
+            if (!this.floatingBar || this.table.getAttribute('data-disable-floating-actions') === 'true' || this.table.classList.contains('no-floating-actions')) {
+                return;
+            }
             if (!row) {
                 this.hideFloatingActionBar();
                 return;
@@ -991,7 +1018,7 @@
                         <button type="button" class="enhanced-customizer-action-btn enhanced-move-down-btn" title="Di chuyển xuống dưới" ${index === this.columns.length - 1 ? 'disabled style="opacity: 0.3;"' : ''}>
                             <i class="bi bi-chevron-down"></i>
                         </button>
-                        ${!col.isAction ? `
+                        ${col.pinnable ? `
                         <button type="button" class="enhanced-customizer-action-btn enhanced-pin-col-btn ${col.pinned ? 'active text-primary' : ''}" title="${col.pinned ? 'Bỏ ghim' : 'Ghim bên trái'}">
                             <i class="bi ${col.pinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
                         </button>` : ''}
