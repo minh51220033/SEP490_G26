@@ -234,36 +234,13 @@
 }
 
 /* ============================================================================
-   6. Pinned Action Column for Cashier Table (Chống tràn mép & cố định thao tác)
+   6. Action Column for Cashier Table
    ============================================================================ */
-.cashier-page th.cashier-actions-col {
-    position: sticky !important;
-    right: 0 !important;
-    min-width: 330px !important;
-    width: 330px !important;
-    background-color: #f8fafc !important;
-    z-index: 6 !important;
-    box-shadow: -3px 0 6px -2px rgba(15, 23, 42, 0.08);
-}
-
+/* Cột Thao tác sử dụng cơ chế ghim và co giãn mặc định của enhanced-table */
+.cashier-page th.cashier-actions-col,
 .cashier-page td.cashier-actions-col {
-    position: sticky !important;
-    right: 0 !important;
-    min-width: 330px !important;
-    width: 330px !important;
-    background-color: #ffffff;
-    z-index: 5 !important;
-    box-shadow: -3px 0 6px -2px rgba(15, 23, 42, 0.08);
-    white-space: nowrap !important;
+    white-space: nowrap;
     text-align: center;
-}
-
-.cashier-page tr:hover td.cashier-actions-col {
-    background-color: #f8fafc !important;
-}
-
-.cashier-page tr.table-primary td.cashier-actions-col {
-    background-color: #eff6ff !important;
 }
 
 /* Nhóm nút thao tác hàng ngang gọn gàng, không bị tràn ra ngoài */
