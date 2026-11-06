@@ -78,6 +78,9 @@
                             <td>
                                 <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
                                 <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
+                                <span class="badge bg-light text-primary border small ms-1"
+                                      th:if="${ord.price != null and ord.price > 0}"
+                                      th:text="${#numbers.formatDecimal(ord.price, 0, 'COMMA', 0, 'POINT')} + ' đ'">50.000 đ</span>
                                 <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
                             </td>
                             <td class="text-center"><span class="badge bg-primary-subtle text-primary border" th:text="${ord.toothNumbers}">R16</span></td>
@@ -87,6 +90,13 @@
                                 <span class="badge"
                                       th:classappend="${ord.status == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'"
                                       th:text="${ord.statusLabel}">Chờ thực hiện</span>
+                                <div th:if="${ord.status == 'COMPLETED'}" class="mt-1">
+                                    <span class="badge bg-info-subtle text-primary border border-primary-subtle py-0.5 px-1.5"
+                                          style="font-size: 10.5px;"
+                                          title="Chỉ định đã có kết quả và được đồng bộ sang bộ phận Kế toán để lập hóa đơn">
+                                        <i class="bi bi-receipt me-0.5"></i>Đã vào hóa đơn
+                                    </span>
+                                </div>
                             </td>
                             <td class="text-center">
                                 <div class="d-inline-flex align-items-center gap-1">
@@ -781,12 +791,21 @@
                     </button>
                 </div>
             `;
+            const priceBadge = (ord.price && Number(ord.price) > 0)
+                ? `<span class="badge bg-light text-primary border small ms-1">${Number(ord.price).toLocaleString('vi-VN')} đ</span>`
+                : '';
+
+            const billedBadge = isDone
+                ? `<div class="mt-1"><span class="badge bg-info-subtle text-primary border border-primary-subtle py-0.5 px-1.5" style="font-size: 10.5px;" title="Chỉ định đã có kết quả và được đồng bộ sang bộ phận Kế toán"><i class="bi bi-receipt me-0.5"></i>Đã vào hóa đơn</span></div>`
+                : '';
+
             rowsHtml += `
                 <tr id="order-row-${ord.orderItemId}">
                     <td><span class="badge bg-light text-dark border fw-bold">${esc(ord.orderCode)}</span></td>
                     <td>
                         <strong class="text-dark">${esc(ord.serviceName)}</strong>
                         <span class="badge bg-secondary-subtle text-secondary small ms-1">${esc(ord.serviceType || 'CLS')}</span>
+                        ${priceBadge}
                         ${resultHtml}
                         ${imgBadgeHtml}
                     </td>
@@ -797,6 +816,7 @@
                         <span class="badge ${isDone ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-dark border border-warning'}">
                             ${esc(ord.statusLabel || (isDone ? 'Đã có kết quả' : 'Chờ thực hiện'))}
                         </span>
+                        ${billedBadge}
                     </td>
                     <td class="text-center">
                         ${actionButtons}

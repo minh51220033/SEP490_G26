@@ -99,6 +99,32 @@ public class TreatmentPlanRestController {
     }
 
     /**
+     * Chuyển kế hoạch điều trị sang bộ phận Kế toán xử lý
+     */
+    @PostMapping("/{id}/handover-accounting")
+    public ResponseEntity<?> handoverToAccounting(@PathVariable Long id) {
+        try {
+            TreatmentPlanResponseDTO updated = treatmentPlanService.handoverToAccounting(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã chuyển kế hoạch điều trị sang bộ phận Kế toán thành công!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            log.error("Lỗi khi chuyển kế hoạch điều trị ID {} sang Kế toán: ", id, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi máy chủ khi chuyển kế hoạch sang Kế toán: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
      * Cập nhật trạng thái giai đoạn điều trị (SCR-15.3 - Ghi nhận now() và tiến độ)
      */
     @PutMapping("/stages/{stageId}/status")

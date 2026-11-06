@@ -14,4 +14,5 @@ public interface ParaclinicalOrderService {
     ParaclinicalOrderItemResponseDTO updateStatus(Long orderItemId, ParaclinicalOrderItemStatus newStatus, String resultSummary);
     void deleteOrder(Long orderItemId);
     List<ServiceDTO> getParaclinicalServices();
+    void syncParaclinicalOrdersToPerformedServices(Long visitId);
 }

@@ -353,6 +353,47 @@ class DoctorExaminationServiceTest {
             assertThrows(IllegalArgumentException.class, () ->
                     diagnosisServiceImpl.saveDoctorInstructions(null, "Notes"));
         }
+
+        @Test
+        @DisplayName("completeClinicalExamination - Khi không có dịch vụ/thuốc phát sinh chi phí -> Chuyển trực tiếp sang COMPLETED")
+        void completeClinicalExamination_NoPayableItems_DirectlyCompleted() {
+            when(visitRepository.findWithDetailsById(100L)).thenReturn(Optional.of(mockVisit));
+            when(visitRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            // Có 1 chẩn đoán chính
+            ExaminationDiagnosis diag = new ExaminationDiagnosis();
+            diag.setDiagnosisType(com.cvdcms.entity.enums.DiagnosisType.MAIN);
+            diag.setDiagnosisText("Viêm lợi nhẹ");
+            when(diagnosisRepository.findByVisitIdWithDetails(100L)).thenReturn(List.of(diag));
+
+            // Không có dịch vụ thực hiện & không có thuốc
+            when(performedServiceRepository.findByVisitIdWithDetails(100L)).thenReturn(Collections.emptyList());
+            when(prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(100L)).thenReturn(Collections.emptyList());
+
+            Visit completed = diagnosisServiceImpl.completeClinicalExamination(100L, "Tư vấn vệ sinh răng miệng");
+            assertEquals(VisitStatus.COMPLETED, completed.getStatus());
+        }
+
+        @Test
+        @DisplayName("completeClinicalExamination - Khi có dịch vụ thực hiện phát sinh chi phí -> Chuyển sang WAITING_PAYMENT")
+        void completeClinicalExamination_HasPayableItems_SetsWaitingPayment() {
+            when(visitRepository.findWithDetailsById(100L)).thenReturn(Optional.of(mockVisit));
+            when(visitRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            ExaminationDiagnosis diag = new ExaminationDiagnosis();
+            diag.setDiagnosisType(com.cvdcms.entity.enums.DiagnosisType.MAIN);
+            diag.setDiagnosisText("Sâu răng");
+            when(diagnosisRepository.findByVisitIdWithDetails(100L)).thenReturn(List.of(diag));
+
+            PerformedService ps = new PerformedService();
+            ps.setStatus(com.cvdcms.entity.enums.PerformedServiceStatus.COMPLETED);
+            ps.setFinalPrice(BigDecimal.valueOf(200000));
+            when(performedServiceRepository.findByVisitIdWithDetails(100L)).thenReturn(List.of(ps));
+            when(prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(100L)).thenReturn(Collections.emptyList());
+
+            Visit completed = diagnosisServiceImpl.completeClinicalExamination(100L, "Đã trám răng");
+            assertEquals(VisitStatus.WAITING_PAYMENT, completed.getStatus());
+        }
     }
 }
 
