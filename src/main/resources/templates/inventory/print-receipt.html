@@ -24,9 +24,7 @@
                         <i class="bi bi-arrow-left me-1"></i> Quay lại Quản lý kho
                     </a>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6">
-                            <i class="bi bi-box-arrow-in-down me-1"></i>Phiếu nhập kho
-                        </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6">Phiếu nhập kho</span>
                         <span class="preview-badge-code fs-6 text-dark" th:text="${receipt.receiptCode}">PNK-001</span>
                     </div>
                 </div>
@@ -34,10 +32,10 @@
                 <div class="preview-toolbar__right">
                     <a th:href="@{'/api/inventory/receipts/' + ${receipt.receiptId} + '/pdf?download=true'}"
                        class="btn btn-outline-primary btn-sm fw-semibold">
-                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Tải PDF
+                        Tải PDF
                     </a>
                     <button type="button" class="btn btn-primary btn-sm fw-semibold" onclick="window.print()">
-                        <i class="bi bi-printer-fill me-1"></i> In phiếu (A4)
+                        <i class="bi bi-printer me-1"></i> In phiếu (A4)
                     </button>
                 </div>
             </section>
@@ -96,15 +94,15 @@
                     <table class="items-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 42px;">STT</th>
-                                <th style="width: 100px;">Mã VT</th>
-                                <th>Tên vật tư / thuốc nha khoa</th>
-                                <th class="text-center" style="width: 65px;">ĐVT</th>
-                                <th style="width: 100px;">Số lô</th>
-                                <th class="text-center" style="width: 90px;">Hạn dùng</th>
-                                <th class="text-end" style="width: 75px;">SL nhập</th>
-                                <th class="text-end" style="width: 110px;">Đơn giá</th>
-                                <th class="text-end" style="width: 120px;">Thành tiền</th>
+                                <th class="col-stt text-center">STT</th>
+                                <th class="col-code">Mã VT</th>
+                                <th class="col-name">Tên vật tư / thuốc nha khoa</th>
+                                <th class="col-unit text-center">ĐVT</th>
+                                <th class="col-batch">Số lô</th>
+                                <th class="col-expiry text-center">Hạn dùng</th>
+                                <th class="col-qty text-end">SL nhập</th>
+                                <th class="col-price text-end">Đơn giá</th>
+                                <th class="col-total text-end">Thành tiền</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -15,6 +15,7 @@
         <header th:replace="~{fragments/header :: appTopbar('Quản lý & Duyệt nghỉ phép Bác sĩ')}"></header>
 
         <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/account.css}">
 
@@ -30,96 +31,165 @@
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
-            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div>
-                    <h1 class="staff-page-title">Quản lý &amp; Duyệt yêu cầu nghỉ phép Bác sĩ</h1>
-                    <p class="staff-page-subtitle">Kiểm duyệt đơn xin nghỉ, tự động khóa lịch trực và rà soát lịch hẹn bệnh nhân bị ảnh hưởng</p>
-                </div>
+            <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
+            <nav class="dv-breadcrumb mb-2">
+                <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Duyệt yêu cầu nghỉ phép Bác sĩ</span>
+            </nav>
 
-                <!-- Thống kê nhanh dạng chip đồng bộ MISA -->
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <a th:href="@{/admin/leave-requests}" class="text-decoration-none">
-                        <span class="chip chip--role" style="max-width: none; padding: 4px 10px; font-size: 0.78rem;">
-                            <i class="bi bi-collection me-1"></i>Tổng: <strong th:text="${summary.total}">0</strong>
-                        </span>
-                    </a>
-                    <a th:href="@{/admin/leave-requests(status='PENDING')}" class="text-decoration-none">
-                        <span class="misa-status-badge misa-status-badge--on_leave" style="padding: 4px 10px; font-size: 0.78rem;">
-                            <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt: <strong class="ms-1" th:text="${summary.pending}">0</strong>
-                        </span>
-                    </a>
-                    <a th:href="@{/admin/leave-requests(status='APPROVED')}" class="text-decoration-none">
-                        <span class="misa-status-badge misa-status-badge--active" style="padding: 4px 10px; font-size: 0.78rem;">
-                            <i class="bi bi-check-circle me-1"></i>Đã duyệt: <strong class="ms-1" th:text="${summary.approved}">0</strong>
-                        </span>
-                    </a>
-                    <a th:href="@{/admin/leave-requests(status='REJECTED')}" class="text-decoration-none">
-                        <span class="misa-status-badge misa-status-badge--inactive" style="padding: 4px 10px; font-size: 0.78rem; background: #fef2f2; color: #dc2626; border-color: #fecaca;">
-                            <i class="bi bi-x-circle me-1"></i>Từ chối: <strong class="ms-1" th:text="${summary.rejected}">0</strong>
-                        </span>
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0">Quản lý &amp; Duyệt yêu cầu nghỉ phép Bác sĩ</h1>
+                        <p class="dv-page-subtitle">Kiểm duyệt đơn xin nghỉ, tự động khóa lịch trực và rà soát lịch hẹn bệnh nhân bị ảnh hưởng</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a th:href="@{/admin/leave-requests}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
                 </div>
             </div>
 
-            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ 100% với Quản lý tài khoản) -->
-            <section class="staff-toolbar-card">
-                <form th:action="@{/admin/leave-requests}" method="get" id="leaveFilterForm" class="staff-toolbar-form">
-                    <!-- Bên trái: Tìm kiếm gọn + Dropdown Trạng thái + Lọc nâng cao -->
-                    <div class="staff-toolbar-left">
-                        <!-- 1. Ô tìm kiếm từ khóa -->
-                        <div class="staff-search-box-compact">
-                            <i class="bi bi-search"></i>
+            <!-- 4 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn /doctor/daily-visits) -->
+            <div class="row g-3 mb-4">
+                <div class="col-xl-3 col-sm-6">
+                    <a th:href="@{/admin/leave-requests(branchId=${selectedBranchId},staffId=${selectedStaffId})}" class="text-decoration-none">
+                        <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${selectedStatus == null} ? 'active-kpi' : ''">
+                            <div>
+                                <div class="dv-kpi-num" th:text="${summary.total ?: 0}">0</div>
+                                <div class="dv-kpi-label">Tổng số đơn nghỉ</div>
+                                <div class="dv-kpi-sub">Toàn bộ yêu cầu nghỉ phép</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-calendar3"></i>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-sm-6">
+                    <a th:href="@{/admin/leave-requests(status='PENDING',branchId=${selectedBranchId},staffId=${selectedStaffId})}" class="text-decoration-none">
+                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'PENDING'} ? 'active-kpi' : ''">
+                            <div>
+                                <div class="dv-kpi-num text-warning" th:text="${summary.pending ?: 0}">0</div>
+                                <div class="dv-kpi-label">Đang chờ duyệt</div>
+                                <div class="dv-kpi-sub">Cần xem xét &amp; phê duyệt ngay</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-sm-6">
+                    <a th:href="@{/admin/leave-requests(status='APPROVED',branchId=${selectedBranchId},staffId=${selectedStaffId})}" class="text-decoration-none">
+                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'APPROVED'} ? 'active-kpi' : ''">
+                            <div>
+                                <div class="dv-kpi-num text-success" th:text="${summary.approved ?: 0}">0</div>
+                                <div class="dv-kpi-label">Đã phê duyệt</div>
+                                <div class="dv-kpi-sub">Đã bố trí bác sĩ trực thay</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-sm-6">
+                    <a th:href="@{/admin/leave-requests(status='REJECTED',branchId=${selectedBranchId},staffId=${selectedStaffId})}" class="text-decoration-none">
+                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${selectedStatus != null and (selectedStatus.name() == 'REJECTED' or selectedStatus.name() == 'CANCELLED')} ? 'active-kpi' : ''">
+                            <div>
+                                <div class="dv-kpi-num text-danger" th:text="${summary.rejected ?: 0}">0</div>
+                                <div class="dv-kpi-label">Từ chối / Đã hủy</div>
+                                <div class="dv-kpi-sub">Đơn không được chấp thuận</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                                <i class="bi bi-x-circle"></i>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
+            <div class="dv-toolbar-card">
+                <form th:action="@{/admin/leave-requests}" method="get" id="leaveFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <!-- Bên trái: Search box + Segment tabs + Lọc nâng cao -->
+                    <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                        <!-- Ô tìm kiếm cỡ lớn chuẩn -->
+                        <div class="dv-search-box">
+                            <i class="bi bi-search search-lead-icon"></i>
                             <input type="text" id="keyword" name="keyword" th:value="${selectedKeyword}"
-                                   class="form-control" placeholder="Tìm tên BS hoặc mã BS...">
+                                   placeholder="Tìm kiếm đơn nghỉ theo tên bác sĩ, mã BS, lý do...">
                         </div>
 
-                        <!-- 2. Dropdown Trạng thái (hay dùng nhất) -->
-                        <div>
-                            <select id="status" name="status" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
-                                <option value="">Trạng thái: Tất cả</option>
-                                <option value="PENDING" th:selected="${selectedStatus != null and selectedStatus.name() == 'PENDING'}">Chờ duyệt</option>
-                                <option value="APPROVED" th:selected="${selectedStatus != null and selectedStatus.name() == 'APPROVED'}">Đã duyệt</option>
-                                <option value="REJECTED" th:selected="${selectedStatus != null and selectedStatus.name() == 'REJECTED'}">Từ chối</option>
-                                <option value="CANCELLED" th:selected="${selectedStatus != null and selectedStatus.name() == 'CANCELLED'}">Đã hủy</option>
-                            </select>
-                        </div>
+                        <!-- Nút bấm Tìm kiếm -->
+                        <button type="submit" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                            <i class="bi bi-search"></i>
+                            <span>Tìm kiếm</span>
+                        </button>
 
-                        <!-- Ẩn các trường lọc nâng cao (chuyển vào popup Lọc nâng cao) -->
+                        <!-- Ẩn các trường lọc nâng cao -->
+                        <input type="hidden" id="statusInput" name="status" th:value="${selectedStatus}">
                         <input type="hidden" id="branchIdInput" name="branchId" th:value="${selectedBranchId}">
                         <input type="hidden" id="staffIdInput" name="staffId" th:value="${selectedStaffId}">
                         <input type="hidden" id="startDateInput" name="startDate" th:value="${selectedStartDate}">
                         <input type="hidden" id="endDateInput" name="endDate" th:value="${selectedEndDate}">
 
-                        <!-- 3. Nút Lọc nâng cao (có badge hiển thị số lượng tiêu chí đang lọc) -->
-                        <button type="button" class="btn btn-secondary-custom btn-vua position-relative" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+                        <!-- Nút Lọc nâng cao -->
+                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 44px;">
                             <i class="bi bi-funnel"></i> Lọc nâng cao
                             <span th:if="${(selectedBranchId != null) or (selectedStaffId != null) or (selectedStartDate != null) or (selectedEndDate != null)}"
-                                  class="filter-badge-count ms-1"
+                                  class="badge bg-primary text-white rounded-pill"
                                   th:text="${(selectedBranchId != null ? 1 : 0) + (selectedStaffId != null ? 1 : 0) + (selectedStartDate != null ? 1 : 0) + (selectedEndDate != null ? 1 : 0)}">
                                 1
                             </span>
                         </button>
 
-                        <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
+                        <!-- Nút Xóa nhanh bộ lọc -->
                         <a th:if="${(selectedKeyword != null and selectedKeyword != '') or selectedStatus != null or selectedBranchId != null or selectedStaffId != null or selectedStartDate != null or selectedEndDate != null}"
                            th:href="@{/admin/leave-requests}"
-                           class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
+                           class="btn btn-link text-decoration-none text-danger p-0 ms-1 small fw-semibold"
                            title="Xóa tất cả bộ lọc">
-                            <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                            <i class="bi bi-x-circle me-1"></i>Xóa lọc
                         </a>
                     </div>
 
-                    <!-- Bên phải: Nút Bảng phân ca tuần + Bánh răng Tùy chỉnh cột -->
-                    <div class="staff-toolbar-right">
+                    <div class="d-flex align-items-center gap-2">
                         <a th:href="@{/admin/schedules}" class="btn btn-secondary-custom btn-vua text-primary">
                             <i class="bi bi-calendar-range me-1"></i> Bảng phân ca tuần
                         </a>
+                    </div>
+                </form>
+            </div>
 
-                        <!-- Bánh răng mở Dropdown Tùy chỉnh cột -->
+            <!-- BẢNG DỮ LIỆU ĐƠN NGHỈ PHÉP (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS ẢNH 2) -->
+            <section class="staff-table-card">
+                <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT (CHUẨN ẢNH 2) -->
+                <div class="dv-grid-topbar">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="fw-bold text-dark" style="font-size: 15px;">
+                            Hiển thị <span class="text-primary fw-bolder" th:text="${totalItems ?: #lists.size(requests)}">0</span> yêu cầu nghỉ phép
+                            <span class="text-muted mx-1">•</span>
+                            <span class="text-secondary fw-semibold">Tất cả các ngày</span>
+                        </div>
+                        <span class="badge rounded-pill px-3 py-1.5"
+                            style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                            <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                        </span>
+                    </div>
+
+                    <!-- Bên phải: Nút Tùy biến cột -->
+                    <div class="d-flex align-items-center gap-2">
                         <div class="custom-col-dropdown position-relative d-inline-block">
-                            <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
-                                <i class="bi bi-gear"></i>
+                            <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                    style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                    id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                <i class="bi bi-layout-three-columns text-primary"></i>
+                                <span>Tùy biến cột</span>
                             </button>
 
                             <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
@@ -214,67 +284,48 @@
                             </div>
                         </div>
                     </div>
-                </form>
-            </section>
+                </div>
 
-            <!-- BẢNG DỮ LIỆU ĐƠN NGHỈ PHÉP MISA (Hỗ trợ kéo giãn độ rộng cột & cuộn nội bộ) -->
-            <section class="staff-table-card">
-                <div class="staff-table-wrapper">
-                    <table class="table staff-modern-table align-middle" id="leaveTable">
-                        <colgroup>
-                            <col data-col="stt" style="width: 60px;">
-                            <col data-col="doctor" style="width: 220px;">
-                            <col data-col="branch" style="width: 170px;">
-                            <col data-col="daterange" style="width: 195px;">
-                            <col data-col="shift" style="width: 155px;">
-                            <col data-col="type" style="width: 170px;">
-                            <col data-col="reason" style="width: 220px;">
-                            <col data-col="submitted" style="width: 150px;">
-                            <col data-col="status" style="width: 160px;">
-                        </colgroup>
+                <div class="dv-table-scroll-container">
+                    <table class="dv-amis-table" id="leaveTable">
                         <thead>
                         <tr>
-                            <th data-col="stt" style="width: 60px; min-width: 50px;">
-                                <span>#</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                <div class="dv-th-inner justify-content-center"><span>#</span></div>
                             </th>
-                            <th data-col="doctor" style="width: 220px; min-width: 180px;">
-                                <span>Bác sĩ yêu cầu</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="doctor" style="min-width: 260px;">
+                                <div class="dv-th-inner"><span>Bác sĩ yêu cầu</span></div>
                             </th>
-                            <th data-col="branch" style="width: 170px; min-width: 140px;">
-                                <span>Chi nhánh</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="branch" style="min-width: 200px;">
+                                <div class="dv-th-inner"><span>Chi nhánh</span></div>
                             </th>
-                            <th data-col="daterange" style="width: 195px; min-width: 165px;">
-                                <span>Thời gian nghỉ</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="daterange" style="min-width: 220px;">
+                                <div class="dv-th-inner"><span>Thời gian nghỉ</span></div>
                             </th>
-                            <th data-col="shift" style="width: 155px; min-width: 130px;">
-                                <span>Ca trực</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="shift" style="min-width: 160px;">
+                                <div class="dv-th-inner"><span>Ca trực</span></div>
                             </th>
-                            <th data-col="type" style="width: 170px; min-width: 140px;">
-                                <span>Loại nghỉ</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="type" style="min-width: 180px;">
+                                <div class="dv-th-inner"><span>Loại nghỉ</span></div>
                             </th>
-                            <th data-col="reason" style="width: 220px; min-width: 160px;">
-                                <span>Lý do</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="reason" style="min-width: 240px;">
+                                <div class="dv-th-inner"><span>Lý do</span></div>
                             </th>
-                            <th data-col="submitted" style="width: 150px; min-width: 135px;">
-                                <span>Ngày gửi</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="submitted" style="min-width: 160px;">
+                                <div class="dv-th-inner"><span>Ngày gửi</span></div>
                             </th>
-                            <th data-col="status" style="width: 160px; min-width: 140px;">
-                                <span>Trạng thái</span>
-                                <div class="col-resizer"></div>
+                            <th data-col="status" style="min-width: 160px;">
+                                <div class="dv-th-inner"><span>Trạng thái</span></div>
                             </th>
+                            <th data-col="actions" class="text-center" style="min-width: 260px;">
+                                <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
+                            </th>
+                            <th class="dv-floating-actions-track"></th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="r, iter : ${requests}"
-                            class="leave-data-row"
+                            class="leave-data-row dv-data-row"
                             th:data-leave-id="${r.leaveId}"
                             th:data-doctor-name="${r.staff.fullName}"
                             th:data-doctor-code="${r.staff.staffCode}"
@@ -292,23 +343,21 @@
                             th:data-reviewed-at="${r.reviewedAt != null ? #temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm') : ''}">
 
                             <!-- 1. STT -->
-                            <td data-col="stt" class="text-muted fw-semibold">
+                            <td data-col="stt" class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
                                 <span class="row-stt-index" th:text="${iter.count}">1</span>
                             </td>
 
                             <!-- 2. Bác sĩ yêu cầu -->
-                            <td data-col="doctor">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="staff-avatar bg-primary text-white"
-                                          th:text="${#strings.toUpperCase(#strings.substring(r.staff.fullName, 0, 1))}">B</span>
-                                    <div class="text-truncate">
-                                        <div class="staff-name text-truncate">
-                                            <a href="javascript:void(0)"
-                                               class="text-dark text-decoration-none fw-semibold btn-trigger-review"
-                                               th:text="${r.staff.fullName}">Bác sĩ A</a>
-                                        </div>
-                                        <div class="staff-sub text-truncate">
-                                            <span th:text="${r.staff.staffCode}">BS001</span> ·
+                            <td data-col="doctor" style="min-width: 260px;">
+                                <div class="d-flex align-items-center">
+                                    <div class="dv-patient-avatar flex-shrink-0"
+                                         th:text="${#strings.toUpperCase(#strings.substring(r.staff.fullName, 0, 1))}">B</div>
+                                    <div class="d-flex flex-column justify-content-center">
+                                        <a href="javascript:void(0)"
+                                           class="dv-patient-name btn-trigger-review"
+                                           th:text="${r.staff.fullName}">Bác sĩ A</a>
+                                        <div class="text-secondary small fw-semibold mt-1">
+                                            <span class="dv-code-pill" style="font-size: 11px; padding: 2px 6px;" th:text="${r.staff.staffCode}">BS001</span> ·
                                             <span th:text="${r.staff.specialty != null ? r.staff.specialty : 'Nha khoa'}">Chuyên khoa</span>
                                         </div>
                                     </div>
@@ -316,7 +365,7 @@
                             </td>
 
                             <!-- 3. Chi nhánh -->
-                            <td data-col="branch">
+                            <td data-col="branch" style="min-width: 200px;">
                                 <span th:if="${r.branch != null}" class="chip chip--primary" th:title="${r.branch.branchName}">
                                     <i class="bi bi-buildings me-1"></i>
                                     <span th:text="${r.branch.branchName}">Chi nhánh</span>
@@ -325,7 +374,7 @@
                             </td>
 
                             <!-- 4. Thời gian nghỉ -->
-                            <td data-col="daterange">
+                            <td data-col="daterange" style="min-width: 220px;">
                                 <div class="text-truncate">
                                     <i class="bi bi-calendar3 text-muted me-1"></i>
                                     <span class="fw-semibold text-dark" th:text="${#temporals.format(r.startDate, 'dd/MM/yyyy')}">01/01/2026</span>
@@ -336,7 +385,7 @@
                             </td>
 
                             <!-- 5. Ca trực -->
-                            <td data-col="shift">
+                            <td data-col="shift" style="min-width: 160px;">
                                 <span th:if="${r.shift != null}" class="chip chip--role" style="max-width: 150px;"
                                       th:title="${r.shift.shiftName + ' (' + #temporals.format(r.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(r.shift.endTime, 'HH:mm') + ')'}">
                                     <i class="bi bi-clock me-1"></i>
@@ -348,7 +397,7 @@
                             </td>
 
                             <!-- 6. Loại nghỉ -->
-                            <td data-col="type">
+                            <td data-col="type" style="min-width: 180px;">
                                 <div class="d-flex align-items-center gap-1">
                                     <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="chip">Phép năm</span>
                                     <span th:if="${r.leaveType.name() == 'SICK'}" class="chip" style="background: #fffbeb; color: #b45309; border-color: #fde68a;">Nghỉ ốm</span>
@@ -364,41 +413,64 @@
                             </td>
 
                             <!-- 7. Lý do -->
-                            <td data-col="reason">
-                                <span class="text-truncate d-inline-block text-dark" style="max-width: 200px;"
+                            <td data-col="reason" style="min-width: 240px;">
+                                <span class="text-truncate d-inline-block text-dark fw-semibold" style="max-width: 240px;"
                                       th:text="${r.reason}" th:title="${r.reason}">
                                     Lý do xin nghỉ
                                 </span>
                             </td>
 
                             <!-- 8. Ngày gửi -->
-                            <td data-col="submitted">
-                                <span class="text-muted small" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                            <td data-col="submitted" style="min-width: 160px;">
+                                <span class="text-muted small fw-semibold" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
                                     01/01/2026 09:30
                                 </span>
                             </td>
 
                             <!-- 9. Trạng thái -->
-                            <td data-col="status">
-                                <span th:if="${r.status.name() == 'PENDING'}" class="misa-status-badge misa-status-badge--on_leave">
-                                    Chờ duyệt
+                            <td data-col="status" style="min-width: 160px;">
+                                <span th:if="${r.status.name() == 'PENDING'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fef3c7; color:#b45309; font-size:12.5px; border:1px solid #fde68a;">
+                                    <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt
                                 </span>
-                                <span th:if="${r.status.name() == 'APPROVED'}" class="misa-status-badge misa-status-badge--active">
-                                    Đã duyệt
+                                <span th:if="${r.status.name() == 'APPROVED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã duyệt
                                 </span>
-                                <span th:if="${r.status.name() == 'REJECTED'}" class="misa-status-badge"
-                                      style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
-                                    Từ chối
+                                <span th:if="${r.status.name() == 'REJECTED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fef2f2; color:#dc2626; font-size:12.5px; border:1px solid #fecaca;">
+                                    <i class="bi bi-x-circle-fill me-1"></i>Từ chối
                                 </span>
-                                <span th:if="${r.status.name() == 'CANCELLED'}" class="misa-status-badge misa-status-badge--inactive">
-                                    Đã hủy
+                                <span th:if="${r.status.name() == 'CANCELLED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#f1f5f9; color:#475569; font-size:12.5px; border:1px solid #cbd5e1;">
+                                    <i class="bi bi-dash-circle me-1"></i>Đã hủy
                                 </span>
+                            </td>
+
+                            <!-- 10. Cột Thao tác tĩnh (Luôn hiển thị đầy đủ cụm nút chuẩn như daily-visits) -->
+                            <td data-col="actions" class="text-center" style="width: 380px; min-width: 380px;">
+                                <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
+                                    <button type="button" class="dv-equal-btn-primary btn-trigger-review"
+                                            th:data-leave-id="${r.leaveId}"
+                                            th:title="${r.status.name() == 'PENDING'} ? 'Xét duyệt đơn' : 'Xem chi tiết đơn'">
+                                        <i th:class="${r.status.name() == 'PENDING'} ? 'bi bi-check2-circle' : 'bi bi-eye'"></i>
+                                        <span th:text="${r.status.name() == 'PENDING'} ? 'Xét duyệt' : 'Chi tiết'">Chi tiết</span>
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- 11. Khung Thao tác nổi khi Hover dòng (Chuẩn 100% theo /doctor/daily-visits) -->
+                            <td class="dv-floating-actions-track">
+                                <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                    <button type="button" class="dv-equal-btn-primary btn-trigger-review"
+                                            th:data-leave-id="${r.leaveId}"
+                                            th:title="${r.status.name() == 'PENDING'} ? 'Xét duyệt đơn' : 'Xem chi tiết đơn'">
+                                        <i th:class="${r.status.name() == 'PENDING'} ? 'bi bi-check2-circle' : 'bi bi-eye'"></i>
+                                        <span th:text="${r.status.name() == 'PENDING'} ? 'Xét duyệt' : 'Chi tiết'">Chi tiết</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
                         <!-- Empty State khi không có dữ liệu (Đồng bộ Quản lý tài khoản) -->
                         <tr th:if="${#lists.isEmpty(requests)}">
-                            <td colspan="9" class="p-0">
+                            <td colspan="11" class="p-0">
                                 <div class="account-empty-state">
                                     <div class="account-empty-icon">
                                         <i class="bi bi-calendar-x"></i>
@@ -419,8 +491,8 @@
                     </table>
                 </div>
 
-                <!-- Thanh thao tác cố định ở mép phải của bảng khi Hover dòng (Chuẩn MISA AMIS Table) -->
-                <div id="tableHoverFloatingActions" class="staff-row-floating-actions-bar">
+                <!-- Thanh thao tác cố định ẩn vì đã có cột Thao tác riêng -->
+                <div id="tableHoverFloatingActions" class="staff-row-floating-actions-bar" style="display: none !important;">
                     <button type="button" id="btnFloatingReview"
                             class="staff-action-icon-btn btn-view"
                             title="Xem chi tiết & Xét duyệt">
@@ -671,7 +743,7 @@
             <div class="modal-footer bg-light border-top py-2 px-3 d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
 
-                <div id="mActionButtons" class="d-flex gap-2">
+                <div id="mActionButtons" style="display: flex; gap: 0.5rem;">
                     <button type="button" class="btn btn-outline-danger btn-vua px-3" id="btnReject">
                         <i class="bi bi-x-circle me-1"></i> Từ chối
                     </button>
@@ -728,10 +800,15 @@
             });
         }
 
+        // Dọn dẹp key cũ trong quá trình test
+        ['cv_leave_admin_table_widths_v1', 'cv_leave_admin_table_widths_v2', 'cv_leave_admin_table_widths_v3', 'cv_leave_admin_cols_v1', 'cv_leave_admin_cols_v2', 'cv_leave_admin_cols_v3'].forEach(k => {
+            try { localStorage.removeItem(k); } catch (e) {}
+        });
+
         // 2. Kéo giãn kích thước cột & Tùy chỉnh cột (Chuẩn MISA AMIS đồng bộ Quản lý tài khoản)
         const table = document.getElementById('leaveTable');
-        const STORAGE_WIDTH_KEY = 'cv_leave_admin_table_widths_v1';
-        const STORAGE_CONFIG_KEY = 'cv_leave_admin_cols_v1';
+        const STORAGE_WIDTH_KEY = 'cv_leave_admin_table_widths_v2';
+        const STORAGE_CONFIG_KEY = 'cv_leave_admin_cols_v2';
 
         const defaultColOrder = ['stt', 'doctor', 'branch', 'daterange', 'shift', 'type', 'reason', 'submitted', 'status'];
         const defaultColWidths = {
@@ -743,7 +820,8 @@
             type: 170,
             reason: 220,
             submitted: 150,
-            status: 160
+            status: 160,
+            actions: 170
         };
 
         let currentWidths = loadColWidths();
@@ -799,6 +877,8 @@
                     const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
                     if (col) colgroup.appendChild(col);
                 });
+                const colActions = colgroup.querySelector('col[data-col="actions"]');
+                if (colActions) colgroup.appendChild(colActions);
             }
 
             const theadTr = table.querySelector('thead tr');
@@ -807,6 +887,10 @@
                     const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
                     if (th) theadTr.appendChild(th);
                 });
+                const thActions = theadTr.querySelector('th[data-col="actions"]');
+                if (thActions) theadTr.appendChild(thActions);
+                const thTrack = theadTr.querySelector('.dv-floating-actions-track');
+                if (thTrack) theadTr.appendChild(thTrack);
             }
 
             const tbodyRows = table.querySelectorAll('tbody tr.leave-data-row');
@@ -815,34 +899,36 @@
                     const td = tr.querySelector(`td[data-col="${colKey}"]`);
                     if (td) tr.appendChild(td);
                 });
+                const tdActions = tr.querySelector('td[data-col="actions"]');
+                if (tdActions) tr.appendChild(tdActions);
+                const tdTrack = tr.querySelector('.dv-floating-actions-track');
+                if (tdTrack) tr.appendChild(tdTrack);
             });
         }
 
         function applyColWidths() {
             if (!table) return;
-            currentWidths = loadColWidths();
-            let totalColsWidth = 0;
-
-            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
-            order.forEach(col => {
-                const w = currentWidths[col] || defaultColWidths[col] || 160;
-                currentWidths[col] = w;
-
-                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
-                if (colEl) colEl.style.width = w + 'px';
-
-                const th = table.querySelector(`thead th[data-col="${col}"]`);
-                if (th) {
-                    th.style.width = w + 'px';
-                    th.style.minWidth = w + 'px';
-                    if (!th.classList.contains('d-none')) {
-                        totalColsWidth += w;
+            let totalW = 0;
+            defaultColOrder.forEach(col => {
+                if (!currentConfig.hidden.includes(col)) {
+                    const w = currentWidths[col] || defaultColWidths[col] || 160;
+                    const th = table.querySelector(`thead th[data-col="${col}"]`);
+                    if (th) {
+                        th.style.width = w + 'px';
+                        th.style.minWidth = w + 'px';
                     }
+                    totalW += w;
                 }
             });
-
+            const thActions = table.querySelector('thead th[data-col="actions"]');
+            if (thActions) {
+                const w = currentWidths.actions || defaultColWidths.actions || 140;
+                thActions.style.width = w + 'px';
+                thActions.style.minWidth = w + 'px';
+                totalW += w;
+            }
             const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
+            table.style.width = Math.max(totalW, containerW) + 'px';
         }
 
         function applyColConfig(config) {
@@ -874,6 +960,8 @@
                 const chk = document.getElementById(`chk-col-${col}`);
                 if (chk) chk.checked = !isHidden;
             });
+
+            visibleTotalW += (currentWidths.actions || defaultColWidths.actions || 140);
 
             const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
             table.style.width = Math.max(visibleTotalW, containerW) + 'px';
@@ -936,6 +1024,13 @@
                     startX = e.pageX;
                     startW = thEl.offsetWidth;
 
+                    let otherColsW = 0;
+                    table.querySelectorAll('thead th').forEach(h => {
+                        if (h !== thEl && !h.classList.contains('d-none')) {
+                            otherColsW += h.offsetWidth;
+                        }
+                    });
+
                     resizer.classList.add('is-resizing');
                     document.body.style.cursor = 'col-resize';
                     document.body.style.userSelect = 'none';
@@ -954,15 +1049,8 @@
                         }
                         currentWidths[colKey] = newW;
 
-                        let totalW = 0;
-                        defaultColOrder.forEach(col => {
-                            if (!currentConfig.hidden.includes(col)) {
-                                totalW += (currentWidths[col] || defaultColWidths[col] || 160);
-                            }
-                        });
-
                         const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-                        table.style.width = Math.max(totalW, containerW) + 'px';
+                        table.style.width = Math.max(otherColsW + newW, containerW) + 'px';
                     }
 
                     function onMouseUp() {
@@ -1174,10 +1262,12 @@
             if (status === 'PENDING') {
                 mActionBox.style.display = 'block';
                 mActionButtons.style.display = 'flex';
+                mActionButtons.classList.remove('d-none');
                 mHistoryBox.style.display = 'none';
             } else {
                 mActionBox.style.display = 'none';
                 mActionButtons.style.display = 'none';
+                mActionButtons.classList.add('d-none');
                 mHistoryBox.style.display = 'block';
 
                 if (status === 'APPROVED') {

@@ -22,17 +22,22 @@
 
             <!-- TIÊU ĐỀ CHI NHÁNH -->
             <section class="welcome-card">
-                <div>
-                    <a th:href="@{/admin/branches}" class="text-decoration-none small">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách chi nhánh
-                    </a>
-                    <h2 class="welcome-card__title mt-1">
-                        <span class="text-brand" th:text="${branch.branchName}">Chi nhánh</span>
-                    </h2>
-                    <p class="welcome-card__desc">
-                        <strong th:text="${branch.branchCode}">CN01</strong> ·
-                        <span th:text="${branch.address}">Địa chỉ</span>
-                    </p>
+                <div class="d-flex align-items-center gap-3">
+                    <img th:src="${branch.imageUrl != null and !#strings.isEmpty(branch.imageUrl) ? branch.imageUrl : '/uploads/images/storefont.png'}"
+                         th:alt="${branch.branchName}"
+                         style="width: 68px; height: 68px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; flex-shrink: 0;">
+                    <div>
+                        <a th:href="@{/admin/branches}" class="text-decoration-none small">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách chi nhánh
+                        </a>
+                        <h2 class="welcome-card__title mt-1">
+                            <span class="text-brand" th:text="${branch.branchName}">Chi nhánh</span>
+                        </h2>
+                        <p class="welcome-card__desc">
+                            <strong th:text="${branch.branchCode}">CN01</strong> ·
+                            <span th:text="${branch.address}">Địa chỉ</span>
+                        </p>
+                    </div>
                 </div>
                 <div>
                     <span th:if="${branch.isActive}" class="badge bg-success">Đang hoạt động</span>
@@ -82,7 +87,7 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info"
                                 type="button" role="tab" aria-controls="pane-info" aria-selected="false">
-                            <i class="bi bi-info-circle" aria-hidden="true"></i> Thông tin chi nhánh
+                            <i class="bi bi-info-circle" aria-hidden="true"></i> Thông tin &amp; Hình ảnh cơ sở
                         </button>
                     </li>
                 </ul>
@@ -218,22 +223,22 @@
                         </form>
                     </div>
 
-                    <!-- ============ TAB 3: THÔNG TIN CHI NHÁNH ============ -->
+                    <!-- ============ TAB 3: THÔNG TIN & HÌNH ẢNH CHI NHÁNH ============ -->
                     <div class="tab-pane fade" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
                         <form th:action="@{/admin/branches/{id}/update(id=${branch.branchId})}"
-                              th:object="${branch}" method="post">
+                              th:object="${branch}" method="post" enctype="multipart/form-data">
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Mã chi nhánh</label>
                                     <input type="text" class="form-control" th:value="${branch.branchCode}" disabled>
                                 </div>
                                 <div class="col-md-8">
-                                    <label for="infoName" class="form-label">Tên chi nhánh</label>
+                                    <label for="infoName" class="form-label">Tên chi nhánh <span class="text-danger">*</span></label>
                                     <input type="text" id="infoName" name="branchName" class="form-control"
                                            th:value="${branch.branchName}" maxlength="150" required>
                                 </div>
                                 <div class="col-12">
-                                    <label for="infoAddress" class="form-label">Địa chỉ</label>
+                                    <label for="infoAddress" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
                                     <input type="text" id="infoAddress" name="address" class="form-control"
                                            th:value="${branch.address}" maxlength="255" required>
                                 </div>
@@ -265,10 +270,30 @@
                                                 th:text="${m.displayName}">Quản lý</option>
                                     </select>
                                 </div>
+
+                                <!-- HÌNH ẢNH CƠ SỞ -->
+                                <div class="col-12 mt-3">
+                                    <label for="infoImageFile" class="form-label fw-semibold">
+                                        <i class="bi bi-image text-primary me-1"></i>Hình ảnh mặt tiền / không gian cơ sở
+                                    </label>
+                                    <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded border bg-light">
+                                        <img id="detailBranchImagePreview"
+                                             th:src="${branch.imageUrl != null and !#strings.isEmpty(branch.imageUrl) ? branch.imageUrl : '/uploads/images/storefont.png'}"
+                                             th:alt="${branch.branchName}"
+                                             style="width: 150px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid #cbd5e1;">
+                                        <div class="flex-grow-1">
+                                            <input type="file" id="infoImageFile" name="imageFile" class="form-control mb-1"
+                                                   accept="image/jpeg,image/png,image/webp">
+                                            <div class="form-text mb-0">
+                                                Hỗ trợ JPG, PNG, WEBP (tối đa 5MB). Ảnh này sẽ hiển thị tại mục <strong>Ghé thăm cơ sở</strong> trên trang chủ khách hàng.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="mt-3">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save" aria-hidden="true"></i> Cập nhật thông tin
+                                    <i class="bi bi-save" aria-hidden="true"></i> Cập nhật thông tin &amp; hình ảnh
                                 </button>
                             </div>
                         </form>
@@ -277,7 +302,6 @@
             </section>
         </main>
 
-        
     </div>
 </div>
 
@@ -374,6 +398,17 @@
 <script th:inline="javascript">
     (function () {
         var base = /*[[@{/admin/branches/{id}(id=${branch.branchId})}]]*/ '/admin/branches/1';
+
+        // Preview ảnh cơ sở khi chọn file mới
+        var infoImageFile = document.getElementById('infoImageFile');
+        var detailPreview = document.getElementById('detailBranchImagePreview');
+        if (infoImageFile && detailPreview) {
+            infoImageFile.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    detailPreview.src = URL.createObjectURL(this.files[0]);
+                }
+            });
+        }
 
         // Modal phòng: đổi form theo chế độ thêm / sửa.
         document.getElementById('roomModal').addEventListener('show.bs.modal', function (e) {

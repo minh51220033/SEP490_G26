@@ -18,6 +18,8 @@ public interface NanopixXraySyncLogRepository extends JpaRepository<NanopixXrayS
 
     Optional<NanopixXraySyncLog> findByExternalStudyUid(String externalStudyUid);
 
+    Optional<NanopixXraySyncLog> findFirstByImageUrlOrderByCapturedAtDesc(String imageUrl);
+
     boolean existsByExternalStudyUid(String externalStudyUid);
 
     List<NanopixXraySyncLog> findBySyncStatusOrderByCapturedAtDesc(NanopixSyncStatus syncStatus);

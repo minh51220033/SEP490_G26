@@ -5,24 +5,21 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     private final AdminBranchInterceptor adminBranchInterceptor;
     private final AccountManagementInterceptor accountManagementInterceptor;
-    private final SupplierManagementInterceptor supplierManagementInterceptor; // Thêm biến này
+    private final SupplierManagementInterceptor supplierManagementInterceptor;
 
     public WebConfig(
             AdminBranchInterceptor adminBranchInterceptor,
             AccountManagementInterceptor accountManagementInterceptor,
-            SupplierManagementInterceptor supplierManagementInterceptor // Thêm vào đây
+            SupplierManagementInterceptor supplierManagementInterceptor
     ) {
         this.adminBranchInterceptor = adminBranchInterceptor;
         this.accountManagementInterceptor = accountManagementInterceptor;
-        this.supplierManagementInterceptor = supplierManagementInterceptor; // Gán giá trị
+        this.supplierManagementInterceptor = supplierManagementInterceptor;
     }
 
     @Override
@@ -34,10 +31,6 @@ public class WebConfig implements WebMvcConfigurer {
                         "classpath:/resources/",
                         "classpath:/META-INF/resources/"
                 );
-
-        Path uploadDir = Paths.get("uploads").toAbsolutePath().normalize();
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations(uploadDir.toUri().toString());
     }
 
     @Override

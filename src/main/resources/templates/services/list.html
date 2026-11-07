@@ -24,6 +24,24 @@
 <main class="cp-section cp-section--soft">
     <div class="container-xl">
 
+        <!-- THÔNG BÁO CƠ SỞ ĐANG XEM (KHI NGƯỜI DÙNG ĐÃ CHỌN CƠ SỞ) -->
+        <div class="alert border-0 shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4"
+             style="background: #eef4ff; color: #164ec8; border-radius: 14px; padding: 14px 20px;"
+             th:if="${currentPortalBranch != null}">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-hospital-fill fs-5"></i>
+                <div>
+                    <span class="small fw-semibold text-uppercase d-block" style="letter-spacing: 0.05em; opacity: 0.85;">Bảng giá &amp; Ưu đãi theo cơ sở đang chọn</span>
+                    <strong th:text="${currentPortalBranch.branchName}">Cơ sở Cường Việt</strong>
+                    <span class="text-muted small ms-1" th:if="${currentPortalBranch.address != null}"
+                          th:text="'· ' + ${currentPortalBranch.address}">Địa chỉ</span>
+                </div>
+            </div>
+            <a th:href="@{/#lien-he}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                <i class="bi bi-arrow-left-right me-1"></i>Đổi cơ sở
+            </a>
+        </div>
+
         <!-- THANH TÌM KIẾM & BỘ LỌC -->
         <div class="cp-filter-box">
             <form method="get" th:action="@{/services}" class="row g-3 align-items-end">
