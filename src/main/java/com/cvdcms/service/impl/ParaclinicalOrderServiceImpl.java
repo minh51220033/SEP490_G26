@@ -7,7 +7,6 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.ParaclinicalOrderService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
     private final ParaclinicalOrderRepository paraclinicalOrderRepository;
@@ -29,8 +27,44 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     private final ServiceRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final PerformedServiceRepository performedServiceRepository;
+    private final InvoiceItemRepository invoiceItemRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final java.util.concurrent.atomic.AtomicLong XRAY_REF_COUNTER =
+            new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis() % 100000);
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ParaclinicalOrderServiceImpl(
+            ParaclinicalOrderRepository paraclinicalOrderRepository,
+            ParaclinicalOrderItemRepository paraclinicalOrderItemRepository,
+            VisitRepository visitRepository,
+            ServiceRepository serviceRepository,
+            ServiceCategoryRepository serviceCategoryRepository,
+            StaffProfileRepository staffProfileRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) PerformedServiceRepository performedServiceRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) InvoiceItemRepository invoiceItemRepository
+    ) {
+        this.paraclinicalOrderRepository = paraclinicalOrderRepository;
+        this.paraclinicalOrderItemRepository = paraclinicalOrderItemRepository;
+        this.visitRepository = visitRepository;
+        this.serviceRepository = serviceRepository;
+        this.serviceCategoryRepository = serviceCategoryRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.performedServiceRepository = performedServiceRepository;
+        this.invoiceItemRepository = invoiceItemRepository;
+    }
+
+    private String generateUniqueExternalRefId() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            long seq = Math.abs(XRAY_REF_COUNTER.incrementAndGet() % 900000) + 100000;
+            String candidate = "XQ" + seq;
+            if (paraclinicalOrderItemRepository.findByExternalRefIdIgnoreCase(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        return "XQ" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -38,6 +72,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         if (visitId == null) {
             return Collections.emptyList();
         }
+        // Tự động đồng bộ các chỉ định đã có kết quả sang bảng Dịch vụ thực hiện (để Kế toán lập hóa đơn)
+        syncParaclinicalOrdersToPerformedServices(visitId);
+
         List<ParaclinicalOrderItem> items = paraclinicalOrderItemRepository
                 .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
         return items.stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -112,21 +149,106 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             order = paraclinicalOrderRepository.save(order);
         }
 
-        // Tạo chi tiết chỉ định
+        // Tạo chi tiết chỉ định với mã liên kết duy nhất (external_ref_id) để máy chụp đối chiếu
         ParaclinicalOrderItem item = new ParaclinicalOrderItem();
         item.setOrder(order);
         item.setService(service);
         item.setToothNumbers((dto.getToothNumbers() != null && !dto.getToothNumbers().isBlank())
                 ? dto.getToothNumbers().trim() : "Toàn hàm");
         item.setStatus(ParaclinicalOrderItemStatus.WAITING);
+        item.setExternalRefId(generateUniqueExternalRefId());
+
         if (dto.getNotes() != null && !dto.getNotes().isBlank()) {
             item.setResultSummary(dto.getNotes().trim());
         }
 
-        ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
-        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, Service={}, Tooth={}",
-                savedItem.getOrderItemId(), service.getServiceName(), savedItem.getToothNumbers());
+        if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+            ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
+            att.setOrderItem(item);
+            att.setFileName("Phim chụp / Kết quả CLS");
+            att.setFileUrl(dto.getImageUrl().trim());
+            att.setFileType(ParaclinicalFileType.IMAGE);
+            att.setCaption(service.getServiceName());
+            item.getAttachments().add(att);
+            item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
+            item.setPerformedAt(LocalDateTime.now());
+        }
 
+        // Tự động đồng bộ sang PerformedService nếu đã hoàn thành (hoặc cập nhật)
+        syncOrderItemToPerformedService(item);
+
+        ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
+        if (savedItem != null && (savedItem.getExternalRefId() == null || savedItem.getExternalRefId().isBlank())) {
+            savedItem.setExternalRefId(item.getExternalRefId());
+        }
+
+        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, ExternalRefId={}, Service={}, Tooth={}",
+                savedItem.getOrderItemId(), savedItem.getExternalRefId(), service.getServiceName(), savedItem.getToothNumbers());
+
+        return mapToDTO(savedItem);
+    }
+
+    @Override
+    @Transactional
+    public ParaclinicalOrderItemResponseDTO updateOrder(Long orderItemId, ParaclinicalOrderCreateDTO dto) {
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
+
+        Visit visit = item.getOrder().getVisit();
+        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02).");
+        }
+
+        if (dto.getServiceId() != null) {
+            serviceRepository.findById(dto.getServiceId()).ifPresent(item::setService);
+        }
+
+        if (dto.getToothNumbers() != null) {
+            item.setToothNumbers(dto.getToothNumbers().isBlank() ? "Toàn hàm" : dto.getToothNumbers().trim());
+        }
+
+        String summary = dto.getResultSummary() != null ? dto.getResultSummary() : dto.getNotes();
+        if (summary != null) {
+            item.setResultSummary(summary.trim());
+        }
+
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            ParaclinicalOrderItemStatus st = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim());
+            item.setStatus(st);
+            if (st == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedAt() == null) {
+                item.setPerformedAt(LocalDateTime.now());
+            }
+        }
+
+        if (dto.getImageUrl() != null) {
+            String trimmedUrl = dto.getImageUrl().trim();
+            if (trimmedUrl.isEmpty()) {
+                item.getAttachments().clear();
+            } else {
+                if (item.getAttachments().isEmpty()) {
+                    ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
+                    att.setOrderItem(item);
+                    att.setFileName("Phim chụp / Kết quả CLS");
+                    att.setFileUrl(trimmedUrl);
+                    att.setFileType(ParaclinicalFileType.IMAGE);
+                    att.setCaption(item.getService() != null ? item.getService().getServiceName() : "Ảnh CLS");
+                    item.getAttachments().add(att);
+                } else {
+                    item.getAttachments().get(0).setFileUrl(trimmedUrl);
+                }
+                if (dto.getStatus() == null || dto.getStatus().isBlank()) {
+                    item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
+                    if (item.getPerformedAt() == null) {
+                        item.setPerformedAt(LocalDateTime.now());
+                    }
+                }
+            }
+        }
+
+        // Đồng bộ sang PerformedService
+        syncOrderItemToPerformedService(item);
+
+        ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         return mapToDTO(savedItem);
     }
 
@@ -148,6 +270,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 item.setResultSummary(resultSummary);
             }
         }
+
+        // Đồng bộ sang PerformedService
+        syncOrderItemToPerformedService(item);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
 
@@ -175,8 +300,87 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02). Không thể xóa chỉ định.");
         }
 
+        if (performedServiceRepository != null && invoiceItemRepository != null) {
+            PerformedService ps = item.getPerformedService();
+            if (ps != null) {
+                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                if (isBilled) {
+                    throw new IllegalStateException("Không thể xóa chỉ định cận lâm sàng đã được Kế toán xuất hóa đơn.");
+                }
+                item.setPerformedService(null);
+                paraclinicalOrderItemRepository.save(item);
+                performedServiceRepository.delete(ps);
+            }
+        }
+
         paraclinicalOrderItemRepository.delete(item);
         log.info("Đã xóa chỉ định cận lâm sàng ID: {}", orderItemId);
+    }
+
+    private void syncOrderItemToPerformedService(ParaclinicalOrderItem item) {
+        if (performedServiceRepository == null) {
+            return;
+        }
+        if (item == null || item.getService() == null || item.getOrder() == null) {
+            return;
+        }
+        Visit visit = item.getOrder().getVisit();
+        if (visit == null) {
+            return;
+        }
+
+        if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
+            PerformedService ps = item.getPerformedService();
+            if (ps == null) {
+                ps = new PerformedService();
+                ps.setVisit(visit);
+                ps.setPatientProfile(item.getOrder().getPatientProfile() != null ? item.getOrder().getPatientProfile() : visit.getPatientProfile());
+                ps.setBranch(visit.getBranch());
+                ps.setDoctor(item.getOrder().getDoctor() != null ? item.getOrder().getDoctor() : visit.getPrimaryDoctor());
+                if (ps.getDoctor() == null) {
+                    ps.setDoctor(staffProfileRepository.findAll().stream().findFirst().orElse(null));
+                }
+            }
+
+            ps.setService(item.getService());
+            ps.setToothNumbers(item.getToothNumbers() != null && !item.getToothNumbers().isBlank() ? item.getToothNumbers() : "Toàn hàm");
+            ps.setQuantity(BigDecimal.ONE);
+            BigDecimal price = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
+            ps.setUnitPrice(price);
+            ps.setDiscountAmount(BigDecimal.ZERO);
+            ps.setFinalPrice(price);
+            ps.setCompletedAt(item.getPerformedAt() != null ? item.getPerformedAt() : LocalDateTime.now());
+            ps.setStatus(PerformedServiceStatus.COMPLETED);
+            ps.setClinicalNotes("Chỉ định cận lâm sàng [" + item.getOrder().getOrderCode() + "]: " + item.getService().getServiceName()
+                    + (item.getResultSummary() != null && !item.getResultSummary().isBlank() ? " - " + item.getResultSummary() : ""));
+
+            PerformedService savedPs = performedServiceRepository.save(ps);
+            item.setPerformedService(savedPs);
+        } else {
+            // Khi trạng thái chưa hoàn thành hoặc hủy
+            PerformedService ps = item.getPerformedService();
+            if (ps != null) {
+                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                if (!isBilled) {
+                    ps.setStatus(PerformedServiceStatus.CANCELLED);
+                    performedServiceRepository.save(ps);
+                }
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void syncParaclinicalOrdersToPerformedServices(Long visitId) {
+        if (visitId == null) return;
+        List<ParaclinicalOrderItem> items = paraclinicalOrderItemRepository
+                .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
+        for (ParaclinicalOrderItem item : items) {
+            if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedService() == null) {
+                syncOrderItemToPerformedService(item);
+                paraclinicalOrderItemRepository.save(item);
+            }
+        }
     }
 
     @Override
@@ -253,27 +457,51 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
             statusLabel = "Đã có kết quả";
         } else if (item.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS) {
-            statusLabel = "Đang xử lý";
+            statusLabel = "Đang đồng bộ";
         } else if (item.getStatus() == ParaclinicalOrderItemStatus.CANCELLED) {
             statusLabel = "Đã hủy";
         }
 
         String doctorName = "Bác sĩ điều trị";
-        if (item.getOrder().getDoctor() != null) {
+        if (item.getOrder() != null && item.getOrder().getDoctor() != null) {
             doctorName = item.getOrder().getDoctor().getFullName();
         }
 
-        String orderTimeStr = (item.getOrder().getOrderTime() != null)
+        String orderTimeStr = (item.getOrder() != null && item.getOrder().getOrderTime() != null)
                 ? item.getOrder().getOrderTime().format(DATE_TIME_FORMATTER)
                 : LocalDateTime.now().format(DATE_TIME_FORMATTER);
 
         String performedAtStr = (item.getPerformedAt() != null)
                 ? item.getPerformedAt().format(DATE_TIME_FORMATTER) : null;
 
+        String externalRef = (item.getExternalRefId() != null && !item.getExternalRefId().isBlank())
+                ? item.getExternalRefId()
+                : (item.getOrderItemId() != null ? "XQ" + item.getOrderItemId() : "");
+
+        List<ParaclinicalOrderItemResponseDTO.AttachmentDTO> attachmentDTOs = new ArrayList<>();
+        String primaryImageUrl = null;
+        if (item.getAttachments() != null && !item.getAttachments().isEmpty()) {
+            for (ParaclinicalResultAttachment att : item.getAttachments()) {
+                if (att == null || att.getFileUrl() == null) continue;
+                if (primaryImageUrl == null) {
+                    primaryImageUrl = att.getFileUrl();
+                }
+                attachmentDTOs.add(ParaclinicalOrderItemResponseDTO.AttachmentDTO.builder()
+                        .attachmentId(att.getAttachmentId())
+                        .fileName(att.getFileName())
+                        .fileUrl(att.getFileUrl())
+                        .fileType(att.getFileType() != null ? att.getFileType().name() : "IMAGE")
+                        .caption(att.getCaption())
+                        .uploadedAt(att.getUploadedAt() != null ? att.getUploadedAt().format(DATE_TIME_FORMATTER) : performedAtStr)
+                        .build());
+            }
+        }
+
         return ParaclinicalOrderItemResponseDTO.builder()
                 .orderItemId(item.getOrderItemId())
-                .orderId(item.getOrder().getOrderId())
-                .orderCode(item.getOrder().getOrderCode())
+                .orderId(item.getOrder() != null ? item.getOrder().getOrderId() : null)
+                .orderCode(item.getOrder() != null ? item.getOrder().getOrderCode() : "")
+                .externalRefId(externalRef)
                 .serviceId(item.getService() != null ? item.getService().getServiceId() : null)
                 .serviceCode(item.getService() != null ? item.getService().getServiceCode() : "")
                 .serviceName(item.getService() != null ? item.getService().getServiceName() : "Chỉ định cận lâm sàng")
@@ -286,7 +514,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orderTime(orderTimeStr)
                 .performedAt(performedAtStr)
                 .resultSummary(item.getResultSummary() != null ? item.getResultSummary() : "")
-                .attachmentsCount(item.getAttachments() != null ? item.getAttachments().size() : 0)
+                .imageUrl(primaryImageUrl != null ? primaryImageUrl : "") // Hỗ trợ tương thích ngược cho cả nhánh develop
+                .attachmentsCount(attachmentDTOs.size())
+                .primaryImageUrl(primaryImageUrl)
+                .attachments(attachmentDTOs)
                 .build();
     }
 }

@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Đơn đặt xưởng Labo - DentalSoft</title>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --lab-primary: #0284c7;
+      --lab-primary-dark: #0369a1;
+      --lab-primary-light: #e0f2fe;
+      --lab-border: #cbd5e1;
+      --lab-border-soft: #e2e8f0;
+      --lab-text-dark: #0f172a;
+      --lab-text-secondary: #334155;
+      --lab-text-muted: #64748b;
+      --lab-bg-page: #f8fafc;
+      --lab-bg-card: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--lab-bg-page);
+      color: var(--lab-text-dark);
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOPBAR THÂN THIỆN, THANH MẢNH KHÔNG SIDEBAR */
+    .app-topbar {
+      height: 62px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--lab-border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 18px;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    }
+
+    .brand-text {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--lab-text-dark);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text span {
+      color: var(--lab-primary);
+    }
+
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--lab-text-muted);
+      padding-left: 18px;
+      border-left: 1px solid var(--lab-border-soft);
+    }
+
+    .breadcrumb-nav a {
+      color: var(--lab-primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .breadcrumb-nav a:hover {
+      text-decoration: underline;
+    }
+
+    .breadcrumb-nav .active {
+      color: var(--lab-text-dark);
+      font-weight: 600;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--lab-border-soft);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--lab-primary-light);
+      border: 1.5px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lab-primary);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--lab-text-dark);
+    }
+
+    .user-role {
+      font-size: 11px;
+      color: var(--lab-text-muted);
+    }
+
+    /* WORKSPACE CONTAINER CĂN GIỮA */
+    .workspace-main {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 20px 28px !important;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-sizing: border-box;
+    }
+
+    /* PAGE HEADER */
+    .dv-page-header {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .dv-page-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--lab-text-dark);
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+
+    .dv-page-subtitle {
+      font-size: 13px;
+      color: var(--lab-text-muted);
+      margin: 0;
+    }
+
+    /* 4 THẺ KPI CHUẨN DENTALSOFT CÓ DẢI MÀU BÊN TRÁI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
+
+    .dv-kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--lab-border-soft);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.18s ease;
+    }
+
+    .dv-kpi-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4.5px;
+      background: var(--kpi-accent, #0284c7);
+      border-radius: 12px 0 0 12px;
+    }
+
+    .dv-kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+      border-color: #cbd5e1;
+    }
+
+    .dv-kpi-num {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--lab-text-dark);
+      letter-spacing: -0.5px;
+    }
+
+    .dv-kpi-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+
+    .dv-kpi-sub {
+      font-size: 11.5px;
+      color: var(--lab-text-muted);
+      margin-top: 2px;
+    }
+
+    .dv-kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    /* 3 MAIN TABS CHUẨN CODEBASE */
+    .lab-tab-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 2px solid #e2e8f0;
+      margin-top: 4px;
+    }
+
+    .lab-tab-btn {
+      background: none;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-tab-btn:hover {
+      color: #0284c7;
+    }
+
+    .lab-tab-btn.active {
+      color: #0284c7;
+      font-weight: 700;
+    }
+
+    .lab-tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: #0284c7;
+      border-radius: 3px 3px 0 0;
+    }
+
+    /* CARD CHỨA BẢNG VÀ TOOLBAR */
+    .lab-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+    }
+
+    /* TOOLBAR LỌC & TÌM KIẾM */
+    .lab-toolbar {
+      padding: 14px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      flex-wrap: nowrap !important;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .lab-search-wrap {
+      position: relative;
+      flex: 1 1 240px;
+      min-width: 200px;
+    }
+
+    .lab-search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 13.5px;
+    }
+
+    .lab-search-input {
+      width: 100%;
+      height: 36px;
+      border-radius: 20px;
+      padding: 0 14px 0 36px;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+      color: #1e293b;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    .lab-search-input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .lab-search-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .filter-select {
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+      color: #334155;
+      padding: 0 10px;
+      outline: none;
+      background-color: #ffffff;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      border-color: #0284c7;
+    }
+
+    /* NÚT THÊM PHIẾU NỔI BẬT */
+    .btn-create-order {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 7px 18px;
+      border-radius: 20px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(2, 132, 199, 0.3);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-create-order:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #0c4a6e 100%);
+      color: #ffffff;
+    }
+
+    /* TABLE PHIẾU ĐẶT XƯỞNG CHUẨN CODEBASE DENTALSOFT */
+    .table-scroll-container {
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f8fafc;
+    }
+
+    .table-scroll-container::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .labo-table {
+      width: 100%;
+      min-width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .labo-table thead {
+      background-color: #f8fafc;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .labo-table thead th {
+      padding: 11px 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .labo-table tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+      color: #1e293b;
+    }
+
+    .labo-table tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* BADGES TRẠNG THÁI CHUẨN CODEBASE */
+    .status-badge-custom {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .status-processing {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .status-delivered {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .status-fitted {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-sent {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* PHÂN TRANG LIỀN ĐÁY BẢNG (DV-PAGINATION-CONTAINER) */
+    .dv-pagination-container {
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .modern-pagination-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .modern-pagination-nav .pg-btn {
+      min-width: 30px;
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #334155;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .modern-pagination-nav .pg-btn.is-active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-color: transparent;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .modern-pagination-nav .pg-btn:hover:not(.is-active) {
+      background-color: #f1f5f9;
+      color: #0284c7;
+    }
+
+    /* MODAL CHUẨN CODEBASE THÊM PHIẾU ĐẶT XƯỞNG */
+    .modal-backdrop-custom {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1050;
+      padding: 16px;
+    }
+
+    .modal-box-custom {
+      width: 100%;
+      max-width: 980px;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      max-height: 92vh;
+    }
+
+    .modal-header-custom {
+      padding: 14px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-body-custom {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-footer-custom {
+      padding: 12px 20px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR DENTALSOFT -->
+  <header class="app-topbar">
+    <div class="brand-group">
+      <a href="#" class="brand-logo">
+        <div class="brand-icon">
+          <i class="bi bi-heart-pulse-fill"></i>
+        </div>
+        <div class="brand-text">Dental<span>Soft</span></div>
+      </a>
+      <nav class="breadcrumb-nav">
+        <a href="#">Hồ sơ điều trị</a>
+        <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
+        <span class="active">Quản lý đặt xưởng Labo ngoài</span>
+      </nav>
+    </div>
+
+    <div class="user-pill">
+      <div class="user-avatar">NL</div>
+      <div class="user-info">
+        <div class="user-name">BS. Nguyễn Hoàng Long</div>
+        <div class="user-role">Trưởng khoa Răng Hàm Mặt</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE CONTAINER -->
+  <main class="workspace-main">
+
+    <!-- PAGE HEADER -->
+    <div class="dv-page-header">
+      <div>
+        <h1 class="dv-page-title">
+          <i class="bi bi-box-seam-fill text-primary" style="font-size: 20px;"></i>
+          <span>Quản lý Đơn đặt xưởng Labo ngoài</span>
+        </h1>
+        <p class="dv-page-subtitle">Theo dõi tiến độ chế tác phục hình sứ, hàm khung và mẫu xét nghiệm gửi các xưởng đối tác</p>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-nowrap flex-shrink-0">
+        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5" style="border-radius: 8px; padding: 6px 14px; font-weight: 600;">
+          <i class="bi bi-file-earmark-excel"></i>
+          <span>Xuất Excel</span>
+        </button>
+        <button type="button" class="btn-create-order" id="btnOpenOrderModal">
+          <i class="bi bi-plus-lg"></i>
+          <span>+ Thêm phiếu</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 THẺ KPI CHUẨN DENTALSOFT -->
+    <section class="kpi-grid">
+      <!-- KPI 1 -->
+      <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
+        <div>
+          <div class="dv-kpi-label">Tổng phiếu gửi</div>
+          <div class="dv-kpi-num">48</div>
+          <div class="dv-kpi-sub">Trong tháng 11/2026</div>
+        </div>
+        <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+          <i class="bi bi-folder2-open"></i>
+        </div>
+      </div>
+
+      <!-- KPI 2 -->
+      <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+        <div>
+          <div class="dv-kpi-label">Đang chế tác / Chờ KQ</div>
+          <div class="dv-kpi-num" style="color: #b45309;">12</div>
+          <div class="dv-kpi-sub">Đang xử lý tại xưởng</div>
+        </div>
+        <div class="dv-kpi-icon" style="background: #fef3c7; color: #b45309;">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+      </div>
+
+      <!-- KPI 3 -->
+      <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
+        <div>
+          <div class="dv-kpi-label">Đã nhận về / Có KQ</div>
+          <div class="dv-kpi-num" style="color: #4338ca;">8</div>
+          <div class="dv-kpi-sub">Sẵn sàng thử trên ghế</div>
+        </div>
+        <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4338ca;">
+          <i class="bi bi-box-seam"></i>
+        </div>
+      </div>
+
+      <!-- KPI 4 -->
+      <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+        <div>
+          <div class="dv-kpi-label">Đã gắn lắp / Hoàn tất</div>
+          <div class="dv-kpi-num" style="color: #15803d;">28</div>
+          <div class="dv-kpi-sub">Gắn hoàn thiện thành công</div>
+        </div>
+        <div class="dv-kpi-icon" style="background: #dcfce7; color: #15803d;">
+          <i class="bi bi-patch-check-fill"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 MAIN TABS CHUẨN THEO ẢNH 1, 2, 3 CỦA DENTALSOFT -->
+    <div class="lab-tab-nav">
+      <button type="button" class="lab-tab-btn active">
+        <i class="bi bi-file-earmark-medical"></i>
+        <span>Phiếu đặt xưởng</span>
+      </button>
+      <button type="button" class="lab-tab-btn">
+        <i class="bi bi-building"></i>
+        <span>Nhà cung cấp</span>
+      </button>
+      <button type="button" class="lab-tab-btn">
+        <i class="bi bi-tags"></i>
+        <span>Bảng giá</span>
+      </button>
+    </div>
+
+    <!-- CARD CHỨA BẢNG VÀ TOOLBAR -->
+    <div class="lab-card">
+      <!-- TOOLBAR -->
+      <div class="lab-toolbar">
+        <div class="d-flex align-items-center gap-2" style="flex: 1 1 auto; min-width: 0;" class="d-flex align-items-center gap-2 flex-nowrap">
+          <div class="lab-search-wrap">
+            <i class="bi bi-search lab-search-icon"></i>
+            <input type="text" class="lab-search-input" placeholder="Tìm theo mã phiếu, khách hàng, xưởng, răng...">
+          </div>
+
+          <select class="filter-select" style="min-width: 175px;">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="SENT">Mới gửi</option>
+            <option value="PROCESSING">Đang chế tác / Chờ KQ</option>
+            <option value="DELIVERED">Đã nhận về phòng khám</option>
+            <option value="FITTED_SUCCESS">Đã lắp hoàn tất</option>
+            <option value="RETURNED">Đã trả lại / Bảo hành</option>
+          </select>
+
+          <select class="filter-select" style="min-width: 175px;">
+            <option value="">-- Tất cả xưởng đối tác --</option>
+            <option value="1">LB01 - Labo Nha khoa Sài Gòn</option>
+            <option value="2">LB02 - Labo Kim Cương</option>
+            <option value="3">LB03 - Labo Đăng Khoa</option>
+            <option value="4">LB-XN - Trung tâm Xét nghiệm Medlatec</option>
+          </select>
+        </div>
+
+        <button type="button" class="btn-create-order" onclick="openOrderModal()">
+          <i class="bi bi-plus-lg"></i>
+          <span>+ Thêm phiếu</span>
+        </button>
+      </div>
+
+      <!-- TABLE PHIẾU ĐẶT XƯỞNG CHUẨN TIÊU CHUẨN DENTALSOFT -->
+      <div class="table-scroll-container">
+        <table class="labo-table">
+          <thead>
+            <tr>
+              <th style="width: 45px;" class="text-center">TT</th>
+              <th style="width: 110px;">MÃ PHIẾU</th>
+              <th style="min-width: 180px;">KHÁCH HÀNG</th>
+              <th style="min-width: 230px;">DỊCH VỤ</th>
+              <th style="width: 80px;" class="text-center">VỊ TRÍ</th>
+              <th style="min-width: 190px;">XƯỞNG LABO</th>
+              <th style="width: 155px;">NGÀY GỬI / HẸN</th>
+              <th style="width: 130px;" class="text-end">THÀNH TIỀN</th>
+              <th style="width: 105px;" class="text-center">ẢNH KẾT QUẢ</th>
+              <th style="width: 135px;" class="text-center">TRẠNG THÁI</th>
+              <th style="width: 100px;" class="text-center">THAO TÁC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- ROW 1 -->
+            <tr>
+              <td class="text-center text-muted">1</td>
+              <td>
+                <strong class="text-primary" style="font-size: 13px;">LAB-0021</strong>
+                <div class="text-muted" style="font-size: 11px;">Làm mới</div>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark); display: block;">Nguyễn Văn An</strong>
+                <div class="text-muted" style="font-size: 11.5px;">DEMO0001 - 0988 234 567</div>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: var(--lab-text-dark); display: block;">Răng sứ Zirconia DDBio cao cấp</span>
+                <div style="display: flex; gap: 4px; margin-top: 3px;">
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Màu: A2</span>
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Mão đơn</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border" style="font-weight: 600;">R26</span>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark);">Labo Nha khoa Sài Gòn</strong>
+                <div class="text-muted" style="font-size: 11px;">Hotline: 02838001122</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #475569;">
+                  <i class="bi bi-send text-primary me-1"></i>21/10/2026
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #b45309; margin-top: 2px;">
+                  <i class="bi bi-clock-history text-warning me-1"></i>25/10/2026 09:00
+                </div>
+              </td>
+              <td class="text-end">
+                <strong style="color: var(--lab-text-dark); font-size: 13px;">1.500.000 đ</strong>
+                <div class="text-muted" style="font-size: 11px;">1 x 1.500.000 đ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-muted border" style="cursor: pointer;" title="Đã đính kèm ảnh giấy kết quả">
+                  <i class="bi bi-image text-primary me-1"></i>Xem ảnh
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge-custom status-processing">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #b45309;"></span>
+                  Đang chế tác
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="In phiếu"><i class="bi bi-printer"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-primary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="Sửa"><i class="bi bi-pencil"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- ROW 2 -->
+            <tr>
+              <td class="text-center text-muted">2</td>
+              <td>
+                <strong class="text-primary" style="font-size: 13px;">LAB-0024</strong>
+                <div class="text-muted" style="font-size: 11px;">Làm mới</div>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark); display: block;">Trần Văn Hùng</strong>
+                <div class="text-muted" style="font-size: 11.5px;">BN-8821 - 0912 889 123</div>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: var(--lab-text-dark); display: block;">Răng sứ Cercon HT chính hãng Đức</span>
+                <div style="display: flex; gap: 4px; margin-top: 3px;">
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Màu: BL2</span>
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Cầu 2 đơn vị</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border" style="font-weight: 600;">R21, R22</span>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark);">Labo Kim Cương</strong>
+                <div class="text-muted" style="font-size: 11px;">Hotline: 0243998877</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #475569;">
+                  <i class="bi bi-send text-primary me-1"></i>02/11/2026
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #0284c7; margin-top: 2px;">
+                  <i class="bi bi-clock-history text-primary me-1"></i>05/11/2026 14:30
+                </div>
+              </td>
+              <td class="text-end">
+                <strong style="color: var(--lab-text-dark); font-size: 13px;">4.400.000 đ</strong>
+                <div class="text-muted" style="font-size: 11px;">2 x 2.200.000 đ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-primary border" style="cursor: pointer;">
+                  <i class="bi bi-paperclip me-1"></i>STL 3D
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge-custom status-delivered">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #0284c7;"></span>
+                  Đã nhận về PK
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="In phiếu"><i class="bi bi-printer"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-primary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="Sửa"><i class="bi bi-pencil"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- ROW 3 -->
+            <tr>
+              <td class="text-center text-muted">3</td>
+              <td>
+                <strong class="text-primary" style="font-size: 13px;">LAB-0019</strong>
+                <div class="text-muted" style="font-size: 11px;">Làm mới</div>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark); display: block;">Lê Thị Mai</strong>
+                <div class="text-muted" style="font-size: 11.5px;">BN-8790 - 0973 456 789</div>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: var(--lab-text-dark); display: block;">Mặt dán sứ Veneer Emax Press</span>
+                <div style="display: flex; gap: 4px; margin-top: 3px;">
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Màu: BL1</span>
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">4 mặt dán</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border" style="font-weight: 600;">R11-R22</span>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark);">Labo Đăng Khoa</strong>
+                <div class="text-muted" style="font-size: 11px;">Hotline: 0283912345</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #475569;">
+                  <i class="bi bi-send text-primary me-1"></i>28/10/2026
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #15803d; margin-top: 2px;">
+                  <i class="bi bi-check2-circle text-success me-1"></i>01/11/2026 10:00
+                </div>
+              </td>
+              <td class="text-end">
+                <strong style="color: var(--lab-text-dark); font-size: 13px;">12.000.000 đ</strong>
+                <div class="text-muted" style="font-size: 11px;">4 x 3.000.000 đ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-success border" style="cursor: pointer;">
+                  <i class="bi bi-check-circle-fill me-1"></i>Đã có ảnh
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge-custom status-fitted">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>
+                  Đã lắp hoàn tất
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="In phiếu"><i class="bi bi-printer"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-primary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="Sửa"><i class="bi bi-pencil"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- ROW 4 -->
+            <tr>
+              <td class="text-center text-muted">4</td>
+              <td>
+                <strong class="text-primary" style="font-size: 13px;">LAB-0027</strong>
+                <div class="text-muted" style="font-size: 11px;">Làm mới</div>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark); display: block;">Phạm Thị Lan</strong>
+                <div class="text-muted" style="font-size: 11.5px;">BN-8902 - 0905 112 334</div>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: var(--lab-text-dark); display: block;">Răng sứ Lava Plus 3M USA (Implant)</span>
+                <div style="display: flex; gap: 4px; margin-top: 3px;">
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Màu: A1</span>
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Abutment Titan</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border" style="font-weight: 600;">R46</span>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark);">Labo Nha khoa Sài Gòn</strong>
+                <div class="text-muted" style="font-size: 11px;">Hotline: 02838001122</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #475569;">
+                  <i class="bi bi-send text-primary me-1"></i>03/11/2026
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 2px;">
+                  <i class="bi bi-clock me-1"></i>07/11/2026 16:00
+                </div>
+              </td>
+              <td class="text-end">
+                <strong style="color: var(--lab-text-dark); font-size: 13px;">3.500.000 đ</strong>
+                <div class="text-muted" style="font-size: 11px;">1 x 3.500.000 đ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-muted border">Chưa có ảnh</span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge-custom status-sent">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #64748b;"></span>
+                  Mới gửi
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="In phiếu"><i class="bi bi-printer"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-primary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="Sửa"><i class="bi bi-pencil"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- ROW 5 -->
+            <tr>
+              <td class="text-center text-muted">5</td>
+              <td>
+                <strong class="text-primary" style="font-size: 13px;">LAB-0015</strong>
+                <div class="text-muted" style="font-size: 11px;">Làm lại</div>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark); display: block;">Hoàng Minh Tuấn</strong>
+                <div class="text-muted" style="font-size: 11.5px;">BN-8420 - 0936 998 776</div>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: var(--lab-text-dark); display: block;">Máng chống nghiến / Máng tẩy trắng</span>
+                <div style="display: flex; gap: 4px; margin-top: 3px;">
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Trong suốt</span>
+                  <span class="badge bg-light text-secondary border" style="font-size: 10.5px;">Ép nhiệt 2mm</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border" style="font-weight: 600;">2 Hàm</span>
+              </td>
+              <td>
+                <strong style="color: var(--lab-text-dark);">Labo Kim Cương</strong>
+                <div class="text-muted" style="font-size: 11px;">Hotline: 0243998877</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #475569;">
+                  <i class="bi bi-send text-primary me-1"></i>25/10/2026
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #15803d; margin-top: 2px;">
+                  <i class="bi bi-check2-circle text-success me-1"></i>29/10/2026 09:30
+                </div>
+              </td>
+              <td class="text-end">
+                <strong style="color: var(--lab-text-dark); font-size: 13px;">400.000 đ</strong>
+                <div class="text-muted" style="font-size: 11px;">1 x 400.000 đ</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-success border">
+                  <i class="bi bi-check-circle-fill me-1"></i>Đã có ảnh
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge-custom status-fitted">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>
+                  Đã lắp hoàn tất
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="In phiếu"><i class="bi bi-printer"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-primary p-0" style="width: 28px; height: 28px; border-radius: 6px;" title="Sửa"><i class="bi bi-pencil"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- INTEGRATED TABLE FOOTER PAGINATION (.DV-PAGINATION-CONTAINER) -->
+      <div class="dv-pagination-container">
+        <div>
+          <span>Hiển thị <strong>1 - 5</strong> trên tổng số <strong>48</strong> đơn đặt xưởng</span>
+        </div>
+        <ul class="modern-pagination-nav">
+          <li><button class="pg-btn" disabled><i class="bi bi-chevron-left"></i></button></li>
+          <li><button class="pg-btn is-active">1</button></li>
+          <li><button class="pg-btn">2</button></li>
+          <li><button class="pg-btn">3</button></li>
+          <li><span class="pg-btn" style="border:none; cursor:default;">...</span></li>
+          <li><button class="pg-btn">10</button></li>
+          <li><button class="pg-btn"><i class="bi bi-chevron-right"></i></button></li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL 1: THÊM / SỬA PHIẾU ĐẶT XƯỞNG LABO (CHUẨN ẢNH 2 DENTALSOFT) -->
+  <div class="modal-backdrop-custom" id="mainLaboModal">
+    <div class="modal-box-custom">
+      <!-- HEADER -->
+      <div class="modal-header-custom">
+        <div>
+          <h5 class="fw-bold text-dark mb-0 fs-5">Thêm phiếu đặt xưởng</h5>
+          <p class="text-muted small mb-0 mt-0.5">Phiếu đặt xưởng labo &amp; gửi mẫu xét nghiệm</p>
+        </div>
+        <button type="button" class="btn-close" onclick="closeOrderModal()" aria-label="Close"></button>
+      </div>
+
+      <!-- BODY -->
+      <div class="modal-body-custom">
+        <!-- HÀNG 1: KHÁCH HÀNG, DỊCH VỤ, NHÀ CUNG CẤP -->
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label fw-semibold text-secondary small mb-1">
+              Khách hàng <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <option value="">Tìm KH theo tên, mã, SĐT...</option>
+              <option value="1" selected>Nguyễn Văn An (DEMO0001) - 0988 234 567</option>
+              <option value="2">Trần Văn Hùng (BN-8821) - 0912 889 123</option>
+              <option value="3">Lê Thị Mai (BN-8790) - 0973 456 789</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold text-secondary small mb-1">
+              Dịch vụ / Phục hình <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <option value="">- Chọn dịch vụ labo -</option>
+              <option value="1" selected>Răng sứ Zirconia DDBio (1.500.000 đ)</option>
+              <option value="2">Răng sứ Cercon HT (2.200.000 đ)</option>
+              <option value="3">Răng sứ Lava Plus 3M USA (3.500.000 đ)</option>
+              <option value="4">Mặt dán sứ Veneer Emax Press (3.000.000 đ)</option>
+              <option value="5">Máng chống nghiến / Máng tẩy (400.000 đ)</option>
+              <option value="6">Xét nghiệm đông máu PT/APTT/INR (350.000 đ)</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">
+              Nhà cung cấp <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <option value="">- Chọn NCC -</option>
+              <option value="1" selected>LB01 - Labo Nha khoa Sài Gòn</option>
+              <option value="2">LB02 - Labo Kim Cương</option>
+              <option value="3">LB03 - Labo Đăng Khoa</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- HÀNG 2: NGÀY GỬI, NGÀY THỬ/GIỜ, TRẠNG THÁI -->
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Ngày gửi</label>
+            <input type="date" class="form-control" value="2026-11-04" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-5">
+            <label class="form-label fw-semibold text-secondary small mb-1">Ngày thử / Hẹn trả xưởng</label>
+            <div class="input-group">
+              <input type="date" class="form-control" value="2026-11-08" style="height: 38px; border-radius: 8px 0 0 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <span class="input-group-text bg-white text-muted small" style="border-color: #cbd5e1;">Giờ</span>
+              <select class="form-select" style="max-width: 90px; height: 38px; border-radius: 0 8px 8px 0; font-size: 13.5px; border-color: #cbd5e1;">
+                <option value="09:00" selected>09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="14:00">14:00</option>
+                <option value="16:00">16:00</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold text-secondary small mb-1">Trạng thái</label>
+            <select class="form-select" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <option value="SENT">Mới gửi</option>
+              <option value="PROCESSING" selected>Đang chế tác / Chờ KQ</option>
+              <option value="DELIVERED">Đã nhận về phòng khám</option>
+              <option value="FITTED_SUCCESS">Đã lắp hoàn tất</option>
+              <option value="RETURNED">Làm lại / Bảo hành</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- HÀNG 3: SỐ LƯỢNG, ĐƠN GIÁ, THÀNH TIỀN, LOẠI PHIẾU -->
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Số lượng</label>
+            <input type="number" class="form-control text-center" value="1" min="1" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Đơn giá (đ)</label>
+            <input type="text" class="form-control text-end" value="1.500.000" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Thành tiền (đ)</label>
+            <input type="text" class="form-control text-end fw-bold" value="1.500.000 đ" readonly style="height: 38px; border-radius: 8px; background-color: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe; font-size: 14px;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Loại phiếu</label>
+            <select class="form-select" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+              <option value="NEW" selected>Làm mới</option>
+              <option value="REDO">Làm lại / Sửa chữa</option>
+              <option value="WARRANTY">Bảo hành</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- HÀNG 4: MÀU SỨ, CẦU, MÃO, VỊ TRÍ RĂNG -->
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Màu sứ</label>
+            <input type="text" class="form-control" value="A2 (VITA 3D Master)" placeholder="A1, A2, A3, Bleach..." style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Cầu (bridge)</label>
+            <input type="text" class="form-control" placeholder="VD: Cầu 3 răng R14-R16" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Mão (crown)</label>
+            <input type="text" class="form-control" value="Mão đơn R26" placeholder="VD: Mão sứ đơn R26" style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold text-secondary small mb-1">Vị trí răng (FDI)</label>
+            <input type="text" class="form-control" value="R26" placeholder="VD: R11, R21..." style="height: 38px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1;">
+          </div>
+        </div>
+
+        <!-- HÀNG 5: YÊU CẦU KỸ THUẬT -->
+        <div>
+          <label class="form-label fw-semibold text-secondary small mb-1">Yêu cầu kỹ thuật &amp; Ghi chú lâm sàng</label>
+          <textarea class="form-control" rows="2" placeholder="Yêu cầu kỹ thuật đường hoàn tất bờ vai, khoảng hở khớp cắn 0.05mm cho kỹ thuật viên..." style="border-radius: 8px; font-size: 13px; border-color: #cbd5e1;"></textarea>
+        </div>
+
+        <!-- HÀNG 6: ĐÍNH KÈM ẢNH GIẤY XÉT NGHIỆM / FILE 3D -->
+        <div class="p-3 rounded-3 border bg-light-subtle" style="border-color: #e2e8f0 !important;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold text-secondary small">
+              <i class="bi bi-paperclip text-primary me-1"></i>Ảnh giấy phiếu xưởng / File quét 3D STL:
+            </span>
+            <span class="text-muted" style="font-size: 11px;">Hỗ trợ JPG, PNG, STL đám mây</span>
+          </div>
+
+          <div class="row g-2 align-items-center">
+            <div class="col-md-9">
+              <input type="url" class="form-control form-control-sm mb-1.5" placeholder="Dán link ảnh (https://...) hoặc file scan STL" style="border-radius: 6px; border-color: #cbd5e1;">
+              <input type="file" class="form-control form-control-sm" style="border-radius: 6px; border-color: #cbd5e1;">
+            </div>
+            <div class="col-md-3 text-center">
+              <div class="text-muted small border rounded p-1 bg-white d-flex align-items-center justify-content-center" style="width: 80px; height: 58px; font-size: 11px; margin: auto;">
+                <i class="bi bi-file-earmark-image text-primary fs-5"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="modal-footer-custom">
+        <button type="button" class="btn btn-sm fw-medium px-3.5" onclick="closeOrderModal()" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; height: 36px;">
+          Đóng
+        </button>
+        <button type="button" class="btn btn-sm text-white fw-semibold px-4" onclick="closeOrderModal()" style="background-color: #0284c7; border-color: #0284c7; border-radius: 8px; height: 36px;">
+          <i class="bi bi-check2-circle me-1"></i> Lưu &amp; Gửi xưởng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openOrderModal() {
+      document.getElementById('mainLaboModal').style.display = 'flex';
+    }
+    function closeOrderModal() {
+      document.getElementById('mainLaboModal').style.display = 'none';
+    }
+    document.getElementById('btnOpenOrderModal').addEventListener('click', openOrderModal);
+  </script>
+
+</body>
+</html>

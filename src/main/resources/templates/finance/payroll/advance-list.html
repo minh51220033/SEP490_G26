@@ -5,7 +5,7 @@
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/expense-income.css}">
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('payroll_advances')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -213,17 +213,21 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="mb-3">
-                                        <label for="advStaffId" class="form-label fw-bold">Nhân viên đề xuất <span class="text-danger">*</span></label>
-                                        <select id="advStaffId" name="staffId" class="form-select" required>
-                                            <option value="">-- Chọn nhân viên --</option>
-                                            <option th:each="s : ${activeStaff}" th:value="${s.staffId}" th:text="${s.fullName} + ' (' + ${s.staffCode} + ')'"></option>
+                                        <label for="advBranchId" class="form-label fw-bold">Chi nhánh chi tạm ứng <span class="text-danger">*</span></label>
+                                        <select id="advBranchId" name="branchId" class="form-select" required>
+                                            <option value="" th:if="${branches != null and branches.size() > 1}">-- Chọn chi nhánh --</option>
+                                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                                    th:selected="${branches.size() == 1 or b.branchId == selectedBranchId}"></option>
                                         </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="advBranchId" class="form-label fw-bold">Chi nhánh chi tạm ứng <span class="text-danger">*</span></label>
-                                        <select id="advBranchId" name="branchId" class="form-select" required>
-                                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                                        <label for="advStaffId" class="form-label fw-bold">Nhân viên nhận tạm ứng <span class="text-danger">*</span></label>
+                                        <select id="advStaffId" name="staffId" class="form-select" required>
+                                            <option value="">-- Chọn chi nhánh trước --</option>
                                         </select>
+                                        <div id="advStaffLoading" class="form-text text-muted d-none">
+                                            <span class="spinner-border spinner-border-sm me-1"></span> Đang tải danh sách nhân viên theo chi nhánh...
+                                        </div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="advAmount" class="form-label fw-bold">Số tiền tạm ứng (VNĐ) <span class="text-danger">*</span></label>
@@ -258,6 +262,7 @@
                 <div class="modal fade" id="payAdvanceModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <form id="payAdvanceForm" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
                                     <h5 class="modal-title"><i class="bi bi-cash-stack me-2"></i>Chi tiền tạm ứng lương</h5>
@@ -293,6 +298,7 @@
                 <div class="modal fade" id="rejectAdvanceModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <form id="rejectAdvanceForm" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-content">
                                 <div class="modal-header bg-danger text-white">
                                     <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối đơn tạm ứng</h5>
@@ -335,14 +341,86 @@
                         document.getElementById('payAdvStaff').textContent = staff || '';
                         document.getElementById('payAdvAmount').textContent = amount || '';
                         document.getElementById('payAdvanceForm').action = '/payroll/advances/' + id + '/pay';
-                        new bootstrap.Modal(document.getElementById('payAdvanceModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('payAdvanceModal')).show();
                     }
 
                     function openRejectModal(id, code) {
                         document.getElementById('rejectAdvCode').textContent = code || '';
                         document.getElementById('rejectAdvanceForm').action = '/payroll/advances/' + id + '/reject';
-                        new bootstrap.Modal(document.getElementById('rejectAdvanceModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectAdvanceModal')).show();
                     }
+
+                    function loadStaffForBranch(branchId, selectedStaffId) {
+                        const staffSelect = document.getElementById('advStaffId');
+                        const loadingEl = document.getElementById('advStaffLoading');
+                        if (!staffSelect) return;
+                        if (!branchId) {
+                            staffSelect.innerHTML = '<option value="">-- Chọn chi nhánh trước --</option>';
+                            staffSelect.disabled = true;
+                            return;
+                        }
+                        staffSelect.disabled = true;
+                        if (loadingEl) loadingEl.classList.remove('d-none');
+
+                        fetch('/payroll/advances/staff?branchId=' + encodeURIComponent(branchId))
+                            .then(res => {
+                                if (!res.ok) throw new Error('Không thể tải nhân viên chi nhánh');
+                                return res.json();
+                            })
+                            .then(staffList => {
+                                staffSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
+                                if (Array.isArray(staffList) && staffList.length > 0) {
+                                    staffList.forEach(s => {
+                                        const opt = document.createElement('option');
+                                        opt.value = s.staffId;
+                                        opt.textContent = s.fullName + (s.staffCode ? ' (' + s.staffCode + ')' : '');
+                                        if (selectedStaffId && String(s.staffId) === String(selectedStaffId)) {
+                                            opt.selected = true;
+                                        }
+                                        staffSelect.appendChild(opt);
+                                    });
+                                } else {
+                                    const opt = document.createElement('option');
+                                    opt.value = '';
+                                    opt.textContent = '-- Chi nhánh chưa có nhân viên hoạt động --';
+                                    staffSelect.appendChild(opt);
+                                }
+                                staffSelect.disabled = false;
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                staffSelect.innerHTML = '<option value="">-- Không tải được nhân viên --</option>';
+                                staffSelect.disabled = false;
+                            })
+                            .finally(() => {
+                                if (loadingEl) loadingEl.classList.add('d-none');
+                            });
+                    }
+
+                    (function initAdvancePage() {
+                        const branchSelect = document.getElementById('advBranchId');
+                        if (branchSelect) {
+                            branchSelect.addEventListener('change', function() {
+                                loadStaffForBranch(this.value);
+                            });
+                        }
+
+                        const modalEl = document.getElementById('createAdvanceModal');
+                        if (modalEl) {
+                            modalEl.addEventListener('show.bs.modal', function() {
+                                const currentBranch = branchSelect ? branchSelect.value : '';
+                                if (currentBranch) {
+                                    loadStaffForBranch(currentBranch);
+                                } else {
+                                    const staffSelect = document.getElementById('advStaffId');
+                                    if (staffSelect) {
+                                        staffSelect.innerHTML = '<option value="">-- Chọn chi nhánh trước --</option>';
+                                        staffSelect.disabled = true;
+                                    }
+                                }
+                            });
+                        }
+                    })();
                 </script>
             </div>
         </main>

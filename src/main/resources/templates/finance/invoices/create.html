@@ -4,7 +4,7 @@
     <th:block th:replace="~{fragments/head :: head('Lập Hóa đơn mới - FT21')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
-<body class="app-body">
+<body class="app-body fin-brand-theme">
 <div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('invoices')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
@@ -163,6 +163,10 @@
                                         </td>
                                         <td>
                                             <strong th:text="${ps.service.serviceName}">Trám răng thẩm mỹ</strong>
+                                            <span th:if="${ps.service.isParaclinical or (ps.service.serviceType != null and (ps.service.serviceType.name() == 'XRAY' or ps.service.serviceType.name() == 'LAB'))}"
+                                                  class="badge bg-secondary-subtle text-secondary border small ms-1">
+                                                <i class="bi bi-camera me-1"></i>Cận lâm sàng
+                                            </span>
                                             <small class="d-block text-muted" th:if="${ps.doctor != null}"
                                                    th:text="'BS: ' + ${ps.doctor.fullName}"></small>
                                         </td>
@@ -234,7 +238,7 @@
 
                                         <!-- Nút đổi lại sang mua tại PK (dùng form an toàn ngoài invoiceForm) -->
                                         <button th:if="${pr.status == 'EXTERNAL_PURCHASE'}"
-                                                type="button" class="fin-btn fin-btn-sm fin-btn-outline text-primary border-primary"
+                                                type="button" class="fin-btn fin-btn-sm btn-outline-primary"
                                                 th:data-presc-id="${pr.prescriptionId}"
                                                 onclick="submitSwitchToClinic(this.getAttribute('data-presc-id'))"
                                                 title="Chuyển sang mua tại phòng khám">
@@ -455,6 +459,7 @@
                             <th>Bác sĩ lập</th>
                             <th>Ngày lập</th>
                             <th class="text-end">Chi phí dự kiến</th>
+                            <th class="text-center">Bàn giao Kế toán</th>
                             <th class="text-center">Trạng thái</th>
                         </tr>
                         </thead>
@@ -467,6 +472,14 @@
                             <td class="text-end fw-bold text-secondary"
                                 th:text="${#numbers.formatDecimal(plan.estimatedCost != null ? plan.estimatedCost : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">
                                 15.000.000 đ
+                            </td>
+                            <td class="text-center">
+                                <span th:if="${plan.sentToAccounting}" class="badge bg-success text-white">
+                                    <i class="bi bi-check2-all me-1"></i>Đã chuyển Kế toán
+                                </span>
+                                <span th:if="${!plan.sentToAccounting}" class="badge bg-light text-muted border">
+                                    Chưa chuyển
+                                </span>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border" th:text="${plan.status != null ? plan.status : 'DRAFT'}">ACTIVE</span>
@@ -695,9 +708,9 @@
     }
 
     async function triggerRecalculate() {
-        const profileId = document.getElementById('profileId').value;
-        const visitId = document.getElementById('visitId').value;
-        const prescInput = document.getElementById('prescriptionId');
+        const profileId = document.getElementById('hiddenProfileId').value;
+        const visitId = document.getElementById('hiddenVisitId').value;
+        const prescInput = document.getElementById('hiddenPrescriptionId');
         const prescriptionId = prescInput ? prescInput.value : null;
         const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
         const buyMedicine = chkBuyMed && chkBuyMed.checked;
@@ -711,11 +724,11 @@
         document.querySelectorAll('.item-row').forEach(row => {
             const cb = row.querySelector('.item-checkbox');
             if (cb && cb.checked) {
-                const psId = cb.value;
-                const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
-                const qty = parseFloat(row.querySelector('.item-quantity').value) || 1;
+                const psId = row.querySelector('.prop-performed-id').value;
+                const unitPrice = parseFloat(row.querySelector('.item-price').value) || 0;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
                 items.push({
-                    performedServiceId: parseInt(psId),
+                    performedId: parseInt(psId),
                     unitPrice: unitPrice,
                     quantity: qty
                 });
@@ -727,7 +740,7 @@
             document.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 if (cb && cb.checked) {
-                    const prescItemId = cb.value;
+                    const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
                     const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
                     medicineItems.push({
                         prescriptionItemId: parseInt(prescItemId),

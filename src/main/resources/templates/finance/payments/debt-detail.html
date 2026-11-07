@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Chi tiết công nợ bệnh nhân')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/cashier.css}">
+</head>
+<body class="app-body fin-brand-theme">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('debts')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
+        <main class="app-content finance-page cashier-page">
+            <div th:replace="~{fragments/cashier-tabs :: cashierTabs('debts')}"></div>
+            <div class="cashier-subhead">
+                <div>
+                    <h2 class="cashier-subhead-title">Chi tiết công nợ · <span th:text="${detail.fullName}"></span></h2>
+                    <p class="cashier-subhead-desc"><span th:text="${detail.patientCode}"></span> · Còn nợ
+                        <strong th:text="${#numbers.formatDecimal(detail.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'"></strong></p>
+                </div>
+                <a class="fin-btn fin-btn-outline" th:href="@{/payments/debts(branchId=${branchId})}">Danh sách công nợ</a>
+            </div>
+            <section class="fin-card">
+                <h3 class="h5">Lượt khám chờ lập hóa đơn</h3>
+                <p th:if="${detail.pendingVisits.isEmpty()}" class="text-muted mb-0">Bệnh nhân chưa có lượt khám chờ lập hóa đơn tại cơ sở đang xem.</p>
+                <div class="fin-table-wrapper" th:unless="${detail.pendingVisits.isEmpty()}">
+                    <table class="fin-table"><thead><tr><th>Mã lượt khám</th><th>Cơ sở</th><th>Bác sĩ</th><th>Dịch vụ</th><th>Đơn thuốc</th><th>Thao tác</th></tr></thead>
+                        <tbody><tr th:each="v : ${detail.pendingVisits}">
+                            <td th:text="${v.visitCode}"></td><td th:text="${v.branchName}"></td><td th:text="${v.doctorName}"></td>
+                            <td th:text="${v.unbilledServiceCount}"></td><td th:text="${v.unbilledPrescriptionCount}"></td>
+                            <td><a class="fin-btn fin-btn-primary fin-btn-sm" th:href="@{/invoices/create(visitId=${v.visitId},branchId=${v.branchId})}">Lập hóa đơn</a></td>
+                        </tr></tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="fin-card">
+                <h3 class="h5">Hóa đơn đã phát hành còn nợ</h3>
+                <p th:if="${detail.unpaidInvoices.isEmpty()}" class="text-muted mb-0">Bệnh nhân đã thanh toán hết hóa đơn tại cơ sở đang xem.</p>
+                <div class="fin-table-wrapper" th:unless="${detail.unpaidInvoices.isEmpty()}">
+                    <table class="fin-table"><thead><tr><th>Mã hóa đơn</th><th>Cơ sở</th><th>Tổng tiền</th><th>Đã trả</th><th>Còn nợ</th><th>Thao tác</th></tr></thead>
+                        <tbody><tr th:each="i : ${detail.unpaidInvoices}">
+                            <td><a th:href="@{/invoices/{id}(id=${i.invoiceId})}" th:text="${i.invoiceCode}"></a></td>
+                            <td th:text="${i.branchName}"></td>
+                            <td th:text="${#numbers.formatDecimal(i.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
+                            <td th:text="${#numbers.formatDecimal(i.paidAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
+                            <td th:text="${#numbers.formatDecimal(i.remainingDebt, 1, 'POINT', 0, 'COMMA')} + ' đ'"></td>
+                            <td><a class="fin-btn fin-btn-success fin-btn-sm" th:href="@{/payments/create(invoiceId=${i.invoiceId})}">Thu tiền</a></td>
+                        </tr></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

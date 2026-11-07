@@ -724,3 +724,62 @@ function updatePlanCountBadge() {
         badge.innerText = `${rows.length} kế hoạch`;
     }
 }
+
+/**
+ * Chuyển kế hoạch điều trị sang bộ phận Kế toán xử lý riêng
+ */
+function sendPlanToAccounting(planId, planCode) {
+    const code = planCode || 'KHDT';
+    if (!confirm(`Xác nhận chuyển Kế hoạch điều trị [${code}] sang bộ phận Kế toán để tư vấn & thu phí lộ trình?`)) {
+        return;
+    }
+
+    const btn = document.getElementById(`btn-send-plan-${planId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang chuyển...';
+    }
+
+    fetch(`/api/doctor/treatment-plans/${planId}/handover-accounting`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.message || 'Không thể chuyển kế hoạch sang Kế toán'); });
+        }
+        return res.json();
+    })
+    .then(result => {
+        if (typeof showToast === 'function') {
+            showToast(`✓ Đã chuyển kế hoạch điều trị [${code}] sang Kế toán thành công!`);
+        } else {
+            alert(`✓ Đã chuyển kế hoạch điều trị [${code}] sang Kế toán thành công!`);
+        }
+
+        // Cập nhật ô hiển thị chuyển Kế toán ở cột giá dự kiến
+        const box = document.getElementById(`plan-accounting-box-${planId}`);
+        if (box) {
+            box.innerHTML = `<span class="badge bg-success-subtle text-success border border-success d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 11px;" title="Đã chuyển Kế toán xử lý"><i class="bi bi-check2-all text-success"></i>Đã chuyển Kế toán</span>`;
+        }
+
+        // Cập nhật nút trong cột Thao tác
+        const actionBtn = document.getElementById(`btn-action-handover-${planId}`);
+        if (actionBtn) {
+            actionBtn.outerHTML = `<span class="badge bg-success-subtle text-success border border-success py-1.5 px-2" title="Đã chuyển Kế toán"><i class="bi bi-check2-all me-1"></i>Đã chuyển KT</span>`;
+        }
+    })
+    .catch(err => {
+        if (typeof showToast === 'function') {
+            showToast(err.message, true);
+        } else {
+            alert('Lỗi: ' + err.message);
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill text-primary"></i>Chuyển Kế toán';
+        }
+    });
+}

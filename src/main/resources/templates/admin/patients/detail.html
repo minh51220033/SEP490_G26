@@ -24,7 +24,22 @@
 
             <!-- Nút quay lại danh sách với khoảng cách chuẩn 14px (12-16px) tới thẻ thông tin -->
             <div style="margin-bottom: 14px !important;">
-                <a th:href="${recordBasePath}" class="fin-btn fin-btn-sm fin-btn-outline">
+                <nav aria-label="breadcrumb" class="mb-2" th:if="${param.from != null and param.from[0] == 'daily-visits'}">
+                    <ol class="breadcrumb mb-0 py-1.5 px-3 bg-light rounded-3 border" style="font-size: 13.5px;">
+                        <li class="breadcrumb-item">
+                            <a href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
+                                <i class="bi bi-calendar2-check-fill me-1"></i>Danh sách ca khám trong ngày
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">
+                            Hồ sơ bệnh nhân (<span th:text="${patient.fullName}">Bệnh nhân</span>)
+                        </li>
+                    </ol>
+                </nav>
+                <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="fin-btn fin-btn-sm fin-btn-outline fw-bold">
+                    <i class="bi bi-arrow-left"></i> Quay lại danh sách khám trong ngày
+                </a>
+                <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}" class="fin-btn fin-btn-sm fin-btn-outline">
                     <i class="bi bi-arrow-left"></i> Danh sách khách hàng
                 </a>
             </div>

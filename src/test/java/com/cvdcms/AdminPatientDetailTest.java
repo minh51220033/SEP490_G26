@@ -137,16 +137,21 @@ public class AdminPatientDetailTest {
             org.junit.jupiter.api.Assertions.assertTrue(html15.contains("id=\"" + tabId + "\""), "Phải có tab-pane: " + tabId);
         }
 
-        // 2. Kiểm tra hồ sơ không có kế hoạch điều trị (profileId 1)
-        var result1 = mockMvc.perform(get("/admin/patients/1")
+        // 2. Kiểm tra hồ sơ không có kế hoạch điều trị
+        Long noPlanProfileId = receptionPatientRepository.findAll().stream()
+                .map(ReceptionPatientRecord::getProfileId)
+                .filter(pid -> treatmentPlanRepository.findByProfileIdWithDetails(pid).isEmpty())
+                .findFirst().orElse(3L);
+
+        var result1 = mockMvc.perform(get("/admin/patients/" + noPlanProfileId)
                 .sessionAttr("loggedInUser", adminUser))
                 .andReturn();
         org.junit.jupiter.api.Assertions.assertEquals(200, result1.getResponse().getStatus());
         String html1 = result1.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
 
-        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("Chưa lập kế hoạch điều trị dài hạn."), "Hồ sơ 1 phải thông báo chưa lập kế hoạch");
-        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("</html>"), "Hồ sơ 1 phải render hoàn chỉnh thẻ </html>");
-        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("function switchTab(tabId)"), "Hồ sơ 1 phải có script switchTab");
+        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("Chưa lập kế hoạch điều trị dài hạn."), "Hồ sơ không có kế hoạch phải thông báo chưa lập kế hoạch");
+        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("</html>"), "Hồ sơ phải render hoàn chỉnh thẻ </html>");
+        org.junit.jupiter.api.Assertions.assertTrue(html1.contains("function switchTab(tabId)"), "Hồ sơ phải có script switchTab");
 
         for (String tabId : expectedTabs) {
             org.junit.jupiter.api.Assertions.assertTrue(html1.contains("id=\"tab-" + tabId + "-btn\""), "Phải có nút tab: tab-" + tabId + "-btn");
@@ -216,7 +221,7 @@ public class AdminPatientDetailTest {
         // Đọc tổng số thực tế từ DB để kiểm tra bộ đếm động theo đúng nguyên tắc không hardcode
         long totalPatients = receptionPatientRepository.findAll().size();
         int expectedPage0 = (int) Math.min(10, totalPatients);
-        int expectedPage1 = (int) Math.max(0, totalPatients - 10);
+        int expectedPage1 = (int) Math.min(10, Math.max(0, totalPatients - 10));
 
         // Kiểm tra chỉ báo hiển thị trang 0
         org.junit.jupiter.api.Assertions.assertTrue(contentPage0.contains("Hiển thị <b"), "Phải chứa cấu trúc đếm Hiển thị");

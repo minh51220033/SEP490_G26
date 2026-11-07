@@ -10,7 +10,9 @@ import java.util.List;
 public interface ParaclinicalOrderService {
     List<ParaclinicalOrderItemResponseDTO> getOrdersByVisit(Long visitId);
     ParaclinicalOrderItemResponseDTO createOrder(Long visitId, ParaclinicalOrderCreateDTO dto, Long currentDoctorId);
+    ParaclinicalOrderItemResponseDTO updateOrder(Long orderItemId, ParaclinicalOrderCreateDTO dto);
     ParaclinicalOrderItemResponseDTO updateStatus(Long orderItemId, ParaclinicalOrderItemStatus newStatus, String resultSummary);
     void deleteOrder(Long orderItemId);
     List<ServiceDTO> getParaclinicalServices();
+    void syncParaclinicalOrdersToPerformedServices(Long visitId);
 }

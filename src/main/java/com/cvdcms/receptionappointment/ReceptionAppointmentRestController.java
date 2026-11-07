@@ -99,4 +99,9 @@ public class ReceptionAppointmentRestController {
             @Valid @RequestBody ReceptionAppointmentService.CancelRequest request) {
         return appointments.cancel(session, id, request);
     }
+    @PostMapping("/{id}/quick-status")
+    public ReceptionAppointmentService.AppointmentView quickStatus(HttpSession session, @PathVariable Long id,
+            @RequestBody ReceptionAppointmentService.QuickStatusRequest request) {
+        return appointments.quickStatus(session, id, request);
+    }
 }

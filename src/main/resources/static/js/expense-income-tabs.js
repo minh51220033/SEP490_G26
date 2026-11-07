@@ -131,6 +131,12 @@
                 document.title = doc.title;
             }
 
+            // Dọn dẹp modal hoặc backdrop còn sót lại từ tab trước
+            document.querySelectorAll('.modal-backdrop').forEach(bd => bd.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+
             // Hoán đổi nội dung vùng hiển thị
             contentContainer.innerHTML = newContent.innerHTML;
             contentContainer.classList.remove('is-loading');

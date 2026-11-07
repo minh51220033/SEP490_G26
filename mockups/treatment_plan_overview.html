@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kế hoạch & Lộ trình điều trị (FT15) - DentalSoft</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Font Inter chuẩn dự án -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --df-primary: #0284c7;
+            --df-primary-dark: #0369a1;
+            --df-border: #e2e8f0;
+            --df-border-dark: #cbd5e1;
+            --df-bg-page: #f8fafc;
+            --df-bar-bg: #f1f5f9;
+            --df-text-dark: #1e293b;
+            --df-text-secondary: #475569;
+            --df-text-muted: #64748b;
+            --df-dark-header: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--df-bg-page);
+            color: var(--df-text-dark);
+            margin: 0;
+            padding: 0;
+            font-size: 13.5px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 1. TOPBAR & HEADER BỆNH NHÂN ĐỒNG BỘ */
+        .df-unified-header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .df-topbar-wrapper {
+            width: 100%; max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .df-unified-top-bar {
+            padding: 10px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            font-size: 13px;
+        }
+
+        .df-brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-right: 18px;
+            padding-right: 18px;
+            border-right: 1px solid var(--df-border);
+        }
+
+        .df-brand-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--df-primary);
+            color: #ffffff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .df-brand-text {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--df-dark-header);
+            letter-spacing: -0.2px;
+        }
+
+        .df-brand-text span {
+            color: var(--df-primary);
+        }
+
+        .df-avatar-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .df-subnav {
+            display: flex;
+            gap: 22px;
+            padding: 0 24px;
+            background: #ffffff;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--df-border);
+        }
+
+        .df-subnav-item {
+            padding: 11px 4px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--df-text-muted);
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .df-subnav-item:hover {
+            color: var(--df-primary);
+        }
+
+        .df-subnav-item.active {
+            color: var(--df-primary);
+            border-bottom-color: var(--df-primary);
+            font-weight: 700;
+        }
+
+        /* WORKSPACE CONTAINER CĂN GIỮA MAX 1240PX */
+        .df-workspace-container {
+            width: 100%; max-width: 100%;
+            margin: 0 auto;
+            padding: 20px 24px 60px;
+        }
+
+        /* 2. CARD KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ (FT15) */
+        .df-plan-card {
+            background: #ffffff;
+            border: 1px solid var(--df-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .df-plan-header {
+            padding: 16px 22px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+        }
+
+        .df-plan-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--df-dark-header);
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .df-treatment-count-badge {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid var(--df-border);
+        }
+
+        .df-btn-add-plan {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 16px;
+            background: #0284c7;
+            color: #ffffff !important;
+            border: 1px solid #0284c7;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
+            cursor: pointer;
+        }
+
+        .df-btn-add-plan:hover {
+            background: #0369a1;
+            border-color: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.32);
+        }
+
+        .df-btn-white-plan {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: #ffffff;
+            color: #0284c7;
+            border: 1.5px solid #0284c7;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .df-btn-white-plan:hover {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
+        }
+
+        /* BẢNG DANH SÁCH CÁC KẾ HOẠCH */
+        .df-treatment-table-wrapper {
+            width: 100%;
+            border-top: 1px solid var(--df-border);
+            overflow-x: auto;
+        }
+
+        .df-treatment-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            margin-bottom: 0;
+        }
+
+        .df-treatment-table thead tr {
+            background: var(--df-dark-header);
+            color: #ffffff;
+        }
+
+        .df-treatment-table th {
+            font-weight: 700;
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            padding: 12px 14px;
+            border-right: 1px solid #1e293b;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .df-treatment-table th:last-child {
+            border-right: none;
+        }
+
+        .df-treatment-table td {
+            padding: 14px 14px;
+            border-bottom: 1px solid var(--df-border);
+            border-right: 1px solid #f1f5f9;
+            vertical-align: middle;
+            color: var(--df-text-dark);
+            background: #ffffff;
+        }
+
+        .df-treatment-table td:last-child {
+            border-right: none;
+        }
+
+        .df-plan-tr-hover:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        .df-btn-plan-detail {
+            height: 30px;
+            padding: 0 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: #ffffff;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            white-space: nowrap;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .df-btn-plan-detail:hover {
+            background: #f0f9ff;
+            border-color: #0284c7;
+            color: #0284c7 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
+        }
+
+        .df-btn-roadmap {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff !important;
+            border: none;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.22);
+            white-space: nowrap;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .df-btn-roadmap:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #0c4a6e 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.32);
+        }
+
+        .df-btn-plan-delete {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid #fecdd3;
+            background: #ffffff;
+            color: #e11d48;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12.5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .df-btn-plan-delete:hover {
+            background: #fee2e2;
+            border-color: #f87171;
+            color: #be123c;
+            transform: translateY(-1px);
+        }
+
+        /* 3. KHỐI LỘ TRÌNH ĐIỀU TRỊ CHI TIẾT (COURSE ACCORDION CARD) */
+        .df-course-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .df-course-card:hover {
+            border-color: #94a3b8;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+        }
+
+        .df-course-header {
+            padding: 13px 18px;
+            cursor: pointer;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            user-select: none;
+            transition: background 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .df-course-header:hover {
+            background: #f1f5f9;
+        }
+
+        .df-course-body {
+            padding: 18px;
+            background: #f8fafc;
+            display: block;
+        }
+
+        .df-inline-stage-card {
+            background: #ffffff;
+            border: 1px solid var(--df-border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: border-color 0.15s ease;
+        }
+
+        .df-inline-stage-card.is-completed {
+            border-left: 4px solid #10b981;
+        }
+
+        .df-inline-stage-card.is-in-progress {
+            border-left: 4px solid #0284c7;
+            background-color: #ffffff;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.06);
+        }
+
+        .df-inline-stage-card.is-pending {
+            border-left: 4px solid #94a3b8;
+            background-color: #fafafa;
+        }
+
+        .df-table-clean-steps {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .df-table-clean-steps th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 8px 12px;
+            border: 1px solid var(--df-border);
+        }
+
+        .df-table-clean-steps td {
+            padding: 10px 12px;
+            border: 1px solid var(--df-border);
+            vertical-align: middle;
+            background: #ffffff;
+        }
+    
+        /* ========================================================================= */
+        /* QUY TẮC 1: BỎ GIỚI HẠN CHIỀU RỘNG 1240PX — CHUYỂN SANG FULL-WIDTH 100%   */
+        /* ========================================================================= */
+        .df-workspace-container,
+        .df-workspace-wrapper,
+        .workspace-container,
+        .standalone-wrapper,
+        .main-container,
+        .page-container,
+        .container-xl {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 20px 28px !important;
+            box-sizing: border-box !important;
+        }
+
+        .df-topbar-wrapper,
+        .df-header-inner {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .df-unified-top-bar {
+            padding: 10px 28px !important;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            font-size: 13.5px;
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 16px !important;
+            width: 100% !important;
+        }
+
+        .df-patient-summary-bar {
+            padding: 14px 28px !important;
+            background: #ffffff;
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 16px !important;
+            width: 100% !important;
+        }
+
+        .df-subnav {
+            display: flex;
+            gap: 22px;
+            padding: 0 28px !important;
+            background: #ffffff;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--df-border);
+            width: 100% !important;
+        }
+
+        /* ========================================================================= */
+        /* QUY TẮC 2: THANH TIÊU ĐỀ TRANG (PAGE HEADER) NẰM TRÊN 1 HÀNG NGANG DUY NHẤT */
+        /* ========================================================================= */
+        .df-plan-header {
+            padding: 16px 24px !important;
+            background: #ffffff;
+            border-bottom: 1px solid var(--df-border);
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 16px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .df-plan-header-left {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            flex-wrap: nowrap !important;
+            min-width: 0 !important;
+        }
+
+        .df-plan-header-right {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+            flex-shrink: 0 !important;
+        }
+
+        .df-plan-title {
+            white-space: nowrap !important;
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--df-dark-header);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========================================================================= */
+        /* QUY TẮC 3: THANH TÌM KIẾM & BỘ LỌC (FILTER TOOLBAR) TRÊN 1 HÀNG NGANG DUY NHẤT */
+        /* ========================================================================= */
+        .df-filter-toolbar,
+        .filter-toolbar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 10px !important;
+            padding: 12px 24px !important;
+            background: #f8fafc !important;
+            border-bottom: 1px solid var(--df-border) !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .df-search-box,
+        .filter-search-box {
+            flex: 1 1 240px !important;
+            min-width: 200px !important;
+            position: relative !important;
+        }
+
+        .df-search-box input {
+            padding-left: 36px !important;
+            height: 36px !important;
+            border-radius: 8px !important;
+            border: 1px solid var(--df-border-dark) !important;
+            font-size: 13px !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            transition: all 0.15s ease;
+        }
+
+        .df-search-box input:focus {
+            outline: none !important;
+            border-color: var(--df-primary) !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        }
+
+        .df-search-box i {
+            position: absolute !important;
+            left: 12px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            color: #64748b !important;
+            font-size: 14px !important;
+            pointer-events: none !important;
+        }
+
+        .df-filter-controls {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-shrink: 0 !important;
+            flex-wrap: nowrap !important;
+        }
+
+        .df-filter-controls .btn {
+            white-space: nowrap !important;
+        }
+
+        /* ========================================================================= */
+        /* QUY TẮC 4: BẢNG DỮ LIỆU & LƯỚI CHI TIẾT GIÃN FULL WIDTH 100%                */
+        /* ========================================================================= */
+        .df-plan-card {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .df-treatment-table-wrapper {
+            width: 100% !important;
+            border-top: 1px solid var(--df-border);
+            overflow-x: auto !important;
+        }
+
+        .df-treatment-table {
+            width: 100% !important;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            margin-bottom: 0;
+        }
+
+        .df-treatment-table th {
+            font-weight: 700;
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            padding: 12px 14px;
+            border-right: 1px solid #1e293b;
+            vertical-align: middle;
+            white-space: nowrap !important;
+        }
+
+        .df-treatment-table th.col-expand,
+        .df-treatment-table td.col-expand {
+            white-space: normal !important;
+            width: auto !important;
+        }
+
+        .df-treatment-table td {
+            padding: 14px 14px;
+            border-bottom: 1px solid var(--df-border);
+            border-right: 1px solid #f1f5f9;
+            vertical-align: middle;
+            color: var(--df-text-dark);
+            background: #ffffff;
+            white-space: nowrap !important;
+        }
+
+        #planRoadmapStandaloneArea {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .df-course-card {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .df-course-header {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        .df-inline-stage-card {
+            width: 100% !important;
+        }
+
+        .df-stage-header-row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        .df-table-clean-steps {
+            width: 100% !important;
+        }
+
+        .df-table-clean-steps th,
+        .df-table-clean-steps td {
+            white-space: nowrap !important;
+        }
+
+        .df-table-clean-steps th.col-expand,
+        .df-table-clean-steps td.col-expand {
+            white-space: normal !important;
+            width: auto !important;
+        }
+    
+    </style>
+</head>
+<body>
+
+    <!-- 1. BREADCRUMB & UNIFIED PATIENT BAR (KHÔNG SIDEBAR) -->
+    <header class="df-unified-header">
+        <div class="df-topbar-wrapper">
+            <div class="df-unified-top-bar d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <!-- Logo Nha khoa DentalSoft -->
+                    <a href="javascript:void(0)" class="df-brand-badge">
+                        <div class="df-brand-icon">
+                            <i class="bi bi-shield-plus"></i>
+                        </div>
+                        <div class="df-brand-text">Dental<span>Soft</span></div>
+                    </a>
+
+                    <div>
+                        <a href="javascript:void(0)" class="text-primary text-decoration-none fw-semibold">DS Khám Trong Ngày</a>
+                        <span class="mx-1 text-muted">&gt;</span>
+                        <span class="text-dark fw-bold">BN-0008</span>
+                        <span class="mx-1 text-muted">&gt;</span>
+                        <span class="text-secondary">Khám &amp; Điều trị</span>
+                        <span class="mx-1 text-muted">&gt;</span>
+                        <span class="text-dark fw-bold">Kế hoạch &amp; Lộ trình (FT15)</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-secondary border">Hồ sơ bệnh án điện tử</span>
+                </div>
+            </div>
+
+            <!-- Khối tóm tắt thông tin bệnh nhân -->
+            <div class="df-patient-summary-bar">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="df-avatar-circle">NA</div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <strong class="fs-6 text-dark">Nguyễn Văn An</strong>
+                            <span class="badge bg-light text-dark border">Mã: BN-0008</span>
+                            <span class="badge bg-light text-secondary border">31 tuổi • Nam</span>
+                            <span class="badge bg-light text-primary border">BS. CKII Nguyễn Văn Hùng</span>
+                            <span class="badge bg-info-subtle text-info border">BHYT: CN3-01-2026</span>
+                        </div>
+                        <div class="text-muted small mt-1">
+                            SĐT: <strong class="text-dark">0901 234 567</strong> • 
+                            Ca khám: <strong class="text-dark">VIS-001 (30/10/2026)</strong> • 
+                            Cơ sở: <strong class="text-dark">Nha khoa SmileCare Central</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end d-none d-md-block">
+                    <div class="text-muted small">Chẩn đoán ca khám:</div>
+                    <div class="fw-bold text-dark small">K02.0 (Sâu men răng) • K04.0 (Viêm tủy) • K01.1 (Răng ngầm)</div>
+                </div>
+            </div>
+
+            <!-- Thanh Tabs phân hệ phòng khám -->
+            <nav class="df-subnav">
+                <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-person"></i> Thông tin bệnh nhân</a>
+                <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-heart-pulse"></i> Khám lâm sàng &amp; ICD-10</a>
+                <a href="javascript:void(0)" class="df-subnav-item active"><i class="bi bi-diagram-3-fill"></i> Kế hoạch &amp; Lộ trình điều trị</a>
+                <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-capsule"></i> Đơn thuốc &amp; Dặn dò</a>
+                <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-calendar2-check"></i> Hẹn tái khám</a>
+                <a href="javascript:void(0)" class="df-subnav-item"><i class="bi bi-receipt"></i> Bàn giao thanh toán</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 2. VÙNG LÀM VIỆC CHÍNH (MAX 1240PX) -->
+    <main class="df-workspace-container">
+
+        <!-- ===================================================================== -->
+        <!-- CARD PHÂN HỆ: KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ (FT15)                   -->
+        <!-- ===================================================================== -->
+        <section class="df-plan-card">
+            
+            <!-- HEADER PHÂN HỆ -->
+            <div class="df-plan-header">
+                <div class="df-plan-header-left">
+                    <h3 class="df-plan-title mb-0">
+                        <i class="bi bi-diagram-3-fill text-info"></i>
+                        <span>Kế hoạch &amp; Lộ trình điều trị (FT15)</span>
+                    </h3>
+                    <span class="df-treatment-count-badge" id="planCountBadge">1 kế hoạch</span>
+                    <span class="badge bg-info-subtle text-primary border border-primary-subtle px-2.5 py-1.5 rounded-pill fw-semibold small text-nowrap"
+                          title="Bác sĩ lập kế hoạch kèm giá dự kiến — Bộ phận Kế toán sẽ tiếp nhận để tư vấn tài chính và thu tiền">
+                        <i class="bi bi-send-check-fill me-1"></i>Giá dự kiến tự động đồng bộ sang Kế toán xử lý
+                    </span>
+                </div>
+
+                <div class="df-plan-header-right">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 d-inline-flex align-items-center gap-1.5 text-nowrap" onclick="location.reload()" title="Tải lại danh sách">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Làm mới</span>
+                    </button>
+                    <!-- NÚT LẬP KẾ HOẠCH MỚI -> CHUYỂN HƯỚNG SANG TRANG CHUYÊN DỤNG TREATMENT-PLAN-CREATE -->
+                    <a href="treatment_plan_create.html" class="df-btn-add-plan text-nowrap">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>+ Lập kế hoạch</span>
+                    </a>
+
+                    <!-- NÚT HẸN TÁI KHÁM -->
+                    <button type="button" class="df-btn-white-plan text-nowrap" title="Hẹn ngày tái khám sau điều trị">
+                        <i class="bi bi-calendar2-plus-fill"></i>
+                        <span>Hẹn tái khám</span>
+                        <span class="badge bg-primary text-white rounded-pill ms-1">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ghi chú nghiệp vụ Kế hoạch điều trị -->
+            <div class="alert alert-info py-2.5 px-3 mb-0 small d-flex align-items-center rounded-0 border-start-0 border-end-0 border-top-0" style="width: 100%;">
+                <i class="bi bi-info-circle-fill text-info me-2 fs-6 flex-shrink-0"></i>
+                <div>
+                    <strong>Lưu ý chuyên môn:</strong> Kế hoạch điều trị hiển thị <em>Tổng chi phí dự kiến (Tạm tính)</em> để bệnh nhân tham khảo lộ trình.
+                    <strong>Kế hoạch không tự phát sinh hóa đơn hoặc công nợ.</strong>
+                    Chỉ các dịch vụ thực tế được bác sĩ xác nhận hoàn thành mới đủ điều kiện để Kế toán lập hóa đơn dịch vụ.
+                </div>
+            </div>
+
+            <!-- BẢNG DANH SÁCH CÁC KẾ HOẠCH ĐIỀU TRỊ CỦA BỆNH NHÂN -->
+            <div class="df-treatment-table-wrapper">
+                <table class="df-treatment-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 105px;">MÃ KHĐT</th>
+                            <th class="col-expand">TÊN PHÁC ĐỒ / KẾ HOẠCH ĐIỀU TRỊ</th>
+                            <th style="width: 185px;">THỜI GIAN THỰC HIỆN</th>
+                            <th style="width: 160px;">TIẾN ĐỘ CÁC GIAI ĐOẠN</th>
+                            <th style="width: 165px;" class="text-end">GIÁ DỰ KIẾN (TẠM TÍNH)</th>
+                            <th style="width: 135px;" class="text-center">TRẠNG THÁI</th>
+                            <th style="width: 210px;" class="text-center">THAO TÁC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="df-plan-tr-hover">
+                            <td>
+                                <span class="badge bg-light text-primary border fw-bold font-monospace" style="font-size: 12px; letter-spacing: 0.3px;">
+                                    KHDT1001
+                                </span>
+                            </td>
+                            <td class="col-expand">
+                                <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.45;">
+                                    Kế hoạch điều trị: [CĐ #1] Trám răng sâu Mặt O &amp; [CĐ #2] Điều trị tủy nội nha &amp; [CĐ #3] Nhổ răng khôn Piezotome
+                                </div>
+                                <div class="text-muted small mt-0.5">
+                                    Bác sĩ chủ trì: <strong>BS. CKII Nguyễn Văn Hùng</strong> • Khởi tạo: 30/10/2026
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-dark fw-semibold" style="white-space: nowrap;">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                    <span>30/10/2026</span>
+                                    <span class="text-muted"> &rarr; </span>
+                                    <span>06/11/2026</span>
+                                </div>
+                                <span class="badge bg-light text-secondary border mt-1" style="font-size: 11px;">1 tuần (5 giai đoạn)</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center justify-content-between mb-1 small">
+                                    <span class="fw-semibold text-secondary">2/5 giai đoạn</span>
+                                    <strong class="text-primary">40%</strong>
+                                </div>
+                                <div class="progress" style="height: 6px; background-color: #e2e8f0;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 40%;" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-primary fs-6 d-block">
+                                    4.850.000 đ
+                                </strong>
+                                <span class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary px-2.5 py-1.5 rounded-pill fw-bold">
+                                    Đang điều trị
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex align-items-center justify-content-center gap-1.5 flex-nowrap">
+                                    <a href="treatment_plan_create.html" class="df-btn-plan-detail" title="Xem chi tiết &amp; cập nhật kế hoạch này">
+                                        <i class="bi bi-pencil-square"></i>
+                                        <span>Chi tiết</span>
+                                    </a>
+                                    <button type="button" class="df-btn-roadmap" title="Xem &amp; cập nhật lộ trình các bước lâm sàng (SCR-15.3)" onclick="togglePlanInlineRoadmap()">
+                                        <i class="bi bi-diagram-3-fill"></i>
+                                        <span>Lộ trình</span>
+                                        <i class="bi bi-chevron-up" style="font-size: 11px;" id="chevron-main-plan"></i>
+                                    </button>
+                                    <button type="button" class="df-btn-plan-delete" title="Xóa kế hoạch này">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- KHỐI LỘ TRÌNH CHI TIẾT TỪNG BƯỚC (EXPANDED ROADMAP STANDALONE AREA)  -->
+        <!-- ===================================================================== -->
+        <section id="planRoadmapStandaloneArea" style="width: 100%;">
+            
+            <!-- THANH ĐIỀU KHIỂN GẬP/MỞ TẤT CẢ QUÁ TRÌNH -->
+            <div class="d-flex align-items-center justify-content-between mb-3 px-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-dark text-white px-2.5 py-1 rounded">KHDT1001</span>
+                    <strong class="text-dark fs-6">Lộ trình chi tiết theo từng Quá trình điều trị:</strong>
+                    <span class="text-muted small">(Phân chia theo từng bệnh lý lâm sàng)</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3 rounded-pill" onclick="toggleAllCourses(true)">
+                        <i class="bi bi-arrows-expand me-1"></i> Mở tất cả quá trình
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3 rounded-pill" onclick="toggleAllCourses(false)">
+                        <i class="bi bi-arrows-collapse me-1"></i> Thu gọn tất cả
+                    </button>
+                </div>
+            </div>
+
+            <!-- QUÁ TRÌNH 1: SÂU MEN RĂNG (R-41, R-42) - ĐÃ HOÀN THÀNH -->
+            <div class="df-course-card" id="course-card-1">
+                <div class="df-course-header" onclick="toggleCourse('course-1')">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <i class="bi bi-chevron-up df-course-chevron" id="chevron-course-1"></i>
+                        <span class="badge bg-dark rounded-pill px-2.5 py-1 fw-bold">CĐ #1</span>
+                        <strong class="text-dark" style="font-size: 14px;">Quá trình điều trị: Sâu men răng (R-41, R-42 • Mặt O)</strong>
+                        <span class="badge bg-light text-secondary border font-monospace">K02.0</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border">1/1 giai đoạn</span>
+                        <span class="badge bg-success text-white fw-bold shadow-xs px-2.5 py-1 rounded-pill">
+                            <i class="bi bi-check-all me-1"></i>Đã hoàn thành
+                        </span>
+                    </div>
+                </div>
+
+                <div class="df-course-body" id="course-1-body">
+                    <!-- Giai đoạn 1 của CĐ 1 -->
+                    <div class="df-inline-stage-card is-completed">
+                        <div class="df-stage-header-row pb-2.5 mb-2.5 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn 1</span>
+                                <strong class="text-dark" style="font-size: 14.5px;">Sửa soạn xoang sâu Mặt O &amp; Trám phục hồi Composite</strong>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success">
+                                    <i class="bi bi-clock-history me-1"></i><span>Ngày làm: 30/10/2026</span>
+                                </span>
+                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                    <i class="bi bi-calendar-check text-primary me-1"></i>
+                                    <span>Dự kiến xong: </span><strong>30/10/2026</strong>
+                                </span>
+                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs bg-success-subtle text-success border border-success fw-bold">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Hoàn thành giai đoạn
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive bg-white rounded-3 border">
+                            <table class="df-table-clean-steps mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px;" class="text-center">#</th>
+                                        <th class="col-expand">Tên bước thực hiện / Quy trình thủ thuật</th>
+                                        <th style="width: 140px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 95px;" class="text-center">Số lượng</th>
+                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 140px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center text-muted">1</td>
+                                        <td class="col-expand">
+                                            <strong class="text-dark">Làm sạch lỗ sâu Mặt O, soi mòn Acid &amp; Trám Composite</strong>
+                                            <div class="text-muted small">Chiếu đèn quang trùng hợp 20s lớp Composite 3M Z350 XT</div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary-subtle text-primary border me-1">R-41</span>
+                                            <span class="badge bg-primary-subtle text-primary border">R-42</span>
+                                        </td>
+                                        <td class="text-center fw-bold">2 răng</td>
+                                        <td class="text-center small">
+                                            <span class="badge bg-success-subtle text-success border">
+                                                <i class="bi bi-check-circle-fill me-1"></i>30/10/2026
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill fw-bold">
+                                                <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 12px;">
+                                                <i class="bi bi-arrow-counterclockwise text-primary fw-bold"></i> Hoàn tác
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUÁ TRÌNH 2: VIÊM TỦY RĂNG (R-36) - ĐANG ĐIỀU TRỊ -->
+            <div class="df-course-card" id="course-card-2">
+                <div class="df-course-header" onclick="toggleCourse('course-2')">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <i class="bi bi-chevron-up df-course-chevron" id="chevron-course-2"></i>
+                        <span class="badge bg-dark rounded-pill px-2.5 py-1 fw-bold">CĐ #2</span>
+                        <strong class="text-dark" style="font-size: 14px;">Quá trình điều trị: Viêm tủy răng (R-36 • Mặt O)</strong>
+                        <span class="badge bg-light text-secondary border font-monospace">K04.0</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border">1/2 giai đoạn</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary fw-bold px-2.5 py-1 rounded-pill">
+                            <i class="bi bi-arrow-repeat me-1"></i>Đang điều trị
+                        </span>
+                    </div>
+                </div>
+
+                <div class="df-course-body" id="course-2-body">
+                    <!-- Giai đoạn 1: Mở tủy (Đã xong) -->
+                    <div class="df-inline-stage-card is-completed">
+                        <div class="df-stage-header-row pb-2.5 mb-2.5 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn 1</span>
+                                <strong class="text-dark" style="font-size: 14.5px;">Mở tủy, tạo hình ống tủy &amp; Đặt thuốc sát khuẩn</strong>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success">
+                                    <i class="bi bi-clock-history me-1"></i><span>Ngày làm: 30/10/2026</span>
+                                </span>
+                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs bg-success-subtle text-success border border-success fw-bold">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Hoàn thành giai đoạn
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive bg-white rounded-3 border">
+                            <table class="df-table-clean-steps mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px;" class="text-center">#</th>
+                                        <th class="col-expand">Tên bước thực hiện / Quy trình thủ thuật</th>
+                                        <th style="width: 140px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 95px;" class="text-center">Số lượng</th>
+                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 140px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center text-muted">1</td>
+                                        <td class="col-expand">
+                                            <strong class="text-dark">Gây tê, đặt đê cao su, mở tủy Mặt O &amp; lấy tủy buồng</strong>
+                                            <div class="text-muted small">Bơm rửa NaOCl 3%, đặt thuốc sát trùng buồng tủy Ca(OH)2</div>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary border">R-36</span></td>
+                                        <td class="text-center fw-bold">1 răng</td>
+                                        <td class="text-center small">
+                                            <span class="badge bg-success-subtle text-success border">
+                                                <i class="bi bi-check-circle-fill me-1"></i>30/10/2026
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success-subtle text-success border px-2.5 py-1.5 rounded-pill fw-bold">Đã thực hiện</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 12px;">
+                                                <i class="bi bi-arrow-counterclockwise text-primary"></i> Hoàn tác
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Giai đoạn 2: Hàn kín ống tủy (Chưa làm / Chuẩn bị làm) -->
+                    <div class="df-inline-stage-card is-in-progress">
+                        <div class="df-stage-header-row pb-2.5 mb-2.5 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn 2</span>
+                                <strong class="text-dark" style="font-size: 14.5px;">Hàn kín ống tủy vĩnh viễn &amp; Trám phục hồi thân răng</strong>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border">
+                                    <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
+                                </span>
+                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                    <i class="bi bi-calendar-check text-primary me-1"></i>
+                                    <span>Hẹn ngày: </span><strong>03/11/2026 (+4 ngày)</strong>
+                                </span>
+                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs bg-primary-subtle text-primary border border-primary fw-bold">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Đang chờ tái khám
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive bg-white rounded-3 border">
+                            <table class="df-table-clean-steps mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px;" class="text-center">#</th>
+                                        <th class="col-expand">Tên bước thực hiện / Quy trình thủ thuật</th>
+                                        <th style="width: 140px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 95px;" class="text-center">Số lượng</th>
+                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 140px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center text-muted">1</td>
+                                        <td class="col-expand">
+                                            <strong class="text-dark">Hàn kín ống tủy bằng Gutta-Percha nguội &amp; Sealer bioceramic</strong>
+                                            <div class="text-muted small">Chụp X-quang kiểm tra độ khít sát chóp răng R-36 trước khi trám vĩnh viễn</div>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary border">R-36</span></td>
+                                        <td class="text-center fw-bold">1 răng</td>
+                                        <td class="text-center text-muted">---</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-semibold">Chưa làm</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                                    style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
+                                                <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                                <span>Làm trong ca này</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUÁ TRÌNH 3: RĂNG KHÔN MỌC LỆCH (R-38) - CHƯA THỰC HIỆN -->
+            <div class="df-course-card" id="course-card-3">
+                <div class="df-course-header" onclick="toggleCourse('course-3')">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <i class="bi bi-chevron-up df-course-chevron" id="chevron-course-3"></i>
+                        <span class="badge bg-dark rounded-pill px-2.5 py-1 fw-bold">CĐ #3</span>
+                        <strong class="text-dark" style="font-size: 14px;">Quá trình điều trị: Răng mọc lệch / ngầm (R-38)</strong>
+                        <span class="badge bg-light text-secondary border font-monospace">K01.1</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border">0/2 giai đoạn</span>
+                        <span class="badge bg-light text-secondary border fw-bold px-2.5 py-1 rounded-pill">
+                            <i class="bi bi-clock me-1"></i>Chưa thực hiện
+                        </span>
+                    </div>
+                </div>
+
+                <div class="df-course-body" id="course-3-body">
+                    <!-- Giai đoạn 1: Phẫu thuật nhổ răng khôn -->
+                    <div class="df-inline-stage-card is-pending">
+                        <div class="df-stage-header-row pb-2.5 mb-2.5 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn 1</span>
+                                <strong class="text-dark" style="font-size: 14.5px;">Chụp phim Panorama &amp; Phẫu thuật nhổ răng khôn máy Piezotome</strong>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border">
+                                    <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
+                                </span>
+                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                    <i class="bi bi-calendar-check text-primary me-1"></i>
+                                    <span>Hẹn ngày: </span><strong>06/11/2026</strong>
+                                </span>
+                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs bg-light text-secondary border">
+                                    Chưa thực hiện
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive bg-white rounded-3 border">
+                            <table class="df-table-clean-steps mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px;" class="text-center">#</th>
+                                        <th class="col-expand">Tên bước thực hiện / Quy trình thủ thuật</th>
+                                        <th style="width: 140px;" class="text-center">Vị trí răng</th>
+                                        <th style="width: 95px;" class="text-center">Số lượng</th>
+                                        <th style="width: 165px;" class="text-center">Ngày làm (now)</th>
+                                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                                        <th style="width: 140px;" class="text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center text-muted">1</td>
+                                        <td class="col-expand">
+                                            <strong class="text-dark">Gây tê gai Spix &amp; Phẫu thuật chia cắt răng máy Piezotome</strong>
+                                            <div class="text-muted small">Cắt xương tối thiểu, bảo tồn mô nướu và khâu kín mũi rời chỉ Vicryl 4.0</div>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary border">R-38</span></td>
+                                        <td class="text-center fw-bold">1 răng</td>
+                                        <td class="text-center text-muted">---</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-semibold">Chưa làm</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                                    style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
+                                                <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                                <span>Làm trong ca này</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Bootstrap 5.3 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+        function setPlanFilter(status, btn) {
+            document.querySelectorAll('.df-filter-controls .btn-group .btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const row = document.querySelector('.df-plan-tr-hover');
+            if (!row) return;
+            if (status === 'COMPLETED') {
+                row.style.display = 'none';
+            } else {
+                row.style.display = '';
+            }
+        }
+
+        function filterPlans(keyword) {
+            const row = document.querySelector('.df-plan-tr-hover');
+            if (!row) return;
+            const text = row.innerText.toLowerCase();
+            if (!keyword || text.includes(keyword.trim().toLowerCase())) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    
+    </script>
+
+    <!-- Script điều khiển lộ trình -->
+    <script>
+        function togglePlanInlineRoadmap() {
+            const area = document.getElementById('planRoadmapStandaloneArea');
+            const chev = document.getElementById('chevron-main-plan');
+            if (!area) return;
+            if (area.style.display === 'none') {
+                area.style.display = 'block';
+                if (chev) {
+                    chev.classList.remove('bi-chevron-down');
+                    chev.classList.add('bi-chevron-up');
+                }
+            } else {
+                area.style.display = 'none';
+                if (chev) {
+                    chev.classList.remove('bi-chevron-up');
+                    chev.classList.add('bi-chevron-down');
+                }
+            }
+        }
+
+        function toggleCourse(courseId) {
+            const body = document.getElementById(`${courseId}-body`);
+            const chev = document.getElementById(`chevron-${courseId}`);
+            if (!body) return;
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                if (chev) {
+                    chev.classList.remove('bi-chevron-down');
+                    chev.classList.add('bi-chevron-up');
+                }
+            } else {
+                body.style.display = 'none';
+                if (chev) {
+                    chev.classList.remove('bi-chevron-up');
+                    chev.classList.add('bi-chevron-down');
+                }
+            }
+        }
+
+        function toggleAllCourses(expand) {
+            ['course-1', 'course-2', 'course-3'].forEach(cid => {
+                const body = document.getElementById(`${cid}-body`);
+                const chev = document.getElementById(`chevron-${cid}`);
+                if (!body) return;
+                if (expand) {
+                    body.style.display = 'block';
+                    if (chev) {
+                        chev.classList.remove('bi-chevron-down');
+                        chev.classList.add('bi-chevron-up');
+                    }
+                } else {
+                    body.style.display = 'none';
+                    if (chev) {
+                        chev.classList.remove('bi-chevron-up');
+                        chev.classList.add('bi-chevron-down');
+                    }
+                }
+            });
+        }
+    
+        function setPlanFilter(status, btn) {
+            document.querySelectorAll('.df-filter-controls .btn-group .btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const row = document.querySelector('.df-plan-tr-hover');
+            if (!row) return;
+            if (status === 'COMPLETED') {
+                row.style.display = 'none';
+            } else {
+                row.style.display = '';
+            }
+        }
+
+        function filterPlans(keyword) {
+            const row = document.querySelector('.df-plan-tr-hover');
+            if (!row) return;
+            const text = row.innerText.toLowerCase();
+            if (!keyword || text.includes(keyword.trim().toLowerCase())) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    
+    </script>
+</body>
+</html>

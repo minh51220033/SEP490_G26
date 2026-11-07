@@ -16,30 +16,32 @@
                     Đội ngũ bác sĩ chuyên khoa Cường Việt Dental thăm khám trực tiếp, chụp phim chẩn đoán
                     và xây dựng phác đồ điều trị minh bạch cho từng khách hàng.
                 </p>
-                <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50" th:if="${primaryBranch != null}">
-                    <span th:if="${primaryBranch.phone != null and !#strings.isEmpty(primaryBranch.phone)}">
+                <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50"
+                     th:with="phone=${effectiveContactPhone != null and !#strings.isEmpty(effectiveContactPhone) ? effectiveContactPhone : '0987654321'},
+                              activeBr=${currentPortalBranch != null ? currentPortalBranch : primaryBranch}">
+                    <span>
                         <i class="bi bi-telephone-fill text-white me-1"></i>
-                        Hotline: <strong class="text-white" th:text="${primaryBranch.phone}">0900 000 000</strong>
+                        Hotline: <strong class="text-white" th:text="${phone}">0987654321</strong>
                     </span>
-                    <span th:if="${primaryBranch.openingTime != null and primaryBranch.closingTime != null}">
+                    <span th:if="${activeBr != null and activeBr.openingTime != null and activeBr.closingTime != null}">
                         <i class="bi bi-clock-fill text-white me-1"></i>
                         Giờ làm việc:
                         <strong class="text-white"
-                                th:text="${#temporals.format(primaryBranch.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(primaryBranch.closingTime, 'HH:mm')}">08:00 - 20:00</strong>
+                                th:text="${#temporals.format(activeBr.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(activeBr.closingTime, 'HH:mm')}">08:00 - 20:00</strong>
                     </span>
-                    <span th:if="${primaryBranch.address != null and !#strings.isEmpty(primaryBranch.address)}">
+                    <span th:if="${activeBr != null and activeBr.address != null and !#strings.isEmpty(activeBr.address)}">
                         <i class="bi bi-geo-alt-fill text-white me-1"></i>
-                        <span class="text-white" th:text="${primaryBranch.address}">Địa chỉ cơ sở</span>
+                        <span class="text-white" th:text="${activeBr.address}">Địa chỉ cơ sở</span>
                     </span>
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a th:if="${session.loggedInUser == null}"
-                   th:href="@{/login}" class="btn-brand btn-brand--lg">
+                   th:href="@{/login}" data-open-booking class="btn-brand btn-brand--lg">
                     <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám ngay
                 </a>
                 <a th:if="${session.loggedInUser != null and isPatientUser}"
-                   th:href="@{/portal/appointments/new}" class="btn-brand btn-brand--lg">
+                   th:href="@{/portal/appointments/new}" data-open-booking class="btn-brand btn-brand--lg">
                     <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám ngay
                 </a>
                 <a th:if="${session.loggedInUser != null and !isPatientUser}"
@@ -67,26 +69,28 @@
         <div class="site-footer__top">
             <!-- NHÓM 1: VỀ PHÒNG KHÁM -->
             <div class="site-footer__about">
-                <a th:replace="~{fragments/logo :: logo('dark')}"></a>
+                <a th:replace="~{fragments/logo :: logo('light')}"></a>
                 <p class="site-footer__desc">
                     Nha khoa Cường Việt (CV-DCMS) — Hệ thống phòng khám Răng Hàm Mặt ứng dụng hồ sơ bệnh án điện tử,
                     chẩn đoán hình ảnh kỹ thuật số và quy trình điều trị chuẩn y khoa.
                 </p>
-                <ul class="site-footer__contact" th:if="${primaryBranch != null}">
-                    <li th:if="${primaryBranch.phone != null and !#strings.isEmpty(primaryBranch.phone)}">
+                <ul class="site-footer__contact"
+                    th:with="phone=${effectiveContactPhone != null and !#strings.isEmpty(effectiveContactPhone) ? effectiveContactPhone : '0987654321'},
+                             activeBr=${currentPortalBranch != null ? currentPortalBranch : primaryBranch}">
+                    <li>
                         <i class="bi bi-telephone-fill" aria-hidden="true"></i>
-                        <a th:href="'tel:' + ${primaryBranch.phone}" th:text="${primaryBranch.phone}">0900 000 000</a>
+                        <a th:href="'tel:' + ${phone}" th:text="${phone}">0987654321</a>
                         <span class="text-muted-light"
-                              th:if="${primaryBranch.openingTime != null and primaryBranch.closingTime != null}"
-                              th:text="'· ' + ${#temporals.format(primaryBranch.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(primaryBranch.closingTime, 'HH:mm')}">· 08:00 - 20:00</span>
+                              th:if="${activeBr != null and activeBr.openingTime != null and activeBr.closingTime != null}"
+                              th:text="'· ' + ${#temporals.format(activeBr.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(activeBr.closingTime, 'HH:mm')}">· 08:00 - 20:00</span>
                     </li>
-                    <li th:if="${primaryBranch.email != null and !#strings.isEmpty(primaryBranch.email)}">
+                    <li th:if="${activeBr != null and activeBr.email != null and !#strings.isEmpty(activeBr.email)}">
                         <i class="bi bi-envelope-fill" aria-hidden="true"></i>
-                        <a th:href="'mailto:' + ${primaryBranch.email}" th:text="${primaryBranch.email}">contact@cuongvietdental.vn</a>
+                        <a th:href="'mailto:' + ${activeBr.email}" th:text="${activeBr.email}">contact@cuongvietdental.vn</a>
                     </li>
-                    <li th:if="${primaryBranch.address != null and !#strings.isEmpty(primaryBranch.address)}">
+                    <li th:if="${activeBr != null and activeBr.address != null and !#strings.isEmpty(activeBr.address)}">
                         <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
-                        <span th:text="${primaryBranch.address}">Địa chỉ phòng khám</span>
+                        <span th:text="${activeBr.address}">Địa chỉ phòng khám</span>
                     </li>
                 </ul>
                 <div class="mt-3 d-flex flex-wrap gap-3 small">
@@ -138,7 +142,7 @@
                 <h3 class="site-footer__heading">Hệ thống cơ sở</h3>
                 <ul th:if="${publicBranches != null and !#lists.isEmpty(publicBranches)}">
                     <li th:each="br, stat : ${publicBranches}" th:if="${stat.index < 3}" class="mb-2">
-                        <a th:href="@{/contact}" class="fw-semibold text-dark d-block" th:text="${br.branchName}">Tên cơ sở</a>
+                        <a th:href="@{/contact}" class="fw-semibold text-white d-block" th:text="${br.branchName}">Tên cơ sở</a>
                         <span class="d-block small text-muted" th:text="${br.address}">Địa chỉ</span>
                         <span class="d-block small text-primary" th:if="${br.phone != null and !#strings.isEmpty(br.phone)}">
                             <i class="bi bi-telephone me-1"></i><span th:text="${br.phone}">SĐT</span>

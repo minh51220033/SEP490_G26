@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Tra cứu Thẻ thành viên & Điểm tích lũy (SCR-19.2)')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Tra cứu Thẻ thành viên & Lịch sử điểm')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <style>
         .vip-card-box {
@@ -63,7 +63,7 @@
             <!-- Page Header -->
             <div class="fin-header mb-4">
                 <div>
-                    <h1><i class="bi bi-credit-card-2-front text-primary"></i> Tra cứu Thẻ thành viên Bệnh nhân (SCR-19.2)</h1>
+                    <h1><i class="bi bi-credit-card-2-front text-primary"></i> Tra cứu Thẻ thành viên Bệnh nhân</h1>
                     <p class="text-muted">Tra cứu thẻ hội viên theo mã bệnh nhân, họ tên hoặc số điện thoại; kiểm tra điểm tích lũy và quyền lợi ưu đãi.</p>
                 </div>
             </div>
@@ -152,7 +152,7 @@
                         <!-- Nút chi tiết thẻ -->
                         <div class="p-3 pt-0 border-top mt-2">
                             <a th:href="@{/reception/memberships/{id}(id=${card.profileId})}" class="fin-btn fin-btn-primary w-100 text-center mt-2">
-                                <i class="bi bi-clock-history me-1"></i> Xem lịch sử điểm &amp; Quyền lợi (SCR-19.3)
+                                <i class="bi bi-clock-history me-1"></i> Xem lịch sử điểm &amp; Quyền lợi
                             </a>
                         </div>
                     </div>

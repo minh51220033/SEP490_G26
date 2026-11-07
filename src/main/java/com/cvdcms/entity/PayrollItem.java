@@ -58,6 +58,39 @@ public class PayrollItem {
     @Column(name = "total_commission", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalCommission = BigDecimal.ZERO;
 
+    @Column(name = "gross_salary", nullable = false, precision = 15, scale = 2)
+    private BigDecimal grossSalary = BigDecimal.ZERO;
+
+    @Column(name = "non_taxable_income", nullable = false, precision = 15, scale = 2)
+    private BigDecimal nonTaxableIncome = BigDecimal.ZERO;
+
+    @Column(name = "insurance_employee_deduction", nullable = false, precision = 15, scale = 2)
+    private BigDecimal insuranceEmployeeDeduction = BigDecimal.ZERO;
+
+    @Column(name = "insurance_employer_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal insuranceEmployerAmount = BigDecimal.ZERO;
+
+    @Column(name = "personal_deduction_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal personalDeductionAmount = BigDecimal.ZERO;
+
+    @Column(name = "dependent_deduction_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal dependentDeductionAmount = BigDecimal.ZERO;
+
+    @Column(name = "taxable_income", nullable = false, precision = 15, scale = 2)
+    private BigDecimal taxableIncome = BigDecimal.ZERO;
+
+    @Column(name = "assessable_income", nullable = false, precision = 15, scale = 2)
+    private BigDecimal assessableIncome = BigDecimal.ZERO;
+
+    @Column(name = "pit_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal pitAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_policy_code", length = 50)
+    private String taxPolicyCode;
+
+    @Column(name = "tax_calculation_detail", length = 1000)
+    private String taxCalculationDetail;
+
     @Column(name = "deduction_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal deductionAmount = BigDecimal.ZERO;
 
