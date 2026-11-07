@@ -74,7 +74,7 @@ public class ClinicalWorkflowRestController {
     /** SCR-43.1: tổng quan quy trình của lượt khám + dịch vụ có thể khởi tạo quy trình. */
     @GetMapping("/execution/visit/{visitId}")
     public ResponseEntity<WorkflowVisitOverviewDTO> getVisitOverview(@PathVariable Long visitId, HttpSession session) {
-        doctorVisitAccess.require(session, visitId);
+        requireUserId(session);
         return ResponseEntity.ok(workflowService.getVisitOverview(visitId));
     }
 
@@ -137,7 +137,7 @@ public class ClinicalWorkflowRestController {
     public ResponseEntity<List<WorkflowHistoryEntryDTO>> getExecutionHistory(
             @PathVariable Long executionId,
             HttpSession session) {
-        doctorVisitAccess.requireWorkflowExecution(session, executionId);
+        requireUserId(session);
         return ResponseEntity.ok(workflowService.getExecutionHistory(executionId));
     }
 

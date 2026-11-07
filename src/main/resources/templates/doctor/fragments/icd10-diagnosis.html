@@ -44,7 +44,7 @@
                     </div>
 
                     <!-- THANH CHỌN NHANH VÙNG RĂNG -->
-                    <div class="quick-actions-bar">
+                    <div class="quick-actions-bar" th:unless="${isReadOnlyView == true}">
                         <span class="text-muted small fw-semibold" style="font-size: 11.5px;">Chọn nhanh:</span>
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('ALL')">Toàn hàm (32 răng)</button>
                         <button type="button" class="quick-btn" onclick="selectQuickTeeth('UPPER')">Hàm trên (18-28)</button>
@@ -225,7 +225,7 @@
             </div>
 
             <!-- KHỐI FORM GHI NHẬN CHẨN ĐOÁN & BỆNH LÝ THƯỜNG GẶP -->
-            <div class="mb-4">
+            <div class="mb-4" id="icd10DiagnosisInputBlock" th:unless="${isReadOnlyView == true}">
                 <div class="row g-4">
 
                     <!-- CỘT TRÁI: DANH SÁCH BỆNH LÝ THƯỜNG GẶP (1 CHẠM ĐIỀN TỰ ĐỘNG) -->
