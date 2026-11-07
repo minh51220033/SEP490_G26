@@ -46,15 +46,25 @@ INSERT IGNORE INTO icd10_diseases (icd10_code, disease_name_vi, disease_name_en,
     ('K01.1', 'Răng ngầm / Răng khôn mọc lệch', 'Impacted teeth', 1, 1),
     ('K05.1', 'Viêm nướu mạn tính', 'Chronic gingivitis', 1, 1);
 
-INSERT IGNORE INTO users (user_id, username, password, email, phone_number, is_active, status, branch_id, created_date) VALUES
-    (601, 'bs_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs604@dentalclinic.com', '0906040001', 1, 'ACTIVE', 1, NOW()),
-    (602, 'lt_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'lt604@dentalclinic.com', '0906040002', 1, 'ACTIVE', 1, NOW()),
-    (604, 'bn_604',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn604@dentalclinic.com', '0916040604', 1, 'ACTIVE', 1, NOW()),
-    (605, 'bn_605',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn605@dentalclinic.com', '0916050605', 1, 'ACTIVE', 1, NOW());
+INSERT IGNORE INTO users (user_id, username, password, email, phone_number, is_active, status, user_type, branch_id, created_date) VALUES
+    (601, 'bs_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs604@dentalclinic.com', '0906040001', 1, 'ACTIVE', 'STAFF', 1, NOW()),
+    (602, 'lt_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'lt604@dentalclinic.com', '0906040002', 1, 'ACTIVE', 'STAFF', 1, NOW()),
+    (604, 'bn_604',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn604@dentalclinic.com', '0916040604', 1, 'ACTIVE', 'PATIENT', 1, NOW()),
+    (605, 'bn_605',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn605@dentalclinic.com', '0916050605', 1, 'ACTIVE', 'PATIENT', 1, NOW());
+
+INSERT IGNORE INTO user_roles (user_id, role_id) VALUES
+    (601, 2),
+    (602, 3),
+    (604, 5),
+    (605, 5);
 
 INSERT IGNORE INTO staff_profiles (staff_id, user_id, staff_code, full_name, gender, dob, phone_number, email, department, position_title, specialty, base_salary, allowance_amount, insurance_salary, status, created_at) VALUES
     (601, 601, 'BS-604', 'BS.CKI Trần Minh Hoàng', 'MALE',   '1985-04-15', '0906040001', 'bs604@dentalclinic.com', 'Lâm sàng', 'Bác sĩ Răng-Hàm-Mặt', 'Phẫu thuật trong miệng & Nội nha', 25000000.00, 3000000.00, 20000000.00, 'ACTIVE', NOW()),
     (602, 602, 'LT-604', 'Nguyễn Thị Mai Anh',     'FEMALE', '1996-08-20', '0906040002', 'lt604@dentalclinic.com', 'Lễ tân & CSKH', 'Chuyên viên Chăm sóc khách hàng', 'CSKH Nha khoa', 10000000.00, 1500000.00, 10000000.00, 'ACTIVE', NOW());
+
+INSERT IGNORE INTO staff_branch_assignments (assignment_id, staff_id, branch_id, role_id, is_primary, start_date, status, created_at) VALUES
+    (601, 601, 1, 2, 1, CURDATE(), 'ACTIVE', NOW()),
+    (602, 602, 1, 3, 1, CURDATE(), 'ACTIVE', NOW());
 
 INSERT IGNORE INTO patient_profiles (profile_id, user_id, patient_code, full_name, dob, gender, phone_number, address, has_allergies, allergy_details, has_underlying_disease, underlying_disease_details, medical_history_completed, preferred_branch_id, is_default, deposit_balance, status, created_at) VALUES
     (604, 604, 'BN-CC-604', 'Phạm Quốc Bảo',        '1992-06-12', 'Nam', '0916040604', '128 Nguyễn Thị Minh Khai, Quận 1, TP.HCM', 0, 'Không dị ứng thuốc', 0, 'Không có bệnh nền', 1, 1, 1, 0.00, 'ACTIVE', NOW()),
@@ -135,3 +145,67 @@ INSERT IGNORE INTO customer_care_interactions (interaction_id, task_id, profile_
     (6051, 605, 605, 602, 'ZALO', 'CONNECTED',
      'Chị Phương Thảo nhắn Zalo hỏi về cảm giác tức nhẹ răng R36 và tiền sử dị ứng thuốc. Đã chuyển Bác sĩ Trần Minh Hoàng cho ý kiến chuyên môn.',
      NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR));
+
+-- =========================================================================
+-- MOCK DATA CHO PHÂN HỆ KHÁM BỆNH & ĐIỀU PHỐI GHẾ KHÁM (SCR-18.1 / DOCTOR VISITS)
+-- =========================================================================
+
+INSERT IGNORE INTO rooms (room_id, branch_id, room_code, room_name, room_type, status) VALUES
+    (1, 1, 'P101', 'Phòng Khám Tổng quát 1', 'EXAM', 'ACTIVE'),
+    (2, 1, 'P102', 'Phòng Điều trị & Tiểu phẫu', 'TREATMENT', 'ACTIVE'),
+    (3, 1, 'P103', 'Phòng Chỉnh nha & Thẩm mỹ', 'TREATMENT', 'ACTIVE'),
+    (4, 1, 'P104', 'Phòng Chụp X-Quang Kỹ thuật số', 'XRAY', 'ACTIVE'),
+    (5, 2, 'P201', 'Phòng Khám Đa khoa RHM', 'EXAM', 'ACTIVE'),
+    (6, 2, 'P202', 'Phòng Điều trị Kỹ thuật cao', 'TREATMENT', 'ACTIVE'),
+    (7, 3, 'P301', 'Phòng Khám & Tư vấn Bác sĩ', 'EXAM', 'ACTIVE'),
+    (8, 3, 'P302', 'Phòng Điều trị Lâm sàng', 'TREATMENT', 'ACTIVE'),
+    (9, 4, 'P401', 'Phòng Khám & Điều trị Đống Đa', 'TREATMENT', 'ACTIVE');
+
+INSERT IGNORE INTO dental_chairs (chair_id, branch_id, room_id, chair_code, chair_name, status) VALUES
+    (1, 1, 1, 'G01', 'Ghế khám Tổng quát 01', 'IN_USE'),
+    (2, 1, 3, 'G02', 'Ghế Chỉnh nha 02', 'IN_USE'),
+    (3, 1, 2, 'G03', 'Ghế Cấy ghép Implant 03', 'AVAILABLE'),
+    (4, 1, 2, 'G04', 'Ghế Tiểu phẫu Răng khôn 04', 'AVAILABLE'),
+    (5, 1, 1, 'G05', 'Ghế Nội nha Chữa tủy 05', 'CLEANING'),
+    (6, 1, 1, 'G06', 'Ghế Lấy cao răng & Thẩm mỹ 06', 'AVAILABLE'),
+    (7, 2, 5, 'G201', 'Ghế khám CN2 - 01', 'AVAILABLE'),
+    (8, 2, 6, 'G202', 'Ghế điều trị CN2 - 02', 'IN_USE'),
+    (9, 3, 7, 'G301', 'Ghế khám Quận 1 - 01', 'AVAILABLE'),
+    (10, 3, 8, 'G302', 'Ghế điều trị Quận 1 - 02', 'IN_USE'),
+    (11, 4, 9, 'G401', 'Ghế khám Đống Đa - 01', 'AVAILABLE');
+
+INSERT IGNORE INTO patient_profiles (profile_id, patient_code, full_name, dob, gender, phone_number, address, medical_history_completed, preferred_branch_id, is_default, deposit_balance, status, created_at, updated_at) VALUES
+    (101, 'BN000101', 'Nguyễn Văn An', '1992-05-14', 'Nam', '0912345678', 'Số 15 Cầu Giấy, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (102, 'BN000102', 'Trần Thị Bích Ngọc', '1998-08-20', 'Nữ', '0987654321', 'Số 42 Tây Sơn, Đống Đa, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (103, 'BN000103', 'Lê Hoàng Long', '1981-11-03', 'Nam', '0905123456', 'P402 Chung cư D’Capitale, Trần Duy Hưng', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (104, 'BN000104', 'Phạm Thu Hương', '2005-03-15', 'Nữ', '0934567890', 'Số 88 Nguyễn Trãi, Thanh Xuân, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (105, 'BN000105', 'Đỗ Minh Quân', '2016-09-25', 'Nam', '0978112233', 'Số 12 Láng Hạ, Ba Đình, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (106, 'BN000106', 'Hoàng Mai Lan', '1971-06-10', 'Nữ', '0918223344', 'Số 29 Phố Huế, Hoàn Kiếm, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (107, 'BN000107', 'Vũ Đức Thịnh', '1986-12-01', 'Nam', '0945671234', 'KĐT Vinhomes Smart City, Nam Từ Liêm', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (108, 'BN000108', 'Bùi Khánh Linh', '1996-04-18', 'Nữ', '0966778899', 'Số 102 Hoàng Hoa Thám, Ba Đình, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (109, 'BN000109', 'Trịnh Quốc Bảo', '1962-07-22', 'Nam', '0903456781', 'Số 54 Xã Đàn, Đống Đa, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (110, 'BN000110', 'Ngô Phương Thảo', '2001-10-09', 'Nữ', '0982345612', 'Số 77 Chùa Bộc, Đống Đa, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (111, 'BN000111', 'Đinh Tiến Dũng', '1995-01-30', 'Nam', '0971239845', 'Số 35 Đội Cấn, Ba Đình, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (112, 'BN000112', 'Phan Cẩm Tú', '1990-08-14', 'Nữ', '0915678901', 'KĐT Times City, Hai Bà Trưng, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (113, 'BN000113', 'Nguyễn Hải Đăng', '1983-02-28', 'Nam', '0936112233', 'Số 68 Bà Triệu, Hoàn Kiếm, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (114, 'BN000114', 'Chu Thị Kim Ngân', '1974-12-19', 'Nữ', '0904889977', 'Số 19 Quán Thánh, Ba Đình, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW()),
+    (115, 'BN000115', 'Dương Anh Tuấn', '1999-07-05', 'Nam', '0989334455', 'Số 8 Kim Mã, Ba Đình, Hà Nội', 1, 1, 1, 0.00, 'ACTIVE', NOW(), NOW());
+
+INSERT IGNORE INTO visits (visit_id, visit_code, profile_id, branch_id, visit_type, check_in_at, initial_symptoms, primary_doctor_id, room_id, chair_id, status, completed_at, notes, created_at) VALUES
+    (101, 'VIS26110601', 101, 1, 'APPOINTMENT', '2026-11-06 08:15:00', 'Lấy cao răng định kỳ, trám kẽ răng cửa R11 mẻ nhẹ', 1, 1, 1, 'COMPLETED', '2026-11-06 09:00:00', 'Bệnh nhân hài lòng, hẹn tái khám sau 6 tháng', '2026-11-06 08:15:00'),
+    (102, 'VIS26110602', 103, 1, 'APPOINTMENT', '2026-11-06 08:45:00', 'Cắt chỉ sau cấy ghép Implant R46, kiểm tra tích hợp xương hàm', 26, 2, 3, 'COMPLETED', '2026-11-06 09:20:00', 'Vết thương lành tốt, mô nướu hồng hào', '2026-11-06 08:45:00'),
+    (103, 'VIS26110603', 104, 1, 'APPOINTMENT', '2026-11-06 09:15:00', 'Tái khám chỉnh nha tháng thứ 6: Thay thun, tăng lực cung môi', 24, 3, 2, 'IN_EXAM', NULL, 'Khớp cắn cải thiện đáng kể', '2026-11-06 09:15:00'),
+    (104, 'VIS26110604', 105, 1, 'WALK_IN',     '2026-11-06 09:40:00', 'Nhổ răng sữa lung lay R51, bôi vecni fluor ngừa sâu răng', 1, 1, 1, 'IN_TREATMENT', NULL, 'Bé ngoan, hợp tác tốt', '2026-11-06 09:40:00'),
+    (105, 'VIS26110605', 110, 1, 'APPOINTMENT', '2026-11-06 10:00:00', 'Gắn mắc cài 2 hàm kim loại tự buộc, hướng dẫn vệ sinh nha khoa', 24, 3, 2, 'IN_EXAM', NULL, 'Đang tiến hành gắn mắc cài hàm trên', '2026-11-06 10:00:00'),
+    (106, 'VIS26110606', 113, 1, 'APPOINTMENT', '2026-11-06 10:20:00', 'Phẫu thuật ghép xương hàm nhân tạo chuẩn bị cấy trụ Straumann R36', 26, 2, 3, 'IN_TREATMENT', NULL, 'Gây tê tại chỗ vùng răng 36', '2026-11-06 10:20:00'),
+    (107, 'VIS26110607', 102, 1, 'WALK_IN',     '2026-11-06 10:35:00', 'Đau nhức dữ dội góc hàm dưới phải, nghi mọc răng khôn R48 lệch ngầm', 1, 1, 4, 'WAITING', NULL, 'Cần chụp X-quang khảo sát chân răng', '2026-11-06 10:35:00'),
+    (108, 'VIS26110608', 107, 1, 'APPOINTMENT', '2026-11-06 10:45:00', 'Tư vấn cấy ghép Implant tức thì sau nhổ răng cấm R47', 26, 2, NULL, 'WAITING', NULL, 'Bệnh nhân đến trước 15 phút', '2026-11-06 10:45:00'),
+    (109, 'VIS26110609', 108, 1, 'APPOINTMENT', '2026-11-06 11:00:00', 'Khám khớp cắn sâu, tư vấn niềng răng máng trong suốt Invisalign', 24, 3, NULL, 'WAITING', NULL, 'Đang xem tư liệu mẫu máng', '2026-11-06 11:00:00'),
+    (110, 'VIS26110610', 111, 1, 'WALK_IN',     '2026-11-06 11:15:00', 'Răng cửa R21 bị mẻ góc do cắn vật cứng, muốn trám composite thẩm mỹ', 1, 1, NULL, 'WAITING', NULL, 'Chờ bác sĩ Thương khám', '2026-11-06 11:15:00'),
+    (111, 'VIS26110611', 114, 1, 'WALK_IN',     '2026-11-06 11:30:00', 'Viêm nướu, chảy máu chân răng khi đánh răng buổi sáng kéo dài 1 tuần', 1, 1, NULL, 'WAITING', NULL, 'Ưu tiên khám sớm', '2026-11-06 11:30:00'),
+    (112, 'VIS26110612', 106, 1, 'WALK_IN',     '2026-11-06 10:10:00', 'Đau buốt tủy răng R26 khi ăn nóng, chỉ định chụp phim X-quang quanh chóp', 1, 4, NULL, 'WAITING_PARACLINICAL', NULL, 'Kỹ thuật viên đang chụp phim X-quang ConeBeam', '2026-11-06 10:10:00'),
+    (113, 'VIS26110613', 109, 1, 'APPOINTMENT', '2026-11-06 09:00:00', 'Lắp cầu răng sứ Zirconia 3 đơn vị vùng R35-R37, chờ thanh toán đợt 2', 26, 2, 1, 'WAITING_PAYMENT', NULL, 'Đã thử khớp cắn êm', '2026-11-06 09:00:00'),
+    (114, 'VIS26110614', 112, 1, 'APPOINTMENT', '2026-11-06 09:30:00', 'Tẩy trắng răng tại ghế bằng công nghệ Laser Whitening, chờ thanh toán', 1, 1, 6, 'WAITING_PAYMENT', NULL, 'Răng sáng lên 3 tone màu', '2026-11-06 09:30:00'),
+    (115, 'VIS26110501', 101, 1, 'APPOINTMENT', '2026-11-05 08:30:00', 'Khám tổng quát nha khoa định kỳ', 1, 1, 1, 'COMPLETED', '2026-11-05 09:15:00', 'Hẹn tái khám trám răng hôm nay', '2026-11-05 08:30:00'),
+    (116, 'VIS26110502', 102, 1, 'WALK_IN',     '2026-11-05 14:00:00', 'Viêm lợi góc hàm, kê đơn thuốc giảm phù nề', 1, 1, 1, 'COMPLETED', '2026-11-05 14:30:00', 'Kê thuốc kháng sinh, giảm đau', '2026-11-05 14:00:00'),
+    (117, 'VIS26110503', 115, 1, 'APPOINTMENT', '2026-11-05 15:30:00', 'Điều trị tủy răng hàm dưới R46 lần 2', 1, 1, 5, 'COMPLETED', '2026-11-05 16:30:00', 'Đặt thuốc diệt tủy, hẹn lần 3', '2026-11-05 15:30:00');

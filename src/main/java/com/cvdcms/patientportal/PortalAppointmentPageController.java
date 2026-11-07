@@ -30,9 +30,8 @@ public class PortalAppointmentPageController {
     public String page() { return "portal/appointments/index"; }
 
     @GetMapping("/new")
-    public String newAppointment(Model model) {
-        model.addAttribute("appointmentId", null);
-        return "portal/appointments/form";
+    public String newAppointment() {
+        return "redirect:/?openBooking=true";
     }
 
     @GetMapping("/{id}")

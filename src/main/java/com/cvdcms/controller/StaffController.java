@@ -129,19 +129,51 @@ public class StaffController {
         model.addAttribute("statuses", StaffStatus.values());
         model.addAttribute("branches", branchService.getAllBranches());
 
+        // Thống kê KPI tổng quan (Đồng bộ chuẩn /doctor/daily-visits)
+        List<StaffProfile> allStaffTotal = staffService.searchStaff(null, null, null, null, null, null, null, "staffCode", "asc");
+        long totalStaffCount = allStaffTotal.size();
+        long activeStaffCount = allStaffTotal.stream().filter(s -> s.getStatus() == StaffStatus.ACTIVE).count();
+        long inactiveStaffCount = totalStaffCount - activeStaffCount;
+        long doctorStaffCount = allStaffTotal.stream().filter(s -> 
+            (s.getPositionTitle() != null && s.getPositionTitle().toLowerCase().contains("bác sĩ")) ||
+            (s.getSpecialty() != null && !s.getSpecialty().isBlank())
+        ).count();
+
+        model.addAttribute("totalStaffCount", totalStaffCount);
+        model.addAttribute("activeStaffCount", activeStaffCount);
+        model.addAttribute("inactiveStaffCount", inactiveStaffCount);
+        model.addAttribute("doctorStaffCount", doctorStaffCount);
+
         return "staff/list";
     }
 
     // ===================== SCR-41.2: THÊM MỚI =====================
 
     @GetMapping("/create")
-    public String showCreateForm(Model model, HttpSession session) {
+    public String showCreateForm(
+            @RequestParam(value = "userId", required = false) Long userId,
+            Model model,
+            HttpSession session) {
         String redirect = checkAdmin(session);
         if (redirect != null) {
             return redirect;
         }
         addLayoutAttributes(session, model);
-        fillFormModel(model, new StaffFormDTO(), null);
+        StaffFormDTO form = new StaffFormDTO();
+        if (userId != null) {
+            userRepository.findById(userId).ifPresent(u -> {
+                form.setUserId(u.getUserId());
+                form.setEmail(u.getEmail());
+                form.setPhoneNumber(u.getPhoneNumber());
+                if (u.getBranch() != null) {
+                    form.setBranchId(u.getBranch().getBranchId());
+                }
+                if (u.getRoles() != null && !u.getRoles().isEmpty()) {
+                    form.setRoleId(u.getRoles().iterator().next().getRoleId());
+                }
+            });
+        }
+        fillFormModel(model, form, null);
         return "staff/form";
     }
 
@@ -370,11 +402,16 @@ public class StaffController {
     private void fillFormModel(Model model, StaffFormDTO form, StaffProfile staff) {
         Long currentUserId = staff != null && staff.getUser() != null ? staff.getUser().getUserId() : null;
         Role staffRole = null;
+        StaffBranchAssignment primaryAssignment = null;
         if (staff != null) {
             List<StaffBranchAssignment> activeAssignments = staffService.getAssignments(staff.getStaffId()).stream()
                     .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE)
                     .toList();
             staffRole = staffService.resolveCurrentStaffRole(staff, activeAssignments);
+            primaryAssignment = activeAssignments.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
+                    .findFirst()
+                    .orElse(null);
         }
         Long staffRoleId = staffRole != null ? staffRole.getRoleId() : null;
         boolean isDoctorStaff = staffRole != null && "BAC_SI".equalsIgnoreCase(staffRole.getRoleName());
@@ -382,6 +419,8 @@ public class StaffController {
         model.addAttribute("staffForm", form);
         model.addAttribute("staff", staff);
         model.addAttribute("editMode", staff != null);
+        model.addAttribute("staffRole", staffRole);
+        model.addAttribute("primaryAssignment", primaryAssignment);
         model.addAttribute("staffRoleId", staffRoleId);
         model.addAttribute("isDoctorStaff", isDoctorStaff);
         model.addAttribute("branches", activeBranches());
@@ -408,14 +447,23 @@ public class StaffController {
         f.setSpecialty(s.getSpecialty());
         f.setPracticeLicenseNo(s.getPracticeLicenseNo());
         f.setMohDoctorCode(s.getMohDoctorCode());
-        f.setBaseSalary(s.getBaseSalary());
-        f.setAllowanceAmount(s.getAllowanceAmount());
-        f.setInsuranceSalary(s.getInsuranceSalary());
+        f.setBaseSalary(s.getBaseSalary() != null ? java.math.BigDecimal.valueOf(s.getBaseSalary().longValue()) : null);
+        f.setAllowanceAmount(s.getAllowanceAmount() != null ? java.math.BigDecimal.valueOf(s.getAllowanceAmount().longValue()) : null);
+        f.setInsuranceSalary(s.getInsuranceSalary() != null ? java.math.BigDecimal.valueOf(s.getInsuranceSalary().longValue()) : null);
         f.setBankAccountNumber(s.getBankAccountNumber());
         f.setBankName(s.getBankName());
         f.setHireDate(s.getHireDate());
         f.setStatus(s.getStatus());
         f.setUserId(s.getUser() != null ? s.getUser().getUserId() : null);
+
+        // Nạp vai trò chuyên môn hiện tại vào form để có thể sửa trực tiếp
+        List<StaffBranchAssignment> activeAssignments = staffService.getAssignments(s.getStaffId()).stream()
+                .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE)
+                .toList();
+        Role currentRole = staffService.resolveCurrentStaffRole(s, activeAssignments);
+        if (currentRole != null) {
+            f.setRoleId(currentRole.getRoleId());
+        }
         return f;
     }
 

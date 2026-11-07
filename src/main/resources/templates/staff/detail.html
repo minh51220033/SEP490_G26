@@ -52,45 +52,26 @@
                         </div>
                     </div>
 
-                    <div class="d-flex flex-column align-items-end gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
                         <span class="misa-status-badge"
                               th:classappend="${staff.status.name() == 'ACTIVE' ? 'misa-status-badge--active' : 'misa-status-badge--ended'}"
                               th:text="${staff.status.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
                             Trạng thái
                         </span>
-                        <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
-                            <form th:action="@{/admin/staffs/{id}/status(id=${staff.staffId})}" method="post"
-                                  class="d-flex gap-2">
-                                <select name="status" class="form-select form-select-sm" aria-label="Đổi trạng thái làm việc" style="width: auto;">
-                                    <option th:each="s : ${statuses}" th:value="${s.name()}"
-                                            th:selected="${s == staff.status}"
-                                            th:text="${s.name() == 'ACTIVE' ? 'Đang làm việc' : 'Đã nghỉ việc'}">
-                                        Trạng thái
-                                    </option>
-                                </select>
-                                <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Đổi</button>
-                            </form>
-                            <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}" class="btn btn-sm btn-primary text-nowrap d-inline-flex align-items-center gap-1">
-                                <i class="bi bi-pencil-square" aria-hidden="true"></i> Sửa hồ sơ
-                            </a>
-                        </div>
+                        <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}" class="btn btn-sm btn-primary text-nowrap d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i> Sửa hồ sơ
+                        </a>
                     </div>
                 </div>
             </section>
 
-            <!-- TABS & NỘI DUNG CHI TIẾT -->
+            <!-- TABS & NỘI DUNG CHI TIẾT (GỘP GỌN 2 TAB) -->
             <section class="staff-card p-4">
                 <ul class="nav staff-detail-nav-tabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="tab-profile" data-bs-toggle="tab" data-bs-target="#pane-profile"
                                 type="button" role="tab" aria-controls="pane-profile" aria-selected="true">
-                            <i class="bi bi-person-vcard"></i> Lý lịch &amp; chuyên môn
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-salary" data-bs-toggle="tab" data-bs-target="#pane-salary"
-                                type="button" role="tab" aria-controls="pane-salary" aria-selected="false">
-                            <i class="bi bi-cash-coin"></i> Lương &amp; ngân hàng
+                            <i class="bi bi-person-vcard"></i> Hồ sơ, Chuyên môn &amp; Đãi ngộ
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -104,7 +85,7 @@
 
                 <div class="tab-content pt-2">
 
-                    <!-- ============ TAB 1: LÝ LỊCH & CHUYÊN MÔN ============ -->
+                    <!-- ============ TAB 1: HỒ SƠ, CHUYÊN MÔN & ĐÃI NGỘ ============ -->
                     <div class="tab-pane fade show active" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile">
 
                         <!-- Khối 1: Thông tin hành chính -->
@@ -181,116 +162,83 @@
                             </div>
                         </div>
 
-                        <!-- Khối 3: Tài khoản hệ thống -->
+                        <!-- Khối 3: Lương, Phụ cấp & Tài khoản ngân hàng (Gộp gọn từ Tab 2) -->
+                        <div class="staff-info-card">
+                            <div class="staff-info-card__title">
+                                <i class="bi bi-cash-coin"></i> Lương, Phụ cấp &amp; Ngân hàng thụ hưởng
+                            </div>
+                            <div class="staff-info-grid">
+                                <div class="staff-info-tile">
+                                    <div class="staff-info-tile__label"><i class="bi bi-cash-stack text-success"></i> Lương cơ bản</div>
+                                    <div class="staff-info-tile__value fw-bold text-success"
+                                         th:text="${#numbers.formatDecimal(staff.baseSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                                </div>
+                                <div class="staff-info-tile">
+                                    <div class="staff-info-tile__label"><i class="bi bi-wallet2 text-primary"></i> Phụ cấp</div>
+                                    <div class="staff-info-tile__value fw-semibold text-primary"
+                                         th:text="${#numbers.formatDecimal(staff.allowanceAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                                </div>
+                                <div class="staff-info-tile">
+                                    <div class="staff-info-tile__label"><i class="bi bi-shield-check text-secondary"></i> Lương đóng BHXH</div>
+                                    <div class="staff-info-tile__value"
+                                         th:text="${#numbers.formatDecimal(staff.insuranceSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                                </div>
+                                <div class="staff-info-tile">
+                                    <div class="staff-info-tile__label"><i class="bi bi-credit-card-2-front"></i> Số tài khoản ngân hàng</div>
+                                    <div class="staff-info-tile__value font-monospace" th:if="${staff.bankAccountNumber != null}" th:text="${staff.bankAccountNumber}">000</div>
+                                    <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.bankAccountNumber != null}">Chưa cập nhật</div>
+                                </div>
+                                <div class="staff-info-tile">
+                                    <div class="staff-info-tile__label"><i class="bi bi-bank"></i> Ngân hàng thụ hưởng</div>
+                                    <div class="staff-info-tile__value" th:if="${staff.bankName != null}" th:text="${staff.bankName}">Vietcombank</div>
+                                    <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.bankName != null}">Chưa cập nhật</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khối 4: Tài khoản hệ thống -->
                         <div class="staff-info-card">
                             <div class="staff-info-card__title">
                                 <i class="bi bi-shield-lock"></i> Tài khoản đăng nhập hệ thống
                             </div>
                             <div class="staff-info-grid">
                                 <div class="staff-info-tile" style="grid-column: 1 / -1;">
-                                    <div class="staff-info-tile__label"><i class="bi bi-person-check"></i> Tài khoản liên kết</div>
+                                    <div class="staff-info-tile__label"><i class="bi bi-person-check"></i> Tài khoản liên kết &amp; Vai trò</div>
                                     <div th:if="${staff.user != null}" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                        <div>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
                                             <span class="fw-semibold text-dark fs-6" th:text="${staff.user.username}">username</span>
-                                            <span class="text-muted small ms-2" th:text="'(' + ${staff.user.email} + ')'">(email)</span>
+                                            <span class="text-muted small" th:text="'(' + ${staff.user.email} + ')'">(email)</span>
+                                            <span class="chip chip--role" th:if="${primaryRole != null}"
+                                                  th:text="${primaryRole.displayName != null ? primaryRole.displayName : primaryRole.roleName}">Vai trò</span>
+                                            <span th:unless="${primaryRole != null}" class="badge bg-secondary">Chưa gán vai trò</span>
                                         </div>
                                         <a th:href="@{/accounts/{id}(id=${staff.user.userId})}" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-sliders me-1"></i> Xem &amp; phân quyền tại Quản lý tài khoản &rarr;
+                                            <i class="bi bi-person-badge me-1"></i> Chi tiết tài khoản &rarr;
                                         </a>
                                     </div>
-                                    <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.user != null}">
-                                        Chưa liên kết - nhân viên chưa thể đăng nhập hệ thống
+                                    <div th:unless="${staff.user != null}" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="text-muted small">
+                                            <i class="bi bi-exclamation-circle text-warning me-1"></i>
+                                            Chưa liên kết tài khoản - nhân viên chưa thể đăng nhập vào hệ thống.
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <a th:href="@{/admin/staffs/{id}/edit(id=${staff.staffId})}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-link-45deg me-1"></i> Chọn tài khoản có sẵn
+                                            </a>
+                                            <a th:href="@{/accounts/create(staffId=${staff.staffId})}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-plus-lg me-1"></i> Tạo tài khoản mới
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ============ TAB 2: LƯƠNG & NGÂN HÀNG ============ -->
-                    <div class="tab-pane fade" id="pane-salary" role="tabpanel" aria-labelledby="tab-salary">
-                        <!-- 3 Khối chỉ số tài chính -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <div class="salary-stat-card">
-                                    <div class="salary-stat-card__label">
-                                        <i class="bi bi-cash-stack me-1 text-success"></i> LƯƠNG CƠ BẢN
-                                    </div>
-                                    <div class="salary-stat-card__amount"
-                                         th:text="${#numbers.formatDecimal(staff.baseSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="salary-stat-card">
-                                    <div class="salary-stat-card__label">
-                                        <i class="bi bi-wallet2 me-1 text-primary"></i> PHỤ CẤP
-                                    </div>
-                                    <div class="salary-stat-card__amount salary-stat-card__amount--sub"
-                                         th:text="${#numbers.formatDecimal(staff.allowanceAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="salary-stat-card">
-                                    <div class="salary-stat-card__label">
-                                        <i class="bi bi-shield-check me-1 text-secondary"></i> LƯƠNG ĐÓNG BHXH
-                                    </div>
-                                    <div class="salary-stat-card__amount salary-stat-card__amount--muted"
-                                         th:text="${#numbers.formatDecimal(staff.insuranceSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Khối thông tin ngân hàng -->
-                        <div class="staff-info-card">
-                            <div class="staff-info-card__title">
-                                <i class="bi bi-bank"></i> Thông tin tài khoản ngân hàng thụ hưởng
-                            </div>
-                            <div class="staff-info-grid">
-                                <div class="staff-info-tile">
-                                    <div class="staff-info-tile__label"><i class="bi bi-credit-card-2-front"></i> Số tài khoản ngân hàng</div>
-                                    <div class="staff-info-tile__value font-monospace fs-6" th:if="${staff.bankAccountNumber != null}" th:text="${staff.bankAccountNumber}">000</div>
-                                    <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.bankAccountNumber != null}">Chưa cập nhật</div>
-                                </div>
-                                <div class="staff-info-tile">
-                                    <div class="staff-info-tile__label"><i class="bi bi-building"></i> Ngân hàng thụ hưởng</div>
-                                    <div class="staff-info-tile__value" th:if="${staff.bankName != null}" th:text="${staff.bankName}">Vietcombank</div>
-                                    <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.bankName != null}">Chưa cập nhật</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ============ TAB 3: PHÂN CÔNG CHI NHÁNH & LỊCH SỬ VAI TRÒ (SCR-41.3) ============ -->
+                    <!-- ============ TAB 2: PHÂN CÔNG CHI NHÁNH (SCR-41.3) ============ -->
                     <div class="tab-pane fade" id="pane-assign" role="tabpanel" aria-labelledby="tab-assign">
 
-                        <!-- THÔNG BÁO VAI TRÒ HỆ THỐNG & ĐƯỜNG DẪN ĐỔI VAI TRÒ DUY NHẤT TẠI QUẢN LÝ TÀI KHOẢN -->
-                        <div class="alert alert-light border rounded-3 p-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-primary-subtle text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                                    <i class="bi bi-shield-lock-fill fs-5"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-semibold text-dark">
-                                        Vai trò tài khoản hiện tại:
-                                        <span class="chip chip--role ms-1" th:if="${primaryRole != null}"
-                                              th:text="${primaryRole.displayName != null ? primaryRole.displayName : primaryRole.roleName}">Vai trò</span>
-                                        <span th:unless="${primaryRole != null}" class="badge bg-secondary ms-1">Chưa có vai trò</span>
-                                    </div>
-                                    <div class="text-muted small mt-1">
-                                        Vai trò và tập quyền hạn nghiệp vụ được phân quyền duy nhất và tập trung tại <strong>Quản lý tài khoản</strong>.
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <a th:if="${staff.user != null}" th:href="@{/accounts/{id}(id=${staff.user.userId})}" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-sliders me-1"></i>Đổi vai trò &amp; Phân quyền tại Quản lý tài khoản &rarr;
-                                </a>
-                                <span th:unless="${staff.user != null}" class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3">
-                                    <i class="bi bi-exclamation-circle me-1"></i>Chưa liên kết tài khoản đăng nhập
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                             <p class="mb-0 text-muted small">
                                 Một nhân viên có thể làm việc tại nhiều chi nhánh; chỉ có một chi nhánh chính đang hiệu lực.
                             </p>
@@ -390,14 +338,22 @@
                         <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}">Chi nhánh</option>
                     </select>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" th:if="${primaryRole != null}">
                     <label class="form-label">Vai trò chuyên môn</label>
                     <div class="form-control-plaintext p-0 d-flex align-items-center gap-2">
-                        <span class="chip chip--role" th:if="${primaryRole != null}"
+                        <span class="chip chip--role"
                               th:text="${primaryRole.displayName != null ? primaryRole.displayName : primaryRole.roleName}">Vai trò</span>
-                        <span class="text-muted small">(Cố định theo chức danh của nhân sự trên toàn hệ thống)</span>
+                        <span class="text-muted small">(Theo vai trò của nhân sự trên hệ thống)</span>
                     </div>
                     <input type="hidden" th:field="*{roleId}" id="assignRole" />
+                </div>
+                <div class="mb-3" th:if="${primaryRole == null}">
+                    <label for="assignRoleSelect" class="form-label">Vai trò chuyên môn <span class="text-danger">*</span></label>
+                    <select id="assignRoleSelect" th:field="*{roleId}" class="form-select" required>
+                        <option value="">-- Chọn vai trò --</option>
+                        <option th:each="r : ${roles}" th:value="${r.roleId}"
+                                th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
+                    </select>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
