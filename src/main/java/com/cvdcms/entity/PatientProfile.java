@@ -135,4 +135,11 @@ public class PatientProfile {
                     + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
         }
     }
+
+    /**
+     * Getter tương thích an toàn cho Thymeleaf SpEL khi truy cập thuộc tính phone hoặc phoneNumber.
+     */
+    public String getPhone() {
+        return this.phoneNumber;
+    }
 }

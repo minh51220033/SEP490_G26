@@ -64,7 +64,7 @@ public interface NewsArticleRepository
             Pageable pageable
     );
 
-    // Láº¥y bÃ i viáº¿t liÃªn quan Ä‘Ã£ xuáº¥t báº£n (trá»« bÃ i viáº¿t hiá»‡n táº¡i).
+    // Lấy bài viết liên quan đã xuất bản (trừ bài viết hiện tại).
     @EntityGraph(attributePaths = {"branch", "createdBy"})
     @Query("""
     SELECT n
@@ -77,6 +77,23 @@ public interface NewsArticleRepository
     """)
     List<NewsArticle> findRelatedPublished(
             @Param("excludeNewsId") Long excludeNewsId,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"branch", "createdBy"})
+    @Query("""
+    SELECT n
+    FROM NewsArticle n
+    LEFT JOIN n.branch b
+    WHERE n.status = 'PUBLISHED'
+      AND (b IS NULL OR b.isActive = true)
+      AND (:branchId IS NULL OR b.branchId = :branchId)
+      AND n.newsId <> :excludeNewsId
+    ORDER BY n.publishedAt DESC, n.createdAt DESC
+    """)
+    List<NewsArticle> findRelatedPublishedByBranch(
+            @Param("excludeNewsId") Long excludeNewsId,
+            @Param("branchId") Long branchId,
             Pageable pageable
     );
 

@@ -5,7 +5,7 @@
 <body class="app-body viewport-locked-page">
 
 <!-- CSS riêng của trang kho -->
-<link rel="stylesheet" th:href="@{/css/inventory.css}">
+<link rel="stylesheet" th:href="@{/css/inventory.css(v='20261106-ui')}">
 
 <div class="app-shell">
 
@@ -20,15 +20,15 @@
 
         <main class="inventory-app-view">
 
-            <!-- 1. TOOLBAR CHÍNH -->
+            <!-- 1. TOOLBAR CHÍNH (ĐỒNG BỘ THEO CHUẨN DOCTOR/DAILY-VISITS) -->
             <div class="table-toolbar-card">
-                <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
                     <div class="table-toolbar-title">
                         <p class="eyebrow">CV-DCMS · QUẢN LÝ KHO VẬT TƯ NHA KHOA</p>
                         <h1>Quản lý kho vật tư</h1>
                     </div>
                     <div class="branch-select-wrap ms-md-2">
-                        <label for="branchId"><i class="bi bi-geo-alt-fill text-primary me-1"></i>Kho:</label>
+                        <label for="branchId">Cơ sở kho:</label>
                         <select id="branchId" disabled class="form-select form-select-sm">
                             <option value="">Đang tải chi nhánh...</option>
                         </select>
@@ -36,85 +36,86 @@
                             Chi nhánh: <strong id="fixedBranchName"></strong>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-1 ms-md-2" style="min-width: 260px; max-width: 400px;">
-                        <input id="keyword" type="search" placeholder="Tìm kiếm nhanh mã VT, tên VT, số lô, mã phiếu..." class="form-control form-control-sm">
-                        <button type="button" class="btn-primary-custom py-1 px-2" id="searchBtn" title="Tìm kiếm"><i class="bi bi-search"></i></button>
-                        <button type="button" class="btn-secondary-custom py-1 px-2" id="clearSearchBtn" title="Xóa từ khóa"><i class="bi bi-x-circle"></i></button>
+                    <div class="dv-search-box ms-md-2">
+                        <span class="dv-search-lead"><i class="bi bi-search"></i></span>
+                        <input id="keyword" type="search" placeholder="Tìm nhanh mã VT, tên VT, số lô, mã phiếu...">
+                        <button type="button" class="dv-search-clear" id="clearSearchBtn" title="Xóa từ khóa">×</button>
                     </div>
+                    <button type="button" class="btn-primary-custom" id="searchBtn">Tìm kiếm</button>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <a th:href="@{/suppliers}" class="btn-secondary-custom">
-                        <i class="bi bi-truck me-1"></i>Danh mục NCC riêng
+                        Danh mục NCC
                     </a>
                     <button type="button" class="btn-secondary-custom" id="refreshBtn" title="Làm mới dữ liệu kho">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
                     <button type="button" class="btn-gear-customizer" id="openInvColumnDrawerBtn" title="Tùy chỉnh cột hiển thị" onclick="openInvColumnDrawer()">
-                        <i class="bi bi-gear-fill"></i>
+                        <i class="bi bi-sliders"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI TỔNG QUAN KHO (COMPACT THEO CHUẨN) -->
+            <!-- 2. 4 THẺ KPI TỔNG QUAN KHO (ĐỒNG BỘ DASHBOARD WIDGETS DAILY-VISITS) -->
             <section class="stats-grid" id="summaryStats" aria-label="Chỉ số tổng quan kho chi nhánh">
                 <article class="stat-card stat-card-primary is-loading" id="kpiCardTotalItems" data-kpi-target="inventory-all" role="button" tabindex="0" title="Nhấn để xem toàn bộ mặt hàng tồn kho">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong class="stat-value" id="statTotalItems" aria-live="polite">—</strong>
                         <span class="stat-label">Mặt hàng trong kho</span>
-                        <span class="stat-icon stat-icon-primary" aria-hidden="true">
-                            <i class="bi bi-box-seam"></i>
-                        </span>
+                        <span class="stat-meta" id="statTotalItemsSub">Đang tải dữ liệu...</span>
                     </div>
-                    <strong class="stat-value" id="statTotalItems" aria-live="polite">—</strong>
-                    <span class="stat-meta" id="statTotalItemsSub">Đang tải dữ liệu...</span>
+                    <div class="stat-icon stat-icon-primary" aria-hidden="true">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-card-warning is-loading" id="kpiCardLowStock" data-kpi-target="inventory-low" role="button" tabindex="0" title="Nhấn để lọc các mặt hàng sắp hết / chạm ngưỡng">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong class="stat-value" id="statLowStock" aria-live="polite">—</strong>
                         <span class="stat-label">Cảnh báo sắp hết</span>
-                        <span class="stat-icon stat-icon-warning" aria-hidden="true">
-                            <i class="bi bi-exclamation-triangle"></i>
-                        </span>
+                        <span class="stat-meta" id="statLowStockSub">Đang tải dữ liệu...</span>
                     </div>
-                    <strong class="stat-value" id="statLowStock" aria-live="polite">—</strong>
-                    <span class="stat-meta" id="statLowStockSub">Đang tải dữ liệu...</span>
+                    <div class="stat-icon stat-icon-warning" aria-hidden="true">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-card-danger is-loading" id="kpiCardExpiring" data-kpi-target="batches-expiring" role="button" tabindex="0" title="Nhấn để xem các lô hết hạn hoặc sắp hết hạn">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong class="stat-value" id="statExpiringBatches" aria-live="polite">—</strong>
                         <span class="stat-label">Lô hết / sắp hết hạn</span>
-                        <span class="stat-icon stat-icon-danger" aria-hidden="true">
-                            <i class="bi bi-calendar-x"></i>
-                        </span>
+                        <span class="stat-meta" id="statExpiringBatchesSub">Đang tải dữ liệu...</span>
                     </div>
-                    <strong class="stat-value" id="statExpiringBatches" aria-live="polite">—</strong>
-                    <span class="stat-meta" id="statExpiringBatchesSub">Đang tải dữ liệu...</span>
+                    <div class="stat-icon stat-icon-danger" aria-hidden="true">
+                        <i class="bi bi-calendar-x"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-card-info is-loading" id="kpiCardDebt" data-kpi-target="supplier-debt" role="button" tabindex="0" title="Nhấn để xem chi tiết công nợ nhà cung cấp">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong class="stat-value" id="statTotalDebt" aria-live="polite">—</strong>
                         <span class="stat-label">Tổng công nợ NCC</span>
-                        <span class="stat-icon stat-icon-info" aria-hidden="true">
-                            <i class="bi bi-credit-card-2-front"></i>
-                        </span>
+                        <span class="stat-meta" id="statTotalDebtSub">Đang tải dữ liệu...</span>
                     </div>
-                    <strong class="stat-value" id="statTotalDebt" aria-live="polite">—</strong>
-                    <span class="stat-meta" id="statTotalDebtSub">Đang tải dữ liệu...</span>
+                    <div class="stat-icon stat-icon-info" aria-hidden="true">
+                        <i class="bi bi-credit-card-2-front"></i>
+                    </div>
                 </article>
             </section>
 
             <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 
-            <!-- 3. THANH 8 TABS CHỨC NĂNG QUẢN LÝ KHO -->
+            <!-- 3. THANH 8 TABS CHỨC NĂNG QUẢN LÝ KHO (SEGMENTED PILLS) -->
             <nav class="tabs" aria-label="Chức năng quản lý kho">
-                <button class="tab active" type="button" data-tab="inventory">1. Tồn kho</button>
-                <button class="tab" type="button" data-tab="batches">2. Lô &amp; Hạn dùng</button>
-                <button class="tab" type="button" data-tab="receipt">3. Phiếu nhập kho</button>
-                <button class="tab" type="button" data-tab="issue">4. Phiếu xuất kho</button>
-                <button class="tab" type="button" data-tab="transfer">5. Điều chuyển kho</button>
-                <button class="tab" type="button" data-tab="materials">6. Danh mục vật tư</button>
-                <button class="tab" type="button" data-tab="categories">7. Nhóm vật tư</button>
-                <button class="tab" type="button" data-tab="supplier-payments">8. NCC &amp; Công nợ</button>
+                <button class="tab active" type="button" data-tab="inventory">Tồn kho</button>
+                <button class="tab" type="button" data-tab="batches">Lô &amp; Hạn dùng</button>
+                <button class="tab" type="button" data-tab="receipt">Phiếu nhập kho</button>
+                <button class="tab" type="button" data-tab="issue">Phiếu xuất kho</button>
+                <button class="tab" type="button" data-tab="transfer">Điều chuyển kho</button>
+                <button class="tab" type="button" data-tab="materials">Danh mục vật tư</button>
+                <button class="tab" type="button" data-tab="categories">Nhóm vật tư</button>
+                <button class="tab" type="button" data-tab="supplier-payments">NCC &amp; Công nợ</button>
             </nav>
 
             <!-- ==========================================
@@ -664,7 +665,7 @@
                                 <option value="false">Ngừng sử dụng</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary-custom" id="openAddMaterialBtn">+ Thêm vật tư mới</button>
+                        <button type="button" class="btn-primary-custom" id="openAddMaterialBtn">Thêm vật tư mới</button>
                     </div>
                 </div>
                 <div class="table-viewport-wrapper">
@@ -677,7 +678,7 @@
                             <th style="width:110px;">Đơn vị tính <span class="col-resizer"></span></th>
                             <th style="width:140px;">Ngưỡng tối thiểu <span class="col-resizer"></span></th>
                             <th style="width:140px;">Trạng thái <span class="col-resizer"></span></th>
-                            <th style="width:160px;">Thao tác <span class="col-resizer"></span></th>
+                            <th style="width:200px;">Thao tác <span class="col-resizer"></span></th>
                         </tr>
                         </thead>
                         <tbody id="materialsTable">
@@ -704,7 +705,7 @@
                         <h2>Danh mục nhóm vật tư</h2>
                         <p>Thống kê số lượng vật tư theo từng nhóm chuyên môn phòng khám.</p>
                     </div>
-                    <button type="button" class="btn-primary-custom" id="addMaterialFromCategoryBtn">+ Thêm vật tư vào nhóm</button>
+                    <button type="button" class="btn-primary-custom" id="addMaterialFromCategoryBtn">Thêm vật tư vào nhóm</button>
                 </div>
                 <div class="table-viewport-wrapper">
                     <table class="cv-table">
@@ -714,7 +715,7 @@
                             <th style="width:300px;">Tên nhóm vật tư <span class="col-resizer"></span></th>
                             <th style="width:160px;">Tổng số vật tư <span class="col-resizer"></span></th>
                             <th style="width:160px;">Đang hoạt động <span class="col-resizer"></span></th>
-                            <th style="width:180px;">Thao tác <span class="col-resizer"></span></th>
+                            <th style="width:210px;">Thao tác <span class="col-resizer"></span></th>
                         </tr>
                         </thead>
                         <tbody id="categoriesTable">
@@ -736,8 +737,8 @@
                                 <p>Theo dõi tổng tiền nhập hàng, số tiền đã thanh toán và dư nợ còn lại của từng NCC tại chi nhánh.</p>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn-secondary-custom" id="openQuickSupplierBtn">+ Thêm NCC mới</button>
-                                <button type="button" class="btn-primary-custom" id="openPaymentModalBtn">+ Lập phiếu thanh toán</button>
+                                <button type="button" class="btn-secondary-custom" id="openQuickSupplierBtn">Thêm NCC mới</button>
+                                <button type="button" class="btn-primary-custom" id="openPaymentModalBtn">Lập phiếu thanh toán</button>
                             </div>
                         </div>
                         <div class="table-viewport-wrapper">
@@ -753,7 +754,7 @@
                                     <th style="width:130px;">Đã trả <span class="col-resizer"></span></th>
                                     <th style="width:130px;">Còn nợ <span class="col-resizer"></span></th>
                                     <th style="width:130px;">Trạng thái <span class="col-resizer"></span></th>
-                                    <th style="width:140px;">Thao tác <span class="col-resizer"></span></th>
+                                    <th style="width:230px;">Thao tác <span class="col-resizer"></span></th>
                                 </tr>
                                 </thead>
                                 <tbody id="supplierDebtTable">
@@ -1070,6 +1071,6 @@
     </div>
 </div>
 
-<script th:src="@{/js/inventory.js(v='20261104-fix')}" defer></script>
+<script th:src="@{/js/inventory.js(v='20261106-ui')}" defer></script>
 </body>
 </html>

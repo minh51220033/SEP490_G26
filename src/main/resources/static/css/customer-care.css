@@ -1,4 +1,4 @@
-﻿/* =========================================================================
+/* =========================================================================
    CV-DCMS CUSTOMER CARE (CSKH & HẬU PHẪU) - ENTERPRISE STANDARD
    Theo chuẩn thiết kế DentalFlow / CV-DCMS:
    - Viewport Scroll Lock 100vh (Không 2 thanh cuộn)
@@ -87,12 +87,12 @@ html, body {
     background-color: var(--bg);
 }
 
-/* TOOLBAR THAO TÁC TRÊN BẢNG */
+/* TOOLBAR THAO TÁC TRÊN BẢNG (ĐỒNG BỘ DOCTOR/DAILY-VISITS) */
 .table-toolbar-card {
     background: #ffffff;
-    border: 1px solid var(--table-border);
-    border-radius: 12px;
-    padding: 10px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 12px 18px;
     margin-bottom: 10px;
     flex-shrink: 0;
     display: flex;
@@ -100,12 +100,12 @@ html, body {
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
 .eyebrow {
     margin: 0 0 2px;
-    color: var(--brand-600);
+    color: #0284c7;
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -116,8 +116,8 @@ html, body {
     margin: 0;
     font-size: 19px;
     font-weight: 800;
-    color: var(--ink);
-    letter-spacing: -0.01em;
+    color: #0f172a;
+    letter-spacing: -0.015em;
 }
 
 .table-toolbar-title .subtitle {
@@ -133,102 +133,162 @@ html, body {
 }
 
 .branch-select-wrap label {
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 700;
-    color: #475569;
+    color: #334155;
     white-space: nowrap;
 }
 
 .branch-select-wrap select {
     width: auto;
     min-width: 200px;
-    padding: 6px 10px;
-    font-size: 12.5px;
+    height: 38px;
+    padding: 0 12px;
+    font-size: 13px;
     font-weight: 600;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    background-color: #f8fafc;
 }
 
-/* NÚT THƯƠNG HIỆU CHUẨN */
+/* Ô TÌM KIẾM ĐỒNG BỘ DOCTOR/DAILY-VISITS (.dv-search-box) */
+.dv-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    height: 38px;
+    transition: all 0.2s ease;
+}
+
+.dv-search-box:focus-within {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+}
+
+.dv-search-box .dv-search-lead {
+    padding-left: 12px;
+    padding-right: 8px;
+    color: #64748b;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dv-search-box input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    height: 100%;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+    padding: 0 10px 0 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* NÚT BẤM ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS */
 .btn-primary-custom,
 .button-primary {
-    background-color: var(--btn-primary);
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
     color: #ffffff !important;
     font-weight: 700;
     border: none;
-    padding: 7px 15px;
-    border-radius: 8px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-size: 13px;
-    transition: background 0.15s ease;
+    transition: all 0.18s ease;
     cursor: pointer;
     text-decoration: none;
     white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.22);
 }
 
-.btn-primary-custom:hover,
+.btn-primary-custom:hover:not(:disabled),
 .button-primary:hover:not(:disabled) {
-    background-color: var(--btn-primary-hover);
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
     color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
 }
 
 .btn-secondary-custom,
 .button-secondary {
     background: #ffffff;
-    border: 1px solid var(--table-border);
-    color: #334155 !important;
-    font-weight: 600;
-    padding: 7px 13px;
-    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    color: #0f172a !important;
+    font-weight: 700;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-size: 13px;
     cursor: pointer;
     text-decoration: none;
     white-space: nowrap;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
 }
 
-.btn-secondary-custom:hover,
+.btn-secondary-custom:hover:not(:disabled),
 .button-secondary:hover:not(:disabled) {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #0f172a !important;
+    background: #f0f9ff;
+    border-color: #0284c7;
+    color: #0284c7 !important;
 }
 
 .btn-gear-customizer {
     background: #ffffff;
-    border: 1px solid var(--table-border);
+    border: 1.5px solid #cbd5e1;
     color: #334155;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 15px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
 }
 
 .btn-gear-customizer:hover {
-    background: #f1f5f9;
-    color: var(--btn-primary);
-    border-color: #94a3b8;
-    transform: rotate(20deg);
+    background: #f0f9ff;
+    color: #0284c7;
+    border-color: #0284c7;
 }
 
 .button-sm {
-    padding: 4px 8px;
-    font-size: 12px;
-    border-radius: 6px;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
 }
 
 .button-danger {
     background: #dc2626;
-    color: #fff;
+    color: #fff !important;
     border: none;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-weight: 700;
 }
 .button-danger:hover:not(:disabled) {
     background: #b91c1c;
@@ -236,116 +296,143 @@ html, body {
 
 .button-warning-outline {
     background: #fffbeb;
-    border: 1px solid #fcd34d;
-    color: #b45309;
+    border: 1.5px solid #fcd34d;
+    color: #b45309 !important;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 .button-warning-outline:hover:not(:disabled) {
     background: #fef3c7;
+    border-color: #f59e0b;
 }
 
 .button-danger-outline {
-    background: #fff;
-    border: 1px solid #fca5a5;
-    color: #dc2626;
+    background: #ffffff;
+    border: 1.5px solid #fca5a5;
+    color: #dc2626 !important;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 .button-danger-outline:hover:not(:disabled) {
     background: #fef2f2;
+    border-color: #dc2626;
 }
 
-/* 3. 4 THẺ KPI SUMMARY CARDS (COMPACT & MODERN) */
+/* 3. 4 THẺ KPI SUMMARY CARDS (ĐỒNG BỘ DASHBOARD WIDGETS DOCTOR/DAILY-VISITS) */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 10px;
     flex-shrink: 0;
 }
 
 .stat-card {
     position: relative;
+    overflow: hidden;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     justify-content: space-between;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--btn-primary);
-    border-radius: 10px;
-    padding: 10px 14px;
-    min-height: 74px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    gap: 14px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 15px 18px 15px 20px;
+    min-height: 92px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    transition: all 0.22s ease;
     cursor: pointer;
     user-select: none;
+    --kpi-accent: #0284c7;
+}
+
+.stat-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--kpi-accent, #0284c7);
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
     border-color: #cbd5e1;
 }
 
 .stat-card.stat-warning {
-    border-left-color: #f59e0b;
+    --kpi-accent: #f59e0b;
 }
 
 .stat-card.stat-danger {
-    border-left-color: #ef4444;
+    --kpi-accent: #ef4444;
 }
 
 .stat-card.stat-success {
-    border-left-color: #10b981;
+    --kpi-accent: #10b981;
 }
 
-.stat-card-top {
+.stat-card-body {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 2px;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
+
+.stat-value {
+    display: block;
+    font-size: 26px;
+    font-weight: 800;
+    color: #0284c7;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.stat-card.stat-warning .stat-value { color: #d97706; }
+.stat-card.stat-danger .stat-value { color: #dc2626; }
+.stat-card.stat-success .stat-value { color: #059669; }
 
 .stat-label {
-    font-size: 11.5px;
-    color: var(--muted);
+    font-size: 13px;
+    color: #475569;
     font-weight: 700;
+    margin-top: 4px;
     line-height: 1.25;
 }
 
+.stat-meta {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .stat-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: 14px;
+    font-size: 21px;
 }
 
-.stat-icon-brand { background: #eff6ff; color: #2563eb; }
+.stat-icon-brand { background: #e0f2fe; color: #0284c7; }
 .stat-icon-warning { background: #fef3c7; color: #d97706; }
 .stat-icon-danger { background: #fee2e2; color: #dc2626; }
 .stat-icon-success { background: #dcfce7; color: #059669; }
-
-.stat-value {
-    display: block;
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--ink);
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-}
-
-.stat-card.stat-warning .stat-value { color: #b45309; }
-.stat-card.stat-danger .stat-value { color: #b91c1c; }
-.stat-card.stat-success .stat-value { color: #047857; }
-
-.stat-meta {
-    display: block;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted);
-}
 
 .stat-card.is-loading .stat-value {
     color: #94a3b8;
@@ -357,15 +444,16 @@ html, body {
     50% { opacity: 0.45; }
 }
 
-/* 4. THANH TABS BAR (TABS PHÂN NHÓM) */
+/* 4. THANH TABS BAR (TABS PHÂN NHÓM - ĐỒNG BỘ SEGMENTED PILLS DAILY-VISITS) */
 .tabs-bar {
     display: flex;
+    align-items: center;
     gap: 4px;
     flex-wrap: wrap;
-    background: var(--surface);
-    padding: 6px 10px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
+    background: #ffffff;
+    padding: 5px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
     margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
     flex-shrink: 0;
@@ -375,27 +463,27 @@ html, body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 9px;
     background: transparent;
     color: #475569;
     font-family: inherit;
     font-size: 12.5px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
 }
 
 .tab:hover {
-    background: var(--brand-50);
-    color: var(--brand-800);
+    background: #f1f5f9;
+    color: #0f172a;
 }
 
 .tab.active {
-    background: var(--btn-primary);
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
     color: #ffffff;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
 .tab.tab-doctor:not(.active) {
@@ -406,9 +494,9 @@ html, body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 6px;
     border-radius: 999px;
     font-size: 10.5px;
     font-weight: 800;
@@ -423,12 +511,12 @@ html, body {
 
 /* 5. BỘ LỌC TÌM KIẾM (TOOLBAR FILTER SECTION) */
 .toolbar-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 14px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px 16px;
     margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
     flex-shrink: 0;
 }
 
@@ -441,15 +529,15 @@ html, body {
 
 .filter-field label {
     display: block;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
     color: #475569;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 .filter-actions {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
 }
 
@@ -457,22 +545,28 @@ input,
 select,
 textarea {
     width: 100%;
-    padding: 7px 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    height: 38px;
+    padding: 0 11px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
     background: #ffffff;
     color: #0f172a;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea {
+    height: auto;
+    padding: 8px 11px;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
     outline: none;
-    border-color: var(--btn-primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
 }
 
 /* 6. VÙNG HIỂN THỊ BẢNG (PANEL & TABLE VIEWPORT) */
@@ -568,16 +662,16 @@ textarea:focus {
 }
 
 .cc-tasks-table tbody tr:hover {
-    background-color: #f8fafc;
+    background-color: #f0f9ff;
 }
 
 .cc-tasks-table tbody td {
-    padding: 9px 12px;
+    padding: 10px 12px;
     border-bottom: 1px solid #e2e8f0;
     border-right: 1px solid #f1f5f9;
-    font-size: 12.5px;
+    font-size: 13px;
     color: #1e293b;
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 .patient-cell strong {
@@ -682,81 +776,95 @@ textarea:focus {
     color: #166534;
 }
 
-/* NÚT THAO TÁC TRÊN TỪNG DÒNG */
+/* NÚT THAO TÁC TRÊN TỪNG DÒNG (ĐỒNG NHẤT CHIỀU CAO & XẾP NGANG CÂN ĐỐI) */
 .row-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
 }
 
 .row-actions .button-sm {
-    padding: 4px 6px;
-    font-size: 11.5px;
-    font-weight: 700;
-    justify-content: center;
-    width: 100%;
-    text-align: center;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
 }
 
 .row-actions .sub-actions-row {
-    display: flex;
-    gap: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
 }
 
 .row-actions .sub-actions-row .button-sm {
-    flex: 1 1 50%;
-    padding: 3px 5px;
-    font-size: 11px;
+    flex: 0 0 auto;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
 }
 
-/* 8. THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG (52px) */
+/* 8. THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG (ĐỒNG BỘ DOCTOR/DAILY-VISITS) */
 .table-pagination-footer {
     flex-shrink: 0;
     height: 52px;
     background: #ffffff;
-    border: 1px solid var(--table-border);
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    padding: 0 20px;
     z-index: 20;
     margin-bottom: 10px;
-    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.03);
 }
 
 .pagination-btn-group .btn-page {
-    width: 32px;
+    min-width: 32px;
     height: 32px;
-    padding: 0;
-    border: 1px solid var(--table-border);
+    padding: 0 8px;
+    border: 1px solid #cbd5e1;
     background: #ffffff;
     color: #334155;
     font-size: 12.5px;
-    font-weight: 600;
-    border-radius: 6px;
+    font-weight: 700;
+    border-radius: 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     margin: 0 2px;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: all 0.16s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
-.pagination-btn-group .btn-page:hover:not(.disabled) {
-    background: #f1f5f9;
-    border-color: #94a3b8;
+.pagination-btn-group .btn-page:hover:not(.disabled):not(:disabled) {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    color: #0284c7;
 }
 .pagination-btn-group .btn-page.active {
-    background: var(--btn-primary);
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
-    border-color: var(--btn-primary);
+    border-color: #0284c7;
+    box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
 }
-.pagination-btn-group .btn-page.disabled {
-    color: #cbd5e1;
+.pagination-btn-group .btn-page.disabled,
+.pagination-btn-group .btn-page:disabled {
+    color: #94a3b8;
     background: #f8fafc;
     border-color: #e2e8f0;
     cursor: not-allowed;
+    opacity: 0.55;
 }
 
 /* 9. THÔNG BÁO HỆ THỐNG */

@@ -86,7 +86,70 @@
         if (!sidebar) return;
         lastFocused = document.activeElement;
         root.classList.add("is-sidebar-open");
-        syncToggleState();
+        /* =============================================================
+       12. GUEST LOGIN CONFIRMATION PROMPT (Customer Portal)
+       ============================================================= */
+    (function initGuestLoginPrompt() {
+        var modalEl = null;
+        function ensureModal() {
+            if (modalEl) return modalEl;
+            var wrapper = document.createElement("div");
+            wrapper.id = "cvGuestLoginPromptModal";
+            wrapper.setAttribute("role", "dialog");
+            wrapper.setAttribute("aria-modal", "true");
+            wrapper.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10050;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);";
+            wrapper.innerHTML =
+                '<div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 35px -8px rgba(15,23,42,0.25);border:1px solid #e2e8f0;">' +
+                '  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                '    <span style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#0052cc;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' +
+                '      <i class="bi bi-person-lock"></i>' +
+                '    </span>' +
+                '    <div>' +
+                '      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">Yêu cầu đăng nhập</h3>' +
+                '      <div style="font-size:12px;color:#64748b;">Hệ thống Nha khoa Cường Việt · CV-DCMS</div>' +
+                '    </div>' +
+                '  </div>' +
+                '  <p id="cvGuestLoginPromptMessage" style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;"></p>' +
+                '  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">' +
+                '    <button type="button" id="cvGuestLoginCancelBtn" style="padding:9px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:14px;cursor:pointer;">Để sau</button>' +
+                '    <a id="cvGuestLoginConfirmBtn" href="/login" style="padding:9px 18px;border-radius:10px;border:none;background:#0052cc;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
+                '      <i class="bi bi-box-arrow-in-right"></i> Đồng ý đăng nhập' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(wrapper);
+            var cancelBtn = wrapper.querySelector("#cvGuestLoginCancelBtn");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { wrapper.style.display = "none"; });
+            wrapper.addEventListener("click", function (e) { if (e.target === wrapper) wrapper.style.display = "none"; });
+            modalEl = wrapper;
+            return modalEl;
+        }
+        function showLoginPrompt(actionLabel, targetUrl) {
+            var modal = ensureModal();
+            var msgEl = modal.querySelector("#cvGuestLoginPromptMessage");
+            var confirmBtn = modal.querySelector("#cvGuestLoginConfirmBtn");
+            if (msgEl) msgEl.textContent = "Bạn cần đăng nhập tài khoản để " + actionLabel + ". Bạn có muốn chuyển đến trang đăng nhập để thực hiện tiếp hay không?";
+            if (confirmBtn) confirmBtn.setAttribute("href", targetUrl || "/login");
+            modal.style.display = "flex";
+        }
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-require-login]");
+            if (trigger) {
+                event.preventDefault();
+                showLoginPrompt(trigger.getAttribute("data-require-login") || "thực hiện chức năng này", trigger.getAttribute("href") || "/login");
+                return;
+            }
+            var loginLink = event.target.closest("a[href='/login'], a[href$='/login']");
+            if (!loginLink) return;
+            var text = (loginLink.textContent || "").trim().toLowerCase();
+            if (text.indexOf("đặt lịch") !== -1) {
+                event.preventDefault();
+                showLoginPrompt("đặt lịch khám trực tuyến", loginLink.getAttribute("href") || "/login");
+            }
+        });
+    })();
+
+    syncToggleState();
         // Đưa focus vào drawer sau khi animation bắt đầu (hỗ trợ bàn phím & screen reader)
         window.setTimeout(function () {
             var target = sidebar.querySelector(".side-link.is-active") || sidebar.querySelector(".side-link, .side-group__toggle");
@@ -97,14 +160,140 @@
     function closeDrawer() {
         if (!root.classList.contains("is-sidebar-open")) return;
         root.classList.remove("is-sidebar-open");
-        syncToggleState();
+        /* =============================================================
+       12. GUEST LOGIN CONFIRMATION PROMPT (Customer Portal)
+       ============================================================= */
+    (function initGuestLoginPrompt() {
+        var modalEl = null;
+        function ensureModal() {
+            if (modalEl) return modalEl;
+            var wrapper = document.createElement("div");
+            wrapper.id = "cvGuestLoginPromptModal";
+            wrapper.setAttribute("role", "dialog");
+            wrapper.setAttribute("aria-modal", "true");
+            wrapper.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10050;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);";
+            wrapper.innerHTML =
+                '<div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 35px -8px rgba(15,23,42,0.25);border:1px solid #e2e8f0;">' +
+                '  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                '    <span style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#0052cc;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' +
+                '      <i class="bi bi-person-lock"></i>' +
+                '    </span>' +
+                '    <div>' +
+                '      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">Yêu cầu đăng nhập</h3>' +
+                '      <div style="font-size:12px;color:#64748b;">Hệ thống Nha khoa Cường Việt · CV-DCMS</div>' +
+                '    </div>' +
+                '  </div>' +
+                '  <p id="cvGuestLoginPromptMessage" style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;"></p>' +
+                '  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">' +
+                '    <button type="button" id="cvGuestLoginCancelBtn" style="padding:9px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:14px;cursor:pointer;">Để sau</button>' +
+                '    <a id="cvGuestLoginConfirmBtn" href="/login" style="padding:9px 18px;border-radius:10px;border:none;background:#0052cc;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
+                '      <i class="bi bi-box-arrow-in-right"></i> Đồng ý đăng nhập' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(wrapper);
+            var cancelBtn = wrapper.querySelector("#cvGuestLoginCancelBtn");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { wrapper.style.display = "none"; });
+            wrapper.addEventListener("click", function (e) { if (e.target === wrapper) wrapper.style.display = "none"; });
+            modalEl = wrapper;
+            return modalEl;
+        }
+        function showLoginPrompt(actionLabel, targetUrl) {
+            var modal = ensureModal();
+            var msgEl = modal.querySelector("#cvGuestLoginPromptMessage");
+            var confirmBtn = modal.querySelector("#cvGuestLoginConfirmBtn");
+            if (msgEl) msgEl.textContent = "Bạn cần đăng nhập tài khoản để " + actionLabel + ". Bạn có muốn chuyển đến trang đăng nhập để thực hiện tiếp hay không?";
+            if (confirmBtn) confirmBtn.setAttribute("href", targetUrl || "/login");
+            modal.style.display = "flex";
+        }
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-require-login]");
+            if (trigger) {
+                event.preventDefault();
+                showLoginPrompt(trigger.getAttribute("data-require-login") || "thực hiện chức năng này", trigger.getAttribute("href") || "/login");
+                return;
+            }
+            var loginLink = event.target.closest("a[href='/login'], a[href$='/login']");
+            if (!loginLink) return;
+            var text = (loginLink.textContent || "").trim().toLowerCase();
+            if (text.indexOf("đặt lịch") !== -1) {
+                event.preventDefault();
+                showLoginPrompt("đặt lịch khám trực tuyến", loginLink.getAttribute("href") || "/login");
+            }
+        });
+    })();
+
+    syncToggleState();
         if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
     }
 
     function setCollapsed(collapsed) {
         root.classList.toggle("is-sidebar-collapsed", collapsed);
         storageSet(collapsed ? "1" : "0");
-        syncToggleState();
+        /* =============================================================
+       12. GUEST LOGIN CONFIRMATION PROMPT (Customer Portal)
+       ============================================================= */
+    (function initGuestLoginPrompt() {
+        var modalEl = null;
+        function ensureModal() {
+            if (modalEl) return modalEl;
+            var wrapper = document.createElement("div");
+            wrapper.id = "cvGuestLoginPromptModal";
+            wrapper.setAttribute("role", "dialog");
+            wrapper.setAttribute("aria-modal", "true");
+            wrapper.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10050;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);";
+            wrapper.innerHTML =
+                '<div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 35px -8px rgba(15,23,42,0.25);border:1px solid #e2e8f0;">' +
+                '  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                '    <span style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#0052cc;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' +
+                '      <i class="bi bi-person-lock"></i>' +
+                '    </span>' +
+                '    <div>' +
+                '      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">Yêu cầu đăng nhập</h3>' +
+                '      <div style="font-size:12px;color:#64748b;">Hệ thống Nha khoa Cường Việt · CV-DCMS</div>' +
+                '    </div>' +
+                '  </div>' +
+                '  <p id="cvGuestLoginPromptMessage" style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;"></p>' +
+                '  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">' +
+                '    <button type="button" id="cvGuestLoginCancelBtn" style="padding:9px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:14px;cursor:pointer;">Để sau</button>' +
+                '    <a id="cvGuestLoginConfirmBtn" href="/login" style="padding:9px 18px;border-radius:10px;border:none;background:#0052cc;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
+                '      <i class="bi bi-box-arrow-in-right"></i> Đồng ý đăng nhập' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(wrapper);
+            var cancelBtn = wrapper.querySelector("#cvGuestLoginCancelBtn");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { wrapper.style.display = "none"; });
+            wrapper.addEventListener("click", function (e) { if (e.target === wrapper) wrapper.style.display = "none"; });
+            modalEl = wrapper;
+            return modalEl;
+        }
+        function showLoginPrompt(actionLabel, targetUrl) {
+            var modal = ensureModal();
+            var msgEl = modal.querySelector("#cvGuestLoginPromptMessage");
+            var confirmBtn = modal.querySelector("#cvGuestLoginConfirmBtn");
+            if (msgEl) msgEl.textContent = "Bạn cần đăng nhập tài khoản để " + actionLabel + ". Bạn có muốn chuyển đến trang đăng nhập để thực hiện tiếp hay không?";
+            if (confirmBtn) confirmBtn.setAttribute("href", targetUrl || "/login");
+            modal.style.display = "flex";
+        }
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-require-login]");
+            if (trigger) {
+                event.preventDefault();
+                showLoginPrompt(trigger.getAttribute("data-require-login") || "thực hiện chức năng này", trigger.getAttribute("href") || "/login");
+                return;
+            }
+            var loginLink = event.target.closest("a[href='/login'], a[href$='/login']");
+            if (!loginLink) return;
+            var text = (loginLink.textContent || "").trim().toLowerCase();
+            if (text.indexOf("đặt lịch") !== -1) {
+                event.preventDefault();
+                showLoginPrompt("đặt lịch khám trực tuyến", loginLink.getAttribute("href") || "/login");
+            }
+        });
+    })();
+
+    syncToggleState();
     }
 
     function toggleSidebar() {
@@ -142,7 +331,70 @@
         } else {
             root.classList.remove("is-sidebar-collapsed");
         }
-        syncToggleState();
+        /* =============================================================
+       12. GUEST LOGIN CONFIRMATION PROMPT (Customer Portal)
+       ============================================================= */
+    (function initGuestLoginPrompt() {
+        var modalEl = null;
+        function ensureModal() {
+            if (modalEl) return modalEl;
+            var wrapper = document.createElement("div");
+            wrapper.id = "cvGuestLoginPromptModal";
+            wrapper.setAttribute("role", "dialog");
+            wrapper.setAttribute("aria-modal", "true");
+            wrapper.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10050;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);";
+            wrapper.innerHTML =
+                '<div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 35px -8px rgba(15,23,42,0.25);border:1px solid #e2e8f0;">' +
+                '  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                '    <span style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#0052cc;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' +
+                '      <i class="bi bi-person-lock"></i>' +
+                '    </span>' +
+                '    <div>' +
+                '      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">Yêu cầu đăng nhập</h3>' +
+                '      <div style="font-size:12px;color:#64748b;">Hệ thống Nha khoa Cường Việt · CV-DCMS</div>' +
+                '    </div>' +
+                '  </div>' +
+                '  <p id="cvGuestLoginPromptMessage" style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;"></p>' +
+                '  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">' +
+                '    <button type="button" id="cvGuestLoginCancelBtn" style="padding:9px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:14px;cursor:pointer;">Để sau</button>' +
+                '    <a id="cvGuestLoginConfirmBtn" href="/login" style="padding:9px 18px;border-radius:10px;border:none;background:#0052cc;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
+                '      <i class="bi bi-box-arrow-in-right"></i> Đồng ý đăng nhập' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(wrapper);
+            var cancelBtn = wrapper.querySelector("#cvGuestLoginCancelBtn");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { wrapper.style.display = "none"; });
+            wrapper.addEventListener("click", function (e) { if (e.target === wrapper) wrapper.style.display = "none"; });
+            modalEl = wrapper;
+            return modalEl;
+        }
+        function showLoginPrompt(actionLabel, targetUrl) {
+            var modal = ensureModal();
+            var msgEl = modal.querySelector("#cvGuestLoginPromptMessage");
+            var confirmBtn = modal.querySelector("#cvGuestLoginConfirmBtn");
+            if (msgEl) msgEl.textContent = "Bạn cần đăng nhập tài khoản để " + actionLabel + ". Bạn có muốn chuyển đến trang đăng nhập để thực hiện tiếp hay không?";
+            if (confirmBtn) confirmBtn.setAttribute("href", targetUrl || "/login");
+            modal.style.display = "flex";
+        }
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-require-login]");
+            if (trigger) {
+                event.preventDefault();
+                showLoginPrompt(trigger.getAttribute("data-require-login") || "thực hiện chức năng này", trigger.getAttribute("href") || "/login");
+                return;
+            }
+            var loginLink = event.target.closest("a[href='/login'], a[href$='/login']");
+            if (!loginLink) return;
+            var text = (loginLink.textContent || "").trim().toLowerCase();
+            if (text.indexOf("đặt lịch") !== -1) {
+                event.preventDefault();
+                showLoginPrompt("đặt lịch khám trực tuyến", loginLink.getAttribute("href") || "/login");
+            }
+        });
+    })();
+
+    syncToggleState();
     }
     if (DESKTOP_QUERY.addEventListener) DESKTOP_QUERY.addEventListener("change", handleBreakpointChange);
     else if (DESKTOP_QUERY.addListener) DESKTOP_QUERY.addListener(handleBreakpointChange);
@@ -165,22 +417,21 @@
     }
 
     $all("[data-accordion]").forEach(function (group) {
-        // Nhóm chứa link active luôn được mở và tô màu icon nhóm
+        // Nhóm luôn được mở sẵn toàn bộ link con
+        group.classList.add("is-open");
         if (group.querySelector(".side-link.is-active")) {
-            group.classList.add("has-active", "is-open");
+            group.classList.add("has-active");
         }
-        setGroupOpen(group, group.classList.contains("is-open"));
+        setGroupOpen(group, true);
 
         var toggle = group.querySelector("[data-accordion-toggle]");
         if (!toggle) return;
-        toggle.addEventListener("click", function () {
-            // Đang ở rail icon-only: mở rộng sidebar trước rồi mới bung nhóm
+        toggle.addEventListener("click", function (e) {
+            if (e) e.preventDefault();
+            // Đang ở rail icon-only: mở rộng sidebar
             if (isDesktop() && root.classList.contains("is-sidebar-collapsed")) {
                 setCollapsed(false);
-                setGroupOpen(group, true);
-                return;
             }
-            setGroupOpen(group, !group.classList.contains("is-open"));
         });
     });
 
@@ -281,12 +532,20 @@
 
     $all("[data-dropdown-toggle]").forEach(function (toggle) {
         toggle.addEventListener("click", function (event) {
+            event.preventDefault();
             event.stopPropagation();
             var item = toggle.closest("[data-dropdown]");
             var willOpen = !item.classList.contains("is-open");
             closeAllDropdowns(item);
             item.classList.toggle("is-open", willOpen);
             toggle.setAttribute("aria-expanded", String(willOpen));
+        });
+    });
+
+    // Ngăn chặn sự kiện click bên trong dropdown panel làm đóng chính nó
+    $all(".dropdown-panel, .cp-user-dropdown").forEach(function (panel) {
+        panel.addEventListener("pointerdown", function (event) {
+            event.stopPropagation();
         });
     });
 
@@ -538,6 +797,69 @@
     /* -------------------------------------------------------------
        Khởi tạo: đồng bộ ARIA rồi bật lại transition sau frame đầu
        ------------------------------------------------------------- */
+    /* =============================================================
+       12. GUEST LOGIN CONFIRMATION PROMPT (Customer Portal)
+       ============================================================= */
+    (function initGuestLoginPrompt() {
+        var modalEl = null;
+        function ensureModal() {
+            if (modalEl) return modalEl;
+            var wrapper = document.createElement("div");
+            wrapper.id = "cvGuestLoginPromptModal";
+            wrapper.setAttribute("role", "dialog");
+            wrapper.setAttribute("aria-modal", "true");
+            wrapper.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10050;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);";
+            wrapper.innerHTML =
+                '<div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 35px -8px rgba(15,23,42,0.25);border:1px solid #e2e8f0;">' +
+                '  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                '    <span style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#0052cc;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' +
+                '      <i class="bi bi-person-lock"></i>' +
+                '    </span>' +
+                '    <div>' +
+                '      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;">Yêu cầu đăng nhập</h3>' +
+                '      <div style="font-size:12px;color:#64748b;">Hệ thống Nha khoa Cường Việt · CV-DCMS</div>' +
+                '    </div>' +
+                '  </div>' +
+                '  <p id="cvGuestLoginPromptMessage" style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;"></p>' +
+                '  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">' +
+                '    <button type="button" id="cvGuestLoginCancelBtn" style="padding:9px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:14px;cursor:pointer;">Để sau</button>' +
+                '    <a id="cvGuestLoginConfirmBtn" href="/login" style="padding:9px 18px;border-radius:10px;border:none;background:#0052cc;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
+                '      <i class="bi bi-box-arrow-in-right"></i> Đồng ý đăng nhập' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(wrapper);
+            var cancelBtn = wrapper.querySelector("#cvGuestLoginCancelBtn");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { wrapper.style.display = "none"; });
+            wrapper.addEventListener("click", function (e) { if (e.target === wrapper) wrapper.style.display = "none"; });
+            modalEl = wrapper;
+            return modalEl;
+        }
+        function showLoginPrompt(actionLabel, targetUrl) {
+            var modal = ensureModal();
+            var msgEl = modal.querySelector("#cvGuestLoginPromptMessage");
+            var confirmBtn = modal.querySelector("#cvGuestLoginConfirmBtn");
+            if (msgEl) msgEl.textContent = "Bạn cần đăng nhập tài khoản để " + actionLabel + ". Bạn có muốn chuyển đến trang đăng nhập để thực hiện tiếp hay không?";
+            if (confirmBtn) confirmBtn.setAttribute("href", targetUrl || "/login");
+            modal.style.display = "flex";
+        }
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-require-login]");
+            if (trigger) {
+                event.preventDefault();
+                showLoginPrompt(trigger.getAttribute("data-require-login") || "thực hiện chức năng này", trigger.getAttribute("href") || "/login");
+                return;
+            }
+            var loginLink = event.target.closest("a[href='/login'], a[href$='/login']");
+            if (!loginLink) return;
+            var text = (loginLink.textContent || "").trim().toLowerCase();
+            if (text.indexOf("đặt lịch") !== -1) {
+                event.preventDefault();
+                showLoginPrompt("đặt lịch khám trực tuyến", loginLink.getAttribute("href") || "/login");
+            }
+        });
+    })();
+
     syncToggleState();
     window.requestAnimationFrame(function () {
         window.requestAnimationFrame(function () { root.classList.remove("is-preload"); });

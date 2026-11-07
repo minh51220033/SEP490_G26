@@ -563,9 +563,9 @@
    -------------------------------------------------------------------------- */
 .cvdcms-chat-widget {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 1060;
+    right: 20px;
+    bottom: 20px;
+    z-index: 9999;
     font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
 }
 
@@ -624,11 +624,17 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    z-index: 1061;
+    z-index: 9999;
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.cvdcms-chat-popup[hidden] {
+.cvdcms-chat-popup--guest {
+    height: auto;
+    max-height: calc(100vh - 120px);
+}
+
+.cvdcms-chat-popup[hidden],
+.cvdcms-chat-popup[aria-hidden="true"]:not(.is-open) {
     display: none !important;
 }
 
