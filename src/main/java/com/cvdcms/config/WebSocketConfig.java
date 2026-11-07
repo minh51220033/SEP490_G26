@@ -1,5 +1,6 @@
 package com.cvdcms.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -11,6 +12,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -22,6 +24,9 @@ import java.util.Map;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${app.websocket.allowed-origins:*}")
+    private String allowedOrigins;
 
     private final ChatWebSocketHandshakeInterceptor handshakeInterceptor;
     private final ChatStompChannelInterceptor stompChannelInterceptor;
@@ -57,10 +62,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             }
         };
 
+        String[] originPatterns = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+
         registry.addEndpoint("/ws-chat")
                 .addInterceptors(handshakeInterceptor)
                 .setHandshakeHandler(handshakeHandler)
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(originPatterns)
                 .withSockJS();
     }
 

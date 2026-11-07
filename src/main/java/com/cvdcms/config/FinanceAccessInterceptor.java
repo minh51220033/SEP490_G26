@@ -68,6 +68,19 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
 
         // 3. Kiểm tra vai trò hoặc quyền hạn phân hệ Tài chính từ database
         boolean isAdmin = userRepository.hasActiveAdminRole(userId);
+        if (!isAdmin && session != null) {
+            if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) {
+                isAdmin = true;
+            } else {
+                Object rolesObj = session.getAttribute("roleNames");
+                if (rolesObj instanceof java.util.Collection<?> col) {
+                    isAdmin = col.stream()
+                            .filter(java.util.Objects::nonNull)
+                            .map(Object::toString)
+                            .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.trim()) || "ROLE_ADMIN".equalsIgnoreCase(r.trim()));
+                }
+            }
+        }
         boolean hasFinancePermission = userRepository.hasActivePermission(userId, "INVOICE_VIEW")
                 || userRepository.hasActivePermission(userId, "INVOICE_CREATE")
                 || userRepository.hasActivePermission(userId, "PAYMENT_COLLECT")

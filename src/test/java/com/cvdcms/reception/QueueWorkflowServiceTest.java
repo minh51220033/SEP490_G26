@@ -329,4 +329,29 @@ class QueueWorkflowServiceTest {
         assertSame(waiting, service.callNext(session, 1L, 2L));
         assertEquals(QueueStatus.WAITING, ticket.getStatus());
     }
+
+    @Test void callOrRecallNumberUpdatesCalledAtAndPublicBoardIncludesCallTime() {
+        permitted();
+        StaffProfile doctor = new StaffProfile(); doctor.setStaffId(2L); doctor.setFullName("BS. Minh");
+        visit.setPrimaryDoctor(doctor);
+        ticket.setStatus(QueueStatus.CALLED);
+        ticket.setCalledAt(LocalDateTime.now().minusMinutes(5));
+
+        // Re-calling the ticket
+        service.transition(session, 11L, QueueWorkflowService.Action.CALL, null);
+
+        assertEquals(QueueStatus.CALLED, ticket.getStatus());
+        assertNotNull(ticket.getCalledAt());
+        verify(tickets).save(ticket);
+
+        // Verify public board includes callTime
+        when(tickets.forBoard(eq(1L), any(), eq(QueueType.EXAM))).thenReturn(List.of(ticket));
+        when(branches.findById(1L)).thenReturn(Optional.of(branch));
+
+        QueueWorkflowService.PublicBoard publicBoard = service.publicBoard(1L);
+        assertFalse(publicBoard.called().isEmpty());
+        QueueWorkflowService.PublicNumber calledNumber = publicBoard.called().get(0);
+        assertEquals(11L, calledNumber.ticketId());
+        assertNotNull(calledNumber.callTime());
+    }
 }

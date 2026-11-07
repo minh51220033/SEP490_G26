@@ -156,9 +156,10 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         syncLog.setSyncStatus(NanopixSyncStatus.MATCHED);
         syncLog.setErrorMessage(null);
 
-        // Nếu có chọn chỉ định cận lâm sàng X-quang trong ca khám
+        // Xác định chỉ định cận lâm sàng X-quang cần gắn
+        ParaclinicalOrderItem orderItem = null;
         if (dto.getOrderItemId() != null && dto.getOrderItemId() > 0) {
-            ParaclinicalOrderItem orderItem = paraclinicalOrderItemRepository.findById(dto.getOrderItemId())
+            orderItem = paraclinicalOrderItemRepository.findById(dto.getOrderItemId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy chỉ định CLS ID: " + dto.getOrderItemId()));
 
             // Kiểm tra chỉ định phải thuộc ca khám đã chọn
@@ -166,7 +167,21 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
                     || !orderItem.getOrder().getVisit().getVisitId().equals(visit.getVisitId())) {
                 throw new IllegalArgumentException("Chỉ định cận lâm sàng không thuộc lượt khám đã chọn.");
             }
+        } else {
+            // Nếu người dùng không chọn cụ thể chỉ định nhưng ca khám có đúng 1 chỉ định đang chờ thì tự động gắn
+            List<ParaclinicalOrderItem> visitItems = paraclinicalOrderItemRepository
+                    .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visit.getVisitId());
+            if (visitItems != null) {
+                List<ParaclinicalOrderItem> waitingItems = visitItems.stream()
+                        .filter(i -> i.getStatus() == ParaclinicalOrderItemStatus.WAITING || i.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS)
+                        .toList();
+                if (waitingItems.size() == 1) {
+                    orderItem = waitingItems.get(0);
+                }
+            }
+        }
 
+        if (orderItem != null) {
             syncLog.setMatchedItem(orderItem);
             orderItem.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
             orderItem.setPerformedAt(LocalDateTime.now());
@@ -218,14 +233,21 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
             return m;
         }).collect(Collectors.toList());
 
-        List<ParaclinicalOrderItem> items = Collections.emptyList();
-        if (!visits.isEmpty()) {
-            items = paraclinicalOrderItemRepository.findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visits.get(0).getVisitId());
+        List<ParaclinicalOrderItem> items = new ArrayList<>();
+        for (Visit v : visits) {
+            List<ParaclinicalOrderItem> visitItems = paraclinicalOrderItemRepository
+                    .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(v.getVisitId());
+            if (visitItems != null) {
+                items.addAll(visitItems);
+            }
         }
 
         List<Map<String, Object>> itemList = items.stream().map(item -> {
             Map<String, Object> m = new HashMap<>();
             m.put("orderItemId", item.getOrderItemId());
+            m.put("visitId", item.getOrder() != null && item.getOrder().getVisit() != null ? item.getOrder().getVisit().getVisitId() : null);
+            m.put("externalRefId", item.getExternalRefId() != null ? item.getExternalRefId() : ("XQ" + item.getOrderItemId()));
+            m.put("toothNumbers", item.getToothNumbers());
             m.put("serviceName", item.getService() != null ? item.getService().getServiceName() : "Chụp X-quang");
             m.put("status", item.getStatus() != null ? item.getStatus().name() : "");
             return m;
@@ -240,7 +262,9 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     @Override
     @Transactional
     public NanopixXrayResponseDTO ingestXray(NanopixSyncRequestDTO request, MultipartFile file, Long userId) throws IOException {
-        requireAuthorizedRole(userId);
+        if (userId != null) {
+            requireAuthorizedRole(userId);
+        }
         StaffProfile staff = null;
         if (userId != null) {
             staff = staffProfileRepository.findByUser_UserId(userId).orElse(null);

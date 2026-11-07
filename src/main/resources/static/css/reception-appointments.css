@@ -1,5 +1,17 @@
 /* DentalFlow FT05 Quản Lý Lịch Hẹn Stylesheet */
 
+/* Màn quản lý lịch theo bố cục điều khiển gọn và bảng dữ liệu. */
+.app-content:has(#appointmentRows) .appointment-workflow{display:none!important}
+.app-content:has(#appointmentRows) .patient-page-heading h1,.app-content:has(#calendarGrid) .patient-page-heading h1{font-size:22px;color:#173b5e}
+.app-content:has(#appointmentRows) .appointment-panel,.app-content:has(#calendarGrid) .appointment-panel{padding:14px;border-radius:10px}
+.app-content:has(#appointmentRows) .appointment-filter,.app-content:has(#calendarGrid) .appointment-filter{gap:10px;padding:0;border:0}
+.app-content:has(#appointmentRows) .appointment-filter>div,.app-content:has(#calendarGrid) .appointment-filter>div{min-width:145px;flex:1}
+.app-content:has(#appointmentRows) .appointment-kpis{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.app-content:has(#appointmentRows) .appointment-kpi{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:6px;box-shadow:none}
+.app-content:has(#appointmentRows) .appointment-kpi>div{margin:0!important}.app-content:has(#appointmentRows) .appointment-kpi i{display:none}.app-content:has(#appointmentRows) .appointment-kpi strong{font-size:13px!important}.app-content:has(#appointmentRows) .appointment-kpi span{font-size:12px}
+.app-content:has(#appointmentRows) .appointment-table th{font-size:12px;color:#234b79;white-space:nowrap;background:#edf3fb}.app-content:has(#appointmentRows) .appointment-table td{font-size:13px;padding:12px 10px}
+.appointment-calendar{gap:0!important;border:1px solid #e2e8f0;border-radius:7px;overflow:hidden}.appointment-calendar-header{border-radius:0!important;background:#eef3fa!important;border-right:1px solid #e2e8f0;font-size:12px!important}.appointment-day{min-width:0;min-height:110px!important;border:0!important;border-right:1px solid #edf2f7!important;border-bottom:1px solid #edf2f7!important;border-radius:0!important;padding:6px!important;box-shadow:none!important}.appointment-calendar.is-week .appointment-day{min-height:440px!important}.calendar-day-number{display:block;color:#334155;font-size:12px;font-weight:700;text-decoration:none;margin-bottom:5px}.calendar-count{display:block;font-weight:400;color:#64748b}.appointment-day .calendar-event{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:3px 0;padding:4px 5px;border-left:3px solid #0284c7;border-radius:3px;background:#eaf6fd;color:#075985;font-size:11px;text-decoration:none}.appointment-day .calendar-event[data-status="CHECKED_IN"],.appointment-day .calendar-event[data-status="COMPLETED"]{background:#ecfdf5;border-color:#10b981;color:#047857}.appointment-day .calendar-event[data-status="PENDING"],.appointment-day .calendar-event[data-status="NO_SHOW"]{background:#fffbeb;border-color:#f59e0b;color:#92400e}.appointment-day .calendar-event[data-status="CANCELLED"]{background:#fef2f2;border-color:#ef4444;color:#b91c1c}.calendar-more{display:block;font-size:11px;color:#0284c7;text-decoration:none}
+
 .appointment-panel {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -286,3 +298,424 @@
 .appointment-table th:last-child, .appointment-table td:last-child { min-width: 245px; position: sticky; right: 0; background: #fff; z-index: 1; box-shadow: -8px 0 12px -12px #334155; }
 .appointment-table thead th:last-child { background: #f8fafc; z-index: 2; }
 .appointment-table tbody tr:hover td:last-child { background: #f7f9fc; }
+
+
+/* =========================================================
+   DENTALSOFT CLINICAL APPOINTMENT DESIGN SYSTEM
+   ========================================================= */
+
+.dentalsoft-appointment-page {
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+/* 1. Main Toolbar */
+.dentalsoft-apt-toolbar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.dentalsoft-filter-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    padding: 6px 14px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dentalsoft-filter-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* Date Navigator */
+.dentalsoft-date-nav {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.dentalsoft-date-nav button {
+    background: #ffffff;
+    border: none;
+    padding: 5px 10px;
+    color: #475569;
+    font-size: 12px;
+    transition: background 0.15s ease;
+}
+
+.dentalsoft-date-nav button:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.dentalsoft-date-label {
+    padding: 5px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    background: #ffffff;
+    user-select: none;
+}
+
+/* KPI Badges Bar */
+.dentalsoft-sub-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.kpi-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 2.5px 12px 2.5px 3.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.kpi-pill:hover {
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-pill.active {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 1.5px #0284c7;
+}
+
+.kpi-pill-num {
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    min-width: 24px;
+    text-align: center;
+    display: inline-block;
+}
+
+.kpi-pill-num.bg-navy {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-num.bg-success {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-num.bg-warning {
+    background-color: #f59e0b !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-num.bg-danger {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-text {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #334155;
+    margin-left: 5px;
+}
+
+/* Appointment Data Table (Thẳng hàng, chuẩn DentalSoft) */
+.dentalsoft-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.dentalsoft-apt-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dentalsoft-apt-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 12px 14px;
+    border-bottom: 1.5px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.dentalsoft-apt-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13.5px;
+    color: #1e293b;
+    background: #ffffff;
+}
+
+.dentalsoft-apt-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+.dentalsoft-time-col {
+    line-height: 1.25;
+}
+
+.dentalsoft-time-col .time-val {
+    font-weight: 700;
+    font-family: ui-monospace, monospace;
+    font-size: 13.5px;
+    color: #0f172a;
+}
+
+.dentalsoft-time-col .date-val {
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.customer-code-badge {
+    color: #0284c7;
+    font-weight: 600;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.customer-code-badge:hover {
+    text-decoration: underline;
+}
+
+.customer-name-link {
+    font-weight: 600;
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.customer-name-link:hover {
+    color: #0284c7;
+    text-decoration: underline;
+}
+
+.demo-chip {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1.5px 5px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.phone-link {
+    color: #0284c7;
+    text-decoration: none;
+    font-weight: 500;
+    font-family: ui-monospace, monospace;
+}
+
+.phone-link:hover {
+    text-decoration: underline;
+}
+
+/* Status Pill Button */
+.dentalsoft-status-btn {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    min-width: 110px;
+    max-width: 125px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.dentalsoft-status-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.dentalsoft-status-btn .status-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.dentalsoft-status-btn .status-bot {
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+/* Status variants */
+.dentalsoft-status-btn.waiting {
+    border-left: 3.5px solid #64748b;
+}
+
+.dentalsoft-status-btn.confirmed {
+    border-left: 3.5px solid #0284c7;
+    background: #f0f9ff;
+}
+
+.dentalsoft-status-btn.checkedin {
+    border-left: 3.5px solid #10b981;
+    background: #ecfdf5;
+}
+
+.dentalsoft-status-btn.completed {
+    border-left: 3.5px solid #059669;
+    background: #f0fdf4;
+}
+
+.dentalsoft-status-btn.cancelled {
+    border-left: 3.5px solid #ef4444;
+    background: #fef2f2;
+}
+
+.dentalsoft-status-btn.noshow {
+    border-left: 3.5px solid #f59e0b;
+    background: #fffbeb;
+}
+
+/* Modal 1: Quick Status Modal */
+.modal-header-dentalsoft {
+    background: #2563eb;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header-dentalsoft .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+.status-radio-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 20px;
+    margin: 16px 0;
+}
+
+.status-radio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: #1e293b;
+    user-select: none;
+}
+
+.status-radio-item input[type="radio"] {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
+.status-radio-item:hover {
+    color: #2563eb;
+}
+
+/* Modal 2: Create Appointment Modal */
+.modal-create-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-create-header .icon-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.patient-autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1055;
+}
+
+.patient-autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    transition: background 0.1s ease;
+}
+
+.patient-autocomplete-item:hover {
+    background: #f0f9ff;
+    color: #0284c7;
+}
+
+/* Print Support */
+@media print {
+    aside, header, footer, .dentalsoft-apt-toolbar, .dentalsoft-sub-toolbar, .btn-action-icon, .modal {
+        display: none !important;
+    }
+    .app-main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .dentalsoft-card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .dentalsoft-apt-table th, .dentalsoft-apt-table td {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+    }
+}

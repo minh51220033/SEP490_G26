@@ -156,7 +156,7 @@ public class PortalAppointmentService {
         appointment.setAppointmentDate(request.date());
         appointment.setPreferredSession(request.session());
         appointment.setDurationMinutes(AppointmentSlotService.duration(service));
-        appointment.setExpectedTime(slots.resolve(branch, request.date(), request.session(), request.doctorId(),
+        appointment.setExpectedTime(slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
                 appointment.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.PATIENT));
         appointment.setInitialSymptoms(clean(request.symptoms()));
         appointment.setSource(AppointmentSource.ONLINE);
@@ -213,7 +213,7 @@ public class PortalAppointmentService {
         a.setPreferredSession(request.session());
         a.setDoctor(doctor(request.doctorId()));
         a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
-        a.setExpectedTime(slots.resolve(branch, request.date(), request.session(), request.doctorId(),
+        a.setExpectedTime(slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
                 a.getDurationMinutes(), appointmentId, requestedTime, AppointmentActorType.PATIENT));
         lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);

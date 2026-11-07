@@ -23,6 +23,7 @@ public class ReceptionCheckInController {
     @GetMapping
     public String page(@RequestParam(required = false) Long branchId,
                        @RequestParam(required = false) String query,
+                       @RequestParam(required = false) Long appointmentId,
                        HttpSession session, Model model) {
         String effectiveQuery = query;
         if ((effectiveQuery == null || effectiveQuery.isBlank()) && model.containsAttribute("savedQuery")) {
@@ -30,6 +31,7 @@ public class ReceptionCheckInController {
             if (sq != null) effectiveQuery = sq.toString();
         }
         model.addAttribute("dashboard", service.dashboard(session, branchId, effectiveQuery));
+        model.addAttribute("selectedAppointmentId", appointmentId);
         model.addAttribute("roleNames", List.of("LE_TAN"));
         model.addAttribute("sidebarMenu", "checkin");
         return "reception/check-in";

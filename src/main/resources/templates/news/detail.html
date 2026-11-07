@@ -129,7 +129,19 @@
                 <!-- Chưa đăng nhập -->
                 <div class="nw-alert nw-alert--info" th:if="${session.loggedInUser == null}">
                     <i class="bi bi-person-lock"></i>
-                    <span>Vui lòng <a th:href="@{/login}">đăng nhập</a> để tham gia bình luận và tương tác.</span>
+                    <span>Bạn đang xem ở chế độ khách. Vui lòng <a th:href="@{/login}" data-require-login="bình luận và tương tác bài viết">đăng nhập</a> để tham gia bình luận.</span>
+                    <div style="margin-top:10px; width:100%;">
+                        <textarea class="nw-textarea" rows="2" readonly
+                                  placeholder="Nhấn vào đây để đăng nhập và viết bình luận..."
+                                  data-require-login="viết bình luận cho bài viết này"
+                                  style="cursor:pointer; background:#ffffff; margin-bottom:8px;"></textarea>
+                        <div>
+                            <a th:href="@{/login}" data-require-login="đăng bình luận cho bài viết này"
+                               class="nw-btn nw-btn--primary nw-btn--sm" style="text-decoration:none;">
+                                <i class="bi bi-send"></i> Đăng bình luận
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 

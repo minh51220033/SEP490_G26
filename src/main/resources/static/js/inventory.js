@@ -797,7 +797,7 @@
             const uploadedUrl = res?.attachmentUrl || "";
             $("attachmentUrl").value = uploadedUrl;
             if ($("invoicePreviewStatus")) {
-                $("invoicePreviewStatus").textContent = "✓ Đã tải lên hợp lệ";
+                $("invoicePreviewStatus").textContent = "Đã tải lên hợp lệ";
                 $("invoicePreviewStatus").style.color = "#15803d";
             }
             const isPdf = uploadedUrl.toLowerCase().endsWith(".pdf");
@@ -1040,7 +1040,7 @@
             result.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <strong>✓ Nhập kho thành công</strong> — Mã phiếu: <strong>${escapeHtml(saved.receiptCode)}</strong>
+                        <strong>Nhập kho thành công</strong> — Mã phiếu: <strong>${escapeHtml(saved.receiptCode)}</strong>
                         · Tổng tiền: <strong>${money(saved.totalAmount)}</strong>
                         · Đã thanh toán: <strong class="stock-good">${money(saved.paidAmount)}</strong>
                         · Còn nợ: <strong class="stock-low">${money(saved.remainingDebt)}</strong>
@@ -1803,7 +1803,7 @@
             $("receiptSignatureData").value = dataUrl;
             $("receiptSignPreview").src = dataUrl;
             $("receiptSignPreview").hidden = false;
-            $("receiptSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu nhập)";
+            $("receiptSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu nhập)";
             $("clearReceiptSignBtn").hidden = false;
             $("signatureModal").hidden = true;
             return;
@@ -1812,7 +1812,7 @@
             $("issueSignatureData").value = dataUrl;
             $("issueSignPreview").src = dataUrl;
             $("issueSignPreview").hidden = false;
-            $("issueSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu xuất)";
+            $("issueSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu xuất)";
             $("clearIssueSignBtn").hidden = false;
             $("signatureModal").hidden = true;
             return;
@@ -1821,7 +1821,7 @@
             $("transferSignatureData").value = dataUrl;
             $("transferSignPreview").src = dataUrl;
             $("transferSignPreview").hidden = false;
-            $("transferSignStatus").textContent = "✓ Đã ký nháp (Sẽ lưu cùng phiếu điều chuyển)";
+            $("transferSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu điều chuyển)";
             $("clearTransferSignBtn").hidden = false;
             $("signatureModal").hidden = true;
             return;

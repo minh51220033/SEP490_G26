@@ -2,9 +2,9 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Tách tài khoản')}"></head>
 <body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Tách tài khoản')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
             <div class="patient-page-heading"><div><a th:href="@{/portal/records/{id}(id=${record.id})}">← Chi tiết hồ sơ</a>
                 <h1>Tách tài khoản · Bước 1/3</h1><p>Xác nhận đúng hồ sơ và nhập email tài khoản nhận.</p></div></div>
             <section class="panel patient-detail">
@@ -23,4 +23,4 @@
                     <button type="submit" class="btn btn-primary">Gửi mã xác minh</button>
                 </form>
             </section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer></div></div></body></html>
+        </main></div></div></body></html>

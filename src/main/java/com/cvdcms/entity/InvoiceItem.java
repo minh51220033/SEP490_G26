@@ -75,6 +75,12 @@ public class InvoiceItem {
     @Column(name = "payable_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal payableAmount = BigDecimal.ZERO;
 
+    @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal vatRate = BigDecimal.ZERO;
+
+    @Column(name = "vat_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal vatAmount = BigDecimal.ZERO;
+
     @Column(name = "paid_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 

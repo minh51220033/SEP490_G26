@@ -751,7 +751,10 @@
         if (typeof window.SockJS === 'undefined' || typeof window.Stomp === 'undefined') {
             return;
         }
-        const socket = new window.SockJS('/ws-chat');
+        // Giới hạn transport an toàn hỗ trợ CORS / Origin header (loại trừ JSONP lỗi thời gây cảnh báo phía máy chủ)
+        const socket = new window.SockJS('/ws-chat', null, {
+            transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+        });
         const stomp = window.Stomp.over(socket);
         stomp.debug = null;
 

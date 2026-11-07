@@ -20,41 +20,56 @@
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-            <!-- TIÊU ĐỀ CHI NHÁNH + THỐNG KÊ GHẾ GỌN GÀNG -->
-            <section class="welcome-card d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div>
-                    <a th:href="@{/admin/branches}" class="text-decoration-none small">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách chi nhánh
-                    </a>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                        <h2 class="welcome-card__title mb-0">
+            <!-- TIÊU ĐỀ CHI NHÁNH -->
+            <section class="welcome-card">
+                <div class="d-flex align-items-center gap-3">
+                    <img th:src="${branch.imageUrl != null and !#strings.isEmpty(branch.imageUrl) ? branch.imageUrl : '/uploads/images/storefont.png'}"
+                         th:alt="${branch.branchName}"
+                         style="width: 68px; height: 68px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; flex-shrink: 0;">
+                    <div>
+                        <a th:href="@{/admin/branches}" class="text-decoration-none small">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách chi nhánh
+                        </a>
+                        <h2 class="welcome-card__title mt-1">
                             <span class="text-brand" th:text="${branch.branchName}">Chi nhánh</span>
                         </h2>
-                        <span th:if="${branch.isActive}" class="badge bg-success">Đang hoạt động</span>
-                        <span th:unless="${branch.isActive}" class="badge bg-secondary">Ngừng hoạt động</span>
+                        <p class="welcome-card__desc">
+                            <strong th:text="${branch.branchCode}">CN01</strong> ·
+                            <span th:text="${branch.address}">Địa chỉ</span>
+                        </p>
                     </div>
-                    <p class="welcome-card__desc mb-0 mt-1">
-                        <strong th:text="${branch.branchCode}">CN01</strong> ·
-                        <span th:text="${branch.address}">Địa chỉ</span>
-                    </p>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="badge bg-light text-dark border py-2 px-3">
-                        <i class="bi bi-heart-pulse text-primary me-1"></i>Tổng ghế: <strong th:text="${totalChairs}">0</strong>
-                    </span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3">
-                        <i class="bi bi-check-circle me-1"></i>Trống: <strong th:text="${availableChairs}">0</strong>
-                    </span>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-3">
-                        <i class="bi bi-person-check me-1"></i>Đang khám: <strong th:text="${inUseChairs}">0</strong>
-                    </span>
-                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3">
-                        <i class="bi bi-tools me-1"></i>Vệ sinh/Bảo trì: <strong th:text="${cleaningChairs + maintenanceChairs}">0</strong>
-                    </span>
+                <div>
+                    <span th:if="${branch.isActive}" class="badge bg-success">Đang hoạt động</span>
+                    <span th:unless="${branch.isActive}" class="badge bg-secondary">Ngừng hoạt động</span>
                 </div>
             </section>
 
-            <!-- TAB (GỘP GỌN 2 TAB) -->
+            <!-- SỐ LIỆU GHẾ -->
+            <section class="stat-grid" aria-label="Thống kê ghế nha">
+                <article class="stat-card">
+                    <p class="stat-card__label">Tổng số ghế</p>
+                    <p class="stat-card__value" th:text="${totalChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-heart-pulse" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Ghế trống</p>
+                    <p class="stat-card__value" th:text="${availableChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-check-circle" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Đang khám</p>
+                    <p class="stat-card__value" th:text="${inUseChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-card__label">Vệ sinh / Bảo trì</p>
+                    <p class="stat-card__value" th:text="${cleaningChairs + maintenanceChairs}">0</p>
+                    <span class="stat-card__icon"><i class="bi bi-tools" aria-hidden="true"></i></span>
+                </article>
+            </section>
+
+            <!-- TAB -->
             <section class="panel">
                 <ul class="nav nav-tabs mb-3" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -66,7 +81,13 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="tab-config" data-bs-toggle="tab" data-bs-target="#pane-config"
                                 type="button" role="tab" aria-controls="pane-config" aria-selected="false">
-                            <i class="bi bi-gear" aria-hidden="true"></i> Thông tin &amp; Cấu hình chi nhánh
+                            <i class="bi bi-wifi" aria-hidden="true"></i> Cấu hình mạng &amp; giờ làm việc
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info"
+                                type="button" role="tab" aria-controls="pane-info" aria-selected="false">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i> Thông tin &amp; Hình ảnh cơ sở
                         </button>
                     </li>
                 </ul>
@@ -159,123 +180,128 @@
                         </article>
                     </div>
 
-                    <!-- ============ TAB 2: THÔNG TIN & CẤU HÌNH CHI NHÁNH (GỘP GỌN TAB 2 & TAB 3) ============ -->
+                    <!-- ============ TAB 2: CẤU HÌNH (SCR-40.3) ============ -->
                     <div class="tab-pane fade" id="pane-config" role="tabpanel" aria-labelledby="tab-config">
-                        <div class="row g-4">
-                            <!-- CỘT TRÁI: THÔNG TIN HÀNH CHÍNH CHI NHÁNH -->
-                            <div class="col-lg-6">
-                                <div class="card border rounded-3 p-3 h-100 shadow-none">
-                                    <h5 class="fw-bold text-dark fs-6 mb-3 pb-2 border-bottom">
-                                        <i class="bi bi-buildings text-primary me-2"></i>Thông tin chi nhánh
-                                    </h5>
-                                    <form th:action="@{/admin/branches/{id}/update(id=${branch.branchId})}"
-                                          th:object="${branch}" method="post">
-                                        <div class="row g-3">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Mã chi nhánh</label>
-                                                <input type="text" class="form-control bg-light" th:value="${branch.branchCode}" disabled>
-                                            </div>
-                                            <div class="col-md-8">
-                                                <label for="infoName" class="form-label">Tên chi nhánh <span class="text-danger">*</span></label>
-                                                <input type="text" id="infoName" name="branchName" class="form-control"
-                                                       th:value="${branch.branchName}" maxlength="150" required>
-                                            </div>
-                                            <div class="col-12">
-                                                <label for="infoAddress" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
-                                                <input type="text" id="infoAddress" name="address" class="form-control"
-                                                       th:value="${branch.address}" maxlength="255" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label for="infoPhone" class="form-label">Số điện thoại</label>
-                                                <input type="tel" id="infoPhone" name="phone" class="form-control"
-                                                       pattern="^(\+84|0)[0-9]{9,10}$"
-                                                       title="SĐT gồm 10-11 số (ví dụ: 0901234567)"
-                                                       th:value="${branch.phone}" maxlength="20">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label for="infoEmail" class="form-label">Email</label>
-                                                <input type="email" id="infoEmail" name="email" class="form-control"
-                                                       th:value="${branch.email}" maxlength="100">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label for="infoTaxCode" class="form-label">Mã số thuế</label>
-                                                <input type="text" id="infoTaxCode" name="taxCode" class="form-control"
-                                                       pattern="^([0-9]{10}|[0-9]{13}|[0-9]{10}-[0-9]{3})$"
-                                                       title="Mã số thuế gồm 10 số (doanh nghiệp) hoặc 13 số (chi nhánh). Ví dụ: 0101234567 hoặc 0101234567-001"
-                                                       th:value="${branch.taxCode}" maxlength="20" placeholder="Ví dụ: 0101234567">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label for="infoManager" class="form-label">Người quản lý cơ sở</label>
-                                                <select id="infoManager" name="managerUser.userId" class="form-select">
-                                                    <option value="">-- Chưa chỉ định --</option>
-                                                    <option th:each="m : ${managers}" th:value="${m.userId}"
-                                                            th:selected="${branch.managerUser != null and branch.managerUser.userId == m.userId}"
-                                                            th:text="${m.displayName}">Quản lý</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="mt-3 pt-2 border-top text-end">
-                                            <button type="submit" class="btn btn-primary">
-                                                <i class="bi bi-save me-1" aria-hidden="true"></i> Cập nhật thông tin
-                                            </button>
-                                        </div>
-                                    </form>
+                        <form th:action="@{/admin/branches/{id}/config(id=${branch.branchId})}"
+                              th:object="${config}" method="post">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="allowedIpRange" class="form-label">Dải IP Wifi cho phép chấm công</label>
+                                    <input type="text" id="allowedIpRange" th:field="*{allowedIpRange}"
+                                           class="form-control" maxlength="255"
+                                           placeholder="Ví dụ: 192.168.1.0/24, 14.232.112.*">
+                                    <div class="form-text">
+                                        Nhân viên chỉ chấm công được khi kết nối mạng thuộc dải IP này.
+                                        Phân cách nhiều dải bằng dấu phẩy.
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="openingTime" class="form-label">Giờ mở cửa</label>
+                                    <input type="time" id="openingTime" th:field="*{openingTime}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="closingTime" class="form-label">Giờ đóng cửa</label>
+                                    <input type="time" id="closingTime" th:field="*{closingTime}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="workingDays" class="form-label">Ngày làm việc</label>
+                                    <input type="text" id="workingDays" th:field="*{workingDays}"
+                                           class="form-control" maxlength="20" placeholder="2,3,4,5,6,7,CN">
+                                </div>
+                                <div class="col-12">
+                                    <label for="tvConfigJson" class="form-label">Cấu hình TV phòng chờ (JSON)</label>
+                                    <textarea id="tvConfigJson" th:field="*{tvConfigJson}" rows="4"
+                                              class="form-control font-monospace"
+                                              placeholder='{"tvIps": ["192.168.1.50"]}'></textarea>
                                 </div>
                             </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save" aria-hidden="true"></i> Lưu cấu hình
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                            <!-- CỘT PHẢI: CẤU HÌNH MẠNG WIFI & GIỜ LÀM VIỆC (SCR-40.3) -->
-                            <div class="col-lg-6">
-                                <div class="card border rounded-3 p-3 h-100 shadow-none">
-                                    <h5 class="fw-bold text-dark fs-6 mb-3 pb-2 border-bottom">
-                                        <i class="bi bi-wifi text-primary me-2"></i>Cấu hình mạng &amp; Giờ làm việc
-                                    </h5>
-                                    <form th:action="@{/admin/branches/{id}/config(id=${branch.branchId})}"
-                                          th:object="${config}" method="post">
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <label for="allowedIpRange" class="form-label">Dải IP Wifi cho phép chấm công</label>
-                                                <input type="text" id="allowedIpRange" th:field="*{allowedIpRange}"
-                                                       class="form-control" maxlength="255"
-                                                       placeholder="Ví dụ: 192.168.1.0/24, 14.232.112.*">
-                                                <div class="form-text">
-                                                    Nhân viên chỉ chấm công được khi kết nối mạng thuộc dải IP này. Phân cách bằng dấu phẩy.
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label for="openingTime" class="form-label">Giờ mở cửa</label>
-                                                <input type="time" id="openingTime" th:field="*{openingTime}" class="form-control">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label for="closingTime" class="form-label">Giờ đóng cửa</label>
-                                                <input type="time" id="closingTime" th:field="*{closingTime}" class="form-control">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label for="workingDays" class="form-label">Ngày làm việc</label>
-                                                <input type="text" id="workingDays" th:field="*{workingDays}"
-                                                       class="form-control" maxlength="20" placeholder="2,3,4,5,6,7,CN">
-                                            </div>
-                                            <div class="col-12">
-                                                <label for="tvConfigJson" class="form-label">Cấu hình TV phòng chờ (JSON)</label>
-                                                <textarea id="tvConfigJson" th:field="*{tvConfigJson}" rows="3"
-                                                          class="form-control font-monospace"
-                                                          placeholder='{"tvIps": ["192.168.1.50"]}'></textarea>
+                    <!-- ============ TAB 3: THÔNG TIN & HÌNH ẢNH CHI NHÁNH ============ -->
+                    <div class="tab-pane fade" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
+                        <form th:action="@{/admin/branches/{id}/update(id=${branch.branchId})}"
+                              th:object="${branch}" method="post" enctype="multipart/form-data">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Mã chi nhánh</label>
+                                    <input type="text" class="form-control" th:value="${branch.branchCode}" disabled>
+                                </div>
+                                <div class="col-md-8">
+                                    <label for="infoName" class="form-label">Tên chi nhánh <span class="text-danger">*</span></label>
+                                    <input type="text" id="infoName" name="branchName" class="form-control"
+                                           th:value="${branch.branchName}" maxlength="150" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="infoAddress" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
+                                    <input type="text" id="infoAddress" name="address" class="form-control"
+                                           th:value="${branch.address}" maxlength="255" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoPhone" class="form-label">Số điện thoại</label>
+                                    <input type="tel" id="infoPhone" name="phone" class="form-control"
+                                           pattern="^(\+84|0)[0-9]{9,10}$"
+                                           title="SĐT gồm 10-11 số (ví dụ: 0901234567)"
+                                           th:value="${branch.phone}" maxlength="20">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoEmail" class="form-label">Email</label>
+                                    <input type="email" id="infoEmail" name="email" class="form-control"
+                                           th:value="${branch.email}" maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoTaxCode" class="form-label">Mã số thuế</label>
+                                    <input type="text" id="infoTaxCode" name="taxCode" class="form-control"
+                                           pattern="^([0-9]{10}|[0-9]{13}|[0-9]{10}-[0-9]{3})$"
+                                           title="Mã số thuế gồm 10 số (doanh nghiệp) hoặc 13 số (chi nhánh). Ví dụ: 0101234567 hoặc 0101234567-001"
+                                           th:value="${branch.taxCode}" maxlength="20" placeholder="Ví dụ: 0101234567">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="infoManager" class="form-label">Người quản lý cơ sở</label>
+                                    <select id="infoManager" name="managerUser.userId" class="form-select">
+                                        <option value="">-- Chưa chỉ định --</option>
+                                        <option th:each="m : ${managers}" th:value="${m.userId}"
+                                                th:selected="${branch.managerUser != null and branch.managerUser.userId == m.userId}"
+                                                th:text="${m.displayName}">Quản lý</option>
+                                    </select>
+                                </div>
+
+                                <!-- HÌNH ẢNH CƠ SỞ -->
+                                <div class="col-12 mt-3">
+                                    <label for="infoImageFile" class="form-label fw-semibold">
+                                        <i class="bi bi-image text-primary me-1"></i>Hình ảnh mặt tiền / không gian cơ sở
+                                    </label>
+                                    <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded border bg-light">
+                                        <img id="detailBranchImagePreview"
+                                             th:src="${branch.imageUrl != null and !#strings.isEmpty(branch.imageUrl) ? branch.imageUrl : '/uploads/images/storefont.png'}"
+                                             th:alt="${branch.branchName}"
+                                             style="width: 150px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid #cbd5e1;">
+                                        <div class="flex-grow-1">
+                                            <input type="file" id="infoImageFile" name="imageFile" class="form-control mb-1"
+                                                   accept="image/jpeg,image/png,image/webp">
+                                            <div class="form-text mb-0">
+                                                Hỗ trợ JPG, PNG, WEBP (tối đa 5MB). Ảnh này sẽ hiển thị tại mục <strong>Ghé thăm cơ sở</strong> trên trang chủ khách hàng.
                                             </div>
                                         </div>
-                                        <div class="mt-3 pt-2 border-top text-end">
-                                            <button type="submit" class="btn btn-primary">
-                                                <i class="bi bi-save me-1" aria-hidden="true"></i> Lưu cấu hình
-                                            </button>
-                                        </div>
-                                    </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save" aria-hidden="true"></i> Cập nhật thông tin &amp; hình ảnh
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </section>
         </main>
 
-        
     </div>
 </div>
 
@@ -372,6 +398,17 @@
 <script th:inline="javascript">
     (function () {
         var base = /*[[@{/admin/branches/{id}(id=${branch.branchId})}]]*/ '/admin/branches/1';
+
+        // Preview ảnh cơ sở khi chọn file mới
+        var infoImageFile = document.getElementById('infoImageFile');
+        var detailPreview = document.getElementById('detailBranchImagePreview');
+        if (infoImageFile && detailPreview) {
+            infoImageFile.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    detailPreview.src = URL.createObjectURL(this.files[0]);
+                }
+            });
+        }
 
         // Modal phòng: đổi form theo chế độ thêm / sửa.
         document.getElementById('roomModal').addEventListener('show.bs.modal', function (e) {

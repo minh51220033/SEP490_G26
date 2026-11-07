@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
 import java.util.*;
@@ -64,6 +65,43 @@ class DispatchServiceTest {
         assertEquals(ChairStatus.AVAILABLE, chair.getStatus());
         assertEquals(6L, visit.getChairId());
         verify(visits).save(visit);
+    }
+
+    @Test void assignmentRejectsChairAlreadyUsedByAnotherActiveVisit() {
+        permitted();
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+        Room room = new Room(); room.setRoomId(5L); room.setBranch(branch); room.setStatus(RoomStatus.ACTIVE);
+        DentalChair chair = new DentalChair(); chair.setChairId(6L); chair.setBranch(branch); chair.setRoom(room); chair.setStatus(ChairStatus.AVAILABLE);
+        when(chairs.findById(6L)).thenReturn(Optional.of(chair));
+        when(visits.occupiedChair(6L, 7L, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT))).thenReturn(1L);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, 3L, 5L, 6L, null));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Ghế đang được sử dụng"));
+        verify(visits, never()).save(any());
+    }
+
+    @Test void assignmentRejectsChairFromAnotherBranch() {
+        permitted();
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+        Branch otherBranch = new Branch(); otherBranch.setBranchId(2L); otherBranch.setIsActive(true);
+        Room foreignRoom = new Room(); foreignRoom.setRoomId(8L); foreignRoom.setBranch(otherBranch); foreignRoom.setStatus(RoomStatus.ACTIVE);
+        DentalChair foreignChair = new DentalChair(); foreignChair.setChairId(6L); foreignChair.setBranch(otherBranch);
+        foreignChair.setRoom(foreignRoom); foreignChair.setStatus(ChairStatus.AVAILABLE);
+        when(chairs.findById(6L)).thenReturn(Optional.of(foreignChair));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, 3L, 8L, 6L, null));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("thuộc phòng tại chi nhánh"));
+        verify(visits, never()).save(any());
     }
 
     @Test void doctorWithoutCurrentScheduleIsRejected() {
@@ -158,5 +196,28 @@ class DispatchServiceTest {
         when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.of(old));
         assertSame(old, service.issue(session, 1L, 7L, false, null));
         verify(tickets, never()).saveAndFlush(any());
+    }
+
+    @Test void assignWithNoDoctorsWorkingThrowsConflict() {
+        permitted();
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(0L);
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, null, null, null, null));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("không có bác sĩ nào đang trong ca trực"));
+        verify(visits, never()).save(any());
+    }
+
+    @Test void boardExcludesDoctorsWithoutWorkingSchedule() {
+        User user = new User(); user.setUserId(4L);
+        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(user, false, List.of(1L)));
+        when(branches.findAll()).thenReturn(List.of(branch));
+        when(branches.findById(1L)).thenReturn(Optional.of(branch));
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(0L);
+
+        DispatchService.Board board = service.board(session, 1L);
+        assertTrue(board.doctors().isEmpty(), "Bác sĩ không có ca làm việc không được hiển thị trên bảng điều phối");
     }
 }

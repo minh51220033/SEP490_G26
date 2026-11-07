@@ -5,7 +5,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div><div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Khách không đến cần nhắc')}"></header>
         <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
             <div class="patient-page-heading"><div><h1>Khách không đến &amp; cần nhắc</h1><p>Danh sách lịch không đến trong 7 ngày gần nhất. Công việc liên hệ được chuyển sang chăm sóc khách hàng.</p></div></div>
-            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn"><a th:href="@{/reception/appointments}">Dashboard</a>
+            <nav class="appointment-nav" aria-label="Màn hình lịch hẹn"><a th:href="@{/reception/appointments}">Dashboard</a><a th:href="@{/reception/appointments/day}">Lịch ngày theo bác sĩ</a>
                 <a th:href="@{/reception/appointments/calendar}">Lịch tuần / tháng</a><a class="is-current" th:href="@{/reception/appointments/no-shows}">Không đến &amp; cần nhắc</a></nav>
             <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
             <section class="panel appointment-panel"><div class="appointment-filter"><div><label for="filterBranch">Chi nhánh</label><select id="filterBranch" class="form-select"></select></div>

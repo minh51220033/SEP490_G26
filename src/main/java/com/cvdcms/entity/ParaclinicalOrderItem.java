@@ -50,11 +50,15 @@ public class ParaclinicalOrderItem {
     @Column(name = "results_json", columnDefinition = "json")
     private String resultsJson;
 
-    @Column(name = "external_ref_id", length = 100)
+    @Column(name = "external_ref_id", length = 100, unique = true)
     private String externalRefId;
 
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ParaclinicalResultAttachment> attachments = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "performed_id")
+    private PerformedService performedService;
 
     @OneToOne(mappedBy = "orderItem", cascade = CascadeType.ALL)
     private LabExternalOrder labExternalOrder;

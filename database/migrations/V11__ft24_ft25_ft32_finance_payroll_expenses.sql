@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS salary_advances (
     CONSTRAINT fk_adv_staff FOREIGN KEY (staff_id) REFERENCES staff_profiles(staff_id),
     CONSTRAINT fk_adv_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id),
     CONSTRAINT fk_adv_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
-    CONSTRAINT fk_adv_approved_by FOREIGN KEY (approved_by) REFERENCES staff_profiles(staff_id)
+    CONSTRAINT fk_adv_approved_by FOREIGN KEY (approved_by) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DELIMITER $$
