@@ -357,9 +357,9 @@
 .dentalsoft-date-nav button {
     background: #ffffff;
     border: none;
-    padding: 5px 10px;
+    padding: 7px 12px;
     color: #475569;
-    font-size: 12px;
+    font-size: 13px;
     transition: background 0.15s ease;
 }
 
@@ -369,7 +369,7 @@
 }
 
 .dentalsoft-date-label {
-    padding: 5px 14px;
+    padding: 7px 16px;
     font-size: 13.5px;
     font-weight: 600;
     color: #1e293b;
@@ -443,6 +443,29 @@
     color: #ffffff !important;
 }
 
+.kpi-pill-num.bg-primary {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-num.bg-teal {
+    background-color: #0d9488 !important;
+    color: #ffffff !important;
+}
+
+.kpi-pill-num.bg-secondary {
+    background-color: #64748b !important;
+    color: #ffffff !important;
+}
+
+.text-teal {
+    color: #0d9488 !important;
+}
+
+.text-orange {
+    color: #ea580c !important;
+}
+
 .kpi-pill-text {
     font-size: 12.5px;
     font-weight: 500;
@@ -502,7 +525,7 @@
 .dentalsoft-apt-table td.appointment-actions-column {
     position: sticky;
     right: 0;
-    min-width: 180px;
+    min-width: 135px;
     box-shadow: -2px 0 5px rgba(15, 23, 42, 0.08);
     z-index: 2;
 }
@@ -533,21 +556,62 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px !important;
     white-space: nowrap;
 }
 
-.appointment-action-group .btn-action-icon {
-    width: 32px;
-    height: 32px;
-    padding: 6px;
-    border: 1px solid transparent;
+.appointment-action-group .btn-action-icon,
+button.btn-action-icon,
+a.btn-action-icon {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    transition: all 0.15s ease !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
-.appointment-action-group .btn-action-icon:hover,
-.appointment-action-group .btn-action-icon:focus-visible {
-    border-color: currentColor;
-    outline: none;
+.appointment-action-group .btn-action-icon:hover:not(:disabled) {
+    background-color: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+}
+
+.appointment-action-group .btn-action-icon.text-primary:hover:not(:disabled) {
+    background-color: #e0f2fe !important;
+    border-color: #bae6fd !important;
+    color: #0284c7 !important;
+}
+
+.appointment-action-group .btn-action-icon.text-secondary:hover:not(:disabled) {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #1e293b !important;
+}
+
+.appointment-action-group .btn-action-icon.text-danger:hover:not(:disabled) {
+    background-color: #fee2e2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.appointment-action-group .btn-action-icon:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
 }
 
 .dentalsoft-time-col {
@@ -612,81 +676,336 @@
     text-decoration: underline;
 }
 
-/* Status Pill Button */
-.dentalsoft-status-btn {
+/* Read-Only Status Badge (Match 100% with Top Filter Pills) */
+.apt-status-badge {
     display: inline-flex;
-    flex-direction: column;
-    justify-content: center;
-    width: 100%;
-    min-width: 110px;
-    max-width: 125px;
-    padding: 5px 10px;
-    border-radius: 8px;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.3;
+    user-select: none;
+}
+
+.apt-status-badge .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.apt-status-badge.status-pending {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+.apt-status-badge.status-pending .status-dot { background: #f59e0b; }
+
+.apt-status-badge.status-confirmed {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.apt-status-badge.status-confirmed .status-dot { background: #0284c7; }
+
+.apt-status-badge.status-checkedin {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.apt-status-badge.status-checkedin .status-dot { background: #10b981; }
+
+.apt-status-badge.status-completed {
+    background: #f0fdfa;
+    color: #0f766e;
+    border: 1px solid #99f6e4;
+}
+.apt-status-badge.status-completed .status-dot { background: #0d9488; }
+
+.apt-status-badge.status-noshow {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+.apt-status-badge.status-noshow .status-dot { background: #64748b; }
+
+.apt-status-badge.status-cancelled {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+.apt-status-badge.status-cancelled .status-dot { background: #ef4444; }
+
+/* Session Badge inside Table Time Column */
+.apt-session-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-bottom: 3px;
+}
+
+.apt-session-tag.morning {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.apt-session-tag.afternoon {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.apt-session-tag.evening {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+/* Date Group Row for Week / Month List View */
+.apt-date-group-row td {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 8px 14px !important;
+    border-top: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+/* Date View Tabs & Session Segmented Button Group */
+#periodBtnGroup .btn,
+#sessionBtnGroup .btn {
+    font-size: 12.5px;
+    border-color: #cbd5e1;
+    color: #475569;
+    background: #ffffff;
+    transition: all 0.15s ease;
+}
+
+#periodBtnGroup .btn:hover,
+#sessionBtnGroup .btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+#periodBtnGroup .btn.active,
+#sessionBtnGroup .btn.active {
+    background-color: #0284c7 !important;
+    border-color: #0284c7 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+#sessionBtnGroup .btn.active i {
+    color: #ffffff !important;
+}
+
+/* Create Appointment Modal Session Buttons */
+.modal-session-btn {
     border: 1px solid #cbd5e1;
     background: #ffffff;
-    cursor: pointer;
+    color: #334155;
+    border-radius: 8px;
+    padding: 7px 8px;
+    line-height: 1.25;
     transition: all 0.15s ease;
-    text-align: left;
 }
 
-.dentalsoft-status-btn:hover {
-    background: #f1f5f9;
+.modal-session-btn:hover {
+    background: #f8fafc;
     border-color: #94a3b8;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
-.dentalsoft-status-btn .status-top {
+.modal-session-btn.active {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    color: #0369a1;
+    box-shadow: 0 0 0 1.5px #0284c7;
+}
+
+.modal-session-btn .session-time-sub {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.modal-session-btn.active .session-time-sub {
+    color: #0284c7;
+    font-weight: 500;
+}
+
+/* Calendar Event Session Badge (Thay thế hoàn toàn hiển thị giờ trong ô lịch) */
+.cal-session-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 5px;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+.cal-session-badge.morning {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.cal-session-badge.afternoon {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.cal-session-badge.evening {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.appointment-day .calendar-event {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    font-size: 12.5px;
-    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 3.5px 0;
+    padding: 4px 6px;
+    border-left: 3px solid #0284c7;
+    border-radius: 4px;
+    background: #ffffff;
     color: #1e293b;
-    line-height: 1.2;
+    font-size: 11.5px;
+    text-decoration: none;
+    border-top: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.15s ease;
 }
 
-.dentalsoft-status-btn .status-bot {
-    font-size: 10px;
-    color: #64748b;
-    margin-top: 2px;
-    line-height: 1;
-}
-
-/* Status variants */
-.dentalsoft-status-btn.waiting {
-    border-left: 3.5px solid #64748b;
-}
-
-.dentalsoft-status-btn.confirmed {
-    border-left: 3.5px solid #0284c7;
+.appointment-day .calendar-event:hover {
     background: #f0f9ff;
+    border-color: #7dd3fc;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
 }
 
-.dentalsoft-status-btn.checkedin {
-    border-left: 3.5px solid #10b981;
-    background: #ecfdf5;
+.appointment-day .calendar-event[data-status="CHECKED_IN"],
+.appointment-day .calendar-event[data-status="COMPLETED"] {
+    border-left-color: #10b981;
 }
 
-.dentalsoft-status-btn.completed {
-    border-left: 3.5px solid #059669;
-    background: #f0fdf4;
+.appointment-day .calendar-event[data-status="PENDING"] {
+    border-left-color: #f59e0b;
 }
 
-.dentalsoft-status-btn.cancelled {
-    border-left: 3.5px solid #ef4444;
-    background: #fef2f2;
+.appointment-day .calendar-event[data-status="CANCELLED"] {
+    border-left-color: #ef4444;
 }
 
-.dentalsoft-status-btn.noshow {
-    border-left: 3.5px solid #f59e0b;
-    background: #fffbeb;
+.appointment-day .calendar-event[data-status="NO_SHOW"] {
+    border-left-color: #64748b;
 }
 
-/* Modal 1: Quick Status Modal */
-.modal-header-dentalsoft {
-    background: #2563eb;
+.cal-quick-add {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0284c7;
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s ease;
+}
+
+.cal-quick-add:hover {
+    background: #0284c7;
     color: #ffffff;
-    padding: 12px 20px;
+    border-color: #0284c7;
+}
+
+.appointment-calendar.is-week .appointment-day {
+    min-height: 220px !important;
+}
+
+/* Rotate icon for accordion toggle */
+#advFilterChevron {
+    display: inline-block;
+    transition: transform 0.25s ease;
+}
+
+#advFilterChevron.rotate-180 {
+    transform: rotate(180deg);
+}
+
+/* Active Filter Tag Pills (Theo Ảnh 2) */
+.filter-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #0369a1;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.filter-tag-pill .btn-remove-tag {
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    line-height: 1;
+    color: #0284c7;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-tag-pill .btn-remove-tag:hover {
+    color: #0c4a6e;
+}
+
+/* Hide native clear button on search input to prevent icon duplication */
+#appointmentSearch::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+/* Advanced Filter Panel inline styling */
+#advancedFilterPanel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7 !important;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Detail Modal Styles */
+.modal-header-dentalsoft {
+    background: #0284c7;
+    color: #ffffff;
+    padding: 14px 22px;
     border-radius: 12px 12px 0 0;
 }
 
