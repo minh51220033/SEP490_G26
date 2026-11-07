@@ -1,171 +1,1783 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Chi tiết bệnh án điện tử')}"></head>
+<head th:replace="~{fragments/head :: head('Chi tiết bệnh án điện tử MS: BA-18 - DentalFlow')}"></head>
 <body class="app-body">
 <div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('emr')}"></aside>
+    <!-- SIDEBAR CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('doctor-records')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
     <div class="app-main">
+        <!-- HEADER TOPBAR CHUNG -->
         <header th:replace="~{fragments/header :: appTopbar('Chi tiết bệnh án điện tử')}"></header>
-        <main class="app-content emr-page emr-detail-page"
+
+        <main class="app-content emr-page"
               th:with="patient=${detail.snapshot['patient']},visit=${detail.snapshot['visit']},clinical=${detail.snapshot['clinical']},cover=${detail.documentFields['COVER']},dental=${detail.documentFields['OUTPATIENT_DENTAL']},summary=${detail.documentFields['TREATMENT_SUMMARY']}">
             <link rel="stylesheet" th:href="@{/css/emr.css}">
 
-            <div class="emr-chrome">
-                <a class="emr-back" th:href="@{/emr/records}"><i class="bi bi-arrow-left"></i> Danh sách bệnh án</a>
-                <div class="emr-record-head">
-                    <div>
-                        <span class="emr-eyebrow" th:text="${detail.record.code}">EMR</span>
-                        <h1 th:text="${patient['fullName']}">Bệnh nhân</h1>
-                        <p th:text="|${patient['patientCode']} · Lượt khám ${visit['visitCode']} · Phiên bản v${detail.currentVersion}|">Thông tin</p>
-                    </div>
-                    <div class="emr-record-state d-flex align-items-center gap-2">
-                        <span class="emr-status emr-status--large" th:classappend="| status-${detail.record.status}|" th:text="${detail.record.status.displayName}">Bản nháp</span>
-                        <span th:if="${detail.record.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success border border-success px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 12.5px;">
-                            <i class="bi bi-patch-check-fill me-1"></i>ĐÃ CHỨNG THỰC ĐIỆN TỬ
-                        </span>
-                        <span th:if="${detail.record.status.name() == 'DOCTOR_SIGNATURE_PENDING'}" class="badge bg-warning-subtle text-warning border border-warning px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 12.5px;">
-                            <i class="bi bi-pen-fill me-1"></i>CHỜ BÁC SĨ KÝ SỐ
-                        </span>
-                    </div>
-                </div>
+            <div class="emr-detail-container py-3">
 
-                <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
-                <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
-                <div class="alert alert-warning" th:if="${detail.stale and detail.canRefresh}">
-                    <strong>Snapshot đã cũ.</strong> Dữ liệu khám nguồn đã thay đổi; hãy làm mới trước khi kiểm tra và khóa.
-                </div>
+                <!-- BREADCRUMB CHUẨN DENTALSOFT (Item 8) -->
+                <nav aria-label="breadcrumb" class="mb-2.5">
+                    <ol class="breadcrumb emr-breadcrumb mb-0 align-items-center" style="font-size: 13px;">
+                        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted"><i class="bi bi-house-door"></i></a></li>
+                        <li class="breadcrumb-item"><a th:href="@{/doctor/patient-records}" class="text-decoration-none text-muted">Hồ sơ bệnh án</a></li>
+                        <li class="breadcrumb-item"><a th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + detail.record.patientId : '/doctor/patient-records'}" class="text-decoration-none text-muted" th:text="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}">Vũ Phương Anh</a></li>
+                        <li class="breadcrumb-item active text-dark fw-bold font-monospace" th:text="${detail.record.code}">EMR-001</li>
+                    </ol>
+                </nav>
 
-                <section class="emr-action-bar">
-                    <div class="emr-workflow-actions">
-                        <form th:if="${detail.canRefresh}" method="post" th:action="@{/emr/records/{id}/refresh(id=${detail.record.id})}"><button class="btn btn-outline-primary" type="submit"><i class="bi bi-arrow-repeat"></i> Làm mới dữ liệu</button></form>
-                        <form th:if="${detail.canValidate}" method="post" th:action="@{/emr/records/{id}/validate(id=${detail.record.id})}"><button class="btn btn-outline-success" type="submit"><i class="bi bi-clipboard-check"></i> Kiểm tra hồ sơ</button></form>
-                        <form th:if="${detail.canLock}" method="post" th:action="@{/emr/records/{id}/lock(id=${detail.record.id})}"><button class="btn btn-success" type="submit"><i class="bi bi-lock"></i> Khóa phiên bản</button></form>
-                        <form th:if="${detail.canDoctorSign}" method="post" th:action="@{/emr/records/{id}/doctor-sign(id=${detail.record.id})}" class="emr-sign-form d-flex align-items-center gap-2"><label class="d-flex align-items-center gap-1.5 cursor-pointer mb-0 small text-dark fw-medium"><input type="checkbox" name="confirmed" value="true" required> Bác sĩ xác nhận hồ sơ bệnh án chính xác và hợp lệ</label><button class="btn btn-primary" type="submit"><i class="bi bi-patch-check-fill me-1"></i>Ký số xác thực bệnh án</button></form>
+                <!-- 1. THANH SUB-HEADER TÁC VỤ NHANH CHUẨN DENTALSOFT (Item 8) -->
+                <section class="emr-sub-header">
+                    <div class="emr-sub-header__left">
+                        <a class="btn btn-sm btn-outline-secondary rounded-circle p-2 d-inline-flex align-items-center justify-content-center"
+                           th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + detail.record.patientId + '#medical' : '/doctor/patient-records'}"
+                           title="Quay lại hồ sơ bệnh nhân" style="width: 36px; height: 36px;">
+                            <i class="bi bi-arrow-left"></i>
+                        </a>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h1 class="emr-sub-header__title mb-0">
+                                    <span>Bệnh án ngoại trú Răng Hàm Mặt</span>
+                                    <button class="btn btn-sm btn-link text-muted p-0 ms-1" type="button" title="Chỉnh sửa thông tin">
+                                        <i class="bi bi-pencil" style="font-size: 14px;"></i>
+                                    </button>
+                                </h1>
+                                <span class="badge rounded-pill px-3 py-1.5 fw-bold"
+                                      th:classappend="${detail.record.status.name() == 'SIGNED' ? 'bg-success-subtle text-success border border-success-subtle' : (detail.record.status.name() == 'LOCKED' ? 'bg-secondary-subtle text-secondary border' : 'bg-primary-subtle text-primary border border-primary-subtle')}"
+                                      style="font-size: 12.5px;">
+                                    <span class="rounded-circle d-inline-block me-1.5"
+                                          th:style="${detail.record.status.name() == 'SIGNED' ? 'background:#16a34a;' : (detail.record.status.name() == 'LOCKED' ? 'background:#64748b;' : 'background:#0284c7;')}"
+                                          style="width: 7px; height: 7px;"></span>
+                                    <span th:text="${detail.record.status.name() == 'SIGNED' ? 'Đã ký số' : (detail.record.status.name() == 'LOCKED' ? 'Đã khóa' : 'Đang mở')}">Đang mở</span>
+                                </span>
+                            </div>
+                            <div class="emr-sub-header__meta mt-1">
+                                <span><i class="bi bi-person-badge me-1"></i>Mã BN: <strong th:text="${patient['patientCode']}">BN001</strong></span>
+                                <span><i class="bi bi-person me-1"></i>Họ tên: <strong th:text="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}">Vũ Phương Anh</strong></span>
+                                <span><i class="bi bi-calendar3 me-1"></i>Lượt khám: <strong th:text="${visit['visitCode']}">LK001</strong></span>
+                                <span><i class="bi bi-layers me-1"></i>Phiên bản: <strong th:text="|v${detail.currentVersion}|">v1</strong></span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="emr-mode-actions" aria-label="Chế độ hiển thị">
-                        <button type="button" class="emr-mode-btn is-active" data-emr-mode="view"><i class="bi bi-eye"></i> Xem</button>
-                        <button type="button" class="emr-mode-btn" data-emr-mode="edit" th:disabled="${!detail.canRefresh}" th:title="${!detail.canRefresh ? 'Phiên bản đã khóa, không thể chỉnh sửa' : 'Chỉnh sửa nội dung bổ sung'}"><i class="bi bi-pencil-square"></i> Chỉnh sửa</button>
-                        <button type="button" class="emr-mode-btn" data-emr-mode="print"><i class="bi bi-printer"></i> Bản in</button>
+
+                    <!-- Cụm nút tác vụ Sub-header: Đóng HSBA, Ký số, In, Lịch sử -->
+                    <div class="emr-sub-header__actions">
+                        <!-- Nút Đóng HSBA / Khóa phiên bản trực tiếp -->
+                        <form th:if="${detail.canLock}" method="post" th:action="@{/emr/records/{id}/lock(id=${detail.record.id})}" class="m-0">
+                            <button class="btn btn-outline-danger d-inline-flex align-items-center gap-1.5 shadow-sm rounded-3 fw-bold" type="submit">
+                                <i class="bi bi-lock-fill"></i> Đóng HSBA
+                            </button>
+                        </form>
+
+                        <!-- Nút Ký số ngay trực tiếp -->
+                        <form th:if="${detail.canDoctorSign}" method="post" th:action="@{/emr/records/{id}/doctor-sign(id=${detail.record.id})}" class="m-0">
+                            <input type="hidden" name="confirmed" value="true">
+                            <button class="btn btn-primary d-inline-flex align-items-center gap-1.5 shadow-sm rounded-3 fw-bold" type="submit">
+                                <i class="bi bi-pen-fill"></i> Ký số
+                            </button>
+                        </form>
+
+                        <!-- Nút Mở Drawer Lịch sử & Ký số -->
+                        <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-1.5 rounded-3 fw-bold" type="button"
+                                data-bs-toggle="offcanvas" data-bs-target="#emrHistoryDrawer" aria-controls="emrHistoryDrawer">
+                            <i class="bi bi-clock-history"></i> Lịch sử / Ký số
+                        </button>
+
+                        <!-- Dropdown Tác vụ khác -->
                         <div class="dropdown">
-                            <button class="emr-mode-btn dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-download"></i> Xuất</button>
-                            <ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" type="button" data-emr-print><i class="bi bi-file-earmark-pdf me-2"></i>In / lưu PDF</button></li><li><a class="dropdown-item" th:href="@{/emr/records/{id}/export.json(id=${detail.record.id})}"><i class="bi bi-filetype-json me-2"></i>Xuất JSON</a></li></ul>
+                            <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1 rounded-3" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <form th:if="${detail.canRefresh}" method="post" th:action="@{/emr/records/{id}/refresh(id=${detail.record.id})}" class="m-0">
+                                        <button class="dropdown-item d-flex align-items-center gap-2" type="submit">
+                                            <i class="bi bi-arrow-repeat text-primary"></i> Đồng bộ lại từ ca khám
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2" th:href="@{/emr/records/{id}/export.json(id=${detail.record.id})}">
+                                        <i class="bi bi-filetype-json text-primary"></i> Xuất dữ liệu JSON
+                                    </a>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center gap-2" type="button" data-emr-print>
+                                        <i class="bi bi-file-earmark-pdf text-danger"></i> Xuất / In bản PDF
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </section>
-            </div>
 
-            <div class="emr-workspace">
-                <aside class="emr-document-nav emr-chrome">
-                    <div class="emr-document-nav__title"><div><span>Hồ sơ chính</span><h2>Thành phần hồ sơ</h2></div><span class="emr-doc-count" th:text="${#lists.size(detail.documents)}">5</span></div>
-                    <button type="button" class="emr-doc-item" th:each="doc,stat : ${detail.documents}" th:classappend="${stat.first ? ' is-active' : ''}" th:attr="data-doc-target=${doc.code},data-doc-title=${doc.title}">
-                        <span class="emr-doc-icon"><i class="bi" th:classappend="${doc.code == 'COVER' ? ' bi-file-earmark-person' : (doc.code == 'OUTPATIENT_DENTAL' ? ' bi-file-earmark-medical' : (doc.code == 'TREATMENT_SUMMARY' ? ' bi-journal-check' : (doc.code == 'ATTACHMENT_INDEX' ? ' bi-paperclip' : ' bi-shield-check')))}"></i></span>
-                        <span class="emr-doc-copy"><strong th:text="${doc.title}">Tài liệu</strong><small th:text="|${doc.type} · SHA ${#strings.substring(doc.hash,0,8)}…|">TYPE</small></span><i class="bi bi-chevron-right emr-doc-chevron"></i>
-                    </button>
-                    <div class="emr-validation"><h3>Điều kiện khóa</h3><p th:if="${#lists.isEmpty(detail.missing)}" class="text-success"><i class="bi bi-check-circle"></i> Đã đủ dữ liệu bắt buộc.</p><ul th:unless="${#lists.isEmpty(detail.missing)}"><li th:each="item : ${detail.missing}" th:text="${item}"></li></ul><a th:href="@{/doctor/examination/{id}/diagnoses(id=${detail.record.visitId})}" th:if="${!#lists.isEmpty(detail.missing) or !#lists.isEmpty(detail.warnings)}" class="emr-fix-link">Mở phiếu khám để bổ sung <i class="bi bi-arrow-up-right"></i></a><div th:unless="${#lists.isEmpty(detail.warnings)}" class="emr-warning-list"><h3>Nhắc bổ sung</h3><ul><li th:each="warning : ${detail.warnings}" th:text="${warning}"></li></ul></div></div>
-                </aside>
+                <!-- THÔNG BÁO FLASH MESSAGE -->
+                <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0 d-flex align-items-center gap-2 mb-3" th:if="${success}" role="alert">
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0 d-flex align-items-center gap-2 mb-3" th:if="${error}" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
 
-                <section class="emr-canvas" data-emr-canvas>
-                    <div class="emr-print-toolbar emr-chrome"><div><i class="bi bi-file-earmark-text"></i><span data-current-doc-title>Bìa hồ sơ bệnh án</span></div><button class="btn btn-sm btn-primary" type="button" data-emr-print><i class="bi bi-printer"></i> In tài liệu này</button></div>
+                <!-- 2. BỐ CỤC 2 CỘT TIÊU CHUẨN: CỘT TRÁI 280PX & CỘT PHẢI TRANG IN A4 -->
+                <div class="emr-2col-layout">
 
-                    <article class="emr-paper emr-paper--cover is-active" data-emr-document="COVER">
-                        <div class="emr-watermark" th:if="${detail.record.status.name() != 'SIGNED'}">BẢN CHƯA KÝ SỐ</div>
-                        <div class="emr-page-meta"><span th:text="|Mã hồ sơ ${detail.record.code} · v${detail.currentVersion}|">Mã hồ sơ</span><span>Trang bìa</span></div>
-                        <div class="emr-paper__facility"><div><span>Cơ sở khám chữa bệnh</span><strong th:text="${visit['branchName']}">Cơ sở</strong></div><div class="text-end"><span>Mã cơ sở</span><strong th:text="${visit['branchCode']}">CN01</strong></div></div>
-                        <div class="emr-cover-title"><span>HỒ SƠ BỆNH ÁN ĐIỆN TỬ</span><h2>BỆNH ÁN NGOẠI TRÚ<br>RĂNG HÀM MẶT</h2></div>
-                        <div class="emr-cover-grid"><div><span>Mã hồ sơ</span><strong th:text="${detail.record.code}">EMR</strong></div><div><span>Số lưu trữ</span><strong th:text="${cover != null and cover['archiveNo'] != null and !cover['archiveNo'].isBlank() ? cover['archiveNo'] : 'Chưa cấp'}">—</strong></div><div><span>Loại bệnh án</span><strong>Ngoại trú</strong></div><div><span>Khoa</span><strong th:text="${cover != null and cover['department'] != null and !cover['department'].isBlank() ? cover['department'] : 'Răng Hàm Mặt'}">Răng Hàm Mặt</strong></div></div>
-                        <div class="emr-cover-patient"><div><span>Họ và tên người bệnh</span><h3 th:text="${patient['fullName']}">Họ tên</h3><p><span th:text="|Mã người bệnh: ${patient['patientCode']}|">Mã</span><span th:text="|Giới tính: ${patient['gender'] ?: 'Chưa rõ'}|">Giới tính</span><span th:text="|Ngày sinh: ${@emrViewText.date(patient['dob'])}|">Ngày sinh</span></p></div></div>
-                        <dl class="emr-cover-details"><div><dt>CCCD / định danh</dt><dd th:text="${patient['idCardNumber'] ?: 'Chưa cập nhật'}">—</dd></div><div><dt>Bảo hiểm y tế</dt><dd th:text="${patient['healthInsuranceNumber'] ?: 'Chưa cập nhật'}">—</dd></div><div><dt>Địa chỉ</dt><dd th:text="${patient['address'] ?: 'Chưa cập nhật'}">—</dd></div><div><dt>Ngày tiếp nhận</dt><dd th:text="${@emrViewText.date(cover != null and cover['admissionAt'] != null and !cover['admissionAt'].isBlank() ? cover['admissionAt'] : visit['checkInAt'])}">—</dd></div><div><dt>Ngày kết thúc</dt><dd th:text="${@emrViewText.date(cover != null ? cover['dischargeAt'] : null)}">—</dd></div><div><dt>Phòng / ghế</dt><dd th:text="${cover != null and cover['roomBed'] != null and !cover['roomBed'].isBlank() ? cover['roomBed'] : '—'}">—</dd></div></dl>
-                        <form class="emr-edit-form" method="post" th:action="@{/emr/records/{id}/documents/COVER(id=${detail.record.id})}"><div class="emr-edit-heading"><div><i class="bi bi-pencil-square"></i><strong>Chỉnh sửa thông tin bìa</strong><small>Chỉ lưu trên phiên bản EMR, không thay đổi dữ liệu khám nguồn.</small></div><button class="btn btn-primary" type="submit"><i class="bi bi-floppy"></i> Lưu thay đổi</button></div><div class="emr-edit-grid"><label>Số lưu trữ<input class="form-control" name="archiveNo" th:value="${cover != null ? cover['archiveNo'] : ''}"></label><label>Khoa<input class="form-control" name="department" th:value="${cover != null ? cover['department'] : 'Răng Hàm Mặt'}"></label><label>Phòng / ghế<input class="form-control" name="roomBed" th:value="${cover != null ? cover['roomBed'] : ''}"></label><label>Ngày tiếp nhận<input class="form-control" name="admissionAt" th:value="${cover != null ? cover['admissionAt'] : ''}"></label><label>Ngày kết thúc<input class="form-control" name="dischargeAt" th:value="${cover != null ? cover['dischargeAt'] : ''}"></label></div></form>
-                        <div class="emr-page-signature"><span th:text="${detail.record.status.name() == 'SIGNED' ? 'HỒ SƠ ĐÃ ĐƯỢC CHỨNG THỰC ĐIỆN TỬ · TOÀN VẸN NỘI BỘ' : 'BẢN CHƯA KÝ SỐ - ĐANG SOẠN THẢO'}">Trạng thái</span><small th:text="|SHA-256 ${detail.contentHash ?: 'sẽ được tạo khi khóa'}|">Hash</small></div>
-                    </article>
+                    <!-- CỘT TRÁI: SIDEBAR CỐ ĐỊNH 280PX (Item 8) -->
+                    <aside class="emr-sidebar-left">
 
-                    <article class="emr-paper" data-emr-document="OUTPATIENT_DENTAL">
-                        <div class="emr-watermark" th:if="${detail.record.status.name() != 'SIGNED'}">BẢN CHƯA KÝ SỐ</div>
-                        <div class="emr-page-meta"><span th:text="|${detail.record.code} · v${detail.currentVersion}|">Mã</span><span>BA-18</span></div>
-                        <div class="emr-paper__facility"><div><span>Cơ sở khám chữa bệnh</span><strong th:text="${visit['branchName']}">Cơ sở</strong></div><div class="text-end"><span>Mã cơ sở</span><strong th:text="${visit['branchCode']}">CN01</strong></div></div>
-                        <h2>BỆNH ÁN NGOẠI TRÚ<br><small>RĂNG HÀM MẶT</small></h2>
-                        <h3>A. THÔNG TIN CHUNG</h3>
-                        <div class="emr-grid"><label>Họ và tên<strong th:text="${patient['fullName'] ?: '—'}">—</strong></label><label>Ngày sinh<strong th:text="${patient['dob'] ?: '—'}">—</strong></label><label>Giới tính<strong th:text="${patient['gender'] ?: '—'}">—</strong></label><label>Số điện thoại<strong th:text="${patient['phoneNumber'] ?: '—'}">—</strong></label><label class="span-2">Địa chỉ<strong th:text="${patient['address'] ?: '—'}">—</strong></label><label class="span-2">Chẩn đoán và xử lý nơi giới thiệu<strong th:text="${dental != null and dental['referralDiagnosis'] != null and !dental['referralDiagnosis'].isBlank() ? dental['referralDiagnosis'] : '—'}">—</strong></label></div>
-                        <h3>B. THÔNG TIN KHÁM BỆNH</h3>
-                        <div class="emr-clinical-block"><span>I. Lý do vào viện, vấn đề sức khỏe</span><p th:text="${clinical['chiefComplaint'] ?: visit['initialSymptoms'] ?: '—'}">—</p></div>
-                        <div class="emr-clinical-block"><span>II. Quá trình bệnh lý và diễn biến lâm sàng</span><p th:text="${dental != null and dental['diseaseProgress'] != null and !dental['diseaseProgress'].isBlank() ? dental['diseaseProgress'] : (clinical['historyIllness'] ?: '—')}">—</p></div>
-                        <div class="emr-history-table"><div><span>Dị ứng</span><strong th:text="${patient['allergyDetails'] ?: 'Không ghi nhận'}">—</strong></div><div><span>Tiền sử bản thân</span><strong th:text="${dental != null and dental['personalHistory'] != null and !dental['personalHistory'].isBlank() ? dental['personalHistory'] : (patient['underlyingDiseaseDetails'] ?: 'Không ghi nhận')}">—</strong></div><div><span>Tiền sử gia đình</span><strong th:text="${dental != null and dental['familyHistory'] != null and !dental['familyHistory'].isBlank() ? dental['familyHistory'] : 'Không ghi nhận'}">—</strong></div></div>
-                        <h3>III. KHÁM BỆNH</h3>
-                        <div class="emr-grid"><label>Dấu hiệu sinh tồn<strong th:text="${clinical['vitalSigns'] ?: 'Chưa ghi nhận'}">—</strong></label><label>Tình trạng nha chu<strong th:text="${@emrViewText.label(clinical['periodontalStatus'])}">—</strong></label><label>Khám ngoài miệng<strong th:text="${@emrViewText.label(clinical['extraoralExam'])}">—</strong></label><label>Khám trong miệng<strong th:text="${@emrViewText.label(clinical['intraoralExam'])}">—</strong></label></div>
-                        <h4 class="emr-subtitle">Sơ đồ răng</h4>
-                        <div class="emr-tooth-chart" aria-label="Sơ đồ răng vĩnh viễn"><span th:each="tooth : ${ {'18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28','48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'} }" th:attr="data-tooth=${tooth}" th:text="${tooth}">18</span></div>
-                        <h3>IV. CHẨN ĐOÁN (ICD-10)</h3>
-                        <table class="table table-sm emr-paper-table"><thead><tr><th>Loại</th><th>ICD-10</th><th>Chẩn đoán</th><th>Răng</th></tr></thead><tbody><tr th:each="item : ${detail.snapshot['diagnoses']}"><td th:text="${@emrViewText.label(item['type'])}"></td><td th:text="${item['icd10Code'] ?: '—'}"></td><td th:text="${item['diagnosisText']}"></td><td th:text="${item['toothNumbers'] ?: '—'}"></td></tr><tr th:if="${#lists.isEmpty(detail.snapshot['diagnoses'])}"><td colspan="4" class="text-muted">Chưa có chẩn đoán.</td></tr></tbody></table>
-                        <h3>V. KẾ HOẠCH VÀ QUÁ TRÌNH ĐIỀU TRỊ</h3>
-                        <p class="emr-manual-value" th:text="${dental != null and dental['treatmentPlan'] != null and !dental['treatmentPlan'].isBlank() ? dental['treatmentPlan'] : 'Chưa ghi nhận kế hoạch điều trị.'}">—</p>
-                        <table class="table table-sm emr-paper-table"><thead><tr><th>Ngày</th><th>Dịch vụ / thủ thuật</th><th>Răng</th><th>Bác sĩ</th><th>Ghi chú</th></tr></thead><tbody><tr th:each="item : ${detail.snapshot['performedServices']}"><td th:text="${@emrViewText.date(item['completedAt'])}"></td><td th:text="${item['serviceName']}"></td><td th:text="${item['toothNumbers'] ?: '—'}"></td><td th:text="${item['doctorName']}"></td><td th:text="${item['clinicalNotes'] ?: '—'}"></td></tr><tr th:if="${#lists.isEmpty(detail.snapshot['performedServices'])}"><td colspan="5" class="text-muted">Chưa có thủ thuật.</td></tr></tbody></table>
-                        <form class="emr-edit-form" method="post" th:action="@{/emr/records/{id}/documents/OUTPATIENT_DENTAL(id=${detail.record.id})}"><div class="emr-edit-heading"><div><i class="bi bi-pencil-square"></i><strong>Chỉnh sửa bệnh án Răng Hàm Mặt</strong><small>Các trường bổ sung được lưu riêng trên phiên bản EMR.</small></div><button class="btn btn-primary" type="submit"><i class="bi bi-floppy"></i> Lưu thay đổi</button></div><div class="emr-edit-grid"><label class="span-2">Chẩn đoán nơi giới thiệu<textarea class="form-control" name="referralDiagnosis" th:text="${dental != null ? dental['referralDiagnosis'] : ''}"></textarea></label><label class="span-2">Diễn biến bệnh<textarea class="form-control" name="diseaseProgress" th:text="${@emrViewText.effective(dental, 'diseaseProgress', clinical['historyIllness'])}"></textarea></label><label>Tiền sử bản thân<textarea class="form-control" name="personalHistory" th:text="${@emrViewText.effective(dental, 'personalHistory', patient['underlyingDiseaseDetails'])}"></textarea></label><label>Tiền sử gia đình<textarea class="form-control" name="familyHistory" th:text="${dental != null ? dental['familyHistory'] : ''}"></textarea></label><label class="span-2">Đã xử lý ở tuyến dưới<textarea class="form-control" name="lowerLevelTreatment" th:text="${dental != null ? dental['lowerLevelTreatment'] : ''}"></textarea></label><label class="span-2">Kế hoạch điều trị<textarea class="form-control" name="treatmentPlan" th:text="${@emrViewText.effective(dental, 'treatmentPlan', '')}"></textarea></label><label class="span-2">Ghi chú điều trị<textarea class="form-control" name="treatmentNotes" th:text="${dental != null ? dental['treatmentNotes'] : ''}"></textarea></label></div></form>
-                        <div class="emr-signature-line">
-                            <div>
-                                <strong>Bác sĩ khám bệnh</strong>
-                                <span th:text="${visit['doctorName'] ?: 'Chưa xác định'}">Bác sĩ</span>
-                                <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-digital-stamp mt-2 p-2 border border-success rounded bg-light" style="font-size: 11.5px; border-style: dashed !important;">
-                                    <div class="text-success fw-bold"><i class="bi bi-patch-check-fill me-1"></i>ĐÃ KÝ ĐIỆN TỬ BỞI:</div>
-                                    <strong class="d-block text-dark" th:text="|BS. ${visit['doctorName']}|">Bác sĩ</strong>
-                                    <span class="text-muted d-block" th:text="|Đơn vị: ${visit['branchName']}|">CV-DCMS</span>
-                                    <span class="text-success d-block" style="font-family: monospace;" th:if="${detail.contentHash != null}" th:text="|SHA-256: ${#strings.substring(detail.contentHash, 0, 16)}…|">Hash</span>
+                        <!-- Thẻ thông tin bệnh nhân màu xanh Mint chuẩn DentalSoft (Item 8) -->
+                        <div class="emr-patient-summary-card is-green">
+                            <button type="button" class="emr-btn-quick-edit" data-bs-toggle="modal" data-bs-target="#modalEditPatient" title="Cập nhật thông tin bệnh nhân">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <div class="patient-header">
+                                <div class="emr-avatar-circle" th:text="${#strings.substring(@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName'] ?: 'BN')), 0, 1)}">V</div>
+                                <div class="overflow-hidden">
+                                    <h3 class="emr-patient-name text-truncate" th:text="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}">Vũ Phương Anh</h3>
+                                    <div class="emr-patient-sub" th:text="|Mã BN: ${patient['patientCode']}|">Mã: BN001</div>
                                 </div>
                             </div>
-                            <div>
-                                <strong>Đại diện cơ sở KCB</strong>
-                                <span th:text="${visit['branchName'] ?: 'CV-DCMS'}">Ký, ghi rõ họ tên</span>
-                                <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-clinic-stamp mt-2 p-2 border border-primary rounded bg-light" style="font-size: 11.5px; border-style: dashed !important;">
-                                    <div class="text-primary fw-bold"><i class="bi bi-shield-check me-1"></i>CHỨNG THỰC BỆNH ÁN ĐIỆN TỬ</div>
-                                    <span class="text-muted d-block">Phòng khám Nha khoa CV-DCMS</span>
-                                    <span class="text-primary d-block">Mã xác thực: NỘI BỘ HỢP LỆ</span>
+                            <div class="emr-patient-divider"></div>
+                            <div class="emr-patient-meta-list">
+                                <div class="emr-patient-meta-item">
+                                    <i class="bi bi-calendar-event"></i>
+                                    <span><span class="meta-label">Ngày sinh:</span> <strong class="meta-value" th:text="${@emrViewText.effective(dental, 'dob', @emrViewText.date(patient['dob']))}">1985</strong></span>
+                                </div>
+                                <div class="emr-patient-meta-item">
+                                    <i class="bi bi-gender-ambiguous"></i>
+                                    <span><span class="meta-label">Giới tính:</span> <strong class="meta-value" th:text="${@emrViewText.effective(dental, 'gender', patient['gender'] ?: 'Chưa rõ')}">Nữ</strong></span>
+                                </div>
+                                <div class="emr-patient-meta-item">
+                                    <i class="bi bi-telephone"></i>
+                                    <span><span class="meta-label">SĐT:</span> <strong class="meta-value" th:text="${@emrViewText.effective(dental, 'phoneNumber', patient['phoneNumber'] ?: '—')}">0910000685</strong></span>
+                                </div>
+                                <div class="emr-patient-meta-item is-address" th:title="${@emrViewText.effective(dental, 'address', patient['address'])}">
+                                    <i class="bi bi-geo-alt"></i>
+                                    <span class="meta-address" th:text="${@emrViewText.effective(dental, 'address', patient['address'] ?: 'Chưa cập nhật địa chỉ')}">TP. Hồ Chí Minh</span>
                                 </div>
                             </div>
                         </div>
-                    </article>
 
-                    <article class="emr-paper" data-emr-document="TREATMENT_SUMMARY">
-                        <div class="emr-watermark" th:if="${detail.record.status.name() != 'SIGNED'}">BẢN CHƯA KÝ SỐ</div><div class="emr-page-meta"><span th:text="|${detail.record.code} · v${detail.currentVersion}|">Mã</span><span>Tổng kết bệnh án ngoại trú</span></div><div class="emr-paper__facility"><div><span>Cơ sở khám chữa bệnh</span><strong th:text="${visit['branchName']}">Cơ sở</strong></div><div class="text-end"><span>Mã cơ sở</span><strong th:text="${visit['branchCode']}">CN01</strong></div></div>
-                        <h2>TỔNG KẾT BỆNH ÁN NGOẠI TRÚ<br><small>Răng Hàm Mặt</small></h2>
-                        <section class="emr-care-timeline"><h3>Lịch sử khám và điều trị</h3><p class="emr-section-note">Dữ liệu các lần khám trước được chốt tại thời điểm tạo snapshot.</p><div class="emr-care-event" th:each="previous : ${detail.snapshot['visitHistory']}"><div><strong th:text="${previous['visitCode']}">Lượt khám</strong><time th:text="${@emrViewText.date(previous['checkInAt'])}">Ngày</time></div><p th:text="${previous['symptoms'] ?: 'Chưa ghi lý do khám'}"></p><small th:text="|Chẩn đoán: ${#lists.isEmpty(previous['diagnoses']) ? 'Chưa ghi' : #strings.listJoin(previous['diagnoses'], ', ')}|">Chẩn đoán</small><small th:text="|Đã thực hiện: ${#lists.isEmpty(previous['services']) ? 'Chưa có thủ thuật' : #strings.listJoin(previous['services'], ', ')}|">Điều trị</small></div><p th:if="${#lists.isEmpty(detail.snapshot['visitHistory'])}" class="text-muted">Đây là lượt khám đầu tiên được ghi nhận.</p></section>
-                        <section class="emr-care-timeline"><h3>Kế hoạch điều trị sắp tới</h3><div class="emr-care-event" th:each="plan : ${detail.snapshot['treatmentPlans']}"><div><strong th:text="${plan['name']}">Kế hoạch</strong><small th:text="${@emrViewText.label(plan['status'])}">Trạng thái</small></div><p th:text="${plan['notes'] ?: 'Chưa có ghi chú'}"></p><small th:each="stage : ${plan['stages']}" th:text="|${stage['name']} · ${@emrViewText.label(stage['status'])} · Dự kiến ${@emrViewText.date(stage['expectedEndDate'])}|">Giai đoạn</small></div><p th:if="${#lists.isEmpty(detail.snapshot['treatmentPlans'])}" class="text-muted">Chưa có kế hoạch điều trị trong dữ liệu nguồn. Bác sĩ có thể ghi hướng theo dõi ở phần tổng kết.</p></section>
-                        <ol class="emr-summary-list"><li><strong>Quá trình bệnh lý và diễn biến lâm sàng</strong><p th:text="${summary != null and summary['clinicalProgressSummary'] != null and !summary['clinicalProgressSummary'].isBlank() ? summary['clinicalProgressSummary'] : (clinical['historyIllness'] ?: '—')}">—</p></li><li><strong>Tóm tắt kết quả cận lâm sàng có giá trị chẩn đoán</strong><p th:text="${summary != null and summary['paraclinicalSummary'] != null and !summary['paraclinicalSummary'].isBlank() ? summary['paraclinicalSummary'] : '—'}">—</p></li><li><strong>Dấu hiệu lâm sàng chính</strong><p th:text="${summary != null and summary['mainClinicalSigns'] != null and !summary['mainClinicalSigns'].isBlank() ? summary['mainClinicalSigns'] : (clinical['summaryAssessment'] ?: '—')}">—</p></li><li><strong>Chẩn đoán ra viện</strong><p th:text="${summary != null and summary['dischargeDiagnosis'] != null and !summary['dischargeDiagnosis'].isBlank() ? summary['dischargeDiagnosis'] : 'Theo chẩn đoán chính của lượt khám'}">—</p></li><li><strong>Phương pháp điều trị</strong><p th:text="${summary != null and summary['treatmentMethod'] != null and !summary['treatmentMethod'].isBlank() ? summary['treatmentMethod'] : 'Xem bảng quá trình điều trị'}">—</p></li><li><strong>Tình trạng người bệnh khi kết thúc điều trị</strong><p th:text="${summary != null and summary['dischargeCondition'] != null and !summary['dischargeCondition'].isBlank() ? summary['dischargeCondition'] : '—'}">—</p></li><li><strong>Hướng điều trị và chế độ tiếp theo</strong><p th:text="${summary != null and summary['followupInstructions'] != null and !summary['followupInstructions'].isBlank() ? summary['followupInstructions'] : '—'}">—</p></li></ol>
-                        <form class="emr-edit-form" method="post" th:action="@{/emr/records/{id}/documents/TREATMENT_SUMMARY(id=${detail.record.id})}"><div class="emr-edit-heading"><div><i class="bi bi-pencil-square"></i><strong>Chỉnh sửa tổng kết bệnh án</strong><small>Hoàn thiện nội dung trước khi kiểm tra và khóa.</small></div><button class="btn btn-primary" type="submit"><i class="bi bi-floppy"></i> Lưu thay đổi</button></div><div class="emr-edit-grid"><label class="span-2">Diễn biến lâm sàng<textarea class="form-control" name="clinicalProgressSummary" th:text="${@emrViewText.effective(summary, 'clinicalProgressSummary', clinical['historyIllness'])}"></textarea></label><label class="span-2">Kết quả cận lâm sàng<textarea class="form-control" name="paraclinicalSummary" th:text="${summary != null ? summary['paraclinicalSummary'] : ''}"></textarea></label><label class="span-2">Dấu hiệu lâm sàng chính<textarea class="form-control" name="mainClinicalSigns" th:text="${@emrViewText.effective(summary, 'mainClinicalSigns', clinical['summaryAssessment'])}"></textarea></label><label class="span-2">Chẩn đoán ra viện<textarea class="form-control" name="dischargeDiagnosis" th:text="${summary != null ? summary['dischargeDiagnosis'] : ''}"></textarea></label><label class="span-2">Phương pháp điều trị<textarea class="form-control" name="treatmentMethod" th:text="${summary != null ? summary['treatmentMethod'] : ''}"></textarea></label><label>Tình trạng khi kết thúc<textarea class="form-control" name="dischargeCondition" th:text="${summary != null ? summary['dischargeCondition'] : ''}"></textarea></label><label>Hướng theo dõi tiếp theo<textarea class="form-control" name="followupInstructions" th:text="${summary != null ? summary['followupInstructions'] : ''}"></textarea></label></div></form>
-                        <div class="emr-signature-line emr-signature-line--right"><div><strong>Bác sĩ điều trị</strong><span th:text="${visit['doctorName'] ?: 'Chưa xác định'}">Bác sĩ</span></div></div>
-                    </article>
+                        <!-- Cụm 2 nút tác vụ: "Thêm phiếu", "Thêm tài liệu" (Item 8) -->
+                        <div class="emr-action-cluster">
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAddDocument">
+                                <i class="bi bi-file-earmark-plus"></i> Thêm phiếu
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalAddAttachment">
+                                <i class="bi bi-paperclip"></i> Thêm tài liệu
+                            </button>
+                        </div>
 
-                    <article class="emr-paper" data-emr-document="ATTACHMENT_INDEX">
-                        <div class="emr-page-meta"><span th:text="|${detail.record.code} · v${detail.currentVersion}|">Mã</span><span>Phụ lục</span></div>
-                        <h2>DANH MỤC TÀI LIỆU ĐÍNH KÈM</h2>
-                        <p class="emr-section-note" th:if="${detail.canRefresh}">Ảnh nguồn được sao lưu và tính hash từ nội dung tệp khi khóa phiên bản.</p>
-                        <div class="emr-attachment-grid" th:unless="${#lists.isEmpty(detail.attachments)}"><figure th:each="file : ${detail.attachments}"><a th:href="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}" target="_blank" rel="noopener noreferrer"><img th:src="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}" th:alt="${file.caption ?: file.name}" loading="lazy"></a><figcaption><strong th:text="${file.caption ?: file.name}">Ảnh</strong><small th:text="|${file.name} · ${file.byteSize} bytes|"></small><small class="emr-hash" th:text="|SHA-256: ${file.sha256}|"></small></figcaption></figure></div>
-                        <div class="emr-attachment-grid" th:if="${detail.canRefresh and !#lists.isEmpty(detail.snapshot['photos'])}"><figure th:each="photo : ${detail.snapshot['photos']}"><img th:src="${photo['imageUrl']}" th:alt="${photo['caption'] ?: 'Ảnh nguồn'}" loading="lazy"><figcaption><strong th:text="${photo['caption'] ?: 'Ảnh nguồn'}"></strong><small>Chưa chốt vào phiên bản</small></figcaption></figure></div>
-                        <h3 class="emr-verification-title">Cận lâm sàng và labo trong lượt khám</h3>
-                        <div class="table-responsive"><table class="table table-sm emr-paper-table"><thead><tr><th>Loại</th><th>Mã</th><th>Răng</th><th>Thông tin</th></tr></thead><tbody><tr th:each="xray : ${detail.snapshot['xrays']}"><td>X-quang</td><td th:text="${xray['studyUid']}"></td><td th:text="${xray['toothNumbers'] ?: '—'}"></td><td th:text="${@emrViewText.date(xray['capturedAt'])}"></td></tr><tr th:each="labo : ${detail.snapshot['laboOrders']}"><td>Labo</td><td th:text="${labo['code']}"></td><td th:text="${labo['toothPositions'] ?: '—'}"></td><td th:text="|${labo['material']} · ${@emrViewText.label(labo['status'])}|"></td></tr><tr th:if="${#lists.isEmpty(detail.snapshot['xrays']) and #lists.isEmpty(detail.snapshot['laboOrders'])}"><td colspan="4">Chưa có dữ liệu cận lâm sàng/labo.</td></tr></tbody></table></div>
-                        <p class="emr-section-note" th:if="${detail.canRefresh}">Ảnh X-quang/labo nằm trong kho nội bộ sẽ được sao lưu khi khóa. Tệp dùng URL ngoài sẽ bị chặn để tránh ký một liên kết có thể thay đổi.</p>
-                        <p class="emr-section-note" th:if="${#lists.isEmpty(detail.attachments) and #lists.isEmpty(detail.snapshot['photos'])}">Lượt khám này chưa có ảnh lâm sàng.</p>
-                    </article>
+                        <!-- Accordion danh mục hồ sơ bệnh án (Item 8) -->
+                        <div class="emr-tree-card">
+                            <div class="emr-accordion-category">
+                                <div class="emr-accordion-header" id="headingMainDocs" onclick="toggleMainDocsAccordion()">
+                                    <span><i class="bi bi-folder-fill me-1.5 text-success"></i> Hồ sơ chính</span>
+                                    <i class="bi bi-chevron-down chevron-icon" id="chevronMainDocs"></i>
+                                </div>
+                                <div class="emr-accordion-content" id="contentMainDocs">
+                                    <ul class="emr-tree-list">
+                                        <li>
+                                            <button type="button" class="emr-tree-item is-active" data-doc-target="COVER" data-doc-title="Bìa hồ sơ bệnh án">
+                                                <i class="bi bi-file-earmark-person tree-icon"></i>
+                                                <div class="tree-text">
+                                                    <span class="tree-name">Bìa hồ sơ bệnh án</span>
+                                                    <span class="tree-sub">COVER</span>
+                                                </div>
+                                                <i class="bi bi-chevron-right text-muted small ms-auto"></i>
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="emr-tree-item" data-doc-target="OUTPATIENT_DENTAL" data-doc-title="Bệnh án ngoại trú Răng Hàm Mặt (Sơ đồ răng)">
+                                                <i class="bi bi-file-earmark-medical-fill tree-icon"></i>
+                                                <div class="tree-text">
+                                                    <span class="tree-name">Bệnh án ngoại trú RHM</span>
+                                                    <span class="tree-sub">Sơ đồ răng (BA-18)</span>
+                                                </div>
+                                                <i class="bi bi-chevron-right text-muted small ms-auto"></i>
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="emr-tree-item" data-doc-target="TREATMENT_SUMMARY" data-doc-title="Tổng kết bệnh án ngoại trú Răng hàm mặt">
+                                                <i class="bi bi-journal-text tree-icon"></i>
+                                                <div class="tree-text">
+                                                    <span class="tree-name">Tổng kết bệnh án</span>
+                                                    <span class="tree-sub">TREATMENT_SUMMARY</span>
+                                                </div>
+                                                <i class="bi bi-chevron-right text-muted small ms-auto"></i>
+                                            </button>
+                                        </li>
+                                        <!-- Các tài liệu bổ sung khác nếu có -->
+                                        <li th:each="doc : ${detail.documents}" th:if="${doc.code != 'COVER' and doc.code != 'OUTPATIENT_DENTAL' and doc.code != 'TREATMENT_SUMMARY'}">
+                                            <button type="button" class="emr-tree-item"
+                                                    th:attr="data-doc-target=${doc.code},data-doc-title=${doc.title}">
+                                                <i class="bi bi-file-earmark tree-icon"></i>
+                                                <div class="tree-text">
+                                                    <span class="tree-name" th:text="${doc.title}">Tờ phiếu</span>
+                                                    <span class="tree-sub" th:text="${doc.code}">CODE</span>
+                                                </div>
+                                                <i class="bi bi-chevron-right text-muted small ms-auto"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
 
-                    <article class="emr-paper" data-emr-document="VERIFICATION">
-                        <div class="emr-page-meta"><span th:text="|${detail.record.code} · v${detail.currentVersion}|">Mã</span><span>Xác thực</span></div>
-                        <h2>THÔNG TIN XÁC THỰC HỒ SƠ</h2>
-                        <dl class="emr-verification-list"><div><dt>Cơ sở</dt><dd th:text="${visit['branchName']}">—</dd></div><div><dt>Mã hồ sơ</dt><dd th:text="${detail.record.code}">—</dd></div><div><dt>Phiên bản</dt><dd th:text="|v${detail.currentVersion}|">v1</dd></div><div><dt>Trạng thái</dt><dd th:text="${detail.record.status.displayName}">Bản nháp</dd></div><div><dt>SHA-256 nội dung</dt><dd class="emr-hash" th:text="${detail.contentHash ?: 'Chưa khóa'}">—</dd></div></dl>
-                        <h3 class="emr-verification-title">Chữ ký điện tử</h3>
-                        <div th:if="${#lists.isEmpty(detail.signatures)}" class="emr-signature-empty"><i class="bi bi-exclamation-circle"></i><strong>Hồ sơ chưa được ký</strong></div>
-                        <div class="emr-verification-signatures" th:unless="${#lists.isEmpty(detail.signatures)}"><div th:each="signature : ${detail.signatures}"><i class="bi bi-patch-check-fill"></i><span th:text="${@emrViewText.label(signature.type)}">DOCTOR</span><strong th:text="${signature.signerName}">Người ký</strong><small th:text="|${signature.provider == 'LOCAL_TEST_ONLY' or signature.provider == 'CVDCMS_INTERNAL_CA' ? 'Chứng thực số nội bộ' : signature.provider} · ${signature.signedAt != null ? #temporals.format(signature.signedAt, 'dd/MM/yyyy HH:mm') : '—'}|"></small></div></div>
-                        <div class="emr-hash-note"><i class="bi bi-shield-lock-fill text-primary"></i><span>Hồ sơ bệnh án điện tử được chứng thực số bằng chữ ký điện tử nội bộ phòng khám (mã băm bảo toàn SHA-256 &amp; chứng thư định danh Bác sĩ điều trị theo quy chuẩn Thông tư 46/2018/TT-BYT).</span></div>
-                    </article>
-                </section>
+                    <!-- CỘT PHẢI: KHUNG HIỂN THỊ TÀI LIỆU TRANG IN A4 CUỘN LINH HOẠT -->
+                    <section class="emr-canvas-right" id="emrCanvasRight">
 
-                <aside class="emr-history emr-chrome"><h2>Chữ ký số</h2><div class="emr-signature" th:each="signature : ${detail.signatures}"><i class="bi bi-patch-check-fill"></i><div><strong th:text="${signature.signerName}">Người ký</strong><span th:text="|${@emrViewText.label(signature.type)} · ${signature.provider == 'LOCAL_TEST_ONLY' or signature.provider == 'CVDCMS_INTERNAL_CA' ? 'Chứng thực số nội bộ' : signature.provider}|">Loại</span><small th:text="${signature.signedAt != null ? #temporals.format(signature.signedAt, 'dd/MM/yyyy HH:mm') : '—'}"></small></div></div><p class="text-muted" th:if="${#lists.isEmpty(detail.signatures)}">Chưa có chữ ký.</p><h2>Phiên bản</h2><div class="emr-version-row" th:each="version : ${detail.versions}"><span th:text="|v${version.number}|">v1</span><div><strong th:text="${@emrViewText.label(version.status)}">DRAFT</strong><small th:text="${#temporals.format(version.createdAt, 'dd/MM/yyyy HH:mm')}"></small></div></div><h2>Nhật ký</h2><div class="emr-audit" th:each="audit : ${detail.audits}"><span></span><div><strong th:text="${audit.action}">ACTION</strong><p th:text="${audit.details}">Chi tiết</p><small th:text="|${audit.actor} · ${#temporals.format(audit.createdAt, 'dd/MM/yyyy HH:mm')}|"></small></div></div><form class="emr-amendment" th:if="${detail.canAmend}" method="post" th:action="@{/emr/records/{id}/amendments(id=${detail.record.id})}"><label for="reason">Lý do sửa đổi</label><textarea id="reason" class="form-control" name="reason" required maxlength="500"></textarea><button class="btn btn-outline-danger w-100" type="submit"><i class="bi bi-files"></i> Tạo phiên bản sửa đổi</button></form></aside>
+                        <!-- THANH CHUYỂN 3 CHẾ ĐỘ XEM: XEM | CHỈNH SỬA | BẢN IN (Item 9) -->
+                        <div class="emr-view-mode-bar">
+                            <div class="emr-mode-selector">
+                                <span class="mode-label">Chế độ xem:</span>
+                                <div class="emr-mode-toggle-group">
+                                    <label class="emr-mode-radio-label is-active" id="lblModeView">
+                                        <input type="radio" name="emrDisplayMode" value="view" checked>
+                                        <span>Xem</span>
+                                    </label>
+                                    <label class="emr-mode-radio-label" id="lblModeEdit">
+                                        <input type="radio" name="emrDisplayMode" value="edit">
+                                        <span>Chỉnh sửa</span>
+                                    </label>
+                                    <label class="emr-mode-radio-label" id="lblModePrint">
+                                        <input type="radio" name="emrDisplayMode" value="print">
+                                        <span>Bản in</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="emr-mode-save-btn d-none" id="emrInlineSaveGroup">
+                                <span class="text-success small fw-semibold me-2"><i class="bi bi-pencil-square me-1"></i>Đang ở chế độ chỉnh sửa trực tiếp</span>
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm fw-bold" id="btnSubmitInlineActiveDoc">
+                                    <i class="bi bi-floppy-fill me-1"></i> Lưu thay đổi
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- TỜ 1: BÌA HỒ SƠ BỆNH ÁN (COVER) CHUẨN DENTALSOFT (Item 9) -->
+                        <article class="emr-paper is-active" data-emr-document="COVER">
+                            <form method="post" th:action="@{/emr/records/{id}/documents/COVER(id=${detail.record.id})}" id="formDocCOVER" class="emr-doc-form m-0">
+                                <!-- Thanh công cụ nhỏ đỉnh tờ A4 -->
+                                <div class="emr-paper-topbar">
+                                    <span class="doc-title-badge"><i class="bi bi-file-earmark-person"></i> Tờ 1: Bìa hồ sơ bệnh án ngoại trú</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalEditCover" title="Chỉnh sửa bìa qua hộp thoại">
+                                            <i class="bi bi-pencil-square"></i> Sửa nhanh (Modal)
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-emr-print>
+                                            <i class="bi bi-printer"></i> In tờ này
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Header Sở Y Tế & Cơ sở -->
+                                <div class="moh-header">
+                                    <div class="moh-header-left">
+                                        <div>
+                                            <input type="text" name="healthFacility" class="emr-inline-input fw-bold"
+                                                   th:value="${@emrViewText.effective(cover, 'healthFacility', visit['branchName'] ?: 'NHA KHOA CONG VU DENTAL CLINIC')}"
+                                                   placeholder="Tên cơ sở khám chữa bệnh" style="font-size: 13.5px; width: 320px;">
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                            <span>Cơ sở:</span>
+                                            <input type="text" name="branchName" class="emr-inline-input"
+                                                   th:value="${@emrViewText.effective(cover, 'branchName', visit['branchName'] ?: 'CN1')}"
+                                                   placeholder="Cơ sở" style="width: 130px;">
+                                            <span class="mx-1">·</span>
+                                            <span>Mã:</span>
+                                            <input type="text" name="branchCode" class="emr-inline-input font-monospace"
+                                                   th:value="${@emrViewText.effective(cover, 'branchCode', visit['branchCode'] ?: 'CN01')}"
+                                                   placeholder="Mã CS" style="width: 70px;">
+                                        </div>
+                                    </div>
+                                    <div class="moh-header-right">
+                                        <div>Mã hồ sơ:
+                                            <input type="text" name="recordCode" class="emr-inline-input ba-code fw-bold font-monospace"
+                                                   th:value="${@emrViewText.effective(cover, 'recordCode', detail.record.code)}"
+                                                   style="width: 120px;">
+                                        </div>
+                                        <div>Số lưu trữ:
+                                            <input type="text" name="archiveNo" class="emr-inline-input fw-bold"
+                                                   th:value="${@emrViewText.effective(cover, 'archiveNo', '')}"
+                                                   placeholder="Chưa cấp" style="width: 120px;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tiêu đề Bìa (Đã loại bỏ các dòng phụ theo yêu cầu Item 9) -->
+                                <div class="moh-doc-title">
+                                    <h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.5px; margin: 12px 0;">BỆNH ÁN NGOẠI TRÚ<br>RĂNG HÀM MẶT</h1>
+                                </div>
+
+                                <!-- Thông tin khoa, phòng, giường (Hỗ trợ inline edit) -->
+                                <div class="py-2 mb-3">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <strong>KHOA:</strong>
+                                            <input type="text" name="department" class="emr-inline-input fw-bold"
+                                                   th:value="${@emrViewText.effective(cover, 'department', 'Răng Hàm Mặt')}"
+                                                   style="width: 180px;">
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>KHOA CHUYỂN ĐẾN:</strong>
+                                            <input type="text" name="transferredDepartment" class="emr-inline-input"
+                                                   th:value="${@emrViewText.effective(cover, 'transferredDepartment', '')}"
+                                                   placeholder="—" style="width: 180px;">
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>PHÒNG / GHẾ:</strong>
+                                            <input type="text" name="roomBed" class="emr-inline-input fw-bold"
+                                                   th:value="${@emrViewText.effective(cover, 'roomBed', 'Ghế khám 01')}"
+                                                   style="width: 160px;">
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>GIƯỜNG:</strong>
+                                            <input type="text" name="bed" class="emr-inline-input"
+                                                   th:value="${@emrViewText.effective(cover, 'bed', '')}"
+                                                   placeholder="—" style="width: 160px;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Thông tin bệnh nhân bìa -->
+                                <div class="moh-section-title"><span>THÔNG TIN NGƯỜI BỆNH</span></div>
+                                <div class="moh-info-row" th:with="effGender=${@emrViewText.effective(cover, 'gender', @emrViewText.effective(dental, 'gender', patient['gender']))}">
+                                    <span>Họ và tên người bệnh (In hoa):</span>
+                                    <input type="text" name="fullName" class="emr-inline-input fs-5 fw-bold text-uppercase"
+                                           th:value="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}"
+                                           placeholder="HỌ VÀ TÊN BỆNH NHÂN" style="min-width: 260px; width: 45%;">
+                                    <input type="hidden" name="gender" class="input-gender-field" th:value="${effGender}">
+                                    <span class="ms-auto moh-check-item emr-check-toggle" data-gender-choice="Nam" style="cursor: pointer;" title="Chọn Nam">
+                                        <span class="moh-check-box box-gender-male" th:text="${effGender == 'Nam' or effGender == 'MALE' ? '✓' : ''}"></span> Nam
+                                    </span>
+                                    <span class="moh-check-item ms-2 emr-check-toggle" data-gender-choice="Nữ" style="cursor: pointer;" title="Chọn Nữ">
+                                        <span class="moh-check-box box-gender-female" th:text="${effGender == 'Nữ' or effGender == 'FEMALE' ? '✓' : ''}"></span> Nữ
+                                    </span>
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Mã người bệnh:</span>
+                                    <input type="text" name="patientCode" class="emr-inline-input fw-bold font-monospace"
+                                           th:value="${@emrViewText.effective(cover, 'patientCode', patient['patientCode'])}"
+                                           placeholder="BN001" style="width: 100px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Ngày sinh:</span>
+                                    <input type="text" name="dob" class="emr-inline-input fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'dob', @emrViewText.effective(dental, 'dob', @emrViewText.date(patient['dob'])))}"
+                                           placeholder="dd/MM/yyyy" style="width: 110px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Tuổi:</span>
+                                    <input type="text" name="age" class="emr-inline-input fw-bold text-center"
+                                           th:value="${@emrViewText.effective(cover, 'age', @emrViewText.effective(dental, 'age', patient['age']))}"
+                                           placeholder="28" style="width: 45px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Số điện thoại:</span>
+                                    <input type="text" name="phoneNumber" class="emr-inline-input fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'phoneNumber', @emrViewText.effective(dental, 'phoneNumber', patient['phoneNumber'])) ?: ''}"
+                                           placeholder="0912345678" style="width: 130px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Nghề nghiệp:</span>
+                                    <input type="text" name="occupation" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'occupation', @emrViewText.effective(dental, 'occupation', patient['occupation'] ?: ''))}"
+                                           placeholder="Nghề nghiệp" style="width: 180px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Dân tộc:</span>
+                                    <input type="text" name="ethnicity" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'ethnicity', @emrViewText.effective(dental, 'ethnicity', patient['ethnicity'] ?: 'Kinh'))}"
+                                           placeholder="Kinh" style="width: 80px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Quốc tịch:</span>
+                                    <input type="text" name="nationality" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'nationality', @emrViewText.effective(dental, 'nationality', patient['nationality'] ?: 'Việt Nam'))}"
+                                           placeholder="Việt Nam" style="width: 90px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Nơi làm việc:</span>
+                                    <input type="text" name="workplace" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'workplace', @emrViewText.effective(dental, 'workplace', patient['workplace'] ?: ''))}"
+                                           placeholder="Cơ quan, doanh nghiệp làm việc..." style="width: calc(100% - 130px); min-width: 250px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>CCCD / Định danh:</span>
+                                    <input type="text" name="idCardNumber" class="emr-inline-input fw-bold font-monospace"
+                                           th:value="${@emrViewText.effective(cover, 'idCardNumber', @emrViewText.effective(dental, 'idCardNumber', patient['idCardNumber'])) ?: ''}"
+                                           placeholder="12 số căn cước" style="width: 150px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Bảo hiểm y tế:</span>
+                                    <input type="text" name="healthInsuranceNumber" class="emr-inline-input fw-bold font-monospace"
+                                           th:value="${@emrViewText.effective(cover, 'healthInsuranceNumber', @emrViewText.effective(dental, 'healthInsuranceNumber', patient['healthInsuranceNumber'])) ?: ''}"
+                                           placeholder="Mã thẻ BHYT" style="width: 180px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Địa chỉ liên hệ:</span>
+                                    <input type="text" name="address" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'address', @emrViewText.effective(dental, 'address', patient['address'])) ?: ''}"
+                                           placeholder="Địa chỉ thường trú / liên hệ" style="min-width: 280px; width: calc(100% - 150px);">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Người liên hệ khi cần:</span>
+                                    <input type="text" name="guardianName" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'guardianName', @emrViewText.effective(dental, 'guardianName', patient['guardianName'] ?: ''))}"
+                                           placeholder="Họ tên người nhà" style="width: 180px;">
+                                    <span class="mx-2">·</span>
+                                    <span>SĐT:</span>
+                                    <input type="text" name="guardianPhone" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'guardianPhone', @emrViewText.effective(dental, 'guardianPhone', patient['guardianPhone'] ?: ''))}"
+                                           placeholder="SĐT người nhà" style="width: 130px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Quan hệ:</span>
+                                    <input type="text" name="guardianRelationship" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'guardianRelationship', @emrViewText.effective(dental, 'guardianRelationship', patient['guardianRelationship'] ?: ''))}"
+                                           placeholder="Quan hệ" style="width: 100px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Ngày giờ tiếp nhận:</span>
+                                    <input type="text" name="admissionAt" class="emr-inline-input fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'admissionAt', visit['checkInAt'] ?: '')}"
+                                           placeholder="dd/MM/yyyy HH:mm" style="width: 170px;">
+                                    <span class="mx-2">·</span>
+                                    <span>Ngày giờ kết thúc:</span>
+                                    <input type="text" name="dischargeAt" class="emr-inline-input fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'dischargeAt', visit['completedAt'] ?: '')}"
+                                           placeholder="dd/MM/yyyy HH:mm" style="width: 170px;">
+                                </div>
+
+                                <!-- Chẩn đoán & Quá trình điều trị bìa -->
+                                <div class="moh-section-title"><span>CHẨN ĐOÁN &amp; ĐIỀU TRỊ</span></div>
+                                <div class="moh-info-row">
+                                    <span>Nơi giới thiệu:</span>
+                                    <input type="text" name="referralSource" class="emr-inline-input"
+                                           th:value="${@emrViewText.effective(cover, 'referralSource', @emrViewText.effective(dental, 'referralSource', 'Tự đến'))}"
+                                           placeholder="Cơ sở y tế / Tự đến" style="width: 180px;">
+                                    <span class="ms-3">Chẩn đoán nơi GT:</span>
+                                    <input type="text" name="referralDiagnosis" class="emr-inline-input flex-grow-1"
+                                           th:value="${@emrViewText.effective(cover, 'referralDiagnosis', @emrViewText.effective(dental, 'referralDiagnosis', ''))}"
+                                           placeholder="(Trống nếu tự đến)" style="min-width: 180px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Chẩn đoán khi vào viện:</span>
+                                    <input type="text" name="admissionDiagnosis" class="emr-inline-input flex-grow-1 fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'admissionDiagnosis', @emrViewText.effective(dental, 'icdDiagnosisSummary', (!#lists.isEmpty(detail.snapshot['diagnoses']) ? detail.snapshot['diagnoses'][0]['diagnosisText'] : '')))}"
+                                           placeholder="Chẩn đoán ban đầu / ICD-10" style="min-width: 250px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Chẩn đoán khi ra viện:</span>
+                                    <input type="text" name="dischargeDiagnosis" class="emr-inline-input flex-grow-1 fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'dischargeDiagnosis', @emrViewText.effective(summary, 'dischargeDiagnosis', @emrViewText.effective(dental, 'icdDiagnosisSummary', (!#lists.isEmpty(detail.snapshot['diagnoses']) ? detail.snapshot['diagnoses'][0]['diagnosisText'] : ''))))}"
+                                           placeholder="Chẩn đoán khi ra viện" style="min-width: 250px;">
+                                </div>
+                                <div class="moh-info-row">
+                                    <span>Kết quả điều trị:</span>
+                                    <input type="text" name="treatmentOutcome" class="emr-inline-input fw-bold"
+                                           th:value="${@emrViewText.effective(cover, 'treatmentOutcome', @emrViewText.effective(summary, 'dischargeCondition', 'Khỏi / Đỡ, giảm'))}"
+                                           placeholder="Khỏi / Đỡ, giảm / Ổn định" style="width: 220px;">
+                                </div>
+
+                                <!-- Chữ ký / Con dấu bìa -->
+                                <div class="moh-signature-grid emr-cover-signature-grid">
+                                    <div class="moh-signature-block">
+                                        <span class="signer-title">BÁC SĨ ĐIỀU TRỊ</span>
+                                        <span class="signer-sub">(Ký và ghi rõ họ tên)</span>
+                                        <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-digital-stamp-box">
+                                            <div class="emr-stamp-badge"><i class="bi bi-patch-check-fill"></i> ĐÃ KÝ SỐ ĐIỆN TỬ</div>
+                                            <div class="emr-stamp-signer" th:text="|BS. ${@emrViewText.effective(cover, 'doctorName', visit['doctorName'] ?: detail.record.doctorName)}|">BS. Lê Minh Cường</div>
+                                            <div class="emr-stamp-org" th:text="${@emrViewText.effective(cover, 'healthFacility', visit['branchName'])}">CV-DCMS</div>
+                                            <div class="emr-stamp-standard">Hợp lệ Thông tư 46/2018/TT-BYT</div>
+                                        </div>
+                                        <div th:unless="${detail.record.status.name() == 'SIGNED'}" class="pt-4 text-center">
+                                            <div>
+                                                <input type="text" name="doctorName" class="emr-inline-input fw-bold text-center"
+                                                       th:value="${@emrViewText.effective(cover, 'doctorName', visit['doctorName'] ?: detail.record.doctorName ?: '')}"
+                                                       placeholder="BS. Họ và tên" style="width: 220px;">
+                                            </div>
+                                            <div class="text-muted fst-italic small pt-2">(Bản chưa ký số)</div>
+                                        </div>
+                                    </div>
+                                    <div class="moh-signature-block">
+                                        <span class="signer-title">ĐẠI DIỆN CƠ SỞ KHÁM CHỮA BỆNH</span>
+                                        <span class="signer-sub">(Ký, đóng dấu hoặc chứng thực số)</span>
+                                        <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-digital-stamp-box" style="border-color: #0284c7 !important; background: #f0f9ff !important;">
+                                            <div class="emr-stamp-badge" style="color: #0284c7;"><i class="bi bi-shield-check"></i> CHỨNG THỰC BỆNH ÁN ĐIỆN TỬ</div>
+                                            <div class="emr-stamp-signer" th:text="${@emrViewText.effective(cover, 'facilityDirector', visit['branchName'])}">CV-DCMS</div>
+                                            <div class="emr-stamp-standard" style="color: #0284c7; border-color: #bae6fd;">Mã xác thực: HỢP LỆ TOÀN VẸN</div>
+                                        </div>
+                                        <div th:unless="${detail.record.status.name() == 'SIGNED'}" class="pt-4 text-center">
+                                            <div>
+                                                <input type="text" name="facilityDirector" class="emr-inline-input fw-bold text-center"
+                                                       th:value="${@emrViewText.effective(cover, 'facilityDirector', visit['branchName'] ?: 'Giám đốc / Trưởng cơ sở')}"
+                                                       placeholder="Họ và tên người đại diện" style="width: 220px;">
+                                            </div>
+                                            <div class="text-muted fst-italic small pt-2">(Chờ chứng thực)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </article>
+
+                        <!-- TỜ 2: BỆNH ÁN NGOẠI TRÚ RĂNG HÀM MẶT (MS: BA-18) CHUẨN BỘ Y TẾ -->
+                        <article class="emr-paper" data-emr-document="OUTPATIENT_DENTAL">
+                            <form method="post" th:action="@{/emr/records/{id}/documents/OUTPATIENT_DENTAL(id=${detail.record.id})}" id="formDocOUTPATIENT_DENTAL" class="emr-doc-form m-0">
+                                <!-- Thanh công cụ nhỏ đỉnh tờ A4 -->
+                                <div class="emr-paper-topbar">
+                                    <span class="doc-title-badge"><i class="bi bi-file-earmark-medical-fill"></i> Tờ 2: Bệnh án ngoại trú RHM (MS: BA-18)</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-emr-print>
+                                            <i class="bi bi-printer"></i> In tờ này
+                                        </button>
+                                    </div>
+                                </div>
+
+                            <!-- Header chuẩn Bộ Y Tế -->
+                            <div class="moh-header">
+                                <div class="moh-header-left">
+                                    <div>Sở Y Tế: <strong th:text="${visit['branchName']}">Sở Y Tế TP. Hồ Chí Minh</strong></div>
+                                    <div>Cơ sở KCB: <span th:text="${visit['branchName']}">Nha Khoa Demo</span></div>
+                                    <div class="small text-muted" th:text="${visit['branchAddress'] ?: '28-30 Đường 3/2 Phường Hòa Hưng Tp HCM'}">28-30 Đường 3/2 Phường Hòa Hưng Tp HCM</div>
+                                </div>
+                                <div class="moh-header-right">
+                                    <div class="fw-bold fs-6">MS: BA-18</div>
+                                    <div>Mã hồ sơ: <strong class="ba-code" th:text="${detail.record.code}">2610170069</strong></div>
+                                </div>
+                            </div>
+
+                            <!-- Tiêu đề tờ bệnh án -->
+                            <div class="moh-doc-title">
+                                <h1>BỆNH ÁN NGOẠI TRÚ<br>RĂNG HÀM MẶT</h1>
+                            </div>
+
+                            <!-- =========================================================================
+                                 PHẦN A. THÔNG TIN CHUNG (ĐÁNH SỐ 1 ĐẾN 14 KÈM Ô VUÔNG TIÊU CHUẨN)
+                                 ========================================================================= -->
+                            <div class="moh-section-title">
+                                <span>A. THÔNG TIN CHUNG</span>
+                            </div>
+
+                            <!-- 1. Họ và tên -->
+                            <div class="moh-info-row">
+                                <span>1. Họ và tên (In hoa):</span>
+                                <input type="text" name="fullName" class="emr-inline-input fs-6 fw-bold text-uppercase"
+                                       th:value="${@emrViewText.effective(dental, 'fullName', patient['fullName'])}"
+                                       placeholder="HỌ VÀ TÊN BỆNH NHÂN" style="min-width: 280px;">
+                            </div>
+
+                            <!-- 2. Ngày sinh, Tuổi & 3. Giới tính -->
+                            <div class="moh-info-row">
+                                <span>2. Ngày sinh:</span>
+                                <input type="text" name="dob" id="dentalDobInput" class="emr-inline-input fw-bold"
+                                       th:value="${@emrViewText.effective(dental, 'dob', @emrViewText.date(patient['dob']))}"
+                                       placeholder="dd/MM/yyyy" style="width: 110px;">
+                                <span class="ms-3">Tuổi:</span>
+                                <input type="text" name="age" id="dentalAgeInput" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'age', patient['age'])}"
+                                       placeholder="28" style="width: 48px;">
+                                <span class="char-box-container age-box-group" id="dentalAgeBoxes" th:attr="data-dob=${patient['dob']}">
+                                    <span class="char-box" id="boxAge1">4</span>
+                                    <span class="char-box" id="boxAge2">1</span>
+                                </span>
+                                <span class="ms-auto">3. Giới tính:</span>
+                                <input type="hidden" name="gender" id="inputDentalGender"
+                                       th:value="${@emrViewText.effective(dental, 'gender', patient['gender'])}">
+                                <span class="moh-check-item ms-2 emr-check-toggle" data-gender-choice="Nam" style="cursor: pointer;" title="Chọn Nam">
+                                    <span class="moh-check-box" id="boxGenderMale"
+                                          th:text="${@emrViewText.effective(dental, 'gender', patient['gender']) == 'Nam' or @emrViewText.effective(dental, 'gender', patient['gender']) == 'MALE' ? '✓' : ''}"></span> Nam
+                                </span>
+                                <span class="moh-check-item ms-2 emr-check-toggle" data-gender-choice="Nữ" style="cursor: pointer;" title="Chọn Nữ">
+                                    <span class="moh-check-box" id="boxGenderFemale"
+                                          th:text="${@emrViewText.effective(dental, 'gender', patient['gender']) == 'Nữ' or @emrViewText.effective(dental, 'gender', patient['gender']) == 'FEMALE' ? '✓' : ''}">✓</span> Nữ
+                                </span>
+                            </div>
+
+                            <!-- 4. Điện thoại & 5. Nghề nghiệp -->
+                            <div class="moh-info-row">
+                                <span>4. Điện thoại:</span>
+                                <input type="text" name="phoneNumber" class="emr-inline-input fw-bold"
+                                       th:value="${@emrViewText.effective(dental, 'phoneNumber', patient['phoneNumber'])}"
+                                       placeholder="0987776655" style="width: 140px;">
+                                <span class="ms-auto">5. Nghề nghiệp:</span>
+                                <input type="text" name="occupation" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'occupation', patient['occupation'] ?: 'Nhân viên văn phòng')}"
+                                       placeholder="Nghề nghiệp" style="width: 220px;">
+                            </div>
+
+                            <!-- 6. Dân tộc & Quốc tịch -->
+                            <div class="moh-info-row">
+                                <span>6. Dân tộc:</span>
+                                <input type="text" name="ethnicity" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'ethnicity', patient['ethnicity'] ?: 'Kinh')}"
+                                       placeholder="Kinh" style="width: 90px;">
+                                <span class="char-box-container">
+                                    <input type="text" name="ethnicityCode" class="emr-inline-input text-center font-monospace p-0"
+                                           th:value="${@emrViewText.effective(dental, 'ethnicityCode', '25')}"
+                                           maxlength="2" style="width: 32px; height: 24px; border: 1px solid #94a3b8; text-align: center;">
+                                </span>
+                                <span class="ms-auto">Quốc tịch:</span>
+                                <input type="text" name="nationality" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'nationality', patient['nationality'] ?: 'Việt Nam')}"
+                                       placeholder="Việt Nam" style="width: 100px;">
+                                <span class="char-box-container">
+                                    <input type="text" name="nationalityCode" class="emr-inline-input text-center font-monospace p-0"
+                                           th:value="${@emrViewText.effective(dental, 'nationalityCode', 'VN')}"
+                                           maxlength="2" style="width: 32px; height: 24px; border: 1px solid #94a3b8; text-align: center;">
+                                </span>
+                            </div>
+
+                            <!-- 7. Nơi làm việc -->
+                            <div class="moh-info-row">
+                                <span>7. Nơi làm việc:</span>
+                                <input type="text" name="workplace" class="emr-inline-input flex-grow-1"
+                                       th:value="${@emrViewText.effective(dental, 'workplace', patient['workplace'] ?: 'Công ty Cổ phần DentalFlow')}"
+                                       placeholder="Công ty / Doanh nghiệp" style="width: 70%;">
+                            </div>
+
+                            <!-- 8. Địa chỉ -->
+                            <div class="moh-info-row">
+                                <span>8. Địa chỉ:</span>
+                                <input type="text" name="address" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'address', patient['address'] ?: '')}"
+                                       placeholder="Số nhà, đường phố" style="min-width: 240px;">
+                                <span class="ms-auto">Xã, phường:</span>
+                                <input type="text" name="ward" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'ward', '')}"
+                                       placeholder="—" style="width: 65px;">
+                                <span class="ms-2">Huyện(Q, Tx):</span>
+                                <input type="text" name="district" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'district', '')}"
+                                       placeholder="—" style="width: 65px;">
+                                <span class="ms-2">Tỉnh, TP:</span>
+                                <span class="char-box-container">
+                                    <input type="text" name="provinceCode" class="emr-inline-input text-center font-monospace p-0"
+                                           th:value="${@emrViewText.effective(dental, 'provinceCode', '79')}"
+                                           maxlength="2" style="width: 32px; height: 24px; border: 1px solid #94a3b8; text-align: center;">
+                                </span>
+                            </div>
+
+                            <!-- 9. Đối tượng -->
+                            <div class="moh-info-row">
+                                <span>9. Đối tượng:</span>
+                                <input type="hidden" name="patientType" id="inputDentalPatientType"
+                                       th:value="${@emrViewText.effective(dental, 'patientType', (patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank() ? 'BHYT' : 'FEE'))}">
+                                <span class="moh-check-item ms-2 emr-check-toggle" data-type-choice="BHYT" style="cursor: pointer;" title="Chọn BHYT">
+                                    <span class="moh-check-box" id="boxTypeBhyt"
+                                          th:text="${@emrViewText.effective(dental, 'patientType', (patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank() ? 'BHYT' : 'FEE')) == 'BHYT' ? '✓' : ''}"></span> BHYT
+                                </span>
+                                <span class="moh-check-item ms-3 emr-check-toggle" data-type-choice="FEE" style="cursor: pointer;" title="Chọn Thu phí">
+                                    <span class="moh-check-box" id="boxTypeFee"
+                                          th:text="${@emrViewText.effective(dental, 'patientType', (patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank() ? 'BHYT' : 'FEE')) == 'FEE' ? '✓' : ''}">✓</span> Thu phí
+                                </span>
+                                <span class="moh-check-item ms-3 emr-check-toggle" data-type-choice="FREE" style="cursor: pointer;" title="Chọn Miễn">
+                                    <span class="moh-check-box" id="boxTypeFree"
+                                          th:text="${@emrViewText.effective(dental, 'patientType', (patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank() ? 'BHYT' : 'FEE')) == 'FREE' ? '✓' : ''}"></span> Miễn
+                                </span>
+                                <span class="moh-check-item ms-3 emr-check-toggle" data-type-choice="OTHER" style="cursor: pointer;" title="Chọn Khác">
+                                    <span class="moh-check-box" id="boxTypeOther"
+                                          th:text="${@emrViewText.effective(dental, 'patientType', (patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank() ? 'BHYT' : 'FEE')) == 'OTHER' ? '✓' : ''}"></span> Khác
+                                </span>
+                            </div>
+
+                            <!-- 10. Số thẻ BHYT -->
+                            <div class="moh-info-row">
+                                <span>10. Số thẻ BHYT:</span>
+                                <input type="text" name="healthInsuranceNumber" class="emr-inline-input fw-bold font-monospace"
+                                       th:value="${@emrViewText.effective(dental, 'healthInsuranceNumber', patient['healthInsuranceNumber'] ?: '')}"
+                                       placeholder="— (Không có / Nhập mã BHYT)" style="width: 250px;">
+                            </div>
+
+                            <!-- 11. Số Căn cước/ Hộ chiếu/Số định danh cá nhân (12 ô vuông) -->
+                            <div class="moh-info-row">
+                                <span>11. Số Căn cước/ Hộ chiếu/Số định danh cá nhân:</span>
+                                <input type="text" name="idCardNumber" id="dentalIdCardInput" class="emr-inline-input fw-bold font-monospace me-2"
+                                       th:value="${@emrViewText.effective(dental, 'idCardNumber', patient['idCardNumber'] ?: '')}"
+                                       placeholder="— (Trống / 12 số CCCD)" maxlength="12" style="width: 170px;">
+                                <span class="char-box-container cccd-box-group" id="dentalCccdBoxGroup">
+                                    <span class="char-box" th:each="i : ${#numbers.sequence(1, 12)}">&nbsp;</span>
+                                </span>
+                            </div>
+
+                            <!-- 12. Thân nhân khi cần báo tin -->
+                            <div class="moh-info-row">
+                                <span>12. Họ và tên thân nhân của NB khi cần báo tin:</span>
+                                <input type="text" name="guardianName" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'guardianName', patient['guardianName'] ?: '')}"
+                                       placeholder="— (Trống / Họ tên thân nhân)" style="width: 220px;">
+                                <span class="ms-auto">Điện thoại:</span>
+                                <input type="text" name="guardianPhone" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'guardianPhone', patient['guardianPhone'] ?: '')}"
+                                       placeholder="— (Trống / Số điện thoại)" style="width: 150px;">
+                            </div>
+
+                            <!-- 13. Đến khám bệnh lúc -->
+                            <div class="moh-info-row">
+                                <span>13. Đến khám bệnh lúc:</span>
+                                <input type="text" name="admissionHour" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'admissionHour', #temporals.format(detail.record.checkInAt, 'HH'))}"
+                                       style="width: 38px;"> giờ
+                                <input type="text" name="admissionMinute" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'admissionMinute', #temporals.format(detail.record.checkInAt, 'mm'))}"
+                                       style="width: 38px;"> phút, ngày
+                                <input type="text" name="admissionDay" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'admissionDay', #temporals.format(detail.record.checkInAt, 'dd'))}"
+                                       style="width: 38px;"> tháng
+                                <input type="text" name="admissionMonth" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'admissionMonth', #temporals.format(detail.record.checkInAt, 'MM'))}"
+                                       style="width: 38px;"> năm
+                                <input type="text" name="admissionYear" class="emr-inline-input fw-bold text-center"
+                                       th:value="${@emrViewText.effective(dental, 'admissionYear', #temporals.format(detail.record.checkInAt, 'yyyy'))}"
+                                       style="width: 58px;">
+                            </div>
+
+                            <!-- 14. Chẩn đoán và xử lý của nơi giới thiệu (Inline Editable) -->
+                            <div class="moh-info-row">
+                                <span>14. Chẩn đoán và xử lý của nơi giới thiệu:</span>
+                                <input type="text" name="referralDiagnosis" class="emr-inline-input"
+                                       th:value="${@emrViewText.effective(dental, 'referralDiagnosis', '')}"
+                                       placeholder="Không ghi nhận" style="width: 250px;">
+                                <input type="hidden" name="referralSource" id="inputDentalReferralSource"
+                                       th:value="${@emrViewText.effective(dental, 'referralSource', 'SELF')}">
+                                <span class="ms-auto moh-check-item emr-check-toggle" data-referral-choice="MEDICAL" style="cursor: pointer;" title="1. Y tế giới thiệu">
+                                    <span class="moh-check-box" id="boxRefMedical"
+                                          th:text="${@emrViewText.effective(dental, 'referralSource', 'SELF') == 'MEDICAL' ? '✓' : ''}"></span> 1. Y tế
+                                </span>
+                                <span class="moh-check-item ms-2 emr-check-toggle" data-referral-choice="SELF" style="cursor: pointer;" title="2. Tự đến">
+                                    <span class="moh-check-box" id="boxRefSelf"
+                                          th:text="${@emrViewText.effective(dental, 'referralSource', 'SELF') == 'SELF' ? '✓' : ''}">✓</span> 2. Tự đến
+                                </span>
+                            </div>
+
+                            <!-- =========================================================================
+                                 PHẦN B. THÔNG TIN KHÁM BỆNH
+                                 ========================================================================= -->
+                            <div class="moh-section-title mt-4">
+                                <span>B. THÔNG TIN KHÁM BỆNH</span>
+                            </div>
+
+                            <!-- I. Lý do vào viện -->
+                            <div class="mb-3">
+                                <strong class="d-block text-dark">I. LÝ DO VÀO VIỆN, VẤN ĐỀ SỨC KHỎE:</strong>
+                                <textarea name="chiefComplaint" class="emr-inline-textarea mt-1" rows="2"
+                                          th:text="${@emrViewText.effective(dental, 'chiefComplaint', (clinical['chiefComplaint'] ?: visit['initialSymptoms']) ?: 'Khám răng định kỳ và cạo vôi răng')}"
+                                          placeholder="Khám răng định kỳ và cạo vôi răng..."></textarea>
+                            </div>
+
+                            <!-- II. Quá trình bệnh lý (Inline Editable) -->
+                            <div class="mb-3">
+                                <strong class="d-block text-dark">II. QUÁ TRÌNH BỆNH LÝ VÀ DIỄN BIẾN LÂM SÀNG:</strong>
+                                <textarea name="diseaseProgress" class="emr-inline-textarea mt-1" rows="2"
+                                          th:text="${@emrViewText.effective(dental, 'diseaseProgress', clinical['historyIllness'] ?: '')}"
+                                          placeholder="(Trống nếu chưa có diễn biến lâm sàng đặc biệt)"></textarea>
+                            </div>
+
+                            <!-- III. Tiền sử (Inline Editable) -->
+                            <div class="mb-3">
+                                <strong class="d-block text-dark mb-1">III. TIỀN SỬ:</strong>
+                                <div class="ps-2">
+                                    <div class="moh-info-row">
+                                        <span class="fw-semibold" style="min-width: 140px;">- Dị ứng:</span>
+                                        <input type="text" name="allergyDetails" class="emr-inline-input flex-grow-1 fw-bold"
+                                               th:value="${@emrViewText.effective(dental, 'allergyDetails', patient['allergyDetails'] ?: '')}"
+                                               placeholder="Dị ứng (Ví dụ: Dị ứng phấn hoa nhẹ)">
+                                    </div>
+                                    <div class="moh-info-row">
+                                        <span class="fw-semibold" style="min-width: 140px;">- Tiền sử bản thân:</span>
+                                        <input type="text" name="personalHistory" class="emr-inline-input flex-grow-1 fw-bold"
+                                               th:value="${@emrViewText.effective(dental, 'personalHistory', patient['underlyingDiseaseDetails'] ?: '')}"
+                                               placeholder="(Trống nếu bình thường)">
+                                    </div>
+                                    <div class="moh-info-row">
+                                        <span class="fw-semibold" style="min-width: 140px;">- Tiền sử gia đình:</span>
+                                        <input type="text" name="familyHistory" class="emr-inline-input flex-grow-1 fw-bold"
+                                               th:value="${@emrViewText.effective(dental, 'familyHistory', '')}"
+                                               placeholder="(Trống nếu không ghi nhận)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- =========================================================================
+                                 MỤC 4. SƠ ĐỒ RĂNG MS: BA-18 CHUẨN BỘ Y TẾ (Item 10)
+                                 ========================================================================= -->
+                            <div class="dental-chart-section">
+                                <div class="dental-chart-header-row">
+                                    <div class="chart-orientation-box">
+                                        <strong class="text-dark fs-6 mb-2 align-self-start">4. Sơ đồ răng</strong>
+                                        <div class="orientation-top-row">
+                                            <span>Phải</span>
+                                            <span>Thẳng</span>
+                                            <span>Trái</span>
+                                        </div>
+                                        <div class="orientation-sub-row">
+                                            <span>Hàm trên và Họng</span>
+                                        </div>
+                                    </div>
+                                    <div class="cleft-classification-text">
+                                        <div class="classification-title d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <span>Phân loại khe hở môi vòm miệng:</span>
+                                            <input type="text" name="cleftPalateClassification" class="emr-inline-input"
+                                                   th:value="${@emrViewText.effective(dental, 'cleftPalateClassification', '')}"
+                                                   placeholder="Vị trí khe hở (1 đến 9 nếu có)..." style="width: 220px; font-size: 11.5px;">
+                                        </div>
+                                        <div>1 và 4: Khe hở môi</div>
+                                        <div>2 và 5: Khe hở xương ổ răng</div>
+                                        <div>3 và 6: Khe hở cung hàm</div>
+                                        <div>7 và 8: Khe hở vòm miệng cứng</div>
+                                        <div>9: Khe hở vòm miệng mềm</div>
+                                    </div>
+                                </div>
+
+                                <div class="dental-cross-container">
+                                    <!-- 1. BẢNG TRÊN: RĂNG VĨNH VIỄN (Markers [1][4] và [2][3] ôm sát 2 bên bảng) -->
+                                    <div class="chart-table-wrap">
+                                        <div class="chart-side-markers">
+                                            <span class="quadrant-marker" title="Phần tư I: Hàm trên bên Phải">1</span>
+                                            <span class="quadrant-marker" title="Phần tư IV: Hàm dưới bên Phải">4</span>
+                                        </div>
+                                        <div class="permanent-chart-grid" id="permanentChartGrid">
+                                            <!-- Hàng trên: 18 -> 11 | 21 -> 28 -->
+                                            <div th:each="tooth : ${ {'18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'} }"
+                                                 class="tooth-cell" th:attr="data-tooth=${tooth}">
+                                                <span th:text="${#strings.substring(tooth, 1, 2)}">8</span>
+                                                <span class="intervention-dot">•</span>
+                                            </div>
+                                            <!-- Hàng dưới: 48 -> 41 | 31 -> 38 -->
+                                            <div th:each="tooth : ${ {'48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'} }"
+                                                 class="tooth-cell" th:attr="data-tooth=${tooth}">
+                                                <span th:text="${#strings.substring(tooth, 1, 2)}">8</span>
+                                                <span class="intervention-dot">•</span>
+                                            </div>
+                                        </div>
+                                        <div class="chart-side-markers">
+                                            <span class="quadrant-marker" title="Phần tư II: Hàm trên bên Trái">2</span>
+                                            <span class="quadrant-marker" title="Phần tư III: Hàm dưới bên Trái">3</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. BẢNG DƯỚI: RĂNG SỮA (Kích thước ô đồng nhất 38px, markers [5][8] và [6][7] ôm sát) -->
+                                    <div class="chart-table-wrap mt-1">
+                                        <div class="chart-side-markers">
+                                            <span class="quadrant-marker" title="Phần tư V: Răng sữa trên Phải">5</span>
+                                            <span class="quadrant-marker" title="Phần tư VIII: Răng sữa dưới Phải">8</span>
+                                        </div>
+                                        <div class="primary-chart-grid" id="primaryChartGrid">
+                                            <!-- Hàng trên răng sữa: 55 -> 51 | 61 -> 65 -->
+                                            <div th:each="tooth : ${ {'55','54','53','52','51','61','62','63','64','65'} }"
+                                                 class="tooth-cell" th:attr="data-tooth=${tooth}">
+                                                <span th:text="${#strings.substring(tooth, 1, 2)}">5</span>
+                                                <span class="intervention-dot">•</span>
+                                            </div>
+                                            <!-- Hàng dưới răng sữa: 85 -> 81 | 71 -> 75 -->
+                                            <div th:each="tooth : ${ {'85','84','83','82','81','71','72','73','74','75'} }"
+                                                 class="tooth-cell" th:attr="data-tooth=${tooth}">
+                                                <span th:text="${#strings.substring(tooth, 1, 2)}">5</span>
+                                                <span class="intervention-dot">•</span>
+                                            </div>
+                                        </div>
+                                        <div class="chart-side-markers">
+                                            <span class="quadrant-marker" title="Phần tư VI: Răng sữa trên Trái">6</span>
+                                            <span class="quadrant-marker" title="Phần tư VII: Răng sữa dưới Trái">7</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Dòng tổng hợp danh sách răng can thiệp dạng plain text chuẩn y lệnh (Item 10) -->
+                                <div class="tooth-plain-summary" id="toothInterventionSummary">
+                                    <strong><i class="bi bi-card-checklist me-1"></i>Danh sách răng can thiệp &amp; chẩn đoán:</strong>
+                                    <input type="text" name="toothInterventionSummary" id="inputToothInterventionSummary" class="emr-inline-input w-100 mt-1 fw-bold text-dark"
+                                           th:value="${@emrViewText.effective(dental, 'toothInterventionSummary', '')}"
+                                           placeholder="Răng can thiệp và chẩn đoán (Ví dụ: Răng 33: Không có răng (Vô răng) (Mã ICD-10: K00.0))...">
+                                    <span id="toothInterventionSummaryText" class="ms-1 d-none">Đang nạp dữ liệu thủ thuật...</span>
+                                </div>
+                            </div>
+
+                            <!-- =========================================================================
+                                 MỤC 5. CÁC XÉT NGHIỆM, CẬN LÂM SÀNG CẦN LÀM
+                                 ========================================================================= -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center gap-3 flex-wrap">
+                                    <strong class="text-dark">5. Các xét nghiệm, cận lâm sàng cần làm:</strong>
+                                    <input type="hidden" name="paraclinicalRequired" id="inputDentalParaclinicalRequired"
+                                           th:value="${@emrViewText.effective(dental, 'paraclinicalRequired', ((!#lists.isEmpty(detail.snapshot['xrays']) or !#lists.isEmpty(detail.snapshot['laboOrders'])) ? 'YES' : 'NONE'))}">
+                                    <span class="moh-check-item emr-check-toggle" data-paraclinical-choice="NONE" style="cursor: pointer;" title="Tích chọn Không có cận lâm sàng">
+                                        <span class="moh-check-box" id="boxParaNone"
+                                              th:text="${@emrViewText.effective(dental, 'paraclinicalRequired', ((!#lists.isEmpty(detail.snapshot['xrays']) or !#lists.isEmpty(detail.snapshot['laboOrders'])) ? 'YES' : 'NONE')) == 'NONE' ? '✓' : ''}">✓</span> Không
+                                    </span>
+                                    <span class="moh-check-item ms-2 emr-check-toggle" data-paraclinical-choice="YES" style="cursor: pointer;" title="Tích chọn Có cận lâm sàng">
+                                        <span class="moh-check-box" id="boxParaYes"
+                                              th:text="${@emrViewText.effective(dental, 'paraclinicalRequired', ((!#lists.isEmpty(detail.snapshot['xrays']) or !#lists.isEmpty(detail.snapshot['laboOrders'])) ? 'YES' : 'NONE')) == 'YES' ? '✓' : ''}"></span> Có, ghi rõ:
+                                    </span>
+                                    <input type="text" name="paraclinicalNotes" class="emr-inline-input ms-2"
+                                           th:value="${@emrViewText.effective(dental, 'paraclinicalNotes', '')}"
+                                           placeholder="Ghi rõ cận lâm sàng cần làm..." style="width: 280px;">
+                                </div>
+
+                                <div class="mt-2" th:if="${!#lists.isEmpty(detail.snapshot['xrays']) or !#lists.isEmpty(detail.snapshot['laboOrders'])}">
+                                    <table class="table table-sm table-bordered emr-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Loại</th>
+                                                <th>Mã / Chi tiết chỉ định</th>
+                                                <th>Răng liên quan</th>
+                                                <th>Thời gian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="xray : ${detail.snapshot['xrays']}">
+                                                <td><span class="badge bg-info-subtle text-info border">X-quang</span></td>
+                                                <td th:text="|Phim chụp Nanopix (${xray['studyUid']})|">Phim X-quang</td>
+                                                <td th:text="${xray['toothNumbers'] ?: 'Toàn hàm'}">—</td>
+                                                <td th:text="${@emrViewText.date(xray['capturedAt'])}">17/10/2026</td>
+                                            </tr>
+                                            <tr th:each="labo : ${detail.snapshot['laboOrders']}">
+                                                <td><span class="badge bg-purple-subtle text-purple border">Labo phục hình</span></td>
+                                                <td th:text="|Gia công ${labo['material']} (${labo['code']}) · ${@emrViewText.label(labo['status'])}|">Labo</td>
+                                                <td th:text="${labo['toothPositions'] ?: '—'}">—</td>
+                                                <td>Đã gửi labo</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- =========================================================================
+                                 MỤC 6. TÓM TẮT BỆNH ÁN, PHƯƠNG PHÁP ĐIỀU TRỊ
+                                 ========================================================================= -->
+                            <div class="mb-4">
+                                <strong class="d-block text-dark mb-1">6. Tóm tắt bệnh án, chẩn đoán xác định và phương pháp điều trị:</strong>
+                                <div class="mt-2 ps-2">
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong>Chẩn đoán ICD-10:</strong>
+                                            <small class="text-muted">Nhập / chỉnh sửa chi tiết chẩn đoán bên dưới:</small>
+                                        </div>
+                                        <ul class="mb-1 ps-3" th:if="${!#lists.isEmpty(detail.snapshot['diagnoses'])}">
+                                            <li th:each="d : ${detail.snapshot['diagnoses']}">
+                                                <span class="badge bg-secondary-subtle text-secondary me-1" th:text="${d['icd10Code'] ?: 'ICD'}">K04.0</span>
+                                                <strong th:text="${d['diagnosisText']}">Viêm tủy</strong>
+                                                <span class="text-muted" th:if="${d['toothNumbers'] != null and !d['toothNumbers'].isBlank()}" th:text="| (Răng ${d['toothNumbers']})|"></span>
+                                            </li>
+                                        </ul>
+                                        <input type="text" name="icdDiagnosisSummary" class="emr-inline-input w-100 fw-bold"
+                                               th:value="${@emrViewText.effective(dental, 'icdDiagnosisSummary', '')}"
+                                               placeholder="Chẩn đoán ICD-10 (Ví dụ: K00.0 Không có răng (Vô răng) tại Răng 33 (Mặt D))...">
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong>Thủ thuật đã thực hiện:</strong>
+                                            <small class="text-muted">Nhập / chỉnh sửa thủ thuật thực tế bên dưới:</small>
+                                        </div>
+                                        <ul class="mb-1 ps-3" th:if="${!#lists.isEmpty(detail.snapshot['performedServices'])}">
+                                            <li th:each="s : ${detail.snapshot['performedServices']}">
+                                                <span th:text="${s['serviceName']}">Hàn răng</span>
+                                                <span class="text-primary fw-semibold" th:if="${s['toothNumbers'] != null and !s['toothNumbers'].isBlank()}" th:text="| - Răng: ${s['toothNumbers']}|"></span>
+                                                <span class="text-muted small" th:text="| (BS: ${s['doctorName']})|"></span>
+                                            </li>
+                                        </ul>
+                                        <input type="text" name="performedServicesSummary" class="emr-inline-input w-100 fw-bold"
+                                               th:value="${@emrViewText.effective(dental, 'performedServicesSummary', (#lists.isEmpty(detail.snapshot['performedServices']) ? 'Chưa có thủ thuật' : ''))}"
+                                               placeholder="Thủ thuật đã thực hiện (Ví dụ: Chưa có thủ thuật)...">
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Kế hoạch &amp; Lời dặn tiếp theo:</strong>
+                                        <textarea name="treatmentPlan" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${@emrViewText.effective(dental, 'treatmentPlan', '')}"
+                                                  placeholder="(Trống nếu chưa có lời dặn tiếp theo)"></textarea>
+                                    </div>
+                                    <div>
+                                        <strong>Ghi chú điều trị:</strong>
+                                        <input type="text" name="treatmentNotes" class="emr-inline-input w-100 mt-1"
+                                               th:value="${@emrViewText.effective(dental, 'treatmentNotes', '')}"
+                                               placeholder="(Trống / Ghi chú thêm...)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CHỮ KÝ VÀ CON DẤU ĐIỆN TỬ CUỐI BỆNH ÁN MS: BA-18 -->
+                            <div class="moh-signature-grid">
+                                <div class="moh-signature-block">
+                                    <span class="signer-title">BÁC SĨ KHÁM BỆNH</span>
+                                    <span class="signer-sub">(Ký số điện tử)</span>
+
+                                    <!-- NẾU ĐÃ KÝ SỐ: HIỂN THỊ CON DẤU XANH LÁ HỢP LỆ -->
+                                    <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-digital-stamp-box">
+                                        <div class="emr-stamp-badge"><i class="bi bi-patch-check-fill"></i> ĐÃ KÝ SỐ ĐIỆN TỬ</div>
+                                        <div class="emr-stamp-signer" th:text="|BS. ${visit['doctorName'] ?: detail.record.doctorName}|">BS. Lê Minh Cường</div>
+                                        <div class="emr-stamp-org" th:text="|Cơ sở: ${visit['branchName'] ?: detail.record.branchName}|">Nha khoa CV-DCMS</div>
+                                        <div class="emr-stamp-time" th:text="|Ngày ký: ${detail.record.updatedAt != null ? #temporals.format(detail.record.updatedAt, 'dd/MM/yyyy HH:mm:ss') : 'Đã chứng thực'}|">17/10/2026</div>
+                                        <div class="emr-stamp-hash" th:if="${detail.contentHash != null}" th:text="|SHA-256: ${#strings.substring(detail.contentHash, 0, 20)}...|">SHA-256</div>
+                                        <div class="emr-stamp-standard">Chứng thư CVDCMS_INTERNAL_CA · Chuẩn TT 46/2018/TT-BYT</div>
+                                    </div>
+
+                                    <!-- NẾU CHƯA KÝ SỐ VÀ CÓ QUYỀN KÝ: NÚT KÝ SỐ TRỰC TIẾP TẠI ĐÂY -->
+                                    <div th:unless="${detail.record.status.name() == 'SIGNED'}" class="mt-3">
+                                        <form th:if="${detail.canDoctorSign}" method="post" th:action="@{/emr/records/{id}/doctor-sign(id=${detail.record.id})}">
+                                            <input type="hidden" name="confirmed" value="true">
+                                            <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" type="submit">
+                                                <i class="bi bi-pen-fill"></i> Ký số điện tử ngay
+                                            </button>
+                                        </form>
+                                        <span th:unless="${detail.canDoctorSign}" class="text-muted small fst-italic">Bản nháp đang soạn thảo</span>
+                                    </div>
+                                </div>
+
+                                <div class="moh-signature-block">
+                                    <span class="signer-title">ĐẠI DIỆN CƠ SỞ KCB</span>
+                                    <span class="signer-sub">(Chứng thực số nội bộ)</span>
+
+                                    <div th:if="${detail.record.status.name() == 'SIGNED'}" class="emr-digital-stamp-box" style="border-color: #0284c7 !important; background: #f0f9ff !important;">
+                                        <div class="emr-stamp-badge" style="color: #0284c7;"><i class="bi bi-shield-check"></i> CHỨNG THỰC BỆNH ÁN ĐIỆN TỬ</div>
+                                        <div class="emr-stamp-signer" th:text="${visit['branchName']}">CV-DCMS Cơ sở 1</div>
+                                        <div class="emr-stamp-standard" style="color: #0284c7; border-color: #bae6fd;">Hồ sơ đã khóa &amp; toàn vẹn nội dung</div>
+                                    </div>
+
+                                    <div th:unless="${detail.record.status.name() == 'SIGNED'}" class="mt-3">
+                                        <form th:if="${detail.canLock}" method="post" th:action="@{/emr/records/{id}/lock(id=${detail.record.id})}">
+                                            <button class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 shadow-sm" type="submit">
+                                                <i class="bi bi-lock-fill"></i> Đóng &amp; Khóa HSBA
+                                            </button>
+                                        </form>
+                                        <span th:unless="${detail.canLock}" class="text-muted small fst-italic">Chờ hoàn tất hồ sơ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            </form>
+                        </article>
+
+                        <!-- TỜ 3: TỔNG KẾT BỆNH ÁN NGOẠI TRÚ (TREATMENT_SUMMARY) (Item 9) -->
+                        <article class="emr-paper" data-emr-document="TREATMENT_SUMMARY">
+                            <form method="post" th:action="@{/emr/records/{id}/documents/TREATMENT_SUMMARY(id=${detail.record.id})}" id="formDocTREATMENT_SUMMARY" class="emr-doc-form m-0">
+                                <div class="emr-paper-topbar">
+                                    <span class="doc-title-badge"><i class="bi bi-journal-text"></i> Tờ 3: Tổng kết bệnh án ngoại trú RHM</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-emr-print>
+                                            <i class="bi bi-printer"></i> In tờ này
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="moh-header">
+                                    <div class="moh-header-left">
+                                        <strong th:text="${visit['branchName']}">Cơ sở KCB</strong>
+                                        <div>Mã cơ sở: <span th:text="${visit['branchCode']}">CN01</span></div>
+                                    </div>
+                                    <div class="moh-header-right">
+                                        <div>Mã hồ sơ: <strong class="ba-code" th:text="${detail.record.code}">2610170069</strong></div>
+                                    </div>
+                                </div>
+
+                                <div class="moh-doc-title">
+                                    <h1>TỔNG KẾT BỆNH ÁN NGOẠI TRÚ<br><small class="text-muted fs-6">Răng Hàm Mặt</small></h1>
+                                </div>
+
+                                <!-- Lịch sử khám và điều trị -->
+                                <div class="moh-section-title"><span>1. LỊCH SỬ KHÁM VÀ ĐIỀU TRỊ</span></div>
+                                <div class="py-2 mb-3">
+                                    <div th:each="prev : ${detail.snapshot['visitHistory']}" class="mb-2 pb-2 border-bottom">
+                                        <div class="d-flex justify-content-between">
+                                            <strong th:text="${prev['visitCode']}">LK001</strong>
+                                            <span class="text-muted small" th:text="${@emrViewText.date(prev['checkInAt'])}">17/10/2026</span>
+                                        </div>
+                                        <div class="small" th:text="${prev['symptoms'] ?: 'Triệu chứng bình thường'}"></div>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(detail.snapshot['visitHistory'])}" class="text-muted small">
+                                        Đây là lượt khám đầu tiên được ghi nhận.
+                                    </div>
+                                </div>
+
+                                <!-- Nội dung tổng kết 7 mục chuẩn Bộ Y Tế (Inline Editable) -->
+                                <div class="moh-section-title"><span>2. NỘI DUNG TỔNG KẾT ĐIỀU TRỊ</span></div>
+                                <ol class="list-group list-group-numbered mb-4">
+                                    <li class="list-group-item">
+                                        <strong>Quá trình bệnh lý và diễn biến lâm sàng:</strong>
+                                        <textarea name="clinicalProgressSummary" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${summary != null and summary['clinicalProgressSummary'] != null and !summary['clinicalProgressSummary'].isBlank() ? summary['clinicalProgressSummary'] : (clinical['historyIllness'] ?: '')}"></textarea>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Tóm tắt kết quả cận lâm sàng có giá trị chẩn đoán:</strong>
+                                        <textarea name="paraclinicalSummary" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${summary != null and summary['paraclinicalSummary'] != null and !summary['paraclinicalSummary'].isBlank() ? summary['paraclinicalSummary'] : ''}"></textarea>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Dấu hiệu lâm sàng chính:</strong>
+                                        <textarea name="mainClinicalSigns" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${summary != null and summary['mainClinicalSigns'] != null and !summary['mainClinicalSigns'].isBlank() ? summary['mainClinicalSigns'] : (clinical['summaryAssessment'] ?: '')}"></textarea>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Chẩn đoán ra viện:</strong>
+                                        <input type="text" name="dischargeDiagnosis" class="emr-inline-input w-100 mt-1"
+                                               th:value="${summary != null and summary['dischargeDiagnosis'] != null and !summary['dischargeDiagnosis'].isBlank() ? summary['dischargeDiagnosis'] : 'Theo chẩn đoán chính'}">
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Phương pháp điều trị:</strong>
+                                        <textarea name="treatmentMethod" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${summary != null and summary['treatmentMethod'] != null and !summary['treatmentMethod'].isBlank() ? summary['treatmentMethod'] : 'Theo kế hoạch điều trị'}"></textarea>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Tình trạng người bệnh khi kết thúc:</strong>
+                                        <input type="text" name="dischargeCondition" class="emr-inline-input w-100 mt-1"
+                                               th:value="${summary != null and summary['dischargeCondition'] != null and !summary['dischargeCondition'].isBlank() ? summary['dischargeCondition'] : 'Ổn định, không biến chứng'}">
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Hướng điều trị và chế độ tiếp theo:</strong>
+                                        <textarea name="followupInstructions" class="emr-inline-textarea mt-1" rows="2"
+                                                  th:text="${summary != null and summary['followupInstructions'] != null and !summary['followupInstructions'].isBlank() ? summary['followupInstructions'] : 'Tái khám định kỳ 6 tháng một lần.'}"></textarea>
+                                    </li>
+                                </ol>
+                            </form>
+                        </article>
+
+                        <!-- TỜ 4: DANH MỤC TÀI LIỆU ĐÍNH KÈM (ATTACHMENT_INDEX) -->
+                        <article class="emr-paper" data-emr-document="ATTACHMENT_INDEX">
+                            <div class="emr-paper-topbar">
+                                <span class="doc-title-badge"><i class="bi bi-paperclip"></i> Tờ 4: Danh mục tài liệu đính kèm &amp; Cận lâm sàng</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAddAttachment">
+                                        <i class="bi bi-cloud-upload"></i> Đính kèm tệp
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-emr-print>
+                                        <i class="bi bi-printer"></i> In tờ này
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="moh-doc-title">
+                                <h1>DANH MỤC TÀI LIỆU ĐÍNH KÈM</h1>
+                                <p>Các bản scan, phim chụp X-quang, kết quả cận lâm sàng của bệnh án</p>
+                            </div>
+
+                            <!-- Lưới hình ảnh đính kèm có các nút CRUD -->
+                            <div class="row g-3 my-3" th:unless="${#lists.isEmpty(detail.attachments)}">
+                                <div class="col-6 col-md-4" th:each="file : ${detail.attachments}">
+                                    <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+                                        <a th:href="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}" target="_blank">
+                                            <img th:src="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}"
+                                                 class="card-img-top" style="height: 140px; object-fit: cover;" th:alt="${file.caption ?: file.name}">
+                                        </a>
+                                        <div class="card-body p-2">
+                                            <strong class="d-block text-truncate small" th:text="${file.caption ?: file.name}">Ảnh</strong>
+                                            <small class="text-muted font-monospace d-block" style="font-size: 10px;" th:text="|SHA: ${#strings.substring(file.sha256,0,12)}...|"></small>
+                                            <div class="d-flex gap-1 mt-2">
+                                                <a class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 11px;"
+                                                   th:href="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}" target="_blank">
+                                                    <i class="bi bi-eye"></i> Xem
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 11px;"
+                                                   th:href="@{/emr/records/{id}/attachments/{aid}(id=${detail.record.id},aid=${file.id})}" download>
+                                                    <i class="bi bi-download"></i> Tải
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hiển thị ảnh nguồn nếu chưa khóa -->
+                            <div class="row g-3 my-3" th:if="${detail.canRefresh and !#lists.isEmpty(detail.snapshot['photos'])}">
+                                <div class="col-6 col-md-4" th:each="photo : ${detail.snapshot['photos']}">
+                                    <div class="card h-100 shadow-sm border rounded-3 overflow-hidden">
+                                        <img th:src="${photo['imageUrl']}" class="card-img-top" style="height: 140px; object-fit: cover;">
+                                        <div class="card-body p-2">
+                                            <strong class="d-block small text-truncate" th:text="${photo['caption'] ?: 'Ảnh lâm sàng'}"></strong>
+                                            <span class="badge bg-warning-subtle text-warning" style="font-size: 10px;">Chưa chốt phiên bản</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div th:if="${#lists.isEmpty(detail.attachments) and #lists.isEmpty(detail.snapshot['photos'])}" class="p-5 text-center text-muted">
+                                <i class="bi bi-images fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Lượt khám này chưa có tài liệu hoặc hình ảnh lâm sàng đính kèm.
+                            </div>
+                        </article>
+
+                        <!-- TỜ 5: XÁC THỰC HỒ SƠ (VERIFICATION) -->
+                        <article class="emr-paper" data-emr-document="VERIFICATION">
+                            <div class="emr-paper-topbar">
+                                <span class="doc-title-badge"><i class="bi bi-shield-check"></i> Tờ 5: Thông tin xác thực &amp; Toàn vẹn dữ liệu</span>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-emr-print>
+                                    <i class="bi bi-printer"></i> In tờ này
+                                </button>
+                            </div>
+
+                            <div class="moh-doc-title">
+                                <h1>THÔNG TIN XÁC THỰC BỆNH ÁN ĐIỆN TỬ</h1>
+                                <p>Hệ thống chứng thực số nội bộ theo tiêu chuẩn Thông tư 46/2018/TT-BYT</p>
+                            </div>
+
+                            <div class="p-4 bg-light rounded-3 border mb-4">
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="text-muted small d-block">Mã hồ sơ:</label>
+                                        <strong class="fs-6 font-monospace" th:text="${detail.record.code}">EMR-001</strong>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="text-muted small d-block">Phiên bản hiện hành:</label>
+                                        <strong class="fs-6" th:text="|Phiên bản v${detail.currentVersion}|">v1</strong>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="text-muted small d-block">Trạng thái bệnh án:</label>
+                                        <span class="emr-badge" th:classappend="| status-${detail.record.status}|" th:text="${detail.record.status.displayName}">Bản nháp</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="text-muted small d-block">Mã băm nội dung SHA-256:</label>
+                                        <span class="font-monospace text-primary small" th:text="${detail.contentHash ?: 'Sẽ tạo khi khóa'}">SHA-256</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="moh-section-title"><span>DANH SÁCH CHỮ KÝ ĐIỆN TỬ HỢP LỆ</span></div>
+                            <div class="row g-3" th:unless="${#lists.isEmpty(detail.signatures)}">
+                                <div class="col-md-6" th:each="sig : ${detail.signatures}">
+                                    <div class="p-3 bg-white rounded-3 border border-success-subtle shadow-sm">
+                                        <div class="d-flex align-items-center gap-2 text-success fw-bold">
+                                            <i class="bi bi-patch-check-fill fs-5"></i>
+                                            <span th:text="${@emrViewText.label(sig.type)}">BÁC SĨ</span>
+                                        </div>
+                                        <div class="fs-6 fw-bold text-dark mt-1" th:text="${sig.signerName}">BS. Lê Minh Cường</div>
+                                        <div class="small text-muted" th:text="|Nhà cung cấp: ${sig.provider == 'CVDCMS_INTERNAL_CA' ? 'Chứng thực số nội bộ CV-DCMS' : sig.provider}|">CA</div>
+                                        <div class="small text-muted" th:text="|Thời gian: ${sig.signedAt != null ? #temporals.format(sig.signedAt, 'dd/MM/yyyy HH:mm:ss') : '—'}|">17/10/2026</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(detail.signatures)}" class="alert alert-warning border-0 rounded-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-circle-fill fs-5"></i>
+                                <span>Bệnh án chưa có chữ ký số điện tử. Bác sĩ điều trị cần kiểm tra hồ sơ và thực hiện ký số.</span>
+                            </div>
+                        </article>
+                    </section>
+                </div>
             </div>
+
+            <!-- =========================================================================
+                 DRAWER LỊCH SỬ / TIMELINE / AUDIT LOG TRƯỢT TỪ BÊN PHẢI (BOOTSTRAP OFFCANVAS)
+                 ========================================================================= -->
+            <div class="offcanvas offcanvas-end emr-history-drawer" tabindex="-1" id="emrHistoryDrawer" aria-labelledby="emrHistoryDrawerLabel">
+                <div class="emr-drawer-header d-flex justify-content-between align-items-center">
+                    <h5 class="offcanvas-title fw-bold text-dark d-flex align-items-center gap-2" id="emrHistoryDrawerLabel">
+                        <i class="bi bi-clock-history text-primary"></i> Lịch sử &amp; Chứng thực số
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="emr-drawer-body">
+                    <!-- Danh sách chữ ký số -->
+                    <div class="drawer-section-title"><span>Chữ ký điện tử</span></div>
+                    <div th:each="sig : ${detail.signatures}" class="p-2.5 bg-white border rounded-3 mb-2 d-flex align-items-center gap-2.5">
+                        <i class="bi bi-patch-check-fill text-success fs-4"></i>
+                        <div>
+                            <strong class="d-block text-dark small" th:text="${sig.signerName}">Người ký</strong>
+                            <small class="text-muted d-block" th:text="|${@emrViewText.label(sig.type)} · ${sig.signedAt != null ? #temporals.format(sig.signedAt, 'dd/MM/yyyy HH:mm') : '—'}|"></small>
+                        </div>
+                    </div>
+                    <p th:if="${#lists.isEmpty(detail.signatures)}" class="text-muted small fst-italic">Chưa có chữ ký điện tử nào.</p>
+
+                    <!-- Lịch sử phiên bản -->
+                    <div class="drawer-section-title"><span>Lịch sử các phiên bản</span></div>
+                    <div th:each="ver : ${detail.versions}" class="p-2.5 bg-white border rounded-3 mb-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary fw-bold font-monospace me-1" th:text="|v${ver.number}|">v1</span>
+                            <strong class="small text-dark" th:text="${@emrViewText.label(ver.status)}">DRAFT</strong>
+                        </div>
+                        <small class="text-muted" th:text="${#temporals.format(ver.createdAt, 'dd/MM/yyyy HH:mm')}"></small>
+                    </div>
+
+                    <!-- Nhật ký thao tác (Audit log timeline) -->
+                    <div class="drawer-section-title"><span>Nhật ký thao tác (Audit Log)</span></div>
+                    <ul class="audit-timeline">
+                        <li class="audit-item" th:each="audit : ${detail.audits}">
+                            <div class="audit-item-box">
+                                <div class="audit-action" th:text="${audit.action}">ACTION</div>
+                                <div class="audit-desc" th:text="${audit.details}">Chi tiết thao tác</div>
+                                <div class="audit-meta" th:text="|${audit.actor} · ${#temporals.format(audit.createdAt, 'dd/MM/yyyy HH:mm')}|">admin</div>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- Form tạo phiên bản sửa đổi nếu canAmend -->
+                    <div th:if="${detail.canAmend}" class="mt-4 pt-3 border-top">
+                        <div class="drawer-section-title text-danger"><span>Tạo phiên bản sửa đổi (Amendment)</span></div>
+                        <form method="post" th:action="@{/emr/records/{id}/amendments(id=${detail.record.id})}">
+                            <label class="form-label small fw-bold text-dark">Lý do sửa đổi hồ sơ:</label>
+                            <textarea class="form-control form-control-sm mb-2" name="reason" required maxlength="500" placeholder="Nhập lý do tạo phiên bản sửa đổi..."></textarea>
+                            <button class="btn btn-outline-danger btn-sm w-100" type="submit">
+                                <i class="bi bi-files me-1"></i> Xác nhận tạo phiên bản sửa đổi
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================================
+                 CÁC MODAL CHỈNH SỬA ĐỘC LẬP (THAY THẾ FORM XANH ĐÁY TỜ A4)
+                 ========================================================================= -->
+
+            <!-- 1. Modal Cập nhật thông tin bệnh nhân chuẩn DentalSoft (Item 8 - Screenshot 6) -->
+            <div class="modal fade emr-modal" id="modalEditPatient" tabindex="-1" aria-labelledby="modalEditPatientLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <form method="post" th:action="@{/emr/records/{id}/patient-demographics(id=${detail.record.id})}" class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalEditPatientLabel">
+                                <i class="bi bi-person-gear text-primary"></i> Cập nhật thông tin bệnh nhân
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="emr-form-grid">
+                                <div>
+                                    <label>Mã người bệnh</label>
+                                    <input type="text" class="form-control bg-light" th:value="${patient['patientCode']}" readonly>
+                                </div>
+                                <div>
+                                    <label>Họ và tên bệnh nhân *</label>
+                                    <input type="text" class="form-control" name="fullName" th:value="${patient['fullName']}" required>
+                                </div>
+                                <div>
+                                    <label>Số điện thoại *</label>
+                                    <input type="text" class="form-control" name="phoneNumber" th:value="${patient['phoneNumber']}" required>
+                                </div>
+                                <div>
+                                    <label>Số CCCD / CMND</label>
+                                    <input type="text" class="form-control" name="idCardNumber" th:value="${patient['idCardNumber']}" placeholder="12 số căn cước">
+                                </div>
+                                <div>
+                                    <label>Ngày sinh *</label>
+                                    <input type="date" class="form-control" name="dob" th:value="${patient['dob']}" required>
+                                </div>
+                                <div>
+                                    <label>Giới tính</label>
+                                    <select class="form-select" name="gender">
+                                        <option value="Nữ" th:selected="${patient['gender'] == 'Nữ' or patient['gender'] == 'FEMALE'}">Nữ</option>
+                                        <option value="Nam" th:selected="${patient['gender'] == 'Nam' or patient['gender'] == 'MALE'}">Nam</option>
+                                        <option value="Khác" th:selected="${patient['gender'] == 'Khác' or patient['gender'] == 'OTHER'}">Khác</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Nghề nghiệp</label>
+                                    <input type="text" class="form-control" name="occupation" th:value="${patient['occupation'] ?: ''}" placeholder="Nghề nghiệp">
+                                </div>
+                                <div>
+                                    <label>Dân tộc</label>
+                                    <input type="text" class="form-control" name="ethnicity" value="Kinh">
+                                </div>
+                                <div>
+                                    <label>Quốc tịch</label>
+                                    <input type="text" class="form-control" name="nationality" value="Việt Nam">
+                                </div>
+                                <div>
+                                    <label>Nơi làm việc</label>
+                                    <input type="text" class="form-control" name="workplace" th:value="${patient['workplace'] ?: ''}" placeholder="Cơ quan / Doanh nghiệp">
+                                </div>
+                                <div class="span-2">
+                                    <label>Địa chỉ chi tiết</label>
+                                    <input type="text" class="form-control" name="address" th:value="${patient['address']}" placeholder="Số nhà, đường, phường/xã, quận/huyện...">
+                                </div>
+                                <div class="span-2">
+                                    <label class="d-block mb-1">Đối tượng</label>
+                                    <div class="d-flex align-items-center gap-4">
+                                        <label class="d-inline-flex align-items-center gap-1.5 small fw-semibold">
+                                            <input type="radio" name="patientType" value="FEE" th:checked="${patient['healthInsuranceNumber'] == null or patient['healthInsuranceNumber'].isBlank()}">
+                                            Thu phí
+                                        </label>
+                                        <label class="d-inline-flex align-items-center gap-1.5 small fw-semibold">
+                                            <input type="radio" name="patientType" value="BHYT" th:checked="${patient['healthInsuranceNumber'] != null and !patient['healthInsuranceNumber'].isBlank()}">
+                                            BHYT
+                                        </label>
+                                        <label class="d-inline-flex align-items-center gap-1.5 small fw-semibold">
+                                            <input type="radio" name="patientType" value="FREE">
+                                            Miễn phí
+                                        </label>
+                                        <label class="d-inline-flex align-items-center gap-1.5 small fw-semibold">
+                                            <input type="radio" name="patientType" value="OTHER">
+                                            Khác
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="span-2">
+                                    <label>Số thẻ BHYT (nếu có)</label>
+                                    <input type="text" class="form-control" name="healthInsuranceNumber" th:value="${patient['healthInsuranceNumber']}">
+                                </div>
+                                <div>
+                                    <label>Họ tên người thân / liên hệ</label>
+                                    <input type="text" class="form-control" name="guardianName" th:value="${patient['guardianName']}" placeholder="Họ tên người thân">
+                                </div>
+                                <div>
+                                    <label>Quan hệ / SĐT thân nhân</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="guardianRelationship" th:value="${patient['guardianRelationship'] ?: ''}" placeholder="Quan hệ" style="max-width: 110px;">
+                                        <input type="text" class="form-control" name="guardianPhone" th:value="${patient['guardianPhone']}" placeholder="Số điện thoại">
+                                    </div>
+                                </div>
+                                <div class="span-2">
+                                    <label>Dị ứng / Bệnh nền cần lưu ý</label>
+                                    <input type="text" class="form-control" name="allergyDetails" th:value="${patient['allergyDetails']}" placeholder="Ghi chú dị ứng...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-floppy-fill me-1"></i> Lưu thông tin
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 2. Modal Chỉnh sửa Tờ bìa (COVER) -->
+            <div class="modal fade emr-modal" id="modalEditCover" tabindex="-1" aria-labelledby="modalEditCoverLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <form method="post" th:action="@{/emr/records/{id}/documents/COVER(id=${detail.record.id})}" class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalEditCoverLabel">
+                                <i class="bi bi-pencil-square text-primary"></i> Chỉnh sửa Bìa hồ sơ bệnh án
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="emr-form-grid">
+                                <div>
+                                    <label>Tên cơ sở khám chữa bệnh</label>
+                                    <input type="text" class="form-control" name="healthFacility" th:value="${@emrViewText.effective(cover, 'healthFacility', visit['branchName'] ?: 'NHA KHOA CONG VU DENTAL CLINIC')}">
+                                </div>
+                                <div>
+                                    <label>Cơ sở</label>
+                                    <input type="text" class="form-control" name="branchName" th:value="${@emrViewText.effective(cover, 'branchName', visit['branchName'] ?: 'CN1')}">
+                                </div>
+                                <div>
+                                    <label>Mã cơ sở</label>
+                                    <input type="text" class="form-control" name="branchCode" th:value="${@emrViewText.effective(cover, 'branchCode', visit['branchCode'] ?: 'CN01')}">
+                                </div>
+                                <div>
+                                    <label>Mã hồ sơ bệnh án</label>
+                                    <input type="text" class="form-control" name="recordCode" th:value="${@emrViewText.effective(cover, 'recordCode', detail.record.code)}">
+                                </div>
+                                <div>
+                                    <label>Số lưu trữ hồ sơ</label>
+                                    <input type="text" class="form-control" name="archiveNo" th:value="${@emrViewText.effective(cover, 'archiveNo', '')}">
+                                </div>
+                                <div>
+                                    <label>Khoa điều trị</label>
+                                    <input type="text" class="form-control" name="department" th:value="${@emrViewText.effective(cover, 'department', 'Răng Hàm Mặt')}">
+                                </div>
+                                <div>
+                                    <label>Khoa chuyển đến</label>
+                                    <input type="text" class="form-control" name="transferredDepartment" th:value="${@emrViewText.effective(cover, 'transferredDepartment', '')}">
+                                </div>
+                                <div>
+                                    <label>Phòng / Ghế</label>
+                                    <input type="text" class="form-control" name="roomBed" th:value="${@emrViewText.effective(cover, 'roomBed', 'Ghế khám 01')}">
+                                </div>
+                                <div>
+                                    <label>Giường</label>
+                                    <input type="text" class="form-control" name="bed" th:value="${@emrViewText.effective(cover, 'bed', '')}">
+                                </div>
+                                <div>
+                                    <label>Mã người bệnh</label>
+                                    <input type="text" class="form-control" name="patientCode" th:value="${@emrViewText.effective(cover, 'patientCode', patient['patientCode'])}">
+                                </div>
+                                <div>
+                                    <label>Họ và tên người bệnh</label>
+                                    <input type="text" class="form-control" name="fullName" th:value="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}">
+                                </div>
+                                <div>
+                                    <label>Giới tính</label>
+                                    <select class="form-select" name="gender">
+                                        <option value="Nam" th:selected="${@emrViewText.effective(cover, 'gender', @emrViewText.effective(dental, 'gender', patient['gender'])) == 'Nam' or @emrViewText.effective(cover, 'gender', @emrViewText.effective(dental, 'gender', patient['gender'])) == 'MALE'}">Nam</option>
+                                        <option value="Nữ" th:selected="${@emrViewText.effective(cover, 'gender', @emrViewText.effective(dental, 'gender', patient['gender'])) == 'Nữ' or @emrViewText.effective(cover, 'gender', @emrViewText.effective(dental, 'gender', patient['gender'])) == 'FEMALE'}">Nữ</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Ngày sinh</label>
+                                    <input type="text" class="form-control" name="dob" th:value="${@emrViewText.effective(cover, 'dob', @emrViewText.effective(dental, 'dob', @emrViewText.date(patient['dob'])))}">
+                                </div>
+                                <div>
+                                    <label>Tuổi</label>
+                                    <input type="text" class="form-control" name="age" th:value="${@emrViewText.effective(cover, 'age', @emrViewText.effective(dental, 'age', patient['age']))}">
+                                </div>
+                                <div>
+                                    <label>Số điện thoại</label>
+                                    <input type="text" class="form-control" name="phoneNumber" th:value="${@emrViewText.effective(cover, 'phoneNumber', @emrViewText.effective(dental, 'phoneNumber', patient['phoneNumber']))}">
+                                </div>
+                                <div>
+                                    <label>Nghề nghiệp</label>
+                                    <input type="text" class="form-control" name="occupation" th:value="${@emrViewText.effective(cover, 'occupation', @emrViewText.effective(dental, 'occupation', patient['occupation'] ?: ''))}">
+                                </div>
+                                <div>
+                                    <label>Dân tộc</label>
+                                    <input type="text" class="form-control" name="ethnicity" th:value="${@emrViewText.effective(cover, 'ethnicity', @emrViewText.effective(dental, 'ethnicity', patient['ethnicity'] ?: 'Kinh'))}">
+                                </div>
+                                <div>
+                                    <label>Quốc tịch</label>
+                                    <input type="text" class="form-control" name="nationality" th:value="${@emrViewText.effective(cover, 'nationality', @emrViewText.effective(dental, 'nationality', patient['nationality'] ?: 'Việt Nam'))}">
+                                </div>
+                                <div class="span-2">
+                                    <label>Nơi làm việc</label>
+                                    <input type="text" class="form-control" name="workplace" th:value="${@emrViewText.effective(cover, 'workplace', @emrViewText.effective(dental, 'workplace', patient['workplace'] ?: ''))}">
+                                </div>
+                                <div>
+                                    <label>Số CCCD / Định danh</label>
+                                    <input type="text" class="form-control" name="idCardNumber" th:value="${@emrViewText.effective(cover, 'idCardNumber', @emrViewText.effective(dental, 'idCardNumber', patient['idCardNumber']))}">
+                                </div>
+                                <div>
+                                    <label>Mã thẻ BHYT</label>
+                                    <input type="text" class="form-control" name="healthInsuranceNumber" th:value="${@emrViewText.effective(cover, 'healthInsuranceNumber', @emrViewText.effective(dental, 'healthInsuranceNumber', patient['healthInsuranceNumber']))}">
+                                </div>
+                                <div class="span-2">
+                                    <label>Địa chỉ liên hệ</label>
+                                    <input type="text" class="form-control" name="address" th:value="${@emrViewText.effective(cover, 'address', @emrViewText.effective(dental, 'address', patient['address']))}">
+                                </div>
+                                <div>
+                                    <label>Người liên hệ khi cần</label>
+                                    <input type="text" class="form-control" name="guardianName" th:value="${@emrViewText.effective(cover, 'guardianName', @emrViewText.effective(dental, 'guardianName', patient['guardianName'] ?: ''))}">
+                                </div>
+                                <div>
+                                    <label>SĐT người nhà</label>
+                                    <input type="text" class="form-control" name="guardianPhone" th:value="${@emrViewText.effective(cover, 'guardianPhone', @emrViewText.effective(dental, 'guardianPhone', patient['guardianPhone'] ?: ''))}">
+                                </div>
+                                <div>
+                                    <label>Quan hệ người nhà</label>
+                                    <input type="text" class="form-control" name="guardianRelationship" th:value="${@emrViewText.effective(cover, 'guardianRelationship', @emrViewText.effective(dental, 'guardianRelationship', patient['guardianRelationship'] ?: ''))}">
+                                </div>
+                                <div>
+                                    <label>Nơi giới thiệu</label>
+                                    <input type="text" class="form-control" name="referralSource" th:value="${@emrViewText.effective(cover, 'referralSource', @emrViewText.effective(dental, 'referralSource', 'Tự đến'))}">
+                                </div>
+                                <div class="span-2">
+                                    <label>Chẩn đoán nơi giới thiệu</label>
+                                    <input type="text" class="form-control" name="referralDiagnosis" th:value="${@emrViewText.effective(cover, 'referralDiagnosis', @emrViewText.effective(dental, 'referralDiagnosis', ''))}">
+                                </div>
+                                <div>
+                                    <label>Ngày giờ tiếp nhận</label>
+                                    <input type="text" class="form-control" name="admissionAt" th:value="${@emrViewText.effective(cover, 'admissionAt', visit['checkInAt'] ?: '')}">
+                                </div>
+                                <div>
+                                    <label>Ngày giờ kết thúc</label>
+                                    <input type="text" class="form-control" name="dischargeAt" th:value="${@emrViewText.effective(cover, 'dischargeAt', visit['completedAt'] ?: '')}">
+                                </div>
+                                <div class="span-2">
+                                    <label>Chẩn đoán khi vào viện</label>
+                                    <input type="text" class="form-control" name="admissionDiagnosis" th:value="${@emrViewText.effective(cover, 'admissionDiagnosis', @emrViewText.effective(dental, 'icdDiagnosisSummary', (!#lists.isEmpty(detail.snapshot['diagnoses']) ? detail.snapshot['diagnoses'][0]['diagnosisText'] : '')))}">
+                                </div>
+                                <div class="span-2">
+                                    <label>Chẩn đoán khi ra viện</label>
+                                    <input type="text" class="form-control" name="dischargeDiagnosis" th:value="${@emrViewText.effective(cover, 'dischargeDiagnosis', @emrViewText.effective(summary, 'dischargeDiagnosis', @emrViewText.effective(dental, 'icdDiagnosisSummary', (!#lists.isEmpty(detail.snapshot['diagnoses']) ? detail.snapshot['diagnoses'][0]['diagnosisText'] : ''))))}">
+                                </div>
+                                <div>
+                                    <label>Kết quả điều trị</label>
+                                    <input type="text" class="form-control" name="treatmentOutcome" th:value="${@emrViewText.effective(cover, 'treatmentOutcome', @emrViewText.effective(summary, 'dischargeCondition', 'Khỏi / Đỡ, giảm'))}">
+                                </div>
+                                <div>
+                                    <label>Bác sĩ điều trị</label>
+                                    <input type="text" class="form-control" name="doctorName" th:value="${@emrViewText.effective(cover, 'doctorName', visit['doctorName'] ?: detail.record.doctorName ?: '')}">
+                                </div>
+                                <div>
+                                    <label>Đại diện cơ sở KCB</label>
+                                    <input type="text" class="form-control" name="facilityDirector" th:value="${@emrViewText.effective(cover, 'facilityDirector', visit['branchName'] ?: 'Giám đốc / Trưởng cơ sở')}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-floppy me-1"></i> Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 3. Modal Chỉnh sửa Tờ BA-18 (OUTPATIENT_DENTAL) -->
+            <div class="modal fade emr-modal" id="modalEditDental" tabindex="-1" aria-labelledby="modalEditDentalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <form method="post" th:action="@{/emr/records/{id}/documents/OUTPATIENT_DENTAL(id=${detail.record.id})}" class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalEditDentalLabel">
+                                <i class="bi bi-pencil-square text-primary"></i> Chỉnh sửa Bệnh án Ngoại trú RHM (MS: BA-18)
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="emr-form-grid">
+                                <div class="span-2">
+                                    <label>I. Lý do vào viện / Vấn đề sức khỏe</label>
+                                    <textarea class="form-control" rows="2" name="chiefComplaint" th:text="${@emrViewText.effective(dental, 'chiefComplaint', (clinical['chiefComplaint'] ?: visit['initialSymptoms']) ?: '')}" placeholder="Khám răng định kỳ và cạo vôi răng..."></textarea>
+                                </div>
+                                <div class="span-2">
+                                    <label>II. Quá trình bệnh lý và diễn biến lâm sàng</label>
+                                    <textarea class="form-control" rows="2" name="diseaseProgress" th:text="${@emrViewText.effective(dental, 'diseaseProgress', clinical['historyIllness'] ?: '')}" placeholder="(Trống nếu chưa có)"></textarea>
+                                </div>
+                                <div>
+                                    <label>III. Dị ứng</label>
+                                    <input type="text" class="form-control" name="allergyDetails" th:value="${@emrViewText.effective(dental, 'allergyDetails', patient['allergyDetails'] ?: '')}" placeholder="Dị ứng phấn hoa, thuốc...">
+                                </div>
+                                <div>
+                                    <label>Tiền sử bản thân</label>
+                                    <input type="text" class="form-control" name="personalHistory" th:value="${@emrViewText.effective(dental, 'personalHistory', patient['underlyingDiseaseDetails'] ?: '')}" placeholder="Bệnh nền...">
+                                </div>
+                                <div>
+                                    <label>Tiền sử gia đình</label>
+                                    <input type="text" class="form-control" name="familyHistory" th:value="${@emrViewText.effective(dental, 'familyHistory', '')}" placeholder="Tiền sử gia đình...">
+                                </div>
+                                <div>
+                                    <label>Phân loại khe hở môi vòm miệng (1-9)</label>
+                                    <input type="text" class="form-control" name="cleftPalateClassification" th:value="${@emrViewText.effective(dental, 'cleftPalateClassification', '')}" placeholder="Vị trí khe hở...">
+                                </div>
+                                <div class="span-2">
+                                    <label>4. Danh sách răng can thiệp &amp; chẩn đoán</label>
+                                    <input type="text" class="form-control" name="toothInterventionSummary" th:value="${@emrViewText.effective(dental, 'toothInterventionSummary', '')}" placeholder="Răng 33: Không có răng (Vô răng) (Mã ICD-10: K00.0)...">
+                                </div>
+                                <div class="span-2">
+                                    <label>5. Cận lâm sàng cần làm (ghi chú)</label>
+                                    <input type="text" class="form-control" name="paraclinicalNotes" th:value="${@emrViewText.effective(dental, 'paraclinicalNotes', '')}" placeholder="Chỉ định cận lâm sàng (hoặc để trống nếu Không)...">
+                                </div>
+                                <div class="span-2">
+                                    <label>6. Chẩn đoán ICD-10 xác định</label>
+                                    <input type="text" class="form-control" name="icdDiagnosisSummary" th:value="${@emrViewText.effective(dental, 'icdDiagnosisSummary', '')}" placeholder="K00.0 Không có răng (Vô răng) tại Răng 33 (Mặt D)...">
+                                </div>
+                                <div class="span-2">
+                                    <label>Thủ thuật đã thực hiện</label>
+                                    <input type="text" class="form-control" name="performedServicesSummary" th:value="${@emrViewText.effective(dental, 'performedServicesSummary', '')}" placeholder="Chưa có thủ thuật / Hàn răng...">
+                                </div>
+                                <div class="span-2">
+                                    <label>Kế hoạch điều trị và lời dặn tiếp theo</label>
+                                    <textarea class="form-control" rows="2" name="treatmentPlan" th:text="${@emrViewText.effective(dental, 'treatmentPlan', '')}" placeholder="(Trống hoặc lời dặn bác sĩ)"></textarea>
+                                </div>
+                                <div class="span-2">
+                                    <label>Ghi chú điều trị</label>
+                                    <textarea class="form-control" rows="2" name="treatmentNotes" th:text="${dental != null ? dental['treatmentNotes'] : ''}" placeholder="Ghi chú thêm..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-floppy me-1"></i> Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. Modal Chỉnh sửa Tổng kết bệnh án (TREATMENT_SUMMARY) -->
+            <div class="modal fade emr-modal" id="modalEditSummary" tabindex="-1" aria-labelledby="modalEditSummaryLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <form method="post" th:action="@{/emr/records/{id}/documents/TREATMENT_SUMMARY(id=${detail.record.id})}" class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalEditSummaryLabel">
+                                <i class="bi bi-pencil-square text-primary"></i> Chỉnh sửa Tổng kết bệnh án ngoại trú
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="emr-form-grid">
+                                <div class="span-2">
+                                    <label>Tóm tắt kết quả cận lâm sàng có giá trị</label>
+                                    <textarea class="form-control" rows="2" name="paraclinicalSummary" th:text="${summary != null ? summary['paraclinicalSummary'] : ''}"></textarea>
+                                </div>
+                                <div class="span-2">
+                                    <label>Chẩn đoán ra viện</label>
+                                    <textarea class="form-control" rows="2" name="dischargeDiagnosis" th:text="${summary != null ? summary['dischargeDiagnosis'] : ''}"></textarea>
+                                </div>
+                                <div class="span-2">
+                                    <label>Phương pháp điều trị</label>
+                                    <textarea class="form-control" rows="2" name="treatmentMethod" th:text="${summary != null ? summary['treatmentMethod'] : ''}"></textarea>
+                                </div>
+                                <div>
+                                    <label>Tình trạng khi kết thúc</label>
+                                    <input type="text" class="form-control" name="dischargeCondition" th:value="${summary != null ? summary['dischargeCondition'] : 'Ổn định'}">
+                                </div>
+                                <div>
+                                    <label>Hướng điều trị tiếp theo</label>
+                                    <input type="text" class="form-control" name="followupInstructions" th:value="${summary != null ? summary['followupInstructions'] : 'Tái khám định kỳ'}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-floppy me-1"></i> Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 5. Modal Thêm tờ phiếu mới -->
+            <div class="modal fade emr-modal" id="modalAddDocument" tabindex="-1" aria-labelledby="modalAddDocumentLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalAddDocumentLabel">
+                                <i class="bi bi-file-earmark-plus text-primary"></i> Thêm tờ phiếu vào hồ sơ
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Chọn loại biểu mẫu / tờ phiếu:</label>
+                                <select class="form-select">
+                                    <option value="CLINICAL_TREATMENT">Phiếu điều trị răng hàm mặt chi tiết</option>
+                                    <option value="SURGERY_CONSENT">Giấy cam kết phẫu thuật / thủ thuật nha khoa</option>
+                                    <option value="MONITORING_SHEET">Phiếu theo dõi sau can thiệp thủ thuật</option>
+                                    <option value="PARACLINICAL_REPORT">Phiếu kết quả cận lâm sàng bổ sung</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tên tiêu đề hiển thị:</label>
+                                <input type="text" class="form-control" placeholder="Nhập tiêu đề phiếu...">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-plus-lg me-1"></i> Tạo tờ phiếu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Modal Đính kèm tài liệu -->
+            <div class="modal fade emr-modal" id="modalAddAttachment" tabindex="-1" aria-labelledby="modalAddAttachmentLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalAddAttachmentLabel">
+                                <i class="bi bi-paperclip text-primary"></i> Đính kèm tệp / tài liệu
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Chọn tệp tin (Ảnh lâm sàng, phim X-quang, PDF):</label>
+                                <input type="file" class="form-control" accept="image/*,application/pdf">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mô tả / Chú thích tệp:</label>
+                                <input type="text" class="form-control" placeholder="Ví dụ: Phim X-quang răng 16 trước can thiệp...">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-cloud-arrow-up me-1"></i> Tải lên
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NÚT IN PHIẾU NỔI GÓC PHẢI DƯỚI (Item 8) -->
+            <button type="button" class="emr-floating-print-btn" data-emr-print title="In phiếu bệnh án ngoại trú">
+                <i class="bi bi-printer-fill fs-6"></i> In phiếu
+            </button>
+
         </main>
     </div>
 </div>
+
+<!-- DỮ LIỆU JAVASCRIPT CHO SƠ ĐỒ RĂNG VÀ TOOLTIPS -->
 <script th:inline="javascript">
     window.emrToothDiagnoses = /*[[${detail.snapshot['diagnoses']}]]*/ [];
+    window.emrPerformedServices = /*[[${detail.snapshot['performedServices']}]]*/ [];
     window.emrOdontogram = /*[[${detail.snapshot['clinical']['odontogram']}]]*/ null;
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/emr-detail.js}"></script>
 </body>
 </html>

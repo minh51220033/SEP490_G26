@@ -30,17 +30,30 @@ public class PatientAccess {
 
     public Scope require(HttpSession session) {
         Object value = session == null ? null : session.getAttribute("loggedInUser");
-        if (!(value instanceof User sessionUser) || sessionUser.getUserId() == null) {
+        Long userId = null;
+        if (value instanceof User sessionUser) {
+            userId = sessionUser.getUserId();
+        } else if (value != null && "com.cvdcms.entity.User".equals(value.getClass().getName())) {
+            try {
+                Object idVal = value.getClass().getMethod("getUserId").invoke(value);
+                if (idVal instanceof Long uid) userId = uid;
+            } catch (Exception ignored) {}
+        }
+        if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
-        User user = users.findById(sessionUser.getUserId())
+        User user = users.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        session.setAttribute("loggedInUser", user);
         if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không hoạt động.");
         }
         boolean admin = hasRole(user, "ADMIN") || users.hasActiveAdminRole(user.getUserId());
-        boolean hasReceptionPermission = users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
-                || users.hasActivePermission(user.getUserId(), "PATIENT_PROFILE_MANAGE");
+        boolean doctor = hasRole(user, "BAC_SI");
+        boolean hasReceptionPermission = doctor
+                || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
+                || users.hasActivePermission(user.getUserId(), "PATIENT_PROFILE_MANAGE")
+                || users.hasActivePermission(user.getUserId(), "MEDICAL_RECORD_VIEW");
         if (!admin && !hasReceptionPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn không được cấp quyền truy cập chức năng này.");
         }
