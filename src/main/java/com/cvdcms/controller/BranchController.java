@@ -78,6 +78,16 @@ public class BranchController {
         model.addAttribute("managers", branchService.getPotentialManagers());
         model.addAttribute("managerDisplayMap", branchService.getManagerDisplayMap());
 
+        // Thống kê KPI tổng quan (Đồng bộ chuẩn /doctor/daily-visits)
+        int totalRooms = roomCounts.values().stream().mapToInt(Integer::intValue).sum();
+        int totalChairs = chairCounts.values().stream().mapToInt(Integer::intValue).sum();
+        long activeBranches = branches.stream().filter(b -> Boolean.TRUE.equals(b.getIsActive())).count();
+
+        model.addAttribute("totalBranchesCount", branches.size());
+        model.addAttribute("activeBranchesCount", activeBranches);
+        model.addAttribute("totalRoomsCount", totalRooms);
+        model.addAttribute("totalChairsCount", totalChairs);
+
         // Trích xuất danh sách địa phương / khu vực thực tế từ dữ liệu chi nhánh (hoàn toàn động, không fix cứng)
         Set<String> locations = new LinkedHashSet<>();
         for (Branch b : branches) {

@@ -38,6 +38,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhoneNumber(String phoneNumber);
 
+    long countByIsActive(Boolean isActive);
+
+    long countByUserType(UserType userType);
+
     // =========================================================
     // 2. TÌM TÀI KHOẢN THEO VAI TRÒ
     // =========================================================

@@ -2147,7 +2147,7 @@
             filteredVisits = dateAndAdvMatched.filter(v => {
                 if (!stFilter || stFilter === 'ALL') return true;
                 if (stFilter === 'EXAMINING') {
-                    return v.status === 'EXAMINING' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED';
+                    return v.status === 'EXAMINING' || v.status === 'IN_EXAM' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED';
                 }
                 return v.status === stFilter;
             });
@@ -2169,7 +2169,7 @@
 
             baseList.forEach(v => {
                 if (v.status === 'WAITING') waiting++;
-                else if (v.status === 'EXAMINING' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED') examining++;
+                else if (v.status === 'EXAMINING' || v.status === 'IN_EXAM' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED') examining++;
                 else if (v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT') completed++;
             });
 
@@ -2606,7 +2606,10 @@
             const map = {
                 'WAITING': { bg: '#fef3c7', color: '#b45309', border: '#fcd34d', icon: 'bi-hourglass-split' },
                 'EXAMINING': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd', icon: 'bi-heart-pulse-fill' },
+                'IN_EXAM': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd', icon: 'bi-heart-pulse-fill' },
                 'IN_TREATMENT': { bg: '#e0e7ff', color: '#4338ca', border: '#a5b4fc', icon: 'bi-tools' },
+                'WAITING_PARACLINICAL': { bg: '#e2e8f0', color: '#334155', border: '#94a3b8', icon: 'bi-camera' },
+                'WAITING_RESULT': { bg: '#fef3c7', color: '#b45309', border: '#fcd34d', icon: 'bi-file-earmark-medical' },
                 'ORDERED': { bg: '#f3e8ff', color: '#7e22ce', border: '#d8b4fe', icon: 'bi-Prescription2' },
                 'WAITING_PAYMENT': { bg: '#ffedd5', color: '#c2410c', border: '#fdba74', icon: 'bi-cash-coin' },
                 'COMPLETED': { bg: '#d1fae5', color: '#047857', border: '#6ee7b7', icon: 'bi-check-circle-fill' },

@@ -3,178 +3,1082 @@
 
 <head th:replace="~{fragments/head :: head('Chấm công toàn chi nhánh')}"></head>
 
-<body class="app-body">
+<body class="app-body account-page-body staff-page-body">
 
-<div class="app-shell">
+    <div class="app-shell">
 
-    <aside th:replace="~{fragments/sidebar :: sidebar('attendance-admin')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+        <aside th:replace="~{fragments/sidebar :: sidebar('attendance-admin')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
-    <div class="app-main">
+        <div class="app-main">
 
-        <header th:replace="~{fragments/header :: appTopbar('Chấm công toàn chi nhánh')}"></header>
+            <header th:replace="~{fragments/header :: appTopbar('Chấm công toàn chi nhánh')}"></header>
 
-        <main class="app-content d-flex flex-column" style="min-height: calc(100vh - var(--topbar-h));">
-            <link rel="stylesheet" th:href="@{/css/staff.css}">
-            <link rel="stylesheet" th:href="@{/css/schedule.css}">
-            <link rel="stylesheet" th:href="@{/css/attendance.css}">
+            <main class="app-content">
+                <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+                <link rel="stylesheet" th:href="@{/css/staff.css}">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
+                <link rel="stylesheet" th:href="@{/css/schedule.css}">
+                <link rel="stylesheet" th:href="@{/css/attendance.css}">
 
-            <section class="panel flex-grow-1 d-flex flex-column mb-0">
-                <div class="panel__head mb-3">
-                    <div>
-                        <h3 class="panel__title fs-5 mb-1">Bảng chấm công toàn chi nhánh</h3>
-                        <p class="panel__subtitle text-muted mb-0">
-                            Tháng <strong class="text-primary" th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
-                            · Dữ liệu ngày công thực tế dùng để tính lương &amp; đối soát nhân sự
-                        </p>
+                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ QUẢN LÝ TÀI KHOẢN -->
+                <nav class="dv-breadcrumb mb-2">
+                    <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Chấm công toàn chi nhánh</span>
+                </nav>
+
+                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                            <i class="bi bi-calendar2-check-fill"></i>
+                        </div>
+                        <div>
+                            <h1 class="dv-page-title mb-0">Bảng chấm công toàn chi nhánh</h1>
+                            <p class="dv-page-subtitle">
+                                Tháng <strong class="text-primary" th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
+                                · Đối chiếu tự động với lịch phân ca để tính lương &amp; đối soát nhân sự
+                            </p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
+                           class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-calendar-week"></i> Bảng phân ca tuần
+                        </a>
+                        <button th:if="${selectedBranchId != null and !#lists.isEmpty(records)}" type="button"
+                                class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2 btn-view-all-att"
+                                style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Nhật ký toàn cơ sở (<span th:text="${#lists.size(records)}">0</span> lượt)</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- BỘ LỌC CHI NHÁNH & THỜI GIAN ĐỒNG BỘ NẰM TRÊN 1 DÒNG -->
-                <form th:action="@{/admin/attendance}" method="get" class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 p-3 bg-light rounded-3 border">
-                    <input type="hidden" name="month" th:value="${month}">
-                    <div style="min-width: 280px; max-width: 420px; flex: 1;">
-                        <label for="branchId" class="form-label small fw-semibold text-muted mb-1">
-                            <i class="bi bi-geo-alt-fill text-primary me-1"></i>Chi nhánh trực thuộc
-                        </label>
-                        <select id="branchId" name="branchId" class="form-select" onchange="this.form.submit()">
-                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh</option>
-                        </select>
+                <!-- 4 THẺ KPI TỔNG QUAN (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+                <div th:if="${selectedBranchId != null}" class="row g-3 mb-4">
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card active-kpi" style="--kpi-accent: #0284c7;">
+                            <div>
+                                <div class="dv-kpi-num" th:text="${summary.workDays}">0</div>
+                                <div class="dv-kpi-label">Tổng lượt chấm công</div>
+                                <div class="dv-kpi-sub">
+                                    Tổng thời gian: <strong class="text-primary" th:text="${(summary.workedMinutes / 60 > 0 ? (summary.workedMinutes / 60) + ' giờ ' : '') + (summary.workedMinutes % 60) + ' phút'}">0 phút</strong>
+                                </div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-calendar-check-fill"></i>
+                            </div>
+                        </div>
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}" class="btn btn-outline-secondary">
-                            <i class="bi bi-chevron-left me-1"></i> Tháng trước
-                        </a>
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}" class="btn btn-primary px-3">
-                            <i class="bi bi-calendar-event me-1"></i> Tháng này
-                        </a>
-                        <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}" class="btn btn-outline-secondary">
-                            Tháng sau <i class="bi bi-chevron-right ms-1"></i>
-                        </a>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                            <div>
+                                <div class="dv-kpi-num text-success" th:text="${summary.onTime}">0</div>
+                                <div class="dv-kpi-label">Lượt đúng giờ</div>
+                                <div class="dv-kpi-sub">Check-in đúng giờ vào ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
                     </div>
-                </form>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+                            <div>
+                                <div class="dv-kpi-num text-warning" th:text="${summary.late}">0</div>
+                                <div class="dv-kpi-label">Lượt đi muộn</div>
+                                <div class="dv-kpi-sub">Check-in trễ so với giờ ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-alarm-fill"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;">
+                            <div>
+                                <div class="dv-kpi-num text-danger" th:text="${summary.earlyLeave}">0</div>
+                                <div class="dv-kpi-label">Lượt về sớm</div>
+                                <div class="dv-kpi-sub">Check-out trước giờ kết thúc ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <div th:if="${selectedBranchId == null}" class="schedule-empty my-auto text-center py-5">
+                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ 100% CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                <div class="dv-toolbar-card">
+                    <form th:action="@{/admin/attendance}" method="get" id="attFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <input type="hidden" id="monthInput" name="month" th:value="${month}">
+                        <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                            <!-- Ô tìm kiếm chuẩn -->
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="attStaffKeyword" placeholder="Tìm kiếm nhân sự theo họ tên, mã nhân viên...">
+                            </div>
+
+                            <!-- Nút bấm Tìm kiếm -->
+                            <button type="button" id="btnAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                                <i class="bi bi-search"></i>
+                                <span>Tìm kiếm</span>
+                            </button>
+
+                            <!-- Nút Lọc nâng cao -->
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 44px;">
+                                <i class="bi bi-funnel"></i> Lọc nâng cao
+                                <span id="advFilterBadge" class="badge bg-primary text-white rounded-pill" style="display: none;">1</span>
+                            </button>
+
+                            <!-- Chọn nhanh chi nhánh -->
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small fw-bold text-secondary text-nowrap">
+                                    <i class="bi bi-geo-alt-fill text-primary me-1"></i>Chi nhánh:
+                                </span>
+                                <select id="branchId" name="branchId" class="form-select fw-semibold rounded-3"
+                                        style="min-width: 200px; height: 44px; font-size: 14px; border-color: #cbd5e1;" onchange="this.form.submit()">
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                            th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh</option>
+                                </select>
+                            </div>
+
+                            <!-- Nút Xóa nhanh bộ lọc -->
+                            <button type="button" id="btnClearAttFilter"
+                                    class="btn btn-link text-decoration-none text-danger p-0 ms-1 small fw-semibold"
+                                    style="display: none;" title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                            </button>
+                        </div>
+
+                        <!-- Bộ điều hướng tháng -->
+                        <div class="d-flex gap-2 align-items-center">
+                            <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}"
+                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                                <i class="bi bi-chevron-left"></i> Tháng trước
+                            </a>
+                            <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}"
+                               class="btn btn-primary fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center"
+                               style="height: 44px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                                Tháng này (<span th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</span>)
+                            </a>
+                            <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}"
+                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                                Tháng sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <div th:if="${selectedBranchId == null}" class="staff-table-card p-5 text-center text-muted">
                     <i class="bi bi-exclamation-circle text-warning fs-1 d-block mb-2"></i>
                     Chưa có chi nhánh nào đang hoạt động.
                 </div>
 
-                <th:block th:if="${selectedBranchId != null}">
+                <!-- BẢNG DỮ LIỆU CHẤM CÔNG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                <section th:if="${selectedBranchId != null}" class="staff-table-card">
+                    <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT -->
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                                Hiển thị <span class="text-primary fw-bolder" id="visibleStaffCount" th:text="${#lists.size(staffSummary)}">0</span> nhân sự
+                                <span class="text-muted mx-1">•</span>
+                                <span class="text-secondary fw-semibold" th:text="'Tháng ' + ${#temporals.format(month.atDay(1), 'MM/yyyy')}">Tháng 11/2026</span>
+                            </div>
+                            <span class="badge rounded-pill px-3 py-1.5"
+                                  style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                            </span>
+                        </div>
 
-                    <!-- THỐNG KÊ NHANH -->
-                    <div class="att-stats mb-4">
-                        <div class="att-stat"><span>Lượt chấm công</span><strong th:text="${summary.workDays}">0</strong></div>
-                        <div class="att-stat"><span>Đúng giờ</span><strong th:text="${summary.onTime}">0</strong></div>
-                        <div class="att-stat att-stat--late"><span>Đi muộn</span><strong th:text="${summary.late}">0</strong></div>
-                        <div class="att-stat att-stat--early"><span>Về sớm</span><strong th:text="${summary.earlyLeave}">0</strong></div>
-                        <div class="att-stat"><span>Tổng giờ làm</span>
-                            <strong th:text="${summary.workedMinutes / 60} + 'h ' + ${summary.workedMinutes % 60} + 'm'">0h 0m</strong>
+                        <!-- Bên phải: Nút Tùy biến cột -->
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="custom-col-dropdown position-relative d-inline-block">
+                                <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                        style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                        id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                    <i class="bi bi-layout-three-columns text-primary"></i>
+                                    <span>Tùy biến cột</span>
+                                </button>
+
+                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                                <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                    <div class="custom-column-header">
+                                        <h6 class="custom-column-title">
+                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                        </h6>
+                                        <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                    </div>
+                                    <div class="custom-column-search">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                        </div>
+                                    </div>
+                                    <div class="custom-column-table-head">
+                                        <div class="flex-grow-1">Tên trường</div>
+                                    </div>
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="custom-col-item" data-col-target="stt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="staff">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-staff" checked>
+                                            <label for="chk-col-staff" class="custom-col-name">Nhân sự</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="workDays">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-workDays" checked>
+                                            <label for="chk-col-workDays" class="custom-col-name">Ngày công (Thực tế / Lịch)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="onTime">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-onTime" checked>
+                                            <label for="chk-col-onTime" class="custom-col-name">Đúng giờ</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="late">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-late" checked>
+                                            <label for="chk-col-late" class="custom-col-name">Đi muộn</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="early">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-early" checked>
+                                            <label for="chk-col-early" class="custom-col-name">Về sớm</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="worked">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-worked" checked>
+                                            <label for="chk-col-worked" class="custom-col-name">Tổng thời gian làm</label>
+                                        </div>
+                                    </div>
+                                    <div class="custom-column-footer">
+                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                            Lấy lại mặc định
+                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-secondary-custom btn-vua" id="btnCancelCols">Hủy</button>
+                                            <button type="button" id="btnSaveCols" class="btn btn-primary btn-vua">Lưu</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- TỔNG HỢP CÔNG THEO NHÂN VIÊN -->
-                    <div class="card border rounded-3 mb-4 shadow-none">
-                        <div class="card-header bg-white py-2 px-3 fw-bold border-bottom d-flex align-items-center justify-content-between">
-                            <span><i class="bi bi-people-fill text-primary me-2"></i>Tổng hợp công theo nhân viên</span>
-                            <span class="badge bg-secondary-subtle text-secondary" th:text="${#lists.size(staffSummary)} + ' nhân sự'">0 nhân sự</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead class="table-light">
-                                <tr>
-                                    <th class="ps-3">Nhân viên</th>
-                                    <th class="text-center">Ngày công</th>
-                                    <th class="text-center">Đúng giờ</th>
-                                    <th class="text-center">Đi muộn</th>
-                                    <th class="text-center">Về sớm</th>
-                                    <th class="text-end pe-3">Tổng giờ làm</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:if="${#lists.isEmpty(staffSummary)}">
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        <i class="bi bi-calendar2-x fs-3 d-block mb-1 text-secondary opacity-50"></i>
-                                        Chưa có dữ liệu chấm công tổng hợp trong tháng này.
-                                    </td>
-                                </tr>
-                                <tr th:each="s : ${staffSummary}">
-                                    <td class="ps-3">
-                                        <div class="fw-semibold" th:text="${s.fullName}">Họ tên</div>
-                                        <div class="staff-sub text-muted small" th:text="${s.staffCode}">NV0001</div>
-                                    </td>
-                                    <td class="text-center fw-bold" th:text="${s.workDays}">0</td>
-                                    <td class="text-center" th:text="${s.onTime}">0</td>
-                                    <td class="text-center net-bad" th:text="${s.late}">0</td>
-                                    <td class="text-center" th:text="${s.earlyLeave}">0</td>
-                                    <td class="text-end pe-3" th:text="${s.workedMinutes / 60} + 'h ' + ${s.workedMinutes % 60} + 'm'">0h 0m</td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="dv-table-scroll-container">
+                        <table class="dv-amis-table" id="attSummaryTable">
+                            <thead>
+                            <tr>
+                                <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                    <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                                </th>
+                                <th data-col="staff" style="min-width: 250px;">
+                                    <div class="dv-th-inner"><span>Nhân sự</span></div>
+                                </th>
+                                <th data-col="workDays" class="text-center" style="min-width: 210px;" title="Số ngày thực tế đã chấm công / Tổng số ngày được xếp ca trong tháng">
+                                    <div class="dv-th-inner justify-content-center"><span>Ngày công (Thực tế / Lịch)</span></div>
+                                </th>
+                                <th data-col="onTime" class="text-center" style="min-width: 140px;">
+                                    <div class="dv-th-inner justify-content-center"><span>Đúng giờ</span></div>
+                                </th>
+                                <th data-col="late" class="text-center" style="min-width: 140px;">
+                                    <div class="dv-th-inner justify-content-center"><span>Đi muộn</span></div>
+                                </th>
+                                <th data-col="early" class="text-center" style="min-width: 140px;">
+                                    <div class="dv-th-inner justify-content-center"><span>Về sớm</span></div>
+                                </th>
+                                <th data-col="worked" class="text-end" style="min-width: 190px;">
+                                    <div class="dv-th-inner justify-content-end"><span>Tổng thời gian làm</span></div>
+                                </th>
+                                <th data-col="actions" class="text-center" style="min-width: 260px;">
+                                    <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
+                                </th>
+                                <th class="dv-floating-actions-track"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="attSummaryTbody">
+                            <tr th:if="${#lists.isEmpty(staffSummary)}">
+                                <td colspan="9" class="p-0">
+                                    <div class="account-empty-state">
+                                        <div class="account-empty-icon">
+                                            <i class="bi bi-calendar2-x"></i>
+                                        </div>
+                                        <h5 class="account-empty-title">Chưa có dữ liệu chấm công</h5>
+                                        <p class="account-empty-desc">
+                                            Chưa có nhân sự nào được xếp ca hoặc phát sinh lượt chấm công tại chi nhánh này trong tháng.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:each="s, iter : ${staffSummary}" class="dv-data-row att-filter-row"
+                                th:data-full-name="${s.fullName}"
+                                th:data-staff-code="${s.staffCode}"
+                                th:data-work-days="${s.workDays}"
+                                th:data-scheduled-days="${s.scheduledDays}"
+                                th:data-on-time="${s.onTime}"
+                                th:data-late="${s.late}"
+                                th:data-early="${s.earlyLeave}"
+                                th:data-worked-minutes="${s.workedMinutes}"
+                                th:with="workedText=${(s.workedMinutes / 60 > 0 ? (s.workedMinutes / 60) + ' giờ ' : '') + (s.workedMinutes % 60) + ' phút'}">
+                                <!-- 1. STT -->
+                                <td data-col="stt" class="text-center text-muted fw-semibold col-stt-index" style="width: 60px; min-width: 60px;">
+                                    <span th:text="${iter.count}">1</span>
+                                </td>
+
+                                <!-- 2. Nhân sự + Avatar -->
+                                <td data-col="staff" style="min-width: 250px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="dv-patient-avatar flex-shrink-0 avatar-primary"
+                                             th:text="${!#strings.isEmpty(s.fullName) ? #strings.toUpperCase(#strings.substring(s.fullName, 0, 1)) : 'N'}">N</div>
+                                        <div class="d-flex flex-column justify-content-center">
+                                            <span class="dv-patient-name" th:text="${s.fullName}">Họ tên</span>
+                                            <div class="text-secondary small fw-semibold mt-1">
+                                                <i class="bi bi-person-badge me-1 text-muted"></i><span th:text="${s.staffCode}">NV0001</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 3. Ngày công (Thực tế / Lịch) -->
+                                <td data-col="workDays" class="text-center" style="min-width: 210px;">
+                                    <span class="badge rounded-pill px-3 py-1.5 fw-bold"
+                                          th:style="${s.workDays == 0} ? 'background:#fef2f2;color:#dc2626;font-size:13px;border:1px solid #fecaca;' : (${s.workDays >= s.scheduledDays} ? 'background:#ecfdf5;color:#059669;font-size:13px;border:1px solid #a7f3d0;' : 'background:#eff6ff;color:#1d4ed8;font-size:13px;border:1px solid #bfdbfe;')">
+                                        <span th:text="${s.workDays}">0</span> / <span th:text="${s.scheduledDays} + ' ngày'">0 ngày</span>
+                                    </span>
+                                </td>
+
+                                <!-- 4. Đúng giờ -->
+                                <td data-col="onTime" class="text-center" style="min-width: 140px;">
+                                    <span class="fw-bold text-success" th:text="${s.onTime}">0</span>
+                                    <small class="text-muted">lần</small>
+                                </td>
+
+                                <!-- 5. Đi muộn -->
+                                <td data-col="late" class="text-center" style="min-width: 140px;">
+                                    <span class="fw-bold" th:classappend="${s.late > 0} ? 'text-danger' : 'text-muted'" th:text="${s.late}">0</span>
+                                    <small class="text-muted">lần</small>
+                                </td>
+
+                                <!-- 6. Về sớm -->
+                                <td data-col="early" class="text-center" style="min-width: 140px;">
+                                    <span class="fw-bold" th:classappend="${s.earlyLeave > 0} ? 'text-warning' : 'text-muted'" th:text="${s.earlyLeave}">0</span>
+                                    <small class="text-muted">lần</small>
+                                </td>
+
+                                <!-- 7. Tổng thời gian làm -->
+                                <td data-col="worked" class="text-end" style="min-width: 190px;">
+                                    <span class="fw-bold text-dark" style="font-size: 14px;" th:text="${workedText}">0 phút</span>
+                                </td>
+
+                                <!-- 8. Cột Thao tác tĩnh -->
+                                <td data-col="actions" class="text-center" style="min-width: 260px;">
+                                    <div class="dv-actions-cell-always justify-content-center" onclick="event.stopPropagation()">
+                                        <button type="button"
+                                                class="dv-equal-btn-primary btn-view-staff-att"
+                                                th:data-staff-code="${s.staffCode}"
+                                                th:data-staff-name="${s.fullName}"
+                                                th:data-work-days="${s.workDays}"
+                                                th:data-scheduled-days="${s.scheduledDays}"
+                                                th:data-on-time="${s.onTime}"
+                                                th:data-late="${s.late}"
+                                                th:data-early="${s.earlyLeave}"
+                                                th:data-worked-text="${workedText}">
+                                            <i class="bi bi-eye"></i>
+                                            <span>Xem chi tiết</span>
+                                        </button>
+                                        <a th:if="${s.staffId != null}"
+                                           th:href="@{/admin/staffs/{id}(id=${s.staffId})}"
+                                           class="dv-equal-btn-secondary"
+                                           title="Xem hồ sơ nhân sự">
+                                            <i class="bi bi-person-vcard text-primary"></i>
+                                            <span>Hồ sơ NS</span>
+                                        </a>
+                                    </div>
+                                </td>
+
+                                <!-- 9. Khung Thao tác nổi khi Hover dòng (Đồng bộ 100% chuẩn Quản lý tài khoản) -->
+                                <td class="dv-floating-actions-track">
+                                    <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                        <button type="button"
+                                                class="dv-equal-btn-primary btn-view-staff-att"
+                                                th:data-staff-code="${s.staffCode}"
+                                                th:data-staff-name="${s.fullName}"
+                                                th:data-work-days="${s.workDays}"
+                                                th:data-scheduled-days="${s.scheduledDays}"
+                                                th:data-on-time="${s.onTime}"
+                                                th:data-late="${s.late}"
+                                                th:data-early="${s.earlyLeave}"
+                                                th:data-worked-text="${workedText}">
+                                            <i class="bi bi-eye"></i>
+                                            <span>Xem chi tiết</span>
+                                        </button>
+                                        <a th:if="${s.staffId != null}"
+                                           th:href="@{/admin/staffs/{id}(id=${s.staffId})}"
+                                           class="dv-equal-btn-secondary"
+                                           title="Xem hồ sơ nhân sự">
+                                            <i class="bi bi-person-vcard text-primary"></i>
+                                            <span>Hồ sơ NS</span>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <!-- CHI TIẾT TỪNG LƯỢT CHẤM CÔNG -->
-                    <div class="card border rounded-3 flex-grow-1 shadow-none d-flex flex-column mb-2">
-                        <div class="card-header bg-white py-2 px-3 fw-bold border-bottom d-flex align-items-center justify-content-between">
-                            <span><i class="bi bi-clock-history text-primary me-2"></i>Chi tiết từng lượt chấm công</span>
-                            <span class="badge bg-secondary-subtle text-secondary" th:text="${#lists.size(records)} + ' lượt ghi nhận'">0 lượt</span>
+                    <!-- FOOTER CHUẨN MISA -->
+                    <div class="misa-pagination-footer">
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${#lists.size(staffSummary)}">0</strong> nhân sự
                         </div>
-                        <div class="table-responsive flex-grow-1">
-                            <table class="table align-middle mb-0">
-                                <thead class="table-light">
+                        <div class="misa-pagination-right text-muted small">
+                            Tổng cộng <strong class="text-dark mx-1" th:text="${#lists.size(records)}">0</strong> lượt chấm công ghi nhận trong tháng
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== POPUP 1: MODAL BỘ LỌC NÂNG CAO (ĐỒNG BỘ QUẢN LÝ TÀI KHOẢN) ==================== -->
+    <div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                    <h5 class="modal-title fw-bold text-dark fs-6" id="advancedFilterModalLabel">
+                        <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                    <!-- 1. Chi nhánh -->
+                    <div class="mb-3">
+                        <label for="advBranchId" class="form-label small fw-semibold text-muted">Chi nhánh</label>
+                        <select id="advBranchId" class="form-select">
+                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Tháng chấm công -->
+                    <div class="mb-3">
+                        <label for="advMonth" class="form-label small fw-semibold text-muted">Tháng chấm công</label>
+                        <input type="month" id="advMonth" class="form-control" th:value="${month}">
+                    </div>
+
+                    <!-- 3. Tình trạng chấm công -->
+                    <div class="mb-3">
+                        <label for="advAttStatus" class="form-label small fw-semibold text-muted">Tình trạng chuyên cần</label>
+                        <select id="advAttStatus" class="form-select">
+                            <option value="">Tất cả nhân sự</option>
+                            <option value="FULL">Đi làm đủ lịch phân ca</option>
+                            <option value="LATE_OR_EARLY">Có đi muộn / về sớm</option>
+                            <option value="ZERO">Chưa chấm công (0 ngày)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Sắp xếp theo & Thứ tự -->
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label for="advSort" class="form-label small fw-semibold text-muted">Sắp xếp theo</label>
+                            <select id="advSort" class="form-select">
+                                <option value="fullName">Họ và tên</option>
+                                <option value="workDays">Số ngày công</option>
+                                <option value="late">Số lần đi muộn</option>
+                                <option value="workedMinutes">Tổng thời gian làm</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="advDirection" class="form-label small fw-semibold text-muted">Thứ tự</label>
+                            <select id="advDirection" class="form-select">
+                                <option value="asc">Tăng dần (A → Z)</option>
+                                <option value="desc">Giảm dần (Cao → Thấp)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
+                    <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                        Đặt lại
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" id="btnApplyAdvancedFilter" class="btn btn-primary btn-vua">Áp dụng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== POPUP 2: MODAL CHI TIẾT LƯỢT CHẤM CÔNG ==================== -->
+    <div th:if="${selectedBranchId != null}" class="modal fade" id="staffAttendanceDetailModal" tabindex="-1"
+        aria-labelledby="staffAttendanceDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light border-bottom py-3">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-1" id="staffAttendanceDetailModalLabel">
+                            <i class="bi bi-clock-history text-primary me-2"></i>
+                            <span id="modalStaffTitle">Chi tiết lượt chấm công</span>
+                        </h5>
+                        <div class="d-flex flex-wrap align-items-center gap-2 small text-muted" id="modalStaffMeta">
+                            <span>Tháng <strong class="text-dark"
+                                    th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong></span>
+                            <span id="modalStaffSummaryBadges"
+                                class="d-inline-flex flex-wrap align-items-center gap-2 ms-1">
+                                <span>· Ngày công: <strong class="text-dark" id="modalSumWorkDays">0</strong></span>
+                                <span>· Đúng giờ: <strong class="text-success" id="modalSumOnTime">0</strong></span>
+                                <span>· Đi muộn: <strong class="text-danger" id="modalSumLate">0</strong></span>
+                                <span>· Về sớm: <strong class="text-warning" id="modalSumEarly">0</strong></span>
+                                <span>· Tổng giờ: <strong class="text-primary" id="modalSumWorked">0
+                                        phút</strong></span>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="modalAttRecordsTable">
+                            <thead class="table-light sticky-top">
                                 <tr>
-                                    <th class="ps-3">Nhân viên</th>
-                                    <th>Ngày</th>
-                                    <th>Check-in</th>
-                                    <th>Check-out</th>
-                                    <th>Giờ làm</th>
-                                    <th class="text-center">Mạng</th>
+                                    <th class="ps-3 col-modal-staff">Nhân viên</th>
+                                    <th class="ps-3">Ngày</th>
+                                    <th>Giờ vào (Check-in)</th>
+                                    <th>Giờ ra (Check-out)</th>
+                                    <th>Thời gian làm</th>
+                                    <th class="text-center">Xác thực Wi-Fi</th>
                                     <th class="pe-3">Trạng thái</th>
                                 </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:if="${#lists.isEmpty(records)}">
+                            </thead>
+                            <tbody>
+                                <tr id="modalEmptyRow" style="display: none;">
                                     <td colspan="7" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                                        Chưa có lượt chấm công nào được ghi nhận trong tháng này.
+                                        Không có lượt chấm công nào.
                                     </td>
                                 </tr>
-                                <tr th:each="r : ${records}">
-                                    <td class="ps-3">
+                                <tr th:each="r : ${records}" class="modal-att-record-row"
+                                    th:data-staff-code="${r.staff.staffCode}">
+                                    <td class="ps-3 col-modal-staff">
                                         <div class="fw-semibold" th:text="${r.staff.fullName}">Họ tên</div>
-                                        <div class="staff-sub text-muted small" th:text="${r.staff.staffCode}">NV0001</div>
+                                        <div class="staff-sub text-muted small" th:text="${r.staff.staffCode}">NV0001
+                                        </div>
                                     </td>
-                                    <td th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">01/01/2026</td>
+                                    <td class="ps-3 fw-medium" th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">
+                                        01/01/2026</td>
                                     <td>
-                                        <span th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
-                                        <div class="staff-sub text-muted small" th:if="${r.checkInIp != null}" th:text="${r.checkInIp}"></div>
+                                        <span class="fw-medium"
+                                            th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
+                                        <div class="staff-sub text-muted small" th:if="${r.checkInIp != null}"
+                                            th:text="'IP: ' + ${r.checkInIp}"></div>
                                     </td>
                                     <td>
-                                        <span th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
-                                        <div class="staff-sub text-muted small" th:if="${r.checkOutIp != null}" th:text="${r.checkOutIp}"></div>
+                                        <span class="fw-medium"
+                                            th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
+                                        <div class="staff-sub text-muted small" th:if="${r.checkOutIp != null}"
+                                            th:text="'IP: ' + ${r.checkOutIp}"></div>
                                     </td>
-                                    <td th:text="${r.workedMinutes != null ? (r.workedMinutes / 60) + 'h ' + (r.workedMinutes % 60) + 'm' : '-'}">-</td>
+                                    <td
+                                        th:text="${r.workedMinutes != null ? ((r.workedMinutes / 60 > 0 ? (r.workedMinutes / 60) + ' giờ ' : '') + (r.workedMinutes % 60) + ' phút') : '-'}">
+                                        -</td>
                                     <td class="text-center">
-                                        <i th:if="${r.isValidNetwork}" class="bi bi-wifi text-success" title="Mạng hợp lệ"></i>
-                                        <i th:unless="${r.isValidNetwork}" class="bi bi-wifi-off text-danger" title="Mạng không hợp lệ"></i>
+                                        <span th:if="${r.isValidNetwork}"
+                                            class="badge bg-success-subtle text-success border border-success-subtle fw-medium"
+                                            title="Chấm công từ mạng Wi-Fi hợp lệ của cơ sở">
+                                            <i class="bi bi-wifi me-1"></i>Wi-Fi cơ sở
+                                        </span>
+                                        <span th:unless="${r.isValidNetwork}"
+                                            class="badge bg-danger-subtle text-danger border border-danger-subtle fw-medium"
+                                            title="Chấm công từ mạng ngoài (4G hoặc Wi-Fi lạ)">
+                                            <i class="bi bi-wifi-off me-1"></i>Khác mạng
+                                        </span>
                                     </td>
                                     <td class="pe-3">
                                         <span class="status-badge"
-                                              th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
-                                              th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng giờ</span>
+                                            th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
+                                            th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng
+                                            giờ</span>
                                     </td>
                                 </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
-                </th:block>
-            </section>
-        </main>
-    </div>
-</div>
+                </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+                <div class="modal-footer bg-light border-top py-2">
+                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('attStaffKeyword');
+            const btnAttSearch = document.getElementById('btnAttSearch');
+            const btnClearAttFilter = document.getElementById('btnClearAttFilter');
+            const visibleStaffCount = document.getElementById('visibleStaffCount');
+            const advFilterBadge = document.getElementById('advFilterBadge');
+
+            const advBranchId = document.getElementById('advBranchId');
+            const advMonth = document.getElementById('advMonth');
+            const advAttStatus = document.getElementById('advAttStatus');
+            const advSort = document.getElementById('advSort');
+            const advDirection = document.getElementById('advDirection');
+            const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
+            const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+            const branchSelect = document.getElementById('branchId');
+            const monthInput = document.getElementById('monthInput');
+            const filterForm = document.getElementById('attFilterForm');
+
+            function applyClientFiltersAndSort() {
+                const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+                const statusFilter = advAttStatus ? advAttStatus.value : '';
+                const sortField = advSort ? advSort.value : 'fullName';
+                const sortDir = advDirection ? advDirection.value : 'asc';
+
+                const tbody = document.getElementById('attSummaryTbody');
+                if (!tbody) return;
+
+                const rows = Array.from(tbody.querySelectorAll('.att-filter-row'));
+                let visible = 0;
+
+                rows.forEach(function (row) {
+                    const text = row.textContent.toLowerCase();
+                    const workDays = parseInt(row.getAttribute('data-work-days') || '0', 10);
+                    const schedDays = parseInt(row.getAttribute('data-scheduled-days') || '0', 10);
+                    const late = parseInt(row.getAttribute('data-late') || '0', 10);
+                    const early = parseInt(row.getAttribute('data-early') || '0', 10);
+
+                    let match = (!q || text.includes(q));
+                    if (match && statusFilter === 'FULL') {
+                        match = workDays > 0 && workDays >= schedDays;
+                    } else if (match && statusFilter === 'LATE_OR_EARLY') {
+                        match = (late > 0 || early > 0);
+                    } else if (match && statusFilter === 'ZERO') {
+                        match = workDays === 0;
+                    }
+
+                    row.style.display = match ? '' : 'none';
+                    if (match) visible++;
+                });
+
+                rows.sort(function (a, b) {
+                    let cmp = 0;
+                    if (sortField === 'fullName') {
+                        cmp = (a.getAttribute('data-full-name') || '').localeCompare(b.getAttribute('data-full-name') || '', 'vi');
+                    } else if (sortField === 'workDays') {
+                        cmp = parseInt(a.getAttribute('data-work-days') || '0', 10) - parseInt(b.getAttribute('data-work-days') || '0', 10);
+                    } else if (sortField === 'late') {
+                        cmp = parseInt(a.getAttribute('data-late') || '0', 10) - parseInt(b.getAttribute('data-late') || '0', 10);
+                    } else if (sortField === 'workedMinutes') {
+                        cmp = parseInt(a.getAttribute('data-worked-minutes') || '0', 10) - parseInt(b.getAttribute('data-worked-minutes') || '0', 10);
+                    }
+                    return sortDir === 'desc' ? -cmp : cmp;
+                });
+
+                let idx = 1;
+                rows.forEach(function (row) {
+                    tbody.appendChild(row);
+                    if (row.style.display !== 'none') {
+                        const sttSpan = row.querySelector('.col-stt-index span');
+                        if (sttSpan) sttSpan.textContent = String(idx++);
+                    }
+                });
+
+                if (visibleStaffCount) visibleStaffCount.textContent = String(visible);
+
+                const activeAdvCount = (statusFilter ? 1 : 0) + (sortField !== 'fullName' || sortDir !== 'asc' ? 1 : 0);
+                if (advFilterBadge) {
+                    advFilterBadge.style.display = activeAdvCount > 0 ? '' : 'none';
+                    advFilterBadge.textContent = String(activeAdvCount);
+                }
+                if (btnClearAttFilter) {
+                    btnClearAttFilter.style.display = (q || activeAdvCount > 0) ? '' : 'none';
+                }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyClientFiltersAndSort);
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyClientFiltersAndSort();
+                    }
+                });
+            }
+            if (btnAttSearch) {
+                btnAttSearch.addEventListener('click', applyClientFiltersAndSort);
+            }
+            if (btnClearAttFilter) {
+                btnClearAttFilter.addEventListener('click', function () {
+                    if (searchInput) searchInput.value = '';
+                    if (advAttStatus) advAttStatus.value = '';
+                    if (advSort) advSort.value = 'fullName';
+                    if (advDirection) advDirection.value = 'asc';
+                    applyClientFiltersAndSort();
+                });
+            }
+
+            if (btnApplyAdv) {
+                btnApplyAdv.addEventListener('click', function () {
+                    const newBranch = advBranchId ? advBranchId.value : '';
+                    const newMonth = advMonth ? advMonth.value : '';
+                    const curBranch = branchSelect ? branchSelect.value : '';
+                    const curMonth = monthInput ? monthInput.value : '';
+
+                    if ((newBranch && newBranch !== curBranch) || (newMonth && newMonth !== curMonth)) {
+                        if (branchSelect && newBranch) branchSelect.value = newBranch;
+                        if (monthInput && newMonth) monthInput.value = newMonth;
+                        if (filterForm) filterForm.submit();
+                        return;
+                    }
+                    applyClientFiltersAndSort();
+                    const advModalEl = document.getElementById('advancedFilterModal');
+                    if (advModalEl && window.bootstrap && bootstrap.Modal) {
+                        bootstrap.Modal.getOrCreateInstance(advModalEl).hide();
+                    }
+                });
+            }
+
+            if (btnResetAdv) {
+                btnResetAdv.addEventListener('click', function () {
+                    if (advAttStatus) advAttStatus.value = '';
+                    if (advSort) advSort.value = 'fullName';
+                    if (advDirection) advDirection.value = 'asc';
+                    applyClientFiltersAndSort();
+                });
+            }
+
+            // Kéo dãn kích thước cột (Column Resizer) & Tùy biến cột chuẩn Quản lý tài khoản
+            const table = document.getElementById('attSummaryTable');
+            const STORAGE_WIDTH_KEY = 'cv_att_branch_widths_v1';
+            const STORAGE_CONFIG_KEY = 'cv_att_branch_cols_v1';
+
+            const defaultColOrder = ['stt', 'staff', 'workDays', 'onTime', 'late', 'early', 'worked'];
+            const defaultColWidths = {
+                stt: 60,
+                staff: 260,
+                workDays: 210,
+                onTime: 140,
+                late: 140,
+                early: 140,
+                worked: 190,
+                actions: 260
+            };
+
+            let currentWidths = loadColWidths();
+            let currentConfig = getColConfig();
+
+            function loadColWidths() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
+                    return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
+                } catch (e) {
+                    return Object.assign({}, defaultColWidths);
+                }
+            }
+
+            function saveColWidths(widths) {
+                try { localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths)); } catch (e) {}
+            }
+
+            function getColConfig() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                    if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
+                    const parsed = JSON.parse(raw);
+                    const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
+                    defaultColOrder.forEach(col => { if (!order.includes(col)) order.push(col); });
+                    const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
+                    return { order, hidden };
+                } catch (e) {
+                    return { order: defaultColOrder.slice(), hidden: [] };
+                }
+            }
+
+            function saveColConfig(config) {
+                try { localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
+            }
+
+            function applyColOrder(order) {
+                if (!order || !Array.isArray(order) || !table) return;
+                const theadTr = table.querySelector('thead tr');
+                if (theadTr) {
+                    order.forEach(colKey => {
+                        const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
+                        if (th) theadTr.appendChild(th);
+                    });
+                    const thActions = theadTr.querySelector('th[data-col="actions"]');
+                    if (thActions) theadTr.appendChild(thActions);
+                    const thTrack = theadTr.querySelector('.dv-floating-actions-track');
+                    if (thTrack) theadTr.appendChild(thTrack);
+                }
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    order.forEach(colKey => {
+                        const td = tr.querySelector(`td[data-col="${colKey}"]`);
+                        if (td) tr.appendChild(td);
+                    });
+                    const tdActions = tr.querySelector('td[data-col="actions"]');
+                    if (tdActions) tr.appendChild(tdActions);
+                    const tdTrack = tr.querySelector('.dv-floating-actions-track');
+                    if (tdTrack) tr.appendChild(tdTrack);
+                });
+            }
+
+            function applyColWidths() {
+                if (!table) return;
+                let totalW = 0;
+                const ths = table.querySelectorAll('thead tr:first-child th');
+                ths.forEach(th => {
+                    if (th.classList.contains('dv-floating-actions-track')) return;
+                    const colKey = th.getAttribute('data-col');
+                    if (colKey && currentConfig.hidden.includes(colKey)) {
+                        th.classList.add('d-none');
+                        return;
+                    }
+                    th.classList.remove('d-none');
+                    const w = currentWidths[colKey] || defaultColWidths[colKey] || 160;
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    th.style.maxWidth = w + 'px';
+                    totalW += w;
+                });
+                table.style.tableLayout = 'fixed';
+                table.style.width = Math.max(totalW, 1100) + 'px';
+                table.style.minWidth = Math.max(totalW, 1100) + 'px';
+            }
+
+            function applyColConfig(config) {
+                if (!table) return;
+                const order = (config && config.order) ? config.order : defaultColOrder;
+                order.forEach(col => {
+                    const isHidden = config.hidden.includes(col);
+                    table.querySelectorAll(`[data-col="${col}"]`).forEach(cell => {
+                        if (isHidden) cell.classList.add('d-none');
+                        else cell.classList.remove('d-none');
+                    });
+                    const chk = document.getElementById(`chk-col-${col}`);
+                    if (chk) chk.checked = !isHidden;
+                });
+                applyColWidths();
+            }
+
+            function initColumnResizers() {
+                if (!table) return;
+                const ths = Array.from(table.querySelectorAll('thead th'));
+                ths.forEach(thEl => {
+                    if (thEl.classList.contains('dv-floating-actions-track')) return;
+                    let resizer = thEl.querySelector('.col-resizer');
+                    if (!resizer) {
+                        resizer = document.createElement('span');
+                        resizer.className = 'col-resizer';
+                        resizer.title = 'Kéo để chỉnh độ rộng cột';
+                        thEl.appendChild(resizer);
+                    }
+                    resizer.onmousedown = function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const colKey = thEl.getAttribute('data-col');
+                        const startX = e.pageX;
+                        const startW = thEl.offsetWidth;
+                        const minW = (colKey === 'stt') ? 50 : 70;
+                        let otherColsWidth = 0;
+                        ths.forEach(otherTh => {
+                            if (otherTh !== thEl && !otherTh.classList.contains('dv-floating-actions-track') && otherTh.offsetParent !== null && !otherTh.classList.contains('d-none')) {
+                                otherColsWidth += otherTh.offsetWidth;
+                            }
+                        });
+                        document.body.classList.add('is-col-resizing');
+                        resizer.classList.add('is-resizing');
+
+                        function onMouseMove(moveEvent) {
+                            const diff = moveEvent.pageX - startX;
+                            const newW = Math.max(startW + diff, minW);
+                            thEl.style.width = newW + 'px';
+                            thEl.style.minWidth = newW + 'px';
+                            thEl.style.maxWidth = newW + 'px';
+                            if (colKey) currentWidths[colKey] = newW;
+                            const newTotalW = otherColsWidth + newW;
+                            table.style.width = newTotalW + 'px';
+                            table.style.minWidth = newTotalW + 'px';
+                        }
+
+                        function onMouseUp() {
+                            document.body.classList.remove('is-col-resizing');
+                            resizer.classList.remove('is-resizing');
+                            if (colKey) saveColWidths(currentWidths);
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        }
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    };
+                });
+            }
+
+            // Popover Tùy biến cột
+            const popoverEl = document.getElementById('customColumnPopover');
+            const btnToggleCol = document.getElementById('btnToggleCustomColumns');
+            const btnCloseCol = document.getElementById('btnCloseColPopover');
+            const btnCancelCol = document.getElementById('btnCancelCols');
+            const colSearchInput = document.getElementById('colSearchInput');
+            const btnSaveCols = document.getElementById('btnSaveCols');
+            const btnResetCols = document.getElementById('btnResetCols');
+
+            function closeCustomColPopover() {
+                if (popoverEl) popoverEl.style.display = 'none';
+            }
+            if (btnToggleCol && popoverEl) {
+                btnToggleCol.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    popoverEl.style.display = (popoverEl.style.display === 'block') ? 'none' : 'block';
+                });
+            }
+            if (btnCloseCol) btnCloseCol.addEventListener('click', closeCustomColPopover);
+            if (btnCancelCol) btnCancelCol.addEventListener('click', closeCustomColPopover);
+            document.addEventListener('click', function (e) {
+                if (popoverEl && popoverEl.style.display === 'block' && !popoverEl.contains(e.target) && (!btnToggleCol || !btnToggleCol.contains(e.target))) {
+                    closeCustomColPopover();
+                }
+            });
+            if (colSearchInput) {
+                colSearchInput.addEventListener('input', function () {
+                    const term = this.value.toLowerCase().trim();
+                    document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                        const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
+                        item.style.display = label.includes(term) ? '' : 'none';
+                    });
+                });
+            }
+            if (btnSaveCols) {
+                btnSaveCols.addEventListener('click', function () {
+                    const order = [];
+                    const hidden = [];
+                    document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
+                        const colKey = item.getAttribute('data-col-target');
+                        order.push(colKey);
+                        const chk = item.querySelector('.custom-col-check');
+                        if (chk && !chk.checked) hidden.push(colKey);
+                    });
+                    currentConfig = { order, hidden };
+                    saveColConfig(currentConfig);
+                    applyColOrder(order);
+                    applyColConfig(currentConfig);
+                    closeCustomColPopover();
+                });
+            }
+            if (btnResetCols) {
+                btnResetCols.addEventListener('click', function () {
+                    try {
+                        localStorage.removeItem(STORAGE_WIDTH_KEY);
+                        localStorage.removeItem(STORAGE_CONFIG_KEY);
+                    } catch (e) {}
+                    currentWidths = Object.assign({}, defaultColWidths);
+                    currentConfig = { order: defaultColOrder.slice(), hidden: [] };
+                    applyColOrder(currentConfig.order);
+                    applyColConfig(currentConfig);
+                    applyColWidths();
+                    closeCustomColPopover();
+                });
+            }
+
+            if (table) {
+                applyColOrder(currentConfig.order);
+                applyColWidths();
+                applyColConfig(currentConfig);
+                initColumnResizers();
+            }
+
+            // Modal Chi tiết chấm công
+            const modalEl = document.getElementById('staffAttendanceDetailModal');
+            const modalTitle = document.getElementById('modalStaffTitle');
+            const modalSummaryBadges = document.getElementById('modalStaffSummaryBadges');
+            const modalSumWorkDays = document.getElementById('modalSumWorkDays');
+            const modalSumOnTime = document.getElementById('modalSumOnTime');
+            const modalSumLate = document.getElementById('modalSumLate');
+            const modalSumEarly = document.getElementById('modalSumEarly');
+            const modalSumWorked = document.getElementById('modalSumWorked');
+            const modalEmptyRow = document.getElementById('modalEmptyRow');
+
+            function openAttendanceModal(staffCode, staffName, stats) {
+                if (!modalEl) return;
+
+                const isSingleStaff = Boolean(staffCode);
+                if (modalTitle) {
+                    modalTitle.textContent = isSingleStaff
+                        ? ('Chi tiết chấm công: ' + staffName + ' (' + staffCode + ')')
+                        : 'Nhật ký chấm công toàn chi nhánh';
+                }
+
+                if (modalSummaryBadges) {
+                    if (isSingleStaff && stats) {
+                        modalSummaryBadges.style.display = '';
+                        const sched = stats.scheduledDays || stats.workDays || '0';
+                        if (modalSumWorkDays) modalSumWorkDays.textContent = (stats.workDays || '0') + ' / ' + sched + ' ngày';
+                        if (modalSumOnTime) modalSumOnTime.textContent = (stats.onTime || '0') + ' lần';
+                        if (modalSumLate) modalSumLate.textContent = (stats.late || '0') + ' lần';
+                        if (modalSumEarly) modalSumEarly.textContent = (stats.early || '0') + ' lần';
+                        if (modalSumWorked) modalSumWorked.textContent = stats.workedText || '0 phút';
+                    } else {
+                        modalSummaryBadges.style.display = 'none';
+                    }
+                }
+
+                document.querySelectorAll('.col-modal-staff').forEach(function (col) {
+                    col.style.display = isSingleStaff ? 'none' : '';
+                });
+
+                let visibleCount = 0;
+                document.querySelectorAll('.modal-att-record-row').forEach(function (row) {
+                    const rowCode = row.getAttribute('data-staff-code') || '';
+                    const match = !isSingleStaff || rowCode === staffCode;
+                    row.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+
+                if (modalEmptyRow) {
+                    modalEmptyRow.style.display = visibleCount === 0 ? '' : 'none';
+                }
+
+                if (window.bootstrap && bootstrap.Modal) {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                }
+            }
+
+            document.querySelectorAll('.btn-view-staff-att').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    openAttendanceModal(
+                        this.getAttribute('data-staff-code') || '',
+                        this.getAttribute('data-staff-name') || '',
+                        {
+                            workDays: this.getAttribute('data-work-days'),
+                            scheduledDays: this.getAttribute('data-scheduled-days'),
+                            onTime: this.getAttribute('data-on-time'),
+                            late: this.getAttribute('data-late'),
+                            early: this.getAttribute('data-early'),
+                            workedText: this.getAttribute('data-worked-text')
+                        }
+                    );
+                });
+            });
+
+            document.querySelectorAll('.btn-view-all-att').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    openAttendanceModal('', '', null);
+                });
+            });
+        });
+    </script>
 </body>
+
 </html>

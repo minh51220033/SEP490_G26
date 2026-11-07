@@ -17,143 +17,155 @@
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/account.css}">
 
-            <!-- THÔNG BÁO LỖI NẾU CÓ -->
-            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                <span th:text="${error}">Đã xảy ra lỗi</span>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            <!-- TOAST THÔNG BÁO LỖI NẰM DƯỚI GÓC PHẢI -->
+            <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" th:if="${error != null and !#strings.isEmpty(error)}">
+                <div class="toast show align-items-center text-white bg-danger border-0 shadow-lg rounded-3"
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center gap-2 py-3 px-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                            <span class="fw-medium" th:text="${error}">Đã xảy ra lỗi</span>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
             </div>
 
             <!-- FORM SỬA TÀI KHOẢN (SCR-01.2) -->
-            <section class="panel" style="max-width: 860px; margin: 0 auto;">
-                <div class="panel__head">
+            <section class="panel">
+                <div class="panel__head d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
                         <a th:href="@{/accounts/{id}(id=${account.userId})}" class="text-decoration-none small text-muted">
                             <i class="bi bi-arrow-left" aria-hidden="true"></i> Quay lại chi tiết
                         </a>
-                        <h3 class="panel__title mt-1">Cập nhật thông tin &amp; Phân quyền tài khoản</h3>
-                        <p class="panel__subtitle">Chỉnh sửa thông tin liên hệ, chi nhánh, vai trò chuyên môn và quyền hạn thao tác</p>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                            <h3 class="panel__title mb-0">Cập nhật thông tin &amp; Phân quyền</h3>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fs-6"
+                                  th:text="${account.username}">username</span>
+                            <span th:if="${account.userType != null and account.userType.name() == 'STAFF'}"
+                                  class="account-chip account-chip--staff">
+                                <i class="bi bi-person-badge me-1"></i> Nhân viên nội bộ
+                            </span>
+                            <span th:unless="${account.userType != null and account.userType.name() == 'STAFF'}"
+                                  class="account-chip account-chip--patient">
+                                <i class="bi bi-person me-1"></i> Bệnh nhân
+                            </span>
+                        </div>
+                        <p class="panel__subtitle mb-0 mt-1">Chỉnh sửa thông tin liên hệ, chi nhánh, vai trò chuyên môn và quyền hạn thao tác</p>
                     </div>
                 </div>
 
                 <form th:action="@{/accounts/{id}/edit(id=${account.userId})}" th:object="${accountUpdateDTO}" method="post">
-
-                    <!-- 1. TÀI KHOẢN (READONLY) -->
-                    <div class="form-section-title">
-                        <i class="bi bi-person-badge-fill text-primary"></i> 1. Thông tin định danh (Không thể sửa)
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-muted">Tên đăng nhập</label>
-                            <input type="text" class="form-control bg-light" th:value="${account.username}" readonly>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-muted">Loại tài khoản</label>
-                            <input type="text" class="form-control bg-light"
-                                   th:value="${account.userType != null and account.userType.name() == 'STAFF' ? 'Nhân viên (STAFF)' : 'Bệnh nhân (PATIENT)'}" readonly>
-                        </div>
-                    </div>
-
-                    <!-- 2. THÔNG TIN LIÊN HỆ & CHI NHÁNH -->
-                    <div class="form-section-title">
-                        <i class="bi bi-pencil-fill text-primary"></i> 2. Thông tin liên hệ &amp; Chi nhánh
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="email" class="form-label small fw-semibold">Địa chỉ Email <span class="text-danger">*</span></label>
-                            <input type="email" id="email" class="form-control" th:field="*{email}" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="phoneNumber" class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
-                            <input type="tel" id="phoneNumber" class="form-control" th:field="*{phoneNumber}" required>
-                        </div>
-
-                        <div class="col-md-12">
-                            <label for="branchId" class="form-label small fw-semibold">Chi nhánh cơ sở</label>
-                            <select id="branchId" class="form-select" th:field="*{branchId}" th:disabled="${branchLocked}">
-                                <option value="">-- Không gán chi nhánh (Toàn hệ thống) --</option>
-                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}">Chi nhánh</option>
-                            </select>
-                            <div class="form-text small text-muted" th:unless="${branchLocked}">Chi nhánh hoạt động chính của tài khoản này.</div>
-                            <div class="form-text small text-warning" th:if="${branchLocked}" th:text="${branchLockedReason}">Lý do khóa</div>
-                        </div>
-                    </div>
-
-                    <!-- 3. PHÂN QUYỀN VAI TRÒ & QUYỀN HẠN CHI TIẾT -->
-                    <div class="form-section-title">
-                        <i class="bi bi-shield-lock text-primary"></i> 3. Phân quyền vai trò &amp; Quyền hạn thao tác
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-12">
-                            <label for="roleId" class="form-label small fw-semibold">Vai trò hệ thống <span class="text-danger">*</span></label>
-                            <select id="roleId" class="form-select" th:field="*{roleId}" required th:disabled="${roleLocked}">
-                                <option th:each="role : ${roles}"
-                                        th:if="${(role.isActive == true or account.roles.contains(role))
-                                                and (isTargetAdmin or (role.roleName != 'ADMIN' and role.roleName != 'ROLE_ADMIN'))
-                                                and (isTargetPatient or (role.roleName != 'BENH_NHAN' and role.roleName != 'ROLE_BENH_NHAN' and role.roleName != 'PATIENT' and role.roleName != 'ROLE_PATIENT'))}"
-                                        th:value="${role.roleId}"
-                                        th:data-role-name="${role.roleName}"
-                                        th:text="${role.displayName != null ? role.displayName : role.roleName}">Vai trò</option>
-                            </select>
-                            <!-- Nếu role bị khóa thì gửi hidden roleId để form không bị mất -->
-                            <input type="hidden" name="roleId" th:if="${roleLocked}" th:value="${accountUpdateDTO.roleId}" />
-                            <div class="form-text small text-muted" th:unless="${roleLocked}">
-                                Khi đổi vai trò, các quyền hạn mới có hiệu lực ngay và lịch sử vai trò trước đó được lưu vết trong hồ sơ công tác.
-                            </div>
-                            <div class="form-text small text-warning" th:if="${roleLocked}" th:text="${roleLockedReason}">Lý do cố định vai trò</div>
-                        </div>
-                    </div>
-
-                    <!-- TÙY CHỈNH QUYỀN HẠN CHI TIẾT TRONG TẬP QUYỀN CỦA VAI TRÒ -->
-                    <input type="hidden" name="customPermissionsSubmitted" value="true">
-                    <div id="editCustomPermContainer" class="mb-4" th:if="${!roleLocked}">
-                        <div class="border rounded-3 p-3 bg-light">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
-                                <div>
-                                    <div class="fw-semibold text-dark small">
-                                        <i class="bi bi-sliders2-vertical text-primary me-1"></i>
-                                        Quyền hạn chi tiết của tài khoản (Trong tập quyền của vai trò đã chọn)
+                    <div class="row g-4">
+                        <!-- CỘT TRÁI: THÔNG TIN LIÊN HỆ & CHI NHÁNH -->
+                        <div class="col-lg-5">
+                            <div class="card border-0 shadow-sm rounded-3 mb-3">
+                                <div class="card-header bg-white border-bottom py-3">
+                                    <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-person-lines-fill me-2"></i>1. Thông tin liên hệ &amp; Chi nhánh</h6>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label small fw-semibold">Địa chỉ Email <span class="text-danger">*</span></label>
+                                        <input type="email" id="email" class="form-control" th:field="*{email}" required>
                                     </div>
-                                    <div class="text-muted" style="font-size: 0.78rem;">
-                                        Bạn có thể bỏ tích bớt quyền nếu muốn giới hạn quyền hạn riêng của tài khoản này so với vai trò chuẩn.
+
+                                    <div class="mb-3">
+                                        <label for="phoneNumber" class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                                        <input type="tel" id="phoneNumber" class="form-control" th:field="*{phoneNumber}" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="branchId" class="form-label small fw-semibold">Chi nhánh cơ sở</label>
+                                        <select id="branchId" class="form-select bg-light" th:field="*{branchId}" th:disabled="${branchLocked}">
+                                            <option value="">-- Toàn hệ thống --</option>
+                                            <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}">Chi nhánh</option>
+                                        </select>
+                                        <input type="hidden" name="branchId" th:if="${branchLocked}" th:value="${accountUpdateDTO.branchId}" />
+                                        <div class="form-text small text-muted" th:unless="${branchLocked}">Chi nhánh hoạt động chính của tài khoản.</div>
+                                        <div class="form-text small text-muted" th:if="${linkedStaff}">
+                                            <i class="bi bi-lock me-1"></i> Quản lý theo phân công nhân sự.
+                                            <a th:if="${linkedStaffId != null}" th:href="@{/admin/staffs/{id}(id=${linkedStaffId})} + '#tab-assign'"
+                                               class="text-primary fw-medium text-decoration-none">Đổi ở Phân công chi nhánh &rarr;</a>
+                                        </div>
+                                        <div class="form-text small text-warning" th:if="${branchLocked and !linkedStaff}" th:text="${branchLockedReason}">Lý do khóa</div>
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span id="editPermCounter" class="badge bg-primary-subtle text-primary border border-primary-subtle">0 / 0 quyền</span>
-                                    <button type="button" id="btnEditCheckAllPerms" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.78rem;">
-                                        <i class="bi bi-check2-all me-1"></i>Chọn đủ mặc định
-                                    </button>
-                                </div>
                             </div>
+                        </div>
 
-                            <div th:each="role : ${roles}"
-                                 th:if="${role.roleName != 'ADMIN' and role.roleName != 'ROLE_ADMIN' and role.roleName != 'BENH_NHAN' and role.roleName != 'ROLE_BENH_NHAN'}"
-                                 class="edit-role-perm-panel"
-                                 th:attr="data-role-id=${role.roleId},data-is-current-role=${account.roles.contains(role)}"
-                                 style="display: none;">
-                                <div th:if="${role.permissions == null or #lists.isEmpty(role.permissions)}" class="text-muted small fst-italic py-2">
-                                    Vai trò này hiện chưa được cấu hình danh sách quyền chi tiết.
+                        <!-- CỘT PHẢI: VAI TRÒ & QUYỀN HẠN CHI TIẾT -->
+                        <div class="col-lg-7">
+                            <div class="card border-0 shadow-sm rounded-3 mb-3">
+                                <div class="card-header bg-white border-bottom py-3">
+                                    <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>2. Vai trò &amp; Quyền hạn thao tác</h6>
                                 </div>
-                                <div th:if="${role.permissions != null and !#lists.isEmpty(role.permissions)}" class="row g-2 mt-1">
-                                    <div class="col-md-6" th:each="perm : ${role.permissions}">
-                                        <label class="d-flex align-items-start gap-2 p-2 rounded border bg-white h-100" style="cursor: pointer;">
-                                            <input type="checkbox"
-                                                   class="form-check-input mt-1 edit-role-perm-checkbox"
-                                                   name="permissionIds"
-                                                   th:value="${perm.permissionId}"
-                                                   th:attr="data-code=${perm.permissionCode}"
-                                                   th:checked="${account.roles.contains(role) ? (effectivePermissionIds != null and #sets.contains(effectivePermissionIds, perm.permissionId)) : true}"
-                                                   disabled>
-                                            <span class="small">
-                                                <span class="fw-semibold d-block text-dark" th:text="${perm.description != null ? perm.description : perm.permissionCode}">Tên quyền</span>
-                                                <code class="text-muted" style="font-size: 0.72rem;" th:text="${perm.permissionCode}">CODE</code>
-                                            </span>
-                                        </label>
+                                <div class="card-body p-3">
+                                    <div class="mb-3">
+                                        <label for="roleId" class="form-label small fw-semibold">Vai trò hệ thống <span class="text-danger">*</span></label>
+                                        <select id="roleId" class="form-select" th:field="*{roleId}" required th:disabled="${roleLocked}">
+                                            <option th:each="role : ${roles}"
+                                                    th:if="${(role.isActive == true or account.roles.contains(role))
+                                                            and (isTargetAdmin or (role.roleName != 'ADMIN' and role.roleName != 'ROLE_ADMIN'))
+                                                            and (isTargetPatient or (role.roleName != 'BENH_NHAN' and role.roleName != 'ROLE_BENH_NHAN' and role.roleName != 'PATIENT' and role.roleName != 'ROLE_PATIENT'))}"
+                                                    th:value="${role.roleId}"
+                                                    th:data-role-name="${role.roleName}"
+                                                    th:text="${role.displayName != null ? role.displayName : role.roleName}">Vai trò</option>
+                                        </select>
+                                        <input type="hidden" name="roleId" th:if="${roleLocked}" th:value="${accountUpdateDTO.roleId}" />
+                                        <div class="form-text small text-muted" th:unless="${roleLocked}">
+                                            Khi đổi vai trò, các quyền hạn mới có hiệu lực ngay và lịch sử vai trò trước đó được lưu vết trong hồ sơ công tác.
+                                        </div>
+                                        <div class="form-text small text-warning" th:if="${roleLocked}" th:text="${roleLockedReason}">Lý do cố định vai trò</div>
+                                    </div>
+
+                                    <!-- TÙY CHỈNH QUYỀN HẠN CHI TIẾT TRONG TẬP QUYỀN CỦA VAI TRÒ -->
+                                    <input type="hidden" name="customPermissionsSubmitted" value="true">
+                                    <div id="editCustomPermContainer" class="mb-2" th:if="${!roleLocked}">
+                                        <div class="border rounded-3 p-3 bg-light">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                                                <div>
+                                                    <div class="fw-semibold text-dark small">
+                                                        <i class="bi bi-sliders2-vertical text-primary me-1"></i>
+                                                        Quyền hạn chi tiết (Trong tập quyền của vai trò)
+                                                    </div>
+                                                    <div class="text-muted" style="font-size: 0.78rem;">
+                                                        Bỏ tích bớt quyền nếu muốn giới hạn riêng tài khoản này so với vai trò chuẩn.
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span id="editPermCounter" class="badge bg-primary-subtle text-primary border border-primary-subtle">0 / 0 quyền</span>
+                                                    <button type="button" id="btnEditCheckAllPerms" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.78rem;">
+                                                        <i class="bi bi-check2-all me-1"></i>Chọn đủ mặc định
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div th:each="role : ${roles}"
+                                                 th:if="${role.roleName != 'ADMIN' and role.roleName != 'ROLE_ADMIN' and role.roleName != 'BENH_NHAN' and role.roleName != 'ROLE_BENH_NHAN'}"
+                                                 class="edit-role-perm-panel"
+                                                 th:attr="data-role-id=${role.roleId},data-is-current-role=${account.roles.contains(role)}"
+                                                 style="display: none;">
+                                                <div th:if="${role.permissions == null or #lists.isEmpty(role.permissions)}" class="text-muted small fst-italic py-2">
+                                                    Vai trò này hiện chưa được cấu hình danh sách quyền chi tiết.
+                                                </div>
+                                                <div th:if="${role.permissions != null and !#lists.isEmpty(role.permissions)}" class="row g-2 mt-1">
+                                                    <div class="col-md-6" th:each="perm : ${role.permissions}">
+                                                        <label class="d-flex align-items-center gap-2 p-2 rounded border bg-white h-100"
+                                                               style="cursor: pointer;"
+                                                               th:title="${perm.permissionCode}">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input mt-0 edit-role-perm-checkbox"
+                                                                   name="permissionIds"
+                                                                   th:value="${perm.permissionId}"
+                                                                   th:attr="data-code=${perm.permissionCode}"
+                                                                   th:checked="${account.roles.contains(role) ? (effectivePermissionIds != null and #sets.contains(effectivePermissionIds, perm.permissionId)) : true}"
+                                                                   disabled>
+                                                            <span class="small fw-medium text-dark" th:text="${perm.description != null ? perm.description : perm.permissionCode}">Tên quyền</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -161,13 +173,15 @@
                     </div>
 
                     <!-- NÚT LƯU & QUAY LẠI -->
-                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                        <a th:href="@{/accounts/{id}(id=${account.userId})}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Hủy bỏ
-                        </a>
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-check-lg me-1"></i> Lưu thay đổi
-                        </button>
+                    <div class="card border-0 shadow-sm rounded-3 mt-3">
+                        <div class="card-body d-flex justify-content-between align-items-center py-3">
+                            <a th:href="@{/accounts/{id}(id=${account.userId})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Hủy bỏ
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-lg me-1"></i> Lưu thay đổi
+                            </button>
+                        </div>
                     </div>
 
                 </form>
