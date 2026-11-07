@@ -1408,7 +1408,10 @@
                              th:data-category="${photo.category != null ? photo.category : ''}"
                              th:data-visit="${photo.visitCode != null ? photo.visitCode : ''}"
                              th:data-date="${photo.capturedAt != null ? #temporals.format(photo.capturedAt, 'yyyy-MM-dd') : ''}">
-                            <div class="ds-photo-thumb" th:onclick="|openPhotoLightbox('${photo.url}', '${photo.caption}')|">
+                            <div class="ds-photo-thumb"
+                                 th:data-photo-url="${photo.url}"
+                                 th:data-photo-caption="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"
+                                 onclick="openPhotoLightbox(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
                                 <img th:src="${photo.url}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">
                                 <span class="ds-photo-badge"
                                       th:classappend="${photo.stage == 'BEFORE' ? 'stage-before' : (photo.stage == 'DURING' ? 'stage-during' : 'stage-after')}"
@@ -1426,7 +1429,11 @@
                                 <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                                     <span class="dv-code-pill" style="font-size: 11px;" th:text="${photo.visitCode != null and !photo.visitCode.isBlank() ? photo.visitCode : 'Chung'}">VIS-001</span>
                                     <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-light btn-sm border" th:onclick="|openPhotoLightbox('${photo.url}', '${photo.caption}')|" title="Xem phóng to">
+                                        <button type="button" class="btn btn-light btn-sm border"
+                                                th:data-photo-url="${photo.url}"
+                                                th:data-photo-caption="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"
+                                                onclick="openPhotoLightbox(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))"
+                                                title="Xem phóng to">
                                             <i class="bi bi-zoom-in text-primary"></i>
                                         </button>
                                         <button th:if="${photo.id != null}" type="button" class="btn btn-light btn-sm border"
