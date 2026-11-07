@@ -102,9 +102,18 @@ public class AdminNewsController {
         long fromItem = totalItems == 0 ? 0 : ((long) currentPage * pageSize) + 1;
         long toItem = Math.min(((long) (currentPage + 1) * pageSize), totalItems);
 
+        long publishedCount = newsRepository.countByStatus("PUBLISHED");
+        long draftCount = newsRepository.countByStatus("DRAFT");
+        long archivedCount = newsRepository.countByStatus("ARCHIVED");
+        long totalCommentsCount = commentRepository.count();
+
         model.addAttribute("newsPage", newsPage);
         model.addAttribute("newsList", newsPage.getContent());
         model.addAttribute("totalItems", totalItems);
+        model.addAttribute("publishedCount", publishedCount);
+        model.addAttribute("draftCount", draftCount);
+        model.addAttribute("archivedCount", archivedCount);
+        model.addAttribute("totalCommentsCount", totalCommentsCount);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("pageSize", pageSize);
         model.addAttribute("totalPages", totalPages);

@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Chấm công của tôi')}"></head>
 
-<body class="app-body">
+<body class="app-body account-page-body staff-page-body">
 
 <div class="app-shell">
 
@@ -15,146 +15,446 @@
         <header th:replace="~{fragments/header :: appTopbar('Chấm công của tôi')}"></header>
 
         <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/account.css}">
             <link rel="stylesheet" th:href="@{/css/schedule.css}">
             <link rel="stylesheet" th:href="@{/css/attendance.css}">
 
-            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
-            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <!-- BREADCRUMB CHUẨN ĐỒNG BỘ QUẢN LÝ TÀI KHOẢN -->
+            <nav class="dv-breadcrumb mb-2">
+                <a th:href="@{/}">Trang chủ</a> / <span>Lịch trực &amp; Chấm công</span> / <span>Chấm công của tôi</span>
+            </nav>
 
-            <div th:if="${staff == null}" class="panel">
-                <div class="schedule-empty">
-                    Tài khoản của bạn chưa liên kết hồ sơ nhân viên nên chưa thể chấm công.
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0">Chấm công của tôi</h1>
+                        <p class="dv-page-subtitle" th:if="${staff != null}">
+                            Nhân sự: <strong class="text-primary" th:text="${staff.fullName}">Họ tên</strong>
+                            (<span class="fw-semibold" th:text="${staff.staffCode}">BS0001</span>)
+                            · Tháng <strong th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</strong>
+                        </p>
+                        <p class="dv-page-subtitle" th:if="${staff == null}">
+                            Ghi nhận thời gian vào/ra ca trực và theo dõi bảng công cá nhân theo tháng
+                        </p>
+                    </div>
                 </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a th:href="@{/schedules/my}"
+                       class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-calendar-week"></i> Lịch trực của tôi
+                    </a>
+                    <a th:href="@{/doctor/leave-requests}"
+                       class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                       style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                        <i class="bi bi-calendar2-plus"></i> Yêu cầu nghỉ / Khóa lịch
+                    </a>
+                </div>
+            </div>
+
+            <div class="alert alert-success rounded-3 shadow-xs d-flex align-items-center gap-2" th:if="${successMessage}">
+                <i class="bi bi-check-circle-fill fs-5"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div class="alert alert-danger rounded-3 shadow-xs d-flex align-items-center gap-2" th:if="${errorMessage}">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <div th:if="${staff == null}" class="staff-table-card p-5 text-center text-muted">
+                <i class="bi bi-person-exclamation text-warning fs-1 d-block mb-2"></i>
+                Tài khoản của bạn chưa liên kết hồ sơ nhân viên nên chưa thể chấm công.
             </div>
 
             <th:block th:if="${staff != null}">
 
-                <!-- CHECK-IN / CHECK-OUT (SCR-33.2) -->
-                <section class="checkin-card">
+                <!-- CHECK-IN / CHECK-OUT (SCR-33.2) - ĐỒNG BỘ CHUẨN ENTERPRISE CARD -->
+                <section class="checkin-card mb-4" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05); padding: 22px;">
                     <div>
-                        <div class="checkin-card__clock" id="liveClock">--:--:--</div>
-                        <div class="checkin-card__date"
+                        <div class="checkin-card__clock" id="liveClock" style="color: #0284c7; font-weight: 800; font-size: 2.8rem; letter-spacing: 0.5px;">--:--:--</div>
+                        <div class="checkin-card__date text-secondary fw-semibold mt-1"
                              th:text="${#temporals.dayOfWeekName(today)} + ', ' + ${#temporals.format(today, 'dd/MM/yyyy')}">
                             Thứ hai, 01/01/2026
                         </div>
 
-                        <div class="checkin-state" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
-                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                            Check-in lúc <strong th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
+                        <div class="checkin-state p-2.5 rounded-3 border mt-3" style="background: #f8fafc; border-color: #e2e8f0 !important;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
+                            <i class="bi bi-box-arrow-in-right text-primary" aria-hidden="true"></i>
+                            Check-in lúc <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
                             <span th:if="${todayRecord.checkOutAt != null}">
-                                · <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                                Check-out lúc <strong th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
+                                · <i class="bi bi-box-arrow-right text-secondary" aria-hidden="true"></i>
+                                Check-out lúc <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
                             </span>
-                            <span class="status-badge ms-1"
+                            <span class="status-badge ms-2"
                                   th:classappend="'status-badge--' + ${#strings.toLowerCase(todayRecord.status.name())}"
                                   th:text="${todayRecord.status.name() == 'ON_TIME' ? 'Đúng giờ' : (todayRecord.status.name() == 'LATE' ? 'Đi muộn' : (todayRecord.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : 'Khác'))}">Đúng giờ</span>
                         </div>
 
-                        <div class="checkin-card__actions">
+                        <div class="checkin-card__actions mt-3 d-flex gap-2 flex-wrap">
                             <form th:action="@{/attendance/check-in}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-primary checkin-btn" id="btnCheckIn"
+                                <button type="submit" class="btn btn-primary fw-bold px-4 py-2.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-2" id="btnCheckIn"
+                                        style="height: 44px; font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                                         th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null)}">
-                                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Check-in
+                                    <i class="bi bi-box-arrow-in-right fs-5"></i> Check-in vào ca
                                 </button>
                             </form>
                             <form th:action="@{/attendance/check-out}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-outline-primary checkin-btn" id="btnCheckOut"
+                                <button type="submit" class="btn btn-outline-primary fw-bold px-4 py-2.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-2" id="btnCheckOut"
+                                        style="height: 44px; font-size: 14.5px;"
                                         th:disabled="${todayRecord == null or todayRecord.checkInAt == null or todayRecord.checkOutAt != null}">
-                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Check-out
+                                    <i class="bi bi-box-arrow-right fs-5"></i> Check-out tan ca
                                 </button>
                             </form>
                         </div>
-                        <div class="checkin-card__ip">
-                            <i class="bi bi-wifi" aria-hidden="true"></i>
-                            Địa chỉ IP hiện tại: <strong th:text="${clientIp}">127.0.0.1</strong> ·
-                            Chỉ chấm công được khi kết nối đúng Wifi của chi nhánh.
+                        <div class="checkin-card__ip text-muted small mt-2 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-wifi text-primary"></i>
+                            <span>Địa chỉ IP hiện tại: <strong class="text-dark" th:text="${clientIp}">127.0.0.1</strong> · Chỉ chấm công được khi kết nối đúng Wi-Fi của chi nhánh.</span>
                         </div>
                     </div>
 
-                    <div class="checkin-shifts">
-                        <div class="checkin-shifts__title">Ca làm việc hôm nay</div>
-                        <div th:if="${#lists.isEmpty(todayShifts)}" class="checkin-shift text-muted">
-                            Hôm nay bạn không có ca làm việc.
+                    <div class="checkin-shifts p-3 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                        <div class="checkin-shifts__title d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <span class="fw-bold text-dark text-uppercase small"><i class="bi bi-calendar2-day text-primary me-1.5"></i>Ca làm việc hôm nay</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" style="font-size: 11.5px;"
+                                  th:text="${#lists.size(todayShifts)} + ' ca'">1 ca</span>
                         </div>
-                        <div th:each="s : ${todayShifts}" class="checkin-shift">
+                        <div th:if="${#lists.isEmpty(todayShifts)}" class="checkin-shift text-muted py-3 text-center">
+                            <i class="bi bi-info-circle me-1"></i>Hôm nay bạn không có ca làm việc.
+                        </div>
+                        <div th:each="s : ${todayShifts}" class="checkin-shift bg-white p-2.5 rounded-3 border mb-2 d-flex align-items-center justify-content-between shadow-xs">
                             <div>
-                                <strong th:text="${s.shift.shiftName}">Ca sáng</strong>
-                                <div class="staff-sub" th:classappend="${!s.branch.isActive} ? 'text-danger' : ''">
-                                    <span th:text="${s.branch.branchName}">Chi nhánh</span>
+                                <strong class="text-primary fw-bold" th:text="${s.shift.shiftName}">Ca sáng</strong>
+                                <div class="staff-sub small text-secondary mt-0.5" th:classappend="${!s.branch.isActive} ? 'text-danger' : ''">
+                                    <i class="bi bi-building me-1"></i><span th:text="${s.branch.branchName}">Chi nhánh</span>
                                     <span th:if="${!s.branch.isActive}" class="badge bg-danger ms-1">Đã ngừng hoạt động</span>
                                 </div>
                             </div>
-                            <span th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">08:00 - 12:00</span>
+                            <span class="badge bg-light text-dark border fw-bold px-2.5 py-1.5" style="font-size: 13px;"
+                                  th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">08:00 - 12:00</span>
                         </div>
                     </div>
                 </section>
 
-                <!-- LỊCH SỬ CHẤM CÔNG CÁ NHÂN (SCR-33.4) -->
-                <section class="panel">
-                    <div class="panel__head">
-                        <div>
-                            <h3 class="panel__title">Lịch sử chấm công</h3>
-                            <p class="panel__subtitle">
-                                Tháng <strong th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
-                                <span th:text="' · ' + ${staff.fullName} + ' (' + ${staff.staffCode} + ')'"></span>
-                            </p>
+                <!-- 4 THẺ KPI TỔNG QUAN THÁNG (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card active-kpi kpi-status-card" data-status-val="" style="--kpi-accent: #0284c7; cursor: pointer;">
+                            <div>
+                                <div class="dv-kpi-num" th:text="${summary.workDays}">0</div>
+                                <div class="dv-kpi-label">Ngày công trong tháng</div>
+                                <div class="dv-kpi-sub">
+                                    Tổng thời gian: <strong class="text-primary" th:text="${(summary.workedMinutes / 60 > 0 ? (summary.workedMinutes / 60) + ' giờ ' : '') + (summary.workedMinutes % 60) + ' phút'}">0 phút</strong>
+                                </div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-calendar-check-fill"></i>
+                            </div>
                         </div>
-                        <div class="d-flex gap-2">
-                            <a th:href="@{/attendance/my(month=${prevMonth})}" class="btn btn-light">
-                                <i class="bi bi-chevron-left" aria-hidden="true"></i> Tháng trước</a>
-                            <a th:href="@{/attendance/my}" class="btn btn-light">Tháng này</a>
-                            <a th:href="@{/attendance/my(month=${nextMonth})}" class="btn btn-light">
-                                Tháng sau <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-                            <a th:href="@{/schedules/my}" class="btn btn-light">
-                                <i class="bi bi-calendar-week" aria-hidden="true"></i> Lịch trực</a>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card kpi-status-card" data-status-val="ON_TIME" style="--kpi-accent: #10b981; cursor: pointer;">
+                            <div>
+                                <div class="dv-kpi-num text-success" th:text="${summary.onTime}">0</div>
+                                <div class="dv-kpi-label">Lượt đúng giờ</div>
+                                <div class="dv-kpi-sub">Check-in đúng giờ vào ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card kpi-status-card" data-status-val="LATE" style="--kpi-accent: #f59e0b; cursor: pointer;">
+                            <div>
+                                <div class="dv-kpi-num text-warning" th:text="${summary.late}">0</div>
+                                <div class="dv-kpi-label">Lượt đi muộn</div>
+                                <div class="dv-kpi-sub">Check-in trễ so với giờ ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-alarm-fill"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="dv-kpi-card kpi-status-card" data-status-val="EARLY_LEAVE" style="--kpi-accent: #ef4444; cursor: pointer;">
+                            <div>
+                                <div class="dv-kpi-num text-danger" th:text="${summary.earlyLeave}">0</div>
+                                <div class="dv-kpi-label">Lượt về sớm</div>
+                                <div class="dv-kpi-sub">Check-out trước giờ kết thúc ca</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ 100% CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                <div class="dv-toolbar-card">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                            <!-- Ô tìm kiếm chuẩn 380px -->
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="myAttKeyword" placeholder="Tìm theo ngày, ca trực, cơ sở...">
+                            </div>
+
+                            <!-- Nút bấm Tìm kiếm -->
+                            <button type="button" id="btnMyAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                                <i class="bi bi-search"></i>
+                                <span>Tìm kiếm</span>
+                            </button>
+
+                            <!-- Nút Lọc nâng cao -->
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#myAttAdvancedFilterModal" style="height: 44px;">
+                                <i class="bi bi-funnel"></i> Lọc nâng cao
+                                <span id="myAdvFilterBadge" class="badge bg-primary text-white rounded-pill" style="display: none;">1</span>
+                            </button>
+
+                            <!-- Nút Xóa nhanh bộ lọc -->
+                            <button type="button" id="btnClearMyAttFilter"
+                                    class="btn btn-link text-decoration-none text-danger p-0 ms-1 small fw-semibold"
+                                    style="display: none;" title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                            </button>
+                        </div>
+
+                        <!-- Bộ điều hướng tháng -->
+                        <div class="d-flex gap-2 align-items-center">
+                            <a th:href="@{/attendance/my(month=${prevMonth})}"
+                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                                <i class="bi bi-chevron-left"></i> Tháng trước
+                            </a>
+                            <a th:href="@{/attendance/my}"
+                               class="btn btn-primary fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center"
+                               style="height: 44px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                                Tháng này (<span th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</span>)
+                            </a>
+                            <a th:href="@{/attendance/my(month=${nextMonth})}"
+                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                                Tháng sau <i class="bi bi-chevron-right"></i>
+                            </a>
                         </div>
                     </div>
 
-                    <div class="att-stats">
-                        <div class="att-stat"><span>Ngày công</span><strong th:text="${summary.workDays}">0</strong></div>
-                        <div class="att-stat"><span>Đúng giờ</span><strong th:text="${summary.onTime}">0</strong></div>
-                        <div class="att-stat att-stat--late"><span>Đi muộn</span><strong th:text="${summary.late}">0</strong></div>
-                        <div class="att-stat att-stat--early"><span>Về sớm</span><strong th:text="${summary.earlyLeave}">0</strong></div>
-                        <div class="att-stat"><span>Tổng giờ làm</span>
-                            <strong th:text="${summary.workedMinutes / 60} + 'h ' + ${summary.workedMinutes % 60} + 'm'">0h 0m</strong>
+                    <!-- Dải Tag hiển thị các điều kiện lọc đang áp dụng -->
+                    <div id="myActiveFilterTagsBar" class="d-flex flex-wrap align-items-center gap-2 mt-3 pt-3 border-top" style="display: none !important;">
+                        <span class="small text-muted fw-semibold me-1"><i class="bi bi-sliders2 me-1"></i>Đang lọc theo:</span>
+                        <span id="tagMyStatus" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1" style="display: none !important; font-size: 12.5px;">
+                            <span>Trạng thái: <strong id="tagMyStatusText"></strong></span>
+                            <button type="button" class="btn-close ms-1" style="font-size: 9px;" id="btnRemoveMyStatusTag"></button>
+                        </span>
+                        <span id="tagMyWifi" class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1" style="display: none !important; font-size: 12.5px;">
+                            <span>Mạng Wi-Fi: <strong id="tagMyWifiText"></strong></span>
+                            <button type="button" class="btn-close ms-1" style="font-size: 9px;" id="btnRemoveMyWifiTag"></button>
+                        </span>
+                        <a href="javascript:void(0)" id="btnResetAllMyTags" class="text-danger small fw-semibold text-decoration-none ms-2">Xóa tất cả bộ lọc</a>
+                    </div>
+                </div>
+
+                <!-- BẢNG LỊCH SỬ CHẤM CÔNG CÁ NHÂN ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                <section class="staff-table-card">
+                    <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT -->
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                                Hiển thị <span class="text-primary fw-bolder" id="visibleRecordCount" th:text="${#lists.size(history)}">0</span> lượt chấm công
+                                <span class="text-muted mx-1">•</span>
+                                <span class="text-secondary fw-semibold" th:text="'Tháng ' + ${#temporals.format(month.atDay(1), 'MM/yyyy')}">Tháng 11/2026</span>
+                            </div>
+                        </div>
+
+                        <!-- Bên phải: Nút Tùy biến cột -->
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="custom-col-dropdown position-relative d-inline-block">
+                                <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                        style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                        id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                    <i class="bi bi-layout-three-columns text-primary"></i>
+                                    <span>Tùy biến cột</span>
+                                </button>
+
+                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                                <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
+                                    <div class="custom-column-header">
+                                        <h6 class="custom-column-title">
+                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
+                                        </h6>
+                                        <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                                    </div>
+                                    <div class="custom-column-search">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                        </div>
+                                    </div>
+                                    <div class="custom-column-table-head">
+                                        <div class="flex-grow-1">Tên trường</div>
+                                    </div>
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="custom-col-item" data-col-target="stt">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
+                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="workDate">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-workDate" checked>
+                                            <label for="chk-col-workDate" class="custom-col-name">Ngày làm việc</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="branch">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
+                                            <label for="chk-col-branch" class="custom-col-name">Chi nhánh</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="shift">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-shift" checked>
+                                            <label for="chk-col-shift" class="custom-col-name">Ca trực quy định</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="checkIn">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-checkIn" checked>
+                                            <label for="chk-col-checkIn" class="custom-col-name">Giờ vào (Check-in)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="checkOut">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-checkOut" checked>
+                                            <label for="chk-col-checkOut" class="custom-col-name">Giờ ra (Check-out)</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="workedTime">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-workedTime" checked>
+                                            <label for="chk-col-workedTime" class="custom-col-name">Thời gian làm</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="wifi">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-wifi" checked>
+                                            <label for="chk-col-wifi" class="custom-col-name">Xác thực Wi-Fi</label>
+                                        </div>
+                                        <div class="custom-col-item" data-col-target="status">
+                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
+                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
+                                            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                        </div>
+                                    </div>
+                                    <div class="custom-column-footer">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnResetColumns">Lấy lại mặc định</button>
+                                        <button type="button" class="btn btn-sm btn-primary fw-bold px-3" id="btnSaveColumns">Áp dụng</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
+                    <div class="dv-table-scroll-container">
+                        <table class="dv-amis-table" id="myAttendanceTable">
                             <thead>
                             <tr>
-                                <th>Ngày</th>
-                                <th>Chi nhánh</th>
-                                <th>Check-in</th>
-                                <th>Check-out</th>
-                                <th>Giờ làm</th>
-                                <th>Mạng</th>
-                                <th>Trạng thái</th>
+                                <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                    <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                                </th>
+                                <th data-col="workDate" style="min-width: 170px;">
+                                    <div class="dv-th-inner"><span>Ngày làm việc</span></div>
+                                </th>
+                                <th data-col="branch" style="min-width: 200px;">
+                                    <div class="dv-th-inner"><span>Chi nhánh</span></div>
+                                </th>
+                                <th data-col="shift" style="min-width: 210px;">
+                                    <div class="dv-th-inner"><span>Ca trực quy định</span></div>
+                                </th>
+                                <th data-col="checkIn" style="min-width: 180px;">
+                                    <div class="dv-th-inner"><span>Giờ vào (Check-in)</span></div>
+                                </th>
+                                <th data-col="checkOut" style="min-width: 180px;">
+                                    <div class="dv-th-inner"><span>Giờ ra (Check-out)</span></div>
+                                </th>
+                                <th data-col="workedTime" style="min-width: 170px;">
+                                    <div class="dv-th-inner"><span>Thời gian làm</span></div>
+                                </th>
+                                <th data-col="wifi" style="min-width: 160px;" class="text-center">
+                                    <div class="dv-th-inner justify-content-center"><span>Xác thực Wi-Fi</span></div>
+                                </th>
+                                <th data-col="status" style="min-width: 150px;" class="text-center">
+                                    <div class="dv-th-inner justify-content-center"><span>Trạng thái</span></div>
+                                </th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:if="${#lists.isEmpty(history)}">
-                                <td colspan="7" class="text-center text-muted py-4">Chưa có dữ liệu chấm công trong tháng này.</td>
+                                <td colspan="9" class="text-center text-muted py-5">
+                                    <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                    Chưa có dữ liệu chấm công trong tháng này.
+                                </td>
                             </tr>
-                            <tr th:each="r : ${history}">
-                                <td th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">01/01/2026</td>
-                                <td th:text="${r.branch.branchName}">Chi nhánh</td>
-                                <td>
-                                    <span th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
-                                    <div class="staff-sub" th:if="${r.checkInIp != null}" th:text="${r.checkInIp}"></div>
+                            <tr id="myAttNoMatchRow" style="display: none;">
+                                <td colspan="9" class="text-center text-muted py-5">
+                                    <i class="bi bi-search fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                    Không tìm thấy bản ghi chấm công nào khớp với điều kiện lọc.
                                 </td>
-                                <td>
-                                    <span th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
-                                    <div class="staff-sub" th:if="${r.checkOutIp != null}" th:text="${r.checkOutIp}"></div>
+                            </tr>
+                            <tr th:each="r, stat : ${history}"
+                                class="dv-data-row my-att-row"
+                                th:with="shiftText=${(shiftLabelsByDate != null and shiftLabelsByDate.containsKey(r.workDate)) ? shiftLabelsByDate.get(r.workDate) : 'Ca sáng (08:00 - 12:00)'}"
+                                th:attr="data-search=${#strings.toLowerCase(#temporals.format(r.workDate, 'dd/MM/yyyy') + ' ' + r.branch.branchName + ' ' + shiftText + ' ' + (r.checkInIp != null ? r.checkInIp : '') + ' ' + (r.checkOutIp != null ? r.checkOutIp : ''))},
+                                         data-status=${r.status.name()},
+                                         data-wifi=${r.isValidNetwork ? 'VALID' : 'INVALID'},
+                                         data-date=${#temporals.format(r.workDate, 'dd/MM/yyyy')},
+                                         data-branch=${r.branch.branchName},
+                                         data-shift=${shiftText},
+                                         data-checkin=${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : 'Chưa check-in'},
+                                         data-checkin-ip=${r.checkInIp != null ? r.checkInIp : '-'},
+                                         data-checkout=${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : 'Chưa check-out'},
+                                         data-checkout-ip=${r.checkOutIp != null ? r.checkOutIp : '-'},
+                                         data-worked=${r.workedMinutes != null ? ((r.workedMinutes / 60 > 0 ? (r.workedMinutes / 60) + ' giờ ' : '') + (r.workedMinutes % 60) + ' phút') : '0 phút'},
+                                         data-status-label=${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">
+                                <td data-col="stt" class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
+                                    <span class="row-stt" th:text="${stat.count}">1</span>
                                 </td>
-                                <td th:text="${r.workedMinutes != null ? (r.workedMinutes / 60) + 'h ' + (r.workedMinutes % 60) + 'm' : '-'}">-</td>
-                                <td>
-                                    <i th:if="${r.isValidNetwork}" class="bi bi-wifi net-ok" title="Mạng hợp lệ"></i>
-                                    <i th:unless="${r.isValidNetwork}" class="bi bi-wifi-off net-bad" title="Mạng không hợp lệ"></i>
+                                <td data-col="workDate" style="min-width: 170px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-light text-primary border border-primary-subtle rounded-2 p-1.5">
+                                            <i class="bi bi-calendar3"></i>
+                                        </span>
+                                        <span class="fw-bold text-dark" style="font-size: 14.5px;" th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">01/01/2026</span>
+                                    </div>
                                 </td>
-                                <td>
+                                <td data-col="branch" style="min-width: 200px;">
+                                    <span class="badge border fw-semibold px-2.5 py-1.5"
+                                          style="background: #f0fdf4; color: #166534; border-color: #bbf7d0 !important; font-size: 13px;">
+                                        <i class="bi bi-building me-1"></i><span th:text="${r.branch.branchName}">Chi nhánh</span>
+                                    </span>
+                                </td>
+                                <td data-col="shift" style="min-width: 210px;">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-2 px-2.5 py-1.5 fw-bold" style="font-size: 12.5px;">
+                                        <i class="bi bi-clock me-1"></i><span th:text="${shiftText}">Ca sáng (08:00 - 12:00)</span>
+                                    </span>
+                                </td>
+                                <td data-col="checkIn" style="min-width: 180px;">
+                                    <span class="fw-bold text-dark" style="font-size: 14px;" th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
+                                    <div class="staff-sub text-muted small" th:if="${r.checkInIp != null}" th:text="'IP: ' + ${r.checkInIp}"></div>
+                                </td>
+                                <td data-col="checkOut" style="min-width: 180px;">
+                                    <span class="fw-bold text-dark" style="font-size: 14px;" th:text="${r.checkOutAt != null ? #temporals.format(r.checkOutAt, 'HH:mm:ss') : '-'}">-</span>
+                                    <div class="staff-sub text-muted small" th:if="${r.checkOutIp != null}" th:text="'IP: ' + ${r.checkOutIp}"></div>
+                                </td>
+                                <td data-col="workedTime" style="min-width: 170px;">
+                                    <span class="fw-bold text-dark" style="font-size: 14px;"
+                                          th:text="${r.workedMinutes != null ? ((r.workedMinutes / 60 > 0 ? (r.workedMinutes / 60) + ' giờ ' : '') + (r.workedMinutes % 60) + ' phút') : '-'}">-</span>
+                                </td>
+                                <td data-col="wifi" class="text-center" style="min-width: 160px;">
+                                    <span th:if="${r.isValidNetwork}" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 12.5px;" title="Chấm công từ mạng Wi-Fi hợp lệ của cơ sở">
+                                        <i class="bi bi-wifi me-1"></i>Wi-Fi cơ sở
+                                    </span>
+                                    <span th:unless="${r.isValidNetwork}" class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 12.5px;" title="Chấm công từ mạng ngoài (4G hoặc Wi-Fi lạ)">
+                                        <i class="bi bi-wifi-off me-1"></i>Khác mạng
+                                    </span>
+                                </td>
+                                <td data-col="status" class="text-center" style="min-width: 150px;">
                                     <span class="status-badge"
                                           th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
                                           th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng giờ</span>
@@ -163,24 +463,495 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- FOOTER BẢNG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
+                    <div class="dv-pagination-footer">
+                        <div class="text-secondary small">
+                            Tổng số: <strong class="text-dark" id="footerRecordCount" th:text="${#lists.size(history)}">0</strong> lượt chấm công trong tháng
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-secondary small">
+                            <span>Tổng thời gian làm việc:</span>
+                            <strong class="text-primary" th:text="${(summary.workedMinutes / 60 > 0 ? (summary.workedMinutes / 60) + ' giờ ' : '') + (summary.workedMinutes % 60) + ' phút'}">0 phút</strong>
+                        </div>
+                    </div>
                 </section>
             </th:block>
         </main>
     </div>
 </div>
 
+<!-- MODAL BỘ LỌC NÂNG CAO (ĐẶT NGOÀI .app-shell ĐỂ KHÔNG BỊ BACKDROP ĐÈ) -->
+<div class="modal fade" id="myAttAdvancedFilterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel-fill text-primary"></i> Bộ lọc nâng cao lịch sử chấm công
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Trạng thái chấm công</label>
+                    <select id="advMyStatusSelect" class="form-select rounded-3" style="height: 44px;">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="ON_TIME">Đúng giờ</option>
+                        <option value="LATE">Đi muộn</option>
+                        <option value="EARLY_LEAVE">Về sớm</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Xác thực mạng Wi-Fi</label>
+                    <select id="advMyWifiSelect" class="form-select rounded-3" style="height: 44px;">
+                        <option value="">-- Tất cả mạng kết nối --</option>
+                        <option value="VALID">Wi-Fi cơ sở hợp lệ</option>
+                        <option value="INVALID">Khác mạng (Ngoài cơ sở)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-top px-4 py-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-danger fw-semibold rounded-3 px-3" id="btnResetMyAdvModal">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light fw-semibold rounded-3 px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary fw-bold rounded-3 px-4" id="btnApplyMyAdvModal">
+                        <i class="bi bi-check2-circle me-1"></i>Áp dụng bộ lọc
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ĐỐI SOÁT & CHI TIẾT BẢN GHI CHẤM CÔNG CÁ NHÂN -->
+<div class="modal fade" id="myRecordDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom px-4 py-3" style="background: #f8fafc;">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-clipboard2-check-fill text-primary"></i>
+                    <span>Đối soát chấm công ngày <span id="mRecDate" class="text-primary"></span></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Khung quy định ca trực & Ngưỡng ân hạn -->
+                <div class="p-3 rounded-3 mb-3 border" style="background: #f8fafc;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-secondary small fw-bold text-uppercase"><i class="bi bi-calendar2-range text-primary me-1"></i>Ca trực theo lịch phân công</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" id="mRecShift">Ca sáng (08:00 - 12:00)</span>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        • Cơ sở trực: <strong class="text-dark" id="mRecBranch">-</strong><br>
+                        • Quy định chấm công: Ngưỡng ân hạn <strong>±15 phút</strong> so với giờ bắt đầu / kết thúc ca.
+                    </div>
+                </div>
+
+                <!-- Kết luận đối soát tự động -->
+                <div id="mRecExplainBox" class="p-3 rounded-3 mb-3 border d-flex align-items-start gap-2.5">
+                    <i id="mRecExplainIcon" class="bi bi-info-circle-fill fs-5 mt-0.5"></i>
+                    <div>
+                        <div class="fw-bold" id="mRecStatus">-</div>
+                        <div class="small mt-0.5" id="mRecExplainText">-</div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 rounded-3 border">
+                            <div class="text-secondary small fw-semibold mb-1"><i class="bi bi-box-arrow-in-right text-success me-1"></i>Giờ vào thực tế</div>
+                            <div class="fw-bold fs-5 text-dark" id="mRecCheckIn">-</div>
+                            <div class="text-muted small mt-1">IP: <span id="mRecCheckInIp">-</span></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 rounded-3 border">
+                            <div class="text-secondary small fw-semibold mb-1"><i class="bi bi-box-arrow-right text-danger me-1"></i>Giờ ra thực tế</div>
+                            <div class="fw-bold fs-5 text-dark" id="mRecCheckOut">-</div>
+                            <div class="text-muted small mt-1">IP: <span id="mRecCheckOutIp">-</span></div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded-3 border d-flex align-items-center justify-content-between" style="background: #f0f9ff; border-color: #bae6fd !important;">
+                            <div>
+                                <div class="text-secondary small fw-semibold">Tổng thời gian làm việc thực tế</div>
+                                <div class="fw-bolder fs-5 text-primary" id="mRecWorked">-</div>
+                            </div>
+                            <span id="mRecWifiBadge" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-bold">
+                                <i class="bi bi-wifi me-1"></i>Wi-Fi cơ sở
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top px-4 py-3 d-flex justify-content-between">
+                <a th:href="@{/schedules/my}" class="btn btn-outline-primary fw-semibold rounded-3 px-3">
+                    <i class="bi bi-calendar-week me-1"></i>Xem lịch trực tuần
+                </a>
+                <button type="button" class="btn btn-secondary fw-semibold rounded-3 px-4" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
+        // 1. ĐỒNG HỒ THỜI GIAN THỰC
         var el = document.getElementById('liveClock');
-        if (!el) return;
-        function tick() {
-            var d = new Date();
-            var p = function (n) { return String(n).padStart(2, '0'); };
-            el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+        if (el) {
+            function tick() {
+                var d = new Date();
+                var p = function (n) { return String(n).padStart(2, '0'); };
+                el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+            }
+            tick();
+            setInterval(tick, 1000);
         }
-        tick();
-        setInterval(tick, 1000);
+
+        // 2. BỘ LỌC TÌM KIẾM + LỌC NÂNG CAO + CLICK THẺ KPI
+        var kwInput = document.getElementById('myAttKeyword');
+        var btnSearch = document.getElementById('btnMyAttSearch');
+        var btnClear = document.getElementById('btnClearMyAttFilter');
+        var advStatusSelect = document.getElementById('advMyStatusSelect');
+        var advWifiSelect = document.getElementById('advMyWifiSelect');
+        var btnApplyAdv = document.getElementById('btnApplyMyAdvModal');
+        var btnResetAdv = document.getElementById('btnResetMyAdvModal');
+        var advBadge = document.getElementById('myAdvFilterBadge');
+
+        var tagsBar = document.getElementById('myActiveFilterTagsBar');
+        var tagStatus = document.getElementById('tagMyStatus');
+        var tagStatusText = document.getElementById('tagMyStatusText');
+        var btnRemoveStatusTag = document.getElementById('btnRemoveMyStatusTag');
+        var tagWifi = document.getElementById('tagMyWifi');
+        var tagWifiText = document.getElementById('tagMyWifiText');
+        var btnRemoveWifiTag = document.getElementById('btnRemoveMyWifiTag');
+        var btnResetAllTags = document.getElementById('btnResetAllMyTags');
+
+        var kpiCards = document.querySelectorAll('.kpi-status-card');
+        var rows = document.querySelectorAll('.my-att-row');
+        var noMatchRow = document.getElementById('myAttNoMatchRow');
+        var visibleCountEl = document.getElementById('visibleRecordCount');
+        var footerCountEl = document.getElementById('footerRecordCount');
+
+        var activeStatus = '';
+        var activeWifi = '';
+
+        function applyMyAttFilter() {
+            var kw = kwInput ? kwInput.value.trim().toLowerCase() : '';
+            var visible = 0;
+
+            rows.forEach(function (row) {
+                var searchStr = row.getAttribute('data-search') || '';
+                var rowStatus = row.getAttribute('data-status') || '';
+                var rowWifi = row.getAttribute('data-wifi') || '';
+
+                var matchKw = !kw || searchStr.indexOf(kw) !== -1;
+                var matchStatus = !activeStatus || rowStatus === activeStatus;
+                var matchWifi = !activeWifi || rowWifi === activeWifi;
+
+                if (matchKw && matchStatus && matchWifi) {
+                    row.style.display = '';
+                    visible++;
+                    var sttCell = row.querySelector('.row-stt');
+                    if (sttCell) sttCell.textContent = visible;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noMatchRow) {
+                noMatchRow.style.display = (rows.length > 0 && visible === 0) ? '' : 'none';
+            }
+            if (visibleCountEl) visibleCountEl.textContent = visible;
+            if (footerCountEl) footerCountEl.textContent = visible;
+
+            // Cập nhật trạng thái nút xóa & badge
+            var advCount = (activeStatus ? 1 : 0) + (activeWifi ? 1 : 0);
+            if (advBadge) {
+                advBadge.style.display = advCount > 0 ? 'inline-block' : 'none';
+                advBadge.textContent = advCount;
+            }
+            if (btnClear) {
+                btnClear.style.display = (kw || advCount > 0) ? 'inline-block' : 'none';
+            }
+
+            // Cập nhật dải Tag
+            if (tagsBar) {
+                if (advCount > 0) {
+                    tagsBar.style.setProperty('display', 'flex', 'important');
+                } else {
+                    tagsBar.style.setProperty('display', 'none', 'important');
+                }
+            }
+            if (tagStatus && tagStatusText) {
+                if (activeStatus) {
+                    var labelMap = { 'ON_TIME': 'Đúng giờ', 'LATE': 'Đi muộn', 'EARLY_LEAVE': 'Về sớm' };
+                    tagStatusText.textContent = labelMap[activeStatus] || activeStatus;
+                    tagStatus.style.setProperty('display', 'inline-flex', 'important');
+                } else {
+                    tagStatus.style.setProperty('display', 'none', 'important');
+                }
+            }
+            if (tagWifi && tagWifiText) {
+                if (activeWifi) {
+                    tagWifiText.textContent = activeWifi === 'VALID' ? 'Wi-Fi cơ sở hợp lệ' : 'Khác mạng';
+                    tagWifi.style.setProperty('display', 'inline-flex', 'important');
+                } else {
+                    tagWifi.style.setProperty('display', 'none', 'important');
+                }
+            }
+
+            // Đồng bộ active-kpi
+            kpiCards.forEach(function (card) {
+                var val = card.getAttribute('data-status-val') || '';
+                if (val === activeStatus) {
+                    card.classList.add('active-kpi');
+                } else {
+                    card.classList.remove('active-kpi');
+                }
+            });
+        }
+
+        if (btnSearch) btnSearch.addEventListener('click', applyMyAttFilter);
+        if (kwInput) {
+            kwInput.addEventListener('input', applyMyAttFilter);
+            kwInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyMyAttFilter();
+                }
+            });
+        }
+
+        kpiCards.forEach(function (card) {
+            card.addEventListener('click', function () {
+                activeStatus = card.getAttribute('data-status-val') || '';
+                if (advStatusSelect) advStatusSelect.value = activeStatus;
+                applyMyAttFilter();
+            });
+        });
+
+        if (btnApplyAdv) {
+            btnApplyAdv.addEventListener('click', function () {
+                activeStatus = advStatusSelect ? advStatusSelect.value : '';
+                activeWifi = advWifiSelect ? advWifiSelect.value : '';
+                applyMyAttFilter();
+                var modalEl = document.getElementById('myAttAdvancedFilterModal');
+                if (modalEl && window.bootstrap) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+            });
+        }
+
+        function resetAllFilters() {
+            if (kwInput) kwInput.value = '';
+            activeStatus = '';
+            activeWifi = '';
+            if (advStatusSelect) advStatusSelect.value = '';
+            if (advWifiSelect) advWifiSelect.value = '';
+            applyMyAttFilter();
+        }
+
+        if (btnResetAdv) btnResetAdv.addEventListener('click', resetAllFilters);
+        if (btnClear) btnClear.addEventListener('click', resetAllFilters);
+        if (btnResetAllTags) btnResetAllTags.addEventListener('click', resetAllFilters);
+        if (btnRemoveStatusTag) {
+            btnRemoveStatusTag.addEventListener('click', function () {
+                activeStatus = '';
+                if (advStatusSelect) advStatusSelect.value = '';
+                applyMyAttFilter();
+            });
+        }
+        if (btnRemoveWifiTag) {
+            btnRemoveWifiTag.addEventListener('click', function () {
+                activeWifi = '';
+                if (advWifiSelect) advWifiSelect.value = '';
+                applyMyAttFilter();
+            });
+        }
+
+        // 3. XEM ĐỐI SOÁT & CHI TIẾT BẢN GHI CHẤM CÔNG TRONG MODAL
+        document.querySelectorAll('.btn-view-record-detail').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var row = btn.closest('.my-att-row');
+                if (!row) return;
+                var statusCode = row.getAttribute('data-status') || '';
+                var statusLabel = row.getAttribute('data-status-label') || '-';
+                var shiftLabel = row.getAttribute('data-shift') || 'Ca sáng (08:00 - 12:00)';
+                var checkInTime = row.getAttribute('data-checkin') || '-';
+                var checkOutTime = row.getAttribute('data-checkout') || '-';
+
+                document.getElementById('mRecDate').textContent = row.getAttribute('data-date') || '-';
+                document.getElementById('mRecBranch').textContent = row.getAttribute('data-branch') || '-';
+                document.getElementById('mRecShift').textContent = shiftLabel;
+                document.getElementById('mRecStatus').textContent = 'Trạng thái: ' + statusLabel;
+                document.getElementById('mRecCheckIn').textContent = checkInTime;
+                document.getElementById('mRecCheckInIp').textContent = row.getAttribute('data-checkin-ip') || '-';
+                document.getElementById('mRecCheckOut').textContent = checkOutTime;
+                document.getElementById('mRecCheckOutIp').textContent = row.getAttribute('data-checkout-ip') || '-';
+                document.getElementById('mRecWorked').textContent = row.getAttribute('data-worked') || '-';
+
+                var explainBox = document.getElementById('mRecExplainBox');
+                var explainIcon = document.getElementById('mRecExplainIcon');
+                var explainText = document.getElementById('mRecExplainText');
+                if (explainBox && explainIcon && explainText) {
+                    if (statusCode === 'ON_TIME') {
+                        explainBox.style.background = '#ecfdf5';
+                        explainBox.style.borderColor = '#a7f3d0';
+                        explainBox.style.color = '#065f46';
+                        explainIcon.className = 'bi bi-check-circle-fill text-success fs-5 mt-0.5';
+                        explainText.textContent = 'Nhân sự thực hiện Check-in (' + checkInTime + ') và Check-out (' + checkOutTime + ') tuân thủ đúng khung giờ quy định của ' + shiftLabel + '.';
+                    } else if (statusCode === 'LATE') {
+                        explainBox.style.background = '#fffbeb';
+                        explainBox.style.borderColor = '#fde68a';
+                        explainBox.style.color = '#92400e';
+                        explainIcon.className = 'bi bi-alarm-fill text-warning fs-5 mt-0.5';
+                        explainText.textContent = 'Nhân sự Check-in lúc ' + checkInTime + ', trễ quá ngưỡng ân hạn 15 phút so với giờ bắt đầu ' + shiftLabel + '.';
+                    } else if (statusCode === 'EARLY_LEAVE') {
+                        explainBox.style.background = '#fef2f2';
+                        explainBox.style.borderColor = '#fecaca';
+                        explainBox.style.color = '#991b1b';
+                        explainIcon.className = 'bi bi-clock-history text-danger fs-5 mt-0.5';
+                        explainText.textContent = 'Nhân sự Check-out lúc ' + checkOutTime + ', sớm hơn 15 phút so với giờ kết thúc ' + shiftLabel + '.';
+                    } else {
+                        explainBox.style.background = '#f8fafc';
+                        explainBox.style.borderColor = '#e2e8f0';
+                        explainBox.style.color = '#334155';
+                        explainIcon.className = 'bi bi-info-circle-fill text-secondary fs-5 mt-0.5';
+                        explainText.textContent = 'Bản ghi chấm công được đối soát tự động theo lịch phân ca.';
+                    }
+                }
+
+                var wifiBadge = document.getElementById('mRecWifiBadge');
+                if (wifiBadge) {
+                    var isValid = row.getAttribute('data-wifi') === 'VALID';
+                    wifiBadge.className = isValid
+                        ? 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-bold'
+                        : 'badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2 fw-bold';
+                    wifiBadge.innerHTML = isValid
+                        ? '<i class="bi bi-wifi me-1"></i>Wi-Fi cơ sở hợp lệ'
+                        : '<i class="bi bi-wifi-off me-1"></i>Khác mạng cơ sở';
+                }
+
+                var modalEl = document.getElementById('myRecordDetailModal');
+                if (modalEl && window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                }
+            });
+        });
+
+        // 4. TÙY BIẾN CỘT & KÉO GIÃN ĐỘ RỘNG CỘT (GIỐNG QUẢN LÝ TÀI KHOẢN)
+        var btnToggleCol = document.getElementById('btnToggleCustomColumns');
+        var colPopover = document.getElementById('customColumnPopover');
+        var btnClosePopover = document.getElementById('btnCloseColPopover');
+        var btnSaveCols = document.getElementById('btnSaveColumns');
+        var btnResetCols = document.getElementById('btnResetColumns');
+        var colSearchInput = document.getElementById('colSearchInput');
+        var table = document.getElementById('myAttendanceTable');
+
+        if (btnToggleCol && colPopover) {
+            btnToggleCol.addEventListener('click', function (e) {
+                e.stopPropagation();
+                colPopover.style.display = colPopover.style.display === 'none' ? 'block' : 'none';
+            });
+            if (btnClosePopover) {
+                btnClosePopover.addEventListener('click', function () {
+                    colPopover.style.display = 'none';
+                });
+            }
+            document.addEventListener('click', function (e) {
+                if (!colPopover.contains(e.target) && e.target !== btnToggleCol) {
+                    colPopover.style.display = 'none';
+                }
+            });
+        }
+
+        if (colSearchInput) {
+            colSearchInput.addEventListener('input', function () {
+                var q = colSearchInput.value.trim().toLowerCase();
+                document.querySelectorAll('#customColList .custom-col-item').forEach(function (item) {
+                    var label = item.textContent.toLowerCase();
+                    item.style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        }
+
+        function applyColumnVisibility() {
+            if (!table) return;
+            document.querySelectorAll('#customColList .custom-col-item').forEach(function (item) {
+                var colKey = item.getAttribute('data-col-target');
+                var chk = item.querySelector('.custom-col-check');
+                var show = !chk || chk.checked;
+                table.querySelectorAll('[data-col="' + colKey + '"]').forEach(function (cell) {
+                    cell.style.display = show ? '' : 'none';
+                });
+            });
+        }
+
+        if (btnSaveCols) {
+            btnSaveCols.addEventListener('click', function () {
+                applyColumnVisibility();
+                if (colPopover) colPopover.style.display = 'none';
+            });
+        }
+
+        if (btnResetCols) {
+            btnResetCols.addEventListener('click', function () {
+                document.querySelectorAll('#customColList .custom-col-check').forEach(function (chk) {
+                    chk.checked = true;
+                });
+                applyColumnVisibility();
+                if (table) {
+                    table.style.width = '';
+                    table.style.minWidth = '';
+                }
+                if (colPopover) colPopover.style.display = 'none';
+            });
+        }
+
+        // KÉO GIÃN CỘT BẢNG (COLUMN RESIZER)
+        if (table) {
+            var resizers = table.querySelectorAll('.dv-col-resizer');
+            resizers.forEach(function (resizer) {
+                var th = resizer.parentElement;
+                var startX = 0;
+                var startWidth = 0;
+                var startTableWidth = 0;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    startTableWidth = table.offsetWidth;
+                    resizer.classList.add('is-resizing');
+                    document.body.classList.add('dv-is-resizing-col');
+
+                    function onMouseMove(moveEvent) {
+                        var diff = moveEvent.pageX - startX;
+                        var newWidth = Math.max(60, startWidth + diff);
+                        var actualDiff = newWidth - startWidth;
+                        th.style.width = newWidth + 'px';
+                        th.style.minWidth = newWidth + 'px';
+                        table.style.width = (startTableWidth + actualDiff) + 'px';
+                        table.style.minWidth = (startTableWidth + actualDiff) + 'px';
+                    }
+
+                    function onMouseUp() {
+                        resizer.classList.remove('is-resizing');
+                        document.body.classList.remove('dv-is-resizing-col');
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
     })();
 </script>
 </body>

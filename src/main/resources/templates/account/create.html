@@ -17,16 +17,22 @@
             <main class="app-content">
                 <link rel="stylesheet" th:href="@{/css/account.css}">
 
-                <!-- THÔNG BÁO LỖI NẾU CÓ -->
-                <div th:if="${error}"
-                    class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                    <span th:text="${error}">Đã xảy ra lỗi</span>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                <!-- TOAST THÔNG BÁO LỖI NẰM DƯỚI GÓC PHẢI -->
+                <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" th:if="${error != null and !#strings.isEmpty(error)}">
+                    <div class="toast show align-items-center text-white bg-danger border-0 shadow-lg rounded-3"
+                         role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body d-flex align-items-center gap-2 py-3 px-3">
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                <span class="fw-medium" th:text="${error}">Đã xảy ra lỗi</span>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- FORM TẠO TÀI KHOẢN (SCR-01.2) -->
-                <section class="panel" style="max-width: 860px; margin: 0 auto;">
+                <section class="panel">
                     <div class="panel__head">
                         <div>
                             <a th:href="@{/accounts}" class="text-decoration-none small text-muted">
@@ -38,146 +44,160 @@
                         </div>
                     </div>
 
+                    <!-- THÔNG BÁO TẠO TÀI KHOẢN CHO NHÂN SỰ CỤ THỂ -->
+                    <div th:if="${linkedStaff != null}" class="alert alert-info d-flex align-items-center mb-4 border border-info-subtle bg-info-subtle text-info-emphasis rounded-3 p-3">
+                        <i class="bi bi-person-badge-fill fs-3 me-3 flex-shrink-0 text-primary"></i>
+                        <div>
+                            <div class="fw-bold">Đang tạo tài khoản cho nhân sự: <span th:text="${linkedStaff.fullName + ' (' + linkedStaff.staffCode + ')'}">Họ tên</span></div>
+                            <div class="small mt-1 text-muted">
+                                Email, số điện thoại, chi nhánh và vai trò đã được tự động điền sẵn từ hồ sơ nhân sự. Tài khoản sẽ được tự động liên kết ngay sau khi lưu.
+                            </div>
+                        </div>
+                    </div>
+
                     <form th:action="@{/accounts/create}" th:object="${accountCreateDTO}" method="post">
-
-                        <!-- 1. THÔNG TIN XÁC THỰC -->
-                        <div class="form-section-title">
-                            <i class="bi bi-key-fill text-primary"></i> 1. Thông tin đăng nhập
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-12">
-                                <label for="username" class="form-label small fw-semibold">Tên đăng nhập <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" id="username" class="form-control" th:field="*{username}" required
-                                    minlength="3" maxlength="50" placeholder="Ví dụ: bsamnh, letan01...">
-                                <div class="form-text small text-muted">Tên đăng nhập viết liền, không dấu, từ 3 đến 50
-                                    ký tự.</div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="password" class="form-label small fw-semibold">Mật khẩu <span
-                                        class="text-danger">*</span></label>
-                                <input type="password" id="password" class="form-control" th:field="*{password}"
-                                    required minlength="6" placeholder="Tối thiểu 6 ký tự">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="confirmPassword" class="form-label small fw-semibold">Xác nhận mật khẩu
-                                    <span class="text-danger">*</span></label>
-                                <input type="password" id="confirmPassword" class="form-control"
-                                    th:field="*{confirmPassword}" required minlength="6"
-                                    placeholder="Nhập lại mật khẩu">
-                            </div>
-                        </div>
-
-                        <!-- 2. THÔNG TIN LIÊN HỆ -->
-                        <div class="form-section-title">
-                            <i class="bi bi-person-lines-fill text-primary"></i> 2. Thông tin liên hệ
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="email" class="form-label small fw-semibold">Địa chỉ Email <span
-                                        class="text-danger">*</span></label>
-                                <input type="email" id="email" class="form-control" th:field="*{email}" required
-                                    placeholder="example@cuongvietdental.vn">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="phoneNumber" class="form-label small fw-semibold">Số điện thoại <span
-                                        class="text-danger">*</span></label>
-                                <input type="tel" id="phoneNumber" class="form-control" th:field="*{phoneNumber}"
-                                    required placeholder="Ví dụ: 0912345678">
-                            </div>
-                        </div>
-
-                        <!-- 3. PHÂN QUYỀN & CHI NHÁNH -->
-                        <div class="form-section-title">
-                            <i class="bi bi-shield-check text-primary"></i> 3. Phân quyền vai trò &amp; Cơ sở
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="roleId" class="form-label small fw-semibold">Vai trò hệ thống <span
-                                        class="text-danger">*</span></label>
-                                <select id="roleId" class="form-select" th:field="*{roleId}" required>
-                                    <option value="">-- Chọn vai trò --</option>
-                                    <option th:each="r : ${roles}"
-                                        th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and (r.isActive == null or r.isActive)}"
-                                        th:data-role-name="${r.roleName}" th:value="${r.roleId}"
-                                        th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
-                                </select>
-                                <div class="form-text small text-muted">Hệ thống sẽ tự động gán loại tài khoản
-                                    (STAFF/PATIENT) tương ứng.</div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="branchId" class="form-label small fw-semibold">Chi nhánh trực thuộc</label>
-                                <select id="branchId" class="form-select" th:field="*{branchId}">
-                                    <option value="">-- Không gán chi nhánh (Toàn hệ thống) --</option>
-                                    <option th:each="b : ${branches}" th:value="${b.branchId}"
-                                        th:text="${b.branchName}">Chi nhánh</option>
-                                </select>
-                                <div class="form-text small text-muted" id="branchHint">Có thể gán chi nhánh làm việc
-                                    chính hoặc bỏ trống.</div>
-                            </div>
-                        </div>
-
-                        <!-- 3B. TÙY CHỈNH QUYỀN HẠN CHI TIẾT CHO TÀI KHOẢN TRONG PHẠM VI VAI TRÒ -->
-                        <input type="hidden" name="customPermissionsSubmitted" value="true">
-                        <div id="customPermissionContainer" class="mb-4" style="display: none;">
-                            <div class="border rounded-3 p-3 bg-light">
-                                <div
-                                    class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
-                                    <div>
-                                        <div class="fw-semibold text-dark small">
-                                            <i class="bi bi-sliders2-vertical text-primary me-1"></i>
-                                            Quyền hạn chi tiết của tài khoản (Trong tập quyền của vai trò đã chọn)
-                                        </div>
-                                        <div class="text-muted" style="font-size: 0.78rem;">
-                                            Mặc định tài khoản được tích sẵn toàn bộ quyền chuẩn của vai trò. Bạn có thể
-                                            bỏ tích bớt quyền nếu muốn giới hạn phạm vi thao tác của nhân sự này.
-                                        </div>
+                        <input type="hidden" name="staffId" th:value="${linkedStaff != null ? linkedStaff.staffId : null}">
+                        <div class="row g-4">
+                            <!-- CỘT TRÁI: THÔNG TIN ĐĂNG NHẬP & LIÊN HỆ -->
+                            <div class="col-lg-5">
+                                <!-- 1. Thông tin đăng nhập -->
+                                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                                    <div class="card-header bg-white border-bottom py-3">
+                                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-key-fill me-2"></i>1. Thông tin đăng nhập</h6>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span id="permCounterBadge"
-                                            class="badge bg-primary-subtle text-primary border border-primary-subtle">0
-                                            / 0 quyền</span>
-                                        <button type="button" id="btnCheckAllRolePerms"
-                                            class="btn btn-sm btn-outline-primary py-0 px-2"
-                                            style="font-size: 0.78rem;">
-                                            <i class="bi bi-check2-all me-1"></i>Chọn đủ mặc định
-                                        </button>
+                                    <div class="card-body p-3">
+                                        <div class="mb-3">
+                                            <label for="username" class="form-label small fw-semibold">Tên đăng nhập <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" id="username" class="form-control" th:field="*{username}" required
+                                                minlength="3" maxlength="50" placeholder="Ví dụ: bsamnh, letan01...">
+                                            <div class="form-text small text-muted">Viết liền, không dấu, từ 3 đến 50 ký tự.</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="password" class="form-label small fw-semibold">Mật khẩu <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="password" id="password" class="form-control" th:field="*{password}"
+                                                required minlength="6" placeholder="Tối thiểu 6 ký tự">
+                                        </div>
+
+                                        <div class="mb-1">
+                                            <label for="confirmPassword" class="form-label small fw-semibold">Xác nhận mật khẩu
+                                                <span class="text-danger">*</span></label>
+                                            <input type="password" id="confirmPassword" class="form-control"
+                                                th:field="*{confirmPassword}" required minlength="6"
+                                                placeholder="Nhập lại mật khẩu">
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div th:each="r : ${roles}"
-                                    th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and r.roleName != 'BENH_NHAN' and r.roleName != 'ROLE_BENH_NHAN'}"
-                                    class="role-permission-panel" th:attr="data-role-id=${r.roleId}"
-                                    style="display: none;">
-                                    <div th:if="${r.permissions == null or #lists.isEmpty(r.permissions)}"
-                                        class="text-muted small fst-italic py-2">
-                                        Vai trò này hiện chưa được cấu hình danh sách quyền chi tiết.
+                                <!-- 2. Thông tin liên hệ & Cơ sở -->
+                                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                                    <div class="card-header bg-white border-bottom py-3">
+                                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-person-lines-fill me-2"></i>2. Thông tin liên hệ &amp; Cơ sở</h6>
                                     </div>
-                                    <div th:if="${r.permissions != null and !#lists.isEmpty(r.permissions)}"
-                                        class="row g-2 mt-1">
-                                        <div class="col-md-6" th:each="perm : ${r.permissions}">
-                                            <label
-                                                class="d-flex align-items-start gap-2 p-2 rounded border bg-white h-100"
-                                                style="cursor: pointer;">
-                                                <input type="checkbox" class="form-check-input mt-1 role-perm-checkbox"
-                                                    name="permissionIds" th:value="${perm.permissionId}"
-                                                    th:attr="data-code=${perm.permissionCode}"
-                                                    th:checked="${accountCreateDTO.permissionIds == null or #lists.isEmpty(accountCreateDTO.permissionIds) or #lists.contains(accountCreateDTO.permissionIds, perm.permissionId)}"
-                                                    disabled>
-                                                <span class="small">
-                                                    <span class="fw-semibold d-block text-dark"
-                                                        th:text="${perm.description != null ? perm.description : perm.permissionCode}">Tên quyền</span>
-                                                    <code class="text-muted" style="font-size: 0.72rem;"
-                                                        th:text="${perm.permissionCode}">CODE</code>
-                                                </span>
-                                            </label>
+                                    <div class="card-body p-3">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label small fw-semibold">Địa chỉ Email <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="email" id="email" class="form-control" th:field="*{email}" required
+                                                placeholder="example@cuongvietdental.vn">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="phoneNumber" class="form-label small fw-semibold">Số điện thoại <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="tel" id="phoneNumber" class="form-control" th:field="*{phoneNumber}"
+                                                required placeholder="Ví dụ: 0912345678">
+                                        </div>
+
+                                        <div class="mb-1">
+                                            <label for="branchId" class="form-label small fw-semibold">Chi nhánh cơ sở</label>
+                                            <select id="branchId" class="form-select" th:field="*{branchId}">
+                                                <option value="">-- Toàn hệ thống --</option>
+                                                <option th:each="b : ${branches}" th:value="${b.branchId}"
+                                                    th:text="${b.branchName}">Chi nhánh</option>
+                                            </select>
+                                            <div class="form-text small text-muted" id="branchHint">Chi nhánh làm việc chính của nhân sự.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: VAI TRÒ & QUYỀN HẠN CHI TIẾT -->
+                            <div class="col-lg-7">
+                                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                                    <div class="card-header bg-white border-bottom py-3">
+                                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>3. Vai trò &amp; Quyền hạn thao tác</h6>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="mb-3">
+                                            <label for="roleId" class="form-label small fw-semibold">Vai trò hệ thống <span
+                                                    class="text-danger">*</span></label>
+                                            <select id="roleId" class="form-select" th:field="*{roleId}" required>
+                                                <option value="">-- Chọn vai trò --</option>
+                                                <option th:each="r : ${roles}"
+                                                    th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and (r.isActive == null or r.isActive)}"
+                                                    th:data-role-name="${r.roleName}" th:value="${r.roleId}"
+                                                    th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
+                                            </select>
+                                            <div class="form-text small text-muted">Quyền hạn thao tác sẽ tự động được gán theo vai trò đã chọn.</div>
+                                        </div>
+
+                                        <!-- TÙY CHỈNH QUYỀN HẠN CHI TIẾT CHO TÀI KHOẢN TRONG PHẠM VI VAI TRÒ -->
+                                        <input type="hidden" name="customPermissionsSubmitted" value="true">
+                                        <div id="customPermissionContainer" class="mb-2" style="display: none;">
+                                            <div class="border rounded-3 p-3 bg-light">
+                                                <div
+                                                    class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                                                    <div>
+                                                        <div class="fw-semibold text-dark small">
+                                                            <i class="bi bi-sliders2-vertical text-primary me-1"></i>
+                                                            Quyền hạn chi tiết (Trong tập quyền của vai trò)
+                                                        </div>
+                                                        <div class="text-muted" style="font-size: 0.78rem;">
+                                                            Mặc định chọn đủ quyền. Bạn có thể bỏ tích bớt quyền nếu muốn giới hạn riêng tài khoản này.
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span id="permCounterBadge"
+                                                            class="badge bg-primary-subtle text-primary border border-primary-subtle">0
+                                                            / 0 quyền</span>
+                                                        <button type="button" id="btnCheckAllRolePerms"
+                                                            class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                            style="font-size: 0.78rem;">
+                                                            <i class="bi bi-check2-all me-1"></i>Chọn đủ mặc định
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div th:each="r : ${roles}"
+                                                    th:if="${r.roleName != 'ADMIN' and r.roleName != 'ROLE_ADMIN' and r.roleName != 'BENH_NHAN' and r.roleName != 'ROLE_BENH_NHAN'}"
+                                                    class="role-permission-panel" th:attr="data-role-id=${r.roleId}"
+                                                    style="display: none;">
+                                                    <div th:if="${r.permissions == null or #lists.isEmpty(r.permissions)}"
+                                                        class="text-muted small fst-italic py-2">
+                                                        Vai trò này hiện chưa được cấu hình danh sách quyền chi tiết.
+                                                    </div>
+                                                    <div th:if="${r.permissions != null and !#lists.isEmpty(r.permissions)}"
+                                                        class="row g-2 mt-1">
+                                                        <div class="col-md-6" th:each="perm : ${r.permissions}">
+                                                            <label
+                                                                class="d-flex align-items-center gap-2 p-2 rounded border bg-white h-100"
+                                                                style="cursor: pointer;"
+                                                                th:title="${perm.permissionCode}">
+                                                                <input type="checkbox" class="form-check-input mt-0 role-perm-checkbox"
+                                                                    name="permissionIds" th:value="${perm.permissionId}"
+                                                                    th:attr="data-code=${perm.permissionCode}"
+                                                                    th:checked="${accountCreateDTO.permissionIds == null or #lists.isEmpty(accountCreateDTO.permissionIds) or #lists.contains(accountCreateDTO.permissionIds, perm.permissionId)}"
+                                                                    disabled>
+                                                                <span class="small fw-medium text-dark"
+                                                                    th:text="${perm.description != null ? perm.description : perm.permissionCode}">Tên quyền</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -185,13 +205,15 @@
                         </div>
 
                         <!-- NÚT LƯU & QUAY LẠI -->
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a th:href="@{/accounts}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle me-1"></i> Hủy bỏ
-                            </a>
-                            <button type="submit" class="btn btn-primary px-4">
-                                <i class="bi bi-check-lg me-1"></i> Tạo tài khoản
-                            </button>
+                        <div class="card border-0 shadow-sm rounded-3 mt-3">
+                            <div class="card-body d-flex justify-content-between align-items-center py-3">
+                                <a th:href="@{/accounts}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i> Hủy bỏ
+                                </a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-check-lg me-1"></i> Tạo tài khoản
+                                </button>
+                            </div>
                         </div>
 
                     </form>

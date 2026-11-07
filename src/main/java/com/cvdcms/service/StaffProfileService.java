@@ -411,10 +411,17 @@ public class StaffProfileService {
         List<StaffBranchAssignment> activeAssignments =
                 assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE);
 
-        Role fixedRole = resolveCurrentStaffRole(staff, activeAssignments);
-        boolean isDoctor = activeAssignments.stream()
-                .anyMatch(a -> a.getRole() != null && ROLE_DOCTOR.equalsIgnoreCase(a.getRole().getRoleName()))
-                || (fixedRole != null && ROLE_DOCTOR.equalsIgnoreCase(fixedRole.getRoleName()));
+        // Nếu người dùng chọn đổi vai trò chuyên môn trên form sửa
+        Role selectedRole = null;
+        if (dto.getRoleId() != null) {
+            selectedRole = findRole(dto.getRoleId());
+            if (ROLE_ADMIN.equalsIgnoreCase(selectedRole.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(selectedRole.getRoleName())) {
+                throw new IllegalArgumentException("Không thể gán vai trò Quản trị hệ thống (Admin) cho hồ sơ nhân sự.");
+            }
+        }
+
+        Role fixedRole = selectedRole != null ? selectedRole : resolveCurrentStaffRole(staff, activeAssignments);
+        boolean isDoctor = (fixedRole != null && ROLE_DOCTOR.equalsIgnoreCase(fixedRole.getRoleName()));
 
         // Nếu nhân viên đang là bác sĩ thì bắt buộc có CCHN.
         if (isDoctor && trimToNull(dto.getPracticeLicenseNo()) == null) {
@@ -423,6 +430,18 @@ public class StaffProfileService {
 
         boolean isFixedDoctor = isDoctor;
         applyProfile(staff, dto, isFixedDoctor);
+
+        // Cập nhật vai trò chuyên môn mới vào phân công chi nhánh chính đang hiệu lực (nếu có đổi vai trò)
+        if (selectedRole != null) {
+            StaffBranchAssignment primary = activeAssignments.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
+                    .findFirst()
+                    .orElse(null);
+            if (primary != null && (primary.getRole() == null || !primary.getRole().getRoleId().equals(selectedRole.getRoleId()))) {
+                primary.setRole(selectedRole);
+                assignmentRepository.save(primary);
+            }
+        }
 
         User previousUser = staff.getUser();
         Long currentUserId = previousUser != null ? previousUser.getUserId() : null;
@@ -441,17 +460,13 @@ public class StaffProfileService {
         // Đồng bộ tài khoản liên kết theo chi nhánh chính hiện tại, vai trò chuyên môn và trạng thái làm việc.
         if (user != null) {
             syncUserStatusWithStaff(user, saved.getStatus());
-            if (!user.getUserId().equals(currentUserId)) {
-                StaffBranchAssignment primary = activeAssignments.stream()
-                        .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
-                        .findFirst()
-                        .orElse(null);
-                Branch primaryBranch = primary != null ? primary.getBranch() : null;
-                Role primaryRole = primary != null ? primary.getRole() : fixedRole;
-                syncUserWithStaff(user, primaryBranch, primaryRole);
-            } else {
-                userRepository.save(user);
-            }
+            StaffBranchAssignment primary = activeAssignments.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
+                    .findFirst()
+                    .orElse(null);
+            Branch primaryBranch = primary != null ? primary.getBranch() : null;
+            Role primaryRole = primary != null && primary.getRole() != null ? primary.getRole() : fixedRole;
+            syncUserWithStaff(user, primaryBranch, primaryRole);
         }
         return saved;
     }
