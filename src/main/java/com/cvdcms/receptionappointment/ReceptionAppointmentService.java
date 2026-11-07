@@ -74,7 +74,17 @@ public class ReceptionAppointmentService {
             Boolean isTentative, String internalNote,
             LocalDate patientDob, String patientGender,
             String guardianName, String guardianPhone, String guardianRelationship,
-            String idCardNumber, Boolean confirmDuplicate) {
+            String idCardNumber, Boolean confirmDuplicate, @Min(15) @Max(240) Integer durationMinutes) {
+        public CreateRequest(Long branchId, Long profileId, LocalDate date, PreferredSession session,
+                Long doctorId, Long serviceId, String symptoms, LocalTime expectedTime,
+                String patientName, String patientPhone, String patientAddress, String customerSource,
+                Boolean isTentative, String internalNote, LocalDate patientDob, String patientGender,
+                String guardianName, String guardianPhone, String guardianRelationship,
+                String idCardNumber, Boolean confirmDuplicate) {
+            this(branchId, profileId, date, session, doctorId, serviceId, symptoms, expectedTime,
+                    patientName, patientPhone, patientAddress, customerSource, isTentative, internalNote,
+                    patientDob, patientGender, guardianName, guardianPhone, guardianRelationship, idCardNumber, confirmDuplicate, null);
+        }
         public CreateRequest(Long branchId, Long profileId, LocalDate date, PreferredSession session,
                 Long doctorId, Long serviceId, String symptoms, LocalTime expectedTime) {
             this(branchId, profileId, date, session, doctorId, serviceId, symptoms, expectedTime,
@@ -116,7 +126,8 @@ public class ReceptionAppointmentService {
             LocalDate date, PreferredSession session, String symptoms,
             AppointmentSource source, AppointmentStatus status, int rescheduleCount,
             String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt,
-            String conflictNotes, LocalTime expectedTime, Integer durationMinutes) {
+            String conflictNotes, LocalTime expectedTime, Integer durationMinutes,
+            LocalDate patientDob, String patientGender) {
         public AppointmentView(Long id, String code, Long profileId, String patientCode,
                                String patientName, String patientPhone, Long branchId, String branchName,
                                Long doctorId, String doctorName, Long serviceId, String serviceName,
@@ -125,7 +136,7 @@ public class ReceptionAppointmentService {
                                String cancelReason, boolean doctorUnavailable, LocalDateTime createdAt) {
             this(id, code, profileId, patientCode, patientName, patientPhone, branchId, branchName,
                     doctorId, doctorName, serviceId, serviceName, date, session, symptoms,
-                    source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null, null, 30);
+                    source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null, null, 30, null, null);
         }
     }
     public record HistoryView(String action, String oldValue, String newValue, String reason, LocalDateTime createdAt) {}
@@ -316,7 +327,9 @@ public class ReceptionAppointmentService {
             notes = (notes == null ? "" : notes + " - ") + "[Ghi chú: " + request.internalNote().trim() + "]";
         }
         a.setInitialSymptoms(notes);
-        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
+        if (request.durationMinutes() != null && (request.durationMinutes() < 15 || request.durationMinutes() > 240))
+            throw bad("Thời lượng dự kiến phải từ 15 đến 240 phút.");
+        a.setDurationMinutes(request.durationMinutes() != null ? request.durationMinutes() : AppointmentSlotService.duration(a.getService()));
 
         LocalTime expectedTime = null;
         if (request.expectedTime() != null) {
@@ -590,7 +603,7 @@ public class ReceptionAppointmentService {
                 a.getService() == null ? null : a.getService().getServiceName(),
                 a.getAppointmentDate(), a.getPreferredSession(), a.getInitialSymptoms(), a.getSource(), a.getStatus(),
                 a.getRescheduleCount(), a.getCancelReason(), doctorUnavailable, a.getCreatedAt(), conflictNotes,
-                a.getExpectedTime(), a.getDurationMinutes());
+                a.getExpectedTime(), a.getDurationMinutes(), a.getPatientProfile().getDob(), a.getPatientProfile().getGender());
     }
     private static long count(List<AppointmentView> list, AppointmentStatus status) {
         return list.stream().filter(a -> a.status() == status).count();

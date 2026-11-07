@@ -190,11 +190,108 @@
     border-radius: 8px;
 }
 
+.queue-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
 .queue-card-actions .btn {
-    font-size: 0.78rem;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 0.3rem 0.65rem;
+    padding: 6px 12px;
     border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   QUEUE CLINICAL TABLE & STICKY ACTIONS COLUMN
+   ========================================================================== */
+.queue-table, .queue-page table {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: collapse;
+}
+
+.queue-table th, .queue-page table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 12px 14px;
+    border-bottom: 1.5px solid #e2e8f0;
+    border-right: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.queue-table td, .queue-page table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #e5e7eb;
+    font-size: 13.5px;
+    color: #1e293b;
+    background: #ffffff;
+}
+
+.queue-table tbody tr:hover td, .queue-page table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+.queue-table th:last-child, .queue-table td:last-child,
+.queue-page table th:last-child, .queue-page table td:last-child {
+    border-right: 0;
+}
+
+/* Cố định cột Thao tác (Sticky Column) */
+.queue-table th.queue-actions-column, .queue-table td.queue-actions-column,
+.queue-page table th:last-child, .queue-page table td:last-child {
+    position: sticky;
+    right: 0;
+    min-width: 220px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+
+.queue-table th.queue-actions-column, .queue-page table thead th:last-child {
+    background: #f8fafc;
+    z-index: 4;
+}
+
+.queue-table td.queue-actions-column, .queue-page table tbody td:last-child {
+    background: #ffffff;
+}
+
+.queue-table tbody tr:hover td.queue-actions-column, .queue-page table tbody tr:hover td:last-child {
+    background: #f8fafc;
+}
+
+.queue-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.queue-action-group .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    border-radius: 7px;
+    font-weight: 600;
 }
 
 .btn-xs {

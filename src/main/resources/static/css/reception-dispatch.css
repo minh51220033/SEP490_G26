@@ -59,8 +59,77 @@
 .dispatch-ticket-controls { flex: 1; min-width: 0; }
 .dispatch-ticket-controls label { font-size: .82rem; font-weight: 650; margin-bottom: .3rem; }
 .dispatch-ticket-form .btn { white-space: nowrap; }
-.dispatch-table { min-width: 760px; }
-.dispatch-table thead th { color: #64748b; background: #f8fafc; font-size: .78rem; font-weight: 750; border-bottom: 1px solid #e2e8f0; }
+.dispatch-table {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: collapse;
+}
+.dispatch-table thead th {
+    color: #475569;
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 12px 14px;
+    border-bottom: 1.5px solid #e2e8f0;
+    border-right: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+.dispatch-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #e5e7eb;
+    font-size: 13.5px;
+    color: #1e293b;
+    background: #ffffff;
+}
+.dispatch-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+.dispatch-table th:last-child,
+.dispatch-table td:last-child {
+    border-right: 0;
+}
+
+/* Cố định cột Thao tác (Sticky Column) */
+.dispatch-table th.dispatch-actions-column,
+.dispatch-table td.dispatch-actions-column {
+    position: sticky;
+    right: 0;
+    min-width: 240px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+.dispatch-table th.dispatch-actions-column {
+    background: #f8fafc;
+    z-index: 4;
+}
+.dispatch-table td.dispatch-actions-column {
+    background: #ffffff;
+}
+.dispatch-table tbody tr:hover td.dispatch-actions-column {
+    background: #f8fafc;
+}
+
+/* Giãn cách các icon/nút thao tác */
+.dispatch-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+.dispatch-action-group .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    border-radius: 7px;
+    font-weight: 600;
+}
 .dispatch-queue-filter { display: flex; align-items: center; gap: .7rem; margin-bottom: .85rem; }
 .dispatch-queue-filter label { color: #475569; font-size: .8rem; font-weight: 700; }
 .dispatch-queue-filter select { max-width: 290px; }
