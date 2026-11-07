@@ -27,6 +27,10 @@ public class SecurityConfig {
                 // Tích hợp Filter đồng bộ session User vào SecurityContext
                 .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
+                // Tắt hoàn toàn hộp thoại HTTP Basic Auth (Sign in popup của trình duyệt)
+                .httpBasic(basic -> basic.disable())
+                .formLogin(form -> form.disable())
+
                 // Bật CSRF protection với CookieCsrfTokenRepository chuẩn (HttpOnly = false để client JS đọc được token nếu cần)
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
