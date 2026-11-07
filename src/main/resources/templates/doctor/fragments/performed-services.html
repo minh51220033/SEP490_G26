@@ -107,7 +107,8 @@
                                     <td class="text-center">
                                         <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
                                                 style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
-                                                th:onclick="'executePlanItemFromTab(' + ${item.planItemId} + ')'"
+                                                th:data-item-id="${item.planItemId}"
+                                                onclick="executePlanItemFromTab(this.getAttribute('data-item-id'))"
                                                 title="Xác nhận thực hiện thủ thuật này tại ghế trong ca khám hôm nay">
                                             <i class="bi bi-lightning-charge-fill text-warning"></i>
                                             <span>Làm trong ca này</span>

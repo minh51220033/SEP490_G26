@@ -708,7 +708,8 @@
                                         </div>
                                         <div>
                                             <a href="javascript:void(0)" class="proc-main-title"
-                                               th:onclick="'viewWorkflowStepsModal(' + ${wf.templateId} + ')'"
+                                               th:data-id="${wf.templateId}"
+                                               onclick="viewWorkflowStepsModal(this.getAttribute('data-id'))"
                                                th:text="${#strings.replace(#strings.replace(wf.templateName, 'Quy trình kỹ thuật ', ''), 'Quy trình ', '')}">
                                                 Lấy cao răng &amp; Đánh bóng
                                             </a>
@@ -738,7 +739,7 @@
                                 </div>
                             </td>
                             <td class="text-center">
-                                <button type="button" class="dv-step-pill-btn" th:onclick="'viewWorkflowStepsModal(' + ${wf.templateId} + ')'" title="Bấm xem các bước lâm sàng">
+                                <button type="button" class="dv-step-pill-btn" th:data-id="${wf.templateId}" onclick="viewWorkflowStepsModal(this.getAttribute('data-id'))" title="Bấm xem các bước lâm sàng">
                                     <i class="bi bi-list-ol"></i>
                                     <span><strong th:text="${wf.stepCount != null ? wf.stepCount : (wf.steps != null ? wf.steps.size() : 0)}">4</strong> bước chuẩn</span>
                                 </button>
@@ -754,15 +755,15 @@
                             <td class="text-end pe-4">
                                 <div class="d-flex align-items-center justify-content-end gap-1.5">
                                     <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1"
-                                            title="Xem các bước lâm sàng" th:onclick="'viewWorkflowStepsModal(' + ${wf.templateId} + ')'">
+                                            title="Xem các bước lâm sàng" th:data-id="${wf.templateId}" onclick="viewWorkflowStepsModal(this.getAttribute('data-id'))">
                                         <i class="bi bi-eye-fill"></i> <span>Xem</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-2 py-1 fw-bold"
-                                            title="Chỉnh sửa quy trình &amp; các bước" th:onclick="'openEditWorkflowModal(' + ${wf.templateId} + ')'">
+                                            title="Chỉnh sửa quy trình &amp; các bước" th:data-id="${wf.templateId}" onclick="openEditWorkflowModal(this.getAttribute('data-id'))">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-2 py-1"
-                                            title="Xóa quy trình" th:onclick="'deleteWorkflow(' + ${wf.templateId} + ')'">
+                                            title="Xóa quy trình" th:data-id="${wf.templateId}" onclick="deleteWorkflow(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3-fill"></i>
                                     </button>
                                 </div>
