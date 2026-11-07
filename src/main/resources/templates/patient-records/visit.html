@@ -11,10 +11,7 @@
         <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
         <div class="app-main">
-            <!-- HEADER TOPBAR DÙNG CHUNG -->
-            <header th:replace="~{fragments/header :: appTopbar('Chi tiết lượt khám')}"></header>
-
-            <main class="app-content p-3 p-md-4" style="background: #f8fafc !important; min-height: calc(100vh - 64px);">
+            <main class="app-content p-3 p-md-4" style="background: #f8fafc !important; min-height: 100vh;">
                 <style>
                     :root {
                         --dv-primary: #0284c7;
@@ -381,7 +378,12 @@
                 </style>
 
                 <!-- BREADCRUMB -->
-                <nav class="mb-3" aria-label="breadcrumb">
+                <nav class="mb-3 d-flex align-items-center gap-2" aria-label="breadcrumb">
+                    <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                    <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                            data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                        <i class="bi bi-list fs-6"></i>
+                    </button>
                     <ol class="breadcrumb mb-0" style="font-size: 13.5px; font-weight: 500;">
                         <li class="breadcrumb-item"><a th:href="@{/dashboard}" style="color: #64748b; text-decoration: none;">Trang chủ</a></li>
                         <li class="breadcrumb-item"><a th:href="@{/daily-visits}" style="color: #64748b; text-decoration: none;">Ca khám trong ngày</a></li>
