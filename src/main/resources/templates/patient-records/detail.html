@@ -6,8 +6,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></header>
-        <main class="app-content px-3 px-md-4 pt-2 pb-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px);">
+        <main class="app-content px-3 px-md-4 pt-2 pb-4" style="background: #f1f5f9 !important; min-height: 100vh;">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/patient-emr.css}">
             <style>
@@ -449,19 +448,26 @@
             <div class="ds-header-card">
                 <!-- Thanh Breadcrumb gắn liền trên đỉnh Card (Xóa khoảng trống thừa) -->
                 <div class="ds-header-topbar">
-                    <ol class="breadcrumb mb-0 p-0 bg-transparent" style="font-size: 13px;">
-                        <li class="breadcrumb-item">
-                            <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
-                                <i class="bi bi-arrow-left me-1"></i>Danh sách ca khám trong ngày
-                            </a>
-                            <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}" class="text-decoration-none fw-bold text-primary">
-                                <i class="bi bi-arrow-left me-1"></i>Danh sách hồ sơ bệnh nhân
-                            </a>
-                        </li>
-                        <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
-                            Chi tiết hồ sơ: <strong class="text-dark" th:text="${patient.fullName}">Bệnh nhân</strong>
-                        </li>
-                    </ol>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                        <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                            <i class="bi bi-list fs-6"></i>
+                        </button>
+                        <ol class="breadcrumb mb-0 p-0 bg-transparent" style="font-size: 13px;">
+                            <li class="breadcrumb-item">
+                                <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Danh sách ca khám trong ngày
+                                </a>
+                                <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}" class="text-decoration-none fw-bold text-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Danh sách hồ sơ bệnh nhân
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
+                                Chi tiết hồ sơ: <strong class="text-dark" th:text="${patient.fullName}">Bệnh nhân</strong>
+                            </li>
+                        </ol>
+                    </div>
 
                     <!-- Cụm nút hành động nhanh trên thanh頂 (nếu có quyền hành chính) -->
                     <div class="d-flex align-items-center gap-2" th:if="${canManageAdministrative}">
