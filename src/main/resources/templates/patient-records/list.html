@@ -643,6 +643,9 @@
             <!-- TOOLBAR CARD (CHUẨN DAILY-VISITS.HTML & AMIS) -->
             <div class="dv-toolbar-card">
                 <form id="patientFilterForm" method="get" th:action="${recordBasePath}">
+                    <!-- Bắt buộc có 2 trường ẩn này cho phân trang chuẩn MISA AMIS -->
+                    <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                    <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <!-- Left Side: Search Box & Filters -->
                         <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
@@ -674,7 +677,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <!-- Branch Selector -->
                             <div th:if="${branches != null and #lists.size(branches) > 0}" style="min-width: 140px;">
-                                <select class="dv-adv-control fw-semibold" name="branchId" onchange="document.getElementById('patientFilterForm').submit()">
+                                <select class="dv-adv-control fw-semibold" name="branchId" onchange="const p = document.getElementById('pageIndexInput'); if (p) p.value = '0'; document.getElementById('patientFilterForm').submit();">
                                     <option value="">Tất cả cơ sở</option>
                                     <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}" th:selected="${branchId == b.branchId}"></option>
                                 </select>
@@ -784,7 +787,7 @@
                         <tbody>
                             <tr th:each="patient, stat : ${patients.content}" class="dv-data-row" th:id="|patient-row-${patient.id}|">
                                 <!-- 1. TT -->
-                                <td class="text-center text-muted fw-semibold" th:text="${patients.number * patients.size + stat.count}">1</td>
+                                <td class="text-center text-muted fw-semibold" th:text="${currentPage * pageSize + stat.count}">1</td>
 
                                 <!-- 2. MÃ BN -->
                                 <td>
@@ -921,59 +924,60 @@
                     </table>
                 </div>
 
-                <!-- CỐ ĐỊNH FOOTER PAGINATION (LIỀN ĐÁY BẢNG) -->
-                <div class="dv-pagination-container">
-                    <!-- Thông tin số bản ghi -->
-                    <div class="small text-secondary fw-semibold">
-                        Hiển thị
-                        <strong class="text-dark" th:text="${patients.numberOfElements > 0 ? (patients.number * patients.size + 1) : 0}">1</strong> -
-                        <strong class="text-dark" th:text="${patients.number * patients.size + patients.numberOfElements}">10</strong>
-                        trong tổng số <strong class="text-primary" th:text="${patients.totalElements}">28</strong> hồ sơ
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalItems}">0</strong>
                     </div>
-
-                    <!-- Nút bấm phân trang hiện đại -->
-                    <nav class="modern-pagination-nav" th:if="${patients.totalPages > 0}">
-                        <!-- First Page -->
-                        <a th:href="@{${recordBasePath}(page=0,query=${query},dob=${dob},status=${status},branchId=${branchId},customerSource=${param.customerSource})}"
-                           class="pg-btn"
-                           th:classappend="${patients.first} ? 'is-disabled' : ''"
-                           title="Trang đầu tiên">
-                            <i class="bi bi-chevron-double-left"></i>
-                        </a>
-
-                        <!-- Previous Page -->
-                        <a th:href="@{${recordBasePath}(page=${patients.number - 1},query=${query},dob=${dob},status=${status},branchId=${branchId},customerSource=${param.customerSource})}"
-                           class="pg-btn"
-                           th:classappend="${!patients.hasPrevious()} ? 'is-disabled' : ''"
-                           title="Trang trước">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-
-                        <!-- Page Numbers (Hiển thị dải trang thông minh) -->
-                        <th:block th:each="p : ${#numbers.sequence(0, patients.totalPages - 1)}">
-                            <a th:if="${p >= patients.number - 2 and p <= patients.number + 2}"
-                               th:href="@{${recordBasePath}(page=${p},query=${query},dob=${dob},status=${status},branchId=${branchId},customerSource=${param.customerSource})}"
-                               class="pg-btn"
-                               th:classappend="${p == patients.number} ? 'is-active' : ''"
-                               th:text="${p + 1}">1</a>
-                        </th:block>
-
-                        <!-- Next Page -->
-                        <a th:href="@{${recordBasePath}(page=${patients.number + 1},query=${query},dob=${dob},status=${status},branchId=${branchId},customerSource=${param.customerSource})}"
-                           class="pg-btn"
-                           th:classappend="${!patients.hasNext()} ? 'is-disabled' : ''"
-                           title="Trang sau">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-
-                        <!-- Last Page -->
-                        <a th:href="@{${recordBasePath}(page=${patients.totalPages - 1},query=${query},dob=${dob},status=${status},branchId=${branchId},customerSource=${param.customerSource})}"
-                           class="pg-btn"
-                           th:classappend="${patients.last} ? 'is-disabled' : ''"
-                           title="Trang cuối">
-                            <i class="bi bi-chevron-double-right"></i>
-                        </a>
-                    </nav>
+                    <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+                    <div class="misa-pagination-right">
+                        <!-- Dropdown chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="25" th:selected="${pageSize == 25}">25</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
+                        <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+                        <div class="misa-page-range">
+                            <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                        </div>
+                        <!-- Cụm 4 nút phân trang (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- 1. Về trang đầu -->
+                            <a th:href="@{${recordBasePath}(page=0, size=${pageSize}, query=${query}, dob=${dob}, status=${status}, branchId=${branchId}, customerSource=${param.customerSource})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <!-- 2. Trang trước -->
+                            <a th:href="@{${recordBasePath}(page=${currentPage - 1}, size=${pageSize}, query=${query}, dob=${dob}, status=${status}, branchId=${branchId}, customerSource=${param.customerSource})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <!-- 3. Trang sau -->
+                            <a th:href="@{${recordBasePath}(page=${currentPage + 1}, size=${pageSize}, query=${query}, dob=${dob}, status=${status}, branchId=${branchId}, customerSource=${param.customerSource})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                               title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <!-- 4. Đến trang cuối -->
+                            <a th:href="@{${recordBasePath}(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, query=${query}, dob=${dob}, status=${status}, branchId=${branchId}, customerSource=${param.customerSource})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1208,6 +1212,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Xử lý phân trang chuẩn MISA AMIS
+    document.addEventListener('DOMContentLoaded', function () {
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('patientFilterForm') || document.getElementById('filterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function () {
+                if (pageIndexInput) pageIndexInput.value = '0';
+            });
+        }
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0'; // Bắt buộc reset về trang đầu
+                }
+                filterForm.submit();
+            });
+        }
+    });
+
     // Search Box clear button visibility
     const searchInput = document.getElementById('searchInput');
     const searchClearBtn = document.getElementById('searchClearBtn');
@@ -1224,6 +1250,8 @@
             searchInput.value = '';
             searchClearBtn.style.display = 'none';
             searchInput.focus();
+            const pageIndexInput = document.getElementById('pageIndexInput');
+            if (pageIndexInput) pageIndexInput.value = '0';
             document.getElementById('patientFilterForm').submit();
         }
     }

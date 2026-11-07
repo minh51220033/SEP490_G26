@@ -44,6 +44,50 @@ public class EmrPageController {
         return "redirect:/doctor/patient-records";
     }
 
+    @GetMapping({"/list", "/all"})
+    public String listView(HttpSession session, Model model,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) EmrRecordStatus status,
+            @RequestParam(required = false) java.time.LocalDate fromDate,
+            @RequestParam(required = false) java.time.LocalDate toDate,
+            @RequestParam(required = false) String doctor,
+            @RequestParam(required = false) String branch,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
+        }
+        var dashboard = service.dashboard(session, query, status, fromDate, toDate, doctor, branch);
+        int totalItems = dashboard.records().size();
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / size);
+        int currentPage = Math.max(0, Math.min(page, Math.max(0, totalPages - 1)));
+        int fromIndex = totalItems == 0 ? 0 : currentPage * size;
+        int toIndex = Math.min(fromIndex + size, totalItems);
+        var pagedRecords = totalItems == 0 ? List.<EmrModuleService.RecordRow>of() : dashboard.records().subList(fromIndex, toIndex);
+
+        long toItem = toIndex;
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
+        model.addAttribute("dashboard", dashboard);
+        model.addAttribute("pagedRecords", pagedRecords);
+        model.addAttribute("items", pagedRecords);
+        model.addAttribute("totalItems", (long) totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+        model.addAttribute("keyword", query);
+        model.addAttribute("query", query);
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("branch", branch);
+        model.addAttribute("statuses", EmrRecordStatus.values());
+        return "emr/list";
+    }
+
     @GetMapping("/{recordId}")
     public String detail(HttpSession session, Model model, @PathVariable Long recordId) {
         model.addAttribute("detail", service.detail(session, recordId));

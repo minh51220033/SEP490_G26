@@ -33,15 +33,41 @@ public class LaboPageController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "status", required = false) LaboOrderStatus status,
             @RequestParam(value = "supplierId", required = false) Long supplierId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model
     ) {
-        List<LaboOrderResponseDTO> orders = laboOrderService.getAllOrders(keyword, status, supplierId, null, null);
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
+        }
+        List<LaboOrderResponseDTO> allOrders = laboOrderService.getAllOrders(keyword, status, supplierId, null, null);
+        long totalItems = allOrders.size();
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / size);
+        int currentPage = Math.max(0, Math.min(page, Math.max(0, totalPages - 1)));
+        int fromIndex = totalItems == 0 ? 0 : currentPage * size;
+        int toIndex = (int) Math.min(fromIndex + size, totalItems);
+        List<LaboOrderResponseDTO> pagedOrders = totalItems == 0 ? List.of() : allOrders.subList(fromIndex, toIndex);
+
+        long toItem = toIndex;
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
         Map<String, Object> stats = laboOrderService.getLaboStatistics(null, null);
         List<Supplier> suppliers = supplierRepository.findAll();
 
         model.addAttribute("activeMenu", "labo");
         model.addAttribute("currentTab", tab);
-        model.addAttribute("orders", orders);
+        model.addAttribute("orders", pagedOrders);
+        model.addAttribute("allOrders", allOrders);
+        model.addAttribute("items", pagedOrders);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("status", status);
+        model.addAttribute("supplierId", supplierId);
         model.addAttribute("stats", stats);
         model.addAttribute("suppliers", suppliers);
         model.addAttribute("patients", patientProfileRepository.findAll());

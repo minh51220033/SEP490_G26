@@ -143,14 +143,20 @@ public class DoctorRecordService {
 
     public Page<PatientView> search(HttpSession session, String query, LocalDate dob,
                                     String status, Long branchId, int page) {
+        return search(session, query, dob, status, branchId, page, 10);
+    }
+
+    public Page<PatientView> search(HttpSession session, String query, LocalDate dob,
+                                    String status, Long branchId, int page, int size) {
         Set<Long> allowed = branches(session);
         boolean admin = isAdmin(session);
         if (!admin && branchId != null && !allowed.contains(branchId))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         String term = query == null || query.isBlank() ? null : query.trim();
         String state = status == null || status.isBlank() ? null : status.trim();
+        int safeSize = (size == 10 || size == 25 || size == 50 || size == 100) ? size : 10;
         return profiles.search(allowed, branchId, dob, state, term,
-                PageRequest.of(Math.max(0, page), 15, Sort.by(Sort.Direction.DESC, "profileId")))
+                PageRequest.of(Math.max(0, page), safeSize, Sort.by(Sort.Direction.DESC, "profileId")))
                 .map(PatientView::from);
     }
 

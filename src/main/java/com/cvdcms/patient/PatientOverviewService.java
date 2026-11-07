@@ -113,7 +113,7 @@ public class PatientOverviewService {
 
     public Page<PatientOverviewDTO> searchPatients(Long branchId, String query, LocalDate dob, String status, int page, int size) {
         int safePage = Math.max(0, page);
-        int safeSize = Math.min(50, Math.max(1, size));
+        int safeSize = Math.min(100, Math.max(1, size));
         String cleanQuery = query != null && !query.isBlank() ? query.trim() : null;
         String cleanStatus = status != null && !status.isBlank() ? status.trim() : null;
 

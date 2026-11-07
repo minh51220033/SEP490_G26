@@ -26,6 +26,83 @@
             }
 
             /* =========================================================================
+               FOOTER PHÂN TRANG CHUẨN MISA AMIS
+               ========================================================================= */
+            .misa-pagination-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 16px;
+                background: #ffffff;
+                border-top: 1px solid #e2e8f0;
+                font-size: 0.85rem;
+                color: #334155;
+                font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            }
+            .misa-pagination-left {
+                font-size: 0.85rem;
+                color: #475569;
+            }
+            .misa-pagination-left strong {
+                color: #0f172a;
+                font-weight: 700;
+            }
+            .misa-pagination-right {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .misa-page-size-wrapper {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.85rem;
+                color: #475569;
+                white-space: nowrap;
+            }
+            .misa-page-size-select {
+                height: 30px;
+                width: 68px !important;
+                padding: 2px 20px 2px 8px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background-color: #ffffff;
+                cursor: pointer;
+                font-weight: 600;
+            }
+            .misa-page-range {
+                font-size: 0.85rem;
+                color: #334155;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            .misa-nav-btn {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                color: #475569;
+                background: transparent;
+                border: 1px solid transparent;
+                cursor: pointer;
+                text-decoration: none;
+                transition: all 0.15s ease;
+            }
+            .misa-nav-btn:hover:not(.disabled) {
+                background: #f1f5f9;
+                color: #0284c7;
+                border-color: #cbd5e1;
+            }
+            .misa-nav-btn.disabled {
+                color: #cbd5e1 !important;
+                cursor: not-allowed !important;
+                pointer-events: none !important;
+            }
+
+            /* =========================================================================
                CV-DCMS ENTERPRISE DATA TABLE (ĐỒNG BỘ 100% VỚI /doctor/daily-visits)
                ========================================================================= */
             .staff-table-card,

@@ -12,9 +12,6 @@
 
     <div class="app-main">
 
-        <!-- HEADER TOPBAR DÙNG CHUNG -->
-        <header th:replace="~{fragments/header :: appTopbar(${isReadOnlyView == true ? 'Chi tiết lượt khám (Chỉ xem)' : 'Khám & Điều trị'})}"></header>
-
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
             <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101c)}">
             <style>
@@ -222,26 +219,33 @@
                                 <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ (DEMO) THEO CHUẨN MẪU -->
                 <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-white">
                     <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTE -->
-                <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2.5 mb-2 px-3 py-2.5" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
-                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
-                    <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:if="${isReadOnlyView == true}">
-                        <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}" class="text-decoration-none text-primary fw-bold small">
-                            <i class="bi bi-arrow-left-circle-fill me-1"></i>Hồ sơ bệnh nhân
-                        </a>
-                        <span class="text-muted small">&gt;</span>
-                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
-                        <span class="text-muted small">&gt;</span>
-                        <span class="text-dark fw-bold small">Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)</span>
+                    <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2.5 mb-2 px-3 py-2.5" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+                        <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:unless="${isReadOnlyView == true}">
-                        <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
-                        <span class="text-muted small">&gt;</span>
-                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
-                        <span class="text-muted small">&gt;</span>
-                        <span class="text-dark fw-bold small">Bàn khám bệnh</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                        <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                            <i class="bi bi-list fs-6"></i>
+                        </button>
+                        <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:if="${isReadOnlyView == true}">
+                            <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}" class="text-decoration-none text-primary fw-bold small">
+                                <i class="bi bi-arrow-left-circle-fill me-1"></i>Hồ sơ bệnh nhân
+                            </a>
+                            <span class="text-muted small">&gt;</span>
+                            <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
+                            <span class="text-muted small">&gt;</span>
+                            <span class="text-dark fw-bold small">Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)</span>
+                        </div>
+                        <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:unless="${isReadOnlyView == true}">
+                            <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
+                            <span class="text-muted small">&gt;</span>
+                            <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
+                            <span class="text-muted small">&gt;</span>
+                            <span class="text-dark fw-bold small">Bàn khám bệnh</span>
+                        </div>
                     </div>
 
                     <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
