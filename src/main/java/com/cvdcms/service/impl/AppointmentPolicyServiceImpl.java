@@ -172,9 +172,36 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         Map<Long, StaffProfile> doctors = new LinkedHashMap<>();
         for (PreferredSession session : List.of(PreferredSession.MORNING,
                 PreferredSession.AFTERNOON, PreferredSession.EVENING)) {
-            if (invalidSession(branch, date, session, actorType) == null) {
+            if (actorType == AppointmentActorType.RECEPTIONIST || invalidSession(branch, date, session, actorType) == null) {
                 eligibleDoctors(branch, date, session)
                         .forEach(doctor -> doctors.put(doctor.getStaffId(), doctor));
+            }
+        }
+        if (doctors.isEmpty() && branch != null && date != null) {
+            Set<Long> assigned = new HashSet<>();
+            for (StaffBranchAssignment assignment : assignments.findByBranchAndStatus(
+                    branch.getBranchId(), AssignmentStatus.ACTIVE)) {
+                if (assignment.getStartDate().isAfter(date)
+                        || (assignment.getEndDate() != null && assignment.getEndDate().isBefore(date))) continue;
+                String role = assignment.getRole().getRoleName();
+                if (!Boolean.TRUE.equals(assignment.getRole().getIsActive()) || role == null
+                        || !("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))) continue;
+                if (assignment.getStaff().getStatus() == StaffStatus.ACTIVE) {
+                    assigned.add(assignment.getStaff().getStaffId());
+                }
+            }
+            List<LeaveRequest> approved = leaves.findApprovedOn(branch.getBranchId(), date, LeaveStatus.APPROVED);
+            for (StaffSchedule schedule : schedules.findForBooking(branch.getBranchId(), date, ScheduleStatus.SCHEDULED)) {
+                StaffProfile doctor = schedule.getStaff();
+                WorkShift shift = schedule.getShift();
+                if (assigned.contains(doctor.getStaffId()) && Boolean.TRUE.equals(shift.getIsActive())) {
+                    boolean absent = approved.stream().anyMatch(leave ->
+                            leave.getStaff().getStaffId().equals(doctor.getStaffId())
+                                    && (leave.getShift() == null || leave.getShift().getShiftId().equals(shift.getShiftId())));
+                    if (!absent) {
+                        doctors.put(doctor.getStaffId(), doctor);
+                    }
+                }
             }
         }
         return doctors.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName))
