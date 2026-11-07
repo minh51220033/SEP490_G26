@@ -487,7 +487,12 @@
 </aside>
 
 <!-- Lớp phủ làm mờ nền khi mở sidebar trên mobile (click để đóng) -->
-<div th:fragment="sidebarBackdrop" class="app-sidebar__backdrop" data-sidebar-close aria-hidden="true"></div>
+<div th:fragment="sidebarBackdrop">
+    <div class="app-sidebar__backdrop" data-sidebar-close aria-hidden="true"></div>
+    <button type="button" class="mobile-sidebar-toggle d-lg-none" data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+        <i class="bi bi-list"></i>
+    </button>
+</div>
 
 </body>
 </html>
