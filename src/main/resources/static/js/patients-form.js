@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = form.dataset.patientId || null;
     const error = document.getElementById('formError');
     const saveButton = document.getElementById('saveButton');
+    const confirmButton = document.getElementById('confirmDuplicate');
     const modalElement = document.getElementById('duplicateModal');
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     const rows = document.getElementById('duplicateRows');
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function save(confirmDuplicate) {
         error.hidden = true;
         saveButton.disabled = true;
+        confirmButton.disabled = true;
         try {
             const csrfToken = getCsrfToken();
             const headers = { 'Content-Type': 'application/json' };
@@ -128,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(cause.message);
         } finally {
             saveButton.disabled = false;
+            confirmButton.disabled = false;
         }
     }
 

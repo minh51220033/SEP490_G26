@@ -67,6 +67,25 @@ public class DoctorParaclinicalRestController {
     }
 
     /**
+     * Cập nhật thông tin chỉ định cận lâm sàng (Vị trí răng, kết quả, link ảnh phim chụp, trạng thái)
+     */
+    @PutMapping("/paraclinical-orders/{orderItemId}")
+    public ResponseEntity<?> updateOrder(
+            @PathVariable("orderItemId") Long orderItemId,
+            @RequestBody ParaclinicalOrderCreateDTO dto
+    ) {
+        try {
+            ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi cập nhật chỉ định cận lâm sàng: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Cập nhật trạng thái chỉ định (WAITING -> COMPLETED)
      */
     @PutMapping("/paraclinical-orders/{orderItemId}/status")
@@ -76,6 +95,17 @@ public class DoctorParaclinicalRestController {
     ) {
         doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
         try {
+            if (payload.containsKey("imageUrl") || payload.containsKey("toothNumbers") || payload.containsKey("serviceId")) {
+                ParaclinicalOrderCreateDTO dto = ParaclinicalOrderCreateDTO.builder()
+                        .serviceId(payload.get("serviceId") != null && !payload.get("serviceId").isBlank() ? Long.valueOf(payload.get("serviceId")) : null)
+                        .toothNumbers(payload.get("toothNumbers"))
+                        .resultSummary(payload.get("resultSummary"))
+                        .status(payload.get("status"))
+                        .imageUrl(payload.get("imageUrl"))
+                        .build();
+                ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
+                return ResponseEntity.ok(updated);
+            }
             String statusStr = payload.getOrDefault("status", "COMPLETED");
             String resultSummary = payload.get("resultSummary");
             ParaclinicalOrderItemStatus status = ParaclinicalOrderItemStatus.valueOf(statusStr);

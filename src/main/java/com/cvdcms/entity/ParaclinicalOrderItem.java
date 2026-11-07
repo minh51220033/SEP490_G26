@@ -56,6 +56,10 @@ public class ParaclinicalOrderItem {
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ParaclinicalResultAttachment> attachments = new ArrayList<>();
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "performed_id")
+    private PerformedService performedService;
+
     @OneToOne(mappedBy = "orderItem", cascade = CascadeType.ALL)
     private LabExternalOrder labExternalOrder;
 }

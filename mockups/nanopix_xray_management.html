@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Kết quả Phim X-quang NanoPix - DentalSoft</title>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    /* CSS NANOPIX ĐỒNG BỘ NGUYÊN BẢN THEO FILE static/css/nanopix-xray.css */
+    :root {
+      --brand-900: #1a2f6e;
+      --brand-800: #1e3780;
+      --brand-700: #24408e;
+      --brand-600: #2b4fb3;
+      --brand-100: #dde7f8;
+      --brand-50: #eef2fb;
+      --surface: #ffffff;
+      --bg: #f4f6fb;
+      --line: #e2e7f2;
+      --ink: #111827;
+      --muted: #5a6478;
+      --darkroom-bg: #0b1120;
+      --primary-ocean: #0284c7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOPBAR ĐỒNG BỘ HỆ THỐNG DENTALSOFT (KHÔNG SIDEBAR) */
+    .app-topbar {
+      height: 62px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 18px;
+    }
+
+    .brand-text {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .brand-text span {
+      color: #0284c7;
+    }
+
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      padding-left: 18px;
+      border-left: 1px solid var(--line);
+    }
+
+    .breadcrumb-nav a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0f2fe;
+      border: 1.5px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0284c7;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* TRANG QUẢN LÝ X-QUANG NANOPIX CONTAINER */
+    .xray-page {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 20px 28px !important;
+      box-sizing: border-box;
+    }
+
+    /* TOPBAR NANOPIX GRADIENT THEO CODEBASE FT12 */
+    .xray-topbar {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-700) 60%, var(--brand-600) 100%);
+      color: #fff;
+      padding: 20px 28px;
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(26, 47, 110, 0.16);
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .xray-topbar .eyebrow {
+      margin: 0 0 4px;
+      color: #b8cdf8;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .xray-topbar h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .xray-topbar .subtitle {
+      margin: 4px 0 0;
+      color: #dbe7ff;
+      font-size: 13px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* BUTTONS */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 15px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .button-primary {
+      background: var(--brand-700);
+      color: #fff;
+    }
+
+    .button-primary:hover {
+      background: var(--brand-800);
+      color: #fff;
+    }
+
+    .button-primary-white {
+      background: #fff;
+      color: var(--brand-900);
+      border-color: #fff;
+    }
+
+    .button-primary-white:hover {
+      background: var(--brand-50);
+    }
+
+    .button-secondary {
+      background: #fff;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+
+    .button-secondary:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .button-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* 4 THẺ CHỈ SỐ TỔNG QUAN (SCR-12.4) */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--brand-700);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 12px rgba(26, 47, 110, 0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat-card.stat-success {
+      border-left-color: #10b981;
+    }
+
+    .stat-card.stat-warning {
+      border-left-color: #f59e0b;
+    }
+
+    .stat-card.stat-info {
+      border-left-color: #0284c7;
+    }
+
+    .stat-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 12.5px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--brand-900);
+      line-height: 1.2;
+    }
+
+    .stat-meta {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* THANH TABS */
+    .tabs-bar {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
+      overflow-x: auto;
+    }
+
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 18px;
+      background: transparent;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      color: var(--brand-700);
+    }
+
+    .tab.active {
+      color: var(--brand-700);
+      border-bottom-color: var(--brand-700);
+    }
+
+    .tab-badge {
+      background: #e2e8f0;
+      color: #334155;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .tab-badge.badge-alert {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    /* BỘ LỌC TÌM KIẾM */
+    .filter-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 18px;
+      width: 100%;
+    }
+
+    .filter-grid {
+      display: flex;
+      flex-wrap: nowrap !important;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .filter-field:first-child {
+      flex: 1 1 240px;
+      min-width: 200px;
+    }
+
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .filter-field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .filter-field input,
+    .filter-field select {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+
+    .filter-field input:focus,
+    .filter-field select:focus {
+      border-color: var(--brand-600);
+      box-shadow: 0 0 0 3px rgba(43, 79, 179, 0.12);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* X-RAY CARDS GRID */
+    .xray-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+
+    .xray-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .xray-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .xray-thumb-wrap {
+      position: relative;
+      background: #0b1120;
+      height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .status-badge-float {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+    }
+
+    .badge-matched {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .xray-card-body {
+      padding: 14px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .study-uid-code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--brand-700);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .patient-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 4px;
+    }
+
+    .xray-meta-row {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 2px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .xray-meta-row strong {
+      color: #1e293b;
+    }
+
+    .xray-card-actions {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 6px;
+    }
+
+    .xray-card-actions button {
+      flex: 1;
+    }
+
+    /* MODAL SOI PHIM X-QUANG ĐA CHẾ ĐỘ RVG VIEWER (#viewerModal) */
+    .xray-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 17, 32, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1050;
+      padding: 16px;
+    }
+
+    .xray-modal-dialog {
+      width: 100%;
+      max-width: 1180px;
+      background: #111827;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #1f2937;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      max-height: 94vh;
+    }
+
+    .xray-modal-header {
+      padding: 14px 20px;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .viewer-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: 520px;
+      max-height: calc(94vh - 60px);
+    }
+
+    .viewer-canvas-wrap {
+      background: #0b1120;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #1f2937;
+      position: relative;
+    }
+
+    .viewer-toolbar {
+      padding: 10px 16px;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .viewer-btn {
+      background: #1f2937;
+      color: #e2e8f0;
+      border: 1px solid #374151;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .viewer-btn:hover {
+      background: #374151;
+      color: #fff;
+    }
+
+    .viewer-btn.active {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #fff;
+    }
+
+    .viewer-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .viewer-slider-group input[type="range"] {
+      width: 90px;
+      accent-color: #0284c7;
+    }
+
+    .viewer-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #182234 0%, #0b1120 100%);
+    }
+
+    .viewer-sidebar {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .viewer-sidebar h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 6px;
+    }
+
+    .viewer-info-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      padding: 5px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    .viewer-info-item span {
+      color: #94a3b8;
+    }
+
+    .viewer-info-item strong {
+      color: #fff;
+    }
+
+    /* TABLE VIEW UNMATCHED */
+    .table-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    .xray-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .xray-table th, .xray-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    .xray-table th {
+      background: #f8fafd;
+      color: #475569;
+      font-weight: 700;
+      font-size: 11.5px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR DENTALSOFT -->
+  <header class="app-topbar">
+    <div class="brand-group">
+      <a href="#" class="brand-logo">
+        <div class="brand-icon">
+          <i class="bi bi-heart-pulse-fill"></i>
+        </div>
+        <div class="brand-text">Dental<span>Soft</span></div>
+      </a>
+      <nav class="breadcrumb-nav">
+        <a href="#">Chẩn đoán hình ảnh</a>
+        <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
+        <span style="color: var(--ink); font-weight: 600;">X-quang kỹ thuật số NanoPix (FT12)</span>
+      </nav>
+    </div>
+
+    <div class="user-pill">
+      <div class="user-avatar">NL</div>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">BS. Nguyễn Hoàng Long</div>
+        <div style="font-size: 11px; color: var(--muted);">Trưởng khoa RHM</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE -->
+  <main class="xray-page">
+
+    <!-- HEADER TRANG QUẢN LÝ X-QUANG NANOPIX (FT12) CHUẨN NGUYÊN BẢN CODEBASE -->
+    <header class="xray-topbar">
+      <div>
+        <p class="eyebrow">CV-DCMS · QUẢN LÝ KẾT QUẢ CẬN LÂM SÀNG &amp; HÌNH ẢNH (FT12)</p>
+        <h1>Quản lý Kết quả Phim X-quang NanoPix</h1>
+        <p class="subtitle">
+          Kho lưu trữ phim X-quang kỹ thuật số, trình soi phim đa chế độ tại ghế, đối chiếu hồ sơ ca khám và giám sát kết nối cảm biến Eighteeth NanoPix.
+        </p>
+      </div>
+      <div class="topbar-actions">
+        <button id="openIngestBtn" class="button button-primary-white" type="button" title="Nạp file ảnh chụp xuất ra từ máy NanoPix">
+          + Nạp phim NanoPix
+        </button>
+        <button id="checkConnectionBtn" class="button button-secondary" type="button">
+          ⚡ Kiểm tra kết nối
+        </button>
+        <button id="refreshAllBtn" class="button button-secondary" type="button">
+          ↻ Làm mới
+        </button>
+      </div>
+    </header>
+
+    <!-- 4 THẺ CHỈ SỐ TỔNG QUAN (SCR-12.4) -->
+    <section class="stats-grid" aria-label="Thống kê kết quả phim X-quang">
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-label">Tổng số phim X-quang</span>
+          <span class="stat-icon" style="background:#eff6ff;color:#1d4ed8;">📷</span>
+        </div>
+        <strong id="statTotalCount" class="stat-value">128</strong>
+        <span class="stat-meta">Tổng phim nhận từ cảm biến</span>
+      </article>
+
+      <article class="stat-card stat-success">
+        <div class="stat-card-top">
+          <span class="stat-label">Đã khớp hồ sơ &amp; Ca khám</span>
+          <span class="stat-icon" style="background:#ecfdf5;color:#047857;">✓</span>
+        </div>
+        <strong id="statMatchedCount" class="stat-value">125</strong>
+        <span class="stat-meta">Sẵn sàng trong bệnh án bác sĩ</span>
+      </article>
+
+      <article class="stat-card stat-warning">
+        <div class="stat-card-top">
+          <span class="stat-label">Chưa khớp hồ sơ (Chờ đối chiếu)</span>
+          <span class="stat-icon" style="background:#fffbeb;color:#b45309;">⏳</span>
+        </div>
+        <strong id="statUnmatchedCount" class="stat-value" style="color:#b45309;">3</strong>
+        <span class="stat-meta">Cần Lễ tân / Bác sĩ liên kết</span>
+      </article>
+
+      <article class="stat-card stat-info">
+        <div class="stat-card-top">
+          <span class="stat-label">Kết nối Sensor NanoPix1</span>
+          <span class="stat-icon" style="background:#f0f9ff;color:#0284c7;">🔌</span>
+        </div>
+        <strong id="statAdapterStatus" class="stat-value" style="font-size:18px; color: #10b981;">Đang kết nối</strong>
+        <span class="stat-meta">Eighteeth S/N: EN1E0408A032</span>
+      </article>
+    </section>
+
+    <!-- THANH ĐIỀU HƯỚNG TABS -->
+    <nav class="tabs-bar" aria-label="Điều hướng các phân hệ X-quang">
+      <button type="button" class="tab active" id="tabArchive">
+        🖼️ Kho phim X-quang (SCR-12.1)
+      </button>
+      <button type="button" class="tab" id="tabUnmatched">
+        ⚠️ Chưa khớp hồ sơ (SCR-12.2)
+        <span id="unmatchedTabBadge" class="tab-badge badge-alert">3</span>
+      </button>
+      <button type="button" class="tab" id="tabMonitor">
+        🔌 Trạng thái kết nối &amp; Thiết bị (SCR-12.4)
+      </button>
+    </nav>
+
+    <!-- TAB 1: KHO PHIM X-QUANG & BỘ LỌC (SCR-12.1) -->
+    <div id="archivePanel">
+      <!-- Bộ lọc tìm kiếm -->
+      <section class="filter-card">
+        <div class="filter-grid">
+          <div class="filter-field">
+            <label for="filterKeyword">Tìm kiếm phim</label>
+            <input id="filterKeyword" type="text" placeholder="Nhập tên BN, mã BN, mã ca khám hoặc Study UID...">
+          </div>
+          <div class="filter-field">
+            <label for="filterBranch">Cơ sở hoạt động</label>
+            <select id="filterBranch">
+              <option value="">Tất cả cơ sở phòng khám</option>
+              <option value="1" selected>Cơ sở 1 - TP. Hà Nội</option>
+              <option value="2">Cơ sở 2 - TP. Hồ Chí Minh</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="filterStatus">Trạng thái đối chiếu</label>
+            <select id="filterStatus">
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="MATCHED" selected>✓ Đã khớp hồ sơ</option>
+              <option value="UNMATCHED">⏳ Chưa khớp hồ sơ</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="filterFromDate">Từ ngày chụp</label>
+            <input id="filterFromDate" type="date">
+          </div>
+          <div class="filter-actions">
+            <button id="searchBtn" type="button" class="button button-primary">🔍 Tìm kiếm</button>
+            <button id="resetFilterBtn" type="button" class="button button-secondary">Đặt lại</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LƯỚI DANH SÁCH THẺ PHIM X-QUANG NGUYÊN BẢN THEO CODEBASE -->
+      <section class="xray-grid">
+        <!-- CARD 1 -->
+        <div class="xray-card">
+          <div class="xray-thumb-wrap" onclick="openViewerModal()">
+            <span class="status-badge-float badge-matched">✓ Đã khớp hồ sơ</span>
+            <!-- Periapical SVG Vector Render -->
+            <svg width="100%" height="100%" viewBox="0 0 280 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="280" height="190" fill="#0B1120"/>
+              <!-- Bone trabeculae -->
+              <ellipse cx="140" cy="95" rx="100" ry="60" fill="#1E293B" opacity="0.6"/>
+              <!-- Tooth R21 periapical -->
+              <path d="M 120 40 C 95 60, 90 120, 100 150 C 105 165, 120 170, 125 150 C 135 120, 130 60, 120 40 Z" fill="#E2E8F0" opacity="0.85"/>
+              <path d="M 120 65 L 122 155" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+              <!-- Tooth R22 -->
+              <path d="M 155 45 C 135 60, 132 110, 140 140 C 144 152, 155 155, 158 140 C 165 110, 162 60, 155 45 Z" fill="#CBD5E1" opacity="0.75"/>
+              <path d="M 154 68 L 155 142" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Endodontic Measurement Overlay -->
+              <line x1="120" y1="70" x2="120" y2="160" stroke="#0284C7" stroke-width="2" stroke-dasharray="2,2"/>
+              <rect x="70" y="100" width="46" height="18" rx="3" fill="#0284C7"/>
+              <text x="93" y="113" fill="#FFF" font-family="'Inter', sans-serif" font-size="10" font-weight="700" text-anchor="middle">21.4mm</text>
+            </svg>
+          </div>
+          <div class="xray-card-body">
+            <div>
+              <span class="study-uid-code">NPX-20261104-0042</span>
+              <h3 class="patient-title">Trần Văn Hùng (BN-8821)</h3>
+              <div class="xray-meta-row">
+                <span>Vị trí răng:</span>
+                <strong>R21, R22 (Cận chóp)</strong>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thời điểm chụp:</span>
+                <span>04/11/2026 14:22:15</span>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thiết bị:</span>
+                <span>NanoPix1 (Eighteeth)</span>
+              </div>
+            </div>
+            <div class="xray-card-actions">
+              <button class="button button-primary button-sm" type="button" onclick="openViewerModal()">
+                🔍 Soi phim
+              </button>
+              <button class="button button-secondary button-sm" type="button">
+                🔗 Chi tiết
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <div class="xray-card">
+          <div class="xray-thumb-wrap" onclick="openViewerModal()">
+            <span class="status-badge-float badge-matched">✓ Đã khớp hồ sơ</span>
+            <svg width="100%" height="100%" viewBox="0 0 280 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="280" height="190" fill="#0B1120"/>
+              <ellipse cx="140" cy="95" rx="90" ry="55" fill="#1E293B" opacity="0.6"/>
+              <!-- Molar with Implant fixture -->
+              <rect x="125" y="80" width="30" height="70" rx="3" fill="#F8FAFC" opacity="0.9"/>
+              <line x1="125" y1="95" x2="155" y2="95" stroke="#64748B" stroke-width="2"/>
+              <line x1="125" y1="110" x2="155" y2="110" stroke="#64748B" stroke-width="2"/>
+              <line x1="125" y1="125" x2="155" y2="125" stroke="#64748B" stroke-width="2"/>
+              <path d="M 115 50 Q 140 40 165 50 L 165 80 L 115 80 Z" fill="#E2E8F0" opacity="0.85"/>
+            </svg>
+          </div>
+          <div class="xray-card-body">
+            <div>
+              <span class="study-uid-code">NPX-20261104-0038</span>
+              <h3 class="patient-title">Phạm Thị Lan (BN-8902)</h3>
+              <div class="xray-meta-row">
+                <span>Vị trí răng:</span>
+                <strong>R46 (Trụ Implant Straumann)</strong>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thời điểm chụp:</span>
+                <span>03/11/2026 10:15:00</span>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thiết bị:</span>
+                <span>NanoPix1 (Eighteeth)</span>
+              </div>
+            </div>
+            <div class="xray-card-actions">
+              <button class="button button-primary button-sm" type="button" onclick="openViewerModal()">
+                🔍 Soi phim
+              </button>
+              <button class="button button-secondary button-sm" type="button">
+                🔗 Chi tiết
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3 -->
+        <div class="xray-card">
+          <div class="xray-thumb-wrap" onclick="openViewerModal()">
+            <span class="status-badge-float badge-matched">✓ Đã khớp hồ sơ</span>
+            <svg width="100%" height="100%" viewBox="0 0 280 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="280" height="190" fill="#0B1120"/>
+              <ellipse cx="140" cy="95" rx="80" ry="50" fill="#1E293B" opacity="0.5"/>
+              <path d="M 130 45 C 110 60, 105 110, 115 145 C 120 155, 130 158, 134 145 C 140 110, 138 60, 130 45 Z" fill="#E2E8F0" opacity="0.8"/>
+              <path d="M 130 65 L 131 148" stroke="#0F172A" stroke-width="2.5"/>
+            </svg>
+          </div>
+          <div class="xray-card-body">
+            <div>
+              <span class="study-uid-code">NPX-20261104-0031</span>
+              <h3 class="patient-title">Lê Thị Mai (BN-8790)</h3>
+              <div class="xray-meta-row">
+                <span>Vị trí răng:</span>
+                <strong>R11, R12 (Kiểm tra chân răng)</strong>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thời điểm chụp:</span>
+                <span>28/10/2026 16:40:12</span>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thiết bị:</span>
+                <span>NanoPix1 (Eighteeth)</span>
+              </div>
+            </div>
+            <div class="xray-card-actions">
+              <button class="button button-primary button-sm" type="button" onclick="openViewerModal()">
+                🔍 Soi phim
+              </button>
+              <button class="button button-secondary button-sm" type="button">
+                🔗 Chi tiết
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 4 -->
+        <div class="xray-card">
+          <div class="xray-thumb-wrap" onclick="openViewerModal()">
+            <span class="status-badge-float badge-matched">✓ Đã khớp hồ sơ</span>
+            <svg width="100%" height="100%" viewBox="0 0 280 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="280" height="190" fill="#0B1120"/>
+              <ellipse cx="140" cy="95" rx="85" ry="55" fill="#1E293B" opacity="0.6"/>
+              <!-- Lower Molar Tooth with 2 roots -->
+              <path d="M 110 50 Q 140 45 170 50 L 175 85 Q 165 145 155 155 Q 148 135 140 95 Q 132 135 125 155 Q 115 145 105 85 Z" fill="#E2E8F0" opacity="0.85"/>
+              <path d="M 125 90 L 122 150" stroke="#0F172A" stroke-width="2"/>
+              <path d="M 155 90 L 157 150" stroke="#0F172A" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="xray-card-body">
+            <div>
+              <span class="study-uid-code">NPX-20261104-0025</span>
+              <h3 class="patient-title">Nguyễn Văn An (DEMO0001)</h3>
+              <div class="xray-meta-row">
+                <span>Vị trí răng:</span>
+                <strong>R36 (Nội nha tủy buồng)</strong>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thời điểm chụp:</span>
+                <span>21/10/2026 09:30:45</span>
+              </div>
+              <div class="xray-meta-row">
+                <span>Thiết bị:</span>
+                <span>NanoPix1 (Eighteeth)</span>
+              </div>
+            </div>
+            <div class="xray-card-actions">
+              <button class="button button-primary button-sm" type="button" onclick="openViewerModal()">
+                🔍 Soi phim
+              </button>
+              <button class="button button-secondary button-sm" type="button">
+                🔗 Chi tiết
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: DANH SÁCH KẾT QUẢ CHƯA KHỚP HỒ SƠ (SCR-12.2) -->
+    <div id="unmatchedPanel" style="display: none;">
+      <section class="filter-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:280px;display:flex;gap:8px;">
+            <input type="text" class="form-control" placeholder="Tìm theo mã tham chiếu NanoPix, tên trên máy chụp..." style="height: 38px;">
+            <button type="button" class="button button-primary">Tìm kiếm</button>
+          </div>
+          <div style="font-size:12.5px;color:#b45309;font-weight:600;">
+            💡 Chọn "Đối chiếu ngay" để liên kết kết quả vào hồ sơ bệnh nhân và ca khám đang điều trị.
+          </div>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table class="xray-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">ẢNH</th>
+              <th>MÃ THAM CHIẾU STUDY UID</th>
+              <th>TÊN TRÊN MÁY NANOPIX</th>
+              <th>THỜI ĐIỂM CHỤP</th>
+              <th>TRẠNG THÁI</th>
+              <th>LÝ DO CHƯA KHỚP</th>
+              <th style="text-align:center;">THAO TÁC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="width: 50px; height: 50px; background: #0b1120; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                  <i class="bi bi-file-earmark-medical"></i>
+                </div>
+              </td>
+              <td><strong class="study-uid-code">IMG_20261104_1430.dcm</strong></td>
+              <td>NanoPix_Chairsite_02</td>
+              <td>04/11/2026 14:30:22</td>
+              <td><span class="badge bg-warning text-dark">Chờ đối chiếu</span></td>
+              <td>Bệnh nhân mới chụp chưa gán mã BN</td>
+              <td style="text-align: center;">
+                <button type="button" class="button button-primary button-sm" onclick="openMatchModal('IMG_20261104_1430.dcm')">
+                  🔗 Đối chiếu ngay
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="width: 50px; height: 50px; background: #0b1120; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                  <i class="bi bi-file-earmark-medical"></i>
+                </div>
+              </td>
+              <td><strong class="study-uid-code">IMG_20261104_1415.dcm</strong></td>
+              <td>NanoPix_Chairsite_01</td>
+              <td>04/11/2026 14:15:05</td>
+              <td><span class="badge bg-warning text-dark">Chờ đối chiếu</span></td>
+              <td>Bác sĩ chụp nhanh kiểm tra tủy</td>
+              <td style="text-align: center;">
+                <button type="button" class="button button-primary button-sm" onclick="openMatchModal('IMG_20261104_1415.dcm')">
+                  🔗 Đối chiếu ngay
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="width: 50px; height: 50px; background: #0b1120; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                  <i class="bi bi-file-earmark-medical"></i>
+                </div>
+              </td>
+              <td><strong class="study-uid-code">IMG_20261104_1350.dcm</strong></td>
+              <td>NanoPix_Mobile_Sensor</td>
+              <td>04/11/2026 13:50:18</td>
+              <td><span class="badge bg-warning text-dark">Chờ đối chiếu</span></td>
+              <td>Chụp khẩn cấp tại phòng thủ thuật</td>
+              <td style="text-align: center;">
+                <button type="button" class="button button-primary button-sm" onclick="openMatchModal('IMG_20261104_1350.dcm')">
+                  🔗 Đối chiếu ngay
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL 1: TRÌNH SOI PHIM X-QUANG ĐA CHẾ ĐỘ RVG VIEWER (SCR-12.1) NGUYÊN BẢN THEO CODEBASE -->
+  <div id="viewerModal" class="xray-modal-backdrop" style="display: none;">
+    <div class="xray-modal-dialog">
+      <!-- HEADER -->
+      <div class="xray-modal-header">
+        <h3 style="color:#fff;font-size:16px; margin: 0; font-weight: 700;">
+          <i class="bi bi-camera-reels text-primary me-2"></i>Soi phim X-quang NanoPix · Study UID: NPX-20261104-0042
+        </h3>
+        <button type="button" onclick="closeViewerModal()" style="background:#1f2937;color:#fff; border: none; font-size: 20px; border-radius: 6px; width: 32px; height: 32px; cursor: pointer;">×</button>
+      </div>
+
+      <!-- LAYOUT 2 CỘT -->
+      <div class="viewer-layout">
+        <!-- VÙNG HIỂN THỊ ẢNH VÀ TOOLBAR SOI PHIM -->
+        <div class="viewer-canvas-wrap">
+          <div class="viewer-toolbar">
+            <button type="button" class="viewer-btn" title="Phóng to">🔍 Zoom +</button>
+            <button type="button" class="viewer-btn" title="Thu nhỏ">🔍 Zoom -</button>
+            <button type="button" class="viewer-btn" title="Đặt lại">↺ Reset</button>
+            <span style="color:#475569;">|</span>
+            <button type="button" class="viewer-btn" title="Xoay trái 90°">🔄 Xoay trái</button>
+            <button type="button" class="viewer-btn" title="Xoay phải 90°">🔃 Xoay phải</button>
+            <span style="color:#475569;">|</span>
+            <button type="button" class="viewer-btn" title="Đảo màu âm bản">🌓 Đảo âm bản</button>
+
+            <div class="viewer-slider-group">
+              <label>☀️ Sáng</label>
+              <input type="range" min="30" max="200" value="100">
+            </div>
+
+            <div class="viewer-slider-group">
+              <label>◐ Tương phản</label>
+              <input type="range" min="30" max="250" value="100">
+            </div>
+
+            <button type="button" class="viewer-btn" style="background:#047857;border-color:#059669;" title="Tải ảnh gốc về máy">📥 Tải ảnh</button>
+          </div>
+
+          <!-- STAGE X-RAY CANVAS -->
+          <div class="viewer-stage">
+            <svg width="460" height="380" viewBox="0 0 460 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="460" height="380" rx="8" fill="#0B1120"/>
+              <!-- High-res periapical tooth canal -->
+              <ellipse cx="230" cy="190" rx="180" ry="120" fill="#1E293B" opacity="0.6"/>
+              <!-- Tooth R21 -->
+              <path d="M 190 60 C 145 90, 140 210, 155 280 C 165 310, 195 320, 205 280 C 225 210, 215 90, 190 60 Z" fill="#E2E8F0" opacity="0.9"/>
+              <path d="M 190 100 C 170 140, 175 220, 185 275" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+              <!-- Tooth R22 -->
+              <path d="M 260 70 C 225 95, 220 200, 235 260 C 242 285, 265 290, 272 260 C 285 200, 280 95, 260 70 Z" fill="#CBD5E1" opacity="0.75"/>
+              <path d="M 258 110 L 260 255" stroke="#0F172A" stroke-width="4" stroke-linecap="round"/>
+              <!-- Millimeter canal measurement callout -->
+              <line x1="188" y1="105" x2="188" y2="280" stroke="#0284C7" stroke-width="2" stroke-dasharray="3,3"/>
+              <rect x="85" y="180" width="85" height="26" rx="4" fill="#0284C7"/>
+              <text x="127" y="197" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="11" font-weight="700" text-anchor="middle">21.4 mm</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- CỘT THÔNG TIN HỒ SƠ BÊN PHẢI -->
+        <aside class="viewer-sidebar">
+          <div>
+            <h4>👤 Thông tin Bệnh nhân</h4>
+            <div class="viewer-info-item">
+              <span>Họ và tên:</span>
+              <strong>Trần Văn Hùng</strong>
+            </div>
+            <div class="viewer-info-item">
+              <span>Mã bệnh nhân:</span>
+              <strong style="color: #38bdf8;">BN-8821</strong>
+            </div>
+            <div class="viewer-info-item">
+              <span>Giới tính / Tuổi:</span>
+              <strong>Nam · 34 tuổi</strong>
+            </div>
+          </div>
+
+          <div>
+            <h4>🦷 Chi tiết Chụp X-quang</h4>
+            <div class="viewer-info-item">
+              <span>Vị trí răng:</span>
+              <strong style="color: #38bdf8;">R21 - R22 (Cận chóp)</strong>
+            </div>
+            <div class="viewer-info-item">
+              <span>Thiết bị cảm biến:</span>
+              <strong>Eighteeth NanoPix1</strong>
+            </div>
+            <div class="viewer-info-item">
+              <span>Thời điểm chụp:</span>
+              <span>04/11/2026 14:22:15</span>
+            </div>
+            <div class="viewer-info-item">
+              <span>Kỹ thuật viên:</span>
+              <strong>KTV. Nguyễn Thùy Trang</strong>
+            </div>
+          </div>
+
+          <div>
+            <h4>📝 Chẩn đoán &amp; Nhận xét Bác sĩ</h4>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Viêm tủy cấp R21, thấu quang chóp 1.2mm, chiều dài ống tủy 21.4mm.</p>
+            <textarea class="form-control" rows="3" placeholder="Nhập nhận xét đọc phim và hướng điều trị nội nha..." style="background: #0f172a; border-color: #334155; color: #fff; font-size: 12px;"></textarea>
+            <button type="button" class="button button-primary button-sm mt-2 w-100" style="justify-content: center;">
+              Lưu nhận xét X-quang
+            </button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ĐỐI CHIẾU PHIM X-QUANG VÀO HỒ SƠ -->
+  <div id="matchModal" class="xray-modal-backdrop" style="display: none;">
+    <div style="width: 100%; max-width: 520px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between;">
+        <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Liên kết phim X-quang vào hồ sơ</h4>
+        <button type="button" onclick="closeMatchModal()" style="background:none; border:none; font-size: 20px; cursor: pointer;">×</button>
+      </div>
+      <div style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Mã hồ sơ bệnh nhân</label>
+          <input type="text" class="form-control" placeholder="Nhập mã BN hoặc SĐT (Ví dụ: BN-8821)..." style="font-size: 13px;">
+        </div>
+        <div>
+          <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Vị trí răng (FDI)</label>
+          <input type="text" class="form-control" placeholder="Ví dụ: R21-R22..." style="font-size: 13px;">
+        </div>
+        <div>
+          <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Ghi chú lâm sàng</label>
+          <textarea class="form-control" rows="2" placeholder="Ghi chú lâm sàng cho phim..." style="font-size: 13px;"></textarea>
+        </div>
+      </div>
+      <div style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="button button-secondary button-sm" onclick="closeMatchModal()">Đóng</button>
+        <button type="button" class="button button-primary button-sm" onclick="closeMatchModal()">Xác nhận liên kết</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tabArchive = document.getElementById('tabArchive');
+    const tabUnmatched = document.getElementById('tabUnmatched');
+    const archivePanel = document.getElementById('archivePanel');
+    const unmatchedPanel = document.getElementById('unmatchedPanel');
+
+    tabArchive.addEventListener('click', () => {
+      tabArchive.classList.add('active');
+      tabUnmatched.classList.remove('active');
+      archivePanel.style.display = 'block';
+      unmatchedPanel.style.display = 'none';
+    });
+
+    tabUnmatched.addEventListener('click', () => {
+      tabUnmatched.classList.add('active');
+      tabArchive.classList.remove('active');
+      unmatchedPanel.style.display = 'block';
+      archivePanel.style.display = 'none';
+    });
+
+    function openViewerModal() {
+      document.getElementById('viewerModal').style.display = 'flex';
+    }
+    function closeViewerModal() {
+      document.getElementById('viewerModal').style.display = 'none';
+    }
+
+    function openMatchModal(uid) {
+      document.getElementById('matchModal').style.display = 'flex';
+    }
+    function closeMatchModal() {
+      document.getElementById('matchModal').style.display = 'none';
+    }
+  </script>
+
+</body>
+</html>

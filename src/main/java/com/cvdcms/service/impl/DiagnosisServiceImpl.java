@@ -47,6 +47,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private ClinicalQueueTicketRepository queueTickets;
     @Autowired(required = false)
     private SystemAuditLogRepository auditLogs;
+    @Autowired(required = false)
+    private com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
+    @Autowired(required = false)
+    private com.cvdcms.repository.ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -219,10 +223,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ClinicalCompletionCheckDTO checkClinicalCompletionReadiness(Long visitId) {
         Visit visit = getVisitOrThrow(visitId);
         PatientProfile patient = visit.getPatientProfile();
+
+        // 1. Tự động đồng bộ các chỉ định cận lâm sàng đã có kết quả sang dịch vụ thực hiện (để tính viện phí & Kế toán lập hóa đơn)
+        if (paraclinicalOrderService != null) {
+            try {
+                paraclinicalOrderService.syncParaclinicalOrdersToPerformedServices(visitId);
+            } catch (Exception ex) {
+                log.warn("Lỗi đồng bộ chỉ định cận lâm sàng trong kiểm tra hoàn tất ca khám: {}", ex.getMessage());
+            }
+        }
 
         List<ExaminationDiagnosis> diagnoses = diagnosisRepository.findByVisitIdWithDetails(visitId);
         int diagnosisCount = diagnoses.size();
@@ -280,20 +293,23 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                                 .toList()
                         : Collections.emptyList();
         int treatmentPlanCount = activePlans.size();
-        boolean hasTreatmentPlan = treatmentPlanCount > 0;
 
+        // Chỉ những kế hoạch điều trị mà bác sĩ bấm "Chuyển Kế toán" mới được tính vào chi phí bàn giao
         BigDecimal totalEstimatedPlanAmount = BigDecimal.ZERO;
         List<Map<String, Object>> treatmentPlanSummaries = new ArrayList<>();
         for (TreatmentPlan tp : activePlans) {
             BigDecimal planEst = tp.getFinalEstimatedCost() != null ? tp.getFinalEstimatedCost()
                     : (tp.getTotalEstimatedCost() != null ? tp.getTotalEstimatedCost() : BigDecimal.ZERO);
-            totalEstimatedPlanAmount = totalEstimatedPlanAmount.add(planEst);
+            if (Boolean.TRUE.equals(tp.getSentToAccounting())) {
+                totalEstimatedPlanAmount = totalEstimatedPlanAmount.add(planEst);
+            }
 
             Map<String, Object> tpMap = new HashMap<>();
             tpMap.put("planId", tp.getPlanId());
             tpMap.put("planCode", tp.getPlanCode());
             tpMap.put("planName", tp.getPlanName());
             tpMap.put("estimatedAmount", planEst);
+            tpMap.put("sentToAccounting", Boolean.TRUE.equals(tp.getSentToAccounting()));
             tpMap.put("status", tp.getStatus() != null ? tp.getStatus().name() : "PROPOSED");
             treatmentPlanSummaries.add(tpMap);
         }
@@ -318,7 +334,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             missingRequirements.add("Ca khám này đã hoàn tất toàn bộ quy trình và xuất hóa đơn.");
         }
 
-        // Kiểm tra điều kiện 1: Đã có chẩn đoán ICD-10
+        // Kiểm tra điều kiện 1: Bắt buộc có chẩn đoán ICD-10
         if (!hasDiagnosis) {
             missingRequirements
                     .add("Chưa có chẩn đoán ICD-10. Bác sĩ cần thêm ít nhất 01 chẩn đoán trước khi hoàn tất ca khám.");
@@ -327,14 +343,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                     "Chưa có chẩn đoán loại CHÍNH (MAIN). Khuyến nghị xác định chẩn đoán chính để bệnh án chuẩn y khoa.");
         }
 
-        // Kiểm tra điều kiện 2: Có ít nhất 01 Dịch vụ thực hiện (COMPLETED), Kế hoạch
-        // điều trị hoặc Đơn thuốc để bàn giao Kế toán
-        if (!hasCompletedServices && !hasTreatmentPlan && !hasPrescription) {
-            missingRequirements.add(
-                    "Chưa có dịch vụ thực hiện (COMPLETED), kế hoạch điều trị hoặc đơn thuốc nào. Bác sĩ cần lập kế hoạch điều trị, kê đơn thuốc hoặc ghi nhận dịch vụ thực hiện trước khi bàn giao sang Kế toán.");
-        } else if (!hasCompletedServices) {
+        // Cảnh báo về dịch vụ thực hiện & chi phí
+        if (!hasCompletedServices && !hasPrescription) {
             warnings.add(
-                    "Chưa có dịch vụ thực hiện tại ghế (COMPLETED) trong ca này — Hệ thống sẽ bàn giao Giá dự kiến của Kế hoạch điều trị / Đơn thuốc sang Kế toán xử lý.");
+                    "Ca khám này chưa ghi nhận dịch vụ thực hiện tại ghế hoặc đơn thuốc phát sinh chi phí. Nếu không có viện phí, ca khám sẽ được hoàn tất trực tiếp.");
+        }
+
+        // Kiểm tra chỉ định cận lâm sàng còn chờ thực hiện
+        if (paraclinicalOrderItemRepository != null) {
+            long waitingCount = paraclinicalOrderItemRepository.countByOrder_Visit_VisitIdAndStatus(
+                    visitId, com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.WAITING);
+            if (waitingCount > 0) {
+                warnings.add("Hiện còn " + waitingCount + " chỉ định cận lâm sàng đang ở trạng thái 'Chờ thực hiện'.");
+            }
         }
 
         // Cảnh báo bổ sung (không chặn hoàn tất)
@@ -391,7 +412,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .totalBillableAmount(grandTotalAmount)
                 .hasPrescription(hasPrescription)
                 .prescriptionCount(prescriptionCount)
-                .hasTreatmentPlan(hasTreatmentPlan)
+                .hasTreatmentPlan(treatmentPlanCount > 0)
                 .treatmentPlanCount(treatmentPlanCount)
                 .totalEstimatedPlanAmount(totalEstimatedPlanAmount)
                 .hasReExamination(hasReExam)
@@ -406,6 +427,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     @Override
+    @Transactional
     public Visit completeClinicalExamination(Long visitId, String doctorNotes) {
         ClinicalCompletionCheckDTO check = checkClinicalCompletionReadiness(visitId);
         if (!check.isReady()) {
@@ -417,7 +439,21 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalStateException("Lượt khám hiện tại đã ở trạng thái " + visit.getStatus().name() + ".");
         }
 
-        visit.setStatus(VisitStatus.WAITING_PAYMENT);
+        // Kiểm tra xem ca khám có phát sinh chi phí cần Kế toán lập hóa đơn hay không
+        BigDecimal totalService = check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO;
+        BigDecimal totalPresc = check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO;
+        boolean hasPayableItems = totalService.compareTo(BigDecimal.ZERO) > 0 
+                || totalPresc.compareTo(BigDecimal.ZERO) > 0 
+                || check.isHasCompletedServices() 
+                || check.isHasPrescription();
+
+        if (hasPayableItems) {
+            visit.setStatus(VisitStatus.WAITING_PAYMENT);
+        } else {
+            // Không có dịch vụ/thuốc phát sinh chi phí -> Hoàn tất ca khám trực tiếp
+            visit.setStatus(VisitStatus.COMPLETED);
+        }
+
         if (dentalChairs != null && visit.getChairId() != null) {
             dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
                 if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
@@ -439,9 +475,6 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
         String svcCostStr = vndFmt
                 .format(check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO) + "đ";
-        String planCostStr = vndFmt.format(
-                check.getTotalEstimatedPlanAmount() != null ? check.getTotalEstimatedPlanAmount() : BigDecimal.ZERO)
-                + "đ";
         String prescCostStr = vndFmt.format(
                 check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO)
                 + "đ";
@@ -449,11 +482,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         String doctorName = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getFullName()
                 : "Bác sĩ điều trị";
-        log.info("Ca khám visitId={} đã được bác sĩ {} hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked). Dự kiến viện phí bàn giao: [DV: {} | KHDT: {} | Thuốc: {}]. Ghi chú bàn giao: {}", visitId, doctorName, svcCostStr, planCostStr, prescCostStr, doctorNotes);
+        log.info("Ca khám visitId={} đã được bác sĩ {} hoàn tất. Trạng thái mới: {}. Viện phí phát sinh: [DV: {} | Thuốc: {}]. Ghi chú: {}", 
+                visitId, doctorName, visit.getStatus().name(), svcCostStr, prescCostStr, doctorNotes);
 
         Visit saved = visitRepository.save(visit);
-        log.info("Ca khám visitId={} đã được bác sĩ hoàn tất và chuyển sang WAITING_PAYMENT (BR-EMR-02 locked)",
-                visitId);
         return saved;
     }
 

@@ -55,9 +55,13 @@ public class PatientPageController {
     }
 
     @GetMapping("/new")
-    public String create(Model model, HttpSession session) {
+    public String create(@RequestParam(required = false) Long branchId,
+                         @RequestParam(required = false) String phone,
+                         Model model, HttpSession session) {
         model.addAttribute("branches", service.branches(session));
         model.addAttribute("patient", null);
+        model.addAttribute("prefillBranchId", branchId);
+        model.addAttribute("prefillPhone", phone != null && phone.matches("0[0-9]{9,10}") ? phone : "");
         return "reception/patients/form";
     }
 

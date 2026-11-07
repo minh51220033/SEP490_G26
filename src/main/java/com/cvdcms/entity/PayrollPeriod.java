@@ -66,6 +66,21 @@ public class PayrollPeriod {
     @Column(name = "total_remaining_payable", precision = 15, scale = 2)
     private BigDecimal totalRemainingPayable = BigDecimal.ZERO;
 
+    @Column(name = "total_gross_salary", precision = 15, scale = 2)
+    private BigDecimal totalGrossSalary = BigDecimal.ZERO;
+
+    @Column(name = "total_insurance_employee", precision = 15, scale = 2)
+    private BigDecimal totalInsuranceEmployee = BigDecimal.ZERO;
+
+    @Column(name = "total_insurance_employer", precision = 15, scale = 2)
+    private BigDecimal totalInsuranceEmployer = BigDecimal.ZERO;
+
+    @Column(name = "total_pit_amount", precision = 15, scale = 2)
+    private BigDecimal totalPitAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_policy_code", length = 50)
+    private String taxPolicyCode;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PayrollStatus status = PayrollStatus.DRAFT;

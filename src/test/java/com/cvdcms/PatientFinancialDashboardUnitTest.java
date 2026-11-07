@@ -4,6 +4,7 @@ import com.cvdcms.DTO.PatientDebtSummaryDTO;
 import com.cvdcms.controller.PaymentPageController;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.entity.enums.InvoicePaymentStatus;
 import com.cvdcms.entity.enums.InvoiceStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.DebtService;
@@ -474,5 +475,93 @@ public class PatientFinancialDashboardUnitTest {
         assertEquals("finance/payments/dashboard", view);
         assertNull(model.getAttribute("patient"));
         assertNotNull(model.getAttribute("branches"));
+    }
+
+    @Test
+    @DisplayName("12. Lọc hóa đơn theo trạng thái UNPAID (Chưa trả): Gọi đúng repository với InvoicePaymentStatus.UNPAID")
+    void testDashboard_WithInvoicePaymentStatusUnpaid() {
+        Model model = new ConcurrentModel();
+
+        when(invoiceRepository.findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(100L, InvoiceStatus.CANCELLED))
+                .thenReturn(Collections.emptyList());
+
+        when(invoiceRepository.findInvoicesByPatientAndDates(
+                eq(100L),
+                eq(InvoiceStatus.CANCELLED),
+                eq(InvoicePaymentStatus.UNPAID),
+                isNull(),
+                isNull(),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
+
+        when(paymentRepository.findPaymentsByPatientAndDates(eq(100L), isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        String view = controller.patientFinancialDashboard(
+                null, 100L, null, 0,
+                0, 0,
+                "UNPAID",
+                null, null,
+                null, null,
+                model, session
+        );
+
+        assertEquals("finance/payments/dashboard", view);
+        assertEquals("UNPAID", model.getAttribute("invoicePaymentStatus"));
+
+        verify(invoiceRepository).findInvoicesByPatientAndDates(
+                eq(100L),
+                eq(InvoiceStatus.CANCELLED),
+                eq(InvoicePaymentStatus.UNPAID),
+                isNull(),
+                isNull(),
+                any(Pageable.class)
+        );
+    }
+
+    @Test
+    @DisplayName("13. Lọc hóa đơn kết hợp trạng thái PARTIAL và khoảng ngày")
+    void testDashboard_WithInvoicePaymentStatusAndDates() {
+        Model model = new ConcurrentModel();
+        LocalDate fromDate = LocalDate.of(2026, 10, 1);
+        LocalDate toDate = LocalDate.of(2026, 10, 31);
+
+        when(invoiceRepository.findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(100L, InvoiceStatus.CANCELLED))
+                .thenReturn(Collections.emptyList());
+
+        when(invoiceRepository.findInvoicesByPatientAndDates(
+                eq(100L),
+                eq(InvoiceStatus.CANCELLED),
+                eq(InvoicePaymentStatus.PARTIAL),
+                eq(fromDate.atStartOfDay()),
+                eq(toDate.plusDays(1).atStartOfDay()),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
+
+        when(paymentRepository.findPaymentsByPatientAndDates(eq(100L), isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        String view = controller.patientFinancialDashboard(
+                null, 100L, null, 0,
+                0, 0,
+                "PARTIAL",
+                fromDate, toDate,
+                null, null,
+                model, session
+        );
+
+        assertEquals("finance/payments/dashboard", view);
+        assertEquals("PARTIAL", model.getAttribute("invoicePaymentStatus"));
+        assertEquals(fromDate, model.getAttribute("invoiceFromDate"));
+        assertEquals(toDate, model.getAttribute("invoiceToDate"));
+
+        verify(invoiceRepository).findInvoicesByPatientAndDates(
+                eq(100L),
+                eq(InvoiceStatus.CANCELLED),
+                eq(InvoicePaymentStatus.PARTIAL),
+                eq(fromDate.atStartOfDay()),
+                eq(toDate.plusDays(1).atStartOfDay()),
+                any(Pageable.class)
+        );
     }
 }

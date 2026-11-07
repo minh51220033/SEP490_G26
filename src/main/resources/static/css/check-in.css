@@ -116,6 +116,27 @@
     border: 1px solid #c4b5fd;
 }
 
+/* Flash Success Action Bar */
+.flash-success-action-bar {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1.5px solid #86efac;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+}
+
+.flash-actions-group .btn {
+    border-radius: 8px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+}
+
+.flash-actions-group .btn:hover {
+    transform: translateY(-1px);
+}
+
 .action-quick-btn {
     display: inline-flex;
     align-items: center;

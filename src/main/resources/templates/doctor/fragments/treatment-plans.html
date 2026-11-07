@@ -172,9 +172,9 @@
                       th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' kế hoạch'">
                     0 kế hoạch
                 </span>
-                <span class="badge bg-info-subtle text-primary border border-primary-subtle px-2.5 py-1.5 rounded-pill fw-semibold small"
-                      title="Bác sĩ lập kế hoạch kèm giá dự kiến — Bộ phận Kế toán sẽ tiếp nhận để tư vấn tài chính và thu tiền">
-                    <i class="bi bi-send-check-fill me-1"></i>Giá dự kiến tự động đồng bộ sang Kế toán xử lý
+                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-semibold small"
+                      title="Bác sĩ có thể bấm nút 'Chuyển Kế toán' riêng cho từng kế hoạch để gửi sang bộ phận Kế toán">
+                    <i class="bi bi-send-check text-primary me-1"></i>Chuyển Kế toán theo từng kế hoạch điều trị
                 </span>
             </div>
 
@@ -268,9 +268,25 @@
                                 th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                             15.500.000 đ
                         </strong>
-                        <span class="text-muted" style="font-size: 11px;">
-                            <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán
-                        </span>
+                        <div th:id="'plan-accounting-box-' + ${plan.planId}" class="mt-1">
+                            <span th:if="${plan.sentToAccounting}"
+                                  class="badge bg-success-subtle text-success border border-success d-inline-flex align-items-center gap-1 py-1 px-2"
+                                  style="font-size: 11px;"
+                                  th:title="${plan.sentToAccountingAt != null ? 'Đã chuyển Kế toán lúc: ' + plan.sentToAccountingAt : 'Đã chuyển Kế toán xử lý'}">
+                                <i class="bi bi-check2-all text-success"></i>Đã chuyển Kế toán
+                            </span>
+                            <button th:if="${!plan.sentToAccounting}"
+                                    type="button"
+                                    th:id="'btn-send-plan-' + ${plan.planId}"
+                                    class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill d-inline-flex align-items-center gap-1 shadow-xs"
+                                    style="font-size: 11px; font-weight: 600;"
+                                    th:data-id="${plan.planId}"
+                                    th:data-code="${plan.planCode}"
+                                    onclick="sendPlanToAccounting(this.getAttribute('data-id'), this.getAttribute('data-code'))"
+                                    title="Bấm để chuyển riêng kế hoạch điều trị này sang bộ phận Kế toán">
+                                <i class="bi bi-send-fill text-primary"></i>Chuyển Kế toán
+                            </button>
+                        </div>
                     </td>
                     <td style="padding: 10px 12px;" class="text-center" th:id="'plan-status-cell-' + ${plan.planId}">
                         <div class="dropdown d-inline-block">
@@ -298,6 +314,23 @@
                                 <i class="bi bi-pencil-square"></i>
                                 <span>Chi tiết</span>
                             </a>
+                            <button th:if="${!plan.sentToAccounting}"
+                                    type="button"
+                                    th:id="'btn-action-handover-' + ${plan.planId}"
+                                    class="df-btn-plan-detail text-primary border-primary"
+                                    style="background: #f0f9ff;"
+                                    th:data-id="${plan.planId}"
+                                    th:data-code="${plan.planCode}"
+                                    onclick="sendPlanToAccounting(this.getAttribute('data-id'), this.getAttribute('data-code'))"
+                                    title="Chuyển sang bộ phận Kế toán">
+                                <i class="bi bi-send-fill text-primary"></i>
+                                <span>Chuyển KT</span>
+                            </button>
+                            <span th:if="${plan.sentToAccounting}"
+                                  class="badge bg-success-subtle text-success border border-success py-1.5 px-2"
+                                  title="Kế hoạch này đã được chuyển sang Kế toán">
+                                <i class="bi bi-check2-all me-1"></i>Đã chuyển KT
+                            </span>
                             <button type="button" class="df-btn-roadmap"
                                     title="Xem &amp; cập nhật lộ trình các bước lâm sàng (SCR-15.3)"
                                     th:data-id="${plan.planId}"

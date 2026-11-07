@@ -50,7 +50,7 @@ public class AppointmentSlotService {
         // checking overlap at each exact time.
         List<Appointment> booked = appointments.findOccupyingForSession(branch.getBranchId(), date, session, OCCUPYING)
                 .stream().filter(a -> excludeId == null || !Objects.equals(a.getAppointmentId(), excludeId)).toList();
-        int capacity = Math.min(availability.doctors().size(), availability.remainingBranch() + booked.size());
+        int capacity = Math.min(Math.max(1, availability.doctors().size()), availability.remainingBranch() + booked.size());
         if (capacity == 0) return List.of();
         List<Slot> result = new ArrayList<>();
         for (LocalTime time = range.start; !time.plusMinutes(durationMinutes).isAfter(range.end);
@@ -136,7 +136,7 @@ public class AppointmentSlotService {
             }
             AppointmentPolicyService.Availability availability = policy.availability(branch, date, session, excludeId, actorType);
             if (availability != null && availability.available()) {
-                int capacity = Math.min(availability.doctors().size(), availability.remainingBranch() + booked.size());
+                int capacity = Math.min(Math.max(1, availability.doctors().size()), availability.remainingBranch() + booked.size());
                 long overlapping = booked.stream().filter(a -> overlaps(a, requested, end)).count();
                 if (capacity > 0 && overlapping >= capacity) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,

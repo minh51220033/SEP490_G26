@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kê đơn thuốc & Dặn dò sau điều trị (FT18) - DentalSoft</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --primary-ocean: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-active: #0c4a6e;
+      --ocean-light: #e0f2fe;
+      --ocean-subtle: #f0f9ff;
+      --dark-heading: #0f172a;
+      --body-text: #1e293b;
+      --secondary-text: #334155;
+      --muted-text: #64748b;
+      --border-light: #e2e8f0;
+      --border-medium: #cbd5e1;
+      --page-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --placeholder-color: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--page-bg);
+      color: var(--body-text);
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Topbar thanh mảnh không sidebar */
+    .app-topbar {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border-light);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-topbar-inner {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 28px !important;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 18px;
+    }
+
+    .brand-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-logo-text span {
+      color: var(--primary-ocean);
+    }
+
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted-text);
+    }
+
+    .breadcrumb-nav a {
+      color: var(--muted-text);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .breadcrumb-nav a:hover {
+      color: var(--primary-ocean);
+    }
+
+    .breadcrumb-nav .active {
+      color: var(--dark-heading);
+      font-weight: 600;
+    }
+
+    .doctor-badge {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 12px;
+      background-color: var(--ocean-subtle);
+      border: 1px solid var(--ocean-light);
+      border-radius: 20px;
+    }
+
+    .doctor-avatar {
+      width: 28px;
+      height: 28px;
+      background-color: var(--primary-ocean);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .doctor-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dark-heading);
+    }
+
+    /* 1. BỎ GIỚI HẠN CHIỀU RỘNG 1240PX — CHUYỂN SANG FULL-WIDTH 100% */
+    .workspace-wrapper {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 20px 28px !important;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 2. THANH TIÊU ĐỀ TRANG NẰM TRÊN 1 HÀNG NGANG DUY NHẤT */
+    .screen-header-bar {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+      width: 100% !important;
+    }
+
+    .screen-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    .screen-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    
+
+    /* Banner thông tin bệnh nhân chuẩn EMR */
+    .patient-banner-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+      width: 100% !important;
+    }
+
+    .patient-banner-card > div:last-child {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    .patient-avatar-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .patient-meta-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark-heading);
+    }
+
+    .patient-meta-sub {
+      font-size: 13px;
+      color: var(--muted-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .diag-badge {
+      background-color: var(--ocean-light);
+      color: var(--primary-hover);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .alert-badge {
+      background-color: #f1f5f9;
+      color: var(--secondary-text);
+      border: 1px solid var(--border-medium);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Card chuẩn hệ thống gốc DentalSoft */
+    .df-presc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+      width: 100% !important;
+    }
+
+    .df-presc-header {
+      padding: 14px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .card-title-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title-icon-box {
+      width: 34px;
+      height: 34px;
+      background-color: var(--primary-ocean);
+      color: #ffffff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* Preset Container - Dùng mẫu có sẵn 1 chạm */
+    .df-preset-container {
+      background: var(--ocean-subtle);
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+
+    .df-preset-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--primary-hover);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .df-preset-btn {
+      background: #ffffff;
+      color: var(--dark-heading);
+      border: 1px solid #cbd5e1;
+      padding: 6px 13px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .df-preset-btn:hover {
+      background: var(--ocean-light);
+      color: var(--primary-hover);
+      border-color: var(--primary-ocean);
+      transform: translateY(-1px);
+    }
+
+    .df-preset-btn.is-active {
+      background: var(--primary-ocean);
+      color: #ffffff;
+      border-color: var(--primary-ocean);
+    }
+
+    /* Form Fields */
+    .form-label-custom {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary-text);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-control-custom {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--body-text);
+      background-color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-control-custom:focus {
+      border-color: var(--primary-ocean);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .form-control-custom::placeholder {
+      color: var(--placeholder-color);
+    }
+
+    textarea.form-control-custom {
+      height: auto;
+      min-height: 80px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    /* Table thuốc kê */
+    .df-drug-table-wrap {
+      width: 100% !important;
+      overflow-x: auto;
+    }
+
+    .df-drug-table {
+      width: 100% !important;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+
+    .df-drug-table th, .df-drug-table td {
+      white-space: nowrap;
+    }
+
+    .df-drug-table th.col-drug-name, .df-drug-table td.col-drug-name {
+      white-space: normal !important;
+      min-width: 250px;
+    }
+
+    .df-drug-table th.col-usage, .df-drug-table td.col-usage {
+      white-space: normal !important;
+      width: auto !important;
+    }
+
+    .df-drug-table thead {
+      background-color: #f8fafc;
+    }
+
+    .df-drug-table th {
+      padding: 10px 12px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      border-bottom: 1.5px solid var(--border-light);
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    .df-drug-table td {
+      padding: 12px;
+      color: var(--body-text);
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+
+    .df-drug-table tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    .df-drug-table tfoot td {
+      background-color: #f8fafc;
+      font-weight: 700;
+      border-top: 1.5px solid var(--border-light);
+      padding: 12px;
+    }
+
+    .med-code-badge {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 11.5px;
+      color: var(--primary-hover);
+      background-color: var(--ocean-subtle);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #bae6fd;
+    }
+
+    /* Buttons */
+    .df-btn-add-plan {
+      background: var(--primary-ocean);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .df-btn-add-plan:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    }
+
+    .df-btn-white-plan {
+      background: #ffffff;
+      color: var(--primary-ocean);
+      border: 1.5px solid var(--primary-ocean);
+      border-radius: 8px;
+      padding: 6.5px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .df-btn-white-plan:hover {
+      background: var(--ocean-subtle);
+      color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-outline-secondary {
+      background: #ffffff;
+      color: var(--secondary-text);
+      border: 1px solid var(--border-medium);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-outline-secondary:hover {
+      background: #f1f5f9;
+      color: var(--dark-heading);
+    }
+
+    /* Bottom Sticky Action Bar */
+    .bottom-action-bar {
+      background-color: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 14px 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
+      width: 100% !important;
+    }
+
+    .bottom-action-bar > div:last-child {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar: Không Sidebar, Breadcrumb & Profile Bác sĩ -->
+  <header class="app-topbar">
+    <div class="app-topbar-inner">
+      <div class="d-flex align-items-center gap-4">
+        <a href="#" class="brand-logo">
+          <div class="brand-logo-icon">
+            <i class="bi bi-hospital"></i>
+          </div>
+          <div class="brand-logo-text">Dental<span>Soft</span></div>
+        </a>
+        <div class="breadcrumb-nav">
+          <a href="#">DS Khám Trong Ngày</a>
+          <i class="bi bi-chevron-right"></i>
+          <a href="#">Hồ sơ ca khám</a>
+          <i class="bi bi-chevron-right"></i>
+          <span class="active">Kê đơn thuốc & Dặn dò sau điều trị (SCR-18.3 & 18.4)</span>
+        </div>
+      </div>
+
+      <div class="doctor-badge">
+        <div class="doctor-avatar">N</div>
+        <div>
+          <div class="doctor-name">BS. CK1 Lê Hoàng Nam</div>
+          <div style="font-size: 11px; color: #64748b;">Khoa Răng Hàm Mặt</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace Container 1240px -->
+  <main class="workspace-wrapper">
+
+    <!-- Screen Title Bar -->
+    <div class="screen-header-bar">
+      <div>
+        <div class="screen-title">
+          <i class="bi bi-capsule text-primary"></i>
+          <span>Kê đơn thuốc &amp; Dặn dò dùng thuốc sau điều trị</span>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-6 px-3 py-1">FT18</span>
+        </div>
+        <div class="text-muted small mt-1">
+          Đơn thuốc được lưu vào bệnh án điện tử EMR, tự động đồng bộ sang Kế toán và in cấp phát cho người bệnh.
+        </div>
+      </div>
+
+      <div class="screen-actions">
+        <a href="modal_re_examination.html" class="df-btn-white-plan" title="Lập lịch hẹn tái khám cho bệnh nhân">
+          <i class="bi bi-calendar2-plus-fill"></i>
+          <span>Hẹn tái khám (SCR-18.1)</span>
+        </a>
+        <a href="prescription_print_view.html" class="df-btn-white-plan" title="Xem trước bản in A5 chuẩn Bộ Y Tế">
+          <i class="bi bi-printer text-primary"></i>
+          <span>Xem trước &amp; In đơn thuốc</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Patient Banner Card -->
+    <div class="patient-banner-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="patient-avatar-circle">A</div>
+        <div>
+          <div class="patient-meta-name">Nguyễn Văn An</div>
+          <div class="patient-meta-sub">
+            <span><strong>Mã KH:</strong> KH1001</span>
+            <span>&bull;</span>
+            <span>Mã BN: BN-2026-089</span>
+            <span>&bull;</span>
+            <span>32 tuổi (1994)</span>
+            <span>&bull;</span>
+            <span>Nam</span>
+            <span>&bull;</span>
+            <span>SĐT: 0912 345 678</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-nowrap">
+        <span class="diag-badge">
+          <i class="bi bi-clipboard2-pulse"></i>
+          K02.1 - Sâu ngà răng R36
+        </span>
+        <span class="diag-badge">
+          <i class="bi bi-clipboard2-pulse"></i>
+          K04.0 - Viêm tủy răng R36
+        </span>
+        <span class="alert-badge">
+          <i class="bi bi-shield-check text-success"></i>
+          Chưa ghi nhận dị ứng thuốc
+        </span>
+      </div>
+    </div>
+
+    <!-- Alert Note: Nghiệp vụ đồng bộ kế toán tách biệt chuyên môn và tài chính -->
+    <div class="alert alert-info py-2.5 px-3 mb-0 small d-flex align-items-center rounded-3 border-info-subtle">
+      <i class="bi bi-info-circle-fill text-info me-2 fs-6 flex-shrink-0"></i>
+      <div>
+        <strong>Lưu ý nghiệp vụ:</strong> Giá thuốc hiển thị là <em>Giá thuốc dự kiến / Tạm tính</em>.
+        <strong class="text-primary">Thanh toán tiền thuốc nếu bệnh nhân chọn mua tại phòng khám.</strong>
+        Kê đơn chuyên môn không tự ý tạo hóa đơn, công nợ hay trừ xuất kho vật tư.
+      </div>
+    </div>
+
+    <!-- Form chính Kê đơn thuốc (image10.png & SCR-18.3) -->
+    <div class="df-presc-card">
+      <div class="df-presc-header">
+        <div class="card-title-text">
+          <div class="card-title-icon-box">
+            <i class="bi bi-prescription2"></i>
+          </div>
+          <div>
+            <div>THÔNG TIN ĐƠN THUỐC ĐIỀU TRỊ</div>
+            <div style="font-size: 11.5px; color: #64748b; font-weight: normal;">Phòng khám chưa bật liên thông quốc gia — đơn chỉ lưu và in tại chỗ</div>
+          </div>
+        </div>
+        <div class="text-end small text-muted">
+          Mã ca khám: <strong>#VISIT-2026-089</strong>
+        </div>
+      </div>
+
+      <div class="p-4 bg-white d-flex flex-column gap-3">
+
+        <!-- 1. Dùng mẫu có sẵn 1 chạm -->
+        <div class="df-preset-container">
+          <div class="df-preset-label">
+            <i class="bi bi-lightning-charge-fill text-warning"></i>
+            <span>Dùng mẫu có sẵn (1 chạm điền tự động danh sách thuốc &amp; lời dặn):</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="df-preset-btn">Giảm đau thông thường</button>
+            <button type="button" class="df-preset-btn">Sau cấy ghép Implant</button>
+            <button type="button" class="df-preset-btn is-active">Sau nhổ răng / tiểu phẫu</button>
+            <button type="button" class="df-preset-btn">Trẻ em sau nhổ răng sữa</button>
+            <button type="button" class="df-preset-btn">Viêm nha chu</button>
+            <button type="button" class="df-preset-btn">Viêm quanh chóp / áp xe</button>
+          </div>
+        </div>
+
+        <!-- 2. Tên đơn thuốc -->
+        <div>
+          <label class="form-label-custom">Tên đơn thuốc:</label>
+          <input type="text" class="form-control-custom" placeholder="VD: Đơn sau nhổ răng khôn / điều trị tủy - để trống cũng được" value="Đơn thuốc kháng sinh & giảm đau sau điều trị tủy răng R36">
+        </div>
+
+        <!-- 3. Bác sĩ kê đơn, Ngày kê, Giờ kê -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label-custom">Bác sĩ kê đơn <span class="text-danger">*</span>:</label>
+            <select class="form-control-custom">
+              <option value="1" selected>BS. CK1 Lê Hoàng Nam (BS01 - Răng Hàm Mặt)</option>
+              <option value="2">BS. Trần Minh Tâm (BS02 - Khoa Phục hình)</option>
+              <option value="3">BS. Lê Thu Trang (BS03 - Khoa Chỉnh nha)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label-custom">Ngày kê đơn:</label>
+            <input type="date" class="form-control-custom" value="2026-11-04">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label-custom">Giờ kê đơn:</label>
+            <input type="time" class="form-control-custom" value="10:30">
+          </div>
+        </div>
+
+        <!-- 4. Chẩn đoán bệnh lý tự động từ EMR -->
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label-custom">Mã ICD-10:</label>
+            <input type="text" class="form-control-custom bg-light" value="K02.1" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Tên chẩn đoán:</label>
+            <input type="text" class="form-control-custom bg-light" value="Sâu ngà răng R36; Viêm tủy răng R36" readonly>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label-custom">Kết luận chẩn đoán của Bác sĩ:</label>
+            <input type="text" class="form-control-custom" placeholder="Ghi nhận kết luận chẩn đoán hoặc diễn biến ca khám..." value="R36 viêm tủy cấp, đã mở tủy lấy tủy buồng, đặt thuốc diệt tủy tạm thời">
+          </div>
+        </div>
+
+        <!-- 5. Bảng thuốc kê (df-drug-table) -->
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <label class="form-label-custom mb-0">
+              <i class="bi bi-list-check text-primary me-1"></i>
+              Danh mục thuốc kê đơn <span class="text-danger">*</span>:
+            </label>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold d-inline-flex align-items-center gap-1">
+              <i class="bi bi-plus-lg"></i> Thêm dòng thuốc
+            </button>
+          </div>
+
+          <div class="df-drug-table-wrap">
+            <table class="df-drug-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;" class="text-center">TT</th>
+                  <th style="min-width: 250px;" class="col-drug-name">Thuốc (Gõ tên thuốc hoặc hoạt chất)</th>
+                  <th style="width: 100px;">Mã thuốc</th>
+                  <th style="width: 80px;" class="text-center">ĐVT</th>
+                  <th style="width: 75px;" class="text-center">SL</th>
+                  <th style="width: 110px;" class="text-end">Đơn giá (đ)</th>
+                  <th style="width: 115px;" class="text-end">Thành tiền</th>
+                  <th class="col-usage">Cách dùng chi tiết</th>
+                  <th style="width: 45px;" class="text-center">Xóa</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Row 1 -->
+                <tr>
+                  <td class="text-center text-muted fw-bold">01</td>
+                  <td class="col-drug-name">
+                    <div class="fw-bold text-dark">Augmentin 1g</div>
+                    <small class="text-muted">Amoxicillin 875mg + Acid Clavulanic 125mg</small>
+                  </td>
+                  <td><span class="med-code-badge">TH-AUG1G</span></td>
+                  <td class="text-center">Viên</td>
+                  <td class="text-center fw-bold">10</td>
+                  <td class="text-end">22.000 đ</td>
+                  <td class="text-end fw-bold text-dark">220.000 đ</td>
+                  <td class="col-usage">Ngày uống 2 lần, mỗi lần 1 viên sáng/chiều sau khi ăn no</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash3"></i></button>
+                  </td>
+                </tr>
+
+                <!-- Row 2 -->
+                <tr>
+                  <td class="text-center text-muted fw-bold">02</td>
+                  <td class="col-drug-name">
+                    <div class="fw-bold text-dark">Ibuprofen 400mg</div>
+                    <small class="text-muted">Ibuprofen kháng viêm giảm đau</small>
+                  </td>
+                  <td><span class="med-code-badge">TH-IBU400</span></td>
+                  <td class="text-center">Viên</td>
+                  <td class="text-center fw-bold">8</td>
+                  <td class="text-end">3.500 đ</td>
+                  <td class="text-end fw-bold text-dark">28.000 đ</td>
+                  <td class="col-usage">Ngày uống 2 lần, mỗi lần 1 viên sau ăn no khi đau nhức</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash3"></i></button>
+                  </td>
+                </tr>
+
+                <!-- Row 3 -->
+                <tr>
+                  <td class="text-center text-muted fw-bold">03</td>
+                  <td class="col-drug-name">
+                    <div class="fw-bold text-dark">Alphachymotrypsin 4.2mg (Choay)</div>
+                    <small class="text-muted">Chymotrypsin kháng phù nề</small>
+                  </td>
+                  <td><span class="med-code-badge">TH-ALPHA</span></td>
+                  <td class="text-center">Viên</td>
+                  <td class="text-center fw-bold">15</td>
+                  <td class="text-end">3.500 đ</td>
+                  <td class="text-end fw-bold text-dark">52.500 đ</td>
+                  <td class="col-usage">Ngậm dưới lưỡi ngày 3 lần, mỗi lần 1 viên sau ăn</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash3"></i></button>
+                  </td>
+                </tr>
+
+                <!-- Row 4 -->
+                <tr>
+                  <td class="text-center text-muted fw-bold">04</td>
+                  <td class="col-drug-name">
+                    <div class="fw-bold text-dark">Nước súc miệng Kin Gingival 0.12% (250ml)</div>
+                    <small class="text-muted">Chlorhexidine digluconate 0.12%</small>
+                  </td>
+                  <td><span class="med-code-badge">TH-KIN250</span></td>
+                  <td class="text-center">Chai</td>
+                  <td class="text-center fw-bold">1</td>
+                  <td class="text-end">130.000 đ</td>
+                  <td class="text-end fw-bold text-dark">130.000 đ</td>
+                  <td class="col-usage">Súc miệng nhẹ nhàng từ ngày thứ 2, ngày 2 lần sau đánh răng, ngậm 30s</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-link text-danger p-0" title="Xóa"><i class="bi bi-trash3"></i></button>
+                  </td>
+                </tr>
+
+                <!-- Row input trống trực tiếp cho bác sĩ -->
+                <tr style="background-color: #fafafa;">
+                  <td class="text-center text-muted">+</td>
+                  <td>
+                    <input type="text" class="form-control-custom" placeholder="Gõ tên thuốc mới hoặc hoạt chất...">
+                  </td>
+                  <td>
+                    <input type="text" class="form-control-custom text-center" placeholder="Mã thuốc">
+                  </td>
+                  <td>
+                    <input type="text" class="form-control-custom text-center" placeholder="Viên/Chai">
+                  </td>
+                  <td>
+                    <input type="number" class="form-control-custom text-center" placeholder="SL">
+                  </td>
+                  <td>
+                    <input type="text" class="form-control-custom text-end" placeholder="Đơn giá">
+                  </td>
+                  <td>
+                    <input type="text" class="form-control-custom text-end bg-light" placeholder="0 đ" readonly>
+                  </td>
+                  <td>
+                    <input type="text" class="form-control-custom" placeholder="Nhập liều & cách dùng...">
+                  </td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-link text-primary p-0" title="Thêm"><i class="bi bi-plus-circle fs-6"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="text-end text-dark">
+                    <i class="bi bi-calculator-fill text-primary me-1"></i>
+                    Giá thuốc dự kiến (Tạm tính - Gửi Kế toán xử lý):
+                  </td>
+                  <td class="text-end text-success fs-6">430.500 đ</td>
+                  <td colspan="2" class="text-muted small">04 loại thuốc</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="alert alert-light border py-2 px-3 mt-2 mb-0 d-flex align-items-center justify-content-between small rounded-3">
+            <div>
+              <i class="bi bi-send-check text-primary me-1"></i>
+              <strong>Đã đồng bộ sang Kế toán:</strong> Thông tin đơn thuốc &amp; <strong>Giá thuốc dự kiến (Tạm tính)</strong> sẽ tự động gửi sang bộ phận Kế toán xử lý khi bệnh nhân chọn thanh toán mua thuốc tại quầy.
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Lời dặn và Lưu ý đặc biệt -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label-custom">Lời dặn của Bác sĩ điều trị:</label>
+            <textarea class="form-control-custom" rows="3" placeholder="Ví dụ: Cắn chặt bông gòn trong 45-60 phút. Tuyệt đối không khạc nhổ, không mút chíp vết thương, không súc miệng nước muối trong 24 giờ đầu. Ăn thức ăn mềm, nguội...">Cắn chặt bông gòn trong 45-60 phút. Tuyệt đối không khạc nhổ, không mút chíp vết thương, không súc miệng nước muối trong 24 giờ đầu. Chườm đá lạnh ngoài má ngày đầu giảm sưng. Ăn thức ăn lỏng, nguội, mềm. Tái khám điều trị tủy đợt tiếp theo sau 7 ngày.</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label-custom">Lưu ý / Tiền sử đặc biệt:</label>
+            <textarea class="form-control-custom" rows="3" placeholder="Ví dụ: Dị ứng thuốc, tiền sử bệnh nền dạ dày, mang thai hoặc đang cho con bú...">Tiền sử dạ dày nhẹ — uống Ibuprofen sau khi ăn no. Nếu xuất hiện đau nhức dữ dội hoặc sốt cao > 38.5°C liên hệ hotline 1900 6868 ngay.</textarea>
+          </div>
+        </div>
+
+        <!-- 7. Tái khám, Cân nặng, Người giám hộ -->
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label-custom">Tái khám sau (ngày):</label>
+            <div class="input-group">
+              <input type="number" class="form-control-custom" value="7" min="0" max="90">
+              <span class="input-group-text bg-light text-muted" style="border: 1px solid var(--border-medium); border-left: none; font-size: 13px;">ngày</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Cân nặng (kg):</label>
+            <div class="input-group">
+              <input type="number" class="form-control-custom" placeholder="VD: 55" value="62" min="0" step="0.5">
+              <span class="input-group-text bg-light text-muted" style="border: 1px solid var(--border-medium); border-left: none; font-size: 13px;">kg</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Người giám hộ (nếu bé &lt; 6 tuổi):</label>
+            <input type="text" class="form-control-custom" placeholder="Họ tên — SĐT — quan hệ">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-action-bar">
+      <div class="d-flex align-items-center gap-2 small text-muted">
+        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Bản nháp đang soạn</span>
+        <span>Mã phiên kê đơn: <strong>RX-DRAFT-2026-089</strong></span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn-outline-secondary">
+          <i class="bi bi-x-circle"></i>
+          Hủy bỏ
+        </button>
+        <button type="button" class="btn-outline-secondary">
+          <i class="bi bi-bookmark"></i>
+          Lưu bản nháp
+        </button>
+        <a href="prescription_print_view.html" class="df-btn-white-plan">
+          <i class="bi bi-printer text-primary"></i>
+          Xem trước bản in (A5)
+        </a>
+        <button type="button" class="df-btn-add-plan">
+          <i class="bi bi-check-circle-fill"></i>
+          Lưu &amp; Ký số đơn thuốc
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>

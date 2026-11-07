@@ -106,11 +106,11 @@ public class EmrPageController {
                 () -> service.lock(session, recordId));
     }
 
-    @PostMapping("/{recordId}/doctor-sign-test")
+    @PostMapping(path = {"/{recordId}/doctor-sign", "/{recordId}/doctor-sign-test"})
     public String doctorSign(HttpSession session, @PathVariable Long recordId,
             @RequestParam(defaultValue = "false") boolean confirmed, RedirectAttributes redirect) {
-        return run(recordId, redirect, "Đã hoàn tất chữ ký thử nghiệm của bác sĩ.",
-                () -> service.doctorSignForTest(session, recordId, confirmed));
+        return run(recordId, redirect, "Đã hoàn tất chứng thực chữ ký số của bác sĩ điều trị.",
+                () -> service.doctorSign(session, recordId, confirmed));
     }
 
     @PostMapping("/{recordId}/amendments")
