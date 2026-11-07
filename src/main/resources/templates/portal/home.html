@@ -179,7 +179,7 @@
                          th:each="svc, stat : ${portalServices}"
                          th:with="promo=${servicePromotions != null ? servicePromotions[svc.serviceId] : null},
                                   listedPrice=${(svc.basePrice != null ? svc.basePrice : T(java.math.BigDecimal).ZERO).add(svc.surchargeAmount != null ? svc.surchargeAmount : T(java.math.BigDecimal).ZERO)},
-                                  plainDesc=${@customerPortalService != null ? @customerPortalService.plainTextSummary(svc.description, 105) : svc.description}"
+                                  plainDesc=${@customerPortalServiceImpl.plainTextSummary(svc.description, 105)}"
                          th:attr="data-service-category=${svc.category != null ? 'cat-' + svc.category.categoryId : 'cat-other'},
                                   data-initial-visible=${stat.index < 5 ? 'true' : 'false'}"
                          th:classappend="${stat.index >= 5} ? 'is-hidden' : ''">
@@ -220,7 +220,7 @@
                         <div class="cv-service-cell__footer">
                             <button type="button"
                                     data-open-booking
-                                    th:attr="data-service-name=${svc.serviceName}"
+                                    th:attr="data-service-name=${svc.serviceName}, data-service-id=${svc.serviceId}"
                                     class="cv-service-cell__link">
                                 Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
                             </button>
@@ -372,7 +372,10 @@
                         <a th:href="@{/doctors/{id}(id=${doc.staffId})}" class="cv-service-cell__link" style="margin-top:0;">
                             Hồ sơ &amp; Lịch trực <span aria-hidden="true">&rarr;</span>
                         </a>
-                        <button type="button" data-open-booking class="cv-btn cv-btn--primary" style="padding: 0.42rem 0.9rem; font-size: 0.78rem;">
+                        <button type="button"
+                                data-open-booking
+                                th:attr="data-doctor-id=${doc.staffId}, data-doctor-name=${doc.fullName}"
+                                class="cv-btn cv-btn--primary" style="padding: 0.42rem 0.9rem; font-size: 0.78rem;">
                             Đặt lịch
                         </button>
                     </div>
@@ -433,7 +436,7 @@
                         <p class="cv-news-lead__summary"
                            th:text="${leadNews.summary != null and !#strings.isEmpty(leadNews.summary)
                                    ? leadNews.summary
-                                   : (@customerPortalService != null ? @customerPortalService.plainTextSummary(leadNews.content, 220) : 'Cập nhật kiến thức nha khoa và hướng dẫn chăm sóc răng miệng chuẩn y khoa từ đội ngũ bác sĩ Nha khoa Cường Việt.')}">
+                                   : @customerPortalServiceImpl.plainTextSummary(leadNews.content, 220)}">
                             Tóm tắt nội dung bài viết tiêu điểm...
                         </p>
 
@@ -503,7 +506,7 @@
                             <p class="cv-news-subcard__excerpt"
                                th:text="${item.summary != null and !#strings.isEmpty(item.summary)
                                        ? item.summary
-                                       : (@customerPortalService != null ? @customerPortalService.plainTextSummary(item.content, 110) : '')}">
+                                       : @customerPortalServiceImpl.plainTextSummary(item.content, 110)}">
                                 Tóm tắt ngắn bài viết...
                             </p>
                         </article>
@@ -559,7 +562,7 @@
                             </div>
 
                             <!-- Thông tin chi tiết cơ sở từ DB -->
-                            <div>
+                            <div class="cv-visit__content">
                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                     <p class="cv-section__eyebrow mb-0">
                                         Ghé thăm · <span th:text="${br.branchCode}">CN01</span>
@@ -633,7 +636,7 @@
 
                                     <button type="button"
                                             data-open-booking
-                                            th:attr="data-branch-name=${br.branchName}"
+                                            th:attr="data-branch-id=${br.branchId}, data-branch-name=${br.branchName}"
                                             class="cv-btn cv-btn--card">
                                         <i class="bi bi-calendar2-check" aria-hidden="true"></i>
                                         Đặt lịch tại cơ sở này
@@ -724,112 +727,169 @@
         </button>
     </div>
 
-    <form id="bookingForm" class="cv-drawer__body" novalidate>
+    <form id="bookingForm" class="cv-drawer__form" novalidate>
+        <div class="cv-drawer__body">
+        <!-- Khối hướng dẫn và link đồng bộ sang trang /portal/appointments/new -->
         <div class="cv-drawer__info-box">
-            <p class="mb-2" th:if="${session.loggedInUser != null and isPatientUser}">
-                <strong>Mẹo nhanh:</strong> Bạn đã đăng nhập tài khoản thành viên. Bạn có thể đặt lịch chọn bác sĩ &amp; khung giờ trực tiếp trên hệ thống hoặc điền phiếu tư vấn nhanh bên dưới.
-            </p>
-            <p class="mb-2" th:if="${session.loggedInUser == null}">
-                Điền thông tin bên dưới để lễ tân gọi xác nhận trong giờ làm việc, hoặc đăng nhập để đặt lịch trực tuyến theo khung giờ bác sĩ.
-            </p>
-            <div class="d-flex flex-wrap gap-2">
-                <a th:if="${session.loggedInUser != null and isPatientUser}"
-                   th:href="@{/portal/appointments/new}"
-                   class="cv-btn cv-btn--primary" style="padding: 0.45rem 0.95rem; font-size: 0.8rem;">
-                    <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Vào trang Đặt lịch trực tuyến
-                </a>
-                <a th:if="${session.loggedInUser == null}"
-                   th:href="@{/login}"
-                   class="cv-btn cv-btn--card" style="padding: 0.45rem 0.95rem; font-size: 0.8rem;">
-                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Đăng nhập tài khoản
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span style="font-weight: 700; color: var(--cp-primary); font-size: 12.5px;">
+                    <i class="bi bi-shield-check me-1"></i> Giữ chỗ trực tuyến
+                </span>
+                <a id="bkGoFullPageBtn" th:href="@{/portal/appointments/new}"
+                   class="fw-semibold text-primary" style="font-size: 12px; text-decoration: none;"
+                   title="Xem chi tiết khung giờ trống và chọn slot thời gian chính xác">
+                    Trang đặt lịch đầy đủ <i class="bi bi-arrow-right-short"></i>
                 </a>
             </div>
+            <p class="mb-0" style="font-size: 12.5px; line-height: 1.55; color: var(--cp-ink-soft);">
+                Thông tin bạn chọn bên dưới sẽ được tự động đồng bộ sang trang đặt lịch trực tuyến, hoặc bạn có thể gửi nhanh yêu cầu để lễ tân gọi xác nhận.
+            </p>
         </div>
 
+        <!-- 1. Chi nhánh tiếp nhận -->
         <div class="cv-form-group">
-            <label for="bkName" class="cv-form-label">
-                Họ và tên <span class="text-danger">*</span>
-            </label>
-            <input id="bkName"
-                   name="name"
-                   type="text"
-                   required
-                   th:value="${displayName != null and !#strings.isEmpty(displayName) ? displayName : ''}"
-                   placeholder="Nguyễn Văn A"
-                   class="cv-form-input" />
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label for="bkBranch" class="cv-form-label mb-0">Cơ sở (Chi nhánh) <span class="text-danger">*</span></label>
+                <span id="bkBranchBadge" class="small text-muted text-truncate" style="max-width: 220px; font-size: 11.5px;"></span>
+            </div>
+            <select id="bkBranch" name="branchId" class="cv-form-select" required>
+                <th:block th:if="${branches != null and !#lists.isEmpty(branches)}">
+                    <option th:each="b : ${branches}"
+                            th:value="${b.branchId}"
+                            th:text="${b.branchName}"
+                            th:attr="data-address=${b.address}, data-phone=${b.phone}"
+                            th:selected="${currentPortalBranch != null and currentPortalBranch.branchId == b.branchId}"></option>
+                </th:block>
+                <option th:if="${branches == null or #lists.isEmpty(branches)}" value="" data-phone="0987654321">Cơ sở Nha khoa Cường Việt</option>
+            </select>
         </div>
 
+        <!-- 2. Dịch vụ quan tâm + Nút Chi tiết dịch vụ -->
         <div class="cv-form-group">
-            <label for="bkPhone" class="cv-form-label">
-                Số điện thoại <span class="text-danger">*</span>
-            </label>
-            <input id="bkPhone"
-                   name="phone"
-                   type="tel"
-                   required
-                   pattern="[0-9\s+.-]{8,15}"
-                   th:value="${defaultPatientProfile != null and defaultPatientProfile.phone != null ? defaultPatientProfile.phone : ''}"
-                   placeholder="0912 345 678"
-                   class="cv-form-input" />
-        </div>
-
-        <div class="cv-form-group">
-            <label for="bkService" class="cv-form-label">Dịch vụ quan tâm</label>
-            <select id="bkService" name="service" class="cv-form-select">
-                <option value="Khám & tư vấn tổng quát">Khám &amp; tư vấn tổng quát</option>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label for="bkService" class="cv-form-label mb-0">Dịch vụ quan tâm</label>
+                <a id="bkServiceDetailBtn" href="/services" target="_blank" class="cv-btn-link-detail" style="display: none;">
+                    <i class="bi bi-box-arrow-up-right"></i> Chi tiết
+                </a>
+            </div>
+            <select id="bkService" name="serviceId" class="cv-form-select">
+                <option value="" data-url="/services" data-name="Khám & tư vấn tổng quát">Khám &amp; tư vấn tổng quát (Chưa chọn dịch vụ cụ thể)</option>
                 <th:block th:if="${portalServices != null and !#lists.isEmpty(portalServices)}">
                     <option th:each="svc : ${portalServices}"
-                            th:value="${svc.serviceName}"
-                            th:text="${svc.serviceName}">Tên dịch vụ</option>
+                            th:value="${svc.serviceId}"
+                            th:text="${svc.serviceName}"
+                            th:attr="data-url=@{/services/{id}(id=${svc.serviceId})}, data-name=${svc.serviceName}">Tên dịch vụ</option>
                 </th:block>
             </select>
         </div>
 
+        <!-- 3. Ngày mong muốn & Buổi khám -->
         <div class="cv-form-row-2">
             <div>
-                <label for="bkDate" class="cv-form-label">Ngày mong muốn</label>
-                <input id="bkDate" name="date" type="date" class="cv-form-input" />
+                <label for="bkDate" class="cv-form-label">Ngày mong muốn <span class="text-danger">*</span></label>
+                <input id="bkDate" name="date" type="date" class="cv-form-input" required />
             </div>
             <div>
-                <label for="bkSession" class="cv-form-label">Khung giờ</label>
-                <select id="bkSession" name="session" class="cv-form-select">
-                    <option value="Buổi chiều (17:00 – 18:30)">17:00 – 18:30</option>
-                    <option value="Buổi tối (18:30 – 20:00)">18:30 – 20:00</option>
-                    <option value="Cuối tuần – Buổi sáng (08:00 – 11:30)">Cuối tuần · Sáng</option>
-                    <option value="Cuối tuần – Buổi chiều (14:00 – 17:00)">Cuối tuần · Chiều</option>
+                <label for="bkSession" class="cv-form-label">Buổi khám <span class="text-danger">*</span></label>
+                <select id="bkSession" name="session" class="cv-form-select" required>
+                    <option value="MORNING">Buổi sáng (08:00 – 12:00)</option>
+                    <option value="AFTERNOON" selected>Buổi chiều (13:30 – 17:30)</option>
+                    <option value="EVENING">Buổi tối (18:00 – 20:00)</option>
                 </select>
             </div>
         </div>
 
+        <!-- 4. Bác sĩ đích danh & Giờ hẹn dự kiến -->
+        <div class="cv-form-row-2">
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="bkDoctor" class="cv-form-label mb-0">Bác sĩ đích danh</label>
+                </div>
+                <select id="bkDoctor" name="doctorId" class="cv-form-select">
+                    <option value="">Không yêu cầu bác sĩ</option>
+                </select>
+            </div>
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="bkSlotTime" class="cv-form-label mb-0">Giờ hẹn dự kiến</label>
+                </div>
+                <select id="bkSlotTime" name="slotTime" class="cv-form-select">
+                    <option value="">Linh hoạt trong ca</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Thông báo kiểm tra lịch trực và khả năng tiếp nhận theo chính sách -->
+        <div id="bkAvailabilityNotice" class="cv-drawer__notice" style="display: none;"></div>
+
+        <!-- 5. Thông tin bệnh nhân -->
+        <div class="cv-form-row-2">
+            <div>
+                <label for="bkName" class="cv-form-label">
+                    Họ và tên <span class="text-danger">*</span>
+                </label>
+                <input id="bkName"
+                       name="name"
+                       type="text"
+                       required
+                       th:value="${displayName != null and !#strings.isEmpty(displayName) ? displayName : ''}"
+                       placeholder="Nguyễn Văn A"
+                       class="cv-form-input" />
+            </div>
+            <div>
+                <label for="bkPhone" class="cv-form-label">
+                    Số điện thoại <span class="text-danger">*</span>
+                </label>
+                <input id="bkPhone"
+                       name="phone"
+                       type="tel"
+                       required
+                       pattern="[0-9\s+.-]{8,15}"
+                       th:value="${defaultPatientProfile != null and defaultPatientProfile.phoneNumber != null ? defaultPatientProfile.phoneNumber : (session.loggedInUser != null and session.loggedInUser.phoneNumber != null ? session.loggedInUser.phoneNumber : '')}"
+                       placeholder="0912 345 678"
+                       class="cv-form-input" />
+            </div>
+        </div>
+
         <div class="cv-form-group">
-            <label for="bkNote" class="cv-form-label">Ghi chú triệu chứng (không bắt buộc)</label>
+            <label for="bkNote" class="cv-form-label">Lý do đến khám / Triệu chứng ban đầu</label>
             <textarea id="bkNote"
                       name="note"
-                      rows="3"
-                      placeholder="Ví dụ: đau răng hàm dưới bên phải, muốn khám cho bé 7 tuổi..."
+                      rows="2"
+                      placeholder="Ví dụ: đau buốt răng hàm dưới, kiểm tra khớp cắn, tư vấn niềng răng..."
                       class="cv-form-textarea"></textarea>
         </div>
 
         <p id="bookingError" class="cv-drawer__error" role="alert"></p>
 
         <div id="bookingSuccess" class="cv-drawer__success">
-            <p class="cv-drawer__success-title">Đã ghi nhận thông tin đặt lịch</p>
+            <p class="cv-drawer__success-title">
+                <i class="bi bi-check-circle-fill me-1"></i> Đã ghi nhận thông tin đặt lịch
+            </p>
             <p id="bookingSummary" class="cv-drawer__success-desc"></p>
-            <p style="margin-top: 0.75rem; margin-bottom: 0; font-size: 0.76rem; color: var(--cv-ink-muted);">
-                Cần xác nhận gấp? Gọi trực tiếp:
-                <a th:href="'tel:' + ${effectivePhone}"
+            <div id="bookingActionNext" class="mt-2" style="display: none;">
+                <a id="bookingNextLink" href="/portal/appointments/new" class="cv-btn cv-btn--primary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">
+                    Mở chi tiết lịch hẹn
+                </a>
+            </div>
+            <p style="margin-top: 0.75rem; margin-bottom: 0; font-size: 0.78rem; color: var(--cv-ink-muted);">
+                Cần xác nhận lịch gấp? Gọi trực tiếp cơ sở:
+                <a id="bookingBranchPhoneCall" th:href="'tel:' + ${effectivePhone}"
                    style="font-weight: 700; color: var(--cv-primary); text-decoration: underline;"
                    th:text="${effectivePhone}">0987654321</a>
             </p>
         </div>
+        </div>
 
         <div class="cv-drawer__foot">
-            <button type="submit" class="cv-btn cv-btn--primary" style="width: 100%; padding: 0.82rem 1.25rem;">
-                Gửi yêu cầu đặt lịch
+            <button type="submit" id="bkSubmitBtn" class="cv-btn cv-btn--primary" style="width: 100%; padding: 0.82rem 1.25rem;">
+                <span id="bkSubmitSpinner" class="spinner-border spinner-border-sm me-1" style="display: none;" role="status" aria-hidden="true"></span>
+                <i id="bkSubmitIcon" class="bi bi-send-check me-1"></i>
+                <span id="bkSubmitText">Gửi yêu cầu đặt lịch</span>
             </button>
             <p class="cv-drawer__foot-note">
-                Hoặc gọi nhanh
-                <a th:href="'tel:' + ${effectivePhone}"
+                Hoặc liên hệ hotline:
+                <a id="bookingFootPhoneCall" th:href="'tel:' + ${effectivePhone}"
                    style="font-weight: 600; color: var(--cv-ink-muted); text-decoration: underline;"
                    th:text="${effectivePhone}">0987654321</a>
             </p>
@@ -837,11 +897,20 @@
     </form>
 </aside>
 
+<!-- FLOATING TOAST NOTIFICATION -->
+<div id="bookingToast" class="cv-toast" role="alert" aria-live="assertive">
+    <div class="cv-toast__icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="cv-toast__content">
+        <h4 class="cv-toast__title">Đặt lịch thành công!</h4>
+        <p class="cv-toast__desc" id="bookingToastDesc">Yêu cầu đặt lịch đã được ghi nhận vào hệ thống.</p>
+    </div>
+    <button type="button" class="cv-toast__close" id="bookingToastClose" aria-label="Đóng"><i class="bi bi-x"></i></button>
+</div>
+
 <!-- ===================================================================== -->
 <!-- JAVASCRIPT TƯƠNG TÁC: LỌC DỊCH VỤ, SLIDER CƠ SỞ, ĐỔI CƠ SỞ & DRAWER   -->
 <!-- ===================================================================== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/header.js}"></script>
 <script>
     (function () {
         // 1. Bộ lọc danh mục dịch vụ (Hiển thị tối đa 5 dịch vụ + ô CTA thứ 6 và đánh lại số thứ tự 01..05)
@@ -978,18 +1047,37 @@
             });
         }
 
-        // 4. Slide-over Drawer đặt lịch nhanh
+        // 4. Slide-over Drawer đặt lịch nhanh & Đồng bộ với /portal/appointments/new
         const drawer = document.getElementById('bookingDrawer');
         const overlay = document.getElementById('bookingOverlay');
         const openBtns = document.querySelectorAll('[data-open-booking]');
         const closeBtns = document.querySelectorAll('[data-close-booking]');
+        const branchSelect = document.getElementById('bkBranch');
+        const branchBadge = document.getElementById('bkBranchBadge');
         const serviceSelect = document.getElementById('bkService');
+        const serviceDetailBtn = document.getElementById('bkServiceDetailBtn');
+        const doctorSelect = document.getElementById('bkDoctor');
+        const slotSelect = document.getElementById('bkSlotTime');
+        const noticeEl = document.getElementById('bkAvailabilityNotice');
         const dateInput = document.getElementById('bkDate');
+        const sessionSelect = document.getElementById('bkSession');
         const nameInput = document.getElementById('bkName');
+        const phoneInput = document.getElementById('bkPhone');
+        const noteInput = document.getElementById('bkNote');
         const form = document.getElementById('bookingForm');
         const errorEl = document.getElementById('bookingError');
         const successBox = document.getElementById('bookingSuccess');
         const summaryEl = document.getElementById('bookingSummary');
+        const goFullPageBtn = document.getElementById('bkGoFullPageBtn');
+        const branchPhoneCall = document.getElementById('bookingBranchPhoneCall');
+        const footPhoneCall = document.getElementById('bookingFootPhoneCall');
+        const submitBtn = document.getElementById('bkSubmitBtn');
+        const actionNext = document.getElementById('bookingActionNext');
+        const nextLink = document.getElementById('bookingNextLink');
+
+        let targetDoctorId = null;
+        let targetDoctorName = null;
+        let availSequence = 0;
 
         if (dateInput) {
             const today = new Date();
@@ -997,19 +1085,295 @@
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             dateInput.min = `${yyyy}-${mm}-${dd}`;
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + 90);
+            const maxY = maxDate.getFullYear();
+            const maxM = String(maxDate.getMonth() + 1).padStart(2, '0');
+            const maxD = String(maxDate.getDate()).padStart(2, '0');
+            dateInput.max = `${maxY}-${maxM}-${maxD}`;
             if (!dateInput.value) dateInput.value = `${yyyy}-${mm}-${dd}`;
         }
 
-        function openBooking(preselectService) {
+        // Cập nhật URL đồng bộ sang trang /portal/appointments/new với các query parameters
+        function updateFullAppointmentUrl() {
+            const params = new URLSearchParams();
+            if (branchSelect && branchSelect.value) params.set('branchId', branchSelect.value);
+            if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+            if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
+            if (dateInput && dateInput.value) params.set('date', dateInput.value);
+            if (sessionSelect && sessionSelect.value) params.set('session', sessionSelect.value);
+
+            const queryString = params.toString();
+            const fullUrl = '/portal/appointments/new' + (queryString ? '?' + queryString : '');
+            if (goFullPageBtn) goFullPageBtn.href = fullUrl;
+            if (nextLink) nextLink.href = fullUrl;
+        }
+
+        // Cập nhật thông tin chi tiết dịch vụ (link chi tiết cạnh dropdown)
+        function updateServiceDetailLink() {
+            if (!serviceSelect || !serviceDetailBtn) return;
+            const opt = serviceSelect.options[serviceSelect.selectedIndex];
+            const url = opt ? opt.getAttribute('data-url') : null;
+            if (url && serviceSelect.value) {
+                serviceDetailBtn.href = url;
+                serviceDetailBtn.style.display = 'inline-flex';
+            } else {
+                serviceDetailBtn.style.display = 'none';
+            }
+        }
+
+        // Cập nhật hotline và badge khi đổi cơ sở
+        function updateBranchInfo() {
+            if (!branchSelect) return;
+            const opt = branchSelect.options[branchSelect.selectedIndex];
+            if (opt) {
+                const address = opt.getAttribute('data-address');
+                const phone = opt.getAttribute('data-phone') || '0987654321';
+                if (branchBadge) branchBadge.textContent = address || '';
+                if (branchPhoneCall) {
+                    branchPhoneCall.textContent = phone;
+                    branchPhoneCall.href = 'tel:' + phone;
+                }
+                if (footPhoneCall) {
+                    footPhoneCall.textContent = phone;
+                    footPhoneCall.href = 'tel:' + phone;
+                }
+            }
+        }
+
+        // Kiểm tra khung giờ trống (Slots) dựa trên dịch vụ & bác sĩ
+        async function loadSlots(seq) {
+            if (!slotSelect || !branchSelect || !dateInput || !sessionSelect) return;
+            const branchId = branchSelect.value;
+            const dateVal = dateInput.value;
+            const sessionVal = sessionSelect.value;
+            if (!branchId || !dateVal || !sessionVal) return;
+
+            const prevValue = slotSelect.value;
+            slotSelect.disabled = true;
+            slotSelect.innerHTML = '<option value="">Đang tải giờ trống...</option>';
+
+            try {
+                const params = new URLSearchParams({
+                    branchId: branchId,
+                    date: dateVal,
+                    sessionPeriod: sessionVal
+                });
+                if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
+                if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+
+                const res = await fetch(`/api/public/booking/slots?${params.toString()}`);
+                if (seq !== availSequence) return;
+                const list = await res.json().catch(() => []);
+
+                slotSelect.innerHTML = '<option value="">Linh hoạt trong ca (Khám theo thứ tự đến)</option>';
+                if (Array.isArray(list) && list.length > 0) {
+                    list.forEach(slot => {
+                        const opt = document.createElement('option');
+                        opt.value = slot.time;
+                        opt.textContent = `${slot.time} · còn ${slot.remaining} chỗ`;
+                        slotSelect.appendChild(opt);
+                    });
+                    if (prevValue && list.some(s => s.time === prevValue)) {
+                        slotSelect.value = prevValue;
+                    }
+                    slotSelect.disabled = false;
+                } else {
+                    slotSelect.disabled = false;
+                }
+            } catch (err) {
+                if (seq === availSequence) {
+                    slotSelect.innerHTML = '<option value="">Linh hoạt trong ca</option>';
+                    slotSelect.disabled = false;
+                }
+            }
+        }
+
+        // Kiểm tra khả năng tiếp nhận và lịch làm việc của Bác sĩ (Availability)
+        async function checkAvailability() {
+            const seq = ++availSequence;
+            if (!branchSelect || !dateInput || !sessionSelect) return;
+            const branchId = branchSelect.value;
+            const dateVal = dateInput.value;
+            const sessionVal = sessionSelect.value;
+
+            if (!branchId || !dateVal || !sessionVal) {
+                if (noticeEl) noticeEl.style.display = 'none';
+                return;
+            }
+
+            if (noticeEl) {
+                noticeEl.className = 'cv-drawer__notice';
+                noticeEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang kiểm tra lịch trực của bác sĩ và khả năng tiếp nhận...';
+                noticeEl.style.display = 'block';
+            }
+            if (submitBtn) submitBtn.disabled = true;
+            if (doctorSelect) doctorSelect.disabled = true;
+            if (slotSelect) slotSelect.disabled = true;
+
+            try {
+                const params = new URLSearchParams({
+                    branchId: branchId,
+                    date: dateVal,
+                    sessionPeriod: sessionVal
+                });
+                const res = await fetch(`/api/public/booking/availability?${params.toString()}`);
+                if (seq !== availSequence) return;
+                const data = await res.json().catch(() => ({ available: false }));
+
+                if (!data.available) {
+                    if (noticeEl) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (data.reason || 'Cơ sở không nhận lịch trong buổi này.');
+                        noticeEl.style.display = 'block';
+                    }
+                    if (doctorSelect) {
+                        doctorSelect.innerHTML = '<option value="">Chưa có bác sĩ trực buổi này</option>';
+                        doctorSelect.disabled = true;
+                    }
+                    if (slotSelect) {
+                        slotSelect.innerHTML = '<option value="">Không có giờ trống</option>';
+                        slotSelect.disabled = true;
+                    }
+                    if (submitBtn) submitBtn.disabled = true;
+                    return;
+                }
+
+                // Buổi khám hợp lệ & có bác sĩ trực
+                if (doctorSelect) {
+                    doctorSelect.disabled = false;
+                    doctorSelect.innerHTML = '<option value="" data-name="Không yêu cầu bác sĩ">Không yêu cầu bác sĩ (Lễ tân điều phối khi đến)</option>';
+
+                    const doctors = data.doctors || [];
+                    doctors.forEach(doc => {
+                        const opt = document.createElement('option');
+                        opt.value = String(doc.id);
+                        opt.setAttribute('data-name', doc.name);
+                        const spec = doc.specialty ? ` · ${doc.specialty}` : '';
+                        opt.textContent = `${doc.name}${spec} (Còn ${doc.remaining} chỗ)`;
+                        doctorSelect.appendChild(opt);
+                    });
+
+                    // Kiểm tra bác sĩ mà bệnh nhân muốn đặt đích danh
+                    if (targetDoctorId && doctors.some(d => String(d.id) === String(targetDoctorId))) {
+                        doctorSelect.value = String(targetDoctorId);
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-success';
+                            noticeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Bác sĩ <strong>' + (targetDoctorName || 'được chọn') + '</strong> có lịch trực trong buổi này. Còn ' + data.remainingBranch + ' chỗ tiếp nhận.';
+                            noticeEl.style.display = 'block';
+                        }
+                    } else if (targetDoctorId) {
+                        doctorSelect.value = "";
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-warning';
+                            noticeEl.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> <strong>Lưu ý:</strong> Bác sĩ ' + (targetDoctorName ? '<strong>' + targetDoctorName + '</strong> ' : '') + 'không có ca trực vào ngày và buổi này. Bạn có thể đổi sang ngày/buổi khác hoặc chọn bác sĩ đang trực bên dưới.';
+                            noticeEl.style.display = 'block';
+                        }
+                    } else {
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-success';
+                            noticeEl.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> Buổi khám còn <strong>' + data.remainingBranch + ' chỗ</strong> với ' + doctors.length + ' bác sĩ đang trực. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối.';
+                            noticeEl.style.display = 'block';
+                        }
+                    }
+                }
+
+                if (submitBtn) submitBtn.disabled = false;
+                await loadSlots(seq);
+
+            } catch (err) {
+                if (seq === availSequence) {
+                    if (noticeEl) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Không thể kiểm tra khả năng tiếp nhận lúc này. Vui lòng thử lại.';
+                        noticeEl.style.display = 'block';
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            }
+        }
+
+        // Lắng nghe sự kiện thay đổi của các trường trong Drawer để đồng bộ URL & giao diện
+        if (branchSelect) branchSelect.addEventListener('change', () => { updateBranchInfo(); updateFullAppointmentUrl(); checkAvailability(); });
+        if (dateInput) dateInput.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
+        if (sessionSelect) sessionSelect.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
+        if (doctorSelect) doctorSelect.addEventListener('change', () => {
+            targetDoctorId = doctorSelect.value || null;
+            const opt = doctorSelect.options[doctorSelect.selectedIndex];
+            targetDoctorName = opt ? opt.getAttribute('data-name') : null;
+            updateFullAppointmentUrl();
+            loadSlots(availSequence);
+        });
+        if (serviceSelect) serviceSelect.addEventListener('change', () => {
+            updateServiceDetailLink();
+            updateFullAppointmentUrl();
+            loadSlots(availSequence);
+        });
+
+        function openBooking(opts = {}) {
             if (!drawer || !overlay) return;
-            if (preselectService && serviceSelect) {
-                for (let i = 0; i < serviceSelect.options.length; i++) {
-                    if (serviceSelect.options[i].value === preselectService) {
-                        serviceSelect.selectedIndex = i;
+            if (errorEl) errorEl.classList.remove('is-visible');
+            if (successBox) successBox.classList.remove('is-visible');
+            if (actionNext) actionNext.style.display = 'none';
+
+            // 1. Lưu bác sĩ đích danh được chọn từ thẻ ngoài
+            targetDoctorId = opts.doctorId ? String(opts.doctorId) : null;
+            targetDoctorName = opts.doctorName || null;
+
+            // 2. Pre-fill Cơ sở (Branch)
+            if (opts.branchId && branchSelect) {
+                for (let i = 0; i < branchSelect.options.length; i++) {
+                    if (branchSelect.options[i].value === String(opts.branchId)) {
+                        branchSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else if (opts.branchName && branchSelect) {
+                for (let i = 0; i < branchSelect.options.length; i++) {
+                    if (branchSelect.options[i].textContent.includes(opts.branchName)) {
+                        branchSelect.selectedIndex = i;
                         break;
                     }
                 }
             }
+
+            // 3. Pre-fill Dịch vụ (Service)
+            if (serviceSelect) {
+                let matchedSvc = false;
+                if (opts.serviceId) {
+                    for (let i = 0; i < serviceSelect.options.length; i++) {
+                        if (serviceSelect.options[i].value === String(opts.serviceId)) {
+                            serviceSelect.selectedIndex = i;
+                            matchedSvc = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matchedSvc && opts.serviceName) {
+                    for (let i = 0; i < serviceSelect.options.length; i++) {
+                        const nameAttr = serviceSelect.options[i].getAttribute('data-name');
+                        if (serviceSelect.options[i].value === opts.serviceName ||
+                            (nameAttr && nameAttr.toLowerCase() === opts.serviceName.toLowerCase()) ||
+                            serviceSelect.options[i].textContent.toLowerCase().includes(opts.serviceName.toLowerCase())) {
+                            serviceSelect.selectedIndex = i;
+                            matchedSvc = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matchedSvc && !opts.serviceId && !opts.serviceName) {
+                    serviceSelect.selectedIndex = 0;
+                }
+            }
+
+            // Cập nhật lại các liên kết & trạng thái
+            updateBranchInfo();
+            updateServiceDetailLink();
+            updateFullAppointmentUrl();
+
+            // 4. Kích hoạt kiểm tra lịch làm việc của bác sĩ theo ngày và ca được chọn
+            checkAvailability();
+
             drawer.classList.add('is-open');
             overlay.classList.add('is-open');
             document.body.style.overflow = 'hidden';
@@ -1024,9 +1388,23 @@
         }
 
         openBtns.forEach((b) => {
-            b.addEventListener('click', () => {
-                const svc = b.getAttribute('data-service-name');
-                openBooking(svc);
+            b.addEventListener('click', (e) => {
+                e.preventDefault();
+                const serviceId = b.getAttribute('data-service-id');
+                const serviceName = b.getAttribute('data-service-name');
+                const doctorId = b.getAttribute('data-doctor-id');
+                const doctorName = b.getAttribute('data-doctor-name');
+                const branchId = b.getAttribute('data-branch-id');
+                const branchName = b.getAttribute('data-branch-name');
+
+                openBooking({
+                    serviceId: serviceId || null,
+                    serviceName: serviceName || null,
+                    doctorId: doctorId || null,
+                    doctorName: doctorName || null,
+                    branchId: branchId || null,
+                    branchName: branchName || null
+                });
             });
         });
 
@@ -1040,31 +1418,155 @@
             }
         });
 
+        const submitSpinner = document.getElementById('bkSubmitSpinner');
+        const submitIcon = document.getElementById('bkSubmitIcon');
+        const submitText = document.getElementById('bkSubmitText');
+        const toast = document.getElementById('bookingToast');
+        const toastDesc = document.getElementById('bookingToastDesc');
+        const toastClose = document.getElementById('bookingToastClose');
+
+        if (toastClose) {
+            toastClose.addEventListener('click', () => toast && toast.classList.remove('is-visible'));
+        }
+
+        function showToast(message) {
+            if (!toast) return;
+            if (toastDesc) toastDesc.textContent = message;
+            toast.classList.add('is-visible');
+            setTimeout(() => toast && toast.classList.remove('is-visible'), 6000);
+        }
+
+        // Tự động mở drawer nếu URL có query ?openBooking=true
+        if (new URLSearchParams(window.location.search).get('openBooking') === 'true') {
+            setTimeout(() => openBooking(), 300);
+        }
+
         if (form) {
-            form.addEventListener('submit', (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                errorEl.classList.remove('is-visible');
-                const name = form.name.value.trim();
-                const phone = form.phone.value.trim();
-                const service = form.service.value;
-                const date = form.date.value;
-                const session = form.session.value;
+                if (errorEl) errorEl.classList.remove('is-visible');
+                if (successBox) successBox.classList.remove('is-visible');
+
+                const name = nameInput ? nameInput.value.trim() : '';
+                const phone = phoneInput ? phoneInput.value.trim() : '';
+                const branchVal = branchSelect ? branchSelect.value : null;
+                const serviceVal = serviceSelect && serviceSelect.value ? serviceSelect.value : null;
+                const doctorVal = doctorSelect && doctorSelect.value ? doctorSelect.value : null;
+                const dateVal = dateInput ? dateInput.value : '';
+                const sessionVal = sessionSelect ? sessionSelect.value : 'AFTERNOON';
+                const slotVal = slotSelect && slotSelect.value ? slotSelect.value : null;
+                const noteVal = noteInput ? noteInput.value.trim() : '';
 
                 if (!name || !phone) {
-                    errorEl.textContent = 'Vui lòng nhập đầy đủ họ tên và số điện thoại.';
-                    errorEl.classList.add('is-visible');
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng nhập đầy đủ họ tên và số điện thoại liên hệ.';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                     return;
                 }
 
                 const digits = phone.replace(/\D/g, '');
                 if (digits.length < 9 || digits.length > 11) {
-                    errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
-                    errorEl.classList.add('is-visible');
+                    if (errorEl) {
+                        errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                     return;
                 }
 
-                summaryEl.textContent = `Cảm ơn ${name}. Yêu cầu "${service}" vào ${session}${date ? ' ngày ' + date : ''} đã được ghi nhận. Phòng khám sẽ liên hệ qua số ${phone} để xác nhận lịch.`;
-                successBox.classList.add('is-visible');
+                if (!branchVal) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng chọn cơ sở phòng khám.';
+                        errorEl.classList.add('is-visible');
+                    }
+                    return;
+                }
+
+                if (!dateVal) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng chọn ngày khám mong muốn.';
+                        errorEl.classList.add('is-visible');
+                    }
+                    return;
+                }
+
+                // Hiển thị trạng thái loading trên nút submit
+                if (submitBtn) submitBtn.disabled = true;
+                if (submitSpinner) submitSpinner.style.display = 'inline-block';
+                if (submitIcon) submitIcon.style.display = 'none';
+                if (submitText) submitText.textContent = 'Đang lưu yêu cầu...';
+
+                try {
+                    const payload = {
+                        branchId: Number(branchVal),
+                        serviceId: serviceVal ? Number(serviceVal) : null,
+                        doctorId: doctorVal ? Number(doctorVal) : null,
+                        appointmentDate: dateVal,
+                        preferredSession: sessionVal,
+                        slotTime: slotVal || null,
+                        fullName: name,
+                        phoneNumber: phone,
+                        note: noteVal || null
+                    };
+
+                    const response = await fetch('/api/public/booking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || `Lỗi khi lưu lịch hẹn (${response.status}). Vui lòng thử lại.`);
+                    }
+
+                    // Thành công: cập nhật giao diện trong Drawer
+                    const appointmentCode = data.appointmentCode || '';
+                    if (summaryEl) {
+                        summaryEl.innerHTML = `<strong>Mã đặt lịch: <span class="text-primary">${appointmentCode}</span></strong><br>${data.message}`;
+                    }
+                    if (successBox) {
+                        successBox.classList.add('is-visible');
+                        successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+
+                    // Hiển thị Floating Toast trên trang
+                    showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}. Cơ sở sẽ liên hệ lại qua SĐT ${phone}.`);
+
+                    // Reset form fields
+                    if (noteInput) noteInput.value = '';
+
+                    // Nút đổi thành "Đã gửi thành công"
+                    if (submitText) submitText.textContent = 'Đã gửi thành công';
+                    if (submitSpinner) submitSpinner.style.display = 'none';
+                    if (submitIcon) {
+                        submitIcon.className = 'bi bi-check2-all me-1';
+                        submitIcon.style.display = 'inline-block';
+                    }
+
+                    setTimeout(() => {
+                        if (submitBtn) submitBtn.disabled = false;
+                        if (submitText) submitText.textContent = 'Gửi yêu cầu đặt lịch khác';
+                        if (submitIcon) submitIcon.className = 'bi bi-send-check me-1';
+                    }, 4000);
+
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại hoặc gọi hotline.';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (submitSpinner) submitSpinner.style.display = 'none';
+                    if (submitIcon) submitIcon.style.display = 'inline-block';
+                    if (submitText) submitText.textContent = 'Thử lại';
+                }
             });
         }
     })();

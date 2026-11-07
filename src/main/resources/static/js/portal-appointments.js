@@ -191,8 +191,19 @@
             $('symptomsSection').hidden = true;
             $('submitAppointment').textContent = 'Lưu lịch mới';
         } else {
-            const profileParam = new URLSearchParams(location.search).get('profileId');
+            const urlParams = new URLSearchParams(location.search);
+            const profileParam = urlParams.get('profileId');
             if (profileParam && options.profiles.some(p => String(p.id) === profileParam)) $('profileId').value = profileParam;
+            const branchParam = urlParams.get('branchId');
+            if (branchParam && options.branches.some(b => String(b.id) === branchParam)) $('branchId').value = branchParam;
+            const serviceParam = urlParams.get('serviceId');
+            if (serviceParam && options.services.some(s => String(s.id) === serviceParam)) $('serviceId').value = serviceParam;
+            const dateParam = urlParams.get('date');
+            if (dateParam) $('appointmentDate').value = dateParam;
+            const sessionParam = urlParams.get('session');
+            if (sessionParam) $('preferredSession').value = sessionParam;
+            const doctorParam = urlParams.get('doctorId');
+            if (doctorParam) window._initialDoctorParam = doctorParam;
         }
         let available = false;
         let sequence = 0;
@@ -238,6 +249,10 @@
             result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (${d.remaining} chỗ)`)));
             if (current?.requestedDoctorId && result.doctors.some(d => d.id === current.requestedDoctorId))
                 doctor.value = String(current.requestedDoctorId);
+            if (window._initialDoctorParam && result.doctors.some(d => String(d.id) === String(window._initialDoctorParam))) {
+                doctor.value = String(window._initialDoctorParam);
+                window._initialDoctorParam = null;
+            }
             doctor.disabled = false;
             available = true; button.disabled = false;
             message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối khi đến.`;
@@ -251,7 +266,11 @@
         ['doctorId', 'serviceId'].forEach(field => $(field).addEventListener('change', () => {
             if (available) loadSlots(sequence).catch(e => error(e.message));
         }));
-        if (editing) await availability();
+        if (editing) {
+            await availability();
+        } else if ($('branchId').value && $('appointmentDate').value && $('preferredSession').value) {
+            await availability().catch(e => error(e.message));
+        }
         let key = sessionStorage.getItem('ft06-booking-key');
         if (!key) { key = crypto.randomUUID(); sessionStorage.setItem('ft06-booking-key', key); }
         form.addEventListener('submit', async event => {

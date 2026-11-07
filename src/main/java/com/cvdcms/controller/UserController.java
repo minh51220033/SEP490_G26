@@ -99,7 +99,7 @@ public class UserController {
 
             boolean isLoggedIn = session != null && session.getAttribute("loggedInUser") != null;
             String effectivePhone = "0987654321";
-            if (isLoggedIn) {
+            if (isLoggedIn || currentBranch != null) {
                 Branch phoneBranch = currentBranch != null ? currentBranch : customerPortalService.getPrimaryBranch();
                 if (phoneBranch != null && phoneBranch.getPhone() != null && !phoneBranch.getPhone().isBlank()) {
                     effectivePhone = phoneBranch.getPhone().trim();
@@ -118,6 +118,7 @@ public class UserController {
             model.addAttribute("featuredServices", topFeatured);
             model.addAttribute("servicePromotions", customerPortalService.getActiveServicePromotionsMap(targetBranchId));
             model.addAttribute("featuredDoctors", customerPortalService.getFeaturedDoctors(4, targetBranchId));
+            model.addAttribute("allDoctors", customerPortalService.getPublicDoctors(null, null, null));
             model.addAttribute("latestNews", customerPortalService.getLatestPublishedNews(4, targetBranchId));
             model.addAttribute("branches", branches);
         } else {
@@ -128,6 +129,7 @@ public class UserController {
             model.addAttribute("featuredServices", List.of());
             model.addAttribute("servicePromotions", java.util.Map.of());
             model.addAttribute("featuredDoctors", List.of());
+            model.addAttribute("allDoctors", List.of());
             model.addAttribute("latestNews", List.of());
             model.addAttribute("branches", List.of());
         }

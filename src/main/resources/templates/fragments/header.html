@@ -123,14 +123,14 @@
                         <a th:href="@{/register}" class="btn-light-soft">
                             <i class="bi bi-person-plus" aria-hidden="true"></i> Đăng ký
                         </a>
-                        <a th:href="@{/login}" class="btn-brand">
+                        <a th:href="@{/login}" data-open-booking class="btn-brand">
                             <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám
                         </a>
                     </th:block>
 
                     <!-- TRƯỜNG HỢP 2: BỆNH NHÂN ĐÃ ĐĂNG NHẬP (BENH_NHAN) -->
                     <th:block th:if="${session.loggedInUser != null and isPatientUser}">
-                        <a th:href="@{/portal/appointments/new}" class="btn-brand">
+                        <a th:href="@{/portal/appointments/new}" data-open-booking class="btn-brand">
                             <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám
                         </a>
 
