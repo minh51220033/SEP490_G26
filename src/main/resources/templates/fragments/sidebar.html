@@ -8,7 +8,9 @@
         <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
         <div   th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 -->
-<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar>
+<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar
+       th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
+                displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? (session.loggedInUser.fullName != null and !#strings.isEmpty(session.loggedInUser.fullName) ? session.loggedInUser.fullName : session.loggedInUser.username) : '')}">
     <style>
         .side-icon-labo {
             color: #0284c7 !important;
@@ -404,33 +406,76 @@
         </div>
     </nav>
 
-    <!-- CHÂN SIDEBAR: thẻ người dùng + nút thu gọn (desktop) -->
+    <!-- CHÂN SIDEBAR: thẻ người dùng + popup dropup + nút thu gọn (desktop) -->
     <div class="app-sidebar__foot">
-        <div class="app-sidebar__user" th:if="${session.loggedInUser != null}">
-            <span class="user-card__avatar"
-                  th:text="${session.loggedInUser.username != null
-                          and !#strings.isEmpty(session.loggedInUser.username)
-                          ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
-                          : 'U'}">A</span>
-            <span class="user-card__info">
-                <span class="user-card__name"
+        <div class="sidebar-user-dropdown" data-dropdown th:if="${session.loggedInUser != null}">
+            <!-- Nút / Thẻ kích hoạt dropup -->
+            <div class="app-sidebar__user"
+                 data-dropdown-toggle
+                 role="button"
+                 tabindex="0"
+                 aria-label="Tùy chọn tài khoản"
+                 aria-haspopup="true"
+                 aria-expanded="false"
+                 title="Tùy chọn tài khoản &amp; Cài đặt">
+                <span class="user-card__avatar"
                       th:text="${displayName != null and !#strings.isEmpty(displayName)
-                              ? displayName : session.loggedInUser.username}">admin</span>
-                <span class="user-card__role"
-                      th:text="${roleNames != null and !#lists.isEmpty(roleNames)
-                              ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
-            </span>
+                              ? #strings.substring(displayName, 0, 1).toUpperCase()
+                              : (session.loggedInUser.username != null and !#strings.isEmpty(session.loggedInUser.username)
+                                 ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
+                                 : 'U')}">A</span>
+                <span class="user-card__info">
+                    <span class="user-card__name"
+                          th:text="${displayName != null and !#strings.isEmpty(displayName)
+                                  ? displayName : session.loggedInUser.username}">admin</span>
+                    <span class="user-card__role"
+                          th:text="${roleNames != null and !#lists.isEmpty(roleNames)
+                                  ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
+                </span>
 
-            <!-- Nút Thông tin cá nhân -->
-            <a th:href="@{/profile}" class="icon-button" aria-label="Thông tin cá nhân" title="Thông tin cá nhân">
-                <i class="bi bi-person-gear" aria-hidden="true"></i>
-            </a>
+                <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->
+                <span class="icon-button user-card__gear" aria-hidden="true" title="Tùy chọn tài khoản">
+                    <i class="bi bi-person-gear"></i>
+                </span>
 
-            <form th:action="@{/logout}" method="post" class="m-0 user-card__action">
-                <button type="submit" class="icon-button" aria-label="Đăng xuất" title="Đăng xuất">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                </button>
-            </form>
+                <!-- Đăng xuất nhanh (tùy chọn) -->
+                <form th:action="@{/logout}" method="post" class="m-0 user-card__action"
+                      onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()">
+                    <button type="submit" class="icon-button" aria-label="Đăng xuất" title="Đăng xuất">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- POPUP DROPUP MENU (Mở ngược lên trên, hiển thị đủ các chức năng chuẩn DentalSoft/DentalFlow) -->
+            <div class="user-dropup-panel">
+                <div class="user-dropdown__header">
+                    <div class="user-dropdown__name"
+                         th:text="${displayName != null and !#strings.isEmpty(displayName)
+                                 ? displayName : session.loggedInUser.username}">Người dùng</div>
+                    <div class="user-dropdown__role"
+                         th:text="${roleNames != null and !#lists.isEmpty(roleNames)
+                                 ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Vai trò</div>
+                </div>
+
+                <a th:href="@{/profile}" class="dropdown-item-link">
+                    <i class="bi bi-person-vcard" aria-hidden="true"></i> Thông tin cá nhân
+                </a>
+
+                <a th:href="@{/profile/edit}" class="dropdown-item-link">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> Cập nhật tài khoản
+                </a>
+
+                <a th:href="@{/profile/change-password}" class="dropdown-item-link">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i> Đổi mật khẩu
+                </a>
+
+                <form th:action="@{/logout}" method="post" class="m-0">
+                    <button type="submit" class="dropdown-item-link dropdown-item-link--danger w-100 border-0 bg-transparent text-start">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                    </button>
+                </form>
+            </div>
         </div>
 
         <button type="button" class="app-sidebar__collapse" data-sidebar-toggle aria-controls="appSidebar"
