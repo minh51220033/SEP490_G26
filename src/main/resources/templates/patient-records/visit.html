@@ -852,7 +852,10 @@
 
                     <div th:unless="${#lists.isEmpty(snap['photos']) && #lists.isEmpty(snap['xrays'])}" class="dv-photo-grid">
                         <!-- Ảnh lâm sàng -->
-                        <div th:each="photo : ${snap['photos']}" class="dv-photo-card" th:onclick="|openImageModal('${photo['imageUrl']}', '${photo['caption'] != null ? photo['caption'] : 'Ảnh lâm sàng'}')|">
+                        <div th:each="photo : ${snap['photos']}" class="dv-photo-card"
+                             th:data-photo-url="${photo['imageUrl']}"
+                             th:data-photo-caption="${photo['caption'] != null ? photo['caption'] : 'Ảnh lâm sàng'}"
+                             onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
                             <img th:src="${photo['imageUrl']}" src="/images/placeholder-tooth.png" class="dv-photo-img" alt="Ảnh lâm sàng">
                             <div class="dv-photo-meta">
                                 <span class="dv-badge dv-badge-sky mb-1" th:text="${@emrViewText.label(photo['stage'])}">Trước điều trị</span>
@@ -861,7 +864,10 @@
                         </div>
 
                         <!-- Phim X-quang -->
-                        <div th:each="xray : ${snap['xrays']}" class="dv-photo-card" th:onclick="|openImageModal('${xray['imageUrl']}', 'Phim X-quang · ${xray['studyUid']}')|">
+                        <div th:each="xray : ${snap['xrays']}" class="dv-photo-card"
+                             th:data-photo-url="${xray['imageUrl']}"
+                             th:data-photo-caption="'Phim X-quang · ' + ${xray['studyUid']}"
+                             onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
                             <img th:src="${xray['imageUrl']}" src="/images/placeholder-xray.png" class="dv-photo-img" style="filter: contrast(110%);" alt="Phim X-quang">
                             <div class="dv-photo-meta">
                                 <span class="dv-badge dv-badge-rose mb-1">Phim X-quang</span>

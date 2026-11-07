@@ -298,11 +298,11 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border py-1 rounded-3" style="font-size: 13px; min-width: 175px;">
                                 <li><h6 class="dropdown-header text-uppercase text-muted" style="font-size: 10px; letter-spacing: 0.5px;">Cập nhật trạng thái</h6></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:onclick="'updatePlanStatusDirectly(' + ${plan.planId} + ', \'ACCEPTED\')'"><span class="badge bg-info-subtle text-info border">BN đã đồng ý</span></a></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:onclick="'updatePlanStatusDirectly(' + ${plan.planId} + ', \'IN_PROGRESS\')'"><span class="badge bg-primary-subtle text-primary border">Đang điều trị</span></a></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:onclick="'updatePlanStatusDirectly(' + ${plan.planId} + ', \'COMPLETED\')'"><span class="badge bg-success-subtle text-success border">Hoàn thành phác đồ</span></a></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'ACCEPTED')"><span class="badge bg-info-subtle text-info border">BN đã đồng ý</span></a></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'IN_PROGRESS')"><span class="badge bg-primary-subtle text-primary border">Đang điều trị</span></a></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'COMPLETED')"><span class="badge bg-success-subtle text-success border">Hoàn thành phác đồ</span></a></li>
                                 <li><hr class="dropdown-divider my-1"></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" th:onclick="'updatePlanStatusDirectly(' + ${plan.planId} + ', \'CANCELLED\')'"><span class="badge bg-danger-subtle text-danger border">Hủy kế hoạch</span></a></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'CANCELLED')"><span class="badge bg-danger-subtle text-danger border">Hủy kế hoạch</span></a></li>
                             </ul>
                         </div>
                     </td>
