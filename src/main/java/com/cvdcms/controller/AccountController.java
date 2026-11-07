@@ -9,6 +9,7 @@ import com.cvdcms.entity.Role;
 import com.cvdcms.entity.StaffBranchAssignment;
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.PatientProfile;
+import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.UserType;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
@@ -241,6 +242,17 @@ public class AccountController {
                 // Họ tên hiển thị theo từng tài khoản (nhân sự / bệnh nhân / admin)
                 model.addAttribute("displayNames", buildDisplayNames(accountPage.getContent()));
 
+                // Số liệu KPI tổng quan (Đồng bộ chuẩn /doctor/daily-visits)
+                long totalUsers = userRepository.count();
+                long activeUsers = userRepository.countByIsActive(true);
+                long inactiveUsers = userRepository.countByIsActive(false);
+                long staffUsers = userRepository.countByUserType(UserType.STAFF);
+
+                model.addAttribute("totalUsersCount", totalUsers);
+                model.addAttribute("activeUsersCount", activeUsers);
+                model.addAttribute("inactiveUsersCount", inactiveUsers);
+                model.addAttribute("staffUsersCount", staffUsers);
+
                 return "account/list";
         }
 
@@ -249,7 +261,10 @@ public class AccountController {
         // =========================================================
 
         @GetMapping("/create")
-        public String showCreateForm(HttpSession session, Model model) {
+        public String showCreateForm(
+                        @RequestParam(value = "staffId", required = false) Long staffId,
+                        HttpSession session,
+                        Model model) {
 
                 requireAdmin(session);
 
@@ -258,9 +273,34 @@ public class AccountController {
                 addLayoutAttributes(session, model);
                 model.addAttribute("isAdmin", isAdmin(currentUser));
 
-                model.addAttribute(
-                                "accountCreateDTO",
-                                new AccountCreateDTO());
+                AccountCreateDTO dto = new AccountCreateDTO();
+                StaffProfile linkedStaff = null;
+                if (staffId != null) {
+                        linkedStaff = staffProfileRepository.findById(staffId).orElse(null);
+                        if (linkedStaff != null) {
+                                dto.setEmail(linkedStaff.getEmail());
+                                dto.setPhoneNumber(linkedStaff.getPhoneNumber());
+                                if (linkedStaff.getStaffCode() != null) {
+                                        dto.setUsername(linkedStaff.getStaffCode().toLowerCase());
+                                }
+                                List<StaffBranchAssignment> assignments = staffBranchAssignmentRepository.findByStaffId(staffId);
+                                StaffBranchAssignment primary = assignments.stream()
+                                                .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()) && a.getStatus() == AssignmentStatus.ACTIVE)
+                                                .findFirst()
+                                                .orElse(null);
+                                if (primary != null) {
+                                        if (primary.getBranch() != null) {
+                                                dto.setBranchId(primary.getBranch().getBranchId());
+                                        }
+                                        if (primary.getRole() != null && primary.getRole().getRoleId() != null) {
+                                                dto.setRoleId(primary.getRole().getRoleId().intValue());
+                                        }
+                                }
+                        }
+                }
+
+                model.addAttribute("accountCreateDTO", dto);
+                model.addAttribute("linkedStaff", linkedStaff);
 
                 model.addAttribute(
                                 "roles",
@@ -281,7 +321,9 @@ public class AccountController {
         @PostMapping("/create")
         public String createAccount(
                         @ModelAttribute AccountCreateDTO dto,
+                        @RequestParam(value = "staffId", required = false) Long staffId,
                         HttpSession session,
+                        RedirectAttributes redirectAttributes,
                         Model model) {
 
                 User currentUser = (User) session.getAttribute("loggedInUser");
@@ -311,7 +353,18 @@ public class AccountController {
                         // Chỉ Quản trị viên được tạo tài khoản.
                         requireAdmin(session);
 
-                        accountService.createAccount(dto);
+                        User createdUser = accountService.createAccount(dto);
+
+                        // Nếu tạo tài khoản từ hồ sơ nhân sự -> tự động liên kết ngay và quay lại trang chi tiết nhân sự
+                        if (staffId != null) {
+                                staffProfileRepository.findById(staffId).ifPresent(staff -> {
+                                        staff.setUser(createdUser);
+                                        staffProfileRepository.save(staff);
+                                });
+                                redirectAttributes.addFlashAttribute("successMessage",
+                                                "Đã tạo tài khoản thành công và tự động liên kết với hồ sơ nhân sự!");
+                                return "redirect:/admin/staffs/" + staffId;
+                        }
 
                         return "redirect:/accounts?success=created";
 
@@ -321,6 +374,7 @@ public class AccountController {
                         addLayoutAttributes(session, model);
                         model.addAttribute("error", e.getMessage());
                         model.addAttribute("accountCreateDTO", dto);
+                        model.addAttribute("linkedStaff", staffId != null ? staffProfileRepository.findById(staffId).orElse(null) : null);
                         model.addAttribute("roles", roleRepository.findAllWithPermissions());
                         model.addAttribute("isAdmin", isAdmin(currentUser));
                         model.addAttribute("branches", branchRepository.findByIsActiveTrueOrderByBranchNameAsc());
@@ -365,14 +419,14 @@ public class AccountController {
                 StaffProfile linkedStaff = staffProfileRepository.findByUser_UserId(id).orElse(null);
                 boolean hasStaffProfile = linkedStaff != null;
                 boolean hasPatientProfile = user.getPatientProfiles() != null && !user.getPatientProfiles().isEmpty();
-                boolean isTargetPatient = hasPatientProfile
+                boolean isTargetPatient = !hasStaffProfile && (hasPatientProfile
                                 || user.getUserType() == UserType.PATIENT
                                 || (user.getRoles() != null && user.getRoles().stream()
                                                 .anyMatch(r -> r.getRoleName() != null && (r.getRoleName()
                                                                 .equalsIgnoreCase("BENH_NHAN")
                                                                 || r.getRoleName().equalsIgnoreCase("ROLE_BENH_NHAN")
                                                                 || r.getRoleName().equalsIgnoreCase("PATIENT")
-                                                                || r.getRoleName().equalsIgnoreCase("ROLE_PATIENT"))));
+                                                                || r.getRoleName().equalsIgnoreCase("ROLE_PATIENT")))));
                 boolean roleLocked = isSelf || isTargetAdmin || isTargetPatient;
 
                 String roleLockedReason = null;
@@ -533,14 +587,15 @@ public class AccountController {
                 boolean isTargetAdmin = isAdmin(user);
 
                 StaffProfile linkedStaff = staffProfileRepository.findByUser_UserId(user.getUserId()).orElse(null);
+                boolean hasStaffProfile = linkedStaff != null;
                 boolean hasPatientProfile = user.getPatientProfiles() != null && !user.getPatientProfiles().isEmpty();
-                boolean isTargetPatient = hasPatientProfile
+                boolean isTargetPatient = !hasStaffProfile && (hasPatientProfile
                                 || user.getUserType() == UserType.PATIENT
                                 || (user.getRoles() != null && user.getRoles().stream().anyMatch(r ->
                                                 r.getRoleName() != null && (r.getRoleName().equalsIgnoreCase("BENH_NHAN")
                                                                 || r.getRoleName().equalsIgnoreCase("ROLE_BENH_NHAN")
                                                                 || r.getRoleName().equalsIgnoreCase("PATIENT")
-                                                                || r.getRoleName().equalsIgnoreCase("ROLE_PATIENT"))));
+                                                                || r.getRoleName().equalsIgnoreCase("ROLE_PATIENT")))));
                 boolean roleLocked = isSelf || isTargetAdmin || isTargetPatient;
 
                 String roleLockedReason = null;
@@ -764,14 +819,21 @@ public class AccountController {
                                                 .anyMatch(n -> n.equalsIgnoreCase("ADMIN")
                                                                 || n.equalsIgnoreCase("ROLE_ADMIN"));
 
-                boolean linkedStaff = staffProfileRepository.existsByUserUserId(account.getUserId());
+                java.util.Optional<StaffProfile> linkedStaffOpt = staffProfileRepository.findByUserUserId(account.getUserId());
+                boolean linkedStaff = linkedStaffOpt.isPresent();
+                Long linkedStaffId = linkedStaff ? linkedStaffOpt.get().getStaffId() : null;
 
-                model.addAttribute("branchLocked", adminAccount || linkedStaff);
-                model.addAttribute(
-                                "branchLockedReason",
-                                adminAccount
-                                                ? "Quản trị viên là cấp toàn hệ thống nên không gán chi nhánh."
-                                                : "Tài khoản đã có hồ sơ nhân sự - chi nhánh được quản lý ở phần Phân công chi nhánh (Quản lý nhân sự).");
+                boolean branchLocked = adminAccount || linkedStaff;
+                String branchLockedReason = adminAccount
+                                ? "Quản trị viên là cấp toàn hệ thống nên không gán chi nhánh."
+                                : (linkedStaff
+                                                ? "Chi nhánh được quản lý theo phân công công tác trong Hồ sơ nhân sự."
+                                                : null);
+
+                model.addAttribute("branchLocked", branchLocked);
+                model.addAttribute("branchLockedReason", branchLockedReason);
+                model.addAttribute("linkedStaff", linkedStaff);
+                model.addAttribute("linkedStaffId", linkedStaffId);
         }
 
 }

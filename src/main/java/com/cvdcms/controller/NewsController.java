@@ -84,12 +84,10 @@ public class NewsController {
         List<Branch> activeBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
 
         String searchKeyword = keyword == null ? "" : keyword.trim();
-        User sessionUser = (User) session.getAttribute("loggedInUser");
-        Long targetBranchId = branchId;
+        User sessionUser = session != null ? (User) session.getAttribute("loggedInUser") : null;
+        Long userScopedBranchId = null;
 
-        // Nếu người dùng không chỉ định branchId cụ thể và đang đăng nhập:
-        // Cố gắng lấy chi nhánh mặc định của bệnh nhân hoặc cơ sở của nhân viên
-        if (targetBranchId == null && sessionUser != null) {
+        if (sessionUser != null) {
             User currentUser = userRepository.findById(sessionUser.getUserId()).orElse(null);
             if (currentUser != null) {
                 PatientProfile profile = patientProfileRepository
@@ -97,12 +95,18 @@ public class NewsController {
                         .orElse(null);
 
                 if (profile != null && profile.getPreferredBranch() != null) {
-                    targetBranchId = profile.getPreferredBranch().getBranchId();
+                    userScopedBranchId = profile.getPreferredBranch().getBranchId();
                 } else if (currentUser.getBranch() != null) {
-                    targetBranchId = currentUser.getBranch().getBranchId();
+                    userScopedBranchId = currentUser.getBranch().getBranchId();
                 }
             }
         }
+        if (userScopedBranchId == null && session != null && session.getAttribute("selectedPortalBranchId") instanceof Long sessBranchId) {
+            userScopedBranchId = sessBranchId;
+        }
+
+        // Khi người dùng đã chọn cơ sở, chỉ hiển thị tin tức của cơ sở đó
+        Long targetBranchId = userScopedBranchId != null ? userScopedBranchId : branchId;
 
         // Lấy thông tin cơ sở hiển thị
         String currentBranchName = "Tất cả cơ sở";
@@ -239,10 +243,26 @@ public class NewsController {
             }
         }
 
-        List<NewsArticle> relatedNews = newsRepository.findRelatedPublished(
-                news.getNewsId(),
-                PageRequest.of(0, 3)
-        );
+        Long relatedBranchId = news.getBranch() != null ? news.getBranch().getBranchId() : null;
+        if (loggedInUser != null) {
+            User currentUser = userRepository.findById(loggedInUser.getUserId()).orElse(null);
+            if (currentUser != null) {
+                PatientProfile profile = patientProfileRepository
+                        .findFirstByUser_UserIdAndIsDefaultTrue(currentUser.getUserId())
+                        .orElse(null);
+                if (profile != null && profile.getPreferredBranch() != null) {
+                    relatedBranchId = profile.getPreferredBranch().getBranchId();
+                } else if (currentUser.getBranch() != null) {
+                    relatedBranchId = currentUser.getBranch().getBranchId();
+                }
+            }
+        } else if (session != null && session.getAttribute("selectedPortalBranchId") instanceof Long sessBranchId) {
+            relatedBranchId = sessBranchId;
+        }
+
+        List<NewsArticle> relatedNews = relatedBranchId != null
+                ? newsRepository.findRelatedPublishedByBranch(news.getNewsId(), relatedBranchId, PageRequest.of(0, 3))
+                : newsRepository.findRelatedPublished(news.getNewsId(), PageRequest.of(0, 3));
 
         model.addAttribute("news", news);
         model.addAttribute("relatedNews", relatedNews);

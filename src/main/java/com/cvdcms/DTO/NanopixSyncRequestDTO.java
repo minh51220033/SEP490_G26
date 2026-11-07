@@ -29,9 +29,29 @@ public class NanopixSyncRequestDTO {
     private String rawPatientName;
 
     /**
-     * Mã bệnh nhân nếu nguồn có gõ đúng mã BN của CV-DCMS.
+     * Mã bệnh nhân nếu nguồn có gõ đúng mã BN của CV-DCMS (ví dụ: BN000123).
      */
     private String externalPatientId;
+
+    /**
+     * ID trực tiếp của mục chỉ định cận lâm sàng (ParaclinicalOrderItem.orderItemId).
+     */
+    private Long orderItemId;
+
+    /**
+     * Mã phiếu chỉ định hoặc mã tham chiếu chỉ định X-quang (ví dụ: XQ105, CĐ1001).
+     */
+    private String orderCode;
+
+    /**
+     * Mã lượt khám (Visit.visitCode, ví dụ: VIS10001).
+     */
+    private String visitCode;
+
+    /**
+     * ID cơ sở / chi nhánh nơi đặt máy chụp X-quang.
+     */
+    private Long branchId;
 
     /**
      * Thời điểm chụp phim X-quang trên cảm biến.

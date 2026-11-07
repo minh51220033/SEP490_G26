@@ -43,6 +43,7 @@
         if (!response.ok) throw new Error(body.detail || body.message || body.error || `Không thể xử lý yêu cầu (${response.status}).`);
         return body;
     }
+
     function error(message) {
         const el = $('pageError');
         if (!el) return;
@@ -50,12 +51,15 @@
         el.hidden = false;
         el.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
+
     function clearError() { if ($('pageError')) $('pageError').hidden = true; }
+
     function option(value, label) {
         const el = document.createElement('option');
         el.value = value; el.textContent = label;
         return el;
     }
+
     function cell(row, value) {
         const el = document.createElement('td');
         if (value !== undefined && value !== null && value !== '') {
@@ -64,11 +68,13 @@
         row.appendChild(el);
         return el;
     }
+
     function dateLabel(value) {
         if (!value) return '—';
         const [year, month, day] = value.split('-');
         return `${day}/${month}/${year}`;
     }
+
     function formatSnapshot(raw) {
         if (!raw) return null;
         const parts = raw.split('|');
@@ -94,11 +100,13 @@
         }
         return { date, session, doctorText, statusText, timeText };
     }
+
     function localDate(offset = 0) {
         const d = new Date();
         d.setDate(d.getDate() + offset);
         return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
     }
+
     function setSelect(select, entries, placeholder, label) {
         select.replaceChildren(option('', placeholder));
         entries.forEach(entry => select.appendChild(option(entry.id, label(entry))));
@@ -195,6 +203,7 @@
         $('appointmentDate').min = localDate();
         $('appointmentDate').max = localDate(90);
         let current = null;
+
         if (editing) {
             const detail = await request(`/${id}`);
             current = detail.appointment;
@@ -255,8 +264,10 @@
                 else $('preferredSession').value = 'EVENING';
             }
         }
+
         let available = false;
         let sequence = 0;
+
         async function loadSlots(token) {
             const select = $('slotTime');
             const previous = select.value || (current?.expectedTime || '').slice(0, 5);
@@ -274,6 +285,7 @@
             }
             if (token !== sequence) return;
             select.replaceChildren();
+
             if (list && list.length > 0) {
                 select.appendChild(option('', 'Chọn giờ hẹn (hoặc linh hoạt)'));
                 list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
@@ -302,6 +314,7 @@
                 $('availabilityMessage').classList.add('is-error');
             }
         }
+
         async function availability() {
             const token = ++sequence;
             const branchId = $('branchId').value, date = $('appointmentDate').value, session = $('preferredSession').value;
@@ -322,9 +335,17 @@
                 message.textContent = result.reason || 'Buổi này không còn chỗ.';
                 message.classList.add('is-error'); return;
             }
+
             result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (${d.remaining} chỗ)`)));
-            if (current?.requestedDoctorId && result.doctors.some(d => d.id === current.requestedDoctorId))
+            if (current?.requestedDoctorId && result.doctors.some(d => d.id === current.requestedDoctorId)) {
                 doctor.value = String(current.requestedDoctorId);
+            }
+            // Bind từ UI / Drawer truyền vào qua biến toàn cục nếu có
+            if (window._initialDoctorParam && result.doctors.some(d => String(d.id) === String(window._initialDoctorParam))) {
+                doctor.value = String(window._initialDoctorParam);
+                window._initialDoctorParam = null;
+            }
+
             doctor.disabled = false;
             available = true; button.disabled = false;
             message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối khi đến.`;
@@ -333,16 +354,19 @@
             message.classList.add('is-success');
             await loadSlots(token);
         }
+
         ['branchId', 'appointmentDate', 'preferredSession'].forEach(field =>
             $(field).addEventListener('change', () => availability().catch(e => error(e.message))));
         ['doctorId', 'serviceId'].forEach(field => $(field).addEventListener('change', () => {
             if (available) loadSlots(sequence).catch(e => error(e.message));
         }));
+
         if (editing) {
             await availability();
         } else if ($('branchId').value && $('appointmentDate').value && $('preferredSession').value) {
             await availability().catch(e => error(e.message));
         }
+
         let key = sessionStorage.getItem('ft06-booking-key');
         if (!key) {
             if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -355,6 +379,7 @@
             }
             sessionStorage.setItem('ft06-booking-key', key);
         }
+
         form.addEventListener('submit', async event => {
             event.preventDefault(); clearError();
             if (!form.reportValidity() || !available) return;
@@ -372,9 +397,9 @@
                     saved = await request(`/${id}/reschedule`, {method: 'PUT', body: JSON.stringify({...payload, reason: 'Bệnh nhân đổi lịch trực tuyến'})});
                 } else {
                     saved = await request('', {method: 'POST', body: JSON.stringify({...payload,
-                        profileId: Number($('profileId').value), branchId: Number($('branchId').value),
-                        serviceId: $('serviceId').value ? Number($('serviceId').value) : null,
-                        symptoms: $('symptoms').value.trim() || null, requestKey: key})});
+                            profileId: Number($('profileId').value), branchId: Number($('branchId').value),
+                            serviceId: $('serviceId').value ? Number($('serviceId').value) : null,
+                            symptoms: $('symptoms').value.trim() || null, requestKey: key})});
                     sessionStorage.removeItem('ft06-booking-key');
                 }
                 location.href = `/portal/appointments/${saved.id}?saved=${editing ? 'changed' : 'created'}`;
@@ -390,7 +415,7 @@
         if (saved) {
             $('successMessage').textContent = saved === 'cancelled' ? 'Đã hủy lịch hẹn.'
                 : saved === 'changed' ? 'Đã gửi lịch mới. Lễ tân sẽ xác nhận lại.'
-                : 'Đã gửi yêu cầu đặt lịch. Lễ tân sẽ xác nhận.';
+                    : 'Đã gửi yêu cầu đặt lịch. Lễ tân sẽ xác nhận.';
             $('successMessage').hidden = false;
         }
         const facts = $('appointmentFacts');

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="tableStyle">
+        <style>
+            /* =========================================================================
+               ĐỒNG BỘ 100% CÙNG 1 FONT CHỮ DUY NHẤT CHO TOÀN BỘ BẢNG & TRANG
+               ========================================================================= */
+            body,
+            .app-content,
+            .dv-amis-table,
+            .staff-modern-table,
+            .dv-amis-table *,
+            .staff-modern-table *,
+            .staff-table-card,
+            .dv-grid-card,
+            .dv-toolbar-card,
+            .dv-kpi-card,
+            .dv-code-pill,
+            .cchn-badge,
+            .dv-patient-name,
+            .btn,
+            .badge,
+            .chip {
+                font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+            }
+
+            /* =========================================================================
+               CV-DCMS ENTERPRISE DATA TABLE (ĐỒNG BỘ 100% VỚI /doctor/daily-visits)
+               ========================================================================= */
+            .staff-table-card,
+            .dv-grid-card {
+                background: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 16px !important;
+                box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+                overflow: hidden !important;
+                position: relative !important;
+            }
+
+            .dv-grid-topbar {
+                padding: 14px 22px !important;
+                background: #f8fafc !important;
+                border-bottom: 1.5px solid #e2e8f0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                flex-wrap: wrap !important;
+                gap: 12px !important;
+            }
+
+            .dv-table-scroll-container,
+            .staff-table-wrapper {
+                width: 100% !important;
+                overflow-x: auto !important;
+                position: relative !important;
+                scroll-behavior: smooth !important;
+            }
+
+            /* Khung tìm kiếm chuẩn kích thước gọn gàng, không bị kéo dài quá mức */
+            .dv-search-box {
+                position: relative !important;
+                width: 380px !important;
+                max-width: 100% !important;
+                flex: 0 1 380px !important;
+            }
+
+            /* Table Layout Fixed để từng cột độc lập tuyệt đối, không co ép cột khác */
+            .dv-amis-table,
+            .staff-modern-table {
+                table-layout: fixed !important;
+                width: max-content !important;
+                min-width: 100% !important;
+                border-collapse: separate !important;
+                border-spacing: 0 !important;
+            }
+
+            .dv-amis-table thead th,
+            .staff-modern-table thead th {
+                background: #f1f5f9 !important;
+                color: #334155 !important;
+                font-size: 13px !important;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.4px !important;
+                padding: 15px 18px !important;
+                border-bottom: 2px solid #cbd5e1 !important;
+                border-right: 1px solid #e2e8f0 !important;
+                white-space: nowrap !important;
+                position: relative !important;
+                top: 0 !important;
+                z-index: 10 !important;
+                user-select: none !important;
+                transition: background 0.15s !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            .dv-amis-table thead th:hover,
+            .staff-modern-table thead th:hover {
+                background: #e2e8f0 !important;
+            }
+
+            .dv-th-inner {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 8px !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+
+            /* Thanh kéo độ rộng cột (Column Resizer) */
+            .col-resizer {
+                position: absolute !important;
+                top: 0 !important;
+                right: 0 !important;
+                width: 14px !important;
+                height: 100% !important;
+                cursor: col-resize !important;
+                user-select: none !important;
+                z-index: 25 !important;
+                touch-action: none !important;
+            }
+
+            .col-resizer::after {
+                content: '' !important;
+                position: absolute !important;
+                top: 15% !important;
+                bottom: 15% !important;
+                right: 3px !important;
+                width: 2px !important;
+                background-color: transparent !important;
+                border-radius: 1px !important;
+                transition: background-color 0.15s ease !important;
+            }
+
+            .col-resizer:hover::after,
+            .col-resizer.is-resizing::after {
+                background-color: #0284c7 !important;
+                width: 3px !important;
+            }
+
+            body.is-col-resizing {
+                cursor: col-resize !important;
+                user-select: none !important;
+            }
+
+            .dv-amis-table tbody tr.dv-data-row,
+            .staff-modern-table tbody tr.dv-data-row {
+                transition: background-color 0.12s ease !important;
+            }
+
+            .dv-amis-table tbody tr.dv-data-row td:not(.dv-floating-actions-track),
+            .staff-modern-table tbody tr.dv-data-row td:not(.dv-floating-actions-track) {
+                padding: 16px 18px !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                border-right: 1px solid #f1f5f9 !important;
+                vertical-align: middle !important;
+                font-size: 14.5px !important;
+                color: #1e293b !important;
+                background: #ffffff !important;
+                transition: background-color 0.12s ease !important;
+                white-space: nowrap !important;
+                box-sizing: border-box !important;
+            }
+
+            .dv-amis-table tbody tr.dv-data-row:hover td,
+            .dv-amis-table tbody tr.dv-data-row.is-row-hovered td,
+            .staff-modern-table tbody tr.dv-data-row:hover td,
+            .staff-modern-table tbody tr.dv-data-row.is-row-hovered td {
+                background: #f0f9ff !important;
+            }
+
+            /* Cột ghim bên trái */
+            .dv-amis-table th.dv-col-pinned,
+            .dv-amis-table td.dv-col-pinned,
+            .staff-modern-table th.dv-col-pinned,
+            .staff-modern-table td.dv-col-pinned {
+                position: sticky !important;
+                z-index: 15 !important;
+            }
+
+            .dv-amis-table thead th.dv-col-pinned,
+            .staff-modern-table thead th.dv-col-pinned {
+                z-index: 25 !important;
+                background: #e0f2fe !important;
+                color: #0369a1 !important;
+            }
+
+            .dv-amis-table th.dv-col-pinned-last,
+            .dv-amis-table td.dv-col-pinned-last,
+            .staff-modern-table th.dv-col-pinned-last,
+            .staff-modern-table td.dv-col-pinned-last {
+                border-right: 2px solid #93c5fd !important;
+                box-shadow: 6px 0 14px -4px rgba(15, 23, 42, 0.12) !important;
+            }
+
+            /* Avatar & text spacing */
+            .dv-patient-avatar {
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px !important;
+                max-width: 40px !important;
+                flex-shrink: 0 !important;
+                border-radius: 11px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-weight: 800 !important;
+                font-size: 16px !important;
+                color: #ffffff !important;
+                background: linear-gradient(135deg, #0284c7 0%, #3b82f6 100%) !important;
+                box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22) !important;
+                margin-right: 14px !important;
+            }
+
+            .dv-patient-avatar.avatar-admin {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            }
+
+            .dv-patient-avatar.avatar-patient {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            }
+
+            .dv-patient-avatar.avatar-secondary {
+                background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+            }
+
+            .dv-patient-name {
+                font-size: 15px !important;
+                font-weight: 800 !important;
+                color: #0f172a !important;
+                text-decoration: none !important;
+                line-height: 1.25 !important;
+            }
+
+            .dv-patient-name:hover {
+                color: #0284c7 !important;
+                text-decoration: underline !important;
+            }
+
+            .dv-code-pill {
+                font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif !important;
+                font-size: 12.5px !important;
+                font-weight: 700 !important;
+                padding: 4px 10px !important;
+                border-radius: 6px !important;
+                background: #f8fafc !important;
+                color: #0369a1 !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+
+            /* Nút thao tác kích thước chuẩn daily-visits */
+            /* 3 NÚT THAO TÁC CÓ ĐỘ RỘNG CÂN BẰNG NHAU (WIDTH: 112PX CHUẨN ẢNH 2) */
+            .dv-equal-btn-primary {
+                width: 112px !important;
+                height: 38px !important;
+                padding: 0 12px !important;
+                background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+                color: #ffffff !important;
+                border: none !important;
+                border-radius: 9px !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                text-decoration: none !important;
+                box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28) !important;
+                transition: all 0.15s ease !important;
+                flex-shrink: 0 !important;
+                white-space: nowrap !important;
+                cursor: pointer !important;
+            }
+
+            .dv-equal-btn-primary:hover {
+                background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 6px 14px rgba(2, 132, 199, 0.38) !important;
+                color: #ffffff !important;
+            }
+
+            .dv-equal-btn-secondary {
+                width: 112px !important;
+                height: 38px !important;
+                padding: 0 12px !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 9px !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 5px !important;
+                text-decoration: none !important;
+                transition: all 0.15s ease !important;
+                flex-shrink: 0 !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+                white-space: nowrap !important;
+                cursor: pointer !important;
+            }
+
+            .dv-equal-btn-secondary:hover {
+                background: #e0f2fe !important;
+                border-color: #7dd3fc !important;
+                color: #0369a1 !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15) !important;
+            }
+
+            .dv-equal-btn-danger {
+                width: 112px !important;
+                height: 38px !important;
+                padding: 0 12px !important;
+                background: #ffffff !important;
+                color: #dc2626 !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 9px !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 5px !important;
+                text-decoration: none !important;
+                transition: all 0.15s ease !important;
+                flex-shrink: 0 !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+                white-space: nowrap !important;
+                cursor: pointer !important;
+            }
+
+            .dv-equal-btn-danger:hover {
+                background: #fee2e2 !important;
+                border-color: #f87171 !important;
+                color: #b91c1c !important;
+                transform: translateY(-1px) !important;
+            }
+
+            .dv-actions-cell-always {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                white-space: nowrap !important;
+                transition: opacity 0.15s ease !important;
+            }
+
+            /* Khi hover vào dòng: Ẩn nút tĩnh để nút nổi hiển thị sắc nét 100%, không bị bóng mờ / đè kép */
+            .dv-amis-table tbody tr.dv-data-row:hover .dv-actions-cell-always,
+            .dv-amis-table tbody tr.is-row-hovered .dv-actions-cell-always,
+            .staff-modern-table tbody tr.dv-data-row:hover .dv-actions-cell-always,
+            .staff-modern-table tbody tr.is-row-hovered .dv-actions-cell-always {
+                opacity: 0 !important;
+                visibility: hidden !important;
+            }
+
+            /* =========================================================================
+               KHUNG NÚT THAO TÁC NỔI KHI HOVER (CHUẨN /doctor/daily-visits)
+               ========================================================================= */
+            .dv-amis-table tbody tr.dv-data-row td.dv-floating-actions-track,
+            .staff-modern-table tbody tr.dv-data-row td.dv-floating-actions-track,
+            .dv-amis-table thead tr th.dv-floating-actions-track,
+            .staff-modern-table thead tr th.dv-floating-actions-track,
+            .dv-floating-actions-track {
+                position: sticky !important;
+                right: 0 !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                overflow: visible !important;
+                z-index: 55 !important;
+                background: transparent !important;
+                vertical-align: middle !important;
+            }
+
+            .dv-floating-actions-bar {
+                position: absolute !important;
+                right: 0 !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                height: 100% !important;
+                transform: none !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                gap: 8px !important;
+                padding: 0 16px !important;
+                background: #f0f9ff !important;
+                border: none !important;
+                outline: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+                transition: opacity 0.15s ease, visibility 0.15s ease !important;
+                white-space: nowrap !important;
+                z-index: 60 !important;
+            }
+
+            .dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar,
+            .dv-amis-table tbody tr.is-row-hovered .dv-floating-actions-bar,
+            .staff-modern-table tbody tr.dv-data-row:hover .dv-floating-actions-bar,
+            .staff-modern-table tbody tr.is-row-hovered .dv-floating-actions-bar {
+                opacity: 1 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+            }
+        </style>
+        <script>
+            // =========================================================================
+            // HỆ THỐNG KÉO THẢ ĐỘ RỘNG CỘT ĐỘC LẬP & HOVER THAO TÁC NỔI CHUẨN ENTERPRISE
+            // =========================================================================
+            (function() {
+                function setupUniversalEnterpriseTable() {
+                    const tables = document.querySelectorAll('.dv-amis-table, .staff-modern-table');
+                    tables.forEach(function (table) {
+                        const thead = table.querySelector('thead');
+                        if (!thead) return;
+
+                        const theadRow = thead.querySelector('tr');
+                        if (!theadRow) return;
+
+                        const storageKey = 'col_widths_v5_' + window.location.pathname.replace(/[^a-zA-Z0-9]/g, '_') + '_' + (table.id || 'tbl');
+                        let savedWidths = {};
+                        try {
+                            const raw = localStorage.getItem(storageKey);
+                            if (raw) savedWidths = JSON.parse(raw);
+                        } catch (e) {}
+
+                        // Đảm bảo track luôn ở cuối cùng của thead
+                        const trackTh = theadRow.querySelector('.dv-floating-actions-track');
+                        if (trackTh) theadRow.appendChild(trackTh);
+
+                        // Đảm bảo track luôn ở cuối cùng của mỗi tr trong tbody & kích hoạt hover
+                        table.querySelectorAll('tbody tr.dv-data-row').forEach(function(tr) {
+                            const trackTd = tr.querySelector('.dv-floating-actions-track');
+                            if (trackTd) tr.appendChild(trackTd);
+
+                            tr.addEventListener('mouseenter', function() {
+                                tr.classList.add('is-row-hovered');
+                            });
+                            tr.addEventListener('mouseleave', function() {
+                                tr.classList.remove('is-row-hovered');
+                            });
+                        });
+
+                        const ths = Array.from(theadRow.querySelectorAll('th:not(.dv-floating-actions-track)'));
+                        if (!ths.length) return;
+
+                        const scrollContainer = table.closest('.dv-table-scroll-container, .staff-table-wrapper') || table.parentElement;
+
+                        // Tính toán tổng độ rộng bảng từ các cột
+                        function syncTableWidth() {
+                            let totalW = 0;
+                            ths.forEach(function(th) {
+                                if (th.offsetParent !== null && !th.classList.contains('d-none')) {
+                                    totalW += th.offsetWidth;
+                                }
+                            });
+                            const containerW = scrollContainer ? scrollContainer.clientWidth : 1200;
+                            const finalW = Math.max(totalW, containerW);
+                            table.style.width = finalW + 'px';
+                            table.style.minWidth = finalW + 'px';
+                        }
+
+                        ths.forEach(function(th, idx) {
+                            const colKey = th.getAttribute('data-col') || ('col_' + idx);
+                            let w = savedWidths[colKey];
+                            if (!w) {
+                                w = parseInt(th.style.width || th.style.minWidth, 10);
+                                if (!w || isNaN(w)) w = (colKey === 'actions' ? 380 : Math.max(th.offsetWidth, 80));
+                            }
+                            if (colKey === 'actions' && w < 380) {
+                                w = 380;
+                            }
+                            th.style.width = w + 'px';
+                            th.style.minWidth = w + 'px';
+                            th.style.maxWidth = w + 'px';
+
+                            let resizer = th.querySelector('.col-resizer');
+                            if (!resizer) {
+                                resizer = document.createElement('span');
+                                resizer.className = 'col-resizer';
+                                resizer.title = 'Kéo để chỉnh độ rộng cột';
+                                th.appendChild(resizer);
+                            }
+
+                            // Kéo thả thay đổi độ rộng cột độc lập
+                            resizer.onmousedown = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const startX = e.pageX;
+                                const startW = th.offsetWidth;
+                                const minW = (colKey === 'stt' || idx === 0) ? 50 : (colKey === 'actions' ? 380 : 70);
+
+                                // Lấy tổng độ rộng của tất cả các cột khác đang hiển thị
+                                let otherColsW = 0;
+                                ths.forEach(function(otherTh) {
+                                    if (otherTh !== th && otherTh.offsetParent !== null && !otherTh.classList.contains('d-none')) {
+                                        otherColsW += otherTh.offsetWidth;
+                                    }
+                                });
+
+                                document.body.classList.add('is-col-resizing');
+                                resizer.classList.add('is-resizing');
+
+                                function onMouseMove(moveEvent) {
+                                    const diff = moveEvent.pageX - startX;
+                                    const newW = Math.max(minW, startW + diff);
+
+                                    th.style.width = newW + 'px';
+                                    th.style.minWidth = newW + 'px';
+                                    th.style.maxWidth = newW + 'px';
+
+                                    // CẬP NHẬT TỔNG CHIỀU RỘNG BẢNG = ĐỘ RỘNG CÁC CỘT KHÁC + ĐỘ RỘNG MỚI CỦA CỘT HIỆN TẠI
+                                    const newTotalW = otherColsW + newW;
+                                    table.style.width = newTotalW + 'px';
+                                    table.style.minWidth = newTotalW + 'px';
+                                }
+
+                                function onMouseUp() {
+                                    document.body.classList.remove('is-col-resizing');
+                                    resizer.classList.remove('is-resizing');
+
+                                    document.removeEventListener('mousemove', onMouseMove);
+                                    document.removeEventListener('mouseup', onMouseUp);
+
+                                    savedWidths[colKey] = th.offsetWidth;
+                                    try {
+                                        localStorage.setItem(storageKey, JSON.stringify(savedWidths));
+                                    } catch (err) {}
+                                }
+
+                                document.addEventListener('mousemove', onMouseMove);
+                                document.addEventListener('mouseup', onMouseUp);
+                            };
+                        });
+
+                        syncTableWidth();
+                    });
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', setupUniversalEnterpriseTable);
+                } else {
+                    setupUniversalEnterpriseTable();
+                }
+
+                window.setupUniversalEnterpriseTable = setupUniversalEnterpriseTable;
+            })();
+        </script>
+    </th:block>
+</head>
+<body>
+</body>
+</html>

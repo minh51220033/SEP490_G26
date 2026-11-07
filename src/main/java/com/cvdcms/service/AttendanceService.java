@@ -88,15 +88,31 @@ public class AttendanceService {
         }
 
         // Nếu có nhiều ca trong ngày (ví dụ ca sáng chi nhánh A, ca tối chi nhánh B),
-        // ưu tiên ca mà nhân viên đang kết nối đúng Wifi của chi nhánh đó.
-        StaffSchedule target = shifts.get(0);
-        if (shifts.size() > 1) {
+        // ưu tiên ca chưa kết thúc và nhân viên đang kết nối đúng Wifi của chi nhánh đó.
+        LocalTime currentTime = now.toLocalTime();
+        StaffSchedule target = null;
+        for (StaffSchedule s : shifts) {
+            if (!currentTime.isAfter(s.getShift().getEndTime())
+                    && isAllowedIp(s.getBranch().getAllowedIpRange(), clientIp)) {
+                target = s;
+                break;
+            }
+        }
+        if (target == null) {
             for (StaffSchedule s : shifts) {
-                if (isAllowedIp(s.getBranch().getAllowedIpRange(), clientIp)) {
+                if (!currentTime.isAfter(s.getShift().getEndTime())) {
                     target = s;
                     break;
                 }
             }
+        }
+        if (target == null) {
+            StaffSchedule lastShift = shifts.get(shifts.size() - 1);
+            throw new IllegalArgumentException("Ca làm việc hôm nay ("
+                    + lastShift.getShift().getShiftName() + ": "
+                    + lastShift.getShift().getStartTime() + " - "
+                    + lastShift.getShift().getEndTime()
+                    + ") đã kết thúc nên không thể check-in.");
         }
 
         Branch branch = target.getBranch();
@@ -298,6 +314,24 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
+    public Map<LocalDate, String> getShiftLabelsByDate(Long staffId, YearMonth month) {
+        Map<LocalDate, String> map = new LinkedHashMap<>();
+        List<StaffSchedule> schedules = scheduleRepository.findByStaffAndRange(
+                staffId, month.atDay(1), month.atEndOfMonth());
+        java.time.format.DateTimeFormatter tf = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        for (StaffSchedule s : schedules) {
+            if (s.getStatus() == ScheduleStatus.CANCELLED || s.getShift() == null) {
+                continue;
+            }
+            String label = s.getShift().getShiftName() + " ("
+                    + s.getShift().getStartTime().format(tf) + " - "
+                    + s.getShift().getEndTime().format(tf) + ")";
+            map.merge(s.getWorkDate(), label, (oldVal, newVal) -> oldVal + ", " + newVal);
+        }
+        return map;
+    }
+
+    @Transactional(readOnly = true)
     public List<AttendanceRecord> getBranchHistory(Long branchId, YearMonth month) {
         return attendanceRepository.findByBranchAndRange(branchId, month.atDay(1), month.atEndOfMonth());
     }
@@ -340,17 +374,56 @@ public class AttendanceService {
 
     // Tổng hợp theo từng nhân viên trong chi nhánh (bảng công tháng).
     public List<Map<String, Object>> summarizeByStaff(List<AttendanceRecord> records) {
-        Map<Long, List<AttendanceRecord>> grouped = new LinkedHashMap<>();
-        for (AttendanceRecord a : records) {
-            grouped.computeIfAbsent(a.getStaff().getStaffId(), k -> new ArrayList<>()).add(a);
+        return summarizeByStaff(null, null, records);
+    }
+
+    // Tổng hợp theo từng nhân viên có lịch phân ca hoặc có dữ liệu chấm công tại chi nhánh trong tháng.
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> summarizeByStaff(Long branchId, YearMonth month, List<AttendanceRecord> records) {
+        Map<Long, StaffProfile> staffMap = new LinkedHashMap<>();
+        Map<Long, List<AttendanceRecord>> groupedRecords = new LinkedHashMap<>();
+        Map<Long, java.util.Set<LocalDate>> scheduledDatesByStaff = new LinkedHashMap<>();
+
+        // 1. Lấy toàn bộ hồ sơ nhân sự đã được xếp ca tại chi nhánh trong tháng (trừ ca đã hủy)
+        if (branchId != null && month != null) {
+            List<StaffSchedule> schedules = scheduleRepository.findByBranchAndRange(
+                    branchId, month.atDay(1), month.atEndOfMonth());
+            for (StaffSchedule sc : schedules) {
+                if (sc.getStatus() == ScheduleStatus.CANCELLED || sc.getStaff() == null) {
+                    continue;
+                }
+                Long sid = sc.getStaff().getStaffId();
+                staffMap.putIfAbsent(sid, sc.getStaff());
+                groupedRecords.computeIfAbsent(sid, k -> new ArrayList<>());
+                scheduledDatesByStaff.computeIfAbsent(sid, k -> new java.util.HashSet<>()).add(sc.getWorkDate());
+            }
         }
+
+        // 2. Gộp thêm các bản ghi chấm công thực tế phát sinh trong tháng
+        for (AttendanceRecord a : records) {
+            if (a.getStaff() == null) {
+                continue;
+            }
+            Long sid = a.getStaff().getStaffId();
+            staffMap.putIfAbsent(sid, a.getStaff());
+            groupedRecords.computeIfAbsent(sid, k -> new ArrayList<>()).add(a);
+        }
+
         List<Map<String, Object>> result = new ArrayList<>();
-        for (List<AttendanceRecord> list : grouped.values()) {
-            StaffProfile staff = list.get(0).getStaff();
+        for (Map.Entry<Long, StaffProfile> entry : staffMap.entrySet()) {
+            Long sid = entry.getKey();
+            StaffProfile staff = entry.getValue();
+            List<AttendanceRecord> list = groupedRecords.getOrDefault(sid, List.of());
             Map<String, Long> s = summarize(list);
+            long scheduledDays = scheduledDatesByStaff.containsKey(sid)
+                    ? scheduledDatesByStaff.get(sid).size()
+                    : s.getOrDefault("workDays", 0L);
+
             Map<String, Object> row = new LinkedHashMap<>();
+            row.put("staffId", sid);
             row.put("fullName", staff.getFullName());
             row.put("staffCode", staff.getStaffCode());
+            row.put("scheduledDays", scheduledDays);
             row.putAll(s);
             result.add(row);
         }

@@ -149,18 +149,14 @@ public class AdminBanController {
             return "redirect:/admin/bans";
         }
 
-        boolean alreadyBanned = commentBanRepository
-                .findFirstByUser_UserIdAndActiveTrueOrderByBannedAtDesc(targetUser.getUserId())
-                .isPresent();
-
-        if (alreadyBanned) {
-            redirectAttributes.addFlashAttribute("banError", "Tài khoản " + targetUser.getUsername() + " hiện đang có lệnh cấm có hiệu lực.");
-            return "redirect:/admin/bans";
-        }
-
         LocalDateTime expiresAt = durationDays > 0 ? LocalDateTime.now().plusDays(durationDays) : null;
 
-        CommentBan ban = new CommentBan();
+        // Gom mỗi tài khoản 1 dòng duy nhất: nếu đã có bản ghi cấm trước đó thì cập nhật lại chính bản ghi đó
+        CommentBan ban = commentBanRepository
+                .findFirstByUser_UserIdOrderByBannedAtDesc(targetUser.getUserId())
+                .orElseGet(CommentBan::new);
+        boolean isUpdate = ban.getBanId() != null;
+
         ban.setUser(targetUser);
         ban.setBannedBy(admin);
         ban.setReason(reason != null && !reason.isBlank() ? reason.trim() : "Vi phạm quy chế bình luận");
@@ -185,7 +181,9 @@ public class AdminBanController {
                 )
         );
 
-        redirectAttributes.addFlashAttribute("banSuccess", "Đã thiết lập lệnh cấm bình luận thành công cho tài khoản: " + targetUser.getUsername());
+        redirectAttributes.addFlashAttribute("banSuccess",
+                (isUpdate ? "Đã cập nhật lệnh cấm bình luận thành công cho tài khoản: " : "Đã thiết lập lệnh cấm bình luận thành công cho tài khoản: ")
+                        + targetUser.getUsername());
         return "redirect:/admin/bans";
     }
 

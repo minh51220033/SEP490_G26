@@ -1,4 +1,3 @@
-
 package com.cvdcms.service;
 
 import com.cvdcms.DTO.BranchConfigDTO;
@@ -143,6 +142,7 @@ public class BranchService {
         branch.setPhone(validatePhone(branch.getPhone()));
         branch.setEmail(validateEmail(branch.getEmail()));
         branch.setTaxCode(validateTaxCode(branch.getTaxCode()));
+        branch.setImageUrl(blankToNull(branch.getImageUrl()));
 
         if (branch.getManagerUser() != null && branch.getManagerUser().getUserId() != null) {
             branch.setManagerUser(userRepository.findById(branch.getManagerUser().getUserId()).orElse(null));
@@ -215,6 +215,9 @@ public class BranchService {
         branch.setPhone(validatePhone(data.getPhone()));
         branch.setEmail(validateEmail(data.getEmail()));
         branch.setTaxCode(validateTaxCode(data.getTaxCode()));
+        if (data.getImageUrl() != null && !data.getImageUrl().isBlank()) {
+            branch.setImageUrl(data.getImageUrl().trim());
+        }
 
         if (data.getManagerUser() != null && data.getManagerUser().getUserId() != null) {
             branch.setManagerUser(userRepository.findById(data.getManagerUser().getUserId()).orElse(null));

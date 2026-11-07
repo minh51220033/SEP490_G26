@@ -17,7 +17,20 @@
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/staff.css}">
 
-            <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <!-- TOAST THÔNG BÁO LỖI / THÀNH CÔNG NẰM DƯỚI GÓC PHẢI -->
+            <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" th:if="${(errorMessage != null and !#strings.isEmpty(errorMessage)) or (successMessage != null and !#strings.isEmpty(successMessage))}">
+                <div class="toast show align-items-center text-white border-0 shadow-lg rounded-3"
+                     th:classappend="${errorMessage != null} ? 'bg-danger' : 'bg-success'"
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center gap-2 py-3 px-3">
+                            <i class="fs-5" th:classappend="${errorMessage != null} ? 'bi bi-exclamation-triangle-fill' : 'bi bi-check-circle-fill'"></i>
+                            <span class="fw-medium" th:text="${errorMessage != null ? errorMessage : successMessage}">Thông báo</span>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
 
             <!-- FORM THÊM / SỬA HỒ SƠ NHÂN VIÊN (SCR-41.2) -->
             <section class="panel">
@@ -59,7 +72,7 @@
                                 </select>
                             </div>
 
-                            <!-- Khi chỉnh sửa: chọn trạng thái làm việc -->
+                            <!-- Khi chỉnh sửa: hiển thị trạng thái, chi nhánh chính và vai trò chuyên môn kèm liên kết -->
                             <div class="col-md-3" th:if="${editMode}">
                                 <label for="status" class="form-label">Trạng thái làm việc</label>
                                 <select id="status" th:field="*{status}" class="form-select">
@@ -68,6 +81,28 @@
                                         Trạng thái
                                     </option>
                                 </select>
+                            </div>
+                            <div class="col-md-3" th:if="${editMode}">
+                                <label class="form-label">Chi nhánh chính</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control bg-light" readonly
+                                           th:value="${primaryAssignment != null and primaryAssignment.branch != null ? primaryAssignment.branch.branchName : 'Chưa phân công'}">
+                                    <a th:href="@{/admin/staffs/{id}(id=${staff.staffId})} + '#tab-assign'" class="btn btn-outline-primary" title="Đổi chi nhánh ở tab Phân công chi nhánh">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </a>
+                                </div>
+                                <div class="form-hint text-muted">Quản lý theo phân công công tác.</div>
+                            </div>
+                            <div class="col-md-3" th:if="${editMode}">
+                                <label for="roleId" class="form-label">Vai trò chuyên môn <span class="text-danger">*</span></label>
+                                <select id="roleId" th:field="*{roleId}" class="form-select" required>
+                                    <option value="">-- Chọn vai trò --</option>
+                                    <option th:each="r : ${roles}" th:value="${r.roleId}"
+                                            th:data-role-name="${r.roleName}"
+                                            th:text="${r.displayName != null ? r.displayName : r.roleName}">Vai trò</option>
+                                </select>
+                                <div class="form-hint" th:if="${staff.user != null}">Tự động đồng bộ sang tài khoản liên kết.</div>
+                                <div class="form-hint text-muted" th:unless="${staff.user != null}">Chưa liên kết tài khoản (chọn vai trò tùy ý).</div>
                             </div>
 
                             <div th:class="${editMode} ? 'col-md-3' : 'col-md-2'">
@@ -94,21 +129,33 @@
                             </div>
                             <div class="col-md-2">
                                 <label for="dob" class="form-label">Ngày sinh</label>
-                                <input type="date" id="dob" th:field="*{dob}" class="form-control">
+                                <input type="date" id="dob" th:field="*{dob}" class="form-control"
+                                       th:classappend="${errorMessage != null and errorMessage.contains('Ngày sinh')} ? 'is-invalid' : ''">
+                                <div class="invalid-feedback" id="dobErrorMsg"
+                                     th:if="${errorMessage != null and errorMessage.contains('Ngày sinh')}"
+                                     th:text="${errorMessage}">
+                                    Ngày sinh phải nằm trong quá khứ.
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label for="idCardNumber" class="form-label">CCCD / CMND</label>
                                 <input type="text" id="idCardNumber" th:field="*{idCardNumber}" class="form-control"
                                        maxlength="20" pattern="^([0-9]{9}|[0-9]{12})$"
-                                       title="CCCD/CMND gồm 9 hoặc 12 chữ số" placeholder="9 hoặc 12 số">
+                                       title="CCCD/CMND gồm 9 hoặc 12 chữ số" placeholder="9 hoặc 12 số"
+                                       th:classappend="${errorMessage != null and (errorMessage.contains('CCCD') or errorMessage.contains('CMND'))} ? 'is-invalid' : ''">
+                                <div class="invalid-feedback"
+                                     th:if="${errorMessage != null and (errorMessage.contains('CCCD') or errorMessage.contains('CMND'))}"
+                                     th:text="${errorMessage}">
+                                    CCCD không hợp lệ.
+                                </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <label for="phoneNumber" class="form-label">Số điện thoại</label>
                                 <input type="tel" id="phoneNumber" th:field="*{phoneNumber}" class="form-control"
                                        maxlength="20" pattern="^(\+84|0)[0-9]{9,10}$"
                                        title="SĐT gồm 10-11 số (ví dụ: 0901234567)" placeholder="Ví dụ: 0901234567">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" id="email" th:field="*{email}" class="form-control" maxlength="100" placeholder="example@email.com">
                             </div>
@@ -156,8 +203,16 @@
                                     Số chứng chỉ hành nghề (CCHN) <span id="cchnRequiredStar" class="text-danger d-none">*</span>
                                 </label>
                                 <input type="text" id="practiceLicenseNo" th:field="*{practiceLicenseNo}"
-                                       class="form-control" maxlength="50" placeholder="Bắt buộc nếu vai trò là Bác sĩ">
-                                <div class="form-hint text-primary"><i class="bi bi-info-circle"></i> Bắt buộc đối với Bác sĩ lâm sàng.</div>
+                                       class="form-control" maxlength="50" placeholder="Bắt buộc nếu vai trò là Bác sĩ"
+                                       th:classappend="${errorMessage != null and (errorMessage.contains('chứng chỉ hành nghề') or errorMessage.contains('CCHN'))} ? 'is-invalid' : ''">
+                                <div class="invalid-feedback"
+                                     th:if="${errorMessage != null and (errorMessage.contains('chứng chỉ hành nghề') or errorMessage.contains('CCHN'))}"
+                                     th:text="${errorMessage}">
+                                    Bác sĩ bắt buộc phải có số CCHN.
+                                </div>
+                                <div class="form-hint text-primary" th:unless="${errorMessage != null and (errorMessage.contains('chứng chỉ hành nghề') or errorMessage.contains('CCHN'))}">
+                                    <i class="bi bi-info-circle"></i> Bắt buộc đối với Bác sĩ lâm sàng.
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label for="mohDoctorCode" class="form-label">Mã định danh y tế (Bộ Y tế)</label>
@@ -174,17 +229,17 @@
                             <div class="col-md-4">
                                 <label for="baseSalary" class="form-label">Lương cơ bản (VNĐ)</label>
                                 <input type="number" id="baseSalary" th:field="*{baseSalary}" class="form-control"
-                                       min="0" step="any" placeholder="0">
+                                       min="0" step="1" placeholder="0">
                             </div>
                             <div class="col-md-4">
                                 <label for="allowanceAmount" class="form-label">Phụ cấp (VNĐ)</label>
                                 <input type="number" id="allowanceAmount" th:field="*{allowanceAmount}" class="form-control"
-                                       min="0" step="any" placeholder="0">
+                                       min="0" step="1" placeholder="0">
                             </div>
                             <div class="col-md-4">
                                 <label for="insuranceSalary" class="form-label">Lương đóng BHXH (VNĐ)</label>
                                 <input type="number" id="insuranceSalary" th:field="*{insuranceSalary}" class="form-control"
-                                       min="0" step="any" placeholder="0">
+                                       min="0" step="1" placeholder="0">
                             </div>
                             <div class="col-md-6">
                                 <label for="bankAccountNumber" class="form-label">Số tài khoản ngân hàng</label>
@@ -209,21 +264,24 @@
                             <div class="col-md-8">
                                 <label for="userId" class="form-label">Tài khoản đăng nhập liên kết</label>
                                 <input type="hidden" id="editStaffRoleId" th:value="${staffRoleId}" th:data-is-doctor="${isDoctorStaff}" th:if="${editMode}">
-                                <select id="userId" th:field="*{userId}" class="form-select">
-                                    <option value="">-- Chưa liên kết --</option>
-                                    <option th:each="u : ${users}" th:value="${u.userId}"
-                                            th:data-role-ids="${u.roleIds}"
-                                            th:data-role-names="${u.roleNames}"
-                                            th:text="${u.displayName}">username (email)</option>
-                                </select>
-                                <div class="form-hint">
-                                    Danh sách tự động lọc tài khoản có vai trò khớp với chức vụ đã chọn.
+                                <div th:class="${editMode and staff.user != null} ? 'input-group' : ''">
+                                    <select id="userId" th:field="*{userId}" class="form-select">
+                                        <option value="">-- Chưa liên kết --</option>
+                                        <option th:each="u : ${users}" th:value="${u.userId}"
+                                                th:data-role-ids="${u.roleIds}"
+                                                th:data-role-names="${u.roleNames}"
+                                                th:text="${u.displayName}">username (email)</option>
+                                    </select>
+                                    <a th:if="${editMode and staff.user != null}" th:href="@{/accounts/{id}/edit(id=${staff.user.userId})}"
+                                       class="btn btn-outline-primary" title="Chuyển sang sửa & phân quyền tài khoản này">
+                                        <i class="bi bi-shield-lock me-1"></i> Sửa thông tin tài khoản &amp; Phân quyền
+                                    </a>
                                 </div>
-                            </div>
-                            <div class="col-12" th:if="${editMode}">
-                                <div class="form-hint text-primary">
-                                    <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-                                    Chi nhánh công tác được quản lý tại tab <strong>Phân công chi nhánh</strong> trong trang chi tiết nhân sự. Việc thay đổi Vai trò &amp; Phân quyền hệ thống được thực hiện duy nhất tại <a th:if="${staff.user != null}" th:href="@{/accounts/{id}(id=${staff.user.userId})}" class="fw-semibold text-decoration-underline">Quản lý tài khoản &rarr;</a><span th:unless="${staff.user != null}"><strong>Quản lý tài khoản</strong>.</span>
+                                <div class="form-hint d-flex justify-content-between align-items-center">
+                                    <span>Danh sách tự động lọc tài khoản có vai trò khớp với chức vụ đã chọn.</span>
+                                    <a th:if="${editMode and staff.user == null}" th:href="@{/accounts/create(staffId=${staff.staffId})}" class="text-decoration-none fw-semibold">
+                                        <i class="bi bi-plus-circle me-1"></i>Tạo tài khoản mới &rarr;
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -334,6 +392,33 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         applySpecialtyVisibility(isDoctorRole(selectedOption));
+    }
+
+    // Client-side validation: Chặn nhập ngày sinh tương lai ngay trên form
+    const dobInput = document.getElementById('dob');
+    if (dobInput) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        dobInput.setAttribute('max', todayStr);
+        dobInput.addEventListener('change', function () {
+            if (this.value && this.value >= todayStr) {
+                this.classList.add('is-invalid');
+                let errDiv = document.getElementById('dobClientError');
+                if (!errDiv) {
+                    errDiv = document.createElement('div');
+                    errDiv.id = 'dobClientError';
+                    errDiv.className = 'invalid-feedback';
+                    errDiv.innerText = 'Ngày sinh phải nằm trong quá khứ.';
+                    dobInput.parentNode.appendChild(errDiv);
+                }
+                errDiv.style.display = 'block';
+            } else {
+                this.classList.remove('is-invalid');
+                const errDiv = document.getElementById('dobClientError');
+                if (errDiv) errDiv.style.display = 'none';
+                const serverErr = document.getElementById('dobErrorMsg');
+                if (serverErr) serverErr.style.display = 'none';
+            }
+        });
     }
 
     if (roleSelect) {

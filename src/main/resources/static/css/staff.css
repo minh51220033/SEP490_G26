@@ -1,4 +1,4 @@
-﻿/* =====================================================================
+/* =====================================================================
    FT41 - Quản lý hồ sơ nhân sự (Thiết kế chuẩn MISA AMIS theo Ảnh 2)
    Tông màu chủ đạo: Xanh dương (#2563eb) & Đen/Slate (#0f172a).
    Font chữ: Thống nhất "Be Vietnam Pro", system-ui, sans-serif.
@@ -43,7 +43,8 @@ body.staff-page-body .app-content {
     gap: 12px;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 64px); /* Trừ đi chiều cao topbar */
+    height: calc(100vh - 64px);
+    /* Trừ đi chiều cao topbar */
 }
 
 /* Bộ điều khiển kéo giãn cột (Column Resizer) */
@@ -58,11 +59,13 @@ body.staff-page-body .app-content {
     z-index: 20;
     touch-action: none;
 }
+
 .col-resizer:hover,
 .col-resizer.is-resizing {
     background-color: var(--staff-primary);
     width: 3px;
 }
+
 .staff-page-header {
     margin-bottom: 2px;
 }
@@ -125,6 +128,7 @@ body.staff-page-body .app-content {
     background: #ffffff;
     transition: all 0.15s;
 }
+
 .btn-icon-square:hover {
     background: #f1f5f9;
     color: var(--staff-primary);
@@ -136,7 +140,9 @@ body.staff-page-body .app-content {
     border-color: var(--staff-primary) !important;
     color: #ffffff !important;
 }
-.btn-primary:hover, .btn-primary:focus {
+
+.btn-primary:hover,
+.btn-primary:focus {
     background-color: var(--staff-primary-hover) !important;
     border-color: var(--staff-primary-hover) !important;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
@@ -147,6 +153,7 @@ body.staff-page-body .app-content {
     border: 1px solid var(--staff-border);
     color: #334155;
 }
+
 .btn-secondary-custom:hover {
     background-color: #f8fafc;
     color: var(--staff-ink);
@@ -209,6 +216,7 @@ body.staff-page-body .app-content {
     font-size: 0.85rem;
     color: var(--staff-ink);
 }
+
 .staff-search-box-compact input:focus {
     border-color: var(--staff-primary);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
@@ -224,6 +232,7 @@ body.staff-page-body .app-content {
     color: var(--staff-ink);
     padding-left: 10px;
 }
+
 .staff-select-compact:focus {
     border-color: var(--staff-primary);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
@@ -248,17 +257,22 @@ body.staff-page-body .app-content {
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto; /* Tự động giãn đầy chiều cao của app-content */
-    min-height: 0;   /* Quan trọng: Cho phép flex-child co lại để không gây tràn màn hình */
-    position: relative; /* Neo các phần tử cố định như Floating Actions Bar */
+    flex: 1 1 auto;
+    /* Tự động giãn đầy chiều cao của app-content */
+    min-height: 0;
+    /* Quan trọng: Cho phép flex-child co lại để không gây tràn màn hình */
+    position: relative;
+    /* Neo các phần tử cố định như Floating Actions Bar */
 }
 
 .staff-table-wrapper {
     position: relative;
     overflow-x: auto !important;
     overflow-y: auto !important;
-    flex: 1 1 auto; /* Tự động giãn đầy khoảng trống còn lại */
-    min-height: 0;   /* Quan trọng: Bắt buộc để thanh scroll dọc chỉ cuộn bên trong bảng */
+    flex: 1 1 auto;
+    /* Tự động giãn đầy khoảng trống còn lại */
+    min-height: 0;
+    /* Quan trọng: Bắt buộc để thanh scroll dọc chỉ cuộn bên trong bảng */
     width: 100%;
     background-color: #ffffff;
 }
@@ -268,62 +282,63 @@ body.staff-page-body .app-content {
     width: 10px;
     height: 10px;
 }
+
 .staff-table-wrapper::-webkit-scrollbar-track {
     background: #f1f5f9;
 }
+
 .staff-table-wrapper::-webkit-scrollbar-thumb {
     background: #94a3b8;
     border-radius: 5px;
     border: 2px solid #f1f5f9;
 }
+
 .staff-table-wrapper::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
 
-.staff-modern-table {
+.staff-modern-table,
+.dv-amis-table {
     margin-bottom: 0;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 100%;
     width: 100%;
-    table-layout: fixed;
+    min-width: 1680px;
 }
 
 .staff-modern-table thead th {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--staff-table-header-bg);
+    background: #f1f5f9;
     color: #334155;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--staff-border);
-    border-right: 1px solid #edf2f7;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 15px 18px;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
     white-space: nowrap;
     vertical-align: middle;
     user-select: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
     box-sizing: border-box;
 }
+
 .staff-modern-table th:last-child {
     border-right: none;
 }
 
 .staff-modern-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f1f5f9;
-    border-right: 1px solid #edf2f7;
-    color: var(--staff-ink);
-    font-size: 0.85rem;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-size: 14.5px;
     vertical-align: middle;
     background-color: #ffffff;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     box-sizing: border-box;
 }
+
 .staff-modern-table td:last-child {
     border-right: none;
 }
@@ -434,6 +449,7 @@ body.staff-page-body .app-content {
 .staff-action-icon-btn.btn-view {
     color: #2563eb;
 }
+
 .staff-action-icon-btn.btn-view:hover {
     background: #eff6ff;
     color: #1d4ed8;
@@ -442,6 +458,7 @@ body.staff-page-body .app-content {
 .staff-action-icon-btn.btn-edit {
     color: #475569;
 }
+
 .staff-action-icon-btn.btn-edit:hover {
     background: #f1f5f9;
     color: #0f172a;
@@ -487,6 +504,7 @@ body.staff-page-body .app-content {
     max-width: 100%;
     overflow: hidden;
 }
+
 .branch-assignment-item:last-child {
     margin-bottom: 0;
 }
@@ -508,11 +526,13 @@ body.staff-page-body .app-content {
     border: 1px solid #dbeafe;
     flex-shrink: 0;
 }
+
 .chip--primary {
     background: #ecfdf5;
     color: #047857;
     border-color: #a7f3d0;
 }
+
 .chip--role {
     background: #f8fafc;
     color: #334155;
@@ -537,6 +557,7 @@ body.staff-page-body .app-content {
     user-select: none;
     flex-shrink: 0;
 }
+
 .staff-branch-more-badge:hover {
     background: #0284c7;
     color: #ffffff;
@@ -584,7 +605,7 @@ body.staff-page-body .app-content {
     background: #f8fafc;
     border: 1px solid var(--staff-border);
     border-radius: 4px;
-    font-family: monospace;
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 0.76rem;
     color: var(--staff-ink);
     cursor: help;
@@ -655,11 +676,13 @@ body.staff-page-body .app-content {
     transition: all 0.12s;
     text-decoration: none;
 }
+
 .misa-nav-btn:hover:not(.disabled) {
     background: #f1f5f9;
     color: var(--staff-ink);
     border-color: #cbd5e1;
 }
+
 .misa-nav-btn.disabled {
     color: #cbd5e1;
     cursor: not-allowed;
@@ -714,9 +737,11 @@ body.staff-page-body .app-content {
     user-select: none;
     cursor: grab;
 }
+
 .custom-col-item:hover {
     background: #f8fafc;
 }
+
 .custom-col-item.is-dragging {
     opacity: 0.45;
     background: #eff6ff;
@@ -731,6 +756,7 @@ body.staff-page-body .app-content {
     display: inline-flex;
     align-items: center;
 }
+
 .custom-col-item:active .custom-col-drag {
     cursor: grabbing;
 }
@@ -793,6 +819,7 @@ body.staff-page-body .app-content {
         opacity: 1 !important;
         visibility: visible !important;
     }
+
     .staff-search-box-compact {
         width: 100%;
     }
@@ -814,6 +841,7 @@ body.staff-page-body .app-content {
     border-radius: 6px;
     background: transparent;
 }
+
 .staff-breadcrumb-back:hover {
     color: var(--staff-primary);
     background: #f1f5f9;
@@ -911,6 +939,7 @@ body.staff-page-body .app-content {
     align-items: center;
     gap: 8px;
 }
+
 .staff-info-card__title i {
     color: var(--staff-primary);
 }
@@ -928,6 +957,7 @@ body.staff-page-body .app-content {
     padding: 12px 16px;
     transition: all 0.15s;
 }
+
 .staff-info-tile:hover {
     background: #f1f5f9;
     border-color: #e2e8f0;
@@ -951,6 +981,7 @@ body.staff-page-body .app-content {
     color: var(--staff-ink);
     word-break: break-word;
 }
+
 .staff-info-tile__value--empty {
     color: #94a3b8;
     font-style: italic;
@@ -965,20 +996,24 @@ body.staff-page-body .app-content {
     padding: 18px 20px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
+
 .salary-stat-card__label {
     font-size: 0.8rem;
     font-weight: 600;
     color: #64748b;
     margin-bottom: 6px;
 }
+
 .salary-stat-card__amount {
     font-size: 1.4rem;
     font-weight: 800;
     color: #16a34a;
 }
+
 .salary-stat-card__amount--sub {
     color: #0284c7;
 }
+
 .salary-stat-card__amount--muted {
     color: #475569;
 }
@@ -1012,6 +1047,7 @@ body.staff-page-body .app-content {
         opacity: 0;
         transform: translateY(-6px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1048,4 +1084,364 @@ body.staff-page-body .app-content {
     padding: 10px 16px;
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
+}
+
+/* =========================================================================
+   ĐỒNG BỘ 100% GIAO DIỆN BẢNG VỚI /doctor/daily-visits (.dv-grid-card + .dv-amis-table)
+   Áp dụng cho: Quản lý tài khoản, Quản lý nhân sự, Quản lý cơ sở, Duyệt nghỉ phép, Nhật ký thao tác
+   ========================================================================= */
+
+/* 1. Khung Card bao quanh bảng (Chuẩn .dv-grid-card) */
+.dv-grid-card,
+.staff-table-card {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 24px;
+}
+
+/* 2. Thanh tiêu đề đầu bảng (Chuẩn .dv-grid-topbar) */
+.dv-grid-topbar {
+    padding: 14px 22px;
+    background: #f8fafc;
+    border-bottom: 1.5px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* 3. Khung cuộn ngang bảng (Chuẩn .dv-table-scroll-container) */
+.dv-table-scroll-container,
+.staff-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    position: relative;
+    scroll-behavior: smooth;
+    background: #ffffff;
+}
+
+/* 4. Cấu trúc Bảng hiện đại AMIS (Chuẩn .dv-amis-table) */
+.dv-amis-table,
+.staff-modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+/* 5. Tiêu đề cột Header (Thead Th) */
+.dv-amis-table thead th,
+.staff-modern-table thead th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 15px 18px;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0 !important;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.dv-amis-table thead th:hover,
+.staff-modern-table thead th:hover {
+    background: #e2e8f0;
+}
+
+.dv-th-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.dv-pin-btn {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.dv-pin-btn:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}
+
+.dv-pin-btn.is-pinned {
+    color: #0284c7;
+    background: #e0f2fe;
+}
+
+/* 6. Dòng dữ liệu & Ô dữ liệu (Tbody Td) */
+.dv-amis-table tbody tr.dv-data-row,
+.staff-modern-table tbody tr {
+    position: relative;
+    transition: background-color 0.12s ease;
+}
+
+.dv-amis-table tbody tr.dv-data-row td:not(.dv-floating-actions-track),
+.staff-modern-table tbody td:not(.dv-floating-actions-track) {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9 !important;
+    vertical-align: middle;
+    font-size: 14.5px;
+    color: #1e293b;
+    background: #ffffff;
+    transition: background-color 0.12s ease;
+    white-space: nowrap;
+}
+
+.dv-amis-table tbody tr.dv-data-row:hover td,
+.staff-modern-table tbody tr:hover td,
+.staff-modern-table tbody tr.is-row-hovered td {
+    background: #f0f9ff !important;
+}
+
+/* 7. Avatar nhận diện dạng khối bo góc gradient chuẩn daily-visits */
+.dv-patient-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    flex-shrink: 0 !important;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #0284c7 0%, #3b82f6 100%);
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22);
+    margin-right: 14px !important;
+}
+
+.dv-patient-avatar.avatar-admin {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #ffffff;
+}
+
+.dv-patient-avatar.avatar-patient {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+}
+
+.dv-patient-avatar.avatar-secondary {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: #ffffff;
+}
+
+/* 8. Tên & Mã pill chuẩn daily-visits */
+.dv-patient-name,
+.staff-name,
+.staff-name a {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    text-decoration: none !important;
+    line-height: 1.25;
+}
+
+.dv-patient-name:hover,
+.staff-name a:hover {
+    color: #0284c7 !important;
+    text-decoration: underline !important;
+}
+
+.dv-code-pill {
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #0369a1;
+    border: 1px solid #cbd5e1;
+}
+
+/* 9. Nút thao tác đồng bộ kích thước chuẩn daily-visits */
+.dv-equal-btn-primary {
+    height: 36px;
+    padding: 0 16px;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.dv-equal-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+    color: #ffffff !important;
+}
+
+.dv-equal-btn-secondary {
+    height: 36px;
+    padding: 0 15px;
+    background: #ffffff;
+    color: #0f172a !important;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.dv-equal-btn-secondary:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0369a1 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+}
+
+.dv-equal-btn-danger {
+    height: 36px;
+    padding: 0 15px;
+    background: #ffffff;
+    color: #dc2626 !important;
+    border: 1.5px solid #fecaca;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.dv-equal-btn-danger:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+    color: #b91c1c !important;
+    transform: translateY(-1px);
+}
+
+/* 10. Cột thao tác (Nút ấn nhanh) */
+.dv-amis-table thead th[data-col="actions"],
+.staff-modern-table thead th[data-col="actions"] {
+    padding: 15px 18px !important;
+    color: #0369a1 !important;
+    text-align: center !important;
+    background: #f1f5f9;
+}
+
+.dv-amis-table tbody td[data-col="actions"],
+.staff-modern-table tbody td[data-col="actions"] {
+    padding: 12px 18px !important;
+    text-align: center !important;
+    white-space: nowrap;
+}
+
+/* Cụm nút thao tác đặt ngay trong ô, sạch đẹp */
+.dv-actions-cell-always {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* =========================================================================
+   11. KHUNG NÚT THAO TÁC NỔI KHI HOVER (CHUẨN 100% THEO /doctor/daily-visits)
+   ========================================================================= */
+.dv-floating-actions-track {
+    position: sticky !important;
+    right: 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    outline: none !important;
+    overflow: visible !important;
+    z-index: 55 !important;
+    background: transparent !important;
+}
+
+.dv-floating-actions-bar {
+    position: absolute !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100% !important;
+    transform: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    padding: 0 16px !important;
+    background: #f0f9ff !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 0.12s ease, visibility 0.12s ease !important;
+    white-space: nowrap !important;
+    z-index: 60 !important;
+}
+
+.dv-amis-table tbody tr:hover .dv-floating-actions-bar,
+.dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar,
+.dv-amis-table tbody tr.is-row-hovered .dv-floating-actions-bar,
+.staff-modern-table tbody tr:hover .dv-floating-actions-bar,
+.staff-modern-table tbody tr.dv-data-row:hover .dv-floating-actions-bar,
+.staff-modern-table tbody tr.is-row-hovered .dv-floating-actions-bar {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    pointer-events: auto !important;
 }

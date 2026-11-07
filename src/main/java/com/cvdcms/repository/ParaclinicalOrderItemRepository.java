@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ParaclinicalOrderItemRepository extends JpaRepository<ParaclinicalOrderItem, Long> {
     List<ParaclinicalOrderItem> findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(Long visitId);
     List<ParaclinicalOrderItem> findByOrder_OrderId(Long orderId);
     long countByOrder_Visit_VisitIdAndStatus(Long visitId, ParaclinicalOrderItemStatus status);
+    Optional<ParaclinicalOrderItem> findByExternalRefIdIgnoreCase(String externalRefId);
+    List<ParaclinicalOrderItem> findByOrder_OrderCodeIgnoreCase(String orderCode);
 }

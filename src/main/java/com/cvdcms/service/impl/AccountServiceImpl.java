@@ -268,13 +268,57 @@ public class AccountServiceImpl implements AccountService {
 
         // Chi nhánh:
         // - Quản trị viên: luôn để trống (toàn hệ thống).
-        // - Nhân sự đã có hồ sơ nhân sự: chi nhánh do phân công chi nhánh (FT41) quyết
-        // định, giữ nguyên.
-        // - Tài khoản khác: cập nhật theo lựa chọn (để trống = bỏ gán chi nhánh).
+        // - Nhân sự và các tài khoản khác: cập nhật theo lựa chọn (để trống = bỏ gán chi nhánh).
+        // Nếu là nhân sự đã có hồ sơ, tự động đồng bộ chi nhánh chính sang bảng staff_branch_assignments.
         if (hasAdminRole(user)) {
             user.setBranch(null);
-        } else if (!staffProfileRepository.existsByUserUserId(userId)) {
-            user.setBranch(resolveBranch(dto.getBranchId()));
+        } else {
+            Branch newBranch = resolveBranch(dto.getBranchId());
+            user.setBranch(newBranch);
+
+            staffProfileRepository.findByUser_UserId(userId).ifPresent(staff -> {
+                user.setUserType(UserType.STAFF);
+                if (newBranch != null) {
+                    java.util.List<StaffBranchAssignment> assignments = staffBranchAssignmentRepository.findByStaffId(staff.getStaffId());
+                    StaffBranchAssignment existingActiveAtTarget = assignments.stream()
+                            .filter(a -> a.getStatus() == AssignmentStatus.ACTIVE
+                                    && a.getBranch() != null
+                                    && a.getBranch().getBranchId().equals(newBranch.getBranchId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    StaffBranchAssignment primary = assignments.stream()
+                            .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()) && a.getStatus() == AssignmentStatus.ACTIVE)
+                            .findFirst()
+                            .orElse(null);
+
+                    if (existingActiveAtTarget != null) {
+                        if (!Boolean.TRUE.equals(existingActiveAtTarget.getIsPrimary())) {
+                            if (primary != null) {
+                                primary.setIsPrimary(false);
+                                staffBranchAssignmentRepository.save(primary);
+                            }
+                            existingActiveAtTarget.setIsPrimary(true);
+                            staffBranchAssignmentRepository.save(existingActiveAtTarget);
+                        }
+                    } else if (primary != null) {
+                        primary.setBranch(newBranch);
+                        staffBranchAssignmentRepository.save(primary);
+                    } else {
+                        Role primaryRole = (user.getRoles() != null && !user.getRoles().isEmpty())
+                                ? user.getRoles().iterator().next()
+                                : null;
+                        StaffBranchAssignment newAssign = new StaffBranchAssignment();
+                        newAssign.setStaff(staff);
+                        newAssign.setBranch(newBranch);
+                        newAssign.setRole(primaryRole);
+                        newAssign.setIsPrimary(true);
+                        newAssign.setStartDate(java.time.LocalDate.now());
+                        newAssign.setStatus(AssignmentStatus.ACTIVE);
+                        staffBranchAssignmentRepository.save(newAssign);
+                    }
+                }
+            });
         }
 
         // Đồng bộ Email và Số điện thoại sang Hồ sơ nhân sự (FT41) nếu tài khoản đã gắn
@@ -464,6 +508,9 @@ public class AccountServiceImpl implements AccountService {
 
     private boolean isPatientAccount(User user) {
         if (user == null) {
+            return false;
+        }
+        if (staffProfileRepository.existsByUserUserId(user.getUserId())) {
             return false;
         }
         boolean hasPatientProfiles = user.getPatientProfiles() != null && !user.getPatientProfiles().isEmpty();
