@@ -79,11 +79,10 @@ class CvDcmsApplicationTests {
     }
 
     @Test
-    @DisplayName("Unauthenticated guest GET /home redirects to /login without EL1001E null exception")
+    @DisplayName("Unauthenticated guest GET /home renders customer portal home safely without EL1001E null exception")
     void testGuestGetHomeRedirectsSafely() throws Exception {
         mockMvc.perform(get("/home"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
+                .andExpect(status().isOk());
     }
 
     @Test

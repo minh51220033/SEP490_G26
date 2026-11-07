@@ -1,564 +1,1575 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Trang chủ Nha khoa Cường Việt')}"></head>
-<body class="cp-body">
+<head th:replace="~{fragments/head :: head('Nha khoa Cường Việt – Trao niềm tin, Nở nụ cười')}"></head>
+<body class="cp-body"
+      th:with="effectivePhone=${effectiveContactPhone != null and !#strings.isEmpty(effectiveContactPhone) ? effectiveContactPhone : '0987654321'}">
 
 <!-- ===================================================================== -->
-<!-- SECTION 1: STICKY HEADER / NAVBAR                                     -->
+<!-- HEADER DÙNG CHUNG: Tự động thích ứng Chưa đăng nhập & Đã đăng nhập    -->
 <!-- ===================================================================== -->
 <header th:replace="~{fragments/header :: siteHeader}"></header>
 
+<!-- ===================================================================== -->
+<!-- THÔNG BÁO KHI ĐỔI CƠ SỞ THÀNH CÔNG                                    -->
+<!-- ===================================================================== -->
+<div class="cv-container mt-3" th:if="${branchSwitchSuccess != null}">
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm border-0 mb-0"
+         style="border-radius: 14px; background: #dcfce7; color: #166534;" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <span class="fw-semibold" th:text="${branchSwitchSuccess}">Đã chuyển cơ sở thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- THANH TIỆN ÍCH CÁ NHÂN (CHỈ HIỂN THỊ KHI NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP)      -->
+<!-- ===================================================================== -->
+<section class="cv-user-bar" th:if="${session.loggedInUser != null}" aria-label="Tiện ích tài khoản đã đăng nhập">
+    <div class="cv-container cv-user-bar__inner">
+        <div class="cv-user-bar__greeting">
+            <span class="cv-user-bar__badge">
+                <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+                <span th:text="${isPatientUser ? 'Khách hàng thành viên' : 'Nhân sự phòng khám'}">Đã đăng nhập</span>
+            </span>
+            <span>
+                Xin chào,
+                <strong th:text="${displayName != null and !#strings.isEmpty(displayName)
+                        ? displayName : session.loggedInUser.username}">Khách hàng</strong>!
+                <span class="text-muted d-none d-md-inline"
+                      th:if="${currentPortalBranch != null}">
+                    · Cơ sở đang xem:
+                    <strong class="text-primary" th:text="${currentPortalBranch.branchName}">Cơ sở Cường Việt</strong>
+                    <a href="#lien-he" class="ms-1 small text-decoration-underline">(Đổi cơ sở)</a>
+                </span>
+            </span>
+        </div>
+
+        <!-- Lối tắt nhanh cho Bệnh nhân đã đăng nhập -->
+        <div class="cv-user-bar__actions" th:if="${isPatientUser}">
+            <a th:href="@{/portal/appointments/new}" class="cv-user-bar__pill cv-user-bar__pill--primary">
+                <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám trực tuyến
+            </a>
+            <a th:href="@{/portal/appointments}" class="cv-user-bar__pill">
+                <i class="bi bi-calendar2-week" aria-hidden="true"></i> Lịch hẹn của tôi
+            </a>
+            <a th:href="@{/portal/records}" class="cv-user-bar__pill">
+                <i class="bi bi-folder2-open" aria-hidden="true"></i> Hồ sơ bệnh án &amp; Phim chụp
+            </a>
+            <a th:href="@{/profile}" class="cv-user-bar__pill">
+                <i class="bi bi-person-circle" aria-hidden="true"></i> Thông tin cá nhân
+            </a>
+        </div>
+
+        <!-- Lối tắt nhanh cho Nhân sự / Bác sĩ / Admin đã đăng nhập -->
+        <div class="cv-user-bar__actions" th:if="${!isPatientUser}">
+            <a th:href="@{/home}" class="cv-user-bar__pill cv-user-bar__pill--primary">
+                <i class="bi bi-speedometer2" aria-hidden="true"></i> Vào Bàn làm việc nội bộ
+            </a>
+            <a th:href="@{/profile}" class="cv-user-bar__pill">
+                <i class="bi bi-person-vcard" aria-hidden="true"></i> Thông tin cá nhân
+            </a>
+        </div>
+    </div>
+</section>
+
 <main>
     <!-- ================================================================= -->
-    <!-- SECTION 2: HERO BANNER                                            -->
+    <!-- SECTION 1: HERO (TRAO NIỀM TIN, NỞ NỤ CƯỜI)                       -->
     <!-- ================================================================= -->
-    <section class="cp-hero">
-        <div class="container-xl">
-            <div class="row align-items-center g-4 g-lg-5">
-                <div class="col-lg-7">
-                    <div class="cp-hero__badge">
-                        <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
-                        <span>Hệ thống Phòng khám Nha khoa Cường Việt · CV-DCMS</span>
-                    </div>
+    <section class="cv-hero">
+        <div class="cv-container cv-hero__grid">
+            <div class="cv-hero__content">
+                <span class="cv-pill-tag">
+                    <span class="cv-pill-tag__dot"></span>
+                    <span th:text="${currentPortalBranch != null
+                            ? 'Răng – Hàm – Mặt · ' + currentPortalBranch.branchName
+                            : 'Răng – Hàm – Mặt · Bắc Giang'}">Răng – Hàm – Mặt · Bắc Giang</span>
+                </span>
 
-                    <h1 class="cp-hero__title">
-                        Chăm sóc nụ cười toàn diện với <span>Quy trình Nha khoa Chuẩn Y Khoa</span>
-                    </h1>
+                <h1 class="cv-hero__heading">
+                    Trao niềm tin,<br />
+                    <em>nở nụ cười.</em>
+                </h1>
 
-                    <p class="cp-hero__desc">
-                        Hệ thống Nha khoa Cường Việt kết hợp đội ngũ bác sĩ chuyên khoa Răng Hàm Mặt,
-                        chẩn đoán hình ảnh X-quang kỹ thuật số và hồ sơ bệnh án điện tử đồng bộ,
-                        mang lại trải nghiệm thăm khám an toàn, minh bạch và tận tâm cho mọi khách hàng.
-                    </p>
-
-                    <div class="cp-hero__actions">
-                        <a th:if="${session.loggedInUser == null}"
-                           th:href="@{/login}" class="btn-brand btn-brand--lg">
-                            <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám ngay
-                        </a>
-                        <a th:if="${session.loggedInUser != null and isPatientUser}"
-                           th:href="@{/portal/appointments/new}" class="btn-brand btn-brand--lg">
-                            <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám ngay
-                        </a>
-                        <a th:if="${session.loggedInUser != null and !isPatientUser}"
-                           th:href="@{/home}" class="btn-brand btn-brand--lg">
-                            <i class="bi bi-speedometer2" aria-hidden="true"></i> Vào bàn làm việc nội bộ
-                        </a>
-
-                        <a th:href="@{/about}" class="btn-outline-brand btn-outline-brand--lg">
-                            Tìm hiểu thêm <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                        <a th:href="@{/services}" class="btn-light-soft" style="height:44px;padding:0 18px;">
-                            <i class="bi bi-tags" aria-hidden="true"></i> Xem bảng giá
-                        </a>
-                    </div>
-
-                    <div class="cp-hero__trust">
-                        <div class="cp-hero__trust-item">
-                            <span class="cp-hero__trust-icon"><i class="bi bi-person-badge-fill"></i></span>
-                            <div>
-                                <p class="cp-hero__trust-title">Bác sĩ Chuyên khoa</p>
-                                <p class="cp-hero__trust-sub">Có chứng chỉ hành nghề RHM</p>
-                            </div>
-                        </div>
-                        <div class="cp-hero__trust-item">
-                            <span class="cp-hero__trust-icon"><i class="bi bi-file-earmark-medical-fill"></i></span>
-                            <div>
-                                <p class="cp-hero__trust-title">Bệnh án Điện tử</p>
-                                <p class="cp-hero__trust-sub">Theo dõi phác đồ &amp; phim chụp</p>
-                            </div>
-                        </div>
-                        <div class="cp-hero__trust-item">
-                            <span class="cp-hero__trust-icon"><i class="bi bi-shield-check"></i></span>
-                            <div>
-                                <p class="cp-hero__trust-title">Bảng giá Minh bạch</p>
-                                <p class="cp-hero__trust-sub">Niêm yết rõ ràng từng dịch vụ</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-5">
-                    <div class="cp-hero__visual">
-                        <div class="cp-hero__card-main">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <span class="badge bg-white text-primary fw-bold px-3 py-2 rounded-pill">
-                                    <i class="bi bi-heart-pulse-fill me-1"></i> Cổng thông tin Bệnh nhân
-                                </span>
-                                <i class="bi bi-hospital fs-3 text-white-50"></i>
-                            </div>
-                            <h2 class="h4 fw-bold mb-2">Đặt lịch hẹn &amp; Tra cứu Hồ sơ Nha khoa Trực tuyến</h2>
-                            <p class="small text-white-50 mb-4" style="line-height:1.6;">
-                                Chủ động lựa chọn cơ sở khám, bác sĩ phụ trách và khung giờ phù hợp.
-                                Tra cứu lịch sử điều trị, đơn thuốc và kết quả cận lâm sàng mọi lúc mọi nơi.
-                            </p>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <a th:href="@{/doctors}"
-                                       class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-10 text-white text-decoration-none">
-                                        <i class="bi bi-people-fill fs-5"></i>
-                                        <span class="small fw-semibold">Đội ngũ bác sĩ</span>
-                                    </a>
-                                </div>
-                                <div class="col-6">
-                                    <a th:href="@{/services}"
-                                       class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-10 text-white text-decoration-none">
-                                        <i class="bi bi-card-checklist fs-5"></i>
-                                        <span class="small fw-semibold">Danh mục dịch vụ</span>
-                                    </a>
-                                </div>
-                                <div class="col-6" th:if="${session.loggedInUser != null and isPatientUser}">
-                                    <a th:href="@{/portal/records}"
-                                       class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-10 text-white text-decoration-none">
-                                        <i class="bi bi-folder2-open fs-5"></i>
-                                        <span class="small fw-semibold">Hồ sơ bệnh nhân</span>
-                                    </a>
-                                </div>
-                                <div class="col-6" th:if="${session.loggedInUser != null and isPatientUser}">
-                                    <a th:href="@{/portal/appointments}"
-                                       class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-10 text-white text-decoration-none">
-                                        <i class="bi bi-calendar2-week fs-5"></i>
-                                        <span class="small fw-semibold">Lịch hẹn của tôi</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cp-hero__floating-card" th:if="${primaryBranch != null}">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="icon-tile icon-tile--lg">
-                                    <i class="bi bi-geo-alt-fill"></i>
-                                </span>
-                                <div class="min-w-0">
-                                    <div class="xs text-muted fw-semibold text-uppercase" style="font-size:11px;">
-                                        Cơ sở hoạt động
-                                    </div>
-                                    <div class="fw-bold text-dark text-truncate" th:text="${primaryBranch.branchName}">
-                                        Cơ sở chính
-                                    </div>
-                                    <div class="small text-muted text-truncate" th:text="${primaryBranch.address}">
-                                        Địa chỉ cơ sở
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SECTION 3: GIỚI THIỆU PHÒNG KHÁM                                  -->
-    <!-- ================================================================= -->
-    <section class="cp-section cp-section--white" id="about-section">
-        <div class="container-xl">
-            <div class="row align-items-center g-4 g-lg-5">
-                <div class="col-lg-6">
-                    <span class="cp-eyebrow">
-                        <i class="bi bi-building-check"></i> Về Nha khoa Cường Việt
+                <p class="cv-hero__desc">
+                    Phòng khám Cường Việt do BS. Nguyễn Đình Toàn phụ trách — chăm sóc răng miệng cho cả gia đình, từ trẻ nhỏ đến ông bà.
+                    <span th:if="${currentPortalBranch != null and currentPortalBranch.address != null}"
+                          class="d-block mt-1 small text-secondary">
+                        <i class="bi bi-geo-alt-fill text-primary me-1"></i>
+                        <span th:text="${currentPortalBranch.branchName + ' — ' + currentPortalBranch.address}">Địa chỉ cơ sở</span>
                     </span>
-                    <h2 class="cp-section-title">
-                        Lấy chất lượng điều trị lâm sàng và sự an toàn của bệnh nhân làm trọng tâm
-                    </h2>
-                    <p class="text-muted mb-3" style="font-size:15px;line-height:1.7;">
-                        Cường Việt Dental được xây dựng theo mô hình phòng khám nha khoa chuẩn hóa quy trình từ bước
-                        tiếp đón, khám tổng quát, chỉ định cận lâm sàng X-quang đến lập kế hoạch điều trị và chăm sóc hậu phẫu.
-                    </p>
-                    <p class="text-muted mb-4" style="font-size:15px;line-height:1.7;">
-                        Toàn bộ thông tin khám chữa bệnh, sơ đồ răng (Odontogram), phim chụp kỹ thuật số, đơn thuốc
-                        và lịch hẹn tái khám đều được quản lý xuyên suốt trên nền tảng CV-DCMS, giúp bác sĩ và bệnh nhân
-                        dễ dàng theo dõi tiến trình điều trị.
-                    </p>
+                </p>
 
-                    <div class="d-flex flex-wrap gap-3">
-                        <a th:href="@{/about}" class="btn-brand">
-                            Xem chi tiết giới thiệu <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                        <a th:href="@{/contact}" class="btn-outline-brand">
-                            Hệ thống cơ sở <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="col-lg-6">
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="p-4 rounded-4 border bg-light h-100">
-                                <span class="icon-tile mb-3"><i class="bi bi-clipboard2-pulse"></i></span>
-                                <h3 class="h6 fw-bold text-dark mb-2">Phác đồ điều trị cá nhân hóa</h3>
-                                <p class="small text-muted mb-0" style="line-height:1.6;">
-                                    Bác sĩ thăm khám kỹ lưỡng, tư vấn rõ tình trạng răng miệng và lộ trình điều trị theo từng giai đoạn.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-4 rounded-4 border bg-light h-100">
-                                <span class="icon-tile mb-3"><i class="bi bi-radioactive"></i></span>
-                                <h3 class="h6 fw-bold text-dark mb-2">Chẩn đoán hình ảnh kỹ thuật số</h3>
-                                <p class="small text-muted mb-0" style="line-height:1.6;">
-                                    Hỗ trợ lưu trữ và đối chiếu phim chụp X-quang nha khoa trực tiếp trên hồ sơ bệnh án điện tử.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-4 rounded-4 border bg-light h-100">
-                                <span class="icon-tile mb-3"><i class="bi bi-shield-plus"></i></span>
-                                <h3 class="h6 fw-bold text-dark mb-2">Kiểm soát vô khuẩn nghiêm ngặt</h3>
-                                <p class="small text-muted mb-0" style="line-height:1.6;">
-                                    Tuân thủ quy trình khử khuẩn dụng cụ và quản lý lô/hạn dùng vật tư nha khoa chặt chẽ.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="p-4 rounded-4 border bg-light h-100">
-                                <span class="icon-tile mb-3"><i class="bi bi-headset"></i></span>
-                                <h3 class="h6 fw-bold text-dark mb-2">Chăm sóc hậu phẫu &amp; Nhắc hẹn</h3>
-                                <p class="small text-muted mb-0" style="line-height:1.6;">
-                                    Đội ngũ chăm sóc khách hàng đồng hành hướng dẫn sau điều trị và nhắc lịch tái khám định kỳ.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SECTION 4: DANH SÁCH DỊCH VỤ NỔI BẬT (TỐI ĐA 4 DỊCH VỤ TỪ DB)     -->
-    <!-- ================================================================= -->
-    <section class="cp-section cp-section--soft" id="services-section">
-        <div class="container-xl">
-            <div class="cp-section-header">
-                <div>
-                    <span class="cp-eyebrow">
-                        <i class="bi bi-stars"></i> Dịch vụ nha khoa
-                    </span>
-                    <h2 class="cp-section-title">Dịch vụ &amp; Giải pháp điều trị</h2>
-                    <p class="cp-section-subtitle">
-                        Bảng giá niêm yết công khai, minh bạch cùng thông tin bảo hành rõ ràng từ hệ thống.
-                    </p>
-                </div>
-                <a th:href="@{/services}" class="btn-outline-brand">
-                    Xem tất cả dịch vụ <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                </a>
-            </div>
-
-            <!-- Có dữ liệu dịch vụ -->
-            <div class="cp-card-grid-4" th:if="${featuredServices != null and !#lists.isEmpty(featuredServices)}">
-                <article class="cp-card" th:each="svc : ${featuredServices}"
-                         th:with="promo=${servicePromotions != null ? servicePromotions[svc.serviceId] : null},
-                                  listedPrice=${(svc.basePrice != null ? svc.basePrice : T(java.math.BigDecimal).ZERO).add(svc.surchargeAmount != null ? svc.surchargeAmount : T(java.math.BigDecimal).ZERO)}">
-                    <a th:href="@{/services/{id}(id=${svc.serviceId})}" class="cp-service-card__media text-decoration-none">
-                        <img th:if="${svc.imageUrl != null and !#strings.isEmpty(svc.imageUrl)}"
-                             th:src="${svc.imageUrl}"
-                             th:alt="${svc.serviceName}"
-                             class="cp-service-card__img"
-                             loading="lazy">
-                        <div th:if="${svc.imageUrl == null or #strings.isEmpty(svc.imageUrl)}"
-                             class="cp-service-card__placeholder">
-                            <i class="bi bi-heart-pulse"></i>
-                            <span class="small fw-semibold">Cường Việt Dental</span>
-                        </div>
-                        <div class="cp-service-card__badges">
-                            <span class="cp-badge cp-badge--category"
-                                  th:if="${svc.category != null}"
-                                  th:text="${svc.category.categoryName}">Nhóm dịch vụ</span>
-                            <span class="cp-badge cp-badge--promo"
-                                  th:if="${promo != null}"
-                                  th:text="${promo.discountBadge}">-20%</span>
-                        </div>
+                <div class="cv-hero__actions">
+                    <a th:href="'tel:' + ${effectivePhone}" class="cv-btn cv-btn--primary">
+                        <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+                        <span th:text="'Gọi đặt lịch · ' + ${effectivePhone}">Gọi đặt lịch · 0987654321</span>
                     </a>
+                    <button type="button" data-open-booking class="cv-btn cv-btn--secondary">
+                        <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám
+                    </button>
+                    <a href="#lien-he" class="cv-btn cv-btn--card">
+                        Xem cơ sở &amp; giờ làm việc
+                    </a>
+                </div>
+            </div>
 
-                    <div class="cp-service-card__body">
-                        <h3 class="cp-service-card__title">
+            <div class="cv-hero__bento-wrap">
+                <div class="cv-hero-bento">
+                    <img th:src="@{/uploads/images/clinc_treatment.png}"
+                         src="/uploads/images/clinc_treatment.png"
+                         alt="Bác sĩ đang khám răng cho bệnh nhân tại Nha khoa Cường Việt"
+                         class="cv-hero-bento__main" />
+                    <div class="cv-hero-bento__side">
+                        <img th:src="@{/uploads/images/waiting_area.png}"
+                             src="/uploads/images/waiting_area.png"
+                             alt="Không gian phòng chờ Nha khoa Cường Việt"
+                             class="cv-hero-bento__sub" />
+                        <div class="cv-hero-bento__stat">
+                            <p class="cv-hero-bento__stat-num">7 ngày</p>
+                            <p class="cv-hero-bento__stat-label">mở cửa mỗi tuần</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 2: DỊCH VỤ ("CHÚNG TÔI ĐIỀU TRỊ GÌ" — KẾT NỐI BACKEND)    -->
+    <!-- ================================================================= -->
+    <section id="dich-vu" class="cv-section">
+        <div class="cv-container">
+            <div class="cv-section__head">
+                <div>
+                    <p class="cv-section__eyebrow">
+                        Dịch vụ
+                        <span th:if="${currentPortalBranch != null}"
+                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                    </p>
+                    <h2 class="cv-section__title">Chúng tôi điều trị gì</h2>
+                </div>
+                <div class="d-flex flex-column align-items-md-end gap-2">
+                    <p class="cv-section__desc mb-0">
+                        Các dịch vụ chính đang thực hiện tại phòng khám. Liên hệ để được tư vấn cụ thể.
+                    </p>
+                    <a th:href="@{/services}" class="cv-btn cv-btn--card" style="padding: 0.45rem 1rem; font-size: 0.84rem;">
+                        Xem toàn bộ bảng giá <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Thanh lọc theo Nhóm danh mục thực tế từ Backend DB -->
+            <div class="cv-filter-bar" role="tablist" aria-label="Lọc nhóm dịch vụ">
+                <button type="button" data-service-filter="all" class="cv-filter-pill is-active">Tất cả</button>
+                <th:block th:if="${categories != null and !#lists.isEmpty(categories)}">
+                    <button type="button"
+                            th:each="cat : ${categories}"
+                            th:attr="data-service-filter='cat-' + ${cat.categoryId}"
+                            class="cv-filter-pill"
+                            th:text="${cat.categoryName}">Nhóm dịch vụ</button>
+                </th:block>
+            </div>
+
+            <!-- Khối Hairline Bento Grid hiển thị dịch vụ thật từ Backend -->
+            <div class="cv-services-bento" id="portalServicesBento">
+                <!-- Trường hợp có dịch vụ trong DB -->
+                <th:block th:if="${portalServices != null and !#lists.isEmpty(portalServices)}">
+                    <div class="cv-service-cell"
+                         th:each="svc, stat : ${portalServices}"
+                         th:with="promo=${servicePromotions != null ? servicePromotions[svc.serviceId] : null},
+                                  listedPrice=${(svc.basePrice != null ? svc.basePrice : T(java.math.BigDecimal).ZERO).add(svc.surchargeAmount != null ? svc.surchargeAmount : T(java.math.BigDecimal).ZERO)},
+                                  plainDesc=${@customerPortalServiceImpl.plainTextSummary(svc.description, 105)}"
+                         th:attr="data-service-category=${svc.category != null ? 'cat-' + svc.category.categoryId : 'cat-other'},
+                                  data-initial-visible=${stat.index < 5 ? 'true' : 'false'}"
+                         th:classappend="${stat.index >= 5} ? 'is-hidden' : ''">
+
+                        <div class="cv-service-cell__header">
+                            <span class="cv-service-cell__num"
+                                   data-service-num
+                                  th:text="${stat.count < 10 ? '0' + stat.count : stat.count}">01</span>
+                            <span class="cv-service-cell__promo"
+                                  th:if="${promo != null}"
+                                  th:text="${promo.discountBadge}">-15%</span>
+                        </div>
+
+                        <h3 class="cv-service-cell__title">
                             <a th:href="@{/services/{id}(id=${svc.serviceId})}"
                                th:text="${svc.serviceName}">Tên dịch vụ</a>
                         </h3>
 
-                        <p class="cp-service-card__desc"
-                           th:text="${!#strings.isEmpty(@customerPortalServiceImpl.plainTextSummary(svc.description, 140))
-                                   ? @customerPortalServiceImpl.plainTextSummary(svc.description, 140)
-                                   : 'Dịch vụ thăm khám và điều trị chuyên sâu theo tiêu chuẩn lâm sàng tại Nha khoa Cường Việt.'}">
-                            Mô tả ngắn của dịch vụ.
+                        <p class="cv-service-cell__desc"
+                           th:text="${plainDesc != null and !#strings.isEmpty(plainDesc)
+                                   ? plainDesc
+                                   : (svc.category != null ? svc.category.categoryName + ' chuẩn y khoa tại Nha khoa Cường Việt.' : 'Thăm khám và điều trị theo phác đồ chuẩn y khoa.')}">
+                            Mô tả dịch vụ
                         </p>
 
-                        <div class="cp-service-card__price-box">
-                            <div th:if="${promo != null}">
-                                <span class="cp-price-current"
-                                      th:text="${#numbers.formatDecimal(promo.discountedPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">800,000 đ</span>
-                                <span class="cp-price-original"
-                                      th:text="${#numbers.formatDecimal(promo.originalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">1,000,000 đ</span>
-                            </div>
-                            <div th:if="${promo == null}">
-                                <span class="cp-price-current"
-                                      th:text="${#numbers.formatDecimal(listedPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">1,000,000 đ</span>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between mt-1">
-                                <span class="cp-price-unit" th:text="'Đơn vị: ' + ${svc.unit}">Đơn vị: Răng</span>
-                                <span class="cp-badge cp-badge--warranty"
-                                      th:if="${svc.warrantyMonths != null and svc.warrantyMonths > 0}"
-                                      th:text="'BH ' + ${svc.warrantyMonths} + ' tháng'">BH 12 tháng</span>
-                            </div>
+                        <div class="cv-service-cell__price-row" th:if="${listedPrice != null and listedPrice.doubleValue() > 0}">
+                            <span class="cv-service-cell__price-current"
+                                  th:text="${#numbers.formatDecimal(promo != null ? promo.discountedPrice : listedPrice, 0, 'POINT', 0, 'COMMA')} + ' đ/' + ${svc.unit != null ? svc.unit : 'Lần'}">
+                                500.000 đ/Lần
+                            </span>
+                            <span class="cv-service-cell__price-old"
+                                  th:if="${promo != null}"
+                                  th:text="${#numbers.formatDecimal(promo.originalPrice, 0, 'POINT', 0, 'COMMA')} + ' đ'">
+                                600.000 đ
+                            </span>
                         </div>
 
-                        <a th:href="@{/services/{id}(id=${svc.serviceId})}" class="btn-outline-brand w-100">
-                            Xem chi tiết <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                        </a>
-                    </div>
-                </article>
-            </div>
-
-            <!-- Empty state an toàn khi chưa có dịch vụ -->
-            <div class="empty-state-box bg-white rounded-4 border p-5"
-                 th:if="${featuredServices == null or #lists.isEmpty(featuredServices)}">
-                <i class="bi bi-clipboard2-x empty-icon"></i>
-                <h6>Chưa có dịch vụ công khai</h6>
-                <p class="mb-0">Danh mục dịch vụ nha khoa đang được cập nhật. Quý khách vui lòng quay lại sau.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SECTION 5: ĐỘI NGŨ BÁC SĨ (TỐI ĐA 4 BÁC SĨ TỪ DB)                 -->
-    <!-- ================================================================= -->
-    <section class="cp-section cp-section--white" id="doctors-section">
-        <div class="container-xl">
-            <div class="cp-section-header">
-                <div>
-                    <span class="cp-eyebrow">
-                        <i class="bi bi-person-Vcard"></i> Đội ngũ chuyên gia
-                    </span>
-                    <h2 class="cp-section-title">Đội ngũ Bác sĩ Răng Hàm Mặt</h2>
-                    <p class="cp-section-subtitle">
-                        Các bác sĩ giàu tâm huyết, có chứng chỉ hành nghề và trực tiếp thăm khám, điều trị tại các cơ sở.
-                    </p>
-                </div>
-                <a th:href="@{/doctors}" class="btn-outline-brand">
-                    Xem tất cả bác sĩ <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                </a>
-            </div>
-
-            <!-- Có dữ liệu bác sĩ -->
-            <div class="cp-card-grid-4" th:if="${featuredDoctors != null and !#lists.isEmpty(featuredDoctors)}">
-                <article class="cp-card" th:each="doc : ${featuredDoctors}">
-                    <div class="cp-doctor-card__top">
-                        <div class="cp-doctor-avatar" th:text="${doc.initials}">BS</div>
-                        <span class="cp-doctor-card__role" th:text="${doc.positionTitle}">Bác sĩ Răng Hàm Mặt</span>
-                        <h3 class="cp-doctor-card__name">
-                            <a th:href="@{/doctors/{id}(id=${doc.staffId})}"
-                               th:text="${doc.fullName}">Họ tên bác sĩ</a>
-                        </h3>
-                        <p class="cp-doctor-card__specialty" th:text="${doc.specialty}">Chuyên khoa</p>
-                    </div>
-
-                    <div class="cp-doctor-card__body">
-                        <ul class="cp-doctor-meta">
-                            <li th:if="${doc.department != null and !#strings.isEmpty(doc.department)}">
-                                <i class="bi bi-hospital"></i>
-                                <span>Khoa/Bộ phận: <strong th:text="${doc.department}">Lâm sàng</strong></span>
-                            </li>
-                            <li th:if="${doc.practiceLicenseNo != null and !#strings.isEmpty(doc.practiceLicenseNo)}">
-                                <i class="bi bi-award"></i>
-                                <span>CCHN: <strong th:text="${doc.practiceLicenseNo}">CCHN</strong></span>
-                            </li>
-                            <li th:if="${doc.branchNames != null and !#lists.isEmpty(doc.branchNames)}">
-                                <i class="bi bi-geo-alt"></i>
-                                <span>Cơ sở: <strong th:text="${#strings.listJoin(doc.branchNames, ', ')}">Cơ sở</strong></span>
-                            </li>
-                        </ul>
-
-                        <a th:href="@{/doctors/{id}(id=${doc.staffId})}" class="btn-outline-brand w-100">
-                            Xem hồ sơ &amp; lịch khám <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                        </a>
-                    </div>
-                </article>
-            </div>
-
-            <!-- Empty state khi chưa có dữ liệu bác sĩ -->
-            <div class="empty-state-box bg-light rounded-4 border p-5"
-                 th:if="${featuredDoctors == null or #lists.isEmpty(featuredDoctors)}">
-                <i class="bi bi-person-badge empty-icon"></i>
-                <h6>Đang cập nhật danh sách bác sĩ</h6>
-                <p class="mb-0">Thông tin đội ngũ bác sĩ phụ trách các cơ sở đang được đồng bộ trên hệ thống.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SECTION 6: TIN TỨC / KIẾN THỨC NHA KHOA (TỐI ĐA 4 BÀI VIẾT TỪ DB) -->
-    <!-- ================================================================= -->
-    <section class="cp-section cp-section--soft" id="news-section">
-        <div class="container-xl">
-            <div class="cp-section-header">
-                <div>
-                    <span class="cp-eyebrow">
-                        <i class="bi bi-journal-medical"></i> Kiến thức &amp; Tin tức
-                    </span>
-                    <h2 class="cp-section-title">Cẩm nang chăm sóc răng miệng &amp; Tin phòng khám</h2>
-                    <p class="cp-section-subtitle">
-                        Cập nhật kiến thức nha khoa hữu ích và các thông báo chính thức từ hệ thống Cường Việt Dental.
-                    </p>
-                </div>
-                <a th:href="@{/news}" class="btn-outline-brand">
-                    Xem tất cả tin tức <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                </a>
-            </div>
-
-            <!-- Có bài viết -->
-            <div class="cp-card-grid-4" th:if="${latestNews != null and !#lists.isEmpty(latestNews)}">
-                <article class="cp-card" th:each="item : ${latestNews}">
-                    <a th:href="@{/news/{slug}(slug=${item.slug})}" class="cp-news-card__media text-decoration-none">
-                        <img th:if="${item.thumbnail != null and !#strings.isEmpty(item.thumbnail)}"
-                             th:src="${item.thumbnail}"
-                             th:alt="${item.title}"
-                             class="cp-news-card__img"
-                             loading="lazy">
-                        <div th:if="${item.thumbnail == null or #strings.isEmpty(item.thumbnail)}"
-                             class="cp-service-card__placeholder">
-                            <i class="bi bi-newspaper"></i>
-                            <span class="small fw-semibold">Tin tức Nha khoa</span>
+                        <div class="cv-service-cell__footer">
+                            <button type="button"
+                                    data-open-booking
+                                    th:attr="data-service-name=${svc.serviceName}, data-service-id=${svc.serviceId}"
+                                    class="cv-service-cell__link">
+                                Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                            </button>
+                            <a th:href="@{/services/{id}(id=${svc.serviceId})}"
+                               class="small text-muted text-decoration-none">
+                                Chi tiết
+                            </a>
                         </div>
+                    </div>
+                </th:block>
+
+                <!-- Fallback nếu DB chưa có bản ghi dịch vụ nào -->
+                <th:block th:if="${portalServices == null or #lists.isEmpty(portalServices)}">
+                    <div class="cv-service-cell" data-service-category="all">
+                        <span class="cv-service-cell__num" data-service-num>01</span>
+                        <h3 class="cv-service-cell__title">Răng sứ thẩm mỹ</h3>
+                        <p class="cv-service-cell__desc">Phục hình răng sứ tự nhiên, khớp màu với hàm răng thật.</p>
+                        <button type="button" data-open-booking data-service-name="Răng sứ thẩm mỹ" class="cv-service-cell__link">
+                            Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                        </button>
+                    </div>
+                    <div class="cv-service-cell" data-service-category="all">
+                        <span class="cv-service-cell__num" data-service-num>02</span>
+                        <h3 class="cv-service-cell__title">Nắn chỉnh răng</h3>
+                        <p class="cv-service-cell__desc">Chỉnh răng lệch, hô, móm cho trẻ em và người lớn.</p>
+                        <button type="button" data-open-booking data-service-name="Nắn chỉnh răng" class="cv-service-cell__link">
+                            Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                        </button>
+                    </div>
+                    <div class="cv-service-cell" data-service-category="all">
+                        <span class="cv-service-cell__num" data-service-num>03</span>
+                        <h3 class="cv-service-cell__title">Điều trị tủy</h3>
+                        <p class="cv-service-cell__desc">Xử lý viêm tủy, giữ lại răng thật lâu dài.</p>
+                        <button type="button" data-open-booking data-service-name="Điều trị tủy" class="cv-service-cell__link">
+                            Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                        </button>
+                    </div>
+                    <div class="cv-service-cell" data-service-category="all">
+                        <span class="cv-service-cell__num" data-service-num>04</span>
+                        <h3 class="cv-service-cell__title">Hàm tháo lắp</h3>
+                        <p class="cv-service-cell__desc">Giải pháp phục hình tiết kiệm, dễ vệ sinh.</p>
+                        <button type="button" data-open-booking data-service-name="Hàm tháo lắp" class="cv-service-cell__link">
+                            Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                        </button>
+                    </div>
+                    <div class="cv-service-cell" data-service-category="all">
+                        <span class="cv-service-cell__num" data-service-num>05</span>
+                        <h3 class="cv-service-cell__title">Tẩy trắng răng</h3>
+                        <p class="cv-service-cell__desc">Làm trắng bằng đèn chuyên dụng ngay tại phòng khám.</p>
+                        <button type="button" data-open-booking data-service-name="Tẩy trắng răng" class="cv-service-cell__link">
+                            Đặt lịch dịch vụ này <span aria-hidden="true">&rarr;</span>
+                        </button>
+                    </div>
+                </th:block>
+
+                <!-- Ô thứ 6 cố định: Điểm nhấn CTA màu xanh thương hiệu + SĐT động theo cơ sở -->
+                <div class="cv-service-cell cv-service-cell--cta">
+                    <div>
+                        <h3 class="cv-service-cell__title">Chưa rõ cần làm gì?</h3>
+                        <p class="cv-service-cell__desc">Đến khám và nhận tư vấn trực tiếp từ bác sĩ.</p>
+                    </div>
+                    <a th:href="'tel:' + ${effectivePhone}"
+                       class="cv-service-cell__cta-phone"
+                       th:text="'Gọi ' + ${effectivePhone}">
+                        Gọi 0987654321
                     </a>
-
-                    <div class="cp-news-card__body">
-                        <div class="cp-news-card__meta">
-                            <span>
-                                <i class="bi bi-calendar3 me-1 text-primary"></i>
-                                <span th:text="${item.publishedAt != null
-                                        ? #temporals.format(item.publishedAt, 'dd/MM/yyyy')
-                                        : #temporals.format(item.createdAt, 'dd/MM/yyyy')}">01/11/2026</span>
-                            </span>
-                            <span th:if="${item.branch != null}">
-                                <i class="bi bi-geo-alt me-1 text-primary"></i>
-                                <span th:text="${item.branch.branchName}">Cơ sở</span>
-                            </span>
-                        </div>
-
-                        <h3 class="cp-news-card__title">
-                            <a th:href="@{/news/{slug}(slug=${item.slug})}" th:text="${item.title}">Tiêu đề bài viết</a>
-                        </h3>
-
-                        <p class="cp-news-card__summary"
-                           th:text="${item.summary != null and !#strings.isEmpty(item.summary)
-                                   ? item.summary
-                                   : 'Xem chi tiết bài viết chuyên môn và hướng dẫn chăm sóc răng miệng từ Nha khoa Cường Việt.'}">
-                            Tóm tắt bài viết.
-                        </p>
-
-                        <a th:href="@{/news/{slug}(slug=${item.slug})}" class="btn-light-soft w-100">
-                            Đọc bài viết <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                    </div>
-                </article>
-            </div>
-
-            <!-- Empty state khi chưa có bài viết -->
-            <div class="empty-state-box bg-white rounded-4 border p-5"
-                 th:if="${latestNews == null or #lists.isEmpty(latestNews)}">
-                <i class="bi bi-newspaper empty-icon"></i>
-                <h6>Chưa có bài viết tin tức</h6>
-                <p class="mb-0">Các bài viết kiến thức nha khoa và thông báo mới sẽ sớm được đăng tải tại đây.</p>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- ================================================================= -->
-    <!-- SECTION 7: HỆ THỐNG CHI NHÁNH (LẤY ĐỘNG TỪ BẢNG BRANCHES)         -->
+    <!-- SECTION 3: KHÔNG GIAN PHÒNG KHÁM                                  -->
     <!-- ================================================================= -->
-    <section class="cp-section cp-section--white" id="branches-section">
-        <div class="container-xl">
-            <div class="cp-section-header">
-                <div>
-                    <span class="cp-eyebrow">
-                        <i class="bi bi-buildings"></i> Hệ thống cơ sở
-                    </span>
-                    <h2 class="cp-section-title">Các cơ sở Nha khoa Cường Việt đang hoạt động</h2>
-                    <p class="cp-section-subtitle">
-                        Thông tin địa chỉ, hotline và khung giờ làm việc thực tế tại từng chi nhánh trong hệ thống.
+    <section id="khong-gian" class="cv-section">
+        <div class="cv-container">
+            <div style="margin-bottom: 2.25rem;">
+                <p class="cv-section__eyebrow">Không gian phòng khám</p>
+                <h2 class="cv-section__title" style="max-width: 28rem;">
+                    Sạch sẽ, rộng rãi, đầy đủ trang thiết bị
+                </h2>
+            </div>
+
+            <div class="cv-gallery-grid">
+                <div class="cv-gallery-grid__main">
+                    <img th:src="@{/uploads/images/clinic_room.png}"
+                         src="/uploads/images/clinic_room.png"
+                         alt="Phòng điều trị chính với nhiều ghế nha hiện đại" />
+                </div>
+                <div class="cv-gallery-grid__top">
+                    <img th:src="@{/uploads/images/whitening.png}"
+                         src="/uploads/images/whitening.png"
+                         alt="Điều trị tẩy trắng răng bằng đèn chuyên dụng" />
+                </div>
+                <div class="cv-gallery-grid__quote">
+                    <p>
+                        “Mỗi bệnh nhân ra về với nụ cười là điều chúng tôi trân trọng nhất.”
                     </p>
                 </div>
-                <a th:href="@{/contact}" class="btn-outline-brand">
-                    Chi tiết liên hệ <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 4: ĐỘI NGŨ BÁC SĨ (LỌC THEO CƠ SỞ ĐANG CHỌN)              -->
+    <!-- ================================================================= -->
+    <section id="bac-si" class="cv-section" th:if="${featuredDoctors != null and !#lists.isEmpty(featuredDoctors)}">
+        <div class="cv-container">
+            <div class="cv-section__head">
+                <div>
+                    <p class="cv-section__eyebrow">
+                        Đội ngũ chuyên môn
+                        <span th:if="${currentPortalBranch != null}"
+                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                    </p>
+                    <h2 class="cv-section__title">Bác sĩ Răng – Hàm – Mặt trực tiếp điều trị</h2>
+                </div>
+                <a th:href="@{/doctors}" class="cv-btn cv-btn--card">
+                    Xem tất cả bác sĩ <span aria-hidden="true">&rarr;</span>
                 </a>
             </div>
 
-            <!-- Có chi nhánh -->
-            <div class="cp-card-grid-3" th:if="${branches != null and !#lists.isEmpty(branches)}">
-                <div class="cp-branch-card" th:each="br : ${branches}">
-                    <div class="cp-branch-card__head">
-                        <span class="cp-branch-card__icon">
-                            <i class="bi bi-hospital"></i>
-                        </span>
+            <div class="cv-card-grid cv-card-grid--4">
+                <article class="cv-doc-card" th:each="doc : ${featuredDoctors}">
+                    <div class="cv-doc-card__top">
+                        <div class="cv-doc-card__avatar" th:text="${doc.initials}">BS</div>
                         <div>
-                            <span class="badge bg-primary-subtle text-primary fw-semibold mb-1"
-                                  th:text="${br.branchCode}">CN01</span>
-                            <h3 class="h6 fw-bold text-dark mb-0" th:text="${br.branchName}">Tên chi nhánh</h3>
+                            <span class="cv-doc-card__role" th:text="${doc.positionTitle}">Bác sĩ Răng Hàm Mặt</span>
+                            <h3 class="cv-doc-card__name">
+                                <a th:href="@{/doctors/{id}(id=${doc.staffId})}" th:text="${doc.fullName}">BS. Nguyễn Đình Toàn</a>
+                            </h3>
                         </div>
                     </div>
 
-                    <ul class="cp-branch-card__list">
-                        <li>
-                            <i class="bi bi-geo-alt-fill"></i>
-                            <span th:text="${br.address}">Địa chỉ chi nhánh</span>
+                    <p class="cv-doc-card__spec" th:text="${doc.specialty}">Chuyên khoa Răng Hàm Mặt</p>
+
+                    <ul class="cv-doc-card__meta">
+                        <li th:if="${doc.practiceLicenseNo != null and !#strings.isEmpty(doc.practiceLicenseNo)}">
+                            <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
+                            <span>CCHN: <strong th:text="${doc.practiceLicenseNo}">001234/BG-CCHN</strong></span>
                         </li>
-                        <li th:if="${br.phone != null and !#strings.isEmpty(br.phone)}">
-                            <i class="bi bi-telephone-fill"></i>
-                            <span>
-                                Hotline:
-                                <a th:href="'tel:' + ${br.phone}" class="fw-semibold text-primary" th:text="${br.phone}">0900 000 000</a>
-                            </span>
-                        </li>
-                        <li th:if="${br.email != null and !#strings.isEmpty(br.email)}">
-                            <i class="bi bi-envelope-fill"></i>
-                            <a th:href="'mailto:' + ${br.email}" th:text="${br.email}">email@cuongvietdental.vn</a>
-                        </li>
-                        <li th:if="${br.openingTime != null and br.closingTime != null}">
-                            <i class="bi bi-clock-fill"></i>
-                            <span>
-                                Giờ mở cửa:
-                                <strong th:text="${#temporals.format(br.openingTime, 'HH:mm')} + ' - ' + ${#temporals.format(br.closingTime, 'HH:mm')}">08:00 - 20:00</strong>
-                            </span>
+                        <li th:if="${doc.branchNames != null and !#lists.isEmpty(doc.branchNames)}">
+                            <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                            <span th:text="${#strings.listJoin(doc.branchNames, ', ')}">Cơ sở</span>
                         </li>
                     </ul>
 
-                    <div class="d-flex gap-2 mt-auto">
-                        <a th:href="@{/doctors(branchId=${br.branchId})}" class="btn-light-soft flex-grow-1">
-                            <i class="bi bi-person-badge"></i> Bác sĩ tại cơ sở
+                    <div class="cv-doc-card__footer">
+                        <a th:href="@{/doctors/{id}(id=${doc.staffId})}" class="cv-service-cell__link" style="margin-top:0;">
+                            Hồ sơ &amp; Lịch trực <span aria-hidden="true">&rarr;</span>
                         </a>
-                        <a th:if="${session.loggedInUser != null and isPatientUser}"
-                           th:href="@{/portal/appointments/new}" class="btn-brand">
+                        <button type="button"
+                                data-open-booking
+                                th:attr="data-doctor-id=${doc.staffId}, data-doctor-name=${doc.fullName}"
+                                class="cv-btn cv-btn--primary" style="padding: 0.42rem 0.9rem; font-size: 0.78rem;">
                             Đặt lịch
-                        </a>
-                        <a th:if="${session.loggedInUser == null}"
-                           th:href="@{/login}" class="btn-brand">
-                            Đặt lịch
-                        </a>
+                        </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Empty state khi chưa có chi nhánh -->
-            <div class="empty-state-box bg-light rounded-4 border p-5"
-                 th:if="${branches == null or #lists.isEmpty(branches)}">
-                <i class="bi bi-building-exclamation empty-icon"></i>
-                <h6>Chưa có thông tin chi nhánh hoạt động</h6>
-                <p class="mb-0">Danh sách các cơ sở đang được cập nhật trên hệ thống.</p>
+                </article>
             </div>
         </div>
     </section>
 
     <!-- ================================================================= -->
-    <!-- SECTION 8: LIÊN HỆ / CALL TO ACTION                               -->
+    <!-- SECTION 5: TIN TỨC & KIẾN THỨC NHA KHOA (BỐ CỤC EDITORIAL NỔI BẬT)-->
     <!-- ================================================================= -->
-    <section th:replace="~{fragments/footer :: ctaBanner}"></section>
+    <section id="tin-tuc" class="cv-section" th:if="${latestNews != null and !#lists.isEmpty(latestNews)}">
+        <div class="cv-container">
+            <div class="cv-section__head">
+                <div>
+                    <p class="cv-section__eyebrow">
+                        Góc kiến thức
+                        <span th:if="${currentPortalBranch != null}"
+                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                    </p>
+                    <h2 class="cv-section__title">Tin tức &amp; Cẩm nang chăm sóc răng miệng</h2>
+                </div>
+                <a th:href="@{/news}" class="cv-btn cv-btn--card">
+                    Xem tất cả bài viết <span aria-hidden="true">&rarr;</span>
+                </a>
+            </div>
+
+            <!-- BỐ CỤC BÁO CHÍ: 1 TIN MỚI NHẤT NỔI BẬT Ở TRÊN + CÁC TIN NHỎ BÊN DƯỚI -->
+            <div class="cv-news-editorial" th:with="leadNews=${latestNews[0]}">
+                <!-- 1. BÀI VIẾT MỚI NHẤT (HERO FEATURED STORY) -->
+                <article class="cv-news-editorial__lead">
+                    <a th:href="@{/news/{slug}(slug=${leadNews.slug})}" class="cv-news-lead__media">
+                        <img th:if="${leadNews.thumbnail != null and !#strings.isEmpty(leadNews.thumbnail)}"
+                             th:src="${leadNews.thumbnail}"
+                             th:alt="${leadNews.title}"
+                             class="cv-news-lead__img"
+                             loading="lazy" />
+                        <img th:if="${leadNews.thumbnail == null or #strings.isEmpty(leadNews.thumbnail)}"
+                             th:src="@{/uploads/images/clinc_treatment.png}"
+                             src="/uploads/images/clinc_treatment.png"
+                             th:alt="${leadNews.title}"
+                             class="cv-news-lead__img"
+                             loading="lazy" />
+                    </a>
+
+                    <div class="cv-news-lead__body">
+                        <span class="cv-news-lead__badge">
+                            <i class="bi bi-stars" aria-hidden="true"></i>
+                            <span th:text="${leadNews.branch != null ? 'Tin mới nhất · ' + leadNews.branch.branchName : 'Tin tiêu điểm mới nhất'}">Tin tiêu điểm mới nhất</span>
+                        </span>
+
+                        <h3 class="cv-news-lead__title">
+                            <a th:href="@{/news/{slug}(slug=${leadNews.slug})}" th:text="${leadNews.title}">
+                                Tiêu đề bài viết nổi bật nhất
+                            </a>
+                        </h3>
+
+                        <p class="cv-news-lead__summary"
+                           th:text="${leadNews.summary != null and !#strings.isEmpty(leadNews.summary)
+                                   ? leadNews.summary
+                                   : @customerPortalServiceImpl.plainTextSummary(leadNews.content, 220)}">
+                            Tóm tắt nội dung bài viết tiêu điểm...
+                        </p>
+
+                        <div class="cv-news-lead__meta">
+                            <span>
+                                <i class="bi bi-calendar3 text-primary me-1" aria-hidden="true"></i>
+                                <span th:text="${leadNews.publishedAt != null
+                                        ? #temporals.format(leadNews.publishedAt, 'dd/MM/yyyy HH:mm')
+                                        : #temporals.format(leadNews.createdAt, 'dd/MM/yyyy')}">06/11/2026</span>
+                            </span>
+                            <span th:if="${leadNews.branch != null}">
+                                <i class="bi bi-geo-alt-fill text-primary me-1" aria-hidden="true"></i>
+                                <span th:text="${leadNews.branch.branchName}">Cơ sở</span>
+                            </span>
+                            <a th:href="@{/news/{slug}(slug=${leadNews.slug})}"
+                               class="cv-service-cell__link ms-auto" style="margin-top:0;">
+                                Đọc tiếp <span aria-hidden="true">&rarr;</span>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 2. HÀNG TIN PHỤ BÊN DƯỚI (3 BÀI VIẾT NHỎ XUNG QUANH) -->
+                <th:block th:if="${#lists.size(latestNews) > 1}">
+                    <div class="cv-news-editorial__divider"></div>
+
+                    <div class="cv-news-editorial__subgrid">
+                        <article class="cv-news-subcard"
+                                 th:each="item, stat : ${latestNews}"
+                                 th:if="${stat.index > 0 and stat.index <= 3}">
+                            <span class="cv-news-subcard__kicker"
+                                  th:text="${item.branch != null ? item.branch.branchName : 'Kiến thức nha khoa'}">
+                                Kiến thức nha khoa
+                            </span>
+
+                            <h4 class="cv-news-subcard__title">
+                                <a th:href="@{/news/{slug}(slug=${item.slug})}" th:text="${item.title}">
+                                    Tiêu đề bài viết phụ
+                                </a>
+                            </h4>
+
+                            <div class="cv-news-subcard__meta">
+                                <span>
+                                    <i class="bi bi-clock me-1" aria-hidden="true"></i>
+                                    <span th:text="${item.publishedAt != null
+                                            ? #temporals.format(item.publishedAt, 'dd/MM/yyyy')
+                                            : #temporals.format(item.createdAt, 'dd/MM/yyyy')}">01/11/2026</span>
+                                </span>
+                                <span th:if="${item.createdBy != null}">
+                                    <i class="bi bi-person me-1" aria-hidden="true"></i>
+                                    <span th:text="${item.createdBy.username}">Tác giả</span>
+                                </span>
+                            </div>
+
+                            <a th:href="@{/news/{slug}(slug=${item.slug})}" class="cv-news-subcard__thumb">
+                                <img th:if="${item.thumbnail != null and !#strings.isEmpty(item.thumbnail)}"
+                                     th:src="${item.thumbnail}"
+                                     th:alt="${item.title}"
+                                     loading="lazy" />
+                                <img th:if="${item.thumbnail == null or #strings.isEmpty(item.thumbnail)}"
+                                     th:src="@{/uploads/images/waiting_area.png}"
+                                     src="/uploads/images/waiting_area.png"
+                                     th:alt="${item.title}"
+                                     loading="lazy" />
+                            </a>
+
+                            <p class="cv-news-subcard__excerpt"
+                               th:text="${item.summary != null and !#strings.isEmpty(item.summary)
+                                       ? item.summary
+                                       : @customerPortalServiceImpl.plainTextSummary(item.content, 110)}">
+                                Tóm tắt ngắn bài viết...
+                            </p>
+                        </article>
+                    </div>
+                </th:block>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 6: GHÉ THĂM / HỆ THỐNG CƠ SỞ (SLIDER 2 BÊN + ĐỔI CƠ SỞ)   -->
+    <!-- ================================================================= -->
+    <section id="lien-he" class="cv-section">
+        <div class="cv-container">
+            <div class="cv-section__head mb-4">
+                <div>
+                    <p class="cv-section__eyebrow">Ghé thăm phòng khám</p>
+                    <h2 class="cv-section__title">Hệ thống cơ sở Nha khoa Cường Việt</h2>
+                </div>
+                <p class="cv-section__desc mb-0">
+                    Sử dụng nút mũi tên hai bên để lướt xem các cơ sở và bấm <strong>Chuyển sang cơ sở này</strong> để xem bác sĩ, dịch vụ, tin tức theo đúng cơ sở bạn chọn.
+                </p>
+            </div>
+
+            <!-- SLIDER CÁC CƠ SỞ TRONG DATABASE -->
+            <div class="cv-branch-carousel" id="branchCarousel"
+                 th:if="${branches != null and !#lists.isEmpty(branches)}">
+
+                <!-- Nút lướt sang trái -->
+                <button type="button"
+                        class="cv-branch-carousel__nav cv-branch-carousel__nav--prev"
+                        data-branch-prev
+                        aria-label="Cơ sở trước">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+
+                <!-- Sân khấu hiển thị các Card cơ sở xếp lớp -->
+                <div class="cv-branch-carousel__stage">
+                    <article class="cv-branch-slide"
+                             th:each="br, stat : ${branches}"
+                             th:with="isCurrentBranch=${currentPortalBranch != null and currentPortalBranch.branchId == br.branchId}"
+                             th:attr="data-branch-slide=${stat.index},
+                                      data-branch-id=${br.branchId},
+                                      data-is-current=${isCurrentBranch}"
+                             th:classappend="${isCurrentBranch or (currentPortalBranch == null and stat.index == 0)} ? 'is-active' : ''">
+
+                        <div class="cv-visit">
+                            <!-- Hình ảnh cơ sở lấy từ DB (hoặc ảnh mặc định storefont.png) -->
+                            <div class="cv-visit__media">
+                                <img th:src="${br.imageUrl != null and !#strings.isEmpty(br.imageUrl) ? br.imageUrl : '/uploads/images/storefont.png'}"
+                                     src="/uploads/images/storefont.png"
+                                     th:alt="'Mặt tiền ' + ${br.branchName}" />
+                            </div>
+
+                            <!-- Thông tin chi tiết cơ sở từ DB -->
+                            <div class="cv-visit__content">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                    <p class="cv-section__eyebrow mb-0">
+                                        Ghé thăm · <span th:text="${br.branchCode}">CN01</span>
+                                    </p>
+                                    <span class="cv-branch-active-badge" th:if="${isCurrentBranch}">
+                                        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                                        Đang xem cơ sở này
+                                    </span>
+                                </div>
+
+                                <h3 class="cv-visit__title" th:text="${br.branchName}">
+                                    Số 906 Đường Lê Lợi
+                                </h3>
+                                <p class="cv-visit__subtitle" th:text="${br.address}">
+                                    P. Dĩnh Kế, TP Bắc Giang
+                                </p>
+
+                                <div class="cv-visit__schedule">
+                                    <div class="cv-visit__row">
+                                        <span class="cv-visit__row-label">Giờ mở cửa</span>
+                                        <span class="cv-visit__row-val"
+                                              th:text="${br.openingTime != null and br.closingTime != null
+                                                      ? #temporals.format(br.openingTime, 'HH:mm') + ' – ' + #temporals.format(br.closingTime, 'HH:mm')
+                                                      : '08:00 – 20:00'}">08:00 – 20:00</span>
+                                    </div>
+                                    <div class="cv-visit__row">
+                                        <span class="cv-visit__row-label">Ngày làm việc</span>
+                                        <span class="cv-visit__row-val"
+                                              th:text="${br.workingDays != null and !#strings.isEmpty(br.workingDays)
+                                                      ? 'Thứ ' + br.workingDays
+                                                      : 'Thứ 2 – Chủ nhật'}">Thứ 2 – Chủ nhật</span>
+                                    </div>
+                                    <div class="cv-visit__row">
+                                        <span class="cv-visit__row-label">Điện thoại</span>
+                                        <div class="cv-visit__phones">
+                                            <a th:if="${br.phone != null and !#strings.isEmpty(br.phone)}"
+                                               th:href="'tel:' + ${br.phone}"
+                                               th:text="${br.phone}">0985 575 838</a>
+                                            <a th:if="${br.phone == null or #strings.isEmpty(br.phone)}"
+                                               th:href="'tel:' + ${effectivePhone}"
+                                               th:text="${effectivePhone}">0987654321</a>
+                                        </div>
+                                    </div>
+                                    <div class="cv-visit__row" th:if="${br.email != null and !#strings.isEmpty(br.email)}">
+                                        <span class="cv-visit__row-label">Email</span>
+                                        <span class="cv-visit__row-val" th:text="${br.email}">contact@cuongvietdental.vn</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 mt-4">
+                                    <!-- Nút Chuyển sang cơ sở này -->
+                                    <button type="button"
+                                            th:if="${!isCurrentBranch}"
+                                            class="cv-btn cv-btn--primary"
+                                            data-switch-branch-btn
+                                            th:attr="data-target-branch-id=${br.branchId},
+                                                     data-target-branch-name=${br.branchName},
+                                                     data-current-branch-name=${currentPortalBranch != null ? currentPortalBranch.branchName : ''}">
+                                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                                        Chuyển sang cơ sở này
+                                    </button>
+
+                                    <button type="button"
+                                            th:if="${isCurrentBranch}"
+                                            class="cv-btn cv-btn--primary"
+                                            disabled
+                                            style="opacity: 0.88; cursor: default;">
+                                        <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                                        Cơ sở hiện tại của bạn
+                                    </button>
+
+                                    <button type="button"
+                                            data-open-booking
+                                            th:attr="data-branch-id=${br.branchId}, data-branch-name=${br.branchName}"
+                                            class="cv-btn cv-btn--card">
+                                        <i class="bi bi-calendar2-check" aria-hidden="true"></i>
+                                        Đặt lịch tại cơ sở này
+                                    </button>
+
+                                    <a th:href="@{/contact}" class="cv-btn cv-btn--card">
+                                        Chi tiết liên hệ
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- Nút lướt sang phải -->
+                <button type="button"
+                        class="cv-branch-carousel__nav cv-branch-carousel__nav--next"
+                        data-branch-next
+                        aria-label="Cơ sở tiếp theo">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+
+                <!-- Chấm chỉ báo vị trí Slide -->
+                <div class="cv-branch-carousel__dots" role="tablist" aria-label="Chọn nhanh cơ sở">
+                    <button type="button"
+                            class="cv-branch-carousel__dot"
+                            th:each="br, stat : ${branches}"
+                            th:attr="data-branch-dot=${stat.index},
+                                     aria-label='Xem ' + ${br.branchName}"
+                            th:classappend="${(currentPortalBranch != null and currentPortalBranch.branchId == br.branchId) or (currentPortalBranch == null and stat.index == 0)} ? 'is-active' : ''">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
 </main>
 
 <!-- ===================================================================== -->
-<!-- SECTION 9: FOOTER                                                     -->
+<!-- MODAL XÁC NHẬN ĐỔI CƠ SỞ ("BẠN CÓ MUỐN ĐỔI TỪ CƠ SỞ A SANG B KHÔNG?") -->
+<!-- ===================================================================== -->
+<div class="cv-confirm-modal" id="switchBranchModal" role="dialog" aria-modal="true" aria-labelledby="switchBranchModalTitle">
+    <div class="cv-confirm-modal__dialog">
+        <div class="cv-confirm-modal__icon">
+            <i class="bi bi-buildings-fill" aria-hidden="true"></i>
+        </div>
+        <h3 class="cv-confirm-modal__title" id="switchBranchModalTitle">Xác nhận chuyển cơ sở</h3>
+        <p class="cv-confirm-modal__desc" id="switchBranchModalDesc">
+            Bạn có muốn đổi từ cơ sở A sang cơ sở B không?
+        </p>
+        <form th:action="@{/portal/switch-branch}" method="post" id="switchBranchForm">
+            <input type="hidden" name="branchId" id="switchBranchInputId" value="" />
+            <input type="hidden" name="redirectUrl" value="/#dich-vu" />
+            <div class="cv-confirm-modal__actions">
+                <button type="button" class="cv-btn cv-btn--card" id="cancelSwitchBranchBtn">
+                    Không, giữ nguyên
+                </button>
+                <button type="submit" class="cv-btn cv-btn--primary">
+                    <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                    Có, chuyển cơ sở
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- FOOTER DÙNG CHUNG CỦA HỆ THỐNG                                        -->
 <!-- ===================================================================== -->
 <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
+<!-- ===================================================================== -->
+<!-- SLIDE-OVER DRAWER ĐẶT LỊCH KHÁM NHANH & TƯ VẤN                        -->
+<!-- ===================================================================== -->
+<div id="bookingOverlay" class="cv-drawer-overlay" aria-hidden="true"></div>
+
+<aside id="bookingDrawer"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="bookingDrawerTitle"
+       class="cv-drawer">
+    <div class="cv-drawer__head">
+        <div>
+            <p class="cv-section__eyebrow" style="margin-bottom: 0.2rem;">Đặt lịch khám</p>
+            <h2 id="bookingDrawerTitle" class="cv-drawer__title">Phòng khám Răng – Hàm – Mặt Cường Việt</h2>
+        </div>
+        <button type="button" data-close-booking aria-label="Đóng" class="cv-drawer__close">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <form id="bookingForm" class="cv-drawer__form" novalidate>
+        <div class="cv-drawer__body">
+        <!-- Khối hướng dẫn và link đồng bộ sang trang /portal/appointments/new -->
+        <div class="cv-drawer__info-box">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span style="font-weight: 700; color: var(--cp-primary); font-size: 12.5px;">
+                    <i class="bi bi-shield-check me-1"></i> Giữ chỗ trực tuyến
+                </span>
+                <a id="bkGoFullPageBtn" th:href="@{/portal/appointments/new}"
+                   class="fw-semibold text-primary" style="font-size: 12px; text-decoration: none;"
+                   title="Xem chi tiết khung giờ trống và chọn slot thời gian chính xác">
+                    Trang đặt lịch đầy đủ <i class="bi bi-arrow-right-short"></i>
+                </a>
+            </div>
+            <p class="mb-0" style="font-size: 12.5px; line-height: 1.55; color: var(--cp-ink-soft);">
+                Thông tin bạn chọn bên dưới sẽ được tự động đồng bộ sang trang đặt lịch trực tuyến, hoặc bạn có thể gửi nhanh yêu cầu để lễ tân gọi xác nhận.
+            </p>
+        </div>
+
+        <!-- 1. Chi nhánh tiếp nhận -->
+        <div class="cv-form-group">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label for="bkBranch" class="cv-form-label mb-0">Cơ sở (Chi nhánh) <span class="text-danger">*</span></label>
+                <span id="bkBranchBadge" class="small text-muted text-truncate" style="max-width: 220px; font-size: 11.5px;"></span>
+            </div>
+            <select id="bkBranch" name="branchId" class="cv-form-select" required>
+                <th:block th:if="${branches != null and !#lists.isEmpty(branches)}">
+                    <option th:each="b : ${branches}"
+                            th:value="${b.branchId}"
+                            th:text="${b.branchName}"
+                            th:attr="data-address=${b.address}, data-phone=${b.phone}"
+                            th:selected="${currentPortalBranch != null and currentPortalBranch.branchId == b.branchId}"></option>
+                </th:block>
+                <option th:if="${branches == null or #lists.isEmpty(branches)}" value="" data-phone="0987654321">Cơ sở Nha khoa Cường Việt</option>
+            </select>
+        </div>
+
+        <!-- 2. Dịch vụ quan tâm + Nút Chi tiết dịch vụ -->
+        <div class="cv-form-group">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label for="bkService" class="cv-form-label mb-0">Dịch vụ quan tâm</label>
+                <a id="bkServiceDetailBtn" href="/services" target="_blank" class="cv-btn-link-detail" style="display: none;">
+                    <i class="bi bi-box-arrow-up-right"></i> Chi tiết
+                </a>
+            </div>
+            <select id="bkService" name="serviceId" class="cv-form-select">
+                <option value="" data-url="/services" data-name="Khám & tư vấn tổng quát">Khám &amp; tư vấn tổng quát (Chưa chọn dịch vụ cụ thể)</option>
+                <th:block th:if="${portalServices != null and !#lists.isEmpty(portalServices)}">
+                    <option th:each="svc : ${portalServices}"
+                            th:value="${svc.serviceId}"
+                            th:text="${svc.serviceName}"
+                            th:attr="data-url=@{/services/{id}(id=${svc.serviceId})}, data-name=${svc.serviceName}">Tên dịch vụ</option>
+                </th:block>
+            </select>
+        </div>
+
+        <!-- 3. Ngày mong muốn & Buổi khám -->
+        <div class="cv-form-row-2">
+            <div>
+                <label for="bkDate" class="cv-form-label">Ngày mong muốn <span class="text-danger">*</span></label>
+                <input id="bkDate" name="date" type="date" class="cv-form-input" required />
+            </div>
+            <div>
+                <label for="bkSession" class="cv-form-label">Buổi khám <span class="text-danger">*</span></label>
+                <select id="bkSession" name="session" class="cv-form-select" required>
+                    <option value="MORNING">Buổi sáng (08:00 – 12:00)</option>
+                    <option value="AFTERNOON" selected>Buổi chiều (13:30 – 17:30)</option>
+                    <option value="EVENING">Buổi tối (18:00 – 20:00)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 4. Bác sĩ đích danh & Giờ hẹn dự kiến -->
+        <div class="cv-form-row-2">
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="bkDoctor" class="cv-form-label mb-0">Bác sĩ đích danh</label>
+                </div>
+                <select id="bkDoctor" name="doctorId" class="cv-form-select">
+                    <option value="">Không yêu cầu bác sĩ</option>
+                </select>
+            </div>
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="bkSlotTime" class="cv-form-label mb-0">Giờ hẹn dự kiến</label>
+                </div>
+                <select id="bkSlotTime" name="slotTime" class="cv-form-select">
+                    <option value="">Linh hoạt trong ca</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Thông báo kiểm tra lịch trực và khả năng tiếp nhận theo chính sách -->
+        <div id="bkAvailabilityNotice" class="cv-drawer__notice" style="display: none;"></div>
+
+        <!-- 5. Thông tin bệnh nhân -->
+        <div class="cv-form-row-2">
+            <div>
+                <label for="bkName" class="cv-form-label">
+                    Họ và tên <span class="text-danger">*</span>
+                </label>
+                <input id="bkName"
+                       name="name"
+                       type="text"
+                       required
+                       th:value="${displayName != null and !#strings.isEmpty(displayName) ? displayName : ''}"
+                       placeholder="Nguyễn Văn A"
+                       class="cv-form-input" />
+            </div>
+            <div>
+                <label for="bkPhone" class="cv-form-label">
+                    Số điện thoại <span class="text-danger">*</span>
+                </label>
+                <input id="bkPhone"
+                       name="phone"
+                       type="tel"
+                       required
+                       pattern="[0-9\s+.-]{8,15}"
+                       th:value="${defaultPatientProfile != null and defaultPatientProfile.phoneNumber != null ? defaultPatientProfile.phoneNumber : (session.loggedInUser != null and session.loggedInUser.phoneNumber != null ? session.loggedInUser.phoneNumber : '')}"
+                       placeholder="0912 345 678"
+                       class="cv-form-input" />
+            </div>
+        </div>
+
+        <div class="cv-form-group">
+            <label for="bkNote" class="cv-form-label">Lý do đến khám / Triệu chứng ban đầu</label>
+            <textarea id="bkNote"
+                      name="note"
+                      rows="2"
+                      placeholder="Ví dụ: đau buốt răng hàm dưới, kiểm tra khớp cắn, tư vấn niềng răng..."
+                      class="cv-form-textarea"></textarea>
+        </div>
+
+        <p id="bookingError" class="cv-drawer__error" role="alert"></p>
+
+        <div id="bookingSuccess" class="cv-drawer__success">
+            <p class="cv-drawer__success-title">
+                <i class="bi bi-check-circle-fill me-1"></i> Đã ghi nhận thông tin đặt lịch
+            </p>
+            <p id="bookingSummary" class="cv-drawer__success-desc"></p>
+            <div id="bookingActionNext" class="mt-2" style="display: none;">
+                <a id="bookingNextLink" href="/portal/appointments/new" class="cv-btn cv-btn--primary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">
+                    Mở chi tiết lịch hẹn
+                </a>
+            </div>
+            <p style="margin-top: 0.75rem; margin-bottom: 0; font-size: 0.78rem; color: var(--cv-ink-muted);">
+                Cần xác nhận lịch gấp? Gọi trực tiếp cơ sở:
+                <a id="bookingBranchPhoneCall" th:href="'tel:' + ${effectivePhone}"
+                   style="font-weight: 700; color: var(--cv-primary); text-decoration: underline;"
+                   th:text="${effectivePhone}">0987654321</a>
+            </p>
+        </div>
+        </div>
+
+        <div class="cv-drawer__foot">
+            <button type="submit" id="bkSubmitBtn" class="cv-btn cv-btn--primary" style="width: 100%; padding: 0.82rem 1.25rem;">
+                <span id="bkSubmitSpinner" class="spinner-border spinner-border-sm me-1" style="display: none;" role="status" aria-hidden="true"></span>
+                <i id="bkSubmitIcon" class="bi bi-send-check me-1"></i>
+                <span id="bkSubmitText">Gửi yêu cầu đặt lịch</span>
+            </button>
+            <p class="cv-drawer__foot-note">
+                Hoặc liên hệ hotline:
+                <a id="bookingFootPhoneCall" th:href="'tel:' + ${effectivePhone}"
+                   style="font-weight: 600; color: var(--cv-ink-muted); text-decoration: underline;"
+                   th:text="${effectivePhone}">0987654321</a>
+            </p>
+        </div>
+    </form>
+</aside>
+
+<!-- FLOATING TOAST NOTIFICATION -->
+<div id="bookingToast" class="cv-toast" role="alert" aria-live="assertive">
+    <div class="cv-toast__icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="cv-toast__content">
+        <h4 class="cv-toast__title">Đặt lịch thành công!</h4>
+        <p class="cv-toast__desc" id="bookingToastDesc">Yêu cầu đặt lịch đã được ghi nhận vào hệ thống.</p>
+    </div>
+    <button type="button" class="cv-toast__close" id="bookingToastClose" aria-label="Đóng"><i class="bi bi-x"></i></button>
+</div>
+
+<!-- ===================================================================== -->
+<!-- JAVASCRIPT TƯƠNG TÁC: LỌC DỊCH VỤ, SLIDER CƠ SỞ, ĐỔI CƠ SỞ & DRAWER   -->
+<!-- ===================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        // 1. Bộ lọc danh mục dịch vụ (Hiển thị tối đa 5 dịch vụ + ô CTA thứ 6 và đánh lại số thứ tự 01..05)
+        const filterButtons = document.querySelectorAll('[data-service-filter]');
+        const serviceCards = document.querySelectorAll('[data-service-category]');
+
+        function applyServiceFilter(cat) {
+            let visibleCount = 0;
+            serviceCards.forEach((card) => {
+                const cardCat = card.getAttribute('data-service-category');
+                const matches = (cat === 'all') || (cardCat === cat);
+                if (matches && visibleCount < 5) {
+                    visibleCount++;
+                    card.classList.remove('is-hidden');
+                    const numEl = card.querySelector('[data-service-num]');
+                    if (numEl) {
+                        numEl.textContent = visibleCount < 10 ? '0' + visibleCount : String(visibleCount);
+                    }
+                } else {
+                    card.classList.add('is-hidden');
+                }
+            });
+        }
+
+        filterButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const cat = btn.getAttribute('data-service-filter');
+                filterButtons.forEach((b) => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
+                applyServiceFilter(cat);
+            });
+        });
+
+        // 2. Slider Cơ sở (Layered Card Carousel với 2 nút trái/phải + phím mũi tên + vuốt cảm ứng)
+        const carousel = document.getElementById('branchCarousel');
+        if (carousel) {
+            const slides = Array.from(carousel.querySelectorAll('[data-branch-slide]'));
+            const dots = Array.from(carousel.querySelectorAll('[data-branch-dot]'));
+            const prevBtn = carousel.querySelector('[data-branch-prev]');
+            const nextBtn = carousel.querySelector('[data-branch-next]');
+
+            let activeIndex = slides.findIndex((s) => s.classList.contains('is-active'));
+            if (activeIndex < 0) activeIndex = 0;
+
+            function renderCarousel(newIndex) {
+                if (slides.length === 0) return;
+                activeIndex = (newIndex + slides.length) % slides.length;
+                const prevIndex = (activeIndex - 1 + slides.length) % slides.length;
+                const nextIndex = (activeIndex + 1) % slides.length;
+
+                slides.forEach((slide, idx) => {
+                    slide.classList.remove('is-active', 'is-prev', 'is-next');
+                    if (idx === activeIndex) {
+                        slide.classList.add('is-active');
+                    } else if (slides.length > 1 && idx === prevIndex) {
+                        slide.classList.add('is-prev');
+                    } else if (slides.length > 2 && idx === nextIndex) {
+                        slide.classList.add('is-next');
+                    }
+                });
+
+                dots.forEach((dot, idx) => {
+                    dot.classList.toggle('is-active', idx === activeIndex);
+                });
+            }
+
+            renderCarousel(activeIndex);
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => renderCarousel(activeIndex - 1));
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => renderCarousel(activeIndex + 1));
+            }
+            dots.forEach((dot, idx) => {
+                dot.addEventListener('click', () => renderCarousel(idx));
+            });
+
+            // Hỗ trợ vuốt ngang trên điện thoại / iPad
+            let touchStartX = 0;
+            carousel.addEventListener('touchstart', (e) => {
+                if (e.changedTouches && e.changedTouches[0]) {
+                    touchStartX = e.changedTouches[0].screenX;
+                }
+            }, { passive: true });
+
+            carousel.addEventListener('touchend', (e) => {
+                if (e.changedTouches && e.changedTouches[0]) {
+                    const diff = e.changedTouches[0].screenX - touchStartX;
+                    if (Math.abs(diff) > 45) {
+                        if (diff < 0) renderCarousel(activeIndex + 1);
+                        else renderCarousel(activeIndex - 1);
+                    }
+                }
+            }, { passive: true });
+        }
+
+        // 3. Modal xác nhận "Chuyển sang cơ sở này"
+        const switchModal = document.getElementById('switchBranchModal');
+        const switchDesc = document.getElementById('switchBranchModalDesc');
+        const switchInputId = document.getElementById('switchBranchInputId');
+        const cancelSwitchBtn = document.getElementById('cancelSwitchBranchBtn');
+
+        document.querySelectorAll('[data-switch-branch-btn]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target-branch-id');
+                const targetName = btn.getAttribute('data-target-branch-name') || 'cơ sở mới';
+                const currentName = btn.getAttribute('data-current-branch-name');
+
+                if (switchInputId) switchInputId.value = targetId;
+                if (switchDesc) {
+                    if (currentName && currentName.trim().length > 0) {
+                        switchDesc.innerHTML = 'Bạn có muốn đổi từ cơ sở <strong>' + currentName + '</strong> sang cơ sở <strong>' + targetName + '</strong> không? Khi đồng ý, toàn bộ bác sĩ, tin tức, dịch vụ và thông tin liên hệ sẽ chuyển sang <strong>' + targetName + '</strong>.';
+                    } else {
+                        switchDesc.innerHTML = 'Bạn có muốn chuyển sang cơ sở <strong>' + targetName + '</strong> không? Khi đồng ý, toàn bộ bác sĩ, tin tức, dịch vụ và thông tin liên hệ sẽ hiển thị theo <strong>' + targetName + '</strong>.';
+                    }
+                }
+                if (switchModal) {
+                    switchModal.classList.add('is-open');
+                }
+            });
+        });
+
+        function closeSwitchModal() {
+            if (switchModal) switchModal.classList.remove('is-open');
+        }
+
+        if (cancelSwitchBtn) {
+            cancelSwitchBtn.addEventListener('click', closeSwitchModal);
+        }
+        if (switchModal) {
+            switchModal.addEventListener('click', (e) => {
+                if (e.target === switchModal) closeSwitchModal();
+            });
+        }
+
+        // 4. Slide-over Drawer đặt lịch nhanh & Đồng bộ với /portal/appointments/new
+        const drawer = document.getElementById('bookingDrawer');
+        const overlay = document.getElementById('bookingOverlay');
+        const openBtns = document.querySelectorAll('[data-open-booking]');
+        const closeBtns = document.querySelectorAll('[data-close-booking]');
+        const branchSelect = document.getElementById('bkBranch');
+        const branchBadge = document.getElementById('bkBranchBadge');
+        const serviceSelect = document.getElementById('bkService');
+        const serviceDetailBtn = document.getElementById('bkServiceDetailBtn');
+        const doctorSelect = document.getElementById('bkDoctor');
+        const slotSelect = document.getElementById('bkSlotTime');
+        const noticeEl = document.getElementById('bkAvailabilityNotice');
+        const dateInput = document.getElementById('bkDate');
+        const sessionSelect = document.getElementById('bkSession');
+        const nameInput = document.getElementById('bkName');
+        const phoneInput = document.getElementById('bkPhone');
+        const noteInput = document.getElementById('bkNote');
+        const form = document.getElementById('bookingForm');
+        const errorEl = document.getElementById('bookingError');
+        const successBox = document.getElementById('bookingSuccess');
+        const summaryEl = document.getElementById('bookingSummary');
+        const goFullPageBtn = document.getElementById('bkGoFullPageBtn');
+        const branchPhoneCall = document.getElementById('bookingBranchPhoneCall');
+        const footPhoneCall = document.getElementById('bookingFootPhoneCall');
+        const submitBtn = document.getElementById('bkSubmitBtn');
+        const actionNext = document.getElementById('bookingActionNext');
+        const nextLink = document.getElementById('bookingNextLink');
+
+        let targetDoctorId = null;
+        let targetDoctorName = null;
+        let availSequence = 0;
+
+        if (dateInput) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.min = `${yyyy}-${mm}-${dd}`;
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + 90);
+            const maxY = maxDate.getFullYear();
+            const maxM = String(maxDate.getMonth() + 1).padStart(2, '0');
+            const maxD = String(maxDate.getDate()).padStart(2, '0');
+            dateInput.max = `${maxY}-${maxM}-${maxD}`;
+            if (!dateInput.value) dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Cập nhật URL đồng bộ sang trang /portal/appointments/new với các query parameters
+        function updateFullAppointmentUrl() {
+            const params = new URLSearchParams();
+            if (branchSelect && branchSelect.value) params.set('branchId', branchSelect.value);
+            if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+            if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
+            if (dateInput && dateInput.value) params.set('date', dateInput.value);
+            if (sessionSelect && sessionSelect.value) params.set('session', sessionSelect.value);
+
+            const queryString = params.toString();
+            const fullUrl = '/portal/appointments/new' + (queryString ? '?' + queryString : '');
+            if (goFullPageBtn) goFullPageBtn.href = fullUrl;
+            if (nextLink) nextLink.href = fullUrl;
+        }
+
+        // Cập nhật thông tin chi tiết dịch vụ (link chi tiết cạnh dropdown)
+        function updateServiceDetailLink() {
+            if (!serviceSelect || !serviceDetailBtn) return;
+            const opt = serviceSelect.options[serviceSelect.selectedIndex];
+            const url = opt ? opt.getAttribute('data-url') : null;
+            if (url && serviceSelect.value) {
+                serviceDetailBtn.href = url;
+                serviceDetailBtn.style.display = 'inline-flex';
+            } else {
+                serviceDetailBtn.style.display = 'none';
+            }
+        }
+
+        // Cập nhật hotline và badge khi đổi cơ sở
+        function updateBranchInfo() {
+            if (!branchSelect) return;
+            const opt = branchSelect.options[branchSelect.selectedIndex];
+            if (opt) {
+                const address = opt.getAttribute('data-address');
+                const phone = opt.getAttribute('data-phone') || '0987654321';
+                if (branchBadge) branchBadge.textContent = address || '';
+                if (branchPhoneCall) {
+                    branchPhoneCall.textContent = phone;
+                    branchPhoneCall.href = 'tel:' + phone;
+                }
+                if (footPhoneCall) {
+                    footPhoneCall.textContent = phone;
+                    footPhoneCall.href = 'tel:' + phone;
+                }
+            }
+        }
+
+        // Kiểm tra khung giờ trống (Slots) dựa trên dịch vụ & bác sĩ
+        async function loadSlots(seq) {
+            if (!slotSelect || !branchSelect || !dateInput || !sessionSelect) return;
+            const branchId = branchSelect.value;
+            const dateVal = dateInput.value;
+            const sessionVal = sessionSelect.value;
+            if (!branchId || !dateVal || !sessionVal) return;
+
+            const prevValue = slotSelect.value;
+            slotSelect.disabled = true;
+            slotSelect.innerHTML = '<option value="">Đang tải giờ trống...</option>';
+
+            try {
+                const params = new URLSearchParams({
+                    branchId: branchId,
+                    date: dateVal,
+                    sessionPeriod: sessionVal
+                });
+                if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
+                if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+
+                const res = await fetch(`/api/public/booking/slots?${params.toString()}`);
+                if (seq !== availSequence) return;
+                const list = await res.json().catch(() => []);
+
+                slotSelect.innerHTML = '<option value="">Linh hoạt trong ca (Khám theo thứ tự đến)</option>';
+                if (Array.isArray(list) && list.length > 0) {
+                    list.forEach(slot => {
+                        const opt = document.createElement('option');
+                        opt.value = slot.time;
+                        opt.textContent = `${slot.time} · còn ${slot.remaining} chỗ`;
+                        slotSelect.appendChild(opt);
+                    });
+                    if (prevValue && list.some(s => s.time === prevValue)) {
+                        slotSelect.value = prevValue;
+                    }
+                    slotSelect.disabled = false;
+                } else {
+                    slotSelect.disabled = false;
+                }
+            } catch (err) {
+                if (seq === availSequence) {
+                    slotSelect.innerHTML = '<option value="">Linh hoạt trong ca</option>';
+                    slotSelect.disabled = false;
+                }
+            }
+        }
+
+        // Kiểm tra khả năng tiếp nhận và lịch làm việc của Bác sĩ (Availability)
+        async function checkAvailability() {
+            const seq = ++availSequence;
+            if (!branchSelect || !dateInput || !sessionSelect) return;
+            const branchId = branchSelect.value;
+            const dateVal = dateInput.value;
+            const sessionVal = sessionSelect.value;
+
+            if (!branchId || !dateVal || !sessionVal) {
+                if (noticeEl) noticeEl.style.display = 'none';
+                return;
+            }
+
+            if (noticeEl) {
+                noticeEl.className = 'cv-drawer__notice';
+                noticeEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang kiểm tra lịch trực của bác sĩ và khả năng tiếp nhận...';
+                noticeEl.style.display = 'block';
+            }
+            if (submitBtn) submitBtn.disabled = true;
+            if (doctorSelect) doctorSelect.disabled = true;
+            if (slotSelect) slotSelect.disabled = true;
+
+            try {
+                const params = new URLSearchParams({
+                    branchId: branchId,
+                    date: dateVal,
+                    sessionPeriod: sessionVal
+                });
+                const res = await fetch(`/api/public/booking/availability?${params.toString()}`);
+                if (seq !== availSequence) return;
+                const data = await res.json().catch(() => ({ available: false }));
+
+                if (!data.available) {
+                    if (noticeEl) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (data.reason || 'Cơ sở không nhận lịch trong buổi này.');
+                        noticeEl.style.display = 'block';
+                    }
+                    if (doctorSelect) {
+                        doctorSelect.innerHTML = '<option value="">Chưa có bác sĩ trực buổi này</option>';
+                        doctorSelect.disabled = true;
+                    }
+                    if (slotSelect) {
+                        slotSelect.innerHTML = '<option value="">Không có giờ trống</option>';
+                        slotSelect.disabled = true;
+                    }
+                    if (submitBtn) submitBtn.disabled = true;
+                    return;
+                }
+
+                // Buổi khám hợp lệ & có bác sĩ trực
+                if (doctorSelect) {
+                    doctorSelect.disabled = false;
+                    doctorSelect.innerHTML = '<option value="" data-name="Không yêu cầu bác sĩ">Không yêu cầu bác sĩ (Lễ tân điều phối khi đến)</option>';
+
+                    const doctors = data.doctors || [];
+                    doctors.forEach(doc => {
+                        const opt = document.createElement('option');
+                        opt.value = String(doc.id);
+                        opt.setAttribute('data-name', doc.name);
+                        const spec = doc.specialty ? ` · ${doc.specialty}` : '';
+                        opt.textContent = `${doc.name}${spec} (Còn ${doc.remaining} chỗ)`;
+                        doctorSelect.appendChild(opt);
+                    });
+
+                    // Kiểm tra bác sĩ mà bệnh nhân muốn đặt đích danh
+                    if (targetDoctorId && doctors.some(d => String(d.id) === String(targetDoctorId))) {
+                        doctorSelect.value = String(targetDoctorId);
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-success';
+                            noticeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Bác sĩ <strong>' + (targetDoctorName || 'được chọn') + '</strong> có lịch trực trong buổi này. Còn ' + data.remainingBranch + ' chỗ tiếp nhận.';
+                            noticeEl.style.display = 'block';
+                        }
+                    } else if (targetDoctorId) {
+                        doctorSelect.value = "";
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-warning';
+                            noticeEl.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> <strong>Lưu ý:</strong> Bác sĩ ' + (targetDoctorName ? '<strong>' + targetDoctorName + '</strong> ' : '') + 'không có ca trực vào ngày và buổi này. Bạn có thể đổi sang ngày/buổi khác hoặc chọn bác sĩ đang trực bên dưới.';
+                            noticeEl.style.display = 'block';
+                        }
+                    } else {
+                        if (noticeEl) {
+                            noticeEl.className = 'cv-drawer__notice is-success';
+                            noticeEl.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> Buổi khám còn <strong>' + data.remainingBranch + ' chỗ</strong> với ' + doctors.length + ' bác sĩ đang trực. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối.';
+                            noticeEl.style.display = 'block';
+                        }
+                    }
+                }
+
+                if (submitBtn) submitBtn.disabled = false;
+                await loadSlots(seq);
+
+            } catch (err) {
+                if (seq === availSequence) {
+                    if (noticeEl) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Không thể kiểm tra khả năng tiếp nhận lúc này. Vui lòng thử lại.';
+                        noticeEl.style.display = 'block';
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            }
+        }
+
+        // Lắng nghe sự kiện thay đổi của các trường trong Drawer để đồng bộ URL & giao diện
+        if (branchSelect) branchSelect.addEventListener('change', () => { updateBranchInfo(); updateFullAppointmentUrl(); checkAvailability(); });
+        if (dateInput) dateInput.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
+        if (sessionSelect) sessionSelect.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
+        if (doctorSelect) doctorSelect.addEventListener('change', () => {
+            targetDoctorId = doctorSelect.value || null;
+            const opt = doctorSelect.options[doctorSelect.selectedIndex];
+            targetDoctorName = opt ? opt.getAttribute('data-name') : null;
+            updateFullAppointmentUrl();
+            loadSlots(availSequence);
+        });
+        if (serviceSelect) serviceSelect.addEventListener('change', () => {
+            updateServiceDetailLink();
+            updateFullAppointmentUrl();
+            loadSlots(availSequence);
+        });
+
+        function openBooking(opts = {}) {
+            if (!drawer || !overlay) return;
+            if (errorEl) errorEl.classList.remove('is-visible');
+            if (successBox) successBox.classList.remove('is-visible');
+            if (actionNext) actionNext.style.display = 'none';
+
+            // 1. Lưu bác sĩ đích danh được chọn từ thẻ ngoài
+            targetDoctorId = opts.doctorId ? String(opts.doctorId) : null;
+            targetDoctorName = opts.doctorName || null;
+
+            // 2. Pre-fill Cơ sở (Branch)
+            if (opts.branchId && branchSelect) {
+                for (let i = 0; i < branchSelect.options.length; i++) {
+                    if (branchSelect.options[i].value === String(opts.branchId)) {
+                        branchSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else if (opts.branchName && branchSelect) {
+                for (let i = 0; i < branchSelect.options.length; i++) {
+                    if (branchSelect.options[i].textContent.includes(opts.branchName)) {
+                        branchSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // 3. Pre-fill Dịch vụ (Service)
+            if (serviceSelect) {
+                let matchedSvc = false;
+                if (opts.serviceId) {
+                    for (let i = 0; i < serviceSelect.options.length; i++) {
+                        if (serviceSelect.options[i].value === String(opts.serviceId)) {
+                            serviceSelect.selectedIndex = i;
+                            matchedSvc = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matchedSvc && opts.serviceName) {
+                    for (let i = 0; i < serviceSelect.options.length; i++) {
+                        const nameAttr = serviceSelect.options[i].getAttribute('data-name');
+                        if (serviceSelect.options[i].value === opts.serviceName ||
+                            (nameAttr && nameAttr.toLowerCase() === opts.serviceName.toLowerCase()) ||
+                            serviceSelect.options[i].textContent.toLowerCase().includes(opts.serviceName.toLowerCase())) {
+                            serviceSelect.selectedIndex = i;
+                            matchedSvc = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matchedSvc && !opts.serviceId && !opts.serviceName) {
+                    serviceSelect.selectedIndex = 0;
+                }
+            }
+
+            // Cập nhật lại các liên kết & trạng thái
+            updateBranchInfo();
+            updateServiceDetailLink();
+            updateFullAppointmentUrl();
+
+            // 4. Kích hoạt kiểm tra lịch làm việc của bác sĩ theo ngày và ca được chọn
+            checkAvailability();
+
+            drawer.classList.add('is-open');
+            overlay.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => nameInput && nameInput.focus(), 180);
+        }
+
+        function closeBooking() {
+            if (!drawer || !overlay) return;
+            drawer.classList.remove('is-open');
+            overlay.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+
+        openBtns.forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.preventDefault();
+                const serviceId = b.getAttribute('data-service-id');
+                const serviceName = b.getAttribute('data-service-name');
+                const doctorId = b.getAttribute('data-doctor-id');
+                const doctorName = b.getAttribute('data-doctor-name');
+                const branchId = b.getAttribute('data-branch-id');
+                const branchName = b.getAttribute('data-branch-name');
+
+                openBooking({
+                    serviceId: serviceId || null,
+                    serviceName: serviceName || null,
+                    doctorId: doctorId || null,
+                    doctorName: doctorName || null,
+                    branchId: branchId || null,
+                    branchName: branchName || null
+                });
+            });
+        });
+
+        closeBtns.forEach((b) => b.addEventListener('click', closeBooking));
+        if (overlay) overlay.addEventListener('click', closeBooking);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeBooking();
+                closeSwitchModal();
+            }
+        });
+
+        const submitSpinner = document.getElementById('bkSubmitSpinner');
+        const submitIcon = document.getElementById('bkSubmitIcon');
+        const submitText = document.getElementById('bkSubmitText');
+        const toast = document.getElementById('bookingToast');
+        const toastDesc = document.getElementById('bookingToastDesc');
+        const toastClose = document.getElementById('bookingToastClose');
+
+        if (toastClose) {
+            toastClose.addEventListener('click', () => toast && toast.classList.remove('is-visible'));
+        }
+
+        function showToast(message) {
+            if (!toast) return;
+            if (toastDesc) toastDesc.textContent = message;
+            toast.classList.add('is-visible');
+            setTimeout(() => toast && toast.classList.remove('is-visible'), 6000);
+        }
+
+        // Tự động mở drawer nếu URL có query ?openBooking=true
+        if (new URLSearchParams(window.location.search).get('openBooking') === 'true') {
+            setTimeout(() => openBooking(), 300);
+        }
+
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (errorEl) errorEl.classList.remove('is-visible');
+                if (successBox) successBox.classList.remove('is-visible');
+
+                const name = nameInput ? nameInput.value.trim() : '';
+                const phone = phoneInput ? phoneInput.value.trim() : '';
+                const branchVal = branchSelect ? branchSelect.value : null;
+                const serviceVal = serviceSelect && serviceSelect.value ? serviceSelect.value : null;
+                const doctorVal = doctorSelect && doctorSelect.value ? doctorSelect.value : null;
+                const dateVal = dateInput ? dateInput.value : '';
+                const sessionVal = sessionSelect ? sessionSelect.value : 'AFTERNOON';
+                const slotVal = slotSelect && slotSelect.value ? slotSelect.value : null;
+                const noteVal = noteInput ? noteInput.value.trim() : '';
+
+                if (!name || !phone) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng nhập đầy đủ họ tên và số điện thoại liên hệ.';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    return;
+                }
+
+                const digits = phone.replace(/\D/g, '');
+                if (digits.length < 9 || digits.length > 11) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    return;
+                }
+
+                if (!branchVal) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng chọn cơ sở phòng khám.';
+                        errorEl.classList.add('is-visible');
+                    }
+                    return;
+                }
+
+                if (!dateVal) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng chọn ngày khám mong muốn.';
+                        errorEl.classList.add('is-visible');
+                    }
+                    return;
+                }
+
+                // Hiển thị trạng thái loading trên nút submit
+                if (submitBtn) submitBtn.disabled = true;
+                if (submitSpinner) submitSpinner.style.display = 'inline-block';
+                if (submitIcon) submitIcon.style.display = 'none';
+                if (submitText) submitText.textContent = 'Đang lưu yêu cầu...';
+
+                try {
+                    const payload = {
+                        branchId: Number(branchVal),
+                        serviceId: serviceVal ? Number(serviceVal) : null,
+                        doctorId: doctorVal ? Number(doctorVal) : null,
+                        appointmentDate: dateVal,
+                        preferredSession: sessionVal,
+                        slotTime: slotVal || null,
+                        fullName: name,
+                        phoneNumber: phone,
+                        note: noteVal || null
+                    };
+
+                    const response = await fetch('/api/public/booking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || `Lỗi khi lưu lịch hẹn (${response.status}). Vui lòng thử lại.`);
+                    }
+
+                    // Thành công: cập nhật giao diện trong Drawer
+                    const appointmentCode = data.appointmentCode || '';
+                    if (summaryEl) {
+                        summaryEl.innerHTML = `<strong>Mã đặt lịch: <span class="text-primary">${appointmentCode}</span></strong><br>${data.message}`;
+                    }
+                    if (successBox) {
+                        successBox.classList.add('is-visible');
+                        successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+
+                    // Hiển thị Floating Toast trên trang
+                    showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}. Cơ sở sẽ liên hệ lại qua SĐT ${phone}.`);
+
+                    // Reset form fields
+                    if (noteInput) noteInput.value = '';
+
+                    // Nút đổi thành "Đã gửi thành công"
+                    if (submitText) submitText.textContent = 'Đã gửi thành công';
+                    if (submitSpinner) submitSpinner.style.display = 'none';
+                    if (submitIcon) {
+                        submitIcon.className = 'bi bi-check2-all me-1';
+                        submitIcon.style.display = 'inline-block';
+                    }
+
+                    setTimeout(() => {
+                        if (submitBtn) submitBtn.disabled = false;
+                        if (submitText) submitText.textContent = 'Gửi yêu cầu đặt lịch khác';
+                        if (submitIcon) submitIcon.className = 'bi bi-send-check me-1';
+                    }, 4000);
+
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại hoặc gọi hotline.';
+                        errorEl.classList.add('is-visible');
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (submitSpinner) submitSpinner.style.display = 'none';
+                    if (submitIcon) submitIcon.style.display = 'inline-block';
+                    if (submitText) submitText.textContent = 'Thử lại';
+                }
+            });
+        }
+    })();
+</script>
 </body>
 </html>

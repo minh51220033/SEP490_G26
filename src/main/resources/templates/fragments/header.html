@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
 
@@ -107,12 +107,12 @@
                 </ul>
 
                 <div class="site-nav__actions">
-                    <!-- Hotline động từ cơ sở chính trong DB -->
-                    <a th:if="${primaryBranch != null and primaryBranch.phone != null and !#strings.isEmpty(primaryBranch.phone)}"
-                       th:href="'tel:' + ${primaryBranch.phone}"
+                    <!-- Hotline động theo cơ sở người dùng đang chọn (hoặc 0987654321 khi chưa đăng nhập) -->
+                    <a th:with="phone=${effectiveContactPhone != null and !#strings.isEmpty(effectiveContactPhone) ? effectiveContactPhone : '0987654321'}"
+                       th:href="'tel:' + ${phone}"
                        class="site-nav__phone">
                         <i class="bi bi-telephone-fill text-primary" aria-hidden="true"></i>
-                        <span th:text="${primaryBranch.phone}">0900 000 000</span>
+                        <span th:text="${phone}">0987654321</span>
                     </a>
 
                     <!-- TRƯỜNG HỢP 1: KHÁCH CHƯA ĐĂNG NHẬP (GUEST) -->
@@ -123,14 +123,14 @@
                         <a th:href="@{/register}" class="btn-light-soft">
                             <i class="bi bi-person-plus" aria-hidden="true"></i> Đăng ký
                         </a>
-                        <a th:href="@{/login}" class="btn-brand">
+                        <a th:href="@{/login}" data-open-booking class="btn-brand">
                             <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám
                         </a>
                     </th:block>
 
                     <!-- TRƯỜNG HỢP 2: BỆNH NHÂN ĐÃ ĐĂNG NHẬP (BENH_NHAN) -->
                     <th:block th:if="${session.loggedInUser != null and isPatientUser}">
-                        <a th:href="@{/portal/appointments/new}" class="btn-brand">
+                        <a th:href="@{/portal/appointments/new}" data-open-booking class="btn-brand">
                             <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám
                         </a>
 
