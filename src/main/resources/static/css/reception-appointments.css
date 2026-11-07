@@ -1,6 +1,15 @@
 /* DentalFlow FT05 Quản Lý Lịch Hẹn Stylesheet */
 
 /* Màn quản lý lịch theo bố cục điều khiển gọn và bảng dữ liệu. */
+.calendar-more { cursor: pointer; font-weight: 700; }
+.calendar-more:hover { color: #075985; text-decoration: underline; }
+.calendar-day-appointment { display: flex; align-items: center; gap: .75rem; border: 1px solid #e2e8f0; border-radius: .75rem; background: #fff; padding: .75rem; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.calendar-day-appointment:hover { border-color: #7dd3fc; box-shadow: 0 4px 12px rgba(2,132,199,.12); transform: translateY(-1px); }
+.calendar-day-appointment__time { flex: 0 0 5.4rem; color: #075985; font-size: .78rem; font-weight: 700; }
+.calendar-day-appointment__main { display: grid; min-width: 0; flex: 1; }
+.calendar-day-appointment__main strong, .calendar-day-appointment__main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-day-appointment__main strong { color: #1e293b; }
+.calendar-day-appointment__main small { color: #64748b; }
 .app-content:has(#appointmentRows) .appointment-workflow{display:none!important}
 .app-content:has(#appointmentRows) .patient-page-heading h1,.app-content:has(#calendarGrid) .patient-page-heading h1{font-size:22px;color:#173b5e}
 .app-content:has(#appointmentRows) .appointment-panel,.app-content:has(#calendarGrid) .appointment-panel{padding:14px;border-radius:10px}
@@ -452,6 +461,7 @@
 
 .dentalsoft-apt-table {
     width: 100%;
+    min-width: 1220px;
     border-collapse: collapse;
 }
 
@@ -464,6 +474,7 @@
     letter-spacing: 0.4px;
     padding: 12px 14px;
     border-bottom: 1.5px solid #e2e8f0;
+    border-right: 1px solid #e5e7eb;
     white-space: nowrap;
 }
 
@@ -471,6 +482,7 @@
     padding: 12px 14px;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #e5e7eb;
     font-size: 13.5px;
     color: #1e293b;
     background: #ffffff;
@@ -478,6 +490,64 @@
 
 .dentalsoft-apt-table tbody tr:hover td {
     background-color: #f8fafc;
+}
+
+.dentalsoft-apt-table th:last-child,
+.dentalsoft-apt-table td:last-child {
+    border-right: 0;
+}
+
+/* Cột thao tác bám mép phải, đồng bộ với bảng Khám trong ngày. */
+.dentalsoft-apt-table th.appointment-actions-column,
+.dentalsoft-apt-table td.appointment-actions-column {
+    position: sticky;
+    right: 0;
+    min-width: 180px;
+    box-shadow: -2px 0 5px rgba(15, 23, 42, 0.08);
+    z-index: 2;
+}
+
+.dentalsoft-apt-table th.appointment-actions-column {
+    background: #f8fafc;
+    z-index: 4;
+}
+
+.dentalsoft-apt-table td.appointment-actions-column {
+    background: #ffffff;
+}
+
+.dentalsoft-apt-table tbody tr:nth-child(even) td.appointment-actions-column {
+    background: #fbfdff;
+}
+
+.dentalsoft-apt-table tbody tr:hover td.appointment-actions-column {
+    background: #f8fafc;
+}
+
+.dentalsoft-apt-table tbody tr.appointment-row-warning td,
+.dentalsoft-apt-table tbody tr.appointment-row-warning td.appointment-actions-column {
+    background: #fffbeb;
+}
+
+.appointment-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.appointment-action-group .btn-action-icon {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border: 1px solid transparent;
+}
+
+.appointment-action-group .btn-action-icon:hover,
+.appointment-action-group .btn-action-icon:focus-visible {
+    border-color: currentColor;
+    outline: none;
 }
 
 .dentalsoft-time-col {

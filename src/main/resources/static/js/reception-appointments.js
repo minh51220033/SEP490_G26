@@ -108,6 +108,88 @@
         link.innerHTML = '<i class="bi bi-eye me-1"></i>Chi tiết'; target.appendChild(link);
     }
 
+    function timeRange(appointment) {
+        const start = appointment.expectedTime?.slice(0, 5);
+        if (!start) return 'Linh động';
+        if (!appointment.durationMinutes) return start;
+        const [hours, minutes] = start.split(':').map(Number);
+        const end = hours * 60 + minutes + appointment.durationMinutes;
+        return `${start} – ${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+    }
+
+    function getDayAppointmentsModal() {
+        let modalElement = $('calendarDayAppointmentsModal');
+        if (modalElement) return modalElement;
+        modalElement = document.createElement('div');
+        modalElement.id = 'calendarDayAppointmentsModal';
+        modalElement.className = 'modal fade';
+        modalElement.tabIndex = -1;
+        modalElement.setAttribute('aria-labelledby', 'calendarDayAppointmentsTitle');
+        modalElement.setAttribute('aria-hidden', 'true');
+        modalElement.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="modal-header modal-header-dentalsoft">
+                        <div><h6 class="modal-title fw-bold mb-0" id="calendarDayAppointmentsTitle">Lịch hẹn trong ngày</h6>
+                            <small class="opacity-75" id="calendarDayAppointmentsSubtitle"></small></div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body p-3 bg-light" id="calendarDayAppointmentsList"></div>
+                </div>
+            </div>`;
+        document.body.appendChild(modalElement);
+        return modalElement;
+    }
+
+    function openDayAppointmentsModal(day, appointments, openDetails) {
+        const modalElement = getDayAppointmentsModal();
+        const title = $('calendarDayAppointmentsTitle');
+        const subtitle = $('calendarDayAppointmentsSubtitle');
+        const list = $('calendarDayAppointmentsList');
+        title.textContent = 'Lịch hẹn trong ngày';
+        subtitle.textContent = `${dateLabel(day)} · ${appointments.length} lịch hẹn`;
+        list.replaceChildren();
+        appointments
+            .slice()
+            .sort((left, right) => (left.expectedTime || '99:99').localeCompare(right.expectedTime || '99:99'))
+            .forEach(appointment => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'calendar-day-appointment btn w-100 text-start mb-2';
+                item.innerHTML = `<span class="calendar-day-appointment__time">${escapeHtml(timeRange(appointment))}</span>
+                    <span class="calendar-day-appointment__main"><strong>${escapeHtml(appointment.patientName || appointment.patientCode || 'Khách hàng')}</strong>
+                    <small>${escapeHtml(appointment.doctorName || 'Chưa chỉ định bác sĩ')} · ${escapeHtml(appointment.serviceName || 'Chưa chọn dịch vụ')}</small></span>
+                    <span class="badge rounded-pill ${statusStyle[appointment.status] || 'bg-secondary'}">${escapeHtml(statusName[appointment.status] || appointment.status)}</span>`;
+                item.addEventListener('click', () => {
+                    window.bootstrap?.Modal.getOrCreateInstance(modalElement).hide();
+                    openDetails(appointment);
+                });
+                list.appendChild(item);
+            });
+        window.bootstrap?.Modal.getOrCreateInstance(modalElement).show();
+    }
+
+    function openReadOnlyAppointmentDetails(appointment) {
+        const detail = document.createElement('div');
+        detail.className = 'modal fade';
+        detail.tabIndex = -1;
+        detail.setAttribute('aria-hidden', 'true');
+        detail.innerHTML = `<div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header modal-header-dentalsoft"><h6 class="modal-title fw-bold">Chi tiết lịch hẹn</h6><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <div class="modal-body p-4"><dl class="row mb-0 g-2"></dl></div></div></div>`;
+        const values = [['Khách hàng', appointment.patientName], ['Mã BN', appointment.patientCode], ['Số điện thoại', appointment.patientPhone],
+            ['Ngày hẹn', dateLabel(appointment.date)], ['Khung giờ', timeRange(appointment)], ['Bác sĩ', appointment.doctorName],
+            ['Dịch vụ', appointment.serviceName], ['Trạng thái', statusName[appointment.status] || appointment.status]];
+        const dl = detail.querySelector('dl');
+        values.forEach(([label, value]) => {
+            const dt = document.createElement('dt'), dd = document.createElement('dd');
+            dt.className = 'col-4 text-muted fw-normal'; dd.className = 'col-8'; dt.textContent = label; dd.textContent = value || '—'; dl.append(dt, dd);
+        });
+        detail.addEventListener('hidden.bs.modal', () => detail.remove(), {once: true});
+        document.body.appendChild(detail);
+        window.bootstrap?.Modal.getOrCreateInstance(detail).show();
+    }
+
     async function dashboardPage() {
         const options = await request('/options');
         const dateInput = $('filterDate'), branch = $('filterBranch'), doctor = $('filterDoctor');
@@ -348,9 +430,7 @@
 
             appointments.forEach((a, index) => {
                 const tr = document.createElement('tr');
-                if (a.doctorUnavailable || a.conflictNotes) {
-                    tr.style.backgroundColor = '#fffbeb';
-                }
+                if (a.doctorUnavailable || a.conflictNotes) tr.classList.add('appointment-row-warning');
 
                 // 1. #
                 const tdIndex = document.createElement('td');
@@ -446,21 +526,19 @@
                 tdStatus.appendChild(statusBtn);
                 tr.appendChild(tdStatus);
 
-                // 9. Thao tác (Icon tiếp đón, sửa, in, hủy)
+                // 9. Thao tác (cụm nút bám mép phải, theo mẫu Khám trong ngày)
                 const tdAction = document.createElement('td');
-                tdAction.className = 'text-center';
+                tdAction.className = 'text-center appointment-actions-column';
                 const canCheckIn = a.status !== 'CHECKED_IN' && a.status !== 'CANCELLED';
                 tdAction.innerHTML = `
-                    <div class="d-inline-flex align-items-center gap-1.5">
-                        ${canCheckIn ? `<a href="/reception/check-in?branchId=${$('branchSelect')?.value || ''}&appointmentId=${a.id}" class="btn-action-icon text-success" title="Tiếp đón & Check-in ngay"><i class="bi bi-person-check-fill"></i></a>` : ''}
+                    <div class="appointment-action-group">
+                        ${canCheckIn ? `<a href="/reception/check-in?branchId=${encodeURIComponent(branch.value || '')}&appointmentId=${a.id}" class="btn-action-icon text-success" title="Tiếp đón & Check-in ngay"><i class="bi bi-person-check-fill"></i></a>` : ''}
                         <a href="/reception/appointments/${a.id}/edit" class="btn-action-icon text-primary" title="Sửa lịch hẹn"><i class="bi bi-pencil"></i></a>
-                        <button type="button" class="btn-action-icon text-dark btn-print" title="In phiếu khám"><i class="bi bi-printer"></i></button>
+                        <button type="button" class="btn-action-icon text-dark btn-details" data-appointment-id="${a.id}" title="Mở chi tiết lịch hẹn"><i class="bi bi-eye"></i></button>
                         <button type="button" class="btn-action-icon text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i></button>
                     </div>
                 `;
-                tdAction.querySelector('.btn-print')?.addEventListener('click', () => {
-                    alert(`In phiếu lịch hẹn #${a.code} cho bệnh nhân ${a.patientName}`);
-                });
+                tdAction.querySelector('.btn-details')?.addEventListener('click', () => openQuickStatusModal(a));
                 tdAction.querySelector('.btn-delete')?.addEventListener('click', async () => {
                     if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng ${a.patientName}?`)) {
                         try {
@@ -513,7 +591,27 @@
 
             $('modalStatusPatientName').textContent = appointment.patientName || 'Khách hàng';
             $('modalStatusDoctorName').textContent = appointment.doctorName ? (appointment.doctorName.startsWith('BS') ? appointment.doctorName : `BS. ${appointment.doctorName}`) : 'Chưa chỉ định';
-            $('modalStatusContent').textContent = appointment.serviceName || appointment.symptoms || 'Khám & tư vấn';
+            const noteMatch = (appointment.symptoms || '').match(/(?:\s*-\s*)?\[Ghi chú: ([\s\S]*?)\]$/);
+            $('modalStatusContent').textContent = (appointment.symptoms || '').replace(/(?:\s*-\s*)?\[Ghi chú: [\s\S]*?\]$/, '').trim() || 'Chưa ghi nhận';
+            const start = appointment.expectedTime?.slice(0, 5);
+            let time = start || 'Linh động';
+            if (start && appointment.durationMinutes) {
+                const [hours, minutes] = start.split(':').map(Number);
+                const end = hours * 60 + minutes + appointment.durationMinutes;
+                time += ` – ${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+            }
+            const details = [ ['Mã BN', appointment.patientCode], ['Điện thoại', appointment.patientPhone],
+                ['Giới tính', appointment.patientGender], ['Ngày sinh', appointment.patientDob ? dateLabel(appointment.patientDob) : null],
+                ['Ngày hẹn', dateLabel(appointment.date)], ['Khung giờ', time],
+                ['Thời lượng', appointment.durationMinutes ? `${appointment.durationMinutes} phút` : null],
+                ['Dịch vụ', appointment.serviceName], ['Ghi chú nội bộ', noteMatch?.[1]] ];
+            const detailList = $('modalAppointmentDetails');
+            detailList.replaceChildren();
+            details.forEach(([label, value]) => {
+                const dt = document.createElement('dt'), dd = document.createElement('dd');
+                dt.className = 'col-4 text-muted fw-normal'; dd.className = 'col-8 mb-0';
+                dt.textContent = label; dd.textContent = value || '—'; detailList.append(dt, dd);
+            });
 
             const badgeEl = $('modalStatusBadge');
             if (badgeEl) {
@@ -650,13 +748,45 @@
         });
 
         // Load doctors for Modal
+        function loadModalBranches() {
+            const modalBranch = $('modalBranchId');
+            if (!modalBranch) return;
+            branches(modalBranch, options);
+            const selectedBranch = branch.value || (options.branches.length === 1 ? String(options.branches[0].id) : '');
+            if (selectedBranch && [...modalBranch.options].some(item => item.value === selectedBranch)) {
+                modalBranch.value = selectedBranch;
+            } else if (!modalBranch.value && modalBranch.options.length > 1) {
+                modalBranch.selectedIndex = 1;
+            }
+        }
+
         async function loadModalDoctors() {
             const select = $('modalDoctorId');
+            const modalBranch = $('modalBranchId');
+            const appointmentDate = $('modalAppointmentDate');
+            const help = $('modalDoctorHelp');
             if (!select) return;
-            select.replaceChildren(option('', '-- Chọn bác sĩ --'));
-            if (!branch.value) return;
-            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
-            list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}`)));
+            select.disabled = true;
+            select.replaceChildren(option('', 'Đang tải bác sĩ trực…'));
+            const branchId = modalBranch?.value;
+            const date = appointmentDate?.value;
+            if (!branchId || !date) {
+                select.replaceChildren(option('', 'Chọn chi nhánh và ngày hẹn trước'));
+                if (help) help.textContent = 'Chọn chi nhánh và ngày hẹn để xem danh sách bác sĩ trực.';
+                return;
+            }
+            try {
+                const list = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
+                select.replaceChildren(option('', '-- Chọn bác sĩ trực --'));
+                list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
+                select.disabled = false;
+                if (help) help.textContent = list.length
+                    ? `Có ${list.length} bác sĩ trực tại chi nhánh trong ngày đã chọn.`
+                    : 'Chưa có bác sĩ trực tại chi nhánh trong ngày đã chọn.';
+            } catch (err) {
+                select.replaceChildren(option('', 'Không tải được danh sách bác sĩ'));
+                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+            }
         }
 
         // Load services for Modal
@@ -671,17 +801,21 @@
             if (!createModal) return;
             $('createAppointmentForm')?.reset();
             $('modalProfileId').value = '';
+            $('modalPatientCode').value = '';
             $('selectedPatientChip').style.display = 'none';
             if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
             if ($('modalGuardianContainer')) $('modalGuardianContainer').style.display = 'none';
             $('modalPatientSearch').value = '';
             $('modalAppointmentDate').value = dateInput.value || today();
             $('createModalSubtitle').textContent = `Ngày ${dateLabel(dateInput.value || today())}`;
-
-            await loadModalDoctors();
+            loadModalBranches();
             loadModalServices();
             createModal.show();
+            await loadModalDoctors();
         });
+
+        $('modalBranchId')?.addEventListener('change', () => loadModalDoctors());
+        $('modalAppointmentDate')?.addEventListener('change', () => loadModalDoctors());
 
         // Customer Autocomplete Search
         let patientSearchTimer;
@@ -695,7 +829,13 @@
             }
             patientSearchTimer = setTimeout(async () => {
                 try {
-                    const patients = await request(`/patients?branchId=${encodeURIComponent(branch.value || 1)}&query=${encodeURIComponent(query)}`);
+                    const patientBranchId = $('modalBranchId')?.value || branch.value;
+                    if (!patientBranchId) {
+                        resultsBox.innerHTML = '<div class="p-2 text-muted small">Vui lòng chọn chi nhánh trước khi tìm khách hàng.</div>';
+                        resultsBox.style.display = 'block';
+                        return;
+                    }
+                    const patients = await request(`/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`);
                     resultsBox.replaceChildren();
                     if (!patients.length) {
                         resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy khách hàng cũ. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
@@ -706,6 +846,7 @@
                             item.innerHTML = `<strong>${escapeHtml(p.name)}</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span> <span class="text-muted ms-1">· ${escapeHtml(p.phone)}</span>`;
                             item.addEventListener('click', () => {
                                 $('modalProfileId').value = p.id;
+                                $('modalPatientCode').value = p.code || '';
                                 $('modalPatientName').value = p.name;
                                 $('modalPatientPhone').value = p.phone || '';
                                 $('selectedPatientName').textContent = p.name;
@@ -724,11 +865,18 @@
             }, 250);
         });
 
-        $('clearSelectedPatientBtn')?.addEventListener('click', () => {
+        $('clearSelectedPatientBtn')?.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            clearTimeout(patientSearchTimer);
             $('modalProfileId').value = '';
+            $('modalPatientCode').value = '';
             $('selectedPatientChip').style.display = 'none';
             if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
             $('modalPatientSearch').value = '';
+            $('modalPatientSearch').disabled = false;
+            $('modalPatientResults').style.display = 'none';
+            $('newPatientFieldsContainer')?.querySelectorAll('input, select, textarea').forEach(field => { field.disabled = false; });
             $('modalPatientName').value = '';
             $('modalPatientPhone').value = '';
             $('modalPatientAddress').value = '';
@@ -752,10 +900,21 @@
             const doctorId = $('modalDoctorId').value ? Number($('modalDoctorId').value) : null;
             const serviceId = $('modalServiceId').value ? Number($('modalServiceId').value) : null;
             const profileId = $('modalProfileId').value ? Number($('modalProfileId').value) : null;
+            const modalBranchId = $('modalBranchId').value ? Number($('modalBranchId').value) : null;
             const isTentative = $('modalIsTentative')?.checked || false;
 
+            if (!modalBranchId) {
+                alert('Vui lòng chọn chi nhánh cho lịch hẹn.');
+                $('modalBranchId').focus();
+                return;
+            }
             if (!date) {
                 alert('Vui lòng chọn ngày hẹn.');
+                return;
+            }
+            if (!doctorId) {
+                alert('Vui lòng chọn bác sĩ trực.');
+                $('modalDoctorId').focus();
                 return;
             }
             if (!symptoms) {
@@ -831,7 +990,7 @@
             const expectedTime = hour ? `${hour}:${minute}:00` : null;
 
             const payload = {
-                branchId: Number(branch.value || 1),
+                branchId: modalBranchId,
                 profileId: profileId,
                 patientName: patientName,
                 patientPhone: $('modalPatientPhone').value.trim(),
@@ -844,8 +1003,9 @@
                 guardianRelationship: guardianRelationship,
                 doctorId: doctorId,
                 date: date,
-                session: hour && parseInt(hour) >= 12 ? 'AFTERNOON' : 'MORNING',
+                session: hour && Number(hour) >= 18 ? 'EVENING' : hour && Number(hour) >= 12 ? 'AFTERNOON' : 'MORNING',
                 expectedTime: expectedTime,
+                durationMinutes: Number($('modalDuration').value),
                 serviceId: serviceId,
                 symptoms: symptoms,
                 internalNote: $('modalInternalNote').value.trim(),
@@ -950,14 +1110,15 @@
                 });
 
                 if (isMonth && events.length > 3) {
-                    const more = document.createElement('div');
-                    more.className = 'calendar-more text-primary small cursor-pointer';
+                    const more = document.createElement('button');
+                    more.type = 'button';
+                    more.className = 'calendar-more text-primary small cursor-pointer border-0 bg-transparent p-0';
                     more.textContent = `+${events.length - 3} lịch khác`;
-                    more.addEventListener('click', () => {
-                        dateInput.value = dayIso;
-                        updateDateDisplay();
-                        switchView('list');
-                        load().catch(e => error(e.message));
+                    more.setAttribute('aria-label', `Xem ${events.length - 3} lịch hẹn khác ngày ${dateLabel(dayIso)}`);
+                    more.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openDayAppointmentsModal(dayIso, events, openQuickStatusModal);
                     });
                     dayLink.appendChild(more);
                 }
@@ -1005,6 +1166,11 @@
         branch.addEventListener('change', async () => {
             try {
                 await loadDoctors();
+                if (createModalEl?.classList.contains('show')) {
+                    const modalBranch = $('modalBranchId');
+                    if (modalBranch && branch.value) modalBranch.value = branch.value;
+                    await loadModalDoctors();
+                }
                 await load();
             } catch (e) {
                 error(e.message);
@@ -1082,7 +1248,19 @@
                 dayLink.append(dayNumber);
                 const events = list.filter(a => a.date === dayIso).sort((a,b) => (a.expectedTime || '99:99').localeCompare(b.expectedTime || '99:99'));
                 events.slice(0, month ? 3 : 30).forEach(a => { const event = document.createElement('a'); event.className = 'calendar-event'; event.dataset.status = a.status; event.href = `/reception/appointments/${encodeURIComponent(a.id)}`; event.textContent = `${a.expectedTime ? a.expectedTime.slice(0,5) : '—'}  ${a.patientName || a.patientCode}`; event.title = `${a.patientName || ''} · ${a.doctorName || 'Chưa phân bác sĩ'} · ${statusName[a.status] || a.status}`; dayLink.appendChild(event); });
-                if (month && events.length > 3) { const more = document.createElement('a'); more.className = 'calendar-more'; more.href = dayNumber.href; more.textContent = `+${events.length - 3} lịch`; dayLink.appendChild(more); }
+                if (month && events.length > 3) {
+                    const more = document.createElement('button');
+                    more.type = 'button';
+                    more.className = 'calendar-more border-0 bg-transparent p-0';
+                    more.textContent = `+${events.length - 3} lịch khác`;
+                    more.setAttribute('aria-label', `Xem ${events.length - 3} lịch hẹn khác ngày ${dateLabel(dayIso)}`);
+                    more.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openDayAppointmentsModal(dayIso, events, openReadOnlyAppointmentDetails);
+                    });
+                    dayLink.appendChild(more);
+                }
                 if (!month && count) { const countLabel = document.createElement('small'); countLabel.className = 'calendar-count'; countLabel.textContent = `${count.total} lịch`; dayNumber.appendChild(countLabel); }
                 grid.appendChild(dayLink);
                 current = addDays(current, 1);
@@ -1316,7 +1494,7 @@
         if (a.conflictNotes) {
             if (a.status === 'CHECKED_IN') {
                 $('doctorWarning').className = 'alert alert-info d-flex align-items-center justify-content-between mb-3';
-                $('doctorWarning').innerHTML = `<div><strong><i class="bi bi-info-circle-fill me-1"></i> Lưu ý điều phối:</strong> ${escapeHtml(a.conflictNotes)}</div> <a href="/reception/dispatch?branchId=${a.branchId || ''}" class="btn btn-sm btn-primary ms-3 text-nowrap"><i class="bi bi-diagram-3 me-1"></i>Vào Điều phối FT08</a>`;
+                $('doctorWarning').innerHTML = `<div><strong><i class="bi bi-info-circle-fill me-1"></i> Lưu ý điều phối:</strong> ${escapeHtml(a.conflictNotes)}</div> <a href="/reception/dispatch?branchId=${a.branchId || ''}" class="btn btn-sm btn-primary ms-3 text-nowrap"><i class="bi bi-diagram-3 me-1"></i>Đến Bàn điều phối ghế nha</a>`;
                 $('doctorWarning').hidden = false;
             } else if (a.status === 'PENDING' || a.status === 'CONFIRMED') {
                 $('doctorWarning').className = 'alert alert-warning mb-3';
@@ -1420,7 +1598,7 @@
                 const rForm = $('revertCheckInForm');
                 if (rForm) {
                     rForm.action = `/reception/check-in/appointments/${id}/revert`;
-                    rForm.onsubmit = () => confirm('Bạn có chắc chắn muốn hoàn tác tiếp đón cho bệnh nhân này? Lịch hẹn sẽ quay về trạng thái Đã xác nhận và lượt khám chờ tại FT08 sẽ bị hủy.');
+                    rForm.onsubmit = () => confirm('Bạn có chắc chắn muốn hoàn tác tiếp đón cho bệnh nhân này? Lịch hẹn sẽ quay về trạng thái Đã xác nhận và lượt khám chờ sẽ bị hủy.');
                 }
             }
             return;
