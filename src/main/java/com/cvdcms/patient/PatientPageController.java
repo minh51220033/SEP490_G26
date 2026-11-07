@@ -52,9 +52,33 @@ public class PatientPageController {
                        @RequestParam(required = false) String status,
                        @RequestParam(required = false) Long branchId,
                        @RequestParam(defaultValue = "0") int page,
+                       @RequestParam(defaultValue = "10") int size,
                        Model model, HttpSession session) {
-        Page<PatientView> result = service.list(session, query, dob, status, branchId, page, 10);
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
+        }
+        Page<PatientView> result = service.list(session, query, dob, status, branchId, page, size);
+        long totalItems = result.getTotalElements();
+        int totalPages = result.getTotalPages();
+        int currentPage = result.getNumber();
+        if (currentPage >= totalPages && totalPages > 0) {
+            currentPage = totalPages - 1;
+            result = service.list(session, query, dob, status, branchId, currentPage, size);
+            totalItems = result.getTotalElements();
+            totalPages = result.getTotalPages();
+        }
+        long toItem = Math.min(((long) (currentPage + 1) * size), totalItems);
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
         model.addAttribute("patients", result);
+        model.addAttribute("items", result.getContent());
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+        model.addAttribute("keyword", query);
         model.addAttribute("branches", service.branches(session));
         model.addAttribute("branchId", branchId);
         model.addAttribute("query", query);

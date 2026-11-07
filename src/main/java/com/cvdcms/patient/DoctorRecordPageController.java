@@ -8,6 +8,7 @@ import com.cvdcms.entity.enums.PhotoStage;
 import com.cvdcms.service.ClinicalPhotoService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -51,8 +52,33 @@ public class DoctorRecordPageController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dob,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long branchId,
-            @RequestParam(defaultValue = "0") int page) {
-        model.addAttribute("patients", records.search(session, query, dob, status, branchId, page));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
+        }
+        Page<PatientView> resultPage = records.search(session, query, dob, status, branchId, page, size);
+        long totalItems = resultPage.getTotalElements();
+        int totalPages = resultPage.getTotalPages();
+        int currentPage = resultPage.getNumber();
+        if (currentPage >= totalPages && totalPages > 0) {
+            currentPage = totalPages - 1;
+            resultPage = records.search(session, query, dob, status, branchId, currentPage, size);
+            totalItems = resultPage.getTotalElements();
+            totalPages = resultPage.getTotalPages();
+        }
+        long toItem = Math.min(((long) (currentPage + 1) * size), totalItems);
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
+        model.addAttribute("patients", resultPage);
+        model.addAttribute("items", resultPage.getContent());
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+        model.addAttribute("keyword", query);
         model.addAttribute("branches", records.allowedBranches(session));
         model.addAttribute("query", query);
         model.addAttribute("dob", dob);

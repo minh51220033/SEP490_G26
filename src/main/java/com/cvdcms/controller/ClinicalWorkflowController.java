@@ -62,8 +62,8 @@ public class ClinicalWorkflowController {
         int toIndex = (int) Math.min(fromIndex + size, totalItems);
         List<WorkflowTemplateResponseDTO> pagedWorkflows = totalItems == 0 ? List.of() : allTemplates.subList(fromIndex, toIndex);
 
-        long fromItem = totalItems == 0 ? 0 : ((long) currentPage * size) + 1;
         long toItem = toIndex;
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
 
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
 

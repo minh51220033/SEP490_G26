@@ -95,7 +95,7 @@ public class PatientService {
         }
         Long selectedBranchId = scope.admin() ? branchId : scope.branchId();
         int safePage = Math.max(0, page);
-        int safeSize = Math.min(50, Math.max(1, size));
+        int safeSize = Math.min(100, Math.max(1, size));
         String term = blankToNull(query);
         String state = blankToNull(status);
         return search.search(selectedBranchId, term, dob, state,
