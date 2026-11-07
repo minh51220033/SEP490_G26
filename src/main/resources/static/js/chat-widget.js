@@ -674,8 +674,8 @@
         wrapper.id = 'cvdcmsFloatingChatWidget';
         wrapper.className = 'cvdcms-chat-widget';
         wrapper.innerHTML = `
-            <div id="cvdcmsChatPopup" class="cvdcms-chat-popup" aria-hidden="true">
-                <div class="cvdcms-chat-header">
+            <div id="cvdcmsChatPopup" class="cvdcms-chat-popup cvdcms-chat-popup--guest" aria-hidden="true" hidden>
+                <div class="cvdcms-chat-popup__header">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-2">
                             <span class="rounded-circle bg-white text-primary d-inline-flex align-items-center justify-content-center fw-bold"
@@ -727,7 +727,7 @@
         function toggleGuestPopup(forceState) {
             state.isOpen = typeof forceState === 'boolean' ? forceState : !state.isOpen;
             if (popup) {
-                popup.classList.toggle('is-open', state.isOpen);
+                popup.hidden = !state.isOpen; popup.classList.toggle('is-open', state.isOpen);
                 popup.setAttribute('aria-hidden', String(!state.isOpen));
             }
         }
@@ -740,7 +740,15 @@
             const resp = await fetch('/api/chat/context', {
                 headers: { 'Accept': 'application/json' }
             });
-            if (!resp.ok) return;
+            if (!resp.ok) {
+                buildGuestWidgetDom();
+                return;
+            }
+            const contentType = resp.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                buildGuestWidgetDom();
+                return;
+            }
             const ctx = await resp.json();
             if (!ctx || ctx.authenticated !== true) {
                 buildGuestWidgetDom();

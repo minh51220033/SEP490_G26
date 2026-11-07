@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/branches")
-public class BranchApiController {
+public class    BranchApiController {
 
     private final BranchService branchService;
     private final BranchAccessService branchAccessService;

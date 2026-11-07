@@ -100,11 +100,16 @@ public class SecurityConfig {
                                 "/doctors",
                                 "/doctors/**",
                                 "/news",
-                                "/news/*"
+                                "/news/*",
+                                "/api/chat/context"
                         ).permitAll()
 
-                        // 2c. Endpoint nạp ảnh từ Windows NanoPix Background Agent (xác thực chặt bằng X-API-KEY trong Controller)
-                        .requestMatchers(HttpMethod.POST, "/api/xray/ingest").permitAll()
+                        // 2c. Endpoint nạp ảnh NanoPix & Đặt lịch khám nhanh công khai từ Drawer (Kiểm tra lịch trực & Đặt lịch)
+                        .requestMatchers(
+                                "/api/xray/ingest",
+                                "/api/public/booking",
+                                "/api/public/booking/**"
+                        ).permitAll()
 
                         // 3. Màn hình TV gọi số công cộng tại sảnh tiếp đón (FT10)
                         .requestMatchers(

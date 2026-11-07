@@ -5,8 +5,8 @@
 <body class="app-body viewport-locked-page">
 
 <!-- CSS và Script riêng của trang CSKH -->
-<link rel="stylesheet" th:href="@{/css/customer-care.css}">
-<script th:src="@{/js/customer-care.js(v='20261104-fix')}" defer></script>
+<link rel="stylesheet" th:href="@{/css/customer-care.css(v='20261106-ui')}">
+<script th:src="@{/js/customer-care.js(v='20261106-ui')}" defer></script>
 
 <!-- Khu vực quản trị: sidebar và main content đồng bộ layout toàn hệ thống -->
 <div class="app-shell">
@@ -22,7 +22,7 @@
 
         <main class="cc-app-view">
 
-            <!-- 1. TOOLBAR CHÍNH -->
+            <!-- 1. TOOLBAR CHÍNH (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
             <div class="table-toolbar-card">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <div class="table-toolbar-title">
@@ -30,7 +30,7 @@
                         <h1>Quản lý Chăm sóc Khách hàng</h1>
                     </div>
                     <div class="branch-select-wrap ms-md-2">
-                        <label for="branchId"><i class="bi bi-geo-alt-fill text-primary me-1"></i>Cơ sở:</label>
+                        <label for="branchId">Cơ sở:</label>
                         <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm">
                             <option value="">Đang tải chi nhánh...</option>
                         </select>
@@ -39,110 +39,113 @@
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <button id="autoGenerateBtn" class="btn-secondary-custom" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
-                        <i class="bi bi-lightning-charge-fill text-warning"></i> Tổng hợp tự động
+                        Tổng hợp tự động
                     </button>
                     <button id="openCreateTaskBtn" class="btn-primary-custom" type="button">
-                        <i class="bi bi-plus-lg"></i> Lập lịch CSKH
+                        Lập lịch CSKH
                     </button>
                     <button id="refreshBtn" class="btn-secondary-custom" type="button" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
                     <button id="openColumnDrawerBtn" class="btn-gear-customizer" type="button" title="Tùy chỉnh cột hiển thị" onclick="openCcColumnDrawer()">
-                        <i class="bi bi-gear-fill"></i>
+                        <i class="bi bi-sliders"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI SUMMARY CARDS (COMPACT THEO CHUẨN) -->
+            <!-- 2. 4 THẺ KPI SUMMARY CARDS (ĐỒNG BỘ DASHBOARD WIDGETS DAILY-VISITS) -->
             <section class="stats-grid" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
                 <article class="stat-card is-loading" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong id="statTotalTasks" class="stat-value">—</strong>
                         <span class="stat-label">Tổng công việc CSKH</span>
-                        <span class="stat-icon stat-icon-brand" aria-hidden="true">
-                            <i class="bi bi-clipboard-check"></i>
-                        </span>
+                        <span id="statTotalTasksSub" class="stat-meta">Đang tải dữ liệu...</span>
                     </div>
-                    <strong id="statTotalTasks" class="stat-value">—</strong>
-                    <span id="statTotalTasksSub" class="stat-meta">Đang tải dữ liệu...</span>
+                    <div class="stat-icon stat-icon-brand" aria-hidden="true">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-warning is-loading" id="kpiCardDue" data-kpi-tab="TODAY" role="button" tabindex="0">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong id="statDueTasks" class="stat-value">—</strong>
                         <span class="stat-label">Hôm nay / Quá hạn</span>
-                        <span class="stat-icon stat-icon-warning" aria-hidden="true">
-                            <i class="bi bi-clock-history"></i>
-                        </span>
+                        <span id="statDueTasksSub" class="stat-meta">Đang kiểm tra lịch...</span>
                     </div>
-                    <strong id="statDueTasks" class="stat-value">—</strong>
-                    <span id="statDueTasksSub" class="stat-meta">Đang kiểm tra lịch...</span>
+                    <div class="stat-icon stat-icon-warning" aria-hidden="true">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-danger is-loading" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong id="statEscalatedTasks" class="stat-value">—</strong>
                         <span class="stat-label">Ca chuyển Bác sĩ</span>
-                        <span class="stat-icon stat-icon-danger" aria-hidden="true">
-                            <i class="bi bi-heart-pulse"></i>
-                        </span>
+                        <span id="statEscalatedTasksSub" class="stat-meta">Đang kiểm tra ca BS...</span>
                     </div>
-                    <strong id="statEscalatedTasks" class="stat-value">—</strong>
-                    <span id="statEscalatedTasksSub" class="stat-meta">Đang kiểm tra ca BS...</span>
+                    <div class="stat-icon stat-icon-danger" aria-hidden="true">
+                        <i class="bi bi-heart-pulse"></i>
+                    </div>
                 </article>
 
                 <article class="stat-card stat-success is-loading" id="kpiCardCompleted" data-kpi-tab="COMPLETED_FILTER" role="button" tabindex="0">
-                    <div class="stat-card-top">
+                    <div class="stat-card-body">
+                        <strong id="statCompletedTasks" class="stat-value">—</strong>
                         <span class="stat-label">Đã hoàn thành CSKH</span>
-                        <span class="stat-icon stat-icon-success" aria-hidden="true">
-                            <i class="bi bi-check2-circle"></i>
-                        </span>
+                        <span id="statCompletedTasksSub" class="stat-meta">Đang tính tỷ lệ...</span>
                     </div>
-                    <strong id="statCompletedTasks" class="stat-value">—</strong>
-                    <span id="statCompletedTasksSub" class="stat-meta">Đang tính tỷ lệ...</span>
+                    <div class="stat-icon stat-icon-success" aria-hidden="true">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
                 </article>
             </section>
 
-            <!-- 3. THANH TABS BAR PHÂN NHÓM BỆNH NHÂN -->
+            <!-- 3. THANH TABS BAR PHÂN NHÓM BỆNH NHÂN (TỐI GIẢN ICON) -->
             <nav class="tabs-bar" aria-label="Phân nhóm công việc chăm sóc khách hàng">
                 <button class="tab active" type="button" data-tab="ALL">
-                    <i class="bi bi-grid-fill me-1"></i>Tổng quan <span class="tab-badge" id="badge_ALL">0</span>
+                    Tổng quan <span class="tab-badge" id="badge_ALL">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="TODAY">
-                    <i class="bi bi-alarm me-1"></i>Hôm nay <span class="tab-badge" id="badge_TODAY">0</span>
+                    Hôm nay <span class="tab-badge" id="badge_TODAY">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="POST_TREATMENT">
-                    🦷 Sau điều trị <span class="tab-badge" id="badge_POST_TREATMENT">0</span>
+                    Sau điều trị <span class="tab-badge" id="badge_POST_TREATMENT">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="APPOINTMENT_REMINDER">
-                    📅 Nhắc hẹn <span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span>
+                    Nhắc hẹn <span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="INSTALLMENT_REMINDER">
-                    💳 Trả góp <span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span>
+                    Trả góp <span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="NO_SHOW_RECALL">
-                    📞 Hẹn lỡ <span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span>
+                    Hẹn lỡ <span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="NO_SERVICE_FOLLOWUP">
-                    ⏸ Chưa làm DV <span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span>
+                    Chưa làm DV <span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="FEEDBACK_COMPLAINT">
-                    💬 Phản ánh <span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span>
+                    Phản ánh <span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span>
                 </button>
                 <button class="tab tab-doctor" type="button" data-tab="ESCALATED">
-                    🩺 Chuyển Bác sĩ <span class="tab-badge" id="badge_ESCALATED">0</span>
+                    Chuyển Bác sĩ <span class="tab-badge" id="badge_ESCALATED">0</span>
                 </button>
                 <button class="tab" type="button" data-tab="HISTORY">
-                    🕒 Lịch sử CSKH BN
+                    Lịch sử CSKH BN
                 </button>
             </nav>
 
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 4. BỘ LỌC TÌM KIẾM NHANH (COLLAPSIBLE / COMPACT) -->
+            <!-- 4. BỘ LỌC TÌM KIẾM NHANH (ĐỒNG BỘ TOOLBAR DAILY-VISITS) -->
             <section id="filterToolbarSection" class="toolbar-card" aria-label="Bộ lọc công việc CSKH">
                 <div class="filter-grid">
                     <div class="filter-field filter-keyword">
                         <label for="keyword">Tìm kiếm nhanh</label>
-                        <input id="keyword" type="search" placeholder="Mã CV, mã BN, họ tên BN, SĐT, mã ca khám...">
+                        <div class="dv-search-box">
+                            <span class="dv-search-lead"><i class="bi bi-search"></i></span>
+                            <input id="keyword" type="search" placeholder="Mã CV, mã BN, họ tên BN, SĐT, mã ca khám...">
+                        </div>
                     </div>
 
                     <div class="filter-field">
@@ -156,11 +159,11 @@
                         <label for="filterStatus">Trạng thái công việc</label>
                         <select id="filterStatus">
                             <option value="">Tất cả trạng thái</option>
-                            <option value="PENDING">Chờ liên hệ (PENDING)</option>
+                            <option value="PENDING">Chờ liên hệ</option>
                             <option value="IN_PROGRESS">Đang chăm sóc / Hẹn gọi lại</option>
                             <option value="ESCALATED_TO_DOCTOR">Chuyển Bác sĩ chuyên môn</option>
-                            <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
-                            <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                            <option value="COMPLETED">Đã hoàn thành</option>
+                            <option value="CANCELLED">Đã hủy</option>
                         </select>
                     </div>
 
@@ -176,10 +179,10 @@
 
                     <div class="filter-actions">
                         <button id="searchBtn" class="btn-primary-custom" type="button">
-                            <i class="bi bi-search"></i> Lọc
+                            Tìm kiếm
                         </button>
                         <button id="clearFilterBtn" class="btn-secondary-custom" type="button">
-                            <i class="bi bi-x-circle"></i> Xóa
+                            Đặt lại
                         </button>
                     </div>
                 </div>
@@ -245,7 +248,7 @@
                 <div class="toolbar-card mb-2 py-2">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div>
-                            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Lịch sử chăm sóc bệnh nhân (Timeline - SCR-44.6)</h6>
+                            <h6 class="mb-0 fw-bold text-dark">Lịch sử chăm sóc bệnh nhân (Timeline)</h6>
                             <p class="small text-muted mb-0">Xem toàn bộ lịch sử tương tác qua Điện thoại, Zalo, SMS của từng bệnh nhân.</p>
                         </div>
                         <div class="inline-filters">
@@ -254,7 +257,7 @@
                                 <option value="">-- Chọn bệnh nhân --</option>
                             </select>
                             <button id="loadHistoryBtn" class="btn-primary-custom" type="button">
-                                <i class="bi bi-eye"></i> Xem lịch sử
+                                Xem lịch sử
                             </button>
                         </div>
                     </div>
@@ -266,14 +269,14 @@
                 <div class="table-viewport-wrapper p-3" style="background:#f8fafc;">
                     <div class="history-layout">
                         <div class="history-column">
-                            <h3 class="sub-heading">🕒 Timeline tương tác liên hệ (<span id="timelineCount">0</span> lần)</h3>
+                            <h3 class="sub-heading">Timeline tương tác liên hệ (<span id="timelineCount">0</span> lần)</h3>
                             <div id="patientTimelineContainer" class="timeline-list">
                                 <p class="empty">Vui lòng chọn một bệnh nhân để xem timeline lịch sử tương tác.</p>
                             </div>
                         </div>
 
                         <div class="history-column">
-                            <h3 class="sub-heading">📋 Danh sách công việc CSKH của bệnh nhân (<span id="patientTasksCount">0</span> công việc)</h3>
+                            <h3 class="sub-heading">Danh sách công việc CSKH của bệnh nhân (<span id="patientTasksCount">0</span> công việc)</h3>
                             <div id="patientTasksContainer" class="patient-tasks-list">
                                 <p class="empty">Chưa chọn bệnh nhân.</p>
                             </div>
@@ -389,7 +392,7 @@
 
                     <div class="modal-footer">
                         <button type="button" class="btn-secondary-custom" id="cancelTaskFormModalBtn">Hủy</button>
-                        <button type="submit" class="btn-primary-custom" id="saveTaskFormBtn">✓ Lưu lịch chăm sóc</button>
+                        <button type="submit" class="btn-primary-custom" id="saveTaskFormBtn">Lưu lịch chăm sóc</button>
                     </div>
                 </form>
             </div>
@@ -405,7 +408,7 @@
         <div class="cc-modal-content modal-content">
             <div class="cc-modal-header modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="interactionModalTitle">Chi tiết công việc &amp; Ghi kết quả liên hệ (SCR-44.4)</h3>
+                    <h3 id="interactionModalTitle">Chi tiết công việc &amp; Ghi kết quả liên hệ</h3>
                     <span class="sub-hint">Ghi nhận thông tin cuộc gọi/Zalo/SMS, đối chiếu chẩn đoán &amp; lời dặn sau điều trị</span>
                 </div>
                 <button type="button" class="cc-modal-close modal-close" id="closeInteractionModalBtn" aria-label="Đóng">×</button>
@@ -413,7 +416,7 @@
 
             <div class="cc-modal-body modal-body-scroll">
                 <!-- Thông tin công việc & hồ sơ liên kết -->
-                <div class="modal-section-title">📌 Thông tin công việc chăm sóc</div>
+                <div class="modal-section-title">Thông tin công việc chăm sóc</div>
                 <div id="interactionTaskMeta" class="detail-meta-grid"></div>
 
                 <!-- Thông tin Hồ sơ Khám lâm sàng, Chẩn đoán & Lời dặn sau điều trị (#tab-instructions) -->
@@ -426,33 +429,33 @@
                 <form id="interactionForm" class="sub-card interaction-form-card">
                     <input type="hidden" id="intTaskId">
                     <div class="sub-card-head">
-                        <h4>📞 Ghi nhận kết quả liên hệ mới</h4>
-                        <span class="sub-note">Nếu bệnh nhân muốn đổi/đặt lịch hẹn mới, vui lòng chọn kết quả "Đã đặt/đổi lịch hẹn" hoặc chuyển sang chức năng Quản lý lịch hẹn (FT05).</span>
+                        <h4>Ghi nhận kết quả liên hệ mới</h4>
+                        <span class="sub-note">Nếu bệnh nhân muốn đổi/đặt lịch hẹn mới, vui lòng chọn kết quả "Đã đặt/đổi lịch hẹn" hoặc chuyển sang chức năng Quản lý lịch hẹn.</span>
                     </div>
 
                     <div class="form-grid-2">
                         <label class="form-field">
                             <span class="field-label">Kênh liên hệ <strong class="req">*</strong></span>
                             <select id="intChannel" required class="form-control">
-                                <option value="PHONE_CALL">📞 Gọi điện thoại (PHONE_CALL)</option>
-                                <option value="ZALO">💬 Nhắn tin Zalo (ZALO)</option>
-                                <option value="SMS">✉️ Tin nhắn SMS (SMS)</option>
-                                <option value="IN_PERSON">🏥 Gặp trực tiếp tại PK (IN_PERSON)</option>
+                                <option value="PHONE_CALL">Gọi điện thoại</option>
+                                <option value="ZALO">Nhắn tin Zalo</option>
+                                <option value="SMS">Tin nhắn SMS</option>
+                                <option value="IN_PERSON">Gặp trực tiếp tại PK</option>
                             </select>
                         </label>
 
                         <label class="form-field">
                             <span class="field-label">Kết quả liên hệ <strong class="req">*</strong></span>
                             <select id="intContactResult" required class="form-control">
-                                <option value="CONNECTED">✓ Đã kết nối thành công (CONNECTED)</option>
-                                <option value="BUSY">⏳ Máy bận (BUSY - Cần hẹn gọi lại)</option>
-                                <option value="NO_ANSWER">📵 Không bắt máy (NO_ANSWER - Cần hẹn gọi lại)</option>
-                                <option value="SCHEDULED_APPOINTMENT">📅 Đã đặt / đổi lịch hẹn (SCHEDULED_APPOINTMENT)</option>
+                                <option value="CONNECTED">Đã kết nối thành công</option>
+                                <option value="BUSY">Máy bận (Cần hẹn gọi lại)</option>
+                                <option value="NO_ANSWER">Không bắt máy (Cần hẹn gọi lại)</option>
+                                <option value="SCHEDULED_APPOINTMENT">Đã đặt / đổi lịch hẹn</option>
                             </select>
                         </label>
 
                         <label class="form-field" id="retryDateTimeWrap">
-                            <span class="field-label" id="retryDateTimeLabel">Thời gian hẹn gọi lại (next_retry_at)</span>
+                            <span class="field-label" id="retryDateTimeLabel">Thời gian hẹn gọi lại</span>
                             <input id="intNextRetryAt" type="datetime-local" class="form-control">
                             <small class="field-hint" id="retryHint">Bắt buộc nhập khi kết quả là Không bắt máy hoặc Máy bận.</small>
                         </label>
@@ -460,9 +463,9 @@
                         <label class="form-field">
                             <span class="field-label">Cập nhật trạng thái công việc <strong class="req">*</strong></span>
                             <select id="intNextStatus" required class="form-control">
-                                <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
-                                <option value="IN_PROGRESS">Đang chăm sóc / Chờ gọi lại (IN_PROGRESS)</option>
-                                <option value="CANCELLED">Hủy công việc (CANCELLED)</option>
+                                <option value="COMPLETED">Đã hoàn thành</option>
+                                <option value="IN_PROGRESS">Đang chăm sóc / Chờ gọi lại</option>
+                                <option value="CANCELLED">Hủy công việc</option>
                             </select>
                         </label>
 
@@ -474,18 +477,18 @@
 
                     <div class="modal-footer-inline">
                         <button type="button" class="btn-secondary-custom text-danger" id="switchToEscalateFromIntBtn">
-                            <i class="bi bi-heart-pulse-fill me-1"></i>Chuyển Bác sĩ hỗ trợ chuyên môn
+                            Chuyển Bác sĩ hỗ trợ chuyên môn
                         </button>
                         <div class="right-btns">
                             <button type="button" class="btn-secondary-custom" id="cancelInteractionModalBtn">Đóng</button>
-                            <button type="submit" class="btn-primary-custom" id="saveInteractionBtn">✓ Lưu kết quả liên hệ</button>
+                            <button type="submit" class="btn-primary-custom" id="saveInteractionBtn">Lưu kết quả liên hệ</button>
                         </div>
                     </div>
                 </form>
 
                 <!-- Lịch sử các lần liên hệ trước đó của công việc này -->
                 <div class="sub-card history-card">
-                    <div class="modal-section-title">🕒 Lịch sử tương tác của công việc này</div>
+                    <div class="modal-section-title">Lịch sử tương tác của công việc này</div>
                     <div id="taskInteractionsList" class="timeline-list"></div>
                 </div>
             </div>
@@ -501,7 +504,7 @@
         <div class="cc-modal-content modal-content">
             <div class="cc-modal-header modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="escalateModalTitle">🩺 Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)</h3>
+                    <h3 id="escalateModalTitle">Chuyển Bác sĩ hỗ trợ chuyên môn</h3>
                     <span class="sub-hint">Bàn giao ca bệnh có phản ánh bất thường hoặc cần tư vấn phác đồ</span>
                 </div>
                 <button type="button" class="cc-modal-close modal-close" id="closeEscalateModalBtn" aria-label="Đóng">×</button>
@@ -527,7 +530,7 @@
 
                     <div class="modal-footer">
                         <button type="button" class="btn-secondary-custom" id="cancelEscalateModalBtn">Hủy</button>
-                        <button type="submit" class="btn btn-danger fw-bold" id="saveEscalateBtn">🩺 Xác nhận chuyển Bác sĩ</button>
+                        <button type="submit" class="btn btn-danger fw-bold" id="saveEscalateBtn">Xác nhận chuyển Bác sĩ</button>
                     </div>
                 </form>
             </div>
@@ -543,7 +546,7 @@
         <div class="cc-modal-content modal-content">
             <div class="cc-modal-header modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="doctorResponseModalTitle">💬 Phản hồi chuyên môn của Bác sĩ (SCR-44.5)</h3>
+                    <h3 id="doctorResponseModalTitle">Phản hồi chuyên môn của Bác sĩ</h3>
                     <span class="sub-hint">Bác sĩ đưa ra chỉ định, hướng dẫn dùng thuốc hoặc hẹn tái khám</span>
                 </div>
                 <button type="button" class="cc-modal-close modal-close" id="closeDoctorResponseModalBtn" aria-label="Đóng">×</button>
@@ -571,7 +574,7 @@
 
                     <div class="modal-footer">
                         <button type="button" class="btn-secondary-custom" id="cancelDoctorResponseModalBtn">Hủy</button>
-                        <button type="submit" class="btn-primary-custom" id="saveDoctorResponseBtn">✓ Lưu phản hồi chuyên môn</button>
+                        <button type="submit" class="btn-primary-custom" id="saveDoctorResponseBtn">Lưu phản hồi chuyên môn</button>
                     </div>
                 </form>
             </div>

@@ -250,14 +250,12 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("publicBranches")
     public List<Branch> populatePublicBranches() {
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+        if (customerPortalServiceProvider == null) {
             return Collections.emptyList();
         }
         try {
-            return portalService.getActiveBranches();
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getActiveBranches() : Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
@@ -298,14 +296,12 @@ public class GlobalModelAttributesAdvice {
         if (current != null) {
             return current;
         }
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+        if (customerPortalServiceProvider == null) {
             return null;
         }
         try {
-            return portalService.getPrimaryBranch();
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getPrimaryBranch() : null;
         } catch (Exception ignored) {
             return null;
         }
@@ -313,9 +309,9 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("effectiveContactPhone")
     public String populateEffectiveContactPhone(HttpSession session) {
-        if (session != null && session.getAttribute("loggedInUser") != null) {
+        if (session != null) {
             Branch current = populateCurrentPortalBranch(session);
-            if (current == null) {
+            if (current == null && session.getAttribute("loggedInUser") != null) {
                 current = populatePrimaryBranch(session);
             }
             if (current != null && current.getPhone() != null && !current.getPhone().isBlank()) {
@@ -327,14 +323,12 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("footerServices")
     public List<Service> populateFooterServices() {
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+        if (customerPortalServiceProvider == null) {
             return Collections.emptyList();
         }
         try {
-            return portalService.getFeaturedServices(5);
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getFeaturedServices(5) : Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }

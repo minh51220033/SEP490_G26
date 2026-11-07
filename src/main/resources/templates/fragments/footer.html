@@ -37,11 +37,11 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a th:if="${session.loggedInUser == null}"
-                   th:href="@{/login}" class="btn-brand btn-brand--lg">
+                   th:href="@{/login}" data-open-booking class="btn-brand btn-brand--lg">
                     <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám ngay
                 </a>
                 <a th:if="${session.loggedInUser != null and isPatientUser}"
-                   th:href="@{/portal/appointments/new}" class="btn-brand btn-brand--lg">
+                   th:href="@{/portal/appointments/new}" data-open-booking class="btn-brand btn-brand--lg">
                     <i class="bi bi-calendar2-plus" aria-hidden="true"></i> Đặt lịch khám ngay
                 </a>
                 <a th:if="${session.loggedInUser != null and !isPatientUser}"
@@ -69,7 +69,7 @@
         <div class="site-footer__top">
             <!-- NHÓM 1: VỀ PHÒNG KHÁM -->
             <div class="site-footer__about">
-                <a th:replace="~{fragments/logo :: logo('dark')}"></a>
+                <a th:replace="~{fragments/logo :: logo('light')}"></a>
                 <p class="site-footer__desc">
                     Nha khoa Cường Việt (CV-DCMS) — Hệ thống phòng khám Răng Hàm Mặt ứng dụng hồ sơ bệnh án điện tử,
                     chẩn đoán hình ảnh kỹ thuật số và quy trình điều trị chuẩn y khoa.
@@ -142,7 +142,7 @@
                 <h3 class="site-footer__heading">Hệ thống cơ sở</h3>
                 <ul th:if="${publicBranches != null and !#lists.isEmpty(publicBranches)}">
                     <li th:each="br, stat : ${publicBranches}" th:if="${stat.index < 3}" class="mb-2">
-                        <a th:href="@{/contact}" class="fw-semibold text-dark d-block" th:text="${br.branchName}">Tên cơ sở</a>
+                        <a th:href="@{/contact}" class="fw-semibold text-white d-block" th:text="${br.branchName}">Tên cơ sở</a>
                         <span class="d-block small text-muted" th:text="${br.address}">Địa chỉ</span>
                         <span class="d-block small text-primary" th:if="${br.phone != null and !#strings.isEmpty(br.phone)}">
                             <i class="bi bi-telephone me-1"></i><span th:text="${br.phone}">SĐT</span>
