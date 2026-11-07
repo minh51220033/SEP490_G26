@@ -16,17 +16,25 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.cvdcms.entity.User;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.util.UUID;
 
 // FT40 - Quản lý Chi nhánh, Phòng khám & Ghế nha (SCR-40.1, 40.2, 40.3).
 @Controller
@@ -105,9 +113,13 @@ public class BranchController {
     @PostMapping
     public String createBranch(
             @ModelAttribute("branchForm") Branch branch,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
             RedirectAttributes redirectAttributes) {
 
         try {
+            if (imageFile != null && !imageFile.isEmpty()) {
+                branch.setImageUrl(saveBranchImage(imageFile));
+            }
             branchService.createBranch(branch);
             redirectAttributes.addFlashAttribute("successMessage", "Thêm chi nhánh thành công.");
         } catch (IllegalArgumentException ex) {
@@ -183,10 +195,44 @@ public class BranchController {
     public String updateBranch(
             @PathVariable Long id,
             @ModelAttribute Branch branch,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã cập nhật thông tin chi nhánh.",
-                () -> branchService.updateBranch(id, branch));
+                () -> {
+                    if (imageFile != null && !imageFile.isEmpty()) {
+                        branch.setImageUrl(saveBranchImage(imageFile));
+                    }
+                    branchService.updateBranch(id, branch);
+                });
+    }
+
+    private String saveBranchImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        long maxSizeBytes = 5L * 1024 * 1024;
+        if (file.getSize() > maxSizeBytes) {
+            throw new IllegalArgumentException("Ảnh cơ sở không được vượt quá 5MB.");
+        }
+        String originalFilename = file.getOriginalFilename();
+        String ext = "";
+        if (originalFilename != null && originalFilename.lastIndexOf('.') >= 0) {
+            ext = originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        }
+        if (!Set.of(".jpg", ".jpeg", ".png", ".webp").contains(ext)) {
+            throw new IllegalArgumentException("Chỉ hỗ trợ định dạng ảnh JPG, JPEG, PNG hoặc WEBP.");
+        }
+        try {
+            Path dir = Paths.get("uploads", "images").toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+            String fileName = "branch_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12) + ext;
+            Path target = dir.resolve(fileName);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            return "/uploads/images/" + fileName;
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("Không thể lưu ảnh cơ sở: " + ex.getMessage());
+        }
     }
 
     // POST /admin/branches/{id}/config - Cấu hình IP Wifi, TV, giờ làm việc.

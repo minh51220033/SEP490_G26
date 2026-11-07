@@ -364,7 +364,7 @@
         }
 
         previewEl.hidden = false;
-        previewEl.innerHTML = "⏳ Đang tải thông tin chẩn đoán & lời dặn từ hồ sơ khám...";
+        previewEl.innerHTML = "Đang tải thông tin chẩn đoán & lời dặn từ hồ sơ khám...";
         try {
             const exam = await request(`/api/customer-care/visits/${vid}/examination-summary`);
             const diagText = exam.diagnosisSummary || exam.prescriptionDiagnosis || "Chưa cập nhật chẩn đoán";
@@ -376,17 +376,17 @@
 
             previewEl.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                    <strong>🦷 Hồ sơ Ca khám ${escapeHtml(exam.visitCode || "#" + vid)} (${escapeHtml(exam.visitStatus || "—")}) · BS: ${escapeHtml(exam.doctor?.fullName || "—")}</strong>
-                    <a href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm" style="font-size:11.5px;padding:3px 8px;">
-                        🔗 Xem Chẩn đoán &amp; Lời dặn (#tab-instructions)
+                    <strong>Hồ sơ Ca khám ${escapeHtml(exam.visitCode || "#" + vid)} (${escapeHtml(exam.visitStatus || "—")}) · BS: ${escapeHtml(exam.doctor?.fullName || "—")}</strong>
+                    <a href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">
+                        Xem Chẩn đoán &amp; Lời dặn
                     </a>
                 </div>
                 <div>• <strong>Chẩn đoán:</strong> ${escapeHtml(diagText)}</div>
                 <div style="margin-top:3px;">• <strong>Lời dặn / Hướng dẫn sau điều trị:</strong> <span style="color:#0369a1;font-weight:600;">${escapeHtml(instrText)}</span></div>
                 ${meds ? `<div style="margin-top:3px;">• <strong>Đơn thuốc:</strong> ${escapeHtml(meds)}</div>` : ""}
                 <div style="margin-top:6px;">
-                    <button type="button" class="button button-secondary button-sm" id="copyVisitInstructionsToNotesBtn" style="font-size:11.5px;padding:3px 8px;">
-                        📋 Chèn chẩn đoán &amp; lời dặn vào ghi chú CSKH
+                    <button type="button" class="button button-secondary button-sm" id="copyVisitInstructionsToNotesBtn">
+                        Chèn chẩn đoán &amp; lời dặn vào ghi chú CSKH
                     </button>
                 </div>
             `;
@@ -445,10 +445,10 @@
             return '<span style="color:#94a3b8;font-size:12px;">Chưa có liên hệ</span>';
         }
         const chMap = {
-            PHONE_CALL: "📞 Gọi điện",
-            ZALO: "💬 Zalo",
-            SMS: "✉️ SMS",
-            IN_PERSON: "🏥 Trực tiếp"
+            PHONE_CALL: "Gọi điện",
+            ZALO: "Zalo",
+            SMS: "SMS",
+            IN_PERSON: "Trực tiếp"
         };
         const resMap = {
             CONNECTED: { label: "Đã kết nối", cls: "status-completed" },
@@ -466,17 +466,17 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v2";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v3";
     const DEFAULT_CC_COLUMNS = [
         { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
-        { id: "patient", title: "Bệnh nhân", width: 220, visible: true, required: true },
-        { id: "careGroup", title: "Phân nhóm & Hồ sơ", width: 220, visible: true },
-        { id: "due", title: "Hạn / Gọi lại", width: 155, visible: true },
-        { id: "notes", title: "Chẩn đoán & Lời dặn", width: 300, visible: true },
-        { id: "staff", title: "Phụ trách", width: 155, visible: true },
-        { id: "interaction", title: "Tương tác gần nhất", width: 175, visible: true },
-        { id: "status", title: "Trạng thái", width: 150, visible: true },
-        { id: "actions", title: "Thao tác", width: 175, visible: true, required: true }
+        { id: "patient", title: "Bệnh nhân", width: 210, visible: true, required: true },
+        { id: "careGroup", title: "Phân nhóm & Hồ sơ", width: 210, visible: true },
+        { id: "due", title: "Hạn / Gọi lại", width: 150, visible: true },
+        { id: "notes", title: "Chẩn đoán & Lời dặn", width: 280, visible: true },
+        { id: "staff", title: "Phụ trách", width: 150, visible: true },
+        { id: "interaction", title: "Tương tác gần nhất", width: 165, visible: true },
+        { id: "status", title: "Trạng thái", width: 145, visible: true },
+        { id: "actions", title: "Thao tác", width: 255, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -730,7 +730,7 @@
                             <td class="patient-cell" style="width:${col.width}px;">
                                 <span class="cell-ellipsis" title="${escapeHtml(t.patientName)}"><strong>${escapeHtml(t.patientName)}</strong></span>
                                 <small>Mã BN: <span class="font-mono-code" style="font-size:11px;padding:1px 5px;">${escapeHtml(t.patientCode)}</span></small>
-                                <small>📞 ${escapeHtml(t.patientPhone || "—")}</small>
+                                <small>SĐT: ${escapeHtml(t.patientPhone || "—")}</small>
                             </td>
                         `);
                     } else if (col.id === "careGroup") {
@@ -738,7 +738,7 @@
                         if (t.visitCode) {
                             const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
                             if (examUrl) {
-                                refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám (#tab-instructions)">🦷 Ca: <strong>${escapeHtml(t.visitCode)}</strong> ↗</a>`);
+                                refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám">Ca: <strong>${escapeHtml(t.visitCode)}</strong></a>`);
                             } else {
                                 refs.push(`<span class="source-ref">Ca: <strong>${escapeHtml(t.visitCode)}</strong></span>`);
                             }
@@ -754,10 +754,10 @@
                         `);
                     } else if (col.id === "due") {
                         const dueTag = t.overdue
-                            ? '<span class="due-tag due-overdue"><i class="bi bi-exclamation-triangle-fill me-1"></i>Quá hạn</span>'
-                            : (t.dueToday ? '<span class="due-tag due-today"><i class="bi bi-clock-fill me-1"></i>Đến hạn hôm nay</span>' : "");
+                            ? '<span class="due-tag due-overdue">Quá hạn</span>'
+                            : (t.dueToday ? '<span class="due-tag due-today">Đến hạn hôm nay</span>' : "");
                         const retryHtml = t.nextRetryAt
-                            ? `<span class="retry-tag"><i class="bi bi-bell-fill me-1"></i>Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
+                            ? `<span class="retry-tag">Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
                             : "";
                         cells.push(`
                             <td style="width:${col.width}px;">
@@ -768,16 +768,16 @@
                         `);
                     } else if (col.id === "notes") {
                         const diagHtml = t.diagnosisSummary
-                            ? `<div style="font-size:11.5px;color:#1e293b;margin-top:3px;" class="cell-ellipsis" title="${escapeHtml(t.diagnosisSummary)}"><strong>🩺 CĐ:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`
+                            ? `<div style="font-size:11.5px;color:#1e293b;margin-top:3px;" class="cell-ellipsis" title="${escapeHtml(t.diagnosisSummary)}"><strong>CĐ:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`
                             : "";
                         const instructionsText = t.treatmentInstructions || t.prescriptionAdvice;
                         const instructionsHtml = instructionsText
-                            ? `<div style="font-size:11.5px;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:2px 6px;border-radius:4px;" class="cell-ellipsis" title="${escapeHtml(instructionsText)}"><strong>📋 Lời dặn:</strong> ${escapeHtml(instructionsText)}</div>`
+                            ? `<div style="font-size:11.5px;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:2px 6px;border-radius:4px;" class="cell-ellipsis" title="${escapeHtml(instructionsText)}"><strong>Lời dặn:</strong> ${escapeHtml(instructionsText)}</div>`
                             : "";
                         const docReplyHtml = t.doctorResponse
-                            ? `<div class="doc-reply-snippet cell-ellipsis" title="${escapeHtml(t.doctorResponse)}"><strong>🩺 BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>`
+                            ? `<div class="doc-reply-snippet cell-ellipsis" title="${escapeHtml(t.doctorResponse)}"><strong>BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>`
                             : (t.status === "ESCALATED_TO_DOCTOR"
-                                ? `<div class="retry-tag" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c;">⏳ Chờ Bác sĩ ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi</div>`
+                                ? `<div class="retry-tag" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c;">Chờ Bác sĩ ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi</div>`
                                 : "");
                         cells.push(`
                             <td style="width:${col.width}px;">
@@ -811,27 +811,23 @@
                         cells.push(`
                             <td style="width:${col.width}px;">
                                 <div class="row-actions">
-                                    <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ (SCR-44.4)">
-                                        <i class="bi bi-telephone-fill"></i> Ghi KQ
+                                    <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
+                                        Ghi KQ
                                     </button>
-                                    <div class="sub-actions-row">
-                                        <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)">
-                                            🩺 Chuyển BS
+                                    <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
+                                        Chuyển BS
+                                    </button>
+                                    <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
+                                        Lịch sử
+                                    </button>
+                                    ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                        <button type="button" class="button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
+                                            Phản hồi
                                         </button>
-                                        <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân (SCR-44.6)">
-                                            🕒 Lịch sử
-                                        </button>
-                                    </div>
-                                    <div class="sub-actions-row">
-                                        ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                            <button type="button" class="btn btn-danger button-sm py-1 px-2" style="font-size:11px;" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn (SCR-44.5)">
-                                                💬 Phản hồi
-                                            </button>
-                                        ` : ""}
-                                        <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại (SCR-44.3)">
-                                            <i class="bi bi-pencil-square"></i> Sửa
-                                        </button>
-                                    </div>
+                                    ` : ""}
+                                    <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
+                                        Sửa
+                                    </button>
                                 </div>
                             </td>
                         `);
@@ -946,7 +942,7 @@
         const branchId = state.branchId || Number($("branchId").value) || 1;
         const btn = $("autoGenerateBtn");
         btn.disabled = true;
-        btn.textContent = "⏳ Đang tổng hợp...";
+        btn.textContent = "Đang tổng hợp...";
         try {
             const res = await request(`/api/customer-care/tasks/auto-generate?branchId=${branchId}`, {
                 method: "POST"
@@ -957,7 +953,7 @@
             showMessage(err.message, "error");
         } finally {
             btn.disabled = false;
-            btn.textContent = "⚡ Tổng hợp tự động";
+            btn.textContent = "Tổng hợp tự động";
         }
     }
 
@@ -1026,12 +1022,12 @@
         box.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
                 <div>
-                    <strong style="font-size:14px;color:#0f172a;">🦷 Dữ liệu Khám lâm sàng, Chẩn đoán &amp; Lời dặn điều trị</strong>
+                    <strong style="font-size:14px;color:#0f172a;">Dữ liệu Khám lâm sàng, Chẩn đoán &amp; Lời dặn điều trị</strong>
                     ${t.doctorName ? `<span style="margin-left:8px;font-size:12.5px;color:#475569;">· Bác sĩ điều trị: <strong>${escapeHtml(t.doctorName)}</strong></span>` : ""}
                 </div>
                 ${examUrl ? `
                     <a href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm" style="text-decoration:none;">
-                        🔗 Xem Hồ sơ Khám &amp; Lời dặn (#tab-instructions) ↗
+                        Xem Hồ sơ Khám &amp; Lời dặn
                     </a>
                 ` : ""}
             </div>
@@ -1039,7 +1035,7 @@
                 ${t.chiefComplaint || t.visitSymptoms ? `<div>• <strong>Lý do khám / Triệu chứng ban đầu:</strong> ${escapeHtml(t.chiefComplaint || t.visitSymptoms)}</div>` : ""}
                 <div style="margin-top:4px;">• <strong>Chẩn đoán lâm sàng:</strong> ${diagHtml}</div>
                 <div style="margin-top:6px;padding:8px 10px;background:#e0f2fe;border-left:4px solid #0284c7;border-radius:4px;">
-                    <strong>📋 Lời dặn / Hướng dẫn chăm sóc sau điều trị (#tab-instructions):</strong><br>
+                    <strong>Lời dặn / Hướng dẫn chăm sóc sau điều trị:</strong><br>
                     <span>${escapeHtml(instructions)}</span>
                 </div>
                 ${medsHtml ? `<div style="margin-top:6px;">• <strong>Đơn thuốc (${escapeHtml(t.prescriptionCode || "Toa thuốc")}):</strong> ${medsHtml}</div>` : ""}
@@ -1059,7 +1055,7 @@
             $("interactionTaskMeta").innerHTML = `
                 <div class="detail-meta-item"><span>Mã công việc</span><strong class="code">${escapeHtml(t.taskCode)}</strong></div>
                 <div class="detail-meta-item"><span>Bệnh nhân</span><strong>${escapeHtml(t.patientName)} (${escapeHtml(t.patientCode)})</strong></div>
-                <div class="detail-meta-item"><span>Số điện thoại</span><strong>📞 ${escapeHtml(t.patientPhone || "—")}</strong></div>
+                <div class="detail-meta-item"><span>Số điện thoại</span><strong>${escapeHtml(t.patientPhone || "—")}</strong></div>
                 <div class="detail-meta-item"><span>Phân nhóm CSKH</span><strong>${escapeHtml(t.careGroupLabel)}</strong></div>
                 <div class="detail-meta-item"><span>Hạn hoàn thành</span><strong>${escapeHtml(t.dueDate || "—")}</strong></div>
                 <div class="detail-meta-item"><span>Trạng thái hiện tại</span><strong>${escapeHtml(t.statusLabel)}</strong></div>
@@ -1074,7 +1070,7 @@
             if (t.doctorResponse || t.status === "ESCALATED_TO_DOCTOR") {
                 docAlert.hidden = false;
                 docAlert.innerHTML = `
-                    <div><strong>🩺 Thông tin chuyển Bác sĩ chuyên môn (${escapeHtml(t.escalatedToDoctorName || "Bác sĩ")}):</strong></div>
+                    <div><strong>Thông tin chuyển Bác sĩ chuyên môn (${escapeHtml(t.escalatedToDoctorName || "Bác sĩ")}):</strong></div>
                     <div style="margin-top:4px;">• <strong>Triệu chứng/Ghi chú:</strong> ${escapeHtml(t.notes || "—")}</div>
                     <div style="margin-top:4px;">• <strong>Chỉ định/Phản hồi của Bác sĩ:</strong> ${
                         t.doctorResponse
@@ -1116,12 +1112,12 @@
                             ${escapeHtml(i.contactResultLabel)}
                         </span>
                     </div>
-                    <span class="timeline-time">🕒 ${escapeHtml(formatDateTime(i.createdAt))}</span>
+                    <span class="timeline-time">${escapeHtml(formatDateTime(i.createdAt))}</span>
                 </div>
                 <p class="timeline-notes">${escapeHtml(i.notes)}</p>
                 <div class="timeline-footer">
                     <span>Thực hiện bởi: <strong>${escapeHtml(i.staffName || "Nhân viên CSKH")}</strong></span>
-                    ${i.nextRetryAt ? `<span style="color:#b45309;font-weight:700;">🔔 Hẹn gọi lại: ${escapeHtml(formatDateTime(i.nextRetryAt))}</span>` : ""}
+                    ${i.nextRetryAt ? `<span style="color:#b45309;font-weight:700;"> · Hẹn gọi lại: ${escapeHtml(formatDateTime(i.nextRetryAt))}</span>` : ""}
                 </div>
             </div>
         `).join("");
@@ -1243,11 +1239,11 @@
             $("docRespTaskId").value = t.taskId;
             const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
             $("docRespTaskSummary").innerHTML = `
-                <div><strong>Mã CV:</strong> <span class="code">${escapeHtml(t.taskCode)}</span> · <strong>Bệnh nhân:</strong> ${escapeHtml(t.patientName)} (📞 ${escapeHtml(t.patientPhone || "—")})</div>
+                <div><strong>Mã CV:</strong> <span class="code">${escapeHtml(t.taskCode)}</span> · <strong>Bệnh nhân:</strong> ${escapeHtml(t.patientName)} (${escapeHtml(t.patientPhone || "—")})</div>
                 <div style="margin-top:4px;"><strong>Bác sĩ phụ trách:</strong> ${escapeHtml(t.escalatedToDoctorName || t.doctorName || "—")} · <strong>Chuyển lúc:</strong> ${escapeHtml(formatDateTime(t.escalatedAt))}</div>
                 ${t.diagnosisSummary ? `<div style="margin-top:4px;"><strong>Chẩn đoán ca khám:</strong> ${escapeHtml(t.diagnosisSummary)}</div>` : ""}
                 ${t.treatmentInstructions ? `<div style="margin-top:4px;"><strong>Lời dặn hiện tại:</strong> ${escapeHtml(t.treatmentInstructions)}</div>` : ""}
-                ${examUrl ? `<div style="margin-top:4px;"><a href="${escapeHtml(examUrl)}" target="_blank" rel="noopener">🔗 Mở hồ sơ khám &amp; lời dặn (#tab-instructions) ↗</a></div>` : ""}
+                ${examUrl ? `<div style="margin-top:4px;"><a href="${escapeHtml(examUrl)}" target="_blank" rel="noopener">Mở hồ sơ khám &amp; lời dặn</a></div>` : ""}
                 <div style="margin-top:6px;padding:8px;background:#fff;border-radius:6px;border:1px solid #cbd5e1;">
                     <strong>Triệu chứng / Vấn đề bệnh nhân báo:</strong><br>
                     ${escapeHtml(t.notes || "—")}
@@ -1317,7 +1313,7 @@
             summaryCard.innerHTML = `
                 <div class="meta-box"><span>Mã bệnh nhân</span><strong class="code">${escapeHtml(p.patientCode)}</strong></div>
                 <div class="meta-box"><span>Họ và tên</span><strong>${escapeHtml(p.fullName)}</strong></div>
-                <div class="meta-box"><span>Số điện thoại</span><strong>📞 ${escapeHtml(p.phoneNumber || "—")}</strong></div>
+                <div class="meta-box"><span>Số điện thoại</span><strong>${escapeHtml(p.phoneNumber || "—")}</strong></div>
                 <div class="meta-box"><span>Ngày sinh / Giới tính</span><strong>${escapeHtml(p.dob || "—")} (${escapeHtml(p.gender || "—")})</strong></div>
                 <div class="meta-box"><span>Địa chỉ</span><strong>${escapeHtml(p.address || "—")}</strong></div>
                 <div class="meta-box"><span>Tổng tương tác CSKH</span><strong>${interactions.length} lần tương tác / ${tasks.length} công việc</strong></div>
@@ -1337,12 +1333,12 @@
                                 ${escapeHtml(i.contactResultLabel)}
                             </span>
                         </div>
-                        <span class="timeline-time">🕒 ${escapeHtml(formatDateTime(i.createdAt))}</span>
+                        <span class="timeline-time">${escapeHtml(formatDateTime(i.createdAt))}</span>
                     </div>
                     <p class="timeline-notes">${escapeHtml(i.notes)}</p>
                     <div class="timeline-footer">
                         <span>Nhân viên CSKH: <strong>${escapeHtml(i.staffName || "—")}</strong> (${escapeHtml(i.branchName || "")})</span>
-                        ${i.nextRetryAt ? `<span style="color:#b45309;font-weight:700;">🔔 Lịch hẹn gọi lại: ${escapeHtml(formatDateTime(i.nextRetryAt))}</span>` : ""}
+                        ${i.nextRetryAt ? `<span style="color:#b45309;font-weight:700;"> · Lịch hẹn gọi lại: ${escapeHtml(formatDateTime(i.nextRetryAt))}</span>` : ""}
                     </div>
                 </div>
             `).join("") : '<p class="empty">Bệnh nhân này chưa có lịch sử tương tác liên hệ nào.</p>';
@@ -1359,14 +1355,14 @@
                         <span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel)}</span>
                     </div>
                     <div style="font-size:13px;margin-bottom:6px;">${escapeHtml(t.notes || "—")}</div>
-                    ${t.diagnosisSummary ? `<div style="font-size:12px;color:#1e293b;margin-bottom:4px;"><strong>🩺 Chẩn đoán:</strong> ${escapeHtml(t.diagnosisSummary)}</div>` : ""}
-                    ${t.treatmentInstructions ? `<div style="font-size:12px;color:#0369a1;margin-bottom:4px;"><strong>📋 Lời dặn ĐT:</strong> ${escapeHtml(t.treatmentInstructions)}</div>` : ""}
-                    ${t.doctorResponse ? `<div class="doc-reply-snippet"><strong>🩺 Phản hồi BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>` : ""}
+                    ${t.diagnosisSummary ? `<div style="font-size:12px;color:#1e293b;margin-bottom:4px;"><strong>Chẩn đoán:</strong> ${escapeHtml(t.diagnosisSummary)}</div>` : ""}
+                    ${t.treatmentInstructions ? `<div style="font-size:12px;color:#0369a1;margin-bottom:4px;"><strong>Lời dặn ĐT:</strong> ${escapeHtml(t.treatmentInstructions)}</div>` : ""}
+                    ${t.doctorResponse ? `<div class="doc-reply-snippet"><strong>Phản hồi BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>` : ""}
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:#64748b;flex-wrap:wrap;gap:6px;">
                         <span>Hạn: <strong>${escapeHtml(t.dueDate || "—")}</strong> · Phụ trách: <strong>${escapeHtml(t.assignedStaffName || "—")}</strong></span>
                         <div style="display:flex;gap:6px;">
-                            ${examUrl ? `<a href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">🦷 Hồ sơ khám</a>` : ""}
-                            <button type="button" class="button button-primary button-sm" data-record-interaction="${t.taskId}">📞 Chi tiết / Ghi KQ</button>
+                            ${examUrl ? `<a href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">Hồ sơ khám</a>` : ""}
+                            <button type="button" class="button button-primary button-sm" data-record-interaction="${t.taskId}">Chi tiết / Ghi KQ</button>
                         </div>
                     </div>
                 </div>

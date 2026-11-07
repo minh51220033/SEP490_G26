@@ -250,44 +250,85 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("publicBranches")
     public List<Branch> populatePublicBranches() {
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+        if (customerPortalServiceProvider == null) {
             return Collections.emptyList();
         }
         try {
-            return portalService.getActiveBranches();
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getActiveBranches() : Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
     }
 
+    @ModelAttribute("currentPortalBranch")
+    public Branch populateCurrentPortalBranch(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        List<Branch> activeBranches = populatePublicBranches();
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân hoặc cơ sở của tài khoản
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            PatientProfile pp = populateDefaultPatientProfile(session);
+            if (pp != null && pp.getPreferredBranch() != null && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+                return pp.getPreferredBranch();
+            }
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser) : sessionUser;
+            if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+                return user.getBranch();
+            }
+        }
+        // 2. Nếu có chọn cơ sở trong session (khi bấm "Chuyển sang cơ sở này")
+        Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
+        if (selectedBranchIdObj instanceof Long selectedId) {
+            for (Branch b : activeBranches) {
+                if (selectedId.equals(b.getBranchId())) {
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+
     @ModelAttribute("primaryBranch")
-    public Branch populatePrimaryBranch() {
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+    public Branch populatePrimaryBranch(HttpSession session) {
+        Branch current = populateCurrentPortalBranch(session);
+        if (current != null) {
+            return current;
+        }
+        if (customerPortalServiceProvider == null) {
             return null;
         }
         try {
-            return portalService.getPrimaryBranch();
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getPrimaryBranch() : null;
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    @ModelAttribute("effectiveContactPhone")
+    public String populateEffectiveContactPhone(HttpSession session) {
+        if (session != null) {
+            Branch current = populateCurrentPortalBranch(session);
+            if (current == null && session.getAttribute("loggedInUser") != null) {
+                current = populatePrimaryBranch(session);
+            }
+            if (current != null && current.getPhone() != null && !current.getPhone().isBlank()) {
+                return current.getPhone().trim();
+            }
+        }
+        return "0987654321";
     }
 
     @ModelAttribute("footerServices")
     public List<Service> populateFooterServices() {
-        CustomerPortalService portalService = customerPortalServiceProvider != null
-                ? customerPortalServiceProvider.getIfAvailable()
-                : null;
-        if (portalService == null) {
+        if (customerPortalServiceProvider == null) {
             return Collections.emptyList();
         }
         try {
-            return portalService.getFeaturedServices(5);
+            CustomerPortalService portalService = customerPortalServiceProvider.getIfAvailable();
+            return portalService != null ? portalService.getFeaturedServices(5) : Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }

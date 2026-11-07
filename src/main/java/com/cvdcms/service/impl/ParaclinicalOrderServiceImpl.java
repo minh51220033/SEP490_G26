@@ -7,7 +7,6 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.ParaclinicalOrderService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +31,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     private final InvoiceItemRepository invoiceItemRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final java.util.concurrent.atomic.AtomicLong XRAY_REF_COUNTER =
+            new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis() % 100000);
 
     @org.springframework.beans.factory.annotation.Autowired
     public ParaclinicalOrderServiceImpl(
@@ -54,19 +55,19 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         this.invoiceItemRepository = invoiceItemRepository;
     }
 
-    public ParaclinicalOrderServiceImpl(
-            ParaclinicalOrderRepository paraclinicalOrderRepository,
-            ParaclinicalOrderItemRepository paraclinicalOrderItemRepository,
-            VisitRepository visitRepository,
-            ServiceRepository serviceRepository,
-            ServiceCategoryRepository serviceCategoryRepository,
-            StaffProfileRepository staffProfileRepository
-    ) {
-        this(paraclinicalOrderRepository, paraclinicalOrderItemRepository, visitRepository, serviceRepository, serviceCategoryRepository, staffProfileRepository, null, null);
+    private String generateUniqueExternalRefId() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            long seq = Math.abs(XRAY_REF_COUNTER.incrementAndGet() % 900000) + 100000;
+            String candidate = "XQ" + seq;
+            if (paraclinicalOrderItemRepository.findByExternalRefIdIgnoreCase(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        return "XQ" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ParaclinicalOrderItemResponseDTO> getOrdersByVisit(Long visitId) {
         if (visitId == null) {
             return Collections.emptyList();
@@ -148,13 +149,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             order = paraclinicalOrderRepository.save(order);
         }
 
-        // Tạo chi tiết chỉ định
+        // Tạo chi tiết chỉ định với mã liên kết duy nhất (external_ref_id) để máy chụp đối chiếu
         ParaclinicalOrderItem item = new ParaclinicalOrderItem();
         item.setOrder(order);
         item.setService(service);
         item.setToothNumbers((dto.getToothNumbers() != null && !dto.getToothNumbers().isBlank())
                 ? dto.getToothNumbers().trim() : "Toàn hàm");
         item.setStatus(ParaclinicalOrderItemStatus.WAITING);
+        item.setExternalRefId(generateUniqueExternalRefId());
+
         if (dto.getNotes() != null && !dto.getNotes().isBlank()) {
             item.setResultSummary(dto.getNotes().trim());
         }
@@ -175,8 +178,12 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         syncOrderItemToPerformedService(item);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
-        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, Service={}, Tooth={}",
-                savedItem.getOrderItemId(), service.getServiceName(), savedItem.getToothNumbers());
+        if (savedItem != null && (savedItem.getExternalRefId() == null || savedItem.getExternalRefId().isBlank())) {
+            savedItem.setExternalRefId(item.getExternalRefId());
+        }
+
+        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, ExternalRefId={}, Service={}, Tooth={}",
+                savedItem.getOrderItemId(), savedItem.getExternalRefId(), service.getServiceName(), savedItem.getToothNumbers());
 
         return mapToDTO(savedItem);
     }
@@ -450,35 +457,51 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
             statusLabel = "Đã có kết quả";
         } else if (item.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS) {
-            statusLabel = "Đang xử lý";
+            statusLabel = "Đang đồng bộ";
         } else if (item.getStatus() == ParaclinicalOrderItemStatus.CANCELLED) {
             statusLabel = "Đã hủy";
         }
 
         String doctorName = "Bác sĩ điều trị";
-        if (item.getOrder().getDoctor() != null) {
+        if (item.getOrder() != null && item.getOrder().getDoctor() != null) {
             doctorName = item.getOrder().getDoctor().getFullName();
         }
 
-        String orderTimeStr = (item.getOrder().getOrderTime() != null)
+        String orderTimeStr = (item.getOrder() != null && item.getOrder().getOrderTime() != null)
                 ? item.getOrder().getOrderTime().format(DATE_TIME_FORMATTER)
                 : LocalDateTime.now().format(DATE_TIME_FORMATTER);
 
         String performedAtStr = (item.getPerformedAt() != null)
                 ? item.getPerformedAt().format(DATE_TIME_FORMATTER) : null;
 
-        String imageUrl = "";
+        String externalRef = (item.getExternalRefId() != null && !item.getExternalRefId().isBlank())
+                ? item.getExternalRefId()
+                : (item.getOrderItemId() != null ? "XQ" + item.getOrderItemId() : "");
+
+        List<ParaclinicalOrderItemResponseDTO.AttachmentDTO> attachmentDTOs = new ArrayList<>();
+        String primaryImageUrl = null;
         if (item.getAttachments() != null && !item.getAttachments().isEmpty()) {
-            String url = item.getAttachments().get(0).getFileUrl();
-            if (url != null) {
-                imageUrl = url;
+            for (ParaclinicalResultAttachment att : item.getAttachments()) {
+                if (att == null || att.getFileUrl() == null) continue;
+                if (primaryImageUrl == null) {
+                    primaryImageUrl = att.getFileUrl();
+                }
+                attachmentDTOs.add(ParaclinicalOrderItemResponseDTO.AttachmentDTO.builder()
+                        .attachmentId(att.getAttachmentId())
+                        .fileName(att.getFileName())
+                        .fileUrl(att.getFileUrl())
+                        .fileType(att.getFileType() != null ? att.getFileType().name() : "IMAGE")
+                        .caption(att.getCaption())
+                        .uploadedAt(att.getUploadedAt() != null ? att.getUploadedAt().format(DATE_TIME_FORMATTER) : performedAtStr)
+                        .build());
             }
         }
 
         return ParaclinicalOrderItemResponseDTO.builder()
                 .orderItemId(item.getOrderItemId())
-                .orderId(item.getOrder().getOrderId())
-                .orderCode(item.getOrder().getOrderCode())
+                .orderId(item.getOrder() != null ? item.getOrder().getOrderId() : null)
+                .orderCode(item.getOrder() != null ? item.getOrder().getOrderCode() : "")
+                .externalRefId(externalRef)
                 .serviceId(item.getService() != null ? item.getService().getServiceId() : null)
                 .serviceCode(item.getService() != null ? item.getService().getServiceCode() : "")
                 .serviceName(item.getService() != null ? item.getService().getServiceName() : "Chỉ định cận lâm sàng")
@@ -491,8 +514,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orderTime(orderTimeStr)
                 .performedAt(performedAtStr)
                 .resultSummary(item.getResultSummary() != null ? item.getResultSummary() : "")
-                .imageUrl(imageUrl)
-                .attachmentsCount(item.getAttachments() != null ? item.getAttachments().size() : 0)
+                .imageUrl(primaryImageUrl != null ? primaryImageUrl : "") // Hỗ trợ tương thích ngược cho cả nhánh develop
+                .attachmentsCount(attachmentDTOs.size())
+                .primaryImageUrl(primaryImageUrl)
+                .attachments(attachmentDTOs)
                 .build();
     }
 }
