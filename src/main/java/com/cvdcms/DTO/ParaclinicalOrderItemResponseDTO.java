@@ -29,6 +29,7 @@ public class ParaclinicalOrderItemResponseDTO {
     private String orderTime;
     private String performedAt;
     private String resultSummary;
+    private String imageUrl;
     private int attachmentsCount;
     private String primaryImageUrl;
     private List<AttachmentDTO> attachments;

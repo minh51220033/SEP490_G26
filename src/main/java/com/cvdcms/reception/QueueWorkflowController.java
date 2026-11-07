@@ -1,6 +1,7 @@
 package com.cvdcms.reception;
 
 import com.cvdcms.entity.enums.QueueStatus;
+import com.cvdcms.entity.enums.VisitStatus;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -8,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -31,6 +34,19 @@ public class QueueWorkflowController {
     private void populate(HttpSession session, Long branchId, Model model) {
         var board = service.board(session, branchId);
         model.addAttribute("board", board);
+        Set<Long> callableDoctorIds = board.doctors().stream()
+                .filter(doctor -> doctor.called() == 0)
+                .map(QueueWorkflowService.DoctorQueue::id)
+                .collect(Collectors.toSet());
+        var nextByDoctor = new LinkedHashMap<Long, Long>();
+        board.tickets().stream()
+                .filter(ticket -> ticket.getStatus() == QueueStatus.WAITING
+                        && ticket.getVisit().getStatus() == VisitStatus.WAITING
+                        && ticket.getVisit().getPrimaryDoctor() != null)
+                .forEach(ticket -> nextByDoctor.putIfAbsent(
+                        ticket.getVisit().getPrimaryDoctor().getStaffId(), ticket.getTicketId()));
+        model.addAttribute("callableDoctorIds", callableDoctorIds);
+        model.addAttribute("nextTicketIds", Set.copyOf(nextByDoctor.values()));
         model.addAttribute("lanes", List.of(QueueStatus.WAITING, QueueStatus.CALLED,
                 QueueStatus.IN_SERVICE, QueueStatus.PAUSED, QueueStatus.DONE));
         model.addAttribute("laneCounts", board.tickets().stream()

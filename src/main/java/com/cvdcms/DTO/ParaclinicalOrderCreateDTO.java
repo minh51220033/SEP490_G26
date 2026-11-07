@@ -14,4 +14,7 @@ public class ParaclinicalOrderCreateDTO {
     private String customServiceName;
     private String toothNumbers;
     private String notes;
+    private String status;
+    private String resultSummary;
+    private String imageUrl;
 }

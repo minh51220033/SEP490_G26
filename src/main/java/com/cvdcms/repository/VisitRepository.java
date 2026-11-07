@@ -184,4 +184,30 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
             @Param("startDate") java.time.LocalDateTime startDate,
             @Param("endDate") java.time.LocalDateTime endDate
     );
+
+    @Query("""
+        SELECT DISTINCT v.patientProfile.profileId FROM Visit v
+        WHERE v.status = :status
+          AND (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+    """)
+    List<Long> findPatientProfileIdsByStatusAndBranches(
+            @Param("status") VisitStatus status,
+            @Param("branchIds") Collection<Long> branchIds
+    );
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE v.patientProfile.profileId = :profileId
+          AND v.status = :status
+          AND (:branchIds IS NULL OR b.branchId IN :branchIds)
+        ORDER BY v.checkInAt DESC
+    """)
+    List<Visit> findWaitingVisitsByProfileIdAndBranches(
+            @Param("profileId") Long profileId,
+            @Param("status") VisitStatus status,
+            @Param("branchIds") Collection<Long> branchIds
+    );
 }

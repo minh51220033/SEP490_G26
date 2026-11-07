@@ -2,9 +2,9 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Xác minh tách tài khoản')}"></head>
 <body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Tách tài khoản')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
             <div class="patient-page-heading"><div><a th:href="@{/portal/records/{id}/transfer(id=${record.id})}">← Bước trước</a>
                 <h1>Tách tài khoản · Bước 2/3</h1><p>Hồ sơ <strong th:text="${record.code}">BN</strong> sẽ được chuyển sang <strong th:text="${request.targetEmail}">email</strong>.</p></div></div>
             <section class="panel patient-detail">
@@ -21,9 +21,25 @@
                             <div><label for="username">Tên đăng nhập *</label><input id="username" name="username" class="form-control" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,49}" minlength="4" maxlength="50" required></div>
                             <div><label for="phoneNumber">Số điện thoại tài khoản *</label><input id="phoneNumber" name="phoneNumber" class="form-control" type="tel" pattern="0[0-9]{9,10}" maxlength="11" required></div>
                             <div><label for="password">Mật khẩu mới *</label><input id="password" name="password" class="form-control" type="password" minlength="8" required autocomplete="new-password"></div>
+                            <div><label for="passwordConfirm">Nhập lại mật khẩu *</label><input id="passwordConfirm" class="form-control" type="password" minlength="8" required autocomplete="new-password"></div>
                         </div>
                     </div>
+                    <label class="d-flex align-items-start gap-2 mt-3"><input class="mt-1" type="checkbox" required><span>Tôi xác nhận hồ sơ này sẽ chuyển sang tài khoản nhận. Tài khoản hiện tại sẽ mất quyền xem hồ sơ sau khi hoàn tất.</span></label>
                     <div class="patient-form-actions"><button type="submit" class="btn btn-primary">Xác nhận chuyển hồ sơ</button></div>
                 </form>
             </section>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer></div></div></body></html>
+        </main></div></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('.patient-form');
+    const password = document.getElementById('password');
+    const confirmation = document.getElementById('passwordConfirm');
+    if (!form || !password || !confirmation) return;
+    const validate = () => confirmation.setCustomValidity(
+        confirmation.value && confirmation.value !== password.value ? 'Mật khẩu nhập lại không khớp.' : '');
+    password.addEventListener('input', validate);
+    confirmation.addEventListener('input', validate);
+    form.addEventListener('submit', validate);
+});
+</script>
+</body></html>

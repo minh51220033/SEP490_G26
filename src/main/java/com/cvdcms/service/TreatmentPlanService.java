@@ -25,5 +25,7 @@ public interface TreatmentPlanService {
 
     void deletePlan(Long planId);
 
+    TreatmentPlanResponseDTO handoverToAccounting(Long planId);
+
     AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request);
 }

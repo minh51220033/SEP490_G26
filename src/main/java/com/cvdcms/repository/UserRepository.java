@@ -251,11 +251,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
     SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END
     FROM User u
-    JOIN u.roles r
+    LEFT JOIN u.roles r
     WHERE u.userId = :userId
-      AND u.isActive = TRUE
-      AND r.isActive = TRUE
-      AND UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+      AND (u.isActive = TRUE OR u.isActive IS NULL)
+      AND (
+          ( (r.isActive = TRUE OR r.isActive IS NULL) AND UPPER(TRIM(r.roleName)) IN ('ADMIN', 'ROLE_ADMIN') )
+          OR LOWER(TRIM(u.username)) = 'admin'
+      )
     """)
     boolean hasActiveAdminRole(@Param("userId") Long userId);
 

@@ -2,9 +2,9 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Hồ sơ người phụ thuộc')}"></head>
 <body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Hồ sơ người phụ thuộc')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}">
+        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
             <div class="patient-page-heading"><div><a th:href="@{/portal/records}">← Hồ sơ của tôi</a>
                 <h1 th:text="${record == null ? 'Thêm người phụ thuộc' : 'Chỉnh sửa người phụ thuộc'}">Hồ sơ người phụ thuộc</h1>
                 <p>Thông tin bắt buộc được đánh dấu *.</p></div></div>
@@ -33,7 +33,7 @@
                 <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${record == null ? '/portal/records' : '/portal/records/' + record.id}">Hủy</a>
                     <button class="btn btn-primary" id="saveButton" type="submit">Lưu hồ sơ</button></div>
             </form>
-        </main><footer th:replace="~{fragments/footer :: siteFooter}"></footer></div></div>
+        </main></div></div>
 <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><h2 class="modal-title fs-5" id="duplicateTitle">Hồ sơ có nguy cơ trùng</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>

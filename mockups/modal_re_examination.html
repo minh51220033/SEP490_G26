@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modal Hẹn tái khám sau điều trị (SCR-18.1 / FT18) - DentalSoft</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --primary-ocean: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-active: #0c4a6e;
+      --ocean-light: #e0f2fe;
+      --ocean-subtle: #f0f9ff;
+      --dark-heading: #0f172a;
+      --body-text: #1e293b;
+      --secondary-text: #334155;
+      --muted-text: #64748b;
+      --border-light: #e2e8f0;
+      --border-medium: #cbd5e1;
+      --placeholder-color: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: rgba(15, 23, 42, 0.65);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      color: var(--body-text);
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Modal Card Standalone 680px chuẩn Figma Auto-layout */
+    .reexam-modal-card {
+      width: 100%;
+      max-width: 680px;
+      background-color: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Modal Header */
+    .modal-header-box {
+      padding: 16px 22px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-light);
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+    }
+
+    .modal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-icon-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--ocean-light);
+      color: var(--primary-ocean);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .modal-title-main {
+      font-size: 16.5px;
+      font-weight: 700;
+      color: var(--dark-heading);
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-title-sub {
+      font-size: 12px;
+      color: var(--muted-text);
+      margin-top: 1px;
+    }
+
+    .btn-close-custom {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--muted-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-close-custom:hover {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+
+    /* Patient summary banner */
+    .patient-summary-strip {
+      background-color: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 22px;
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
+    }
+
+    .patient-avatar-mini {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Modal Body Content */
+    .modal-body-content {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #ffffff;
+    }
+
+    .form-label-custom {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary-text);
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .form-control-custom {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--body-text);
+      background-color: #ffffff;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    .form-control-custom:focus {
+      border-color: var(--primary-ocean);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .form-control-custom::placeholder {
+      color: var(--placeholder-color);
+    }
+
+    /* Switch Box */
+    .switch-box-custom {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* Collapsible History Box */
+    .history-card-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .history-card-header {
+      padding: 10px 14px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .history-table {
+      width: 100% !important;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 0;
+    }
+
+    .history-table th, .history-table td {
+      white-space: nowrap;
+    }
+
+    .history-table th.col-note, .history-table td.col-note {
+      white-space: normal !important;
+      width: auto !important;
+    }
+
+    .history-table th {
+      background: #f8fafc;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: #475569;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .history-table td {
+      padding: 8px 12px;
+      color: var(--body-text);
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    /* Modal Footer */
+    .modal-footer-box {
+      background-color: #ffffff;
+      border-top: 1px solid var(--border-light);
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .df-btn-add-plan {
+      background: var(--primary-ocean);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.15s;
+    }
+
+    .df-btn-add-plan:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    .btn-light-custom {
+      background: #f1f5f9;
+      color: var(--secondary-text);
+      border: 1px solid var(--border-medium);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .btn-light-custom:hover {
+      background: #e2e8f0;
+      color: var(--dark-heading);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Modal Standalone Frame (Width: 680px) -->
+  <div class="reexam-modal-card">
+
+    <!-- Modal Header (Chuẩn SCR-18.1 / FT18) -->
+    <div class="modal-header-box">
+      <div class="modal-title-group">
+        <div class="modal-icon-badge">
+          <i class="bi bi-calendar2-plus-fill"></i>
+        </div>
+        <div>
+          <div class="modal-title-main">
+            <span>Hẹn tái khám sau điều trị (SCR-18.1)</span>
+          </div>
+          <div class="modal-title-sub">
+            Lập lịch tái khám, kiểm tra vết thương, dặn dò &amp; phân công nhắc hẹn CSKH
+          </div>
+        </div>
+      </div>
+      <a href="recalls_list.html" class="btn-close-custom" title="Đóng modal">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+
+    <!-- Patient Summary Banner -->
+    <div class="patient-summary-strip">
+      <div class="d-flex align-items-center gap-2.5">
+        <div class="patient-avatar-mini">A</div>
+        <div>
+          <div class="fw-bold text-dark" style="font-size: 14px;">Nguyễn Văn An</div>
+          <div class="small text-secondary" style="font-size: 12px;">
+            <span>Mã KH: <strong>KH1001</strong></span>
+            <span class="mx-1">&bull;</span>
+            <span>Mã BN: BN-2026-089</span>
+            <span class="mx-1">&bull;</span>
+            <span>SĐT: 0912 345 678</span>
+          </div>
+        </div>
+      </div>
+      <div class="text-end small">
+        <div>Bác sĩ: <strong class="text-primary">BS. CK1 Lê Hoàng Nam</strong></div>
+        <div class="text-muted">Cơ sở: Chi nhánh 1 - Quận 10</div>
+      </div>
+    </div>
+
+    <!-- Modal Form Body -->
+    <div class="modal-body-content">
+
+      <!-- Hàng 1: Mốc hẹn nhanh & Ngày hẹn tái khám -->
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Chọn nhanh mốc hẹn tái khám:</label>
+          <select class="form-control-custom">
+            <option value="">-- Tự chọn ngày cụ thể --</option>
+            <option value="3">+3 ngày</option>
+            <option value="7" selected>+7 ngày</option>
+            <option value="14">+14 ngày</option>
+            <option value="30">+1 tháng</option>
+            <option value="90">+3 tháng</option>
+            <option value="180">+6 tháng</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">
+            Ngày hẹn tái khám: <span class="text-danger">*</span>
+          </label>
+          <input type="date" class="form-control-custom" value="2026-11-11">
+          <div class="mt-1 small text-primary fw-semibold" style="font-size: 12px;">
+            <i class="bi bi-calendar-event me-1"></i> Thứ Tư, ngày 11/11/2026
+          </div>
+        </div>
+      </div>
+
+      <!-- Hàng 2: Buổi hẹn & Bác sĩ phụ trách -->
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Buổi hẹn:</label>
+          <select class="form-control-custom">
+            <option value="MORNING" selected>Sáng (08:00 - 12:00)</option>
+            <option value="AFTERNOON">Chiều (13:30 - 17:30)</option>
+            <option value="EVENING">Tối (17:30 - 20:30)</option>
+            <option value="ANY">Bất kỳ giờ nào</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Bác sĩ phụ trách tái khám:</label>
+          <select class="form-control-custom">
+            <option value="1" selected>BS. CK1 Lê Hoàng Nam (Răng Hàm Mặt)</option>
+            <option value="2">BS. Trần Minh Tâm (Phục hình sứ)</option>
+            <option value="3">BS. Lê Thu Trang (Chỉnh nha)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Hàng 3: Nội dung / Thủ thuật tái khám & Lời dặn -->
+      <div>
+        <label class="form-label-custom">
+          Nội dung / Thủ thuật tái khám &amp; Lời dặn: <span class="text-danger">*</span>
+        </label>
+        <select class="form-control-custom mb-2" style="background-color: #f8fafc;">
+          <option value="">-- Chọn nhanh thủ thuật tái khám --</option>
+          <option value="1" selected>Kiểm tra tủy lần 2 &amp; trám bít ống tủy vĩnh viễn</option>
+          <option value="2">Tái khám cắt chỉ R38 &amp; kiểm tra lành thương</option>
+          <option value="3">Tái khám chỉnh nha: Thay chun &amp; siết dây cung</option>
+          <option value="4">Thử sườn &amp; lắp răng sứ vĩnh viễn</option>
+          <option value="5">Tái khám kiểm tra tích hợp xương Implant &amp; lấy dấu</option>
+          <option value="OTHER">Khác (Tự nhập chi tiết bên dưới)</option>
+        </select>
+        <input type="text" class="form-control-custom" value="Kiểm tra tủy lần 2 &amp; trám bít ống tủy vĩnh viễn R36" placeholder="Nội dung hoặc lời dặn chi tiết cho bệnh nhân...">
+      </div>
+
+      <!-- Hàng 4: Toggle Tự động nhắc hẹn CSKH -->
+      <div class="switch-box-custom">
+        <div class="d-flex align-items-center gap-2.5">
+          <i class="bi bi-headset text-primary fs-5"></i>
+          <div>
+            <div class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1 ngày</div>
+            <div class="text-muted" style="font-size: 11.5px;">Đồng bộ trực tiếp vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
+          </div>
+        </div>
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" checked style="cursor: pointer; width: 36px; height: 18px; accent-color: var(--primary-ocean);">
+        </div>
+      </div>
+
+      <!-- Hàng 5: Lịch hẹn tái khám đã tạo của bệnh nhân (Collapsible history) -->
+      <div class="history-card-box">
+        <div class="history-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history text-secondary"></i>
+            <span class="fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
+              Lịch hẹn tái khám đã tạo của bệnh nhân:
+            </span>
+            <span class="badge rounded-pill bg-white text-dark border">1 lịch hẹn</span>
+          </div>
+          <span class="text-primary fw-semibold" style="font-size: 12px; cursor: pointer;">
+            Chi tiết <i class="bi bi-chevron-down ms-1"></i>
+          </span>
+        </div>
+        <div>
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Mã hẹn</th>
+                <th>Ngày hẹn</th>
+                <th>Buổi</th>
+                <th>Bác sĩ</th>
+                <th>Nội dung</th>
+                <th class="text-center">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong class="text-primary font-monospace">TK-10089</strong></td>
+                <td class="fw-bold text-dark">11/11/2026</td>
+                <td>Sáng</td>
+                <td>BS. CK1 Lê Hoàng Nam</td>
+                <td>Kiểm tra tủy R36</td>
+                <td class="text-center">
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">Đã xác nhận</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer-box">
+      <a href="recalls_list.html" class="btn-light-custom">
+        Đóng
+      </a>
+      <a href="recalls_list.html" class="df-btn-add-plan">
+        <i class="bi bi-check-circle-fill"></i>
+        Xác nhận đặt hẹn tái khám
+      </a>
+    </div>
+
+  </div>
+
+</body>
+</html>

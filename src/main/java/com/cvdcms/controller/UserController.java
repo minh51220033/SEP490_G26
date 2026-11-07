@@ -281,7 +281,7 @@ public class UserController {
     @GetMapping("/home")
     public String home(@RequestParam(value = "view", required = false) String view, HttpSession session, Model model) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
-            return populateCustomerPortalHome(model, session);
+            return populateCustomerPortalHome(model);
         }
 
         // 1. Kiểm tra người dùng đã đăng nhập chưa
@@ -389,7 +389,7 @@ public class UserController {
         session.setAttribute("currentBranchName", currentBranchName);
 
         if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
-            return populateCustomerPortalHome(model, session);
+            return populateCustomerPortalHome(model);
         }
         return "user/home";
     }
