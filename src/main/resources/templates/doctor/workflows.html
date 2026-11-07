@@ -564,7 +564,7 @@
             <!-- ========================================================================= -->
             <div class="row g-3 mb-4">
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card active-kpi" id="kpiCardAll" style="--kpi-accent: #0284c7;" onclick="setStatusFilter('ALL')">
+                    <div class="dv-kpi-card" id="kpiCardAll" th:classappend="${selectedStatus == null or selectedStatus == '' or selectedStatus == 'ALL'} ? 'active-kpi' : ''" style="--kpi-accent: #0284c7;" onclick="setStatusFilter('ALL')">
                         <div>
                             <div class="dv-kpi-num" id="statTotal" th:text="${workflows != null ? workflows.size() : 0}">0</div>
                             <div class="dv-kpi-label">Tổng số quy trình</div>
@@ -577,7 +577,7 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardActive" style="--kpi-accent: #10b981;" onclick="setStatusFilter('ACTIVE')">
+                    <div class="dv-kpi-card" id="kpiCardActive" th:classappend="${selectedStatus == 'ACTIVE'} ? 'active-kpi' : ''" style="--kpi-accent: #10b981;" onclick="setStatusFilter('ACTIVE')">
                         <div>
                             <div class="dv-kpi-num text-success" id="statActive">0</div>
                             <div class="dv-kpi-label">Đang áp dụng</div>
@@ -590,7 +590,7 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardDraft" style="--kpi-accent: #f59e0b;" onclick="setStatusFilter('DRAFT')">
+                    <div class="dv-kpi-card" id="kpiCardDraft" th:classappend="${selectedStatus == 'DRAFT'} ? 'active-kpi' : ''" style="--kpi-accent: #f59e0b;" onclick="setStatusFilter('DRAFT')">
                         <div>
                             <div class="dv-kpi-num text-warning" id="statDraft">0</div>
                             <div class="dv-kpi-label">Bản nháp / Cập nhật</div>
@@ -617,45 +617,53 @@
             </div>
 
             <!-- ========================================================================= -->
-            <!-- 3. BỘ LỌC TỐI GIẢN & TÌM KIẾM CỠ LỚN                                      -->
+            <!-- 3. BỘ LỌC TỐI GIẢN & TÌM KIẾM CỠ LỚN (FORM GET CHUẨN MISA AMIS)            -->
             <!-- ========================================================================= -->
             <div class="dv-toolbar-card">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <!-- Search Input -->
-                    <div class="dv-search-box">
-                        <i class="bi bi-search search-lead-icon"></i>
-                        <input type="text" id="searchInput"
-                               placeholder="Tìm theo tên kỹ thuật, mã quy trình, dịch vụ..."
-                               oninput="handleSearchInput(this.value)">
-                        <button type="button" class="search-clear-btn" id="clearSearchBtn"
-                                onclick="clearSearchInput()" title="Xóa từ khóa">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
+                <form id="filterForm" method="get" th:action="@{/doctor/workflows}">
+                    <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                    <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+                    <input type="hidden" id="statusInput" name="status" th:value="${selectedStatus}">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <!-- Search Input -->
+                        <div class="dv-search-box">
+                            <i class="bi bi-search search-lead-icon"></i>
+                            <input type="text" id="searchInput" name="keyword" th:value="${keyword}"
+                                   placeholder="Tìm theo tên kỹ thuật, mã quy trình, dịch vụ..."
+                                   autocomplete="off">
+                            <button type="button" class="search-clear-btn" id="clearSearchBtn"
+                                    onclick="clearSearchInput()" title="Xóa từ khóa">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
 
-                    <!-- Quick Segment Status Filter -->
-                    <div class="dv-quick-segment" aria-label="Bộ lọc trạng thái">
-                        <button type="button" class="dv-seg-btn active" data-status="ALL" onclick="setStatusFilter('ALL')">
-                            Tất cả <span class="dv-seg-count" id="cntAll">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn" data-status="ACTIVE" onclick="setStatusFilter('ACTIVE')">
-                            <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#10b981;"></span>
-                            Đang áp dụng <span class="dv-seg-count" id="cntActive">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn" data-status="DRAFT" onclick="setStatusFilter('DRAFT')">
-                            <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#f59e0b;"></span>
-                            Bản nháp <span class="dv-seg-count" id="cntDraft">0</span>
-                        </button>
-                    </div>
+                        <!-- Quick Segment Status Filter -->
+                        <div class="dv-quick-segment" aria-label="Bộ lọc trạng thái">
+                            <a th:href="@{/doctor/workflows(size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId})}"
+                               class="dv-seg-btn" th:classappend="${selectedStatus == null or selectedStatus == '' or selectedStatus == 'ALL'} ? 'active' : ''">
+                                Tất cả <span class="dv-seg-count" id="cntAll" th:text="${totalItems}">0</span>
+                            </a>
+                            <a th:href="@{/doctor/workflows(status='ACTIVE', size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId})}"
+                               class="dv-seg-btn" th:classappend="${selectedStatus == 'ACTIVE'} ? 'active' : ''">
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#10b981;"></span>
+                                Đang áp dụng
+                            </a>
+                            <a th:href="@{/doctor/workflows(status='DRAFT', size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId})}"
+                               class="dv-seg-btn" th:classappend="${selectedStatus == 'DRAFT'} ? 'active' : ''">
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#f59e0b;"></span>
+                                Bản nháp
+                            </a>
+                        </div>
 
-                    <!-- Service Filter Dropdown -->
-                    <div>
-                        <select id="serviceFilter" class="dv-select-control" onchange="filterWorkflows()">
-                            <option value="">-- Tất cả dịch vụ nha khoa --</option>
-                            <option th:each="s : ${activeServices}" th:value="${s.serviceId}" th:text="${s.serviceName}">Cạo vôi răng</option>
-                        </select>
+                        <!-- Service Filter Dropdown -->
+                        <div>
+                            <select id="serviceFilter" name="serviceId" class="dv-select-control" onchange="const p = document.getElementById('pageIndexInput'); if (p) p.value = '0'; document.getElementById('filterForm').submit();">
+                                <option value="">-- Tất cả dịch vụ nha khoa --</option>
+                                <option th:each="s : ${activeServices}" th:value="${s.serviceId}" th:text="${s.serviceName}" th:selected="${selectedServiceId == s.serviceId}">Cạo vôi răng</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
+                </form>
             </div>
 
             <!-- ========================================================================= -->
@@ -691,6 +699,12 @@
                         </thead>
                         <tbody id="workflowTableBody">
                         <!-- Thymeleaf SSR First-Paint -->
+                        <tr th:if="${workflows == null or #lists.isEmpty(workflows)}">
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-tools fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                <span>Không tìm thấy quy trình kỹ thuật phù hợp với bộ lọc hiện thời.</span>
+                            </td>
+                        </tr>
                         <tr class="dv-data-row" th:each="wf : ${workflows}" th:id="'wf-row-' + ${wf.templateId}">
                             <td class="ps-4">
                                 <div class="d-flex align-items-start gap-3">
@@ -771,6 +785,62 @@
                         </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalItems}">0</strong>
+                    </div>
+                    <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+                    <div class="misa-pagination-right">
+                        <!-- Dropdown chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="25" th:selected="${pageSize == 25}">25</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
+                        <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+                        <div class="misa-page-range">
+                            <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+                        </div>
+                        <!-- Cụm 4 nút phân trang (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- 1. Về trang đầu -->
+                            <a th:href="@{/doctor/workflows(page=0, size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId}, status=${selectedStatus})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <!-- 2. Trang trước -->
+                            <a th:href="@{/doctor/workflows(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId}, status=${selectedStatus})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <!-- 3. Trang sau -->
+                            <a th:href="@{/doctor/workflows(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId}, status=${selectedStatus})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                               title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <!-- 4. Đến trang cuối -->
+                            <a th:href="@{/doctor/workflows(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, serviceId=${selectedServiceId}, status=${selectedStatus})}"
+                               class="misa-nav-btn"
+                               th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Empty State SVG thân thiện -->
@@ -956,6 +1026,27 @@
 
     // Khởi tạo tải dữ liệu
     document.addEventListener("DOMContentLoaded", () => {
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('filterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function () {
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+            });
+        }
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0'; // Bắt buộc reset về trang đầu
+                }
+                filterForm.submit();
+            });
+        }
+
         fetchWorkflows();
     });
 
@@ -965,7 +1056,6 @@
             if (res.ok) {
                 workflowsData = await res.json();
                 updateKpiStats(workflowsData);
-                filterWorkflows();
             }
         } catch (e) {
             console.error("Lỗi khi tải danh sách quy trình:", e);
@@ -1006,27 +1096,14 @@
     }
 
     function setStatusFilter(status) {
-        activeStatusFilter = status;
-
-        // Đổi trạng thái active nút Segment
-        document.querySelectorAll(".dv-seg-btn").forEach(btn => {
-            if (btn.getAttribute("data-status") === status) {
-                btn.classList.add("active");
-            } else {
-                btn.classList.remove("active");
-            }
-        });
-
-        // Đổi viền active trên Thẻ KPI
-        const cardAll = document.getElementById("kpiCardAll");
-        const cardActive = document.getElementById("kpiCardActive");
-        const cardDraft = document.getElementById("kpiCardDraft");
-
-        if (cardAll) cardAll.classList.toggle("active-kpi", status === 'ALL');
-        if (cardActive) cardActive.classList.toggle("active-kpi", status === 'ACTIVE');
-        if (cardDraft) cardDraft.classList.toggle("active-kpi", status === 'DRAFT');
-
-        filterWorkflows();
+        const form = document.getElementById("filterForm");
+        const statusInput = document.getElementById("statusInput");
+        const pageIndexInput = document.getElementById("pageIndexInput");
+        if (form && statusInput) {
+            statusInput.value = (status === 'ALL' ? '' : status);
+            if (pageIndexInput) pageIndexInput.value = '0';
+            form.submit();
+        }
     }
 
     function handleSearchInput(val) {
@@ -1045,7 +1122,12 @@
         if (input) input.value = "";
         const clearBtn = document.getElementById("clearSearchBtn");
         if (clearBtn) clearBtn.style.display = "none";
-        filterWorkflows();
+        const form = document.getElementById("filterForm");
+        if (form) {
+            const pageIndexInput = document.getElementById("pageIndexInput");
+            if (pageIndexInput) pageIndexInput.value = "0";
+            form.submit();
+        }
     }
 
     function resetFilters() {
