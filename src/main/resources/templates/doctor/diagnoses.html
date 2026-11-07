@@ -3,17 +3,17 @@
 
 <head th:replace="~{fragments/head :: head('Chẩn đoán bệnh lý ICD-10 - DentalFlow')}"></head>
 
-<body class="app-body">
+<body class="app-body" th:classappend="${isReadOnlyView == true ? 'is-readonly-exam-view' : ''}">
 <div class="app-shell">
 
     <!-- SIDEBAR DÙNG CHUNG -->
-    <aside th:replace="~{fragments/sidebar :: sidebar('examination')}"></aside>
+    <aside th:replace="~{fragments/sidebar :: sidebar(${isReadOnlyView == true ? (readonlySidebarMenu != null ? readonlySidebarMenu : 'doctor-records') : 'examination'})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
 
         <!-- HEADER TOPBAR DÙNG CHUNG -->
-        <header th:replace="~{fragments/header :: appTopbar('Khám & Điều trị')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar(${isReadOnlyView == true ? 'Chi tiết lượt khám (Chỉ xem)' : 'Khám & Điều trị'})}"></header>
 
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
             <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261101c)}">
@@ -143,6 +143,75 @@
                     border-color: #2b50aa;
                     box-shadow: 0 0 0 3px rgba(43, 80, 170, 0.12);
                 }
+
+                /* CHẾ ĐỘ CHỈ XEM (READ-ONLY) CHO CHI TIẾT LƯỢT KHÁM TỪ HỒ SƠ BỆNH NHÂN */
+                body.is-readonly-exam-view #btnDirectHandover,
+                body.is-readonly-exam-view #btnSaveGeneralExam,
+                body.is-readonly-exam-view #btnSaveGeneralExamBottom,
+                body.is-readonly-exam-view #bar1FooterSave,
+                body.is-readonly-exam-view #btnOpenParaclinicalModal,
+                body.is-readonly-exam-view #btnOpenDiagModal,
+                body.is-readonly-exam-view #btnOpenServiceModal,
+                body.is-readonly-exam-view #btnOpenPrescModal,
+                body.is-readonly-exam-view #btnOpenTreatmentPlanModal,
+                body.is-readonly-exam-view #btnOpenReExamModal,
+                body.is-readonly-exam-view #btnOpenCareLogModal,
+                body.is-readonly-exam-view #btnOpenLaboModal,
+                body.is-readonly-exam-view #btnOpenUploadPhotoModal,
+                body.is-readonly-exam-view #btnSaveCareInstructions,
+                body.is-readonly-exam-view #ft43BtnOpenInitModal,
+                body.is-readonly-exam-view #ft43ServiceSelect,
+                body.is-readonly-exam-view #ft43StartBtn,
+                body.is-readonly-exam-view #icd10DiagnosisInputBlock,
+                body.is-readonly-exam-view #diagnosisForm,
+                body.is-readonly-exam-view #form-bar1-exam,
+                body.is-readonly-exam-view #form-bar3-diag,
+                body.is-readonly-exam-view #form-bar4-service,
+                body.is-readonly-exam-view #form-bar5-prescription,
+                body.is-readonly-exam-view #mainTabContainer .df-action-icon-btn.delete,
+                body.is-readonly-exam-view #mainTabContainer .df-action-icon-btn.edit,
+                body.is-readonly-exam-view #mainTabContainer .df-btn-plan-delete,
+                body.is-readonly-exam-view #mainTabContainer .ps-btn-delete,
+                body.is-readonly-exam-view #mainTabContainer a[href*="/treatment-plans/create"],
+                body.is-readonly-exam-view #mainTabContainer a[onclick*="updatePlanStatusDirectly"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="delete"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="Delete"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openEdit"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openUploadPhotoModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openQuickUploadImageModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openCreateLaboOrderModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openCreateLaboModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openLogCareInteractionModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openDoctorCareModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openDoctorInstructionModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openReExamModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openAddPrescriptionModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openAddParaclinicalModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="quickCreateParaclinicalOrder"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="toggleOrderStatus"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="sendPlanToAccounting"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="executePlanItem"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="saveGeneralExamination"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="saveCareInstructions"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="reopenClinicalExamination"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="updateLaboStatus"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="quickUpdateLaboStatus"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="openParaclinicalResultModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.quickAction"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.openStepModal"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startService"],
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startSelectedService"] {
+                    display: none !important;
+                }
+                body.is-readonly-exam-view #treatmentPlansTableBody .dropdown-toggle {
+                    pointer-events: none !important;
+                }
+                body.is-readonly-exam-view #mainTabContainer input:not([type="search"]),
+                body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect),
+                body.is-readonly-exam-view #mainTabContainer textarea {
+                    pointer-events: none !important;
+                    background-color: #f8fafc !important;
+                }
             </style>
 
             <!-- ========================================================= -->
@@ -158,7 +227,16 @@
                     <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5">
+                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:if="${isReadOnlyView == true}">
+                        <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}" class="text-decoration-none text-primary fw-bold small">
+                            <i class="bi bi-arrow-left-circle-fill me-1"></i>Hồ sơ bệnh nhân
+                        </a>
+                        <span class="text-muted small">&gt;</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
+                        <span class="text-muted small">&gt;</span>
+                        <span class="text-dark fw-bold small">Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)</span>
+                    </div>
+                <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:unless="${isReadOnlyView == true}">
                         <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
                         <span class="text-muted small">&gt;</span>
                         <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
@@ -166,9 +244,20 @@
                         <span class="text-dark fw-bold small">Bàn khám bệnh</span>
                     </div>
 
+                    <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
+                    <div class="d-flex align-items-center gap-2" th:if="${isReadOnlyView == true}">
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
+                            <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
+                        </span>
+                        <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}"
+                           class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                            <i class="bi bi-arrow-left"></i> Quay lại Hồ sơ bệnh nhân
+                        </a>
+                    </div>
+
                     <!-- THANH CÔNG CỤ CHUẨN ĐÚNG HÌNH ẢNH MẪU YÊU CẦU:
                          [Tìm tên, SĐT, mã số...] [16/10/2026] [Bộ lọc] [Hiển thị 12/28] [+ Thêm bệnh nhân] [DEMO v] -->
-                    <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2">
+                    <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2" th:unless="${isReadOnlyView == true}">
                         <!-- 1. Ô Tìm kiếm: Tìm tên, SĐT, mã số... -->
                         <div class="df-tb-search position-relative" style="min-width: 240px; max-width: 320px;">
                             <i class="bi bi-search df-tb-search-icon"></i>
@@ -296,7 +385,21 @@
                     </div>
 
                     <!-- NÚT CHUYÊN MÔN HOÀN TẤT KHÁM & BÀN GIAO SANG KẾ TOÁN (TÁCH BIỆT CHUYÊN MÔN & TÀI CHÍNH) -->
-                    <div class="d-flex flex-column align-items-end gap-1">
+                    <div class="d-flex flex-column align-items-end gap-1" th:if="${isReadOnlyView == true}">
+                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>Chế độ Chỉ xem Chi tiết lượt khám</span>
+                            </span>
+                            <a th:href="@{/emr/records(query=${visit.visitCode})}"
+                               class="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                               title="Xem bệnh án điện tử EMR của ca khám này">
+                                <i class="bi bi-file-earmark-medical text-primary"></i>
+                                <span>Bệnh án EMR</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1" th:unless="${isReadOnlyView == true}">
                         <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
                             <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
                                 <button type="button" id="btnDirectHandover"
@@ -337,9 +440,6 @@
                                 </span>
                             </th:block>
                         </div>
-                        <small class="text-muted" style="font-size: 11px;">
-                            <i class="bi bi-shield-check text-primary me-1"></i>Khóa bệnh án lâm sàng bất biến (BR-EMR-02) khi hoàn tất ca khám
-                        </small>
                     </div>
                 </div>
 
@@ -413,6 +513,27 @@
             <!-- ========================================================= -->
             <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc; min-height: 80vh;">
 
+                <!-- BANNER CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
+                <div th:if="${isReadOnlyView == true}" class="alert alert-info border border-info-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-info text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                            <i class="bi bi-eye-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark">
+                                CHI TIẾT LƯỢT KHÁM — CHẾ ĐỘ CHỈ XEM (READ-ONLY)
+                            </div>
+                            <div class="text-secondary small mt-0.5">
+                                Bạn đang tra cứu toàn bộ dữ liệu khám lâm sàng, chẩn đoán, kế hoạch điều trị, dịch vụ, đơn thuốc và phim ảnh của lượt khám <strong th:text="${visit != null ? visit.visitCode : ''}">VIS</strong>. Mọi chức năng thêm, sửa, xóa đã được vô hiệu hóa.
+                            </div>
+                        </div>
+                    </div>
+                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}"
+                       class="btn btn-sm btn-primary rounded-pill fw-bold px-3 py-1.5 mt-2 mt-md-0">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại Hồ sơ bệnh nhân
+                    </a>
+                </div>
+
                 <!-- TAB 1: THÔNG TIN BỆNH NHÂN -->
                 <div class="df-tab-pane" id="tab-patient-info" style="display: none;">
                     <div th:replace="~{doctor/fragments/patient-info-tab :: patientInfoTab}"></div>
@@ -421,7 +542,7 @@
                 <!-- TAB 2: KHÁM & ĐIỀU TRỊ (ACTIVE MẶC ĐỊNH - CHỨA ĐÚNG 3 MỤC KHÁM TỔNG QUÁT, CẬN LÂM SÀNG, CHẨN ĐOÁN BỆNH LÝ) -->
                 <div class="df-tab-pane active" id="tab-examination" style="display: block;">
                     <div class="df-session-card" id="diagnosisSection"
-                         th:with="isClinicalLocked=${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}">
+                         th:with="isClinicalLocked=${(isReadOnlyView != null and isReadOnlyView) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED'))}">
 
                         <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
                         <div class="df-session-bar">
@@ -429,14 +550,14 @@
                                 <i class="bi bi-calendar2-event"></i>
                                 <span>NGÀY KHÁM: </span>
                                 <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
-                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
+                                <button th:unless="${isReadOnlyView == true}" type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
                             </div>
                         </div>
 
                         <!-- BANNER THÔNG BÁO KHÓA BỆNH ÁN KHI ĐÃ HOÀN TẤT (BR-EMR-02) -->
-                        <div th:if="${visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
+                        <div th:if="${isReadOnlyView != true and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
                              id="clinicalLockedBanner"
                              class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
                             <div class="d-flex align-items-center gap-3">
@@ -735,12 +856,72 @@
     </div>
 </div>
 
+<!-- MODAL THÔNG BÁO HOÀN TẤT CA KHÁM VÀ MỞ NHANH BỆNH ÁN ĐIỆN TỬ (EMR) -->
+<div class="modal fade" id="examCompletedSuccessModal" tabindex="-1" aria-labelledby="examCompletedSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 18px; overflow: hidden;">
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 26px;">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="examCompletedSuccessModalLabel">Hoàn tất ca khám thành công!</h5>
+                        <p class="mb-0 small text-white-50">Hồ sơ lâm sàng đã được khóa theo chuẩn BR-EMR-02</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-secondary mb-4" style="font-size: 15px;">
+                    Ca khám đã hoàn tất và dữ liệu đã sẵn sàng. Bạn có muốn mở ngay <strong>Bệnh án điện tử (EMR)</strong> của ca khám này không?
+                </p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2" id="btnOpenEmrFromSuccessModal" style="background-color: #0284c7; border-color: #0284c7; border-radius: 10px; font-size: 15px;">
+                        <i class="bi bi-file-earmark-medical-fill fs-5"></i>
+                        <span>Mở Bệnh án điện tử (EMR) ngay</span>
+                    </button>
+                    <div class="d-flex gap-2 mt-1">
+                        <a th:href="@{/doctor/daily-visits}" class="btn btn-outline-secondary w-50 py-2 fw-semibold" style="border-radius: 10px;">
+                            <i class="bi bi-calendar2-week me-1"></i> DS Ca khám
+                        </a>
+                        <button type="button" class="btn btn-light border w-50 py-2 fw-semibold" onclick="window.location.reload()" style="border-radius: 10px;">
+                            <i class="bi bi-arrow-repeat me-1"></i> Ở lại ca khám
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script id="activeServicesCatalogJson" type="application/json" th:utext="${activeServicesJson != null ? activeServicesJson : '[]'}"></script>
 <script th:inline="javascript">
     const availableServicesCatalog = JSON.parse(document.getElementById('activeServicesCatalogJson')?.textContent || '[]');
-    const isClinicalLockedVal = /*[[${visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}]]*/ false;
+    const isReadOnlyViewVal = /*[[${isReadOnlyView != null and isReadOnlyView}]]*/ false;
+    const isClinicalLockedVal = /*[[${(isReadOnlyView != null and isReadOnlyView) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED'))}]]*/ false;
     const currentServerVisitId = /*[[${visit != null and visit.visitId != null ? visit.visitId : 1}]]*/ 1;
+
+    if (isReadOnlyViewVal) {
+        // Chặn mọi thao tác gọi API ghi dữ liệu (POST/PUT/PATCH/DELETE) khi ở chế độ Chỉ xem
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = function(input, init) {
+            const method = (init && init.method) ? String(init.method).toUpperCase() : 'GET';
+            if (method !== 'GET' && method !== 'HEAD') {
+                return Promise.reject(new Error('Chế độ Chỉ xem (Read-Only): Không được phép thay đổi dữ liệu lượt khám.'));
+            }
+            return originalFetch(input, init);
+        };
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('mainTabContainer');
+            if (container) {
+                container.querySelectorAll('input:not([type="search"]), select:not(#photoCategorySelect), textarea').forEach(el => {
+                    el.setAttribute('readonly', 'readonly');
+                    el.setAttribute('disabled', 'disabled');
+                });
+            }
+        });
+    }
 
     function getCurrentVisitId() {
         const vEl = document.getElementById('visitId');
@@ -770,7 +951,7 @@
         }
     }
 
-    function switchMainTab(tabId, el) {
+    function switchMainTab(tabId, el, updateHash = true) {
         if (!tabId) return;
 
         // 1. Cập nhật trạng thái active cho thanh subnav tabs
@@ -821,23 +1002,47 @@
             }
         }
 
-        // 3. Cập nhật hash trên URL để khi reload không mất tab đang xem
-        if (history.replaceState) {
-            history.replaceState(null, null, '#' + tabId);
-        } else {
-            location.hash = '#' + tabId;
+        // 3. Cập nhật hash trên URL để khi reload hoặc copy link giữ đúng tab đang xem
+        if (updateHash !== false) {
+            const newHash = '#' + tabId;
+            if (window.location.hash !== newHash) {
+                if (history.replaceState) {
+                    history.replaceState(null, null, newHash);
+                } else {
+                    location.hash = newHash;
+                }
+            }
         }
     }
     window.switchMainTab = switchMainTab;
 
-    // Tự động khôi phục tab đang mở từ URL Hash khi tải trang
-    document.addEventListener('DOMContentLoaded', function() {
-        let hash = window.location.hash ? window.location.hash.substring(1) : '';
-        if (hash === 'treatmentPlanSection') hash = 'tab-treatment-plan';
-        if (hash === 'prescriptionsSection') hash = 'tab-prescriptions';
+    // Tự động chuẩn hóa và khôi phục tab đang mở từ URL Hash khi tải trang hoặc hash thay đổi
+    function restoreTabFromHash() {
+        let hash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
+        if (!hash) return;
+        // Chuẩn hóa alias
+        if (hash === 'treatmentPlanSection' || hash === 'treatment-plan') hash = 'tab-treatment-plan';
+        if (hash === 'prescriptionsSection' || hash === 'prescriptions') hash = 'tab-prescriptions';
+        if (hash === 'performedServicesSection' || hash === 'performed-services') hash = 'tab-performed-services';
+        if (hash === 'clinicalPhotosSection' || hash === 'clinical-photos') hash = 'tab-clinical-photos';
+        if (hash === 'examination') hash = 'tab-examination';
+        if (hash === 'patient-info') hash = 'tab-patient-info';
+        if (hash === 'appointments') hash = 'tab-appointments';
+        if (hash === 'customer-care') hash = 'tab-customer-care';
+        if (hash === 'labo') hash = 'tab-labo';
+        if (hash === 'instructions') hash = 'tab-instructions';
+        if (hash === 'workflow-execution') hash = 'tab-workflow-execution';
+
         if (hash && document.getElementById(hash)) {
-            switchMainTab(hash);
+            switchMainTab(hash, null, false);
         }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        restoreTabFromHash();
+    });
+    window.addEventListener('hashchange', function() {
+        restoreTabFromHash();
     });
 
     // =========================================================================
@@ -1464,8 +1669,10 @@
         if (dateDisp) dateDisp.value = curDd + '/' + curMm + '/' + curYyyy;
         const nativeDate = document.getElementById('dfTbDateNative');
         if (nativeDate) nativeDate.value = curYyyy + '-' + curMm + '-' + curDd;
-        // Tải danh sách ca khám tuần này để hiển thị đầy đủ
-        setDvdDateFilter('THIS_WEEK');
+        if (!isReadOnlyViewVal) {
+            // Tải danh sách ca khám tuần này để hiển thị đầy đủ
+            setDvdDateFilter('THIS_WEEK');
+        }
 
         // Kiểm tra nếu có tham số URL ?openDailyVisits=true
         const urlParams = new URLSearchParams(window.location.search);
@@ -1474,18 +1681,15 @@
         }
     });
 
-    // Giữ màn hình luôn cố định ở đầu trang khi tải trang (không tự động cuộn xuống)
+    // Giữ hash tab nguyên vẹn khi tải trang (KHÔNG xóa location.hash)
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
-    if (window.location.hash) {
-        history.replaceState(null, null, window.location.pathname + window.location.search);
-    }
-    window.addEventListener('DOMContentLoaded', () => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    });
+    // Đảm bảo tab theo hash được kích hoạt đầy đủ sau khi trang load
     window.addEventListener('load', () => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (typeof restoreTabFromHash === 'function') {
+            restoreTabFromHash();
+        }
     });
     // =====================================================================
 
@@ -1560,12 +1764,44 @@
             if (res.ok && result.success) {
                 if (typeof showToast === 'function') {
                     showToast('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!'));
-                } else {
-                    alert('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!'));
                 }
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // Hiển thị modal thông báo thành công kèm nút bấm mở nhanh Bệnh án điện tử của ca khám
+                const successModalEl = document.getElementById('examCompletedSuccessModal');
+                const btnOpenEmr = document.getElementById('btnOpenEmrFromSuccessModal');
+                if (btnOpenEmr) {
+                    btnOpenEmr.onclick = async function() {
+                        btnOpenEmr.disabled = true;
+                        btnOpenEmr.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang mở Bệnh án điện tử...';
+                        try {
+                            const emrRes = await fetch('/api/emr/records', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ visitId: Number(targetVisitId) })
+                            });
+                            if (emrRes.ok) {
+                                const emrData = await emrRes.json();
+                                if (emrData && emrData.id) {
+                                    window.location.href = '/emr/records/' + emrData.id;
+                                    return;
+                                }
+                            }
+                            window.location.href = '/emr/records';
+                        } catch (e) {
+                            window.location.href = '/emr/records';
+                        }
+                    };
+                }
+
+                if (successModalEl && typeof bootstrap !== 'undefined') {
+                    const modalObj = new bootstrap.Modal(successModalEl);
+                    modalObj.show();
+                } else {
+                    if (confirm('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!') + '\n\nBấm OK để mở ngay Bệnh án điện tử (EMR) của ca khám.')) {
+                        window.location.href = '/emr/records';
+                    } else {
+                        window.location.reload();
+                    }
+                }
             } else {
                 alert('Không thể hoàn tất khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.'));
                 if (btn) {

@@ -19,9 +19,18 @@ public interface PatientVisitReadRepository extends Repository<Visit, Long> {
 
     @Query("""
             SELECT v FROM Visit v JOIN FETCH v.branch
+            JOIN FETCH v.patientProfile p
             LEFT JOIN FETCH v.primaryDoctor
             WHERE v.patientProfile.profileId = :profileId AND v.visitId = :visitId
             """)
     Optional<Visit> oneForPatient(@Param("profileId") Long profileId,
                                   @Param("visitId") Long visitId);
+
+    @Query("""
+            SELECT v FROM Visit v JOIN FETCH v.branch
+            JOIN FETCH v.patientProfile p
+            LEFT JOIN FETCH v.primaryDoctor
+            WHERE v.visitId = :visitId
+            """)
+    Optional<Visit> findWithDetailsById(@Param("visitId") Long visitId);
 }

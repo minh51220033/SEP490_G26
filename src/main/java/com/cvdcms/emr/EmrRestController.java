@@ -28,12 +28,40 @@ public class EmrRestController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public IdResponse create(HttpSession session, @RequestBody CreateRequest request) {
-        return new IdResponse(service.create(session, request.visitId()));
+        return new IdResponse(service.getOrCreate(session, request.visitId()));
     }
 
-    @PostMapping("/{recordId}/refresh-snapshot")
+    @PostMapping("/from-visit/{visitId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public IdResponse fromVisit(HttpSession session, @PathVariable Long visitId) {
+        return new IdResponse(service.getOrCreate(session, visitId));
+    }
+
+    @GetMapping("/visit/{visitId}/snapshot")
+    public java.util.Map<String, Object> getVisitSnapshot(@PathVariable Long visitId) {
+        return service.getVisitSnapshot(visitId);
+    }
+
+    @PostMapping(path = {"/{recordId}/refresh-snapshot", "/{recordId}/sync-examination", "/{recordId}/sync"})
     public void refresh(HttpSession session, @PathVariable Long recordId) {
         service.refresh(session, recordId);
+    }
+
+    @PostMapping(path = {"/{recordId}/patient-demographics", "/{recordId}/demographics"})
+    public void updateDemographics(HttpSession session, @PathVariable Long recordId,
+            @RequestBody java.util.Map<String, String> request) {
+        service.updatePatientDemographics(session, recordId, request);
+    }
+
+    @DeleteMapping("/{recordId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDraft(HttpSession session, @PathVariable Long recordId) {
+        service.deleteDraft(session, recordId);
+    }
+
+    @PostMapping("/{recordId}/delete")
+    public void deleteDraftPost(HttpSession session, @PathVariable Long recordId) {
+        service.deleteDraft(session, recordId);
     }
 
     @PostMapping("/{recordId}/validate")
