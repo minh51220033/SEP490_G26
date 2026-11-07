@@ -120,6 +120,7 @@ public class AdminCommentController {
         model.addAttribute("totalComments", totalComments);
         model.addAttribute("activeComments", activeComments);
         model.addAttribute("deletedComments", deletedComments);
+        model.addAttribute("newsArticles", newsRepository.findAll());
 
         return "admin/comments/list";
     }
@@ -265,7 +266,9 @@ public class AdminCommentController {
 
         LocalDateTime expiresAt = durationDays > 0 ? LocalDateTime.now().plusDays(durationDays) : null;
 
-        CommentBan ban = new CommentBan();
+        CommentBan ban = commentBanRepository
+                .findFirstByUser_UserIdOrderByBannedAtDesc(targetUser.getUserId())
+                .orElseGet(CommentBan::new);
         ban.setUser(targetUser);
         ban.setBannedBy(admin);
         ban.setReason(reason.trim());

@@ -16,6 +16,11 @@ public interface CommentBanRepository
             Long userId
     );
 
+    Optional<CommentBan>
+    findFirstByUser_UserIdOrderByBannedAtDesc(
+            Long userId
+    );
+
     @Query("""
         SELECT b
         FROM CommentBan b

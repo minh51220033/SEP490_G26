@@ -120,7 +120,7 @@
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SYSTEM_BANS'))}"
                        th:href="@{/admin/bans}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'bans'} ? 'is-active' : ''">
-                        <i class="bi bi-person-slash" aria-hidden="true"></i><span class="side-link__label">Tài khoản bị ban</span>
+                        <i class="bi bi-person-slash" aria-hidden="true"></i><span class="side-link__label">Tài khoản bị cấm</span>
                     </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'BRANCH_MANAGE'))}"
                        th:href="@{/admin/branches}" class="side-link side-sublink"
@@ -147,7 +147,6 @@
                        th:classappend="${activeMenu == 'admin-leaves'} ? 'is-active' : ''"
                        title="Quản lý & Duyệt yêu cầu nghỉ phép, khóa lịch bác sĩ (FT42 / SCR-42.3)">
                         <i class="bi bi-calendar-check-fill text-warning" aria-hidden="true"></i><span class="side-link__label">Duyệt nghỉ phép</span>
-                        <span class="side-badge side-badge--warning">FT42</span>
                     </a>
 
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))}"
@@ -155,14 +154,12 @@
                        th:classappend="${activeMenu == 'membership-tiers'} ? 'is-active' : ''"
                        title="Hạng thành viên và quy tắc tích điểm (FT19 / UC-14)">
                         <i class="bi bi-award text-warning" aria-hidden="true"></i><span class="side-link__label">Hạng thẻ &amp; Tích điểm</span>
-                        <span class="side-badge side-badge--warning">FT19</span>
                     </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS'))}"
                        th:href="@{/admin/promotions}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'admin-promotions'} ? 'is-active' : ''"
                        title="Chương trình khuyến mãi &amp; Voucher (FT20 / UC-15)">
                         <i class="bi bi-ticket-perforated text-danger" aria-hidden="true"></i><span class="side-link__label">Khuyến mãi &amp; Voucher</span>
-                        <span class="side-badge side-badge--danger">FT20</span>
                     </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_REPORTS'))}"
                        th:href="@{/admin/reports}" class="side-link side-sublink"
@@ -249,7 +246,6 @@
                        th:href="@{/reception/memberships}" class="side-link side-sublink"
                        title="Tra cứu thẻ thành viên, điểm tích luỹ &amp; quyền lợi (FT19)">
                         <i class="bi bi-credit-card text-info" aria-hidden="true"></i><span class="side-link__label">Thẻ thành viên &amp; Điểm</span>
-                        <span class="side-badge side-badge--info">FT19</span>
                     </a>
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))}"
                        th:href="@{/reception/appointments}" class="side-link side-sublink"
@@ -277,7 +273,6 @@
                         th:classappend="${activeMenu == 'workflow-progress'} ? 'is-active' : ''"
                         title="Theo dõi tiến độ quy trình khám của bệnh nhân (FT43)">
                          <i class="bi bi-list-check" aria-hidden="true"></i><span class="side-link__label">Tiến độ quy trình khám</span>
-                         <span class="side-badge side-badge--info">FT43</span>
                      </a>
                 </div>
             </div>
@@ -326,7 +321,6 @@
                        th:classappend="${activeMenu == 'xray'} ? 'is-active' : ''"
                        title="Trình xem ảnh X-quang tích hợp NanoPix (FT12)">
                         <i class="bi bi-radioactive" aria-hidden="true"></i><span class="side-link__label">Phim X-quang NanoPix</span>
-                        <span class="side-badge">FT12</span>
                     </a>
                     <!-- Quản lý Labo -->
                     <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))}"

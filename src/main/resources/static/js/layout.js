@@ -165,22 +165,21 @@
     }
 
     $all("[data-accordion]").forEach(function (group) {
-        // Nhóm chứa link active luôn được mở và tô màu icon nhóm
+        // Nhóm luôn được mở sẵn toàn bộ link con
+        group.classList.add("is-open");
         if (group.querySelector(".side-link.is-active")) {
-            group.classList.add("has-active", "is-open");
+            group.classList.add("has-active");
         }
-        setGroupOpen(group, group.classList.contains("is-open"));
+        setGroupOpen(group, true);
 
         var toggle = group.querySelector("[data-accordion-toggle]");
         if (!toggle) return;
-        toggle.addEventListener("click", function () {
-            // Đang ở rail icon-only: mở rộng sidebar trước rồi mới bung nhóm
+        toggle.addEventListener("click", function (e) {
+            if (e) e.preventDefault();
+            // Đang ở rail icon-only: mở rộng sidebar
             if (isDesktop() && root.classList.contains("is-sidebar-collapsed")) {
                 setCollapsed(false);
-                setGroupOpen(group, true);
-                return;
             }
-            setGroupOpen(group, !group.classList.contains("is-open"));
         });
     });
 
@@ -281,12 +280,20 @@
 
     $all("[data-dropdown-toggle]").forEach(function (toggle) {
         toggle.addEventListener("click", function (event) {
+            event.preventDefault();
             event.stopPropagation();
             var item = toggle.closest("[data-dropdown]");
             var willOpen = !item.classList.contains("is-open");
             closeAllDropdowns(item);
             item.classList.toggle("is-open", willOpen);
             toggle.setAttribute("aria-expanded", String(willOpen));
+        });
+    });
+
+    // Ngăn chặn sự kiện click bên trong dropdown panel làm đóng chính nó
+    $all(".dropdown-panel, .cp-user-dropdown").forEach(function (panel) {
+        panel.addEventListener("pointerdown", function (event) {
+            event.stopPropagation();
         });
     });
 

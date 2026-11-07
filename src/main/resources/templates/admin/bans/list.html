@@ -15,81 +15,158 @@
             <header th:replace="~{fragments/header :: appTopbar('Tài khoản bị cấm bình luận')}"></header>
 
             <main class="app-content">
+                <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
                 <link rel="stylesheet" th:href="@{/css/staff.css}">
                 <link rel="stylesheet" th:href="@{/css/account.css}">
 
                 <!-- THÔNG BÁO FLASH -->
-                <div th:if="${banSuccess != null}" class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                <div th:if="${banSuccess != null}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
                     <span th:text="${banSuccess}">Thao tác thành công!</span>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div th:if="${banError != null}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                <div th:if="${banError != null}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
                     <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
                     <span th:text="${banError}">Có lỗi xảy ra trong quá trình xử lý.</span>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <!-- TIÊU ĐỀ TRANG CHUẨN MISA -->
-                <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <div>
-                        <h1 class="staff-page-title">Tài khoản bị cấm bình luận</h1>
-                        <p class="staff-page-subtitle">
-                            Quản lý danh sách người dùng bị hạn chế, thời hạn và gỡ bỏ hạn chế
-                            <span class="text-muted ms-1" th:if="${totalBans != null}">
-                                (Tổng: <strong th:text="${totalBans}">0</strong> | Đang bị cấm: <strong class="text-danger" th:text="${activeBans}">0</strong> | Đã gỡ cấm: <strong class="text-success" th:text="${revokedBans}">0</strong>)
-                            </span>
-                        </p>
+                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
+                <nav class="dv-breadcrumb mb-2">
+                    <a th:href="@{/}">Trang chủ</a> / <span>Quản trị nội dung</span> / <span>Tài khoản bị cấm</span>
+                </nav>
+
+                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                            <i class="bi bi-person-slash"></i>
+                        </div>
+                        <div>
+                            <h1 class="dv-page-title mb-0">Tài khoản bị cấm bình luận</h1>
+                            <p class="dv-page-subtitle">Quản lý danh sách người dùng bị hạn chế, thời hạn và gỡ bỏ hạn chế</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/admin/comments}" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-chat-dots"></i> Kiểm duyệt bình luận
+                        </a>
+                        <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;" onclick="openCreateBanModal()">
+                            <i class="bi bi-plus-lg"></i> Cấm tài khoản
+                        </button>
                     </div>
                 </div>
 
-                <!-- TOOLBAR / BỘ LỌC CHUẨN MISA -->
-                <section class="staff-toolbar-card">
-                    <form th:action="@{/admin/bans}" method="get" id="banFilterForm" class="staff-toolbar-form">
-                        <!-- Bên trái: Ô tìm kiếm + Dropdowns lọc -->
-                        <div class="staff-toolbar-left">
-                            <!-- 1. Ô tìm kiếm -->
-                            <div class="staff-search-box-compact">
-                                <i class="bi bi-search"></i>
+                <!-- 3 THẺ KPI TỔNG QUAN -->
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-4 col-sm-6">
+                        <a th:href="@{/admin/bans(keyword=${keyword})}" class="text-decoration-none">
+                            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${activeOnly == null} ? 'active-kpi' : ''">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${totalBans ?: totalItems}">0</div>
+                                    <div class="dv-kpi-label">Tổng tài khoản vi phạm</div>
+                                    <div class="dv-kpi-sub">Toàn bộ tài khoản từng bị xử lý</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                    <i class="bi bi-shield-slash-fill"></i>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-xl-4 col-sm-6">
+                        <a th:href="@{/admin/bans(activeOnly=true,keyword=${keyword})}" class="text-decoration-none">
+                            <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${activeOnly != null and activeOnly == true} ? 'active-kpi' : ''">
+                                <div>
+                                    <div class="dv-kpi-num text-danger" th:text="${activeBans ?: 0}">0</div>
+                                    <div class="dv-kpi-label">Đang bị cấm</div>
+                                    <div class="dv-kpi-sub">Bị đình chỉ quyền bình luận</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                                    <i class="bi bi-slash-circle-fill"></i>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-xl-4 col-sm-6">
+                        <a th:href="@{/admin/bans(activeOnly=false,keyword=${keyword})}" class="text-decoration-none">
+                            <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${activeOnly != null and activeOnly == false} ? 'active-kpi' : ''">
+                                <div>
+                                    <div class="dv-kpi-num text-success" th:text="${revokedBans ?: 0}">0</div>
+                                    <div class="dv-kpi-label">Đã gỡ cấm</div>
+                                    <div class="dv-kpi-sub">Đã khôi phục quyền bình luận</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
+                <div class="dv-toolbar-card">
+                    <form th:action="@{/admin/bans}" method="get" id="banFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                            <!-- Ô tìm kiếm chuẩn -->
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
                                 <input type="text" id="keyword" name="keyword" th:value="${keyword}"
-                                       class="form-control" placeholder="Tìm theo Username hoặc Email...">
+                                       placeholder="Tìm theo Username hoặc Email...">
                             </div>
 
-                            <!-- 2. Dropdown Trạng thái -->
-                            <div>
-                                <select id="activeOnly" name="activeOnly" class="form-select staff-select-compact" aria-label="Trạng thái" onchange="this.form.submit()">
-                                    <option value="" th:selected="${activeOnly == null}">Trạng thái: Tất cả</option>
-                                    <option value="true" th:selected="${activeOnly != null and activeOnly == true}">Đang bị cấm</option>
-                                    <option value="false" th:selected="${activeOnly != null and activeOnly == false}">Đã gỡ cấm</option>
-                                </select>
-                            </div>
-
-                            <!-- Hidden fields cho phân trang -->
-                            <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
-                            <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
-
-                            <!-- Nút Xóa nhanh bộ lọc khi đang có điều kiện lọc -->
-                            <a th:if="${(keyword != null and keyword != '') or (activeOnly != null)}"
-                               th:href="@{/admin/bans}"
-                               class="btn btn-link text-decoration-none text-muted p-0 ms-1 small"
-                               title="Xóa tất cả bộ lọc">
-                                <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
-                            </a>
-                        </div>
-
-                        <!-- Bên phải: Nút Thêm mới + Kiểm duyệt bình luận + Tùy chỉnh cột -->
-                        <div class="staff-toolbar-right">
-                            <a th:href="@{/admin/comments}" class="btn btn-secondary-custom btn-vua text-primary">
-                                <i class="bi bi-chat-dots me-1"></i> Kiểm duyệt bình luận
-                            </a>
-                            <button type="button" class="btn btn-primary btn-vua" data-bs-toggle="modal" data-bs-target="#createBanModal">
-                                <i class="bi bi-plus-lg"></i> Thêm mới
+                            <!-- Nút bấm Tìm kiếm -->
+                            <button type="submit" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                                <i class="bi bi-search"></i>
+                                <span>Tìm kiếm</span>
                             </button>
 
-                            <!-- Bánh răng mở Dropdown Tùy chỉnh cột -->
+                            <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+                            <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+                            <input type="hidden" id="activeOnlyInput" name="activeOnly" th:value="${activeOnly}">
+
+                            <!-- Nút Lọc nâng cao -->
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 44px;">
+                                <i class="bi bi-funnel"></i> Lọc nâng cao
+                                <span th:if="${activeOnly != null}"
+                                      class="badge bg-primary text-white rounded-pill">
+                                    1
+                                </span>
+                            </button>
+
+                            <a th:if="${(keyword != null and keyword != '') or (activeOnly != null)}"
+                               th:href="@{/admin/bans}"
+                               class="btn btn-link text-decoration-none text-danger p-0 ms-1 small fw-semibold"
+                               title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- BẢNG DỮ LIỆU TÀI KHOẢN BỊ CẤM (ĐỒNG BỘ 100% CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+                <section class="staff-table-card">
+                    <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT -->
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                                Hiển thị <span class="text-primary fw-bolder" th:text="${totalItems}">0</span> tài khoản
+                                <span class="text-muted mx-1">•</span>
+                                <span class="text-secondary fw-semibold">Tất cả các ngày</span>
+                            </div>
+                            <span class="badge rounded-pill px-3 py-1.5"
+                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                            </span>
+                        </div>
+
+                        <!-- Bên phải: Nút Tùy biến cột -->
+                        <div class="d-flex align-items-center gap-2">
                             <div class="custom-col-dropdown position-relative d-inline-block">
-                                <button type="button" class="btn-icon-square" id="btnToggleCustomColumns" title="Tùy chỉnh cột" aria-expanded="false">
-                                    <i class="bi bi-gear"></i>
+                                <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                        style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                        id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                    <i class="bi bi-layout-three-columns text-primary"></i>
+                                    <span>Tùy biến cột</span>
                                 </button>
 
                                 <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
@@ -100,21 +177,15 @@
                                         </h6>
                                         <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
                                     </div>
-
-                                    <!-- Ô tìm kiếm tên trường -->
                                     <div class="custom-column-search">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                                             <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
                                         </div>
                                     </div>
-
-                                    <!-- Tiêu đề danh sách cột -->
                                     <div class="custom-column-table-head">
                                         <div class="flex-grow-1">Tên trường</div>
                                     </div>
-
-                                    <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả -->
                                     <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
                                         <div class="custom-col-item" data-col-target="stt">
                                             <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
@@ -151,14 +222,7 @@
                                             <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
                                             <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
                                         </div>
-                                        <div class="custom-col-item" data-col-target="actions">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-actions" checked>
-                                            <label for="chk-col-actions" class="custom-col-name">Thao tác</label>
-                                        </div>
                                     </div>
-
-                                    <!-- Nút Thao tác Footer -->
                                     <div class="custom-column-footer">
                                         <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
                                             Lấy lại mặc định
@@ -171,131 +235,183 @@
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </section>
+                    </div>
 
-                <!-- BẢNG DỮ LIỆU TÀI KHOẢN BỊ CẤM CHUẨN MISA -->
-                <section class="staff-table-card">
-                    <div class="staff-table-wrapper">
-                        <table class="table staff-modern-table align-middle" id="banTable">
-                            <colgroup>
-                                <col data-col="stt" style="width: 60px;">
-                                <col data-col="user" style="width: 210px;">
-                                <col data-col="reason" style="width: 260px;">
-                                <col data-col="bannedBy" style="width: 150px;">
-                                <col data-col="bannedAt" style="width: 150px;">
-                                <col data-col="expiresAt" style="width: 150px;">
-                                <col data-col="status" style="width: 150px;">
-                                <col data-col="actions" style="width: 120px;">
-                            </colgroup>
+                    <div class="dv-table-scroll-container">
+                        <table class="dv-amis-table" id="banTable">
                             <thead>
                             <tr>
-                                <th data-col="stt" style="width: 60px; min-width: 50px;">
-                                    <span>#</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                    <div class="dv-th-inner justify-content-center"><span>#</span></div>
                                 </th>
-                                <th data-col="user" style="width: 210px; min-width: 170px;">
-                                    <span>Tài khoản</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="user" style="min-width: 250px;">
+                                    <div class="dv-th-inner"><span>Tài khoản</span></div>
                                 </th>
-                                <th data-col="reason" style="width: 260px; min-width: 180px;">
-                                    <span>Lý do cấm</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="reason" style="min-width: 250px;">
+                                    <div class="dv-th-inner"><span>Lý do cấm</span></div>
                                 </th>
-                                <th data-col="bannedBy" style="width: 150px; min-width: 120px;">
-                                    <span>Người cấm</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="bannedBy" style="min-width: 170px;">
+                                    <div class="dv-th-inner"><span>Người cấm</span></div>
                                 </th>
-                                <th data-col="bannedAt" style="width: 150px; min-width: 120px;">
-                                    <span>Ngày cấm</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="bannedAt" style="min-width: 170px;">
+                                    <div class="dv-th-inner"><span>Ngày cấm</span></div>
                                 </th>
-                                <th data-col="expiresAt" style="width: 150px; min-width: 120px;">
-                                    <span>Hạn cấm</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="expiresAt" style="min-width: 170px;">
+                                    <div class="dv-th-inner"><span>Hạn cấm</span></div>
                                 </th>
-                                <th data-col="status" style="width: 150px; min-width: 120px;">
-                                    <span>Trạng thái</span>
-                                    <div class="col-resizer"></div>
+                                <th data-col="status" style="min-width: 160px;">
+                                    <div class="dv-th-inner"><span>Trạng thái</span></div>
                                 </th>
-                                <th data-col="actions" style="width: 120px; min-width: 100px;">
-                                    <span>Thao tác</span>
+                                <th data-col="actions" class="text-center" style="min-width: 360px;">
+                                    <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                                 </th>
+                                <th class="dv-floating-actions-track"></th>
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:each="ban, iter : ${bans}"
-                                th:data-ban-id="${ban.banId}">
+                            <tr class="dv-data-row" th:each="ban, iter : ${bans}"
+                                th:data-ban-id="${ban.banId}"
+                                th:data-username="${ban.user != null ? ban.user.username : ''}">
 
                                 <!-- 1. STT -->
-                                <td data-col="stt" class="text-muted fw-semibold">
+                                <td data-col="stt" class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
                                     <span th:text="${currentPage * pageSize + iter.count}">1</span>
                                 </td>
 
-                                <!-- 2. Tài khoản -->
-                                <td data-col="user">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="staff-avatar bg-secondary text-white"
-                                              th:text="${ban.user != null and !#strings.isEmpty(ban.user.username) ? #strings.toUpperCase(#strings.substring(ban.user.username, 0, 1)) : 'U'}">U</span>
-                                        <div class="text-truncate" style="max-width: 160px;">
-                                            <div class="fw-semibold text-dark text-truncate small"
-                                                 th:text="${ban.user != null ? ban.user.username : 'User'}">User</div>
-                                            <div class="text-muted small text-truncate"
-                                                 th:if="${ban.user != null and ban.user.email != null}"
-                                                 th:text="${ban.user.email}">user@gmail.com</div>
+                                <!-- 2. Tài khoản + Avatar + Email -->
+                                <td data-col="user" style="min-width: 250px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="dv-patient-avatar flex-shrink-0 avatar-secondary"
+                                             th:text="${ban.user != null and !#strings.isEmpty(ban.user.username) ? #strings.toUpperCase(#strings.substring(ban.user.username, 0, 1)) : 'U'}">U</div>
+                                        <div class="d-flex flex-column justify-content-center">
+                                            <span class="dv-patient-name" th:text="${ban.user != null ? ban.user.username : 'User'}">username</span>
+                                            <div class="text-secondary small fw-semibold mt-1" th:if="${ban.user != null and ban.user.email != null}">
+                                                <i class="bi bi-envelope me-1 text-muted"></i><span th:text="${ban.user.email}">user@gmail.com</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
 
                                 <!-- 3. Lý do cấm -->
-                                <td data-col="reason">
-                                    <span class="text-dark small" th:text="${ban.reason != null ? ban.reason : 'Vi phạm quy định'}">Lý do</span>
+                                <td data-col="reason" style="min-width: 250px;">
+                                    <span class="fw-semibold text-dark" style="font-size: 14px;" th:text="${ban.reason != null ? ban.reason : 'Vi phạm quy định'}">Lý do</span>
                                 </td>
 
                                 <!-- 4. Người cấm -->
-                                <td data-col="bannedBy">
-                                    <span class="small fw-semibold text-truncate"
-                                          th:text="${ban.bannedBy != null ? ban.bannedBy.username : 'Hệ thống'}">Admin</span>
+                                <td data-col="bannedBy" style="min-width: 170px;">
+                                    <span class="chip chip--role">
+                                        <i class="bi bi-shield-check me-1"></i>
+                                        <span th:text="${ban.bannedBy != null ? ban.bannedBy.username : 'Hệ thống'}">Admin</span>
+                                    </span>
                                 </td>
 
                                 <!-- 5. Ngày cấm -->
-                                <td data-col="bannedAt">
-                                    <span class="small text-muted"
-                                          th:text="${ban.bannedAt != null ? #temporals.format(ban.bannedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                                <td data-col="bannedAt" style="min-width: 170px;">
+                                    <div class="small fw-semibold text-secondary">
+                                        <i class="bi bi-calendar3 me-1 text-muted"></i><span th:text="${ban.bannedAt != null ? #temporals.format(ban.bannedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                                    </div>
                                 </td>
 
                                 <!-- 6. Hạn cấm -->
-                                <td data-col="expiresAt">
-                                    <span th:if="${ban.expiresAt != null}" class="small text-muted"
-                                          th:text="${#temporals.format(ban.expiresAt, 'dd/MM/yyyy HH:mm')}">30/12/2026</span>
-                                    <span th:if="${ban.expiresAt == null}" class="badge bg-danger-subtle text-danger border">Vĩnh viễn</span>
-                                </td>
-
-                                <!-- 7. Trạng thái -->
-                                <td data-col="status">
-                                    <span th:if="${ban.active}" class="misa-status-badge misa-status-badge--inactive">
-                                        Đang bị cấm
+                                <td data-col="expiresAt" style="min-width: 170px;">
+                                    <span th:if="${ban.expiresAt != null}" class="badge bg-light text-dark border px-2.5 py-1 fw-bold" style="font-size: 12.5px;">
+                                        <i class="bi bi-clock me-1 text-primary"></i><span th:text="${#temporals.format(ban.expiresAt, 'dd/MM/yyyy HH:mm')}">30/12/2026</span>
                                     </span>
-                                    <span th:if="${!ban.active}" class="misa-status-badge misa-status-badge--active">
-                                        Đã gỡ cấm
+                                    <span th:if="${ban.expiresAt == null}" class="badge bg-danger-subtle text-danger border px-2.5 py-1 fw-bold" style="font-size: 12.5px;">
+                                        <i class="bi bi-infinity me-1"></i>Vĩnh viễn
                                     </span>
                                 </td>
 
-                                <!-- 8. Thao tác -->
-                                <td data-col="actions">
-                                    <form th:if="${ban.active}" th:action="@{'/admin/bans/' + ${ban.banId} + '/unban'}" method="post"
-                                          onsubmit="return confirm('Bạn có chắc muốn GỠ CẤM bình luận cho tài khoản này không?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Gỡ cấm bình luận">
-                                            <i class="bi bi-unlock me-1"></i>Gỡ cấm
+                                <!-- 7. Trạng thái (Đồng bộ chuẩn Quản lý tài khoản) -->
+                                <td data-col="status" style="min-width: 160px;">
+                                    <span class="badge rounded-pill px-3 py-1.5 fw-bold"
+                                          th:style="${ban.active} ? 'background:#fef2f2;color:#dc2626;font-size:12.5px;border:1px solid #fecaca;' : 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;'">
+                                        <i class="bi" th:classappend="${ban.active} ? 'bi-slash-circle-fill me-1' : 'bi-check-circle-fill me-1'"></i>
+                                        <span th:text="${ban.active} ? 'Đang bị cấm' : 'Đã gỡ cấm'">Đang bị cấm</span>
+                                    </span>
+                                </td>
+
+                                <!-- 8. Cột Thao tác tĩnh -->
+                                <td data-col="actions" class="text-center" style="min-width: 360px;">
+                                    <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
+                                        <!-- Nút 1: Xem bình luận -->
+                                        <a th:href="@{/admin/comments(keyword=${ban.user != null ? ban.user.username : ''})}"
+                                           class="dv-equal-btn-primary"
+                                           title="Xem các bình luận của tài khoản này">
+                                            <i class="bi bi-chat-dots"></i>
+                                            <span>Xem bình luận</span>
+                                        </a>
+
+                                        <!-- Nút 2: Sửa lệnh (chỉ hiển thị khi Đang bị cấm) -->
+                                        <button th:if="${ban.active}" type="button"
+                                                class="dv-equal-btn-secondary"
+                                                th:data-username="${ban.user != null ? ban.user.username : ''}"
+                                                th:data-reason="${ban.reason != null ? ban.reason : ''}"
+                                                onclick="openRebanModal(this.getAttribute('data-username'), this.getAttribute('data-reason'), true)"
+                                                title="Mở form chỉnh lý do / thời hạn cấm">
+                                            <i class="bi bi-pencil text-primary"></i>
+                                            <span>Sửa lệnh</span>
                                         </button>
-                                    </form>
-                                    <span th:if="${!ban.active}" class="text-muted small">—</span>
+
+                                        <!-- Nút 3: Gỡ cấm (nếu active) HOẶC Cấm lại (nếu !active) -->
+                                        <form th:if="${ban.active}" th:action="@{'/admin/bans/' + ${ban.banId} + '/unban'}" method="post" class="d-inline"
+                                              onsubmit="return confirm('Bạn có chắc muốn GỠ CẤM bình luận cho tài khoản này không?');">
+                                            <button type="submit" class="dv-equal-btn-secondary" style="color: #059669 !important; border-color: #a7f3d0 !important;" title="Gỡ cấm ngay">
+                                                <i class="bi bi-unlock text-success"></i>
+                                                <span>Gỡ cấm</span>
+                                            </button>
+                                        </form>
+                                        <button th:if="${!ban.active}" type="button" class="dv-equal-btn-danger"
+                                                th:data-username="${ban.user != null ? ban.user.username : ''}"
+                                                onclick="openRebanModal(this.getAttribute('data-username'), '', false)"
+                                                title="Áp dụng lại lệnh cấm">
+                                            <i class="bi bi-slash-circle"></i>
+                                            <span>Cấm lại</span>
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <!-- 9. Khung Thao tác nổi khi Hover dòng -->
+                                <td class="dv-floating-actions-track">
+                                    <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                        <a th:href="@{/admin/comments(keyword=${ban.user != null ? ban.user.username : ''})}"
+                                           class="dv-equal-btn-primary"
+                                           title="Xem các bình luận của tài khoản này">
+                                            <i class="bi bi-chat-dots"></i>
+                                            <span>Xem bình luận</span>
+                                        </a>
+
+                                        <button th:if="${ban.active}" type="button"
+                                                class="dv-equal-btn-secondary"
+                                                th:data-username="${ban.user != null ? ban.user.username : ''}"
+                                                th:data-reason="${ban.reason != null ? ban.reason : ''}"
+                                                onclick="openRebanModal(this.getAttribute('data-username'), this.getAttribute('data-reason'), true)"
+                                                title="Mở form chỉnh lý do / thời hạn cấm">
+                                            <i class="bi bi-pencil text-primary"></i>
+                                            <span>Sửa lệnh</span>
+                                        </button>
+
+                                        <form th:if="${ban.active}" th:action="@{'/admin/bans/' + ${ban.banId} + '/unban'}" method="post" class="d-inline"
+                                              onsubmit="return confirm('Bạn có chắc muốn GỠ CẤM bình luận cho tài khoản này không?');">
+                                            <button type="submit" class="dv-equal-btn-secondary" style="color: #059669 !important; border-color: #a7f3d0 !important;" title="Gỡ cấm ngay">
+                                                <i class="bi bi-unlock text-success"></i>
+                                                <span>Gỡ cấm</span>
+                                            </button>
+                                        </form>
+                                        <button th:if="${!ban.active}" type="button" class="dv-equal-btn-danger"
+                                                th:data-username="${ban.user != null ? ban.user.username : ''}"
+                                                onclick="openRebanModal(this.getAttribute('data-username'), '', false)"
+                                                title="Áp dụng lại lệnh cấm">
+                                            <i class="bi bi-slash-circle"></i>
+                                            <span>Cấm lại</span>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 
-                            <!-- Empty State khi không có dữ liệu -->
+                            <!-- Empty State -->
                             <tr th:if="${#lists.isEmpty(bans)}">
-                                <td colspan="8" class="p-0">
+                                <td colspan="9" class="p-0">
                                     <div class="account-empty-state">
                                         <div class="account-empty-icon">
                                             <i class="bi bi-shield-check"></i>
@@ -308,8 +424,8 @@
                                             <a th:href="@{/admin/bans}" class="btn btn-secondary-custom btn-be">
                                                 <i class="bi bi-arrow-counterclockwise"></i> Đặt lại bộ lọc
                                             </a>
-                                            <button type="button" class="btn btn-primary btn-be" data-bs-toggle="modal" data-bs-target="#createBanModal">
-                                                <i class="bi bi-plus-lg"></i> Thêm mới
+                                            <button type="button" class="btn btn-primary btn-be" onclick="openCreateBanModal()">
+                                                <i class="bi bi-plus-lg"></i> Cấm tài khoản
                                             </button>
                                         </div>
                                     </div>
@@ -321,14 +437,11 @@
 
                     <!-- FOOTER PHÂN TRANG CHUẨN MISA -->
                     <div class="misa-pagination-footer">
-                        <!-- Bên trái: Tổng số -->
                         <div class="misa-pagination-left">
                             Tổng số: <strong th:text="${totalItems}">0</strong>
                         </div>
 
-                        <!-- Bên phải: Số dòng/trang + Range + Navigation -->
                         <div class="misa-pagination-right">
-                            <!-- Chọn số dòng/trang -->
                             <div class="misa-page-size-wrapper">
                                 <span>Số dòng/trang</span>
                                 <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
@@ -339,38 +452,31 @@
                                 </select>
                             </div>
 
-                            <!-- Khoảng hiển thị -->
                             <div class="misa-page-range">
                                 <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
                             </div>
 
-                            <!-- Nút phân trang (|< < > >|) -->
-                            <div class="d-flex align-items-center gap-1">
-                                <!-- Về trang đầu -->
+                            <div class="misa-page-nav">
                                 <a th:href="@{/admin/bans(page=0, size=${pageSize}, keyword=${keyword}, activeOnly=${activeOnly})}"
                                    class="misa-nav-btn"
                                    th:classappend="${currentPage == 0} ? 'disabled' : ''"
                                    title="Trang đầu">
                                     <i class="bi bi-chevron-bar-left"></i>
                                 </a>
-
-                                <!-- Trang trước -->
                                 <a th:href="@{/admin/bans(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, activeOnly=${activeOnly})}"
                                    class="misa-nav-btn"
                                    th:classappend="${currentPage == 0} ? 'disabled' : ''"
                                    title="Trang trước">
                                     <i class="bi bi-chevron-left"></i>
                                 </a>
-
-                                <!-- Trang kế tiếp -->
+                                <span class="misa-page-current" th:text="${currentPage + 1}">1</span>
+                                <span class="text-muted small">/ <span th:text="${totalPages == 0 ? 1 : totalPages}">1</span></span>
                                 <a th:href="@{/admin/bans(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, activeOnly=${activeOnly})}"
                                    class="misa-nav-btn"
                                    th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
                                    title="Trang sau">
                                     <i class="bi bi-chevron-right"></i>
                                 </a>
-
-                                <!-- Đến trang cuối -->
                                 <a th:href="@{/admin/bans(page=${totalPages - 1}, size=${pageSize}, keyword=${keyword}, activeOnly=${activeOnly})}"
                                    class="misa-nav-btn"
                                    th:classappend="${currentPage >= totalPages - 1} ? 'disabled' : ''"
@@ -385,43 +491,82 @@
         </div>
     </div>
 
-    <!-- MODAL THÊM LỆNH CẤM TRỰC TIẾP (SCR-39.4) -->
+    <!-- Modal Thêm mới / Cấm lại lệnh cấm -->
     <div class="modal fade" id="createBanModal" tabindex="-1" aria-labelledby="createBanModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
-            <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-                    <h5 class="modal-title fw-bold text-dark fs-6" id="createBanModalLabel">
-                        <i class="bi bi-person-slash text-danger me-2"></i>Thêm lệnh cấm bình luận mới
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
+        <div class="modal-dialog">
+            <div class="modal-content">
                 <form th:action="@{/admin/bans/create}" method="post">
-                    <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createBanModalLabel">
+                            <i class="bi bi-slash-circle text-danger me-2"></i>Áp dụng lệnh cấm bình luận
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold text-muted">Tên đăng nhập hoặc Email người dùng <span class="text-danger">*</span></label>
-                            <input type="text" name="usernameOrEmail" class="form-control form-control-sm" required
-                                   placeholder="Ví dụ: patient01 hoặc user@gmail.com">
+                            <label for="createUsername" class="form-label fw-semibold">Tên đăng nhập (Username) hoặc Email <span class="text-danger">*</span></label>
+                            <input type="text" id="createUsername" name="usernameOrEmail" class="form-control"
+                                   placeholder="Ví dụ: patient_01 hoặc user@example.com" required>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold text-muted">Lý do cấm vi phạm <span class="text-danger">*</span></label>
-                            <input type="text" name="reason" class="form-control form-control-sm" required
-                                   placeholder="Nhập lý do xử phạt...">
+                            <label for="createReason" class="form-label fw-semibold">Lý do cấm <span class="text-danger">*</span></label>
+                            <textarea id="createReason" name="reason" rows="3" class="form-control"
+                                      placeholder="Ví dụ: Đăng tải nội dung đả kích, thông tin sai lệch..." required></textarea>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold text-muted">Thời hạn cấm</label>
-                            <select name="durationDays" class="form-select form-select-sm">
+                            <label for="createDays" class="form-label fw-semibold">Thời hạn cấm</label>
+                            <select id="createDays" name="durationDays" class="form-select">
+                                <option value="1">1 ngày</option>
                                 <option value="3">3 ngày</option>
                                 <option value="7" selected>7 ngày</option>
                                 <option value="30">30 ngày</option>
-                                <option value="0">Vĩnh viễn (Không thời hạn)</option>
+                                <option value="0">Vĩnh viễn</option>
                             </select>
                         </div>
                     </div>
-                    <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white" style="border-top: 1px solid #e2e8f0;">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-danger btn-vua">Thiết lập lệnh cấm</button>
+                        <button type="submit" class="btn btn-danger btn-vua">
+                            <i class="bi bi-slash-circle me-1"></i> Áp dụng cấm
+                        </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỌC NÂNG CAO TÀI KHOẢN BỊ CẤM -->
+    <div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+                    <h5 class="modal-title fw-bold text-dark fs-6" id="advancedFilterModalLabel">
+                        <i class="bi bi-funnel text-primary me-2"></i>Bộ lọc nâng cao
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 py-3" style="background: #ffffff;">
+                    <!-- 1. Trạng thái cấm -->
+                    <div class="mb-3">
+                        <label for="advActiveOnly" class="form-label small fw-semibold text-muted">Trạng thái lệnh cấm</label>
+                        <select id="advActiveOnly" class="form-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="true" th:selected="${activeOnly != null and activeOnly == true}">Đang bị cấm</option>
+                            <option value="false" th:selected="${activeOnly != null and activeOnly == false}">Đã gỡ cấm</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer px-4 py-3 justify-content-between bg-white" style="border-top: 1px solid #e2e8f0;">
+                    <button type="button" id="btnResetAdvancedFilter" class="btn btn-link text-decoration-none text-muted p-0 small">
+                        Đặt lại
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" id="btnApplyAdvancedFilter" class="btn btn-primary btn-vua">Áp dụng</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -429,6 +574,40 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+    function openCreateBanModal() {
+        const input = document.getElementById('createUsername');
+        const reasonInput = document.getElementById('createReason');
+        const titleEl = document.getElementById('createBanModalLabel');
+        if (input) {
+            input.value = '';
+            input.readOnly = false;
+        }
+        if (reasonInput) reasonInput.value = '';
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="bi bi-slash-circle text-danger me-2"></i>Áp dụng lệnh cấm bình luận';
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createBanModal'));
+        modal.show();
+    }
+
+    function openRebanModal(username, reason, isEdit) {
+        const input = document.getElementById('createUsername');
+        const reasonInput = document.getElementById('createReason');
+        const titleEl = document.getElementById('createBanModalLabel');
+        if (input) {
+            input.value = username || '';
+            input.readOnly = true;
+        }
+        if (reasonInput) reasonInput.value = reason || '';
+        if (titleEl) {
+            titleEl.innerHTML = isEdit
+                ? '<i class="bi bi-pencil-square text-primary me-2"></i>Cập nhật lệnh cấm: ' + (username || '')
+                : '<i class="bi bi-slash-circle text-danger me-2"></i>Cấm lại tài khoản: ' + (username || '');
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createBanModal'));
+        modal.show();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         // 1. Phân trang & Đổi số dòng / trang
         const pageSizeSelect = document.getElementById('pageSizeSelect');
@@ -439,308 +618,54 @@
         if (pageSizeSelect && filterForm && pageSizeInput) {
             pageSizeSelect.addEventListener('change', function () {
                 pageSizeInput.value = this.value;
-                if (pageIndexInput) {
-                    pageIndexInput.value = '0';
-                }
+                if (pageIndexInput) pageIndexInput.value = '0';
                 filterForm.submit();
             });
         }
 
-        // 2. Kéo dãn cột & Tùy chỉnh cột chuẩn MISA
-        const table = document.getElementById('banTable');
-        const STORAGE_WIDTH_KEY = 'cv_ban_table_widths_v1';
-        const STORAGE_CONFIG_KEY = 'cv_ban_cols_v1';
+        // Xử lý Modal Lọc nâng cao
+        const btnApplyAdv = document.getElementById('btnApplyAdvancedFilter');
+        const btnResetAdv = document.getElementById('btnResetAdvancedFilter');
+        const activeOnlyInput = document.getElementById('activeOnlyInput');
+        const advActiveOnly = document.getElementById('advActiveOnly');
 
-        const defaultColOrder = ['stt', 'user', 'reason', 'bannedBy', 'bannedAt', 'expiresAt', 'status', 'actions'];
-        const defaultColWidths = {
-            stt: 60,
-            user: 210,
-            reason: 260,
-            bannedBy: 150,
-            bannedAt: 150,
-            expiresAt: 150,
-            status: 150,
-            actions: 120
-        };
-
-        let currentWidths = loadColWidths();
-        let currentConfig = getColConfig();
-
-        function loadColWidths() {
-            try {
-                const saved = localStorage.getItem(STORAGE_WIDTH_KEY);
-                return saved ? JSON.parse(saved) : Object.assign({}, defaultColWidths);
-            } catch (e) {
-                return Object.assign({}, defaultColWidths);
-            }
-        }
-
-        function saveColWidths(widths) {
-            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(widths));
-        }
-
-        function getColConfig() {
-            try {
-                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
-                if (!raw) return { order: defaultColOrder.slice(), hidden: [] };
-                const parsed = JSON.parse(raw);
-                const order = Array.isArray(parsed.order) && parsed.order.length > 0 ? parsed.order : defaultColOrder.slice();
-                defaultColOrder.forEach(col => {
-                    if (!order.includes(col)) order.push(col);
-                });
-                const hidden = Array.isArray(parsed.hidden) ? parsed.hidden : [];
-                return { order, hidden };
-            } catch (e) {
-                return { order: defaultColOrder.slice(), hidden: [] };
-            }
-        }
-
-        function saveColConfig(config) {
-            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
-        }
-
-        function applyColOrder(order) {
-            if (!order || !Array.isArray(order) || !table) return;
-
-            const customColList = document.getElementById('customColList');
-            if (customColList) {
-                order.forEach(colKey => {
-                    const item = customColList.querySelector(`[data-col-target="${colKey}"]`);
-                    if (item) customColList.appendChild(item);
-                });
-            }
-
-            const colgroup = table.querySelector('colgroup');
-            if (colgroup) {
-                order.forEach(colKey => {
-                    const col = colgroup.querySelector(`col[data-col="${colKey}"]`);
-                    if (col) colgroup.appendChild(col);
-                });
-            }
-
-            const theadTr = table.querySelector('thead tr');
-            if (theadTr) {
-                order.forEach(colKey => {
-                    const th = theadTr.querySelector(`th[data-col="${colKey}"]`);
-                    if (th) theadTr.appendChild(th);
-                });
-            }
-
-            const tbodyRows = table.querySelectorAll('tbody tr');
-            tbodyRows.forEach(tr => {
-                order.forEach(colKey => {
-                    const td = tr.querySelector(`td[data-col="${colKey}"]`);
-                    if (td) tr.appendChild(td);
-                });
+        if (btnApplyAdv && filterForm) {
+            btnApplyAdv.addEventListener('click', function () {
+                if (activeOnlyInput && advActiveOnly) activeOnlyInput.value = advActiveOnly.value;
+                if (pageIndexInput) pageIndexInput.value = '0';
+                filterForm.submit();
             });
         }
 
-        function applyColWidths() {
-            if (!table) return;
-            currentWidths = loadColWidths();
-            let totalColsWidth = 0;
-
-            const order = (currentConfig && currentConfig.order) ? currentConfig.order : defaultColOrder;
-            order.forEach(col => {
-                const w = currentWidths[col] || defaultColWidths[col] || 150;
-                currentWidths[col] = w;
-
-                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
-                if (colEl) colEl.style.width = w + 'px';
-
-                const th = table.querySelector(`thead th[data-col="${col}"]`);
-                if (th) {
-                    th.style.width = w + 'px';
-                    th.style.minWidth = w + 'px';
-                    if (!th.classList.contains('d-none')) {
-                        totalColsWidth += w;
-                    }
-                }
-            });
-
-            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-            table.style.width = Math.max(totalColsWidth, containerW) + 'px';
-        }
-
-        function applyColConfig(config) {
-            if (!table) return;
-
-            const order = (config && config.order) ? config.order : defaultColOrder;
-            let visibleTotalW = 0;
-
-            order.forEach(col => {
-                const isHidden = config.hidden.includes(col);
-                const cells = table.querySelectorAll(`[data-col="${col}"]`);
-                cells.forEach(cell => {
-                    if (isHidden) {
-                        cell.classList.add('d-none');
-                    } else {
-                        cell.classList.remove('d-none');
-                    }
-                });
-
-                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
-                if (colEl) {
-                    colEl.style.display = isHidden ? 'none' : '';
-                }
-
-                if (!isHidden) {
-                    visibleTotalW += (currentWidths[col] || defaultColWidths[col] || 150);
-                }
-
-                const chk = document.getElementById(`chk-col-${col}`);
-                if (chk) chk.checked = !isHidden;
-            });
-
-            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-            table.style.width = Math.max(visibleTotalW, containerW) + 'px';
-        }
-
-        function initDrawerDragAndDrop() {
-            const colList = document.getElementById('customColList');
-            if (!colList) return;
-
-            let draggedItem = null;
-
-            colList.querySelectorAll('.custom-col-item').forEach(item => {
-                item.setAttribute('draggable', 'true');
-
-                item.addEventListener('dragstart', function () {
-                    draggedItem = this;
-                    this.classList.add('is-dragging');
-                });
-
-                item.addEventListener('dragend', function () {
-                    this.classList.remove('is-dragging');
-                    draggedItem = null;
-                });
-
-                item.addEventListener('dragover', function (e) {
-                    e.preventDefault();
-                    if (draggedItem && draggedItem !== this) {
-                        const rect = this.getBoundingClientRect();
-                        const mid = rect.top + rect.height / 2;
-                        if (e.clientY < mid) {
-                            colList.insertBefore(draggedItem, this);
-                        } else {
-                            colList.insertBefore(draggedItem, this.nextSibling);
-                        }
-                    }
-                });
+        if (btnResetAdv && filterForm) {
+            btnResetAdv.addEventListener('click', function () {
+                if (advActiveOnly) advActiveOnly.value = '';
+                if (activeOnlyInput) activeOnlyInput.value = '';
+                if (pageIndexInput) pageIndexInput.value = '0';
+                filterForm.submit();
             });
         }
 
-        function initColumnResizers() {
-            if (!table) return;
-            const resizers = table.querySelectorAll('.col-resizer');
-
-            resizers.forEach(resizer => {
-                let startX, startW, colKey, colEl, thEl;
-
-                resizer.addEventListener('mousedown', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    thEl = resizer.parentElement;
-                    colKey = thEl.getAttribute('data-col');
-                    colEl = table.querySelector(`colgroup col[data-col="${colKey}"]`);
-
-                    startX = e.pageX;
-                    startW = thEl.offsetWidth;
-
-                    resizer.classList.add('is-resizing');
-                    document.body.style.cursor = 'col-resize';
-                    document.body.style.userSelect = 'none';
-
-                    function onMouseMove(e) {
-                        const diff = e.pageX - startX;
-                        const minW = 60;
-                        const newW = Math.max(startW + diff, minW);
-
-                        if (thEl) {
-                            thEl.style.width = newW + 'px';
-                            thEl.style.minWidth = newW + 'px';
-                        }
-                        if (colEl) {
-                            colEl.style.width = newW + 'px';
-                        }
-                        currentWidths[colKey] = newW;
-
-                        let totalW = 0;
-                        defaultColOrder.forEach(col => {
-                            if (!currentConfig.hidden.includes(col)) {
-                                totalW += (currentWidths[col] || defaultColWidths[col] || 150);
-                            }
-                        });
-
-                        const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
-                        table.style.width = Math.max(totalW, containerW) + 'px';
-                    }
-
-                    function onMouseUp() {
-                        resizer.classList.remove('is-resizing');
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
-
-                        saveColWidths(currentWidths);
-
-                        document.removeEventListener('mousemove', onMouseMove);
-                        document.removeEventListener('mouseup', onMouseUp);
-                    }
-
-                    document.addEventListener('mousemove', onMouseMove);
-                    document.addEventListener('mouseup', onMouseUp);
-                });
-            });
-        }
-
-        // Quản lý Popover Tùy chỉnh cột
+        // 2. Tùy chỉnh cột & Popover
         const popoverEl = document.getElementById('customColumnPopover');
         const btnToggleCol = document.getElementById('btnToggleCustomColumns');
         const btnCloseCol = document.getElementById('btnCloseColPopover');
         const btnCancelCol = document.getElementById('btnCancelCols');
-        const colSearchInput = document.getElementById('colSearchInput');
 
         function openCustomColPopover() {
             if (!popoverEl) return;
             popoverEl.style.display = 'block';
-            if (btnToggleCol) {
-                btnToggleCol.setAttribute('aria-expanded', 'true');
-                btnToggleCol.classList.add('active');
-            }
-            document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
-                const colKey = item.getAttribute('data-col-target');
-                const chk = item.querySelector('.custom-col-check');
-                if (chk) {
-                    chk.checked = !currentConfig.hidden.includes(colKey);
-                }
-            });
-            if (colSearchInput) {
-                colSearchInput.value = '';
-                const items = document.querySelectorAll('#customColList .custom-col-item');
-                items.forEach(it => it.style.display = '');
-                setTimeout(() => colSearchInput.focus(), 60);
-            }
         }
 
         function closeCustomColPopover() {
-            if (!popoverEl) return;
-            popoverEl.style.display = 'none';
-            if (btnToggleCol) {
-                btnToggleCol.setAttribute('aria-expanded', 'false');
-                btnToggleCol.classList.remove('active');
-            }
+            if (popoverEl) popoverEl.style.display = 'none';
         }
 
         if (btnToggleCol) {
             btnToggleCol.addEventListener('click', function (e) {
-                e.preventDefault();
                 e.stopPropagation();
-                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
-                    openCustomColPopover();
-                } else {
-                    closeCustomColPopover();
-                }
+                if (popoverEl.style.display === 'block') closeCustomColPopover();
+                else openCustomColPopover();
             });
         }
 
@@ -748,73 +673,10 @@
         if (btnCancelCol) btnCancelCol.addEventListener('click', closeCustomColPopover);
 
         document.addEventListener('click', function (e) {
-            if (popoverEl && popoverEl.style.display !== 'none') {
-                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
-                    closeCustomColPopover();
-                }
+            if (popoverEl && popoverEl.style.display === 'block' && !popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
+                closeCustomColPopover();
             }
         });
-
-        if (colSearchInput) {
-            colSearchInput.addEventListener('input', function () {
-                const term = this.value.toLowerCase().trim();
-                const items = document.querySelectorAll('#customColList .custom-col-item');
-                items.forEach(item => {
-                    const label = item.querySelector('.custom-col-name').textContent.toLowerCase();
-                    item.style.display = label.includes(term) ? '' : 'none';
-                });
-            });
-        }
-
-        const btnSaveCols = document.getElementById('btnSaveCols');
-        if (btnSaveCols) {
-            btnSaveCols.addEventListener('click', function () {
-                const items = document.querySelectorAll('#customColList .custom-col-item');
-                const order = [];
-                const hidden = [];
-
-                items.forEach(item => {
-                    const colKey = item.getAttribute('data-col-target');
-                    order.push(colKey);
-                    const chk = item.querySelector('.custom-col-check');
-                    if (chk && !chk.checked) {
-                        hidden.push(colKey);
-                    }
-                });
-
-                currentConfig = { order, hidden };
-                saveColConfig(currentConfig);
-
-                applyColOrder(order);
-                applyColConfig(currentConfig);
-
-                closeCustomColPopover();
-            });
-        }
-
-        const btnResetCols = document.getElementById('btnResetCols');
-        if (btnResetCols) {
-            btnResetCols.addEventListener('click', function () {
-                localStorage.removeItem(STORAGE_WIDTH_KEY);
-                localStorage.removeItem(STORAGE_CONFIG_KEY);
-
-                currentWidths = Object.assign({}, defaultColWidths);
-                currentConfig = { order: defaultColOrder.slice(), hidden: [] };
-
-                applyColOrder(currentConfig.order);
-                applyColConfig(currentConfig);
-                applyColWidths();
-
-                closeCustomColPopover();
-            });
-        }
-
-        // Khởi tạo
-        applyColOrder(currentConfig.order);
-        applyColConfig(currentConfig);
-        applyColWidths();
-        initColumnResizers();
-        initDrawerDragAndDrop();
     });
     </script>
 </body>

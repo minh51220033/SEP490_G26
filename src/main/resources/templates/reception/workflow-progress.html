@@ -14,301 +14,298 @@
 
             <header th:replace="~{fragments/header :: appTopbar('Tiến độ quy trình khám')}"></header>
 
-        <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/staff.css}">
-            <link rel="stylesheet" th:href="@{/css/account.css}">
+            <main class="app-content">
+                <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+                <link rel="stylesheet" th:href="@{/css/staff.css}">
+                <link rel="stylesheet" th:href="@{/css/account.css}">
 
-            <!-- TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
-            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div>
-                    <h1 class="staff-page-title">Tiến độ quy trình khám</h1>
-                    <p class="staff-page-subtitle">Theo dõi bệnh nhân đang ở bước nào của quy trình khám &amp; điều trị để điều phối sang phòng hoặc hàng chờ tiếp theo</p>
-                </div>
-            </div>
+                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
+                <nav class="dv-breadcrumb mb-2">
+                    <a th:href="@{/}">Trang chủ</a> / <span>Tiếp đón</span> / <span>Tiến độ quy trình khám</span>
+                </nav>
 
-            <!-- TOOLBAR / BỘ LỌC CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
-            <section class="staff-toolbar-card">
-                <form th:action="@{/reception/workflow-progress}" method="get" id="wfFilterForm" class="staff-toolbar-form">
-                    <!-- Bên trái: Ô tìm kiếm + Ngày khám + Chi nhánh + Trạng thái -->
-                    <div class="staff-toolbar-left">
-                        <!-- 1. Ô tìm kiếm nhỏ gọn -->
-                        <div class="staff-search-box-compact">
-                            <i class="bi bi-search"></i>
-                            <input type="text" id="wfKeyword" class="form-control"
-                                   placeholder="Tìm kiếm bệnh nhân, mã BN, dịch vụ, bác sĩ...">
+                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                            <i class="bi bi-diagram-3-fill"></i>
                         </div>
-
-                        <!-- 2. Chọn ngày khám -->
                         <div>
-                            <input type="date" name="date" class="form-control staff-select-compact"
-                                   th:value="${selectedDate}" onchange="this.form.submit()" aria-label="Ngày khám"
-                                   title="Chọn ngày khám">
+                            <h1 class="dv-page-title mb-0">Tiến độ quy trình khám</h1>
+                            <p class="dv-page-subtitle">Theo dõi bệnh nhân đang ở bước nào của quy trình khám &amp; điều trị để điều phối sang phòng hoặc hàng chờ tiếp theo</p>
                         </div>
-
-                        <!-- 3. Chọn chi nhánh -->
-                        <div>
-                            <select name="branchId" class="form-select staff-select-compact" onchange="this.form.submit()" aria-label="Chi nhánh">
-                                <option value="">Chi nhánh: Tất cả</option>
-                                <option th:each="b : ${branches}" th:value="${b.branchId}"
-                                        th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}"
-                                        th:text="${b.branchName}">Chi nhánh</option>
-                            </select>
-                        </div>
-
-                        <!-- 4. Lọc trạng thái -->
-                        <div>
-                            <select id="wfStatus" class="form-select staff-select-compact" aria-label="Trạng thái">
-                                <option value="">Trạng thái: Tất cả</option>
-                                <option value="IN_PROGRESS">Đang thực hiện</option>
-                                <option value="PAUSED">Tạm dừng (chờ CLS)</option>
-                                <option value="COMPLETED">Đã hoàn tất</option>
-                            </select>
-                        </div>
-
-                        <!-- Nút Xóa nhanh bộ lọc -->
-                        <a th:href="@{/reception/workflow-progress}" class="btn btn-link text-decoration-none text-muted p-0 ms-1 small" title="Đặt lại bộ lọc">
-                            <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
-                        </a>
                     </div>
-
-                    <!-- Bên phải: Các nút điều hướng nhanh + Nút Làm mới -->
-                    <div class="staff-toolbar-right">
-                        <a th:href="@{/reception/queue}" class="btn btn-secondary-custom btn-vua">
-                            <i class="bi bi-people me-1"></i> Hàng chờ khám
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/reception/queue}" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-people"></i> Hàng chờ khám
                         </a>
-                        <a th:href="@{/reception/dispatch}" class="btn btn-secondary-custom btn-vua">
-                            <i class="bi bi-diagram-3 me-1"></i> Điều phối ghế
+                        <a th:href="@{/reception/dispatch}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-diagram-3"></i> Điều phối ghế
                         </a>
-                        <button type="button" class="btn btn-secondary-custom btn-vua" onclick="window.location.reload()" title="Làm mới bảng">
+                        <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;" onclick="window.location.reload()" title="Làm mới bảng">
                             <i class="bi bi-arrow-clockwise"></i> Làm mới
                         </button>
                     </div>
-                </form>
-            </section>
+                </div>
 
-            <!-- BẢNG DỮ LIỆU MISA (Table) - Chiếm trọn chiều cao màn hình -->
-            <section class="staff-table-card">
-                <div class="staff-table-wrapper">
-                    <table class="table staff-modern-table align-middle" id="wfTable">
-                        <colgroup>
-                            <col data-col="stt" style="width: 55px;">
-                            <col data-col="patient" style="width: 230px;">
-                            <col data-col="service" style="width: 240px;">
-                            <col data-col="doctor" style="width: 170px;">
-                            <col data-col="step" style="width: 200px;">
-                            <col data-col="progress" style="width: 180px;">
-                            <col data-col="queue" style="width: 150px;">
-                            <col data-col="status" style="width: 140px;">
-                            <col data-col="actions" style="width: 110px;">
-                        </colgroup>
-                        <thead>
-                        <tr>
-                            <!-- 1. STT -->
-                            <th data-col="stt" style="width: 55px;" class="text-center">
-                                <span>#</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ CHUẨN -->
+                <div class="dv-toolbar-card">
+                    <form th:action="@{/reception/workflow-progress}" method="get" id="wfFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="wfKeyword" class="form-control"
+                                       placeholder="Tìm kiếm bệnh nhân, mã BN, dịch vụ, bác sĩ...">
+                            </div>
 
-                            <!-- 2. Bệnh nhân -->
-                            <th data-col="patient" style="width: 230px;">
-                                <span>Bệnh nhân</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                            <!-- Quick Segment Tabs -->
+                            <div class="dv-quick-segment" id="wfSegmentGroup" aria-label="Bộ lọc trạng thái">
+                                <button type="button" class="dv-seg-btn active" data-wf-status="">Tất cả</button>
+                                <button type="button" class="dv-seg-btn" data-wf-status="IN_PROGRESS">
+                                    <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#10b981;"></span>
+                                    Đang thực hiện
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-wf-status="PAUSED">
+                                    <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#f59e0b;"></span>
+                                    Tạm dừng
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-wf-status="COMPLETED">
+                                    <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#6366f1;"></span>
+                                    Hoàn tất
+                                </button>
+                            </div>
 
-                            <!-- 3. Dịch vụ & Quy trình -->
-                            <th data-col="service" style="width: 240px;">
-                                <span>Dịch vụ &amp; Quy trình</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                            <div>
+                                <input type="date" name="date" class="form-control staff-select-compact"
+                                       th:value="${selectedDate}" onchange="this.form.submit()" aria-label="Ngày khám"
+                                       title="Chọn ngày khám">
+                            </div>
 
-                            <!-- 4. Bác sĩ phụ trách -->
-                            <th data-col="doctor" style="width: 170px;">
-                                <span>Bác sĩ phụ trách</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                            <div>
+                                <select name="branchId" class="form-select staff-select-compact" onchange="this.form.submit()" aria-label="Chi nhánh">
+                                    <option value="">Chi nhánh: Tất cả</option>
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}"
+                                            th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}"
+                                            th:text="${b.branchName}">Chi nhánh</option>
+                                </select>
+                            </div>
 
-                            <!-- 5. Bước hiện tại -->
-                            <th data-col="step" style="width: 200px;">
-                                <span>Bước hiện tại</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                            <a th:href="@{/reception/workflow-progress}" class="btn btn-link text-decoration-none text-muted p-0 ms-1 small" title="Đặt lại bộ lọc">
+                                <i class="bi bi-x-circle text-danger me-1"></i>Xóa lọc
+                            </a>
+                        </div>
+                    </form>
+                </div>
 
-                            <!-- 6. Tiến độ thực hiện -->
-                            <th data-col="progress" style="width: 180px;">
-                                <span>Tiến độ thực hiện</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                <!-- BẢNG DỮ LIỆU TIẾN ĐỘ CHUẨN AMIS -->
+                <div class="staff-table-card mt-3">
+                    <div class="staff-table-header d-flex flex-wrap align-items-center justify-content-between gap-3 px-3 py-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">Hiển thị <strong th:text="${totalCount ?: 0}">0</strong> lượt khám</span>
+                            <span class="badge rounded-pill bg-light text-primary border px-2 py-1 small fw-normal d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-hand-index-thumb"></i> Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                            </span>
+                        </div>
+                    </div>
 
-                            <!-- 7. Hàng chờ tiếp theo -->
-                            <th data-col="queue" style="width: 150px;">
-                                <span>Hàng chờ tiếp</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                    <div class="dv-table-scroll-container">
+                        <table class="table table-hover align-middle m-0 staff-table dv-amis-table" id="wfTable">
+                            <thead>
+                            <tr>
+                                <th data-col="stt" style="width: 55px; min-width: 50px;" class="text-center">
+                                    <div class="th-content">#</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="patient" style="width: 230px; min-width: 180px;">
+                                    <div class="th-content">Bệnh nhân</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="service" style="width: 240px; min-width: 180px;">
+                                    <div class="th-content">Dịch vụ &amp; Quy trình</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="doctor" style="width: 170px; min-width: 140px;">
+                                    <div class="th-content">Bác sĩ phụ trách</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="step" style="width: 200px; min-width: 160px;">
+                                    <div class="th-content">Bước hiện tại</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="progress" style="width: 180px; min-width: 150px;">
+                                    <div class="th-content">Tiến độ thực hiện</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="queue" style="width: 150px; min-width: 130px;">
+                                    <div class="th-content">Hàng chờ tiếp</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th data-col="status" style="width: 140px; min-width: 120px;" class="text-center">
+                                    <div class="th-content">Trạng thái</div>
+                                    <div class="dv-resizer"></div>
+                                </th>
+                                <th class="text-center dv-actions-col-header" data-col="actions" style="width: 140px; min-width: 140px;">THAO TÁC</th>
+                                <th class="dv-floating-actions-track" style="width: 0; min-width: 0; padding: 0; border: none;"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="e, iter : ${executions}" class="wf-row staff-data-row position-relative"
+                                th:data-status="${e.status}"
+                                th:data-search="${#strings.toLowerCase((e.patientName != null ? e.patientName : '') + ' ' + (e.patientCode != null ? e.patientCode : '') + ' ' + (e.serviceName != null ? e.serviceName : '') + ' ' + (e.templateName != null ? e.templateName : '') + ' ' + (e.doctorName != null ? e.doctorName : ''))}">
 
-                            <!-- 8. Trạng thái -->
-                            <th data-col="status" style="width: 140px;" class="text-center">
-                                <span>Trạng thái</span>
-                                <div class="col-resizer"></div>
-                            </th>
+                                <!-- 1. STT -->
+                                <td data-col="stt" class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
 
-                            <!-- 9. Thao tác -->
-                            <th data-col="actions" style="width: 110px;" class="text-center">
-                                <span>Thao tác</span>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="e, iter : ${executions}" class="wf-row"
-                            th:data-status="${e.status}"
-                            th:data-search="${#strings.toLowerCase((e.patientName != null ? e.patientName : '') + ' ' + (e.patientCode != null ? e.patientCode : '') + ' ' + (e.serviceName != null ? e.serviceName : '') + ' ' + (e.templateName != null ? e.templateName : '') + ' ' + (e.doctorName != null ? e.doctorName : ''))}">
-                            
-                            <!-- 1. STT -->
-                            <td data-col="stt" class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
-
-                            <!-- 2. Bệnh nhân + Avatar + Mã -->
-                            <td data-col="patient">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="staff-avatar"
-                                          th:classappend="${iter.count % 3 == 1 ? 'bg-primary text-white' : (iter.count % 3 == 2 ? 'bg-success text-white' : 'bg-info text-white')}"
-                                          th:text="${#strings.toUpperCase(#strings.substring(e.patientName != null ? e.patientName : 'B', 0, 1))}">B</span>
-                                    <div class="text-truncate">
-                                        <div class="staff-name text-truncate fw-semibold" th:text="${e.patientName != null ? e.patientName : '—'}">Nguyễn Văn A</div>
-                                        <div class="staff-sub">
-                                            <span class="fw-semibold text-dark" th:text="${e.patientCode}">BN0001</span>
-                                            <span th:if="${e.branchName != null}" th:text="' · ' + ${e.branchName}"></span>
+                                <!-- 2. Bệnh nhân + Avatar + Mã -->
+                                <td data-col="patient">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="staff-avatar"
+                                              th:classappend="${iter.count % 3 == 1 ? 'bg-primary text-white' : (iter.count % 3 == 2 ? 'bg-success text-white' : 'bg-info text-white')}"
+                                              th:text="${#strings.toUpperCase(#strings.substring(e.patientName != null ? e.patientName : 'B', 0, 1))}">B</span>
+                                        <div class="text-truncate">
+                                            <div class="staff-name text-truncate fw-semibold" th:text="${e.patientName != null ? e.patientName : '—'}">Nguyễn Văn A</div>
+                                            <div class="staff-sub">
+                                                <span class="fw-semibold text-dark" th:text="${e.patientCode}">BN0001</span>
+                                                <span th:if="${e.branchName != null}" th:text="' · ' + ${e.branchName}"></span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </td>
+                                </td>
 
-                            <!-- 3. Dịch vụ / Quy trình -->
-                            <td data-col="service">
-                                <div class="text-truncate" style="max-width: 230px;">
-                                    <div class="staff-name text-truncate" th:text="${e.serviceName != null ? e.serviceName : e.templateName}">Nhổ răng khôn</div>
-                                    <div class="staff-sub text-truncate">
-                                        <span th:text="${e.templateName}">Quy trình chuẩn</span>
-                                        <span class="badge bg-light text-secondary border ms-1" style="font-size: 10px;" th:if="${e.flowMode == 'INTERRUPTIBLE'}">Ngắt quãng</span>
+                                <!-- 3. Dịch vụ / Quy trình -->
+                                <td data-col="service">
+                                    <div class="text-truncate" style="max-width: 230px;">
+                                        <div class="staff-name text-truncate" th:text="${e.serviceName != null ? e.serviceName : e.templateName}">Nhổ răng khôn</div>
+                                        <div class="staff-sub text-truncate">
+                                            <span th:text="${e.templateName}">Quy trình chuẩn</span>
+                                            <span class="badge bg-light text-secondary border ms-1" style="font-size: 10px;" th:if="${e.flowMode == 'INTERRUPTIBLE'}">Ngắt quãng</span>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
+                                </td>
 
-                            <!-- 4. Bác sĩ phụ trách -->
-                            <td data-col="doctor">
-                                <span class="fw-semibold text-dark text-truncate d-inline-block" style="max-width: 160px;"
-                                      th:text="${e.doctorName != null ? e.doctorName : '—'}">BS. Trần B</span>
-                            </td>
+                                <!-- 4. Bác sĩ phụ trách -->
+                                <td data-col="doctor">
+                                    <span class="fw-semibold text-dark text-truncate d-inline-block" style="max-width: 160px;"
+                                          th:text="${e.doctorName != null ? e.doctorName : '—'}">BS. Trần B</span>
+                                </td>
 
-                            <!-- 5. Bước hiện tại -->
-                            <td data-col="step">
-                                <div th:if="${e.currentStepName != null}">
-                                    <span class="chip chip--role">
-                                        <i class="bi bi-play-circle me-1 text-primary"></i>
-                                        <span th:text="${e.currentStepName}">Khám lâm sàng</span>
+                                <!-- 5. Bước hiện tại -->
+                                <td data-col="step">
+                                    <div th:if="${e.currentStepName != null}">
+                                        <span class="chip chip--role">
+                                            <i class="bi bi-play-circle me-1 text-primary"></i>
+                                            <span th:text="${e.currentStepName}">Khám lâm sàng</span>
+                                        </span>
+                                    </div>
+                                    <div th:unless="${e.currentStepName != null}">
+                                        <span class="chip chip--primary">
+                                            <i class="bi bi-check-circle-fill me-1 text-success"></i>Đã xong các bước
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- 6. Tiến độ thực hiện -->
+                                <td data-col="progress">
+                                    <div class="d-flex align-items-center gap-2" style="min-width: 150px;">
+                                        <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0; border-radius: 4px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                 th:style="'width:' + ${e.progressPercent} + '%'"></div>
+                                        </div>
+                                        <span class="small fw-bold text-dark" style="min-width: 34px;" th:text="${e.progressPercent} + '%'">100%</span>
+                                        <span class="small text-muted" th:text="'(' + ${e.completedSteps + e.skippedSteps} + '/' + ${e.totalSteps} + ')'">(4/4)</span>
+                                    </div>
+                                </td>
+
+                                <!-- 7. Hàng chờ tiếp theo -->
+                                <td data-col="queue">
+                                    <span th:if="${e.nextQueueType != null}" class="chip chip--role wf-queue"
+                                          th:data-queue="${e.nextQueueType}" th:text="${e.nextQueueType}">EXAM</span>
+                                    <span th:unless="${e.nextQueueType != null}" class="text-muted small">—</span>
+                                </td>
+
+                                <!-- 8. Trạng thái -->
+                                <td data-col="status" class="text-center">
+                                    <span class="misa-status-badge"
+                                          th:classappend="${e.status == 'IN_PROGRESS' ? 'misa-status-badge--active' : (e.status == 'PAUSED' ? 'misa-status-badge--probation' : (e.status == 'COMPLETED' ? 'misa-status-badge--on_leave' : 'misa-status-badge--inactive'))}"
+                                          th:text="${e.status == 'IN_PROGRESS' ? 'Đang thực hiện' : (e.status == 'PAUSED' ? 'Tạm dừng' : (e.status == 'COMPLETED' ? 'Hoàn tất' : 'Đã hủy'))}">
+                                        Đang thực hiện
                                     </span>
-                                </div>
-                                <div th:unless="${e.currentStepName != null}">
-                                    <span class="chip chip--primary">
-                                        <i class="bi bi-check-circle-fill me-1 text-success"></i>Đã xong các bước
-                                    </span>
-                                </div>
-                            </td>
+                                </td>
 
-                            <!-- 6. Tiến độ thực hiện -->
-                            <td data-col="progress">
-                                <div class="d-flex align-items-center gap-2" style="min-width: 150px;">
-                                    <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0; border-radius: 4px;">
-                                        <div class="progress-bar bg-success" role="progressbar"
-                                             th:style="'width:' + ${e.progressPercent} + '%'"></div>
+                                <!-- 9. Nút ấn nhanh tĩnh -->
+                                <td class="text-center position-relative dv-actions-cell-always" data-col="actions" style="width: 140px; min-width: 140px;">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-outline-primary wf-detail-btn" style="width: 110px; height: 32px;"
+                                                th:data-execution-id="${e.executionId}" title="Xem chi tiết các bước và lịch sử quy trình">
+                                            <i class="bi bi-eye me-1"></i>Chi tiết
+                                        </button>
                                     </div>
-                                    <span class="small fw-bold text-dark" style="min-width: 34px;" th:text="${e.progressPercent} + '%'">100%</span>
-                                    <span class="small text-muted" th:text="'(' + ${e.completedSteps + e.skippedSteps} + '/' + ${e.totalSteps} + ')'">(4/4)</span>
-                                </div>
-                            </td>
+                                </td>
 
-                            <!-- 7. Hàng chờ tiếp theo -->
-                            <td data-col="queue">
-                                <span th:if="${e.nextQueueType != null}" class="chip chip--role wf-queue"
-                                      th:data-queue="${e.nextQueueType}" th:text="${e.nextQueueType}">EXAM</span>
-                                <span th:unless="${e.nextQueueType != null}" class="text-muted small">—</span>
-                            </td>
-
-                            <!-- 8. Trạng thái chuẩn MISA -->
-                            <td data-col="status" class="text-center">
-                                <span class="misa-status-badge"
-                                      th:classappend="${e.status == 'IN_PROGRESS' ? 'misa-status-badge--active' : (e.status == 'PAUSED' ? 'misa-status-badge--probation' : (e.status == 'COMPLETED' ? 'misa-status-badge--on_leave' : 'misa-status-badge--inactive'))}"
-                                      th:text="${e.status == 'IN_PROGRESS' ? 'Đang thực hiện' : (e.status == 'PAUSED' ? 'Tạm dừng' : (e.status == 'COMPLETED' ? 'Hoàn tất' : 'Đã hủy'))}">
-                                    Đang thực hiện
-                                </span>
-                            </td>
-
-                            <!-- 9. Nút thao tác Xem chi tiết -->
-                            <td data-col="actions" class="text-center">
-                                <button type="button" class="btn btn-secondary-custom btn-be wf-detail-btn"
-                                        th:data-execution-id="${e.executionId}" title="Xem chi tiết các bước và lịch sử quy trình">
-                                    <i class="bi bi-eye me-1"></i>Chi tiết
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Empty state chuẩn MISA khi chưa có dữ liệu -->
-                        <tr th:if="${#lists.isEmpty(executions)}">
-                            <td colspan="9" class="p-0">
-                                <div class="account-empty-state">
-                                    <div class="account-empty-icon">
-                                        <i class="bi bi-diagram-3"></i>
+                                <!-- Floating actions bar -->
+                                <td class="dv-floating-actions-track">
+                                    <div class="dv-floating-actions-bar">
+                                        <div class="dv-floating-actions-group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary wf-detail-btn" style="width: 110px; height: 32px;"
+                                                    th:data-execution-id="${e.executionId}" title="Xem chi tiết các bước và lịch sử quy trình">
+                                                <i class="bi bi-eye me-1"></i>Chi tiết
+                                            </button>
+                                        </div>
                                     </div>
-                                    <h5 class="account-empty-title">Chưa có quy trình khám nào trong ngày</h5>
-                                    <p class="account-empty-desc">
-                                        Không có lượt khám nào khởi tạo quy trình trong ngày và chi nhánh đã chọn.
-                                    </p>
-                                    <div class="d-flex justify-content-center gap-2">
-                                        <a th:href="@{/reception/queue}" class="btn btn-primary btn-vua">
-                                            <i class="bi bi-arrow-left me-1"></i>Vào hàng chờ tiếp đón
-                                        </a>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                </td>
+                            </tr>
 
-                <!-- FOOTER PHÂN TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản) -->
-                <div class="misa-pagination-footer">
-                    <!-- Bên trái: Tổng số -->
-                    <div class="misa-pagination-left">
-                        Tổng số: <strong th:text="${totalCount}">0</strong> bản ghi
+                            <!-- Empty state khi chưa có dữ liệu -->
+                            <tr th:if="${#lists.isEmpty(executions)}">
+                                <td colspan="10" class="p-0">
+                                    <div class="account-empty-state">
+                                        <div class="account-empty-icon">
+                                            <i class="bi bi-diagram-3"></i>
+                                        </div>
+                                        <h5 class="account-empty-title">Chưa có quy trình khám nào trong ngày</h5>
+                                        <p class="account-empty-desc">
+                                            Không có lượt khám nào khởi tạo quy trình trong ngày và chi nhánh đã chọn.
+                                        </p>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a th:href="@{/reception/queue}" class="btn btn-primary btn-vua">
+                                                <i class="bi bi-arrow-left me-1"></i>Vào hàng chờ tiếp đón
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <!-- Bên phải: Số dòng/trang + Range + Navigation -->
-                    <div class="misa-pagination-right">
-                        <div class="misa-page-size-wrapper">
-                            <span>Hiển thị</span>
-                            <select class="form-select form-select-sm misa-page-size-select" disabled>
-                                <option value="20" selected>Tất cả</option>
-                            </select>
+                    <!-- FOOTER PHÂN TRANG CHUẨN MISA -->
+                    <div class="misa-pagination-footer">
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${totalCount}">0</strong> bản ghi
                         </div>
-                        <div class="misa-page-range">
-                            <span>1</span> - <span th:text="${totalCount}">0</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="misa-nav-btn disabled" title="Trang đầu"><i class="bi bi-chevron-bar-left"></i></span>
-                            <span class="misa-nav-btn disabled" title="Trang trước"><i class="bi bi-chevron-left"></i></span>
-                            <span class="misa-nav-btn disabled" title="Trang sau"><i class="bi bi-chevron-right"></i></span>
-                            <span class="misa-nav-btn disabled" title="Trang cuối"><i class="bi bi-chevron-bar-right"></i></span>
+
+                        <div class="misa-pagination-right">
+                            <div class="misa-page-size-wrapper">
+                                <span>Hiển thị</span>
+                                <select class="form-select form-select-sm misa-page-size-select" disabled>
+                                    <option value="20" selected>Tất cả</option>
+                                </select>
+                            </div>
+                            <div class="misa-page-range">
+                                <span>1</span> - <span th:text="${totalCount}">0</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
-        </main>
+            </main>
         </div>
     </div>
 
-    <!-- MODAL CHI TIẾT QUY TRÌNH (SCR-43.1 + SCR-43.4, chuẩn giao diện MISA) -->
+    <!-- MODAL CHI TIẾT QUY TRÌNH -->
     <div class="modal fade" id="wfDetailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0052cc, #1e3a8a); padding: 14px 20px;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); padding: 14px 20px;">
                     <div>
                         <h5 class="modal-title fw-bold mb-0 fs-6" id="wfDetailTitle">
                             <i class="bi bi-list-check me-2"></i>Chi tiết quy trình khám &amp; điều trị
@@ -345,7 +342,7 @@
         </div>
     </div>
 
-    <!-- Nạp Bootstrap Bundle JS để điều khiển Modal -->
+    <!-- Nạp Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
@@ -380,10 +377,20 @@
 
             // Lọc nhanh phía client theo từ khóa và trạng thái
             var keyword = document.getElementById('wfKeyword');
-            var status = document.getElementById('wfStatus');
+            var currentWfStatus = '';
+            var segButtons = document.querySelectorAll('#wfSegmentGroup .dv-seg-btn');
+            segButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    segButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentWfStatus = this.getAttribute('data-wf-status') || '';
+                    applyFilter();
+                });
+            });
+
             function applyFilter() {
-                var kw = (keyword.value || '').trim().toLowerCase();
-                var st = status.value;
+                var kw = (keyword ? keyword.value || '' : '').trim().toLowerCase();
+                var st = currentWfStatus;
                 document.querySelectorAll('.wf-row').forEach(function (row) {
                     var okKw = !kw || (row.getAttribute('data-search') || '').indexOf(kw) >= 0;
                     var okSt = !st || row.getAttribute('data-status') === st;
@@ -391,7 +398,6 @@
                 });
             }
             if (keyword) keyword.addEventListener('input', applyFilter);
-            if (status) status.addEventListener('change', applyFilter);
 
             // Xử lý modal chi tiết quy trình (append vào body để không bị backdrop che)
             var modalEl = document.getElementById('wfDetailModal');
@@ -484,6 +490,61 @@
 
                 document.getElementById('wfDetailLoading').classList.add('d-none');
                 document.getElementById('wfDetailBody').classList.remove('d-none');
+            }
+
+            // Kéo dãn cột độc lập
+            const table = document.getElementById('wfTable');
+            if (table) {
+                const resizers = table.querySelectorAll('.dv-resizer');
+                resizers.forEach(resizer => {
+                    let startX, startW, thEl;
+
+                    resizer.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        thEl = resizer.parentElement;
+                        startX = e.pageX;
+                        startW = thEl.offsetWidth;
+
+                        let otherColsW = 0;
+                        table.querySelectorAll('thead th').forEach(h => {
+                            if (h !== thEl && !h.classList.contains('d-none')) {
+                                otherColsW += h.offsetWidth;
+                            }
+                        });
+
+                        resizer.classList.add('is-resizing');
+                        document.body.style.cursor = 'col-resize';
+                        document.body.style.userSelect = 'none';
+
+                        function onMouseMove(e) {
+                            const diff = e.pageX - startX;
+                            const minW = 50;
+                            const newW = Math.max(startW + diff, minW);
+
+                            if (thEl) {
+                                thEl.style.width = newW + 'px';
+                                thEl.style.minWidth = newW + 'px';
+                            }
+
+                            const containerW = table.parentElement ? table.parentElement.clientWidth : 0;
+                            table.style.width = Math.max(otherColsW + newW, containerW) + 'px';
+                        }
+
+                        function onMouseUp() {
+                            resizer.classList.remove('is-resizing');
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        }
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    });
+                });
             }
         })();
     </script>

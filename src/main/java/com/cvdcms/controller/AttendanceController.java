@@ -105,12 +105,26 @@ public class AttendanceController {
         if (staff != null) {
             LocalDate today = LocalDate.now();
             AttendanceRecord todayRecord = attendanceService.findRecord(staff.getStaffId(), today);
-            model.addAttribute("todayShifts", attendanceService.getTodayShifts(staff.getStaffId(), today));
+            var todayShifts = attendanceService.getTodayShifts(staff.getStaffId(), today);
+            model.addAttribute("todayShifts", todayShifts);
             model.addAttribute("todayRecord", todayRecord);
 
             List<AttendanceRecord> history = attendanceService.getMyHistory(staff.getStaffId(), selected);
             model.addAttribute("history", history);
             model.addAttribute("summary", attendanceService.summarize(history));
+            model.addAttribute("shiftLabelsByDate", attendanceService.getShiftLabelsByDate(staff.getStaffId(), selected));
+
+            // Đồng bộ tên cơ sở hiển thị trên Topbar theo ca trực hôm nay hoặc lịch sử chấm công gần nhất
+            String activeBranchName = null;
+            if (!todayShifts.isEmpty() && todayShifts.get(0).getBranch() != null) {
+                activeBranchName = todayShifts.get(0).getBranch().getBranchName();
+            } else if (!history.isEmpty() && history.get(0).getBranch() != null) {
+                activeBranchName = history.get(0).getBranch().getBranchName();
+            }
+            if (activeBranchName != null && !activeBranchName.isBlank()) {
+                session.setAttribute("currentBranchName", activeBranchName);
+                model.addAttribute("currentBranchName", activeBranchName);
+            }
         }
         return "attendance/my";
     }
@@ -187,7 +201,7 @@ public class AttendanceController {
             List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
             model.addAttribute("records", records);
             model.addAttribute("summary", attendanceService.summarize(records));
-            model.addAttribute("staffSummary", attendanceService.summarizeByStaff(records));
+            model.addAttribute("staffSummary", attendanceService.summarizeByStaff(branchId, selected, records));
         }
         return "attendance/branch";
     }
