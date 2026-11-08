@@ -1327,7 +1327,7 @@ a {
 
 
 /* =====================================================================
-   09. TOPBAR (Đã ẩn toàn hệ thống theo chuẩn giao diện DentalSoft)
+   09. TOPBAR (ĐÃ GỠ BỎ HOÀN TOÀN THEO CHUẨN DENTALSOFT - KHÔNG DÙNG TOPBAR XANH)
    ===================================================================== */
 .app-topbar {
     display: none !important;
@@ -1338,6 +1338,145 @@ a {
     padding: 0 !important;
     border: none !important;
     overflow: hidden !important;
+}
+
+.app-topbar__bar {
+    display: none !important;
+}
+
+/* =====================================================================
+   BỘ CHỌN CHI NHÁNH INLINE CHUẨN DENTALSOFT (TÍCH HỢP THANH TÌM KIẾM/ACTION BAR)
+   ===================================================================== */
+.df-tb-branch-wrapper {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.df-branch-btn {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    height: 36px !important;
+    padding: 4px 12px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    transition: all 0.15s ease !important;
+}
+
+.df-branch-btn::after {
+    display: none !important;
+}
+
+.df-branch-btn:hover {
+    border-color: #94a3b8 !important;
+    background-color: #f8fafc !important;
+    color: #0284c7 !important;
+}
+
+.df-tb-select,
+.app-inline-branch-select {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    height: 38px !important;
+    padding: 6px 28px 6px 12px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    cursor: pointer !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23374151' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    transition: all 0.15s ease !important;
+    min-width: 140px;
+    max-width: 220px;
+}
+
+.df-tb-select:hover,
+.app-inline-branch-select:hover {
+    border-color: #94a3b8 !important;
+    background-color: #f8fafc !important;
+}
+
+.df-tb-select:focus,
+.app-inline-branch-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    outline: none !important;
+}
+
+.df-tb-branch-fixed {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    height: 38px !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+    user-select: none !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* =====================================================================
+   BREADCRUMB CHUẨN ĐỒNG BỘ TOÀN HỆ THỐNG (CHỈ DÙNG CHO MÀN HÌNH CON)
+   ===================================================================== */
+.app-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: #64748b;
+}
+
+.app-breadcrumb-link {
+    color: #0284c7;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.app-breadcrumb-link:hover {
+    color: #0369a1;
+    text-decoration: underline;
+}
+
+.app-breadcrumb-sep {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    user-select: none;
+}
+
+.app-breadcrumb-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0284c7;
+    background-color: #e0f2fe;
+    border: 1px solid #bae6fd;
+    padding: 1px 7px;
+    border-radius: 6px;
+}
+
+.app-breadcrumb-current {
+    color: #0f172a;
+    font-weight: 700;
 }
 
 .mobile-sidebar-toggle {
@@ -1387,37 +1526,6 @@ a {
     text-align: center;
 }
 
-.app-topbar__bar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    height: var(--topbar-h);
-    padding: 0 16px;
-    background: var(--primary);
-    color: #fff;
-    transition: box-shadow var(--dur) var(--ease);
-}
-
-.app-topbar.is-scrolled .app-topbar__bar {
-    box-shadow: 0 2px 8px rgba(9, 30, 66, .2);
-}
-
-.app-topbar__left,
-.app-topbar__right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.app-topbar__left {
-    flex-shrink: 0;
-    min-width: 0;
-}
-
-.app-topbar__right {
-    margin-left: auto;
-}
-
 .app-topbar__brand {
     display: none;
 }
@@ -1425,16 +1533,6 @@ a {
 .app-topbar__heading {
     min-width: 0;
     padding-left: 4px;
-}
-
-.app-topbar__title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .app-topbar__date {

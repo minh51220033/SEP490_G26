@@ -41,14 +41,17 @@
                     </div>
                 </div>
 
-                <div class="branch-box">
-                    <span class="icon-tile icon-tile--lg"><i class="bi bi-hospital" aria-hidden="true"></i></span>
-                    <div>
-                        <span class="branch-box__label">Cơ sở hiện tại</span>
-                        <p class="branch-box__name" th:text="${currentBranchName}">Chưa xác định cơ sở</p>
-                        <small class="branch-box__address"
-                               th:text="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)
-                                       ? currentBranchAddress : 'Chưa có thông tin địa chỉ'}">Địa chỉ cơ sở</small>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <div class="branch-box">
+                        <span class="icon-tile icon-tile--lg"><i class="bi bi-hospital" aria-hidden="true"></i></span>
+                        <div>
+                            <span class="branch-box__label">Cơ sở hiện tại</span>
+                            <p class="branch-box__name" th:text="${currentBranchName}">Chưa xác định cơ sở</p>
+                            <small class="branch-box__address"
+                                   th:text="${currentBranchAddress != null and !#strings.isEmpty(currentBranchAddress)
+                                           ? currentBranchAddress : 'Chưa có thông tin địa chỉ'}">Địa chỉ cơ sở</small>
+                        </div>
                     </div>
                 </div>
             </section>

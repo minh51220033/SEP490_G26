@@ -66,6 +66,7 @@ public class DiagnosisController {
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    private final com.cvdcms.service.ClinicalWorkflowService clinicalWorkflowService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository;
 
@@ -602,6 +603,16 @@ public class DiagnosisController {
         model.addAttribute("activeServices", activeServices);
         model.addAttribute("doctors", doctors);
         model.addAttribute("allVisits", allVisits);
+
+        List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
+                ? clinicalWorkflowService.getAllTemplates()
+                : List.of();
+        model.addAttribute("workflowTemplates", workflowTemplates);
+        String workflowTemplatesJson = "[]";
+        try {
+            workflowTemplatesJson = new ObjectMapper().writeValueAsString(workflowTemplates);
+        } catch (Exception ignored) {}
+        model.addAttribute("workflowTemplatesJson", workflowTemplatesJson);
 
         String activeServicesJson = "[]";
         try {

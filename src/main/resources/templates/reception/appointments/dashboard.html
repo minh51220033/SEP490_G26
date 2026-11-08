@@ -81,6 +81,9 @@
                         <button type="button" class="btn btn-sm btn-primary rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-2" id="openCreateModalBtn" style="background-color: #0284c7; border-color: #0284c7;">
                             <i class="bi bi-plus-lg"></i> Thêm lịch hẹn
                         </button>
+
+                        <!-- Bộ chọn cơ sở chuẩn DentalSoft -->
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     </div>
                 </div>
 
@@ -204,7 +207,7 @@
                             <option value="">-- Tất cả bệnh nhân --</option>
                             <option value="HAS_ALERT">Có cảnh báo y tế / Dị ứng thuốc</option>
                             <option value="MINOR">Bệnh nhân dưới 18 tuổi (Có giám hộ)</option>
-                            <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa (FT18)</option>
+                            <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa</option>
                         </select>
                     </div>
 

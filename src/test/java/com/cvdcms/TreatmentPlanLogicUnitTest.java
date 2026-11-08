@@ -59,6 +59,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private UserRepository userRepository;
     @Mock private CustomerCareInteractionRepository customerCareInteractionRepository;
     @Mock private CustomerCareTaskRepository customerCareTaskRepository;
+    @Mock private ClinicalWorkflowService clinicalWorkflowService;
 
     private TreatmentPlanServiceImpl treatmentPlanServiceImpl;
     private DiagnosisController diagnosisController;
@@ -104,7 +105,8 @@ class TreatmentPlanLogicUnitTest {
                 userRepository,
                 customerCareInteractionRepository,
                 customerCareTaskRepository,
-                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class)
+                org.mockito.Mockito.mock(com.cvdcms.security.DoctorVisitAccess.class),
+                clinicalWorkflowService
         );
 
         mockPatient = new PatientProfile();
