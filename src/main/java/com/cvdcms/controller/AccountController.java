@@ -18,6 +18,7 @@ import com.cvdcms.repository.RoleRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.AccountService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -713,10 +714,12 @@ public class AccountController {
         // 8. LOCK / UNLOCK
         // =========================================================
 
-        @PostMapping("/{id}/toggle-status")
+        @PostMapping({"/{id}/toggle-status", "/{id}/status"})
         public String toggleStatus(
 
                         @PathVariable("id") Long id,
+
+                        HttpServletRequest request,
 
                         HttpSession session,
 
@@ -738,6 +741,11 @@ public class AccountController {
                 } catch (IllegalArgumentException e) {
                         redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
                         return "redirect:/accounts/" + id;
+                }
+
+                String referer = request.getHeader("Referer");
+                if (referer != null && referer.contains("/accounts") && !referer.matches(".*/accounts/\\d+.*")) {
+                        return "redirect:/accounts?success=status";
                 }
 
                 return "redirect:/accounts/"

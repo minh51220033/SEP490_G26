@@ -53,6 +53,9 @@
                     </div>
                 </div>
 
+                <!-- THANH TAB NGANG PHÂN HỆ NHÂN SỰ (Chuẩn DentalSoft) -->
+                <nav th:replace="~{fragments/hr_tabs :: hrTabs('attendance')}"></nav>
+
                 <!-- 4 THẺ KPI TỔNG QUAN (KÍCH THƯỚC CHUẨN GỌN MISA AMIS) -->
                 <div th:if="${selectedBranchId != null}" class="row g-2.5 mb-2.5">
                     <div class="col-xl-3 col-sm-6">
