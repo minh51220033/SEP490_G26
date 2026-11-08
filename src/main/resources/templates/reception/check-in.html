@@ -7,12 +7,12 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Tiếp đón & Check-in')}"></header>
-        <main class="app-content" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
+        <main id="reception-content-area" class="app-content" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/check-in.css}">
 
             <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
-            <div class="card border-0 shadow-sm rounded-4 mb-3 p-2 bg-white" aria-label="Quy trình tiếp đón">
+            <div class="card border-0 shadow-sm rounded-4 mb-3 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
                     <div class="d-flex align-items-center gap-2 small">
                         <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
@@ -392,7 +392,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table checkin-table table-hover align-middle mb-0">
                             <thead class="table-light">
                             <tr>
                                 <th class="ps-3" style="width: 130px;">Mã lượt</th>
@@ -402,7 +402,7 @@
                                 <th style="width: 120px;">Loại khám</th>
                                 <th style="width: 150px;">Trạng thái</th>
                                 <th>Ghi nhận ban đầu</th>
-                                <th class="text-end pe-3" style="width: 280px;">Thao tác nhanh</th>
+                                <th class="checkin-actions-column text-center pe-3" style="width: 280px; min-width: 280px;">Thao tác nhanh</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -441,8 +441,8 @@
                                     <span class="badge bg-info text-dark" th:text="${v.status.name() == 'WAITING' ? 'Chờ điều phối' : (v.status.name() == 'IN_EXAM' ? 'Đang khám' : v.status)}">Chờ điều phối</span>
                                 </td>
                                 <td class="small text-muted" th:text="${v.symptoms}">Khám răng tổng quát</td>
-                                <td class="text-end pe-3">
-                                    <div class="d-inline-flex align-items-center gap-1">
+                                <td class="checkin-actions-column text-center pe-3">
+                                    <div class="checkin-action-group">
                                         <a th:if="${v.ticketId != null}" th:href="@{/reception/dispatch/tickets/{id}(id=${v.ticketId}, autoPrint=true)}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded-2" title="In phiếu chờ khám">
                                             <i class="bi bi-printer me-1"></i>In phiếu
                                         </a>
@@ -470,7 +470,11 @@
 
 <!-- Inline Client Script for Quick Appointment Filter -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    (() => {
+    const initialiseCheckIn = () => {
+        const content = document.getElementById('reception-content-area');
+        if (!content || content.dataset.checkinInitialised === 'true') return;
+        content.dataset.checkinInitialised = 'true';
         const selectedAppointmentId = document.querySelector('main[data-selected-appointment-id]')?.dataset.selectedAppointmentId;
         if (selectedAppointmentId) {
             const selectedCard = document.getElementById(`appointment-${selectedAppointmentId}`);
@@ -544,7 +548,12 @@
                 }
             });
         });
-    });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialiseCheckIn, {once: true});
+    else initialiseCheckIn();
+    document.addEventListener('reception:content-loaded', initialiseCheckIn);
+    })();
 </script>
+<script th:src="@{/js/reception-workflow-navigation.js}" defer></script>
 </body>
 </html>

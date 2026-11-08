@@ -1,4 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
+(() => {
+function initialiseDispatch() {
+    const content = document.getElementById('reception-content-area');
+    if (!content || content.dataset.dispatchInitialised === 'true') return;
+    content.dataset.dispatchInitialised = 'true';
     function normalize(str) {
         return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').trim();
     }
@@ -204,4 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-});
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialiseDispatch, {once: true});
+else initialiseDispatch();
+document.addEventListener('reception:content-loaded', initialiseDispatch);
+})();

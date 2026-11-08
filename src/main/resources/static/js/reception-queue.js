@@ -1,4 +1,10 @@
-document.addEventListener('DOMContentLoaded', () => {
+(() => {
+let refreshTimer;
+
+function initialiseQueue() {
+    const content = document.getElementById('reception-content-area');
+    if (!content || content.dataset.queueInitialised === 'true') return;
+    content.dataset.queueInitialised = 'true';
     let board = document.getElementById('queueRows');
     const filter = document.getElementById('doctorFilter');
     const branch = document.getElementById('queueConfig')?.textContent.trim();
@@ -166,5 +172,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    setInterval(refresh, 10000);
-});
+    refreshTimer = window.setInterval(refresh, 10000);
+}
+
+function cleanupQueue() {
+    if (refreshTimer) {
+        window.clearInterval(refreshTimer);
+        refreshTimer = null;
+    }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialiseQueue, {once: true});
+else initialiseQueue();
+document.addEventListener('reception:content-loaded', initialiseQueue);
+document.addEventListener('reception:content-will-change', cleanupQueue);
+})();

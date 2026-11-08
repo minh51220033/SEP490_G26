@@ -1,0 +1,112 @@
+/* Shared shell for FT19 / FT20. Scoped to these pages only. */
+.membership-page .membership-tabs-wrapper {
+    margin-bottom: 16px;
+}
+
+.membership-page .membership-header h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.membership-page .membership-header h1 i {
+    color: #294690;
+}
+
+.membership-page .membership-header p {
+    margin: 4px 0 12px;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.membership-page .membership-tabs-nav {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.membership-page .membership-tabs-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.membership-page .membership-tabs-list li {
+    display: inline-flex;
+}
+
+.membership-page .membership-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.membership-page .membership-tab-btn:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+    color: #111827;
+}
+
+.membership-page .membership-tab-btn.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.membership-page .membership-tab-btn:focus-visible {
+    outline: 2px solid #294690;
+    outline-offset: 3px;
+}
+
+.membership-page .membership-subhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.membership-page .membership-subhead h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.membership-page .membership-subhead p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 575.98px) {
+    .membership-page .membership-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .membership-page .membership-tab-btn {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+}

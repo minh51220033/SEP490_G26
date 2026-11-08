@@ -2,9 +2,10 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý kho vật tư')}"></head>
 
-<body class="app-body viewport-locked-page">
+<body class="app-body">
 
 <!-- CSS riêng của trang kho -->
+<link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
 <link rel="stylesheet" th:href="@{/css/inventory.css(v='20261106-ui')}">
 
 <div class="app-shell">
@@ -148,24 +149,48 @@
                         </tbody>
                     </table>
                 </div>
-                <footer class="table-pagination-footer" id="inventoryPaginationFooter">
-                    <div class="text-secondary small">
-                        Hiển thị <strong id="lblInventoryRange" class="text-dark">0 - 0</strong> của <strong id="lblInventoryTotal" class="text-dark">0</strong> mặt hàng
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer" id="inventoryPaginationFooter">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="lblInventoryTotal">0</strong>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small fw-semibold">Số dòng:</span>
-                        <select id="inventoryPageSizeSelect" class="form-select form-select-sm py-1" style="width: 78px;" onchange="onInvPageSizeChange(this.value)">
-                            <option value="10" selected>10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                        </select>
+
+                    <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+                    <div class="misa-pagination-right">
+                        <!-- Dropdown chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="inventoryPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onInvPageSizeChange(this.value)">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+
+                        <!-- Khoảng hiển thị bản ghi -->
+                        <div class="misa-page-range">
+                            <span id="lblInventoryRange">0 - 0</span>
+                        </div>
+
+                        <!-- Cụm 4 nút điều hướng (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="misa-nav-btn disabled" id="inventoryFirst" title="Trang đầu" disabled>
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="inventoryPrev" title="Trang trước" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="inventoryNext" title="Trang sau" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="inventoryLast" title="Trang cuối" disabled>
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="pagination-btn-group d-flex align-items-center" id="inventoryPaginationControls">
-                        <button id="inventoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                        <span id="inventoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                        <button id="inventoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
-                    </div>
-                </footer>
+                </div>
             </section>
 
             <!-- ==========================================
@@ -210,16 +235,40 @@
                         </tbody>
                     </table>
                 </div>
-                <footer class="table-pagination-footer" id="batchesPaginationFooter">
-                    <div class="text-secondary small">
-                        Hiển thị danh sách lô vật tư &amp; hạn sử dụng
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer" id="batchesPaginationFooter">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="lblBatchesTotal">0</strong>
                     </div>
-                    <div class="pagination-btn-group d-flex align-items-center">
-                        <button id="batchesPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                        <span id="batchesPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                        <button id="batchesNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="batchesPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onBatchesPageSizeChange(this.value)">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="misa-page-range">
+                            <span id="lblBatchesRange">0 - 0</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="misa-nav-btn disabled" id="batchesFirst" title="Trang đầu" disabled>
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="batchesPrev" title="Trang trước" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="batchesNext" title="Trang sau" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="batchesLast" title="Trang cuối" disabled>
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
                     </div>
-                </footer>
+                </div>
             </section>
 
             <!-- ==========================================
@@ -227,14 +276,20 @@
                  ========================================== -->
             <section id="receiptPanel" class="panel" hidden>
                 <div class="form-tab-scroll-container">
-                    <div class="form-box-card">
-                        <div class="panel-heading mb-3">
-                            <div>
-                                <h2>Lập phiếu nhập kho từ Nhà cung cấp</h2>
-                                <p>Tải lên ảnh/hóa đơn chứng từ hợp lệ. Hệ thống tự động cộng tồn kho và tính công nợ NCC.</p>
+                    <div class="form-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-receipt-create" onclick="toggleInventorySection('receipt-create')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-receipt-create"></i>
+                                <span class="df-foldable-title">1. Lập phiếu nhập kho từ Nhà cung cấp</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Tải lên ảnh/hóa đơn chứng từ hợp lệ. Hệ thống tự động cộng tồn kho và tính công nợ NCC.)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary small fw-semibold">Biểu mẫu lập</span>
                             </div>
                         </div>
-                        <form id="receiptForm">
+                        <div class="df-foldable-content" id="content-receipt-create" style="display: block;">
+                            <div class="df-foldable-body">
+                                <form id="receiptForm">
                             <div class="form-grid">
                                 <div class="field">
                                     <label for="supplierId">Nhà cung cấp <span class="required">*</span></label>
@@ -338,34 +393,44 @@
                                     <button type="submit" id="submitReceipt" class="btn-primary-custom">Xác nhận &amp; Lưu phiếu nhập</button>
                                 </div>
                             </div>
-                        </form>
-                        <div id="receiptResult" class="receipt-result" hidden></div>
-                    </div>
-
-                    <div class="history-box-card">
-                        <div class="panel-heading">
-                            <div>
-                                <h2>Lịch sử phiếu nhập kho</h2>
-                                <p>Danh sách các phiếu đã nhập tại chi nhánh hiện tại (hỗ trợ in A4 trực tiếp, xem chi tiết và ký điện tử).</p>
-                            </div>
-                            <div class="date-filters">
-                                <div class="field">
-                                    <label for="receiptFilterSupplier">Nhà cung cấp:</label>
-                                    <select id="receiptFilterSupplier" class="form-select form-select-sm">
-                                        <option value="">Tất cả NCC</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="receiptFromDate">Từ:</label>
-                                    <input id="receiptFromDate" type="date">
-                                </div>
-                                <div class="field">
-                                    <label for="receiptToDate">Đến:</label>
-                                    <input id="receiptToDate" type="date">
-                                </div>
-                                <button type="button" class="btn-primary-custom button-sm" id="filterReceiptsBtn">Lọc phiếu</button>
+                                </form>
+                                <div id="receiptResult" class="receipt-result" hidden></div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="history-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-receipt-history" onclick="toggleInventorySection('receipt-history')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-receipt-history"></i>
+                                <span class="df-foldable-title">2. Lịch sử phiếu nhập kho</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Danh sách các phiếu đã nhập tại chi nhánh hiện tại, hỗ trợ in A4 trực tiếp, xem chi tiết và ký điện tử.)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-primary border small">Lịch sử phiếu</span>
+                            </div>
+                        </div>
+                        <div class="df-foldable-content" id="content-receipt-history" style="display: block;">
+                            <div class="df-foldable-body">
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="date-filters">
+                                        <div class="field">
+                                            <label for="receiptFilterSupplier">Nhà cung cấp:</label>
+                                            <select id="receiptFilterSupplier" class="form-select form-select-sm">
+                                                <option value="">Tất cả NCC</option>
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="receiptFromDate">Từ:</label>
+                                            <input id="receiptFromDate" type="date">
+                                        </div>
+                                        <div class="field">
+                                            <label for="receiptToDate">Đến:</label>
+                                            <input id="receiptToDate" type="date">
+                                        </div>
+                                        <button type="button" class="btn-primary-custom button-sm" id="filterReceiptsBtn">Lọc phiếu</button>
+                                    </div>
+                                </div>
                         <div class="table-viewport-wrapper">
                             <table class="cv-table">
                                 <thead>
@@ -386,14 +451,42 @@
                                 </tbody>
                             </table>
                         </div>
-                        <footer class="table-pagination-footer" style="margin-bottom:0;">
-                            <div class="text-secondary small">Lịch sử phiếu nhập kho chi nhánh</div>
-                            <div class="pagination-btn-group d-flex align-items-center">
-                                <button id="receiptHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                                <span id="receiptHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                                <button id="receiptHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                        <div class="misa-pagination-footer" id="receiptHistoryPaginationFooter">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong id="lblReceiptsTotal">0</strong>
                             </div>
-                        </footer>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select id="receiptHistoryPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onReceiptsPageSizeChange(this.value)">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span id="lblReceiptsRange">0 - 0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="misa-nav-btn disabled" id="receiptHistoryFirst" title="Trang đầu" disabled>
+                                        <i class="bi bi-chevron-bar-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="receiptHistoryPrev" title="Trang trước" disabled>
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="receiptHistoryNext" title="Trang sau" disabled>
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="receiptHistoryLast" title="Trang cuối" disabled>
+                                        <i class="bi bi-chevron-bar-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -403,14 +496,20 @@
                  ========================================== -->
             <section id="issuePanel" class="panel" hidden>
                 <div class="form-tab-scroll-container">
-                    <div class="form-box-card">
-                        <div class="panel-heading mb-3">
-                            <div>
-                                <h2>Lập phiếu xuất kho</h2>
-                                <p>Xuất sử dụng nội bộ (FEFO hoặc chọn lô) và xuất hủy vật tư hết hạn. Không cho phép xuất vượt tồn khả dụng.</p>
+                    <div class="form-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-issue-create" onclick="toggleInventorySection('issue-create')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-issue-create"></i>
+                                <span class="df-foldable-title">1. Lập phiếu xuất kho</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Xuất sử dụng nội bộ (FEFO hoặc chọn lô) và xuất hủy vật tư hết hạn. Không cho phép xuất vượt tồn khả dụng.)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary small fw-semibold">Biểu mẫu lập</span>
                             </div>
                         </div>
-                        <form id="issueForm">
+                        <div class="df-foldable-content" id="content-issue-create" style="display: block;">
+                            <div class="df-foldable-body">
+                                <form id="issueForm">
                             <div class="form-grid">
                                 <div class="field">
                                     <label for="issueType">Mục đích xuất kho <span class="required">*</span></label>
@@ -463,35 +562,45 @@
                                     <button type="submit" id="submitIssue" class="btn-primary-custom">Xác nhận xuất kho</button>
                                 </div>
                             </div>
-                        </form>
-                    </div>
-
-                    <div class="history-box-card">
-                        <div class="panel-heading">
-                            <div>
-                                <h2>Lịch sử phiếu xuất kho</h2>
-                                <p>Theo dõi các phiếu xuất sử dụng nội bộ và xuất hủy tại chi nhánh.</p>
-                            </div>
-                            <div class="date-filters">
-                                <div class="field">
-                                    <label for="issueFilterType">Loại:</label>
-                                    <select id="issueFilterType" class="form-select form-select-sm">
-                                        <option value="">Tất cả loại xuất</option>
-                                        <option value="INTERNAL_USE">Xuất nội bộ</option>
-                                        <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="issueFromDate">Từ:</label>
-                                    <input id="issueFromDate" type="date">
-                                </div>
-                                <div class="field">
-                                    <label for="issueToDate">Đến:</label>
-                                    <input id="issueToDate" type="date">
-                                </div>
-                                <button type="button" class="btn-primary-custom button-sm" id="filterIssuesBtn">Lọc phiếu</button>
+                                </form>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="history-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-issue-history" onclick="toggleInventorySection('issue-history')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-issue-history"></i>
+                                <span class="df-foldable-title">2. Lịch sử phiếu xuất kho</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Theo dõi các phiếu xuất sử dụng nội bộ và xuất hủy tại chi nhánh.)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-primary border small">Lịch sử phiếu</span>
+                            </div>
+                        </div>
+                        <div class="df-foldable-content" id="content-issue-history" style="display: block;">
+                            <div class="df-foldable-body">
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="date-filters">
+                                        <div class="field">
+                                            <label for="issueFilterType">Loại:</label>
+                                            <select id="issueFilterType" class="form-select form-select-sm">
+                                                <option value="">Tất cả loại xuất</option>
+                                                <option value="INTERNAL_USE">Xuất nội bộ</option>
+                                                <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="issueFromDate">Từ:</label>
+                                            <input id="issueFromDate" type="date">
+                                        </div>
+                                        <div class="field">
+                                            <label for="issueToDate">Đến:</label>
+                                            <input id="issueToDate" type="date">
+                                        </div>
+                                        <button type="button" class="btn-primary-custom button-sm" id="filterIssuesBtn">Lọc phiếu</button>
+                                    </div>
+                                </div>
                         <div class="table-viewport-wrapper">
                             <table class="cv-table">
                                 <thead>
@@ -512,14 +621,42 @@
                                 </tbody>
                             </table>
                         </div>
-                        <footer class="table-pagination-footer" style="margin-bottom:0;">
-                            <div class="text-secondary small">Lịch sử phiếu xuất kho</div>
-                            <div class="pagination-btn-group d-flex align-items-center">
-                                <button id="issueHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                                <span id="issueHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                                <button id="issueHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                        <div class="misa-pagination-footer" id="issueHistoryPaginationFooter">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong id="lblIssuesTotal">0</strong>
                             </div>
-                        </footer>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select id="issueHistoryPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onIssuesPageSizeChange(this.value)">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span id="lblIssuesRange">0 - 0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="misa-nav-btn disabled" id="issueHistoryFirst" title="Trang đầu" disabled>
+                                        <i class="bi bi-chevron-bar-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="issueHistoryPrev" title="Trang trước" disabled>
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="issueHistoryNext" title="Trang sau" disabled>
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="issueHistoryLast" title="Trang cuối" disabled>
+                                        <i class="bi bi-chevron-bar-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -529,14 +666,20 @@
                  ========================================== -->
             <section id="transferPanel" class="panel" hidden>
                 <div class="form-tab-scroll-container">
-                    <div class="form-box-card">
-                        <div class="panel-heading mb-3">
-                            <div>
-                                <h2>Điều chuyển vật tư giữa các chi nhánh</h2>
-                                <p>Trừ tồn kho chi nhánh nguồn và cộng đồng thời vào chi nhánh đích (giữ nguyên số lô, hạn dùng và giá vốn).</p>
+                    <div class="form-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-transfer-create" onclick="toggleInventorySection('transfer-create')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-transfer-create"></i>
+                                <span class="df-foldable-title">1. Điều chuyển vật tư giữa các chi nhánh</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Trừ tồn kho chi nhánh nguồn và cộng đồng thời vào chi nhánh đích (giữ nguyên số lô, hạn dùng và giá vốn).)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary small fw-semibold">Biểu mẫu lập</span>
                             </div>
                         </div>
-                        <form id="transferForm">
+                        <div class="df-foldable-content" id="content-transfer-create" style="display: block;">
+                            <div class="df-foldable-body">
+                                <form id="transferForm">
                             <div class="form-grid">
                                 <div class="field">
                                     <label for="destinationBranchId">Chi nhánh đích nhận hàng <span class="required">*</span></label>
@@ -588,27 +731,37 @@
                                     <button type="submit" id="submitTransfer" class="btn-primary-custom">Xác nhận điều chuyển</button>
                                 </div>
                             </div>
-                        </form>
-                    </div>
-
-                    <div class="history-box-card">
-                        <div class="panel-heading">
-                            <div>
-                                <h2>Lịch sử phiếu điều chuyển (Chuyển đi &amp; Nhận về)</h2>
-                                <p>Hiển thị toàn bộ giao dịch điều chuyển có liên quan đến chi nhánh hiện tại.</p>
-                            </div>
-                            <div class="date-filters">
-                                <div class="field">
-                                    <label for="transferFromDate">Từ:</label>
-                                    <input id="transferFromDate" type="date">
-                                </div>
-                                <div class="field">
-                                    <label for="transferToDate">Đến:</label>
-                                    <input id="transferToDate" type="date">
-                                </div>
-                                <button type="button" class="btn-primary-custom button-sm" id="filterTransfersBtn">Lọc phiếu</button>
+                                </form>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="history-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-transfer-history" onclick="toggleInventorySection('transfer-history')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-transfer-history"></i>
+                                <span class="df-foldable-title">2. Lịch sử phiếu điều chuyển (Chuyển đi &amp; Nhận về)</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Hiển thị toàn bộ giao dịch điều chuyển có liên quan đến chi nhánh hiện tại.)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-primary border small">Lịch sử phiếu</span>
+                            </div>
+                        </div>
+                        <div class="df-foldable-content" id="content-transfer-history" style="display: block;">
+                            <div class="df-foldable-body">
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="date-filters">
+                                        <div class="field">
+                                            <label for="transferFromDate">Từ:</label>
+                                            <input id="transferFromDate" type="date">
+                                        </div>
+                                        <div class="field">
+                                            <label for="transferToDate">Đến:</label>
+                                            <input id="transferToDate" type="date">
+                                        </div>
+                                        <button type="button" class="btn-primary-custom button-sm" id="filterTransfersBtn">Lọc phiếu</button>
+                                    </div>
+                                </div>
                         <div class="table-viewport-wrapper">
                             <table class="cv-table">
                                 <thead>
@@ -629,14 +782,42 @@
                                 </tbody>
                             </table>
                         </div>
-                        <footer class="table-pagination-footer" style="margin-bottom:0;">
-                            <div class="text-secondary small">Lịch sử điều chuyển kho</div>
-                            <div class="pagination-btn-group d-flex align-items-center">
-                                <button id="transferHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                                <span id="transferHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                                <button id="transferHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                        <div class="misa-pagination-footer" id="transferHistoryPaginationFooter">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong id="lblTransfersTotal">0</strong>
                             </div>
-                        </footer>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select id="transferHistoryPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onTransfersPageSizeChange(this.value)">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span id="lblTransfersRange">0 - 0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="misa-nav-btn disabled" id="transferHistoryFirst" title="Trang đầu" disabled>
+                                        <i class="bi bi-chevron-bar-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="transferHistoryPrev" title="Trang trước" disabled>
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="transferHistoryNext" title="Trang sau" disabled>
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="transferHistoryLast" title="Trang cuối" disabled>
+                                        <i class="bi bi-chevron-bar-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -686,14 +867,40 @@
                         </tbody>
                     </table>
                 </div>
-                <footer class="table-pagination-footer" id="materialsPaginationFooter">
-                    <div class="text-secondary small">Danh mục vật tư áp dụng toàn hệ thống</div>
-                    <div class="pagination-btn-group d-flex align-items-center">
-                        <button id="materialsPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                        <span id="materialsPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                        <button id="materialsNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer" id="materialsPaginationFooter">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="lblMaterialsTotal">0</strong>
                     </div>
-                </footer>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="materialsPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onMaterialsPageSizeChange(this.value)">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="misa-page-range">
+                            <span id="lblMaterialsRange">0 - 0</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="misa-nav-btn disabled" id="materialsFirst" title="Trang đầu" disabled>
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="materialsPrev" title="Trang trước" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="materialsNext" title="Trang sau" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="materialsLast" title="Trang cuối" disabled>
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ==========================================
@@ -730,17 +937,20 @@
                  ========================================== -->
             <section id="supplierPaymentsPanel" class="panel" hidden>
                 <div class="form-tab-scroll-container">
-                    <div class="history-box-card">
-                        <div class="panel-heading">
-                            <div>
-                                <h2>Công nợ &amp; Thanh toán Nhà cung cấp</h2>
-                                <p>Theo dõi tổng tiền nhập hàng, số tiền đã thanh toán và dư nợ còn lại của từng NCC tại chi nhánh.</p>
+                    <div class="history-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-supplier-debt" onclick="toggleInventorySection('supplier-debt')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-supplier-debt"></i>
+                                <span class="df-foldable-title">1. Công nợ &amp; Thanh toán Nhà cung cấp</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Theo dõi tổng tiền nhập hàng, số tiền đã thanh toán và dư nợ còn lại của từng NCC tại chi nhánh.)</span>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn-secondary-custom" id="openQuickSupplierBtn">Thêm NCC mới</button>
-                                <button type="button" class="btn-primary-custom" id="openPaymentModalBtn">Lập phiếu thanh toán</button>
+                            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                                <button type="button" class="btn-secondary-custom button-sm" id="openQuickSupplierBtn">Thêm NCC mới</button>
+                                <button type="button" class="btn-primary-custom button-sm" id="openPaymentModalBtn">Lập phiếu thanh toán</button>
                             </div>
                         </div>
+                        <div class="df-foldable-content" id="content-supplier-debt" style="display: block;">
+                            <div class="df-foldable-body">
                         <div class="table-viewport-wrapper">
                             <table class="cv-table">
                                 <thead>
@@ -761,33 +971,43 @@
                                 <tr><td colspan="10" class="empty">Đang tải dữ liệu công nợ nhà cung cấp...</td></tr>
                                 </tbody>
                             </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="history-box-card">
-                        <div class="panel-heading">
-                            <div>
-                                <h2>Lịch sử thanh toán Nhà cung cấp</h2>
-                                <p>Danh sách các phiếu chi thanh toán công nợ tại chi nhánh.</p>
+                    <div class="history-box-card df-foldable-card">
+                        <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-supplier-history" onclick="toggleInventorySection('supplier-history')">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-supplier-history"></i>
+                                <span class="df-foldable-title">2. Lịch sử thanh toán Nhà cung cấp</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Danh sách các phiếu chi thanh toán công nợ tại chi nhánh.)</span>
                             </div>
-                            <div class="date-filters">
-                                <div class="field">
-                                    <label for="paymentFilterSupplier">NCC:</label>
-                                    <select id="paymentFilterSupplier" class="form-select form-select-sm">
-                                        <option value="">Tất cả NCC</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="paymentFromDate">Từ:</label>
-                                    <input id="paymentFromDate" type="date">
-                                </div>
-                                <div class="field">
-                                    <label for="paymentToDate">Đến:</label>
-                                    <input id="paymentToDate" type="date">
-                                </div>
-                                <button type="button" class="btn-primary-custom button-sm" id="filterPaymentsBtn">Lọc lịch sử</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-primary border small">Lịch sử chi trả</span>
                             </div>
                         </div>
+                        <div class="df-foldable-content" id="content-supplier-history" style="display: block;">
+                            <div class="df-foldable-body">
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="date-filters">
+                                        <div class="field">
+                                            <label for="paymentFilterSupplier">NCC:</label>
+                                            <select id="paymentFilterSupplier" class="form-select form-select-sm">
+                                                <option value="">Tất cả NCC</option>
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="paymentFromDate">Từ:</label>
+                                            <input id="paymentFromDate" type="date">
+                                        </div>
+                                        <div class="field">
+                                            <label for="paymentToDate">Đến:</label>
+                                            <input id="paymentToDate" type="date">
+                                        </div>
+                                        <button type="button" class="btn-primary-custom button-sm" id="filterPaymentsBtn">Lọc lịch sử</button>
+                                    </div>
+                                </div>
                         <div class="table-viewport-wrapper">
                             <table class="cv-table">
                                 <thead>
@@ -808,14 +1028,42 @@
                                 </tbody>
                             </table>
                         </div>
-                        <footer class="table-pagination-footer" style="margin-bottom:0;">
-                            <div class="text-secondary small">Lịch sử thanh toán NCC</div>
-                            <div class="pagination-btn-group d-flex align-items-center">
-                                <button id="paymentHistoryPrev" class="btn-page disabled" type="button" disabled title="Trang trước">‹</button>
-                                <span id="paymentHistoryPage" class="mx-2 small fw-bold text-dark">Trang 0 / 0</span>
-                                <button id="paymentHistoryNext" class="btn-page disabled" type="button" disabled title="Trang sau">›</button>
+                        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                        <div class="misa-pagination-footer" id="paymentHistoryPaginationFooter">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong id="lblPaymentsTotal">0</strong>
                             </div>
-                        </footer>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select id="paymentHistoryPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onPaymentsPageSizeChange(this.value)">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span id="lblPaymentsRange">0 - 0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="misa-nav-btn disabled" id="paymentHistoryFirst" title="Trang đầu" disabled>
+                                        <i class="bi bi-chevron-bar-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="paymentHistoryPrev" title="Trang trước" disabled>
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="paymentHistoryNext" title="Trang sau" disabled>
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                    <button type="button" class="misa-nav-btn disabled" id="paymentHistoryLast" title="Trang cuối" disabled>
+                                        <i class="bi bi-chevron-bar-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
