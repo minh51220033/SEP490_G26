@@ -89,14 +89,10 @@
             <div class="side-group__panel" id="sgAdmin">
 
                 <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE'))}"
-                       th:href="@{/admin/patients}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'admin-patients'} ? 'is-active' : ''"
-                       title="Quản lý khách hàng / Hồ sơ bệnh nhân tổng hợp">
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
-                    </a>
+
                     <!-- QUẢN LÝ TÀI KHOẢN (gộp: Danh sách tài khoản, Vai trò & Phân quyền, Tài khoản bị cấm) -->
                     <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
+
                        th:href="@{/accounts}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'accounts' or activeMenu == 'roles' or activeMenu == 'bans'} ? 'is-active' : ''"
                        title="Quản lý tài khoản: Danh sách tài khoản, Vai trò &amp; Phân quyền, Tài khoản bị cấm bình luận">
@@ -386,7 +382,7 @@
                        th:href="@{/reception/patients}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'patients' or activeMenu == 'doctor-records'} ? 'is-active' : ''"
                        title="Quản lý thông tin hồ sơ bệnh nhân &amp; lịch sử điều trị">
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Hồ sơ bệnh nhân</span>
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
                     </a>
                     <!-- CSKH -->
                     <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
