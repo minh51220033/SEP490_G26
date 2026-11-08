@@ -368,41 +368,106 @@
                                 </span>
                             </td>
 
-                            <!-- 8. Cột Thao tác tĩnh (Luôn hiển thị đầy đủ cụm nút chuẩn như daily-visits) -->
-                            <td class="text-center" data-col="actions" style="width: 380px; min-width: 380px;">
+                            <!-- 8. Cột Thao tác tĩnh (Gọn gàng 2 nút: Chi tiết/Quản lý cơ sở + Đổi trạng thái/Xóa nhầm) -->
+                            <td class="text-center" data-col="actions" style="width: 280px; min-width: 280px;">
                                 <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
-                                       class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, sơ đồ phòng &amp; ghế">
+                                       class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, quản lý sơ đồ phòng, ghế &amp; sửa thông tin">
                                         <i class="bi bi-eye"></i>
                                         <span>Chi tiết</span>
                                     </a>
-                                    <a th:href="@{/admin/branches/{id}/edit(id=${branch.branchId})}"
-                                       class="dv-equal-btn-secondary"
-                                       title="Chỉnh sửa thông tin cơ sở">
-                                        <i class="bi bi-pencil text-primary"></i>
-                                        <span>Chỉnh sửa</span>
-                                    </a>
+
+                                    <!-- Nút Xóa: Chỉ hiện khi tạo nhầm (chưa có dữ liệu) -->
+                                    <form th:if="${canDeleteMap != null and canDeleteMap[branch.branchId]}"
+                                          th:action="@{/admin/branches/{id}/delete(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-danger border-danger-subtle"
+                                                title="Xóa chi nhánh tạo nhầm (chưa có dữ liệu)"
+                                                onclick="return confirm('Chi nhánh này chưa phát sinh dữ liệu. Bạn có chắc chắn muốn xóa vĩnh viễn không?');">
+                                            <i class="bi bi-trash"></i>
+                                            <span>Xóa</span>
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Ngừng hoạt động (Chỉ hiện khi cơ sở ĐÃ CÓ DỮ LIỆU và đang hoạt động) -->
+                                    <form th:if="${(canDeleteMap == null or !canDeleteMap[branch.branchId]) and branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/deactivate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-warning border-warning-subtle"
+                                                title="Ngừng hoạt động cơ sở này"
+                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?');">
+                                            <i class="bi bi-pause-circle"></i>
+                                            <span>Ngừng</span>
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Kích hoạt lại (Chỉ hiện khi cơ sở ĐÃ CÓ DỮ LIỆU và đang ngừng hoạt động) -->
+                                    <form th:if="${(canDeleteMap == null or !canDeleteMap[branch.branchId]) and !branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/activate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-success border-success-subtle"
+                                                title="Kích hoạt lại cơ sở này"
+                                                onclick="return confirm('Kích hoạt lại chi nhánh này?');">
+                                            <i class="bi bi-play-circle"></i>
+                                            <span>Kích hoạt</span>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
 
-                            <!-- 9. Khung Thao tác nổi khi Hover dòng (Chuẩn 100% theo /doctor/daily-visits) -->
+                            <!-- 9. Khung Thao tác nổi khi Hover dòng (Đồng bộ 100%) -->
                             <td class="dv-floating-actions-track">
                                 <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
                                     <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
-                                       class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, sơ đồ phòng &amp; ghế">
+                                       class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, quản lý sơ đồ phòng, ghế &amp; sửa thông tin">
                                         <i class="bi bi-eye"></i>
                                         <span>Chi tiết</span>
                                     </a>
-                                    <a th:href="@{/admin/branches/{id}/edit(id=${branch.branchId})}"
-                                       class="dv-equal-btn-secondary"
-                                       title="Chỉnh sửa thông tin cơ sở">
-                                        <i class="bi bi-pencil text-primary"></i>
-                                        <span>Chỉnh sửa</span>
-                                    </a>
-                                </div>
-                            </td>
+
+                                    <!-- Nút Xóa: Chỉ hiện khi tạo nhầm (chưa có dữ liệu) -->
+                                    <form th:if="${canDeleteMap != null and canDeleteMap[branch.branchId]}"
+                                          th:action="@{/admin/branches/{id}/delete(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-danger border-danger-subtle"
+                                                title="Xóa chi nhánh tạo nhầm (chưa có dữ liệu)"
+                                                onclick="return confirm('Chi nhánh này chưa phát sinh dữ liệu. Bạn có chắc chắn muốn xóa vĩnh viễn không?');">
+                                            <i class="bi bi-trash"></i>
+                                            <span>Xóa</span>
                                         </button>
                                     </form>
+
+                                    <!-- Nút Ngừng hoạt động (Chỉ hiện khi cơ sở ĐÃ CÓ DỮ LIỆU và đang hoạt động) -->
+                                    <form th:if="${(canDeleteMap == null or !canDeleteMap[branch.branchId]) and branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/deactivate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-warning border-warning-subtle"
+                                                title="Ngừng hoạt động cơ sở này"
+                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?');">
+                                            <i class="bi bi-pause-circle"></i>
+                                            <span>Ngừng</span>
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Kích hoạt lại (Chỉ hiện khi cơ sở ĐÃ CÓ DỮ LIỆU và đang ngừng hoạt động) -->
+                                    <form th:if="${(canDeleteMap == null or !canDeleteMap[branch.branchId]) and !branch.isActive}"
+                                          th:action="@{/admin/branches/{id}/activate(id=${branch.branchId})}"
+                                          method="post" class="d-inline m-0">
+                                        <button type="submit" class="dv-equal-btn-secondary text-success border-success-subtle"
+                                                title="Kích hoạt lại cơ sở này"
+                                                onclick="return confirm('Kích hoạt lại chi nhánh này?');">
+                                            <i class="bi bi-play-circle"></i>
+                                            <span>Kích hoạt</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                                            <span>Kích hoạt</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                                        <span>Xóa</span>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
