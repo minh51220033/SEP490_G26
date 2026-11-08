@@ -626,42 +626,52 @@
     }
 
     function renderCcPagination(totalElements, page, totalPages) {
+        state.totalPages = totalPages;
+        state.page = page;
+
+        // Công thức tính fromItem và toItem chuẩn 1-indexed (xử lý an toàn khi totalElements = 0)
+        const fromItem = totalElements === 0 ? 0 : (page * state.pageSize) + 1;
+        const toItem = Math.min((page + 1) * state.pageSize, totalElements);
+
         if ($("lblTasksRange")) {
-            const start = totalElements > 0 ? (page * state.pageSize + 1) : 0;
-            const end = Math.min((page + 1) * state.pageSize, totalElements);
-            $("lblTasksRange").textContent = totalElements > 0 ? `${start} - ${end}` : "0 - 0";
+            $("lblTasksRange").textContent = totalElements === 0 ? "0 - 0" : `${fromItem} - ${toItem}`;
         }
-        if ($("lblTasksTotal")) $("lblTasksTotal").textContent = totalElements;
-        if ($("tasksPageSizeSelect")) $("tasksPageSizeSelect").value = state.pageSize;
+        if ($("lblTasksTotal")) {
+            $("lblTasksTotal").textContent = totalElements;
+        }
+        if ($("tasksPageSizeSelect")) {
+            $("tasksPageSizeSelect").value = state.pageSize;
+        }
 
-        if ($("tasksFirstBtn")) $("tasksFirstBtn").disabled = page <= 0;
-        if ($("tasksPrevBtn")) $("tasksPrevBtn").disabled = page <= 0;
-        if ($("tasksNextBtn")) $("tasksNextBtn").disabled = page + 1 >= totalPages;
-        if ($("tasksLastBtn")) $("tasksLastBtn").disabled = page + 1 >= totalPages;
+        // Trạng thái vô hiệu hóa cụm 4 nút điều hướng (|< < > >|)
+        const isFirst = page <= 0 || totalElements === 0;
+        const isLast = page >= totalPages - 1 || totalElements === 0;
 
-        const numbersContainer = $("tasksPageNumbers");
-        if (numbersContainer) {
-            numbersContainer.innerHTML = "";
-            const maxButtons = 5;
-            let startPage = Math.max(0, page - Math.floor(maxButtons / 2));
-            let endPage = Math.min(totalPages - 1, startPage + maxButtons - 1);
-            if (endPage - startPage + 1 < maxButtons) {
-                startPage = Math.max(0, endPage - maxButtons + 1);
-            }
-            for (let p = startPage; p <= endPage; p++) {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = `btn-page ${p === page ? "active" : ""}`;
-                btn.textContent = p + 1;
-                btn.onclick = () => loadTasks(p);
-                numbersContainer.appendChild(btn);
-            }
+        const firstBtn = $("tasksFirstBtn");
+        if (firstBtn) {
+            firstBtn.disabled = isFirst;
+            firstBtn.classList.toggle("disabled", isFirst);
+        }
+        const prevBtn = $("tasksPrevBtn");
+        if (prevBtn) {
+            prevBtn.disabled = isFirst;
+            prevBtn.classList.toggle("disabled", isFirst);
+        }
+        const nextBtn = $("tasksNextBtn");
+        if (nextBtn) {
+            nextBtn.disabled = isLast;
+            nextBtn.classList.toggle("disabled", isLast);
+        }
+        const lastBtn = $("tasksLastBtn");
+        if (lastBtn) {
+            lastBtn.disabled = isLast;
+            lastBtn.classList.toggle("disabled", isLast);
         }
     }
 
     window.onCcPageSizeChange = function(newSize) {
         state.pageSize = parseInt(newSize, 10) || 10;
-        loadTasks(0);
+        loadTasks(0); // Bắt buộc reset về trang đầu khi đổi số lượng hiển thị
     };
 
     window.goToCcPage = function(p) {
@@ -669,9 +679,21 @@
         loadTasks(p);
     };
 
+    window.goToCcPrevPage = function() {
+        if (state.page > 0) {
+            loadTasks(state.page - 1);
+        }
+    };
+
+    window.goToCcNextPage = function() {
+        if (state.totalPages > 0 && state.page < state.totalPages - 1) {
+            loadTasks(state.page + 1);
+        }
+    };
+
     window.goToCcLastPage = function() {
         if (state.totalPages > 0) {
-            loadTasks(state.totalPages - 1);
+            loadTasks(Math.max(0, state.totalPages - 1));
         }
     };
 
