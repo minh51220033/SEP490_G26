@@ -3,22 +3,20 @@
 
 <head th:replace="~{fragments/head :: head('Chấm công toàn chi nhánh')}"></head>
 
-<body class="app-body account-page-body staff-page-body">
+<body class="app-body staff-page-body branch-attendance-body">
 
     <div class="app-shell">
 
-        <aside th:replace="~{fragments/sidebar :: sidebar('attendance-admin')}"></aside>
+        <aside th:replace="~{fragments/sidebar :: sidebar('attendance')}"></aside>
         <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
         <div class="app-main">
 
             <header th:replace="~{fragments/header :: appTopbar('Chấm công toàn chi nhánh')}"></header>
 
-            <main class="app-content">
+            <main class="app-content branch-attendance-content">
                 <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
                 <link rel="stylesheet" th:href="@{/css/staff.css}">
-                <link rel="stylesheet" th:href="@{/css/account.css}">
-                <link rel="stylesheet" th:href="@{/css/schedule.css}">
                 <link rel="stylesheet" th:href="@{/css/attendance.css}">
 
                 <!-- BREADCRUMB CHUẨN ĐỒNG BỘ QUẢN LÝ TÀI KHOẢN -->
@@ -26,15 +24,15 @@
                     <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Chấm công toàn chi nhánh</span>
                 </nav>
 
-                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN GỌN GÀNG -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2.5">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="dv-header-icon" style="width: 38px; height: 38px; font-size: 18px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
                             <i class="bi bi-calendar2-check-fill"></i>
                         </div>
                         <div>
-                            <h1 class="dv-page-title mb-0">Bảng chấm công toàn chi nhánh</h1>
-                            <p class="dv-page-subtitle">
+                            <h1 class="dv-page-title mb-0" style="font-size: 20px;">Bảng chấm công toàn chi nhánh</h1>
+                            <p class="dv-page-subtitle" style="font-size: 12.5px;">
                                 Tháng <strong class="text-primary" th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">01/2026</strong>
                                 · Đối chiếu tự động với lịch phân ca để tính lương &amp; đối soát nhân sự
                             </p>
@@ -42,102 +40,103 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
-                           class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                           class="btn btn-outline-primary fw-semibold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5"
+                           style="height: 36px; font-size: 13px;">
                             <i class="bi bi-calendar-week"></i> Bảng phân ca tuần
                         </a>
                         <button th:if="${selectedBranchId != null and !#lists.isEmpty(records)}" type="button"
-                                class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2 btn-view-all-att"
-                                style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                                class="btn btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5 btn-view-all-att"
+                                style="height: 36px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                             <i class="bi bi-clock-history"></i>
                             <span>Nhật ký toàn cơ sở (<span th:text="${#lists.size(records)}">0</span> lượt)</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 4 THẺ KPI TỔNG QUAN (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
-                <div th:if="${selectedBranchId != null}" class="row g-3 mb-4">
+                <!-- 4 THẺ KPI TỔNG QUAN (KÍCH THƯỚC CHUẨN GỌN MISA AMIS) -->
+                <div th:if="${selectedBranchId != null}" class="row g-2.5 mb-2.5">
                     <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card active-kpi" style="--kpi-accent: #0284c7;">
+                        <div class="dv-kpi-card active-kpi" style="--kpi-accent: #0284c7; padding: 12px 16px;">
                             <div>
-                                <div class="dv-kpi-num" th:text="${summary.workDays}">0</div>
-                                <div class="dv-kpi-label">Tổng lượt chấm công</div>
-                                <div class="dv-kpi-sub">
+                                <div class="dv-kpi-num" style="font-size: 24px;" th:text="${summary.workDays}">0</div>
+                                <div class="dv-kpi-label" style="font-size: 13px; margin-top: 2px;">Tổng lượt chấm công</div>
+                                <div class="dv-kpi-sub" style="font-size: 11.5px;">
                                     Tổng thời gian: <strong class="text-primary" th:text="${(summary.workedMinutes / 60 > 0 ? (summary.workedMinutes / 60) + ' giờ ' : '') + (summary.workedMinutes % 60) + ' phút'}">0 phút</strong>
                                 </div>
                             </div>
-                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <div class="dv-kpi-icon" style="width: 42px; height: 42px; font-size: 20px; border-radius: 10px; background: #e0f2fe; color: #0284c7;">
                                 <i class="bi bi-calendar-check-fill"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                        <div class="dv-kpi-card" style="--kpi-accent: #10b981; padding: 12px 16px;">
                             <div>
-                                <div class="dv-kpi-num text-success" th:text="${summary.onTime}">0</div>
-                                <div class="dv-kpi-label">Lượt đúng giờ</div>
-                                <div class="dv-kpi-sub">Check-in đúng giờ vào ca</div>
+                                <div class="dv-kpi-num text-success" style="font-size: 24px;" th:text="${summary.onTime}">0</div>
+                                <div class="dv-kpi-label" style="font-size: 13px; margin-top: 2px;">Lượt đúng giờ</div>
+                                <div class="dv-kpi-sub" style="font-size: 11.5px;">Check-in đúng giờ vào ca</div>
                             </div>
-                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                            <div class="dv-kpi-icon" style="width: 42px; height: 42px; font-size: 20px; border-radius: 10px; background: #d1fae5; color: #059669;">
                                 <i class="bi bi-check-circle-fill"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b; padding: 12px 16px;">
                             <div>
-                                <div class="dv-kpi-num text-warning" th:text="${summary.late}">0</div>
-                                <div class="dv-kpi-label">Lượt đi muộn</div>
-                                <div class="dv-kpi-sub">Check-in trễ so với giờ ca</div>
+                                <div class="dv-kpi-num text-warning" style="font-size: 24px;" th:text="${summary.late}">0</div>
+                                <div class="dv-kpi-label" style="font-size: 13px; margin-top: 2px;">Lượt đi muộn</div>
+                                <div class="dv-kpi-sub" style="font-size: 11.5px;">Check-in trễ so với giờ ca</div>
                             </div>
-                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                            <div class="dv-kpi-icon" style="width: 42px; height: 42px; font-size: 20px; border-radius: 10px; background: #fef3c7; color: #d97706;">
                                 <i class="bi bi-alarm-fill"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;">
+                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444; padding: 12px 16px;">
                             <div>
-                                <div class="dv-kpi-num text-danger" th:text="${summary.earlyLeave}">0</div>
-                                <div class="dv-kpi-label">Lượt về sớm</div>
-                                <div class="dv-kpi-sub">Check-out trước giờ kết thúc ca</div>
+                                <div class="dv-kpi-num text-danger" style="font-size: 24px;" th:text="${summary.earlyLeave}">0</div>
+                                <div class="dv-kpi-label" style="font-size: 13px; margin-top: 2px;">Lượt về sớm</div>
+                                <div class="dv-kpi-sub" style="font-size: 11.5px;">Check-out trước giờ kết thúc ca</div>
                             </div>
-                            <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                            <div class="dv-kpi-icon" style="width: 42px; height: 42px; font-size: 20px; border-radius: 10px; background: #fee2e2; color: #dc2626;">
                                 <i class="bi bi-clock-history"></i>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ 100% CHUẨN QUẢN LÝ TÀI KHOẢN -->
-                <div class="dv-toolbar-card">
-                    <form th:action="@{/admin/attendance}" method="get" id="attFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ GỌN GÀNG -->
+                <div class="dv-toolbar-card" style="padding: 10px 16px; margin-bottom: 12px;">
+                    <form th:action="@{/admin/attendance}" method="get" id="attFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
                         <input type="hidden" id="monthInput" name="month" th:value="${month}">
-                        <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
-                            <!-- Ô tìm kiếm chuẩn -->
-                            <div class="dv-search-box">
-                                <i class="bi bi-search search-lead-icon"></i>
-                                <input type="text" id="attStaffKeyword" placeholder="Tìm kiếm nhân sự theo họ tên, mã nhân viên...">
+                        <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                            <!-- Ô tìm kiếm chuẩn gọn -->
+                            <div class="dv-search-box" style="width: 280px; flex: 0 1 280px;">
+                                <i class="bi bi-search search-lead-icon" style="font-size: 13.5px; left: 12px;"></i>
+                                <input type="text" id="attStaffKeyword" placeholder="Tìm theo tên, mã NV..." style="height: 36px; font-size: 13px; padding-left: 36px; border-radius: 8px;">
                             </div>
 
                             <!-- Nút bấm Tìm kiếm -->
-                            <button type="button" id="btnAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                            <button type="button" id="btnAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-1.5 rounded-3 shadow-xs" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-search"></i>
                                 <span>Tìm kiếm</span>
                             </button>
 
                             <!-- Nút Lọc nâng cao -->
-                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 44px;">
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-funnel"></i> Lọc nâng cao
                                 <span id="advFilterBadge" class="badge bg-primary text-white rounded-pill" style="display: none;">1</span>
                             </button>
 
                             <!-- Chọn nhanh chi nhánh -->
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="small fw-bold text-secondary text-nowrap">
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="small fw-bold text-secondary text-nowrap" style="font-size: 12.5px;">
                                     <i class="bi bi-geo-alt-fill text-primary me-1"></i>Chi nhánh:
                                 </span>
                                 <select id="branchId" name="branchId" class="form-select fw-semibold rounded-3"
-                                        style="min-width: 200px; height: 44px; font-size: 14px; border-color: #cbd5e1;" onchange="this.form.submit()">
+                                        style="min-width: 170px; height: 36px; font-size: 13px; border-color: #cbd5e1;" onchange="this.form.submit()">
                                     <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                             th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh</option>
                                 </select>
@@ -146,24 +145,24 @@
                             <!-- Nút Xóa nhanh bộ lọc -->
                             <button type="button" id="btnClearAttFilter"
                                     class="btn btn-link text-decoration-none text-danger p-0 ms-1 small fw-semibold"
-                                    style="display: none;" title="Xóa tất cả bộ lọc">
+                                    style="display: none; font-size: 12.5px;" title="Xóa tất cả bộ lọc">
                                 <i class="bi bi-x-circle me-1"></i>Xóa lọc
                             </button>
                         </div>
 
-                        <!-- Bộ điều hướng tháng -->
-                        <div class="d-flex gap-2 align-items-center">
+                        <!-- Bộ điều hướng tháng gọn gàng -->
+                        <div class="d-flex gap-1.5 align-items-center">
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}"
-                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                               class="btn btn-outline-secondary fw-semibold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-chevron-left"></i> Tháng trước
                             </a>
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}"
-                               class="btn btn-primary fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center"
-                               style="height: 44px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                               class="btn btn-primary fw-bold px-3 py-1 rounded-3 d-inline-flex align-items-center"
+                               style="height: 36px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                                 Tháng này (<span th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</span>)
                             </a>
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}"
-                               class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;">
+                               class="btn btn-outline-secondary fw-semibold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
                                 Tháng sau <i class="bi bi-chevron-right"></i>
                             </a>
                         </div>
@@ -178,24 +177,24 @@
                 <!-- BẢNG DỮ LIỆU CHẤM CÔNG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN -->
                 <section th:if="${selectedBranchId != null}" class="staff-table-card">
                     <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT -->
-                    <div class="dv-grid-topbar">
-                        <div class="d-flex align-items-center gap-3 flex-wrap">
-                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                    <div class="dv-grid-topbar" style="padding: 10px 16px !important;">
+                        <div class="d-flex align-items-center gap-2.5 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 13.5px;">
                                 Hiển thị <span class="text-primary fw-bolder" id="visibleStaffCount" th:text="${#lists.size(staffSummary)}">0</span> nhân sự
                                 <span class="text-muted mx-1">•</span>
                                 <span class="text-secondary fw-semibold" th:text="'Tháng ' + ${#temporals.format(month.atDay(1), 'MM/yyyy')}">Tháng 11/2026</span>
                             </div>
-                            <span class="badge rounded-pill px-3 py-1.5"
-                                  style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
-                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
+                            <span class="badge rounded-pill px-2.5 py-1"
+                                  style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 11.5px; font-weight: 600;">
+                                <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh
                             </span>
                         </div>
 
                         <!-- Bên phải: Nút Tùy biến cột -->
                         <div class="d-flex align-items-center gap-2">
                             <div class="custom-col-dropdown position-relative d-inline-block">
-                                <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
-                                        style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                <button type="button" class="btn btn-white bg-white border fw-bold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                        style="height: 32px; font-size: 12.5px; border-color: #cbd5e1 !important; color: #0f172a;"
                                         id="btnToggleCustomColumns" title="Tùy chỉnh cột">
                                     <i class="bi bi-layout-three-columns text-primary"></i>
                                     <span>Tùy biến cột</span>
@@ -273,28 +272,28 @@
                         <table class="dv-amis-table" id="attSummaryTable">
                             <thead>
                             <tr>
-                                <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                <th data-col="stt" style="width: 50px; min-width: 50px;" class="text-center">
                                     <div class="dv-th-inner justify-content-center"><span>#</span></div>
                                 </th>
-                                <th data-col="staff" style="min-width: 250px;">
+                                <th data-col="staff" style="min-width: 200px;">
                                     <div class="dv-th-inner"><span>Nhân sự</span></div>
                                 </th>
-                                <th data-col="workDays" class="text-center" style="min-width: 210px;" title="Số ngày thực tế đã chấm công / Tổng số ngày được xếp ca trong tháng">
+                                <th data-col="workDays" class="text-center" style="min-width: 170px;" title="Số ngày thực tế đã chấm công / Tổng số ngày được xếp ca trong tháng">
                                     <div class="dv-th-inner justify-content-center"><span>Ngày công (Thực tế / Lịch)</span></div>
                                 </th>
-                                <th data-col="onTime" class="text-center" style="min-width: 140px;">
+                                <th data-col="onTime" class="text-center" style="min-width: 105px;">
                                     <div class="dv-th-inner justify-content-center"><span>Đúng giờ</span></div>
                                 </th>
-                                <th data-col="late" class="text-center" style="min-width: 140px;">
+                                <th data-col="late" class="text-center" style="min-width: 105px;">
                                     <div class="dv-th-inner justify-content-center"><span>Đi muộn</span></div>
                                 </th>
-                                <th data-col="early" class="text-center" style="min-width: 140px;">
+                                <th data-col="early" class="text-center" style="min-width: 105px;">
                                     <div class="dv-th-inner justify-content-center"><span>Về sớm</span></div>
                                 </th>
-                                <th data-col="worked" class="text-end" style="min-width: 190px;">
+                                <th data-col="worked" class="text-end" style="min-width: 155px;">
                                     <div class="dv-th-inner justify-content-end"><span>Tổng thời gian làm</span></div>
                                 </th>
-                                <th data-col="actions" class="text-center" style="min-width: 260px;">
+                                <th data-col="actions" class="text-center" style="min-width: 180px;">
                                     <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
                                 </th>
                                 <th class="dv-floating-actions-track"></th>
@@ -325,18 +324,19 @@
                                 th:data-worked-minutes="${s.workedMinutes}"
                                 th:with="workedText=${(s.workedMinutes / 60 > 0 ? (s.workedMinutes / 60) + ' giờ ' : '') + (s.workedMinutes % 60) + ' phút'}">
                                 <!-- 1. STT -->
-                                <td data-col="stt" class="text-center text-muted fw-semibold col-stt-index" style="width: 60px; min-width: 60px;">
+                                <td data-col="stt" class="text-center text-muted fw-semibold col-stt-index" style="width: 50px; min-width: 50px;">
                                     <span th:text="${iter.count}">1</span>
                                 </td>
 
                                 <!-- 2. Nhân sự + Avatar -->
-                                <td data-col="staff" style="min-width: 250px;">
+                                <td data-col="staff" style="min-width: 200px;">
                                     <div class="d-flex align-items-center">
                                         <div class="dv-patient-avatar flex-shrink-0 avatar-primary"
+                                             style="width: 32px !important; height: 32px !important; min-width: 32px !important; font-size: 13px !important; border-radius: 8px !important; margin-right: 10px !important;"
                                              th:text="${!#strings.isEmpty(s.fullName) ? #strings.toUpperCase(#strings.substring(s.fullName, 0, 1)) : 'N'}">N</div>
                                         <div class="d-flex flex-column justify-content-center">
-                                            <span class="dv-patient-name" th:text="${s.fullName}">Họ tên</span>
-                                            <div class="text-secondary small fw-semibold mt-1">
+                                             <span class="dv-patient-name" style="font-size: 13.5px !important;" th:text="${s.fullName}">Họ tên</span>
+                                            <div class="text-secondary small fw-semibold mt-0.5" style="font-size: 11.5px;">
                                                 <i class="bi bi-person-badge me-1 text-muted"></i><span th:text="${s.staffCode}">NV0001</span>
                                             </div>
                                         </div>
@@ -344,41 +344,42 @@
                                 </td>
 
                                 <!-- 3. Ngày công (Thực tế / Lịch) -->
-                                <td data-col="workDays" class="text-center" style="min-width: 210px;">
-                                    <span class="badge rounded-pill px-3 py-1.5 fw-bold"
-                                          th:style="${s.workDays == 0} ? 'background:#fef2f2;color:#dc2626;font-size:13px;border:1px solid #fecaca;' : (${s.workDays >= s.scheduledDays} ? 'background:#ecfdf5;color:#059669;font-size:13px;border:1px solid #a7f3d0;' : 'background:#eff6ff;color:#1d4ed8;font-size:13px;border:1px solid #bfdbfe;')">
+                                <td data-col="workDays" class="text-center" style="min-width: 170px;">
+                                    <span class="badge rounded-pill px-2.5 py-1 fw-bold"
+                                          th:style="${s.workDays == 0} ? 'background:#fef2f2;color:#dc2626;font-size:12px;border:1px solid #fecaca;' : (${s.workDays >= s.scheduledDays} ? 'background:#ecfdf5;color:#059669;font-size:12px;border:1px solid #a7f3d0;' : 'background:#eff6ff;color:#1d4ed8;font-size:12px;border:1px solid #bfdbfe;')">
                                         <span th:text="${s.workDays}">0</span> / <span th:text="${s.scheduledDays} + ' ngày'">0 ngày</span>
                                     </span>
                                 </td>
 
                                 <!-- 4. Đúng giờ -->
-                                <td data-col="onTime" class="text-center" style="min-width: 140px;">
+                                <td data-col="onTime" class="text-center" style="min-width: 105px;">
                                     <span class="fw-bold text-success" th:text="${s.onTime}">0</span>
-                                    <small class="text-muted">lần</small>
+                                    <small class="text-muted" style="font-size: 11px;">lần</small>
                                 </td>
 
                                 <!-- 5. Đi muộn -->
-                                <td data-col="late" class="text-center" style="min-width: 140px;">
+                                <td data-col="late" class="text-center" style="min-width: 105px;">
                                     <span class="fw-bold" th:classappend="${s.late > 0} ? 'text-danger' : 'text-muted'" th:text="${s.late}">0</span>
-                                    <small class="text-muted">lần</small>
+                                    <small class="text-muted" style="font-size: 11px;">lần</small>
                                 </td>
 
                                 <!-- 6. Về sớm -->
-                                <td data-col="early" class="text-center" style="min-width: 140px;">
+                                <td data-col="early" class="text-center" style="min-width: 105px;">
                                     <span class="fw-bold" th:classappend="${s.earlyLeave > 0} ? 'text-warning' : 'text-muted'" th:text="${s.earlyLeave}">0</span>
-                                    <small class="text-muted">lần</small>
+                                    <small class="text-muted" style="font-size: 11px;">lần</small>
                                 </td>
 
                                 <!-- 7. Tổng thời gian làm -->
-                                <td data-col="worked" class="text-end" style="min-width: 190px;">
-                                    <span class="fw-bold text-dark" style="font-size: 14px;" th:text="${workedText}">0 phút</span>
+                                <td data-col="worked" class="text-end" style="min-width: 155px;">
+                                    <span class="fw-bold text-dark" style="font-size: 13px;" th:text="${workedText}">0 phút</span>
                                 </td>
 
                                 <!-- 8. Cột Thao tác tĩnh -->
-                                <td data-col="actions" class="text-center" style="min-width: 260px;">
+                                <td data-col="actions" class="text-center" style="min-width: 180px;">
                                     <div class="dv-actions-cell-always justify-content-center" onclick="event.stopPropagation()">
                                         <button type="button"
                                                 class="dv-equal-btn-primary btn-view-staff-att"
+                                                style="width: 88px !important; height: 32px !important; font-size: 12px !important; border-radius: 6px !important;"
                                                 th:data-staff-code="${s.staffCode}"
                                                 th:data-staff-name="${s.fullName}"
                                                 th:data-work-days="${s.workDays}"
@@ -388,23 +389,25 @@
                                                 th:data-early="${s.earlyLeave}"
                                                 th:data-worked-text="${workedText}">
                                             <i class="bi bi-eye"></i>
-                                            <span>Xem chi tiết</span>
+                                            <span>Xem</span>
                                         </button>
                                         <a th:if="${s.staffId != null}"
                                            th:href="@{/admin/staffs/{id}(id=${s.staffId})}"
                                            class="dv-equal-btn-secondary"
+                                           style="width: 78px !important; height: 32px !important; font-size: 12px !important; border-radius: 6px !important;"
                                            title="Xem hồ sơ nhân sự">
                                             <i class="bi bi-person-vcard text-primary"></i>
-                                            <span>Hồ sơ NS</span>
+                                            <span>Hồ sơ</span>
                                         </a>
                                     </div>
                                 </td>
 
-                                <!-- 9. Khung Thao tác nổi khi Hover dòng (Đồng bộ 100% chuẩn Quản lý tài khoản) -->
+                                <!-- 9. Khung Thao tác nổi khi Hover dòng -->
                                 <td class="dv-floating-actions-track">
                                     <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
                                         <button type="button"
                                                 class="dv-equal-btn-primary btn-view-staff-att"
+                                                style="width: 88px !important; height: 32px !important; font-size: 12px !important; border-radius: 6px !important;"
                                                 th:data-staff-code="${s.staffCode}"
                                                 th:data-staff-name="${s.fullName}"
                                                 th:data-work-days="${s.workDays}"
@@ -414,14 +417,15 @@
                                                 th:data-early="${s.earlyLeave}"
                                                 th:data-worked-text="${workedText}">
                                             <i class="bi bi-eye"></i>
-                                            <span>Xem chi tiết</span>
+                                            <span>Xem</span>
                                         </button>
                                         <a th:if="${s.staffId != null}"
                                            th:href="@{/admin/staffs/{id}(id=${s.staffId})}"
                                            class="dv-equal-btn-secondary"
+                                           style="width: 78px !important; height: 32px !important; font-size: 12px !important; border-radius: 6px !important;"
                                            title="Xem hồ sơ nhân sự">
                                             <i class="bi bi-person-vcard text-primary"></i>
-                                            <span>Hồ sơ NS</span>
+                                            <span>Hồ sơ</span>
                                         </a>
                                     </div>
                                 </td>

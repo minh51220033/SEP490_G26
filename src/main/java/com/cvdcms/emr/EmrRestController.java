@@ -80,6 +80,15 @@ public class EmrRestController {
         service.doctorSign(session, recordId, request != null && request.confirmed());
     }
 
+    @PostMapping("/{recordId}/signatures/upload")
+    public java.util.Map<String, String> uploadSignature(@PathVariable Long recordId,
+            @RequestBody java.util.Map<String, String> payload) {
+        String dataUrl = payload != null ? payload.get("signatureData") : null;
+        String signerType = payload != null ? payload.getOrDefault("signerType", "doctor") : "doctor";
+        String url = com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(dataUrl, "emr-" + signerType);
+        return java.util.Map.of("signatureUrl", url);
+    }
+
     @PostMapping("/{recordId}/amendments")
     public void amendment(HttpSession session, @PathVariable Long recordId,
             @RequestBody AmendmentRequest request) {
