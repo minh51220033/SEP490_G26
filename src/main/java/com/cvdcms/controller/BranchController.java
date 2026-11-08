@@ -214,7 +214,7 @@ public class BranchController {
                         branch.setImageUrl(saveBranchImage(imageFile));
                     }
                     branchService.updateBranch(id, branch);
-                });
+                }, "pane-settings");
     }
 
     private String saveBranchImage(MultipartFile file) {
@@ -253,7 +253,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã lưu cấu hình chi nhánh.",
-                () -> branchService.updateBranchConfig(id, config));
+                () -> branchService.updateBranchConfig(id, config), "pane-settings");
     }
 
     // POST /admin/branches/{id}/deactivate - Ngừng hoạt động, không xóa bản ghi.
@@ -301,7 +301,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã thêm phòng khám.",
-                () -> roomService.createRoom(id, room));
+                () -> roomService.createRoom(id, room), "pane-map");
     }
 
     @PostMapping("/{id}/rooms/{roomId}/update")
@@ -312,7 +312,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã cập nhật phòng khám.",
-                () -> roomService.updateRoom(id, roomId, room));
+                () -> roomService.updateRoom(id, roomId, room), "pane-map");
     }
 
     @PostMapping("/{id}/rooms/{roomId}/delete")
@@ -322,7 +322,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã xóa phòng khám.",
-                () -> roomService.deleteRoom(id, roomId));
+                () -> roomService.deleteRoom(id, roomId), "pane-map");
     }
 
     // ===================== GHẾ NHA =====================
@@ -334,7 +334,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã thêm ghế nha.",
-                () -> chairService.createChair(id, chair));
+                () -> chairService.createChair(id, chair), "pane-map");
     }
 
     @PostMapping("/{id}/chairs/{chairId}/update")
@@ -345,7 +345,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã cập nhật ghế nha.",
-                () -> chairService.updateChair(id, chairId, chair));
+                () -> chairService.updateChair(id, chairId, chair), "pane-map");
     }
 
     // Đổi nhanh trạng thái ghế: AVAILABLE / IN_USE / CLEANING / MAINTENANCE.
@@ -357,7 +357,7 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã đổi trạng thái ghế.",
-                () -> chairService.updateChairStatus(id, chairId, status));
+                () -> chairService.updateChairStatus(id, chairId, status), "pane-map");
     }
 
     @PostMapping("/{id}/chairs/{chairId}/delete")
@@ -367,17 +367,26 @@ public class BranchController {
             RedirectAttributes redirectAttributes) {
 
         return handle(id, redirectAttributes, "Đã xóa ghế nha.",
-                () -> chairService.deleteChair(id, chairId));
+                () -> chairService.deleteChair(id, chairId), "pane-map");
     }
 
     // Chạy thao tác, gắn thông báo thành công/lỗi rồi quay lại trang chi tiết chi nhánh.
     private String handle(Long branchId, RedirectAttributes redirectAttributes,
                           String successMessage, Runnable action) {
+        return handle(branchId, redirectAttributes, successMessage, action, null);
+    }
+
+    private String handle(Long branchId, RedirectAttributes redirectAttributes,
+                          String successMessage, Runnable action, String targetTabPane) {
         try {
             action.run();
             redirectAttributes.addFlashAttribute("successMessage", successMessage);
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        if (targetTabPane != null && !targetTabPane.isBlank()) {
+            redirectAttributes.addFlashAttribute("activeTabPane", targetTabPane);
+            return "redirect:/admin/branches/" + branchId + "#" + targetTabPane;
         }
         return "redirect:/admin/branches/" + branchId;
     }
