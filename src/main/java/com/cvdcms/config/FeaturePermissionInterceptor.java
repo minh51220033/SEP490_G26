@@ -288,6 +288,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/bans")) {
             return List.of("SYSTEM_BANS");
         }
+        if (uri.startsWith("/admin/comments")) {
+            return List.of("CATALOG_NEWS", "SYSTEM_BANS");
+        }
         if (uri.startsWith("/admin/catalogs") || uri.startsWith("/admin/catalog")) {
             return List.of("CATALOG_SERVICES", "CATALOG_MEDICATIONS", "CATALOG_ICD10", "CATALOG_MANAGE");
         }
