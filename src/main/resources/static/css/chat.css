@@ -765,3 +765,128 @@
         border-bottom: 1px solid var(--chat-border);
     }
 }
+
+/* Floating chat dismiss and undo */
+.cvdcms-chat-fab-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.cvdcms-chat-fab__dismiss {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #475569;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    z-index: 10;
+    padding: 0;
+}
+
+.cvdcms-chat-fab-wrapper:hover .cvdcms-chat-fab__dismiss {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.cvdcms-chat-fab__dismiss:hover {
+    background: #ef4444 !important;
+    opacity: 1 !important;
+    transform: scale(1.2) !important;
+}
+
+.cvdcms-chat-undo-toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+    font-size: 13px;
+    z-index: 10000;
+    animation: cvChatToastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cvChatToastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.cvdcms-chat-undo-toast[hidden] {
+    display: none !important;
+}
+
+.cvdcms-chat-undo-toast__content {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.cvdcms-chat-undo-toast__btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.cvdcms-chat-undo-toast__btn:hover {
+    background: #1d4ed8;
+}
+
+.cvdcms-chat-restore-pill {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: #ffffff;
+    color: #2563eb;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.2s ease;
+}
+
+.cvdcms-chat-restore-pill[hidden] {
+    display: none !important;
+}
+
+.cvdcms-chat-restore-pill:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
+}

@@ -1,5 +1,5 @@
 const API = "/api/suppliers";
-const PAGE_SIZE = 10;
+let pageSize = 10;
 
 const REGEX = {
     SUPPLIER_CODE: /^[A-Za-z0-9_-]{2,20}$/,
@@ -114,7 +114,7 @@ async function initBranches() {
     await loadSuppliers();
 }
 
-async function loadSuppliers() {
+async function loadSuppliers(page = currentPage) {
     if (listAbortController) {
         try { listAbortController.abort(); } catch { /* ignore */ }
     }
@@ -124,11 +124,12 @@ async function loadSuppliers() {
     $("supplierTable").innerHTML =
         '<tr><td colspan="8" class="empty">Đang tải dữ liệu...</td></tr>';
 
+    currentPage = page;
     const kw = $("keyword").value.trim();
     const params = new URLSearchParams({
         keyword: kw,
         page: currentPage,
-        size: PAGE_SIZE,
+        size: pageSize,
         sortBy: "supplierName",
         direction: "asc"
     });
@@ -150,16 +151,46 @@ async function loadSuppliers() {
             debtMap.set(Number(d.supplierId), d);
         });
 
+        const totalElements = Number(data?.totalElements || 0);
         totalPages = Number(data?.totalPages || 0);
-        $("totalCount").textContent = `${Number(data?.totalElements || 0)} nhà cung cấp`;
+        if ($("totalCount")) $("totalCount").textContent = `${totalElements} nhà cung cấp`;
 
-        $("pageInfo").textContent =
-            totalPages === 0
-                ? "Trang 0 / 0"
-                : `Trang ${currentPage + 1} / ${totalPages}`;
+        const fromItem = totalElements === 0 ? 0 : (currentPage * pageSize) + 1;
+        const toItem = Math.min((currentPage + 1) * pageSize, totalElements);
 
-        $("prevBtn").disabled = currentPage <= 0;
-        $("nextBtn").disabled = totalPages === 0 || currentPage >= totalPages - 1;
+        if ($("lblSuppliersRange")) {
+            $("lblSuppliersRange").textContent = totalElements === 0 ? "0 - 0" : `${fromItem} - ${toItem}`;
+        }
+        if ($("lblSuppliersTotal")) {
+            $("lblSuppliersTotal").textContent = totalElements;
+        }
+        if ($("supplierPageSizeSelect")) {
+            $("supplierPageSizeSelect").value = pageSize;
+        }
+
+        const isFirst = currentPage <= 0 || totalElements === 0;
+        const isLast = currentPage >= totalPages - 1 || totalElements === 0;
+
+        const firstBtn = $("supplierFirstBtn");
+        if (firstBtn) {
+            firstBtn.disabled = isFirst;
+            firstBtn.classList.toggle("disabled", isFirst);
+        }
+        const prevBtn = $("supplierPrevBtn") || $("prevBtn");
+        if (prevBtn) {
+            prevBtn.disabled = isFirst;
+            prevBtn.classList.toggle("disabled", isFirst);
+        }
+        const nextBtn = $("supplierNextBtn") || $("nextBtn");
+        if (nextBtn) {
+            nextBtn.disabled = isLast;
+            nextBtn.classList.toggle("disabled", isLast);
+        }
+        const lastBtn = $("supplierLastBtn");
+        if (lastBtn) {
+            lastBtn.disabled = isLast;
+            lastBtn.classList.toggle("disabled", isLast);
+        }
 
         if (!data?.content || data.content.length === 0) {
             $("supplierTable").innerHTML =
@@ -458,18 +489,33 @@ $("active").addEventListener("change", () => {
     loadSuppliers();
 });
 
-$("prevBtn").addEventListener("click", () => {
+$("supplierFirstBtn")?.addEventListener("click", () => {
     if (currentPage > 0) {
-        currentPage--;
-        loadSuppliers();
+        loadSuppliers(0);
     }
 });
 
-$("nextBtn").addEventListener("click", () => {
-    if (currentPage < totalPages - 1) {
-        currentPage++;
-        loadSuppliers();
+$("supplierPrevBtn")?.addEventListener("click", () => {
+    if (currentPage > 0) {
+        loadSuppliers(currentPage - 1);
     }
+});
+
+$("supplierNextBtn")?.addEventListener("click", () => {
+    if (currentPage < totalPages - 1) {
+        loadSuppliers(currentPage + 1);
+    }
+});
+
+$("supplierLastBtn")?.addEventListener("click", () => {
+    if (totalPages > 0) {
+        loadSuppliers(totalPages - 1);
+    }
+});
+
+$("supplierPageSizeSelect")?.addEventListener("change", (e) => {
+    pageSize = parseInt(e.target.value, 10) || 10;
+    loadSuppliers(0); // Bắt buộc reset về trang đầu khi đổi số lượng hiển thị
 });
 
 $("supplierTable").addEventListener("click", async (event) => {
