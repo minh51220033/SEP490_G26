@@ -551,7 +551,10 @@
                             <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card incurred" title="Bấm để mở Dashboard tài chính">
                                 <div>
                                     <span class="ds-finance-label"><i class="bi bi-receipt-cutoff me-1"></i>Phát sinh</span>
-                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalIncurred != null ? totalIncurred : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="ds-finance-num"
+                                         th:text="|${#numbers.formatDecimal((totalIncurred ?: 0), 1, 'POINT', 0, 'COMMA')} đ|">
+                                        0 đ
+                                    </div>
                                 </div>
                                 <small class="text-muted" style="font-size: 11px;">Tổng chi phí dịch vụ</small>
                             </a>
@@ -560,7 +563,10 @@
                             <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card paid" title="Bấm để mở Dashboard tài chính">
                                 <div>
                                     <span class="ds-finance-label"><i class="bi bi-check2-circle me-1"></i>Đã thanh toán</span>
-                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalPaid != null ? totalPaid : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="ds-finance-num"
+                                         th:text="|${#numbers.formatDecimal((totalPaid ?: 0), 1, 'POINT', 0, 'COMMA')} đ|">
+                                        0 đ
+                                    </div>
                                 </div>
                                 <small class="text-success fw-semibold" style="font-size: 11px;">Đã thu thực tế</small>
                             </a>
@@ -569,7 +575,10 @@
                             <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card debt" title="Bấm để mở Dashboard tài chính">
                                 <div>
                                     <span class="ds-finance-label"><i class="bi bi-exclamation-circle me-1"></i>Công nợ</span>
-                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalDebt != null ? totalDebt : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="ds-finance-num"
+                                         th:text="|${#numbers.formatDecimal((totalDebt ?: 0), 1, 'POINT', 0, 'COMMA')} đ|">
+                                        0 đ
+                                    </div>
                                 </div>
                                 <small class="text-danger fw-semibold" style="font-size: 11px;">Chưa thanh toán</small>
                             </a>
@@ -634,28 +643,13 @@
                         <i class="bi bi-card-checklist"></i> Lời dặn
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-invoices-btn" data-bs-toggle="tab" data-bs-target="#tab-invoices" type="button" role="tab" aria-controls="tab-invoices" aria-selected="false">
-                        <i class="bi bi-receipt"></i> Thanh toán
-                        <span class="badge bg-secondary ms-1" th:if="${invoices != null and !#lists.isEmpty(invoices)}" th:text="${invoices.size()}">0</span>
-                    </button>
-                </li>
+
                 <!-- TAB DROPDOWN "THÊM ▾" CHUẨN DENTALSOFT -->
                 <li class="nav-item dropdown">
                     <button class="nav-link dropdown-toggle" id="tab-more-btn" data-bs-toggle="dropdown" type="button" aria-expanded="false">
                         <i class="bi bi-grid-fill me-1"></i> Thêm
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="tab-more-btn">
-                        <li>
-                            <a class="dropdown-item" th:href="@{/payments/deposits(profileId=${patient.id})}">
-                                <i class="bi bi-piggy-bank text-warning me-2"></i>Đặt cọc / Tạm ứng
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" th:href="@{/payments/refunds(keyword=${patient.code})}">
-                                <i class="bi bi-arrow-counterclockwise text-danger me-2"></i>Hoàn tiền / Xóa nợ
-                            </a>
-                        </li>
                         <li>
                             <a class="dropdown-item" href="javascript:void(0)" onclick="switchTab('tab-emr')">
                                 <i class="bi bi-hospital text-info me-2"></i>Quản lý BAĐT (MS: BA-18)
@@ -1055,10 +1049,16 @@
                                                     <div th:each="s : ${item.services}" class="d-flex justify-content-between align-items-center gap-2 py-1 border-bottom" style="border-color: #f1f5f9 !important; font-size: 12.5px;">
                                                         <div>
                                                             <span class="fw-semibold text-dark" th:text="${s.serviceName}">Trám răng composite</span>
+                                                            <!-- Hiển thị số răng nếu có -->
                                                             <span th:if="${s.toothNumber != null and !s.toothNumber.isBlank()}" class="badge bg-secondary ms-1" style="font-size: 10.5px;" th:text="|Răng ${s.toothNumber}|">R16</span>
+                                                            <!-- Hiển thị số lượng -->
                                                             <span class="text-muted ms-1" th:text="|x${s.quantity}|">x1</span>
                                                         </div>
-                                                        <span class="fw-bold text-primary text-nowrap" th:text="${#numbers.formatDecimal(s.totalAmount != null ? s.totalAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                                        <!-- Đã sửa lại chuẩn format tiền tệ VN và logic SpEL an toàn -->
+                                                        <span class="fw-bold text-primary text-nowrap"
+                                                              th:text="|${#numbers.formatDecimal((s.totalAmount ?: 0), 1, 'POINT', 0, 'COMMA')} đ|">
+              0 đ
+        </span>
                                                     </div>
                                                 </div>
                                                 <span th:if="${item.services == null or #lists.isEmpty(item.services)}" class="text-muted small fst-italic">Chưa ghi nhận dịch vụ / thủ thuật</span>
