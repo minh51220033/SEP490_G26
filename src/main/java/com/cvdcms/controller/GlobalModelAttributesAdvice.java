@@ -63,11 +63,6 @@ public class GlobalModelAttributesAdvice {
         this.branchServiceProvider = branchServiceProvider;
     }
 
-    public GlobalModelAttributesAdvice(Object object, ObjectProvider<CustomerPortalService> provider, Object object2,
-            Object object3) {
-        // TODO Auto-generated constructor stub
-    }
-
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpServletRequest request, HttpSession session) {
         // 1. Lấy từ request attribute (do FeaturePermissionInterceptor đồng bộ)
