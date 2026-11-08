@@ -175,4 +175,52 @@ class ReceptionServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.checkInWalkIn(session, 1L, 7L, "Đau", true, UUID.randomUUID().toString()));
         verify(visits, never()).saveAndFlush(any());
     }
+
+    @Test
+    void revertCheckInSucceedsWhenVisitHasNotMovedToDispatchOrQueue() {
+        permitted();
+        Appointment a = appointment(AppointmentStatus.CHECKED_IN, today);
+        Visit v = new Visit();
+        v.setVisitId(201L);
+        v.setVisitCode("VREVERT");
+        v.setPatientProfile(patient);
+        v.setBranch(branch);
+        v.setAppointmentId(20L);
+        v.setVisitType(VisitType.APPOINTMENT);
+        v.setStatus(VisitStatus.WAITING);
+        when(appointments.findById(20L)).thenReturn(Optional.of(a));
+        when(appointments.lockById(20L)).thenReturn(Optional.of(a));
+        when(profiles.lockById(7L)).thenReturn(Optional.of(patient));
+        when(visits.findByAppointmentId(20L)).thenReturn(Optional.of(v));
+
+        var res = service.revertCheckIn(session, 20L);
+        assertEquals(VisitStatus.CANCELLED, res.status());
+        assertEquals(AppointmentStatus.CONFIRMED, a.getStatus());
+        assertNull(v.getAppointmentId());
+    }
+
+    @Test
+    void revertCheckInRejectedWhenVisitAlreadyDispatchedOrHasActiveTicket() {
+        permitted();
+        Appointment a = appointment(AppointmentStatus.CHECKED_IN, today);
+        Visit v = new Visit();
+        v.setVisitId(202L);
+        v.setVisitCode("VDISPATCHED");
+        v.setPatientProfile(patient);
+        v.setBranch(branch);
+        v.setAppointmentId(20L);
+        v.setVisitType(VisitType.APPOINTMENT);
+        v.setStatus(VisitStatus.WAITING);
+        v.setRoomId(10L);
+        v.setChairId(11L);
+        when(appointments.findById(20L)).thenReturn(Optional.of(a));
+        when(appointments.lockById(20L)).thenReturn(Optional.of(a));
+        when(profiles.lockById(7L)).thenReturn(Optional.of(patient));
+        when(visits.findByAppointmentId(20L)).thenReturn(Optional.of(v));
+
+        var ex = assertThrows(ResponseStatusException.class, () -> service.revertCheckIn(session, 20L));
+        assertTrue(ex.getReason().contains("điều phối"));
+        assertEquals(AppointmentStatus.CHECKED_IN, a.getStatus());
+        assertEquals(VisitStatus.WAITING, v.getStatus());
+    }
 }

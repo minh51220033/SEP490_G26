@@ -235,8 +235,26 @@ document.addEventListener('DOMContentLoaded', () => {
             updateConnStatus(true);
 
             const data = await response.json();
-            branch.textContent = data.branch;
-            waiting.textContent = data.waiting;
+            if (branch) branch.textContent = data.branch;
+            if (waiting) waiting.textContent = data.waiting;
+
+            // Live update Basic List Table (#tvBasicListTable tbody)
+            const tvTableBody = document.querySelector('#tvBasicListTable tbody');
+            if (tvTableBody && Array.isArray(data.queueList)) {
+                if (data.queueList.length === 0) {
+                    tvTableBody.innerHTML = '<tr><td colspan="5" class="tv-empty-row">Chưa có bệnh nhân trong danh sách gọi số.</td></tr>';
+                } else {
+                    tvTableBody.innerHTML = data.queueList.map(row => `
+                        <tr class="${row.status === 'CALLED' ? 'is-called-row' : ''}">
+                            <td>${row.orderIndex ?? row.stt ?? ''}</td>
+                            <td><span class="tv-ticket-pill">${escapeHtml(row.ticketNumber || '—')}</span></td>
+                            <td><span class="tv-code-pill">${escapeHtml(row.patientCode || '—')}</span></td>
+                            <td class="fw-semibold">${escapeHtml(row.patientName || '—')}</td>
+                            <td>${escapeHtml(row.phoneNumber || '—')}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
 
             // Render Next List
             next.replaceChildren(...data.next.map(label => {

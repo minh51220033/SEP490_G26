@@ -84,7 +84,38 @@ public class QueueWorkflowService {
         List<String> next = all.stream().filter(t -> t.getStatus() == QueueStatus.WAITING
                         && t.getVisit().getStatus() == VisitStatus.WAITING)
                 .limit(5).map(t -> t.getDisplayNumber() + " · " + doctorName(t)).toList();
-        return new PublicBoard(branch.getBranchName(), called, serving, next, waiting);
+        List<PublicQueueRow> queueList = buildPublicQueueList(all);
+        return new PublicBoard(branch.getBranchName(), called, serving, next, waiting, queueList);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PublicQueueRow> publicQueueList(Long branchId) {
+        Branch branch = branches.findById(branchId).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
+        if (!Boolean.TRUE.equals(branch.getIsActive())) throw error(HttpStatus.NOT_FOUND, "Chi nhánh không hoạt động.");
+        List<QueueTicket> all = ordered(branchId).stream()
+                .filter(t -> t.getStatus() != QueueStatus.CANCELLED && t.getStatus() != QueueStatus.DONE)
+                .toList();
+        return buildPublicQueueList(all);
+    }
+
+    private List<PublicQueueRow> buildPublicQueueList(List<QueueTicket> all) {
+        List<PublicQueueRow> rows = new ArrayList<>();
+        int stt = 1;
+        for (QueueTicket t : all) {
+            if (t.getStatus() == QueueStatus.CANCELLED || t.getStatus() == QueueStatus.DONE) continue;
+            PatientProfile p = t.getVisit() != null ? t.getVisit().getPatientProfile() : null;
+            int idx = stt++;
+            rows.add(new PublicQueueRow(
+                    idx,
+                    idx,
+                    t.getDisplayNumber(),
+                    p != null && p.getPatientCode() != null ? p.getPatientCode() : "—",
+                    p != null && p.getFullName() != null ? p.getFullName() : "—",
+                    p != null && p.getPhoneNumber() != null ? p.getPhoneNumber() : "—",
+                    t.getStatus() != null ? t.getStatus().name() : "WAITING"
+            ));
+        }
+        return rows;
     }
 
     @Transactional
@@ -202,6 +233,20 @@ public class QueueWorkflowService {
                         "Phải gọi số trước khi bắt đầu khám.");
                 require(visit.getPrimaryDoctor() != null, "Lượt khám chưa được phân bác sĩ.");
                 Long effectiveChairId = chairId != null ? chairId : visit.getChairId();
+                if (effectiveChairId == null || visit.getRoomId() == null) {
+                    List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+                    for (DentalChair c : branchChairs) {
+                        if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                                && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                                && (visit.getRoomId() == null || visit.getRoomId().equals(c.getRoom().getRoomId()))
+                                && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                            effectiveChairId = c.getChairId();
+                            visit.setRoomId(c.getRoom().getRoomId());
+                            visit.setChairId(c.getChairId());
+                            break;
+                        }
+                    }
+                }
                 require(visit.getRoomId() != null && effectiveChairId != null,
                         "Cần phân phòng và ghế tại bàn điều phối trước khi bắt đầu khám.");
                 examinations.ensureForAssignedVisit(visit.getVisitId());
@@ -318,5 +363,16 @@ public class QueueWorkflowService {
         }
     }
     public record PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
-                              List<String> next, long waiting) { }
+                              List<String> next, long waiting, List<PublicQueueRow> queueList) {
+        public PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
+                           List<String> next, long waiting) {
+            this(branch, called, serving, next, waiting, List.of());
+        }
+    }
+    public record PublicQueueRow(int stt, int orderIndex, String ticketNumber, String patientCode,
+                                 String patientName, String phoneNumber, String status) {
+        public PublicQueueRow(int stt, String ticketNumber, String patientCode, String patientName, String phoneNumber) {
+            this(stt, stt, ticketNumber, patientCode, patientName, phoneNumber, "WAITING");
+        }
+    }
 }
