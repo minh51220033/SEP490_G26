@@ -8,7 +8,7 @@
 <!-- Liên kết trực tiếp & đồng bộ với Kế hoạch điều trị (FT15)             -->
 <!-- ===================================================================== -->
 <div th:fragment="performedServicesSection">
-    <div class="df-treatment-card" id="performedServicesSection">
+    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="performedServicesSection">
         <!-- Header: Đồng bộ liên kết chặt chẽ với Kế hoạch điều trị FT15, xóa nút thêm lẻ tẻ & xóa tổng thành tiền -->
         <div class="df-treatment-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
             <div class="df-treatment-title-box d-flex align-items-center gap-2">
@@ -16,8 +16,7 @@
                     <i class="bi bi-tools fs-5"></i>
                 </div>
                 <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Dịch vụ thực hiện tại ghế theo Kế hoạch điều trị (FT16)</h4>
-                    <span class="text-secondary small">Đồng bộ trực tiếp từ các bước thủ thuật trong Kế hoạch điều trị (FT15) &amp; chuyển Kế toán thu tiền</span>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Dịch vụ thực hiện tại ghế theo Kế hoạch điều trị</h4>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="performedCountBadge"
                       th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'">
@@ -30,36 +29,17 @@
                 <span id="totalPerformedText" class="d-none"
                       th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</span>
 
-                <!-- NÚT CHUYỂN SANG KẾ HOẠCH ĐIỀU TRỊ (FT15) - STYLE TRẮNG BO TRÒN ĐỒNG BỘ -->
+                <!-- NÚT CHUYỂN SANG KẾ HOẠCH ĐIỀU TRỊ - STYLE TRẮNG BO TRÒN ĐỒNG BỘ -->
                 <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-treatment-plan')"
-                        title="Chuyển sang Kế hoạch điều trị (FT15) để xem lộ trình chi tiết">
+                        title="Chuyển sang Kế hoạch điều trị để xem lộ trình chi tiết">
                     <i class="bi bi-diagram-3-fill text-primary"></i>
-                    <span>Kế hoạch điều trị (FT15)</span>
-                </button>
-
-                <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-workflow-execution')"
-                        title="Mở bảng thực hiện quy trình khám & điều trị cho lượt khám (FT43)">
-                    <i class="bi bi-list-check text-success"></i>
-                    <span>Quy trình thực hiện (FT43)</span>
+                    <span>Kế hoạch điều trị</span>
                 </button>
 
                 <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>
             </div>
-        </div>
-
-        <!-- Banner liên kết nghiệp vụ trực tiếp với Kế hoạch điều trị (FT15) -->
-        <div class="alert alert-info py-2.5 px-3 mb-0 small d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-0 border-start-0 border-end-0 border-top-0" style="width: 100%;">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-link-45deg fs-5 text-primary flex-shrink-0"></i>
-                <div>
-                    <strong>Cơ chế đồng bộ trực tiếp:</strong> Dịch vụ thực hiện tại ghế được bác sĩ xác nhận từ các bước trong <strong>Kế hoạch điều trị (FT15)</strong> (bằng cách bấm <em>"Làm trong ca này"</em>). Dịch vụ hoàn thành sẽ tự động xuất hiện tại đây và đồng bộ sang Kế toán xử lý viện phí.
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-primary px-3 py-1 rounded-pill fw-semibold small shadow-xs" onclick="switchMainTab('tab-treatment-plan')">
-                <i class="bi bi-arrow-right-circle me-1"></i>Đến lộ trình KHDT
-            </button>
         </div>
 
         <!-- KHỐI BƯỚC THỦ THUẬT KHDT CHỜ THỰC HIỆN TRONG CA NÀY (LIÊN KẾT TRỰC TIẾP FT15 -> FT16) -->
@@ -264,7 +244,7 @@
                                 </div>
                                 <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận thực hiện trong ca khám này</h6>
                                 <p class="text-muted mb-3 small" style="max-width: 520px; line-height: 1.6;">
-                                    Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị (FT15)</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
+                                    Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
                                 </p>
                                 <button type="button" class="btn btn-primary px-3.5 py-1.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
                                         onclick="switchMainTab('tab-treatment-plan')">
