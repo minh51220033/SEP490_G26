@@ -1,0 +1,225 @@
+/**
+ * ============================================================================
+ * TÀI LIỆU QUY CHUẨN KỸ THUẬT FRONTEND: UI/UX & FOOTER PHÂN TRANG
+ * Dự án: Hệ thống Quản lý Phòng khám Nha khoa CV-DCMS
+ * Định dạng chuẩn: Enterprise Data Grid & MISA AMIS Standard
+ * ============================================================================
+ */
+
+/* --------------------------------------------------------------------------
+   PHẦN 2: QUY CHUẨN KỸ THUẬT FOOTER PHÂN TRANG CHUẨN MISA AMIS
+   -------------------------------------------------------------------------- */
+.misa-pagination-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.85rem;
+    color: #334155;
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif !important;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.misa-pagination-left {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.misa-pagination-left strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.misa-pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.misa-page-size-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.misa-page-size-select {
+    height: 30px;
+    width: 68px !important;
+    padding: 2px 20px 2px 8px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.misa-page-range {
+    font-size: 0.85rem;
+    color: #334155;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.misa-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.misa-nav-btn:hover:not(.disabled):not(:disabled) {
+    background: #f1f5f9;
+    color: #0284c7;
+    border-color: #cbd5e1;
+}
+
+.misa-nav-btn.disabled,
+.misa-nav-btn:disabled {
+    color: #cbd5e1 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    opacity: 0.5;
+}
+
+/* --------------------------------------------------------------------------
+   PHẦN 1: QUY CHUẨN RESPONSIVE MOBILE & UX MÀN HÌNH NHỎ (<= 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* 1. Kiến trúc cuộn trang (Scroll Architecture) */
+    html,
+    body,
+    body.viewport-locked-page,
+    .viewport-locked-page html,
+    .app-shell,
+    .app-main,
+    .main-content,
+    .content-wrapper,
+    .inventory-app-view,
+    .cc-app-view,
+    .app-content,
+    .supplier-page {
+        height: auto !important;
+        min-height: 100vh !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 2. Khung chứa Bảng dữ liệu (Table Container) */
+    .table-responsive,
+    .table-wrap,
+    .inventory-table-wrapper,
+    .table-viewport-wrapper,
+    .table-wrapper,
+    .table-container {
+        height: auto !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 0 !important;
+        flex: none !important;
+    }
+
+    .table-responsive > table,
+    .table-wrap > table,
+    .table-viewport-wrapper > table,
+    .table-wrapper > table,
+    .cv-table {
+        min-width: 860px !important; /* Đảm bảo các cột không bị co ép mất cấu trúc */
+    }
+
+    /* Panel không bị khóa overflow */
+    .panel {
+        height: auto !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    /* 3. Thao tác trên từng dòng (Row Actions) & Chạm bấm (Touch UX) */
+    .dv-floating-actions-bar,
+    .row-actions-floating {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        position: static !important;
+    }
+
+    .row-action-btn,
+    .btn-table-action,
+    .btn-action-icon,
+    .action-btn,
+    .table-actions button,
+    .action-buttons button,
+    .action-buttons a,
+    td .btn,
+    td button.action-btn {
+        min-height: 40px !important;
+        min-width: 40px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* 4. Thẻ thống kê (Stats Cards Grid) */
+    .stats-grid,
+    .stats-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .stat-card {
+        padding: 12px !important;
+    }
+
+    .stat-card .desc-text,
+    .stat-card .text-muted-desc,
+    .stat-card .stat-meta {
+        display: none !important; /* Ẩn text phụ */
+    }
+
+    .stat-card .stat-number,
+    .stat-card .stat-value {
+        font-size: 1.4rem !important;
+    }
+
+    /* Tối ưu thanh phân trang trên Mobile */
+    .misa-pagination-footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        position: static !important;
+    }
+
+    .misa-pagination-right {
+        gap: 8px;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .misa-page-size-wrapper {
+        display: none !important; /* Mobile ẩn bớt dropdown chọn size để tiết kiệm diện tích */
+    }
+}

@@ -173,30 +173,12 @@
     border-bottom-color: var(--df-purple);
 }
 
-/* HIỆU ỨNG SÁNG MÀU NỔI BẬT TRONG 1 GIÂY KHI CLICK TAB */
+/* HIỆU ỨNG SÁNG MÀU ÊM DỊU KHI CLICK TAB (KHÔNG DÙNG SCALE ĐỂ TRÁNH GIẬT KHUNG) */
 .df-subnav-item.tab-highlight-active {
     background: #ede9fe !important;
     color: #6d28d9 !important;
     border-bottom-color: #6d28d9 !important;
     font-weight: 700 !important;
-    transform: scale(1.04);
-    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.2) !important;
-    animation: tabPulse1s 1s ease forwards;
-}
-
-@keyframes tabPulse1s {
-    0% {
-        background: #ede9fe;
-        transform: scale(1.05);
-    }
-    70% {
-        background: #ede9fe;
-        transform: scale(1.02);
-    }
-    100% {
-        background: transparent;
-        transform: scale(1);
-    }
 }
 
 /* HIỆU ỨNG CHỚP SÁNG PHÂN VÙNG ĐÍCH TRONG 1 GIÂY */
@@ -215,21 +197,21 @@
 
 .df-tab-pane {
     display: none;
+    min-height: 520px;
+    width: 100%;
 }
 
 .df-tab-pane.active {
     display: block;
-    animation: dfTabFadeIn 0.22s ease-in-out;
+    animation: dfTabFadeIn 0.15s ease-in-out;
 }
 
 @keyframes dfTabFadeIn {
     from {
         opacity: 0;
-        transform: translateY(5px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
     }
 }
 

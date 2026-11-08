@@ -183,9 +183,29 @@
                 </div>
             </div>
 
-            <button type="button" id="cvdcmsChatWidgetFab" class="cvdcms-chat-fab" title="Chat trực tiếp theo cơ sở">
-                <i class="bi bi-chat-dots-fill" id="cvdcmsChatWidgetFabIcon"></i>
-                <span id="cvdcmsChatWidgetUnreadBadge" class="cvdcms-chat-fab__badge" hidden>0</span>
+            <div id="cvdcmsChatFabWrapper" class="cvdcms-chat-fab-wrapper">
+                <button type="button" id="cvdcmsChatWidgetFab" class="cvdcms-chat-fab" title="Chat trực tiếp theo cơ sở">
+                    <i class="bi bi-chat-dots-fill" id="cvdcmsChatWidgetFabIcon"></i>
+                    <span id="cvdcmsChatWidgetUnreadBadge" class="cvdcms-chat-fab__badge" hidden>0</span>
+                </button>
+                <button type="button" id="cvdcmsChatDismissBtn" class="cvdcms-chat-fab__dismiss" title="Tạm ẩn hộp chat" aria-label="Tạm ẩn hộp chat">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+
+            <div id="cvdcmsChatUndoToast" class="cvdcms-chat-undo-toast" hidden>
+                <div class="cvdcms-chat-undo-toast__content">
+                    <i class="bi bi-info-circle me-1 text-primary"></i>
+                    <span>Đã ẩn hộp chat</span>
+                </div>
+                <button type="button" id="cvdcmsChatUndoBtn" class="cvdcms-chat-undo-toast__btn">
+                    Hoàn tác
+                </button>
+            </div>
+
+            <button type="button" id="cvdcmsChatRestoreTrigger" class="cvdcms-chat-restore-pill" title="Mở lại hộp chat" aria-label="Mở lại hộp chat" hidden>
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Chat</span>
             </button>
         `;
 
@@ -228,6 +248,73 @@
         if (recRoleSelect) {
             recRoleSelect.addEventListener('change', loadWidgetRecipients);
         }
+
+        const fabWrapper = document.getElementById('cvdcmsChatFabWrapper');
+        const dismissBtn = document.getElementById('cvdcmsChatDismissBtn');
+        const undoToast = document.getElementById('cvdcmsChatUndoToast');
+        const undoBtn = document.getElementById('cvdcmsChatUndoBtn');
+        const restoreTrigger = document.getElementById('cvdcmsChatRestoreTrigger');
+        let undoToastTimer = null;
+
+        function showChatWidget() {
+            if (undoToastTimer) {
+                clearTimeout(undoToastTimer);
+                undoToastTimer = null;
+            }
+            if (undoToast) undoToast.hidden = true;
+            if (restoreTrigger) restoreTrigger.hidden = true;
+            if (fabWrapper) fabWrapper.style.display = '';
+            try {
+                sessionStorage.removeItem('cvdcms_chat_dismissed');
+            } catch (e) {}
+        }
+
+        function hideChatWidget(showToast = true) {
+            setPopupOpen(false);
+            if (fabWrapper) fabWrapper.style.display = 'none';
+            try {
+                sessionStorage.setItem('cvdcms_chat_dismissed', '1');
+            } catch (e) {}
+
+            if (showToast && undoToast) {
+                undoToast.hidden = false;
+                if (restoreTrigger) restoreTrigger.hidden = true;
+                if (undoToastTimer) clearTimeout(undoToastTimer);
+                undoToastTimer = setTimeout(() => {
+                    undoToast.hidden = true;
+                    if (restoreTrigger) restoreTrigger.hidden = false;
+                }, 7000);
+            } else if (restoreTrigger) {
+                restoreTrigger.hidden = false;
+            }
+        }
+
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideChatWidget(true);
+            });
+        }
+
+        if (undoBtn) {
+            undoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showChatWidget();
+            });
+        }
+
+        if (restoreTrigger) {
+            restoreTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showChatWidget();
+            });
+        }
+
+        try {
+            if (sessionStorage.getItem('cvdcms_chat_dismissed') === '1') {
+                hideChatWidget(false);
+            }
+        } catch (e) {}
     }
 
     function toggleRecipientPicker() {
@@ -751,7 +838,15 @@
             }
             const ctx = await resp.json();
             if (!ctx || ctx.authenticated !== true) {
+                // Khách chưa đăng nhập -> Hiển thị widget tư vấn
                 buildGuestWidgetDom();
+                return;
+            }
+
+            // Chỉ hiển thị widget chat nổi cho role Khách và Bệnh nhân
+            const roleCode = (ctx.roleCode || '').toUpperCase();
+            const isPatient = roleCode === 'BENH_NHAN' || roleCode === 'PATIENT';
+            if (!isPatient) {
                 return;
             }
 
