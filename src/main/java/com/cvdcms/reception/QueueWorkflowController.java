@@ -32,8 +32,17 @@ public class QueueWorkflowController {
         return "reception/queue-rows :: rows";
     }
     private void populate(HttpSession session, Long branchId, Model model) {
-        var board = service.board(session, branchId);
+        Long effectiveBranchId = branchId;
+        if (effectiveBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) effectiveBranchId = sid;
+        }
+        var board = service.board(session, effectiveBranchId);
+        if (session != null) {
+            session.setAttribute("currentBranchId", board.branchId());
+        }
         model.addAttribute("board", board);
+        model.addAttribute("currentBranchId", board.branchId());
         Set<Long> callableDoctorIds = board.doctors().stream()
                 .filter(doctor -> doctor.called() == 0)
                 .map(QueueWorkflowService.DoctorQueue::id)

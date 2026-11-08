@@ -55,6 +55,11 @@
         if (incomingSidebar && currentSidebar) {
             currentSidebar.innerHTML = incomingSidebar.innerHTML;
         }
+        const incomingBranch = parsed.querySelector('.df-tb-branch-wrapper');
+        const currentBranch = document.querySelector('.df-tb-branch-wrapper');
+        if (incomingBranch && currentBranch) {
+            currentBranch.innerHTML = incomingBranch.innerHTML;
+        }
     }
 
     function ensureBootstrap() {
@@ -126,6 +131,27 @@
     async function navigate(url, pushState) {
         const targetUrl = new URL(url, window.location.origin);
         if (!isWorkflowUrl(targetUrl.href) || navigating) return;
+
+        // Preserve current branchId & date across workflow step transitions
+        try {
+            const currentUrl = new URL(window.location.href);
+            const currentBranchId = currentUrl.searchParams.get('branchId') ||
+                document.getElementById('reception-content-area')?.getAttribute('data-current-branch-id');
+            if (currentBranchId && !targetUrl.searchParams.has('branchId')) {
+                targetUrl.searchParams.set('branchId', currentBranchId);
+            }
+            const currentDate = currentUrl.searchParams.get('date') || currentUrl.searchParams.get('day');
+            if (currentDate) {
+                if (targetUrl.pathname === '/reception/appointments' && !targetUrl.searchParams.has('date')) {
+                    targetUrl.searchParams.set('date', currentDate);
+                } else if (targetUrl.pathname === '/reception/check-in' && !targetUrl.searchParams.has('day')) {
+                    targetUrl.searchParams.set('day', currentDate);
+                }
+            }
+        } catch (e) {
+            console.warn('Error retaining navigation params:', e);
+        }
+
         navigating = true;
         document.dispatchEvent(new CustomEvent('reception:content-will-change'));
         try {

@@ -387,7 +387,19 @@ public class ReceptionService {
         if (options.isEmpty()) {
             throw error(HttpStatus.FORBIDDEN, "Không có chi nhánh tiếp đón đang hoạt động.");
         }
-        Long branchId = requestedBranchId == null ? options.get(0).getBranchId() : requestedBranchId;
+        Long branchId = requestedBranchId;
+        if (branchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && options.stream().anyMatch(b -> b.getBranchId().equals(sid))) {
+                branchId = sid;
+            }
+        }
+        if (branchId == null) {
+            branchId = options.get(0).getBranchId();
+        }
+        if (session != null) {
+            session.setAttribute("currentBranchId", branchId);
+        }
         Branch branch = allowedBranch(session, branchId);
         LocalDate day = (requestedDay == null) ? today() : requestedDay;
         Map<Long, QueueTicket> ticketMap = new HashMap<>();

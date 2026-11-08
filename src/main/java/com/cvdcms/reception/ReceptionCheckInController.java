@@ -33,9 +33,25 @@ public class ReceptionCheckInController {
             Object sq = model.getAttribute("savedQuery");
             if (sq != null) effectiveQuery = sq.toString();
         }
-        model.addAttribute("dashboard", service.dashboard(session, branchId, effectiveQuery, day));
+        Long effectiveBranchId = branchId;
+        if (effectiveBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) effectiveBranchId = sid;
+        }
+        LocalDate effectiveDay = day;
+        if (effectiveDay == null && session != null) {
+            Object sDay = session.getAttribute("currentWorkflowDay");
+            if (sDay instanceof LocalDate sd) effectiveDay = sd;
+        }
+        var dashboard = service.dashboard(session, effectiveBranchId, effectiveQuery, effectiveDay);
+        if (session != null) {
+            session.setAttribute("currentBranchId", dashboard.branchId());
+            session.setAttribute("currentWorkflowDay", dashboard.day());
+        }
+        model.addAttribute("dashboard", dashboard);
+        model.addAttribute("currentBranchId", dashboard.branchId());
         model.addAttribute("selectedAppointmentId", appointmentId);
-        model.addAttribute("selectedDay", day);
+        model.addAttribute("selectedDay", dashboard.day());
         model.addAttribute("roleNames", List.of("LE_TAN"));
         model.addAttribute("sidebarMenu", "checkin");
         return "reception/check-in";
