@@ -59,6 +59,10 @@ public class ReceptionAppointmentRestController {
     public ReceptionAppointmentService.Dashboard dashboard(HttpSession session,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long branchId, @RequestParam(required = false) Long doctorId) {
+        if (session != null) {
+            if (branchId != null) session.setAttribute("currentBranchId", branchId);
+            if (date != null) session.setAttribute("currentWorkflowDay", date);
+        }
         return appointments.dashboard(session, date, branchId, doctorId);
     }
     @GetMapping("/calendar")

@@ -108,6 +108,7 @@
                             <td class="text-center fw-bold text-muted" th:text="${it.lineOrder != null ? it.lineOrder : 1}">1</td>
                             <td class="text-start wrap-cell">
                                 <strong class="text-dark" th:text="${it.itemName}">Trám răng</strong>
+                                <small class="d-block text-secondary" th:if="${it.service != null and it.itemName != it.service.serviceName}" th:text="'DV gốc: ' + ${it.service.serviceName}"></small>
                                 <small class="d-block text-muted" th:if="${it.performedService != null and it.performedService.doctor != null}"
                                        th:text="'BS: ' + ${it.performedService.doctor.fullName}"></small>
                             </td>

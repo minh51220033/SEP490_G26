@@ -78,7 +78,7 @@
                 <td colspan="6" class="text-center text-muted py-4">Không có mã ICD-10 nào.</td>
               </tr>
               <tr th:each="d : ${diseases}">
-                <td data-column-key="code"><code th:text="${d.icd10Code}">K02.1</code></td>
+                <td data-column-key="code" class="fw-semibold text-dark" th:text="${d.icd10Code}">K02.1</td>
                 <td data-column-key="diseaseVi" th:text="${d.diseaseNameVi}">Sâu ngà răng</td>
                 <td data-column-key="diseaseEn" th:text="${d.diseaseNameEn ?: '—'}">Dentine caries</td>
                 <td data-column-key="dental" class="text-center">
