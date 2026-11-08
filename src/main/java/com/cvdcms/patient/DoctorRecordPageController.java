@@ -22,7 +22,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Controller
@@ -30,12 +30,16 @@ import java.util.List;
 public class DoctorRecordPageController {
     private final DoctorRecordService records;
     private final com.cvdcms.repository.InvoiceRepository invoiceRepository;
+    private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
 
-    public DoctorRecordPageController(DoctorRecordService records, com.cvdcms.repository.InvoiceRepository invoiceRepository) {
+    public DoctorRecordPageController(DoctorRecordService records,
+                                      com.cvdcms.repository.InvoiceRepository invoiceRepository,
+                                      PatientOverviewService overviewService) {
         this.records = records;
         this.invoiceRepository = invoiceRepository;
+        this.overviewService = overviewService;
     }
 
     @ModelAttribute("roleNames")
@@ -89,7 +93,8 @@ public class DoctorRecordPageController {
     }
 
     @GetMapping("/{id}")
-    public String detail(HttpSession session, Model model, @PathVariable Long id) {
+    public String detail(HttpSession session, Model model, @PathVariable Long id,
+                         @RequestParam(required = false) String tab) {
         PatientView patient = records.get(session, id);
         model.addAttribute("patient", patient);
 
@@ -148,9 +153,22 @@ public class DoctorRecordPageController {
         model.addAttribute("totalPaid", totalPaid);
         model.addAttribute("totalDebt", totalDebt);
 
+        // Bổ sung dữ liệu hợp nhất từ PatientOverviewService
+        Long currentUserId = records.extractUserId(session);
+        model.addAttribute("appointments", overviewService.getPatientAppointments(id));
+        model.addAttribute("careData", overviewService.getPatientCareHistory(id, patient.branchId(), currentUserId));
+        model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));
+        model.addAttribute("laboOrders", overviewService.getPatientLaboOrders(id));
+        model.addAttribute("performedServices", overviewService.getPatientPerformedServices(id));
+        model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
+        model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
+
         // Permissions
         boolean admin = records.isAdmin(session);
+        boolean isDoctor = records.isDoctor(session);
         model.addAttribute("canManageBilling", admin);
+        model.addAttribute("canPerformClinical", isDoctor);
+        model.addAttribute("currentTab", tab != null ? tab : "info");
         shared(model, session);
         return "patient-records/detail";
     }
@@ -188,6 +206,27 @@ public class DoctorRecordPageController {
                                RedirectAttributes redirect) {
         redirect.addFlashAttribute("documentSuccess", "Đã ghi nhận yêu cầu gộp hồ sơ.");
         return "redirect:/doctor/patient-records/" + id;
+    }
+
+    @GetMapping("/{id}/edit")
+    public String edit(@PathVariable Long id) {
+        return "redirect:/reception/patients/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/documents")
+    public String uploadDocument(HttpSession session, @PathVariable Long id,
+                                 @RequestParam DocumentType documentType,
+                                 @RequestParam("file") MultipartFile file,
+                                 RedirectAttributes redirect) {
+        try {
+            records.uploadDocument(session, id, documentType, file);
+            redirect.addFlashAttribute("documentSuccess", "Đã tải lên bản scan giấy tờ thành công.");
+        } catch (ResponseStatusException ex) {
+            redirect.addFlashAttribute("documentError", ex.getReason());
+        } catch (Exception ex) {
+            redirect.addFlashAttribute("documentError", "Không thể tải lên giấy tờ: " + ex.getMessage());
+        }
+        return "redirect:/doctor/patient-records/" + id + "#info";
     }
 
     @PostMapping("/{id}/documents/{documentId}/type")

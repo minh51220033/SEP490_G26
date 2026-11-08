@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -73,7 +74,7 @@ public class DoctorRecordService {
         this.auditRepository = auditRepository;
     }
 
-    private Long extractUserId(HttpSession session) {
+    public Long extractUserId(HttpSession session) {
         if (session == null) return null;
         Object principal = session.getAttribute("loggedInUser");
         if (principal instanceof User current) {
@@ -101,6 +102,18 @@ public class DoctorRecordService {
                         .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
                                 && ("ADMIN".equalsIgnoreCase(role.getRoleName())
                                     || "ROLE_ADMIN".equalsIgnoreCase(role.getRoleName()))))
+                .orElse(false);
+    }
+
+    public boolean isDoctor(HttpSession session) {
+        if (session == null) return false;
+        Long userId = extractUserId(session);
+        if (userId == null) return false;
+        return users.findById(userId)
+                .map(u -> u.getRoles() != null && u.getRoles().stream()
+                        .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                                && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
+                                    || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName()))))
                 .orElse(false);
     }
 
@@ -259,6 +272,29 @@ public class DoctorRecordService {
             HttpSession session, Long patientId, Long documentId) {
         get(session, patientId);
         return documentStorage.download(patientId, documentId);
+    }
+
+    @Transactional
+    public PatientDocumentView uploadDocument(HttpSession session, Long patientId, DocumentType type, MultipartFile file) {
+        Long userId = extractUserId(session);
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        User user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        get(session, patientId);
+        PatientDocumentView saved = documentStorage.upload(patientId, user, type, file);
+        if (auditRepository != null) {
+            PatientProfile profile = profiles.findById(patientId).orElse(null);
+            Branch branch = profile != null ? profile.getPreferredBranch() : null;
+            SystemAuditLog log = new SystemAuditLog();
+            log.setUser(user);
+            log.setBranch(branch);
+            log.setAction("UPLOAD_PATIENT_DOCUMENT");
+            log.setEntityTable("patient_profiles");
+            log.setEntityId(patientId);
+            log.setCreatedAt(LocalDateTime.now());
+            log.setNewValuesJson("{\"documentId\":" + saved.id() + ",\"type\":\"" + saved.type().name() + "\",\"name\":\"" + saved.name() + "\"}");
+            auditRepository.save(log);
+        }
+        return saved;
     }
 
     public List<TreatmentTimelineItem> treatmentTimeline(HttpSession session, Long id) {
