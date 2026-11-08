@@ -125,6 +125,8 @@
                     <td class="text-center" th:text="${it.lineOrder != null ? it.lineOrder : '-'}">1</td>
                     <td>
                         <span class="fw-bold" th:text="${it.itemName}">Trám răng</span>
+                        <small class="d-block text-muted" th:if="${it.service != null and it.itemName != it.service.serviceName}"
+                               th:text="'(DV: ' + ${it.service.serviceName} + ')'"></small>
                         <small class="d-block text-muted" th:if="${it.treatmentPlanItem != null and it.treatmentPlanItem.treatmentStage != null}"
                                th:text="'(Giai đoạn: ' + ${it.treatmentPlanItem.treatmentStage.stageName} + ')'"></small>
                     </td>

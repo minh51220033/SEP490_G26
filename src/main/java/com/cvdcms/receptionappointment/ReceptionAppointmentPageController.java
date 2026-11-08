@@ -22,7 +22,19 @@ public class ReceptionAppointmentPageController {
         access.require(session);
     }
     @GetMapping
-    public String dashboard() { return "reception/appointments/dashboard"; }
+    public String dashboard(@RequestParam(required = false) Long branchId,
+                            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+                            HttpSession session) {
+        if (session != null) {
+            if (branchId != null) {
+                session.setAttribute("currentBranchId", branchId);
+            }
+            if (date != null) {
+                session.setAttribute("currentWorkflowDay", date);
+            }
+        }
+        return "reception/appointments/dashboard";
+    }
     @GetMapping("/calendar")
     public String calendar() { return "reception/appointments/calendar"; }
     @GetMapping("/new")

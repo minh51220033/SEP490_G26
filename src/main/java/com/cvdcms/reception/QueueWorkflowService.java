@@ -40,10 +40,29 @@ public class QueueWorkflowService {
                 .filter(b -> Boolean.TRUE.equals(b.getIsActive()) && scope.permits(b.getBranchId()))
                 .sorted(Comparator.comparing(Branch::getBranchName)).toList();
         if (choices.isEmpty()) throw error(HttpStatus.FORBIDDEN, "Không có chi nhánh tiếp đón.");
-        Long id = requestedBranch == null ? choices.get(0).getBranchId() : requestedBranch;
+        Long selectedId = requestedBranch;
+        if (selectedId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && choices.stream().anyMatch(b -> b.getBranchId().equals(sid))) {
+                selectedId = sid;
+            }
+        }
+        if (selectedId == null) {
+            selectedId = choices.get(0).getBranchId();
+        }
+        final Long id = selectedId;
+        if (session != null) {
+            session.setAttribute("currentBranchId", id);
+        }
         if (choices.stream().noneMatch(b -> b.getBranchId().equals(id)))
             throw error(HttpStatus.FORBIDDEN, "Không được xem hàng chờ chi nhánh này.");
-        List<QueueTicket> rows = ordered(id);
+        LocalDate day = null;
+        if (session != null) {
+            Object sDay = session.getAttribute("currentWorkflowDay");
+            if (sDay instanceof LocalDate sd) day = sd;
+        }
+        if (day == null) day = LocalDate.now(ZONE);
+        List<QueueTicket> rows = ordered(id, day);
         Map<Long, DoctorQueue> doctorQueues = new LinkedHashMap<>();
         for (QueueTicket ticket : rows) {
             StaffProfile doctor = ticket.getVisit().getPrimaryDoctor();
@@ -332,7 +351,12 @@ public class QueueWorkflowService {
     }
 
     private List<QueueTicket> ordered(Long id) {
-        List<QueueTicket> rows = new ArrayList<>(tickets.forBoard(id, LocalDate.now(ZONE), QueueType.EXAM));
+        return ordered(id, null);
+    }
+
+    private List<QueueTicket> ordered(Long id, LocalDate day) {
+        LocalDate targetDay = day != null ? day : LocalDate.now(ZONE);
+        List<QueueTicket> rows = new ArrayList<>(tickets.forBoard(id, targetDay, QueueType.EXAM));
         rows.sort(Comparator.comparingInt((QueueTicket t) -> t.getStatus() == QueueStatus.CALLED ? -1
                 : t.getStatus() == QueueStatus.WAITING ? 0 : t.getStatus() == QueueStatus.PAUSED ? 1 : 2)
                 .thenComparing(waitingOrder()));

@@ -106,6 +106,13 @@
                         title="Quản lý nhân sự: Hồ sơ, Phân ca, Chấm công, Duyệt nghỉ phép">
                          <i class="bi bi-person-badge" aria-hidden="true"></i><span class="side-link__label">Quản lý nhân sự</span>
                      </a>
+                    <!-- Hồ sơ bệnh nhân (Dùng chung cho Quản trị, Lễ tân và Bác sĩ) -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
+                       th:href="@{/reception/patients}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'patients' or activeMenu == 'doctor-records'} ? 'is-active' : ''"
+                       title="Quản lý thông tin hồ sơ bệnh nhân &amp; lịch sử điều trị">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
+                    </a>
                     <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
                        th:href="@{/admin/services}" class="side-link side-sublink"
                        th:classappend="${activeMenu == 'catalogs' or activeMenu == 'service-catalog' or activeMenu == 'medications' or activeMenu == 'icd10'} ? 'is-active' : ''"
@@ -130,16 +137,15 @@
                     <th:block th:if="${membershipAdminEntry}">
                         <a class="side-link side-sublink"
                            th:href="@{${(isAdmin or (permissionCodes != null
-       and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS')))
-       ? '/reception/memberships'
-       : ((permissionCodes != null
-           and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))
-           ? '/admin/membership-tiers'
-           : '/admin/promotions')}}"
+                             and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS')))
+                              ? '/reception/memberships': ((permissionCodes != null
+                              and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))
+                              ? '/admin/membership-tiers'
+                              : '/admin/promotions')}}"
                            th:classappend="${activeMenu == 'reception-memberships'
-       or activeMenu == 'membership-tiers'
-       or activeMenu == 'admin-promotions'}
-       ? 'is-active' : ''"
+                              or activeMenu == 'membership-tiers'
+                              or activeMenu == 'admin-promotions'}
+                              ? 'is-active' : ''"
                            title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
 
                             <i class="bi bi-person-vcard" aria-hidden="true"></i>
@@ -355,13 +361,6 @@
             </button>
             <div class="side-group__panel" id="sgRecords">
                 <div class="side-group__inner">
-                    <!-- Hồ sơ bệnh nhân (Dùng chung cho Quản trị, Lễ tân và Bác sĩ) -->
-                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-                       th:href="@{/reception/patients}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'patients' or activeMenu == 'doctor-records'} ? 'is-active' : ''"
-                       title="Quản lý thông tin hồ sơ bệnh nhân &amp; lịch sử điều trị">
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
-                    </a>
                     <!-- CSKH -->
                     <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
 

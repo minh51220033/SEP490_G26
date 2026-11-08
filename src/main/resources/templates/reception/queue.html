@@ -7,7 +7,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Hàng chờ khám')}"></header>
-        <main id="reception-content-area" class="app-content queue-page p-3">
+        <main id="reception-content-area" class="app-content queue-page p-3" th:attr="data-current-branch-id=${board.branchId}">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/reception-queue.css}">
             <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
@@ -20,11 +20,11 @@
                         <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2 small">
-                        <a th:href="@{/reception/appointments}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
+                        <a th:href="@{/reception/appointments(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
                             <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
                         </a>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/check-in}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
+                        <a th:href="@{/reception/check-in(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
                             <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
                         </a>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
