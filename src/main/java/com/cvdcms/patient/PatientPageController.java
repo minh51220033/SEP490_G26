@@ -32,12 +32,16 @@ import java.util.List;
 public class PatientPageController {
     private final PatientService service;
     private final com.cvdcms.repository.InvoiceRepository invoiceRepository;
+    private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
 
-    public PatientPageController(PatientService service, com.cvdcms.repository.InvoiceRepository invoiceRepository) {
+    public PatientPageController(PatientService service,
+                                 com.cvdcms.repository.InvoiceRepository invoiceRepository,
+                                 PatientOverviewService overviewService) {
         this.service = service;
         this.invoiceRepository = invoiceRepository;
+        this.overviewService = overviewService;
     }
 
     @ModelAttribute("roleNames")
@@ -107,7 +111,9 @@ public class PatientPageController {
     }
 
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model, HttpSession session) {
+    public String detail(@PathVariable Long id,
+                         @RequestParam(required = false) String tab,
+                         Model model, HttpSession session) {
         PatientView patient = service.get(session, id);
         model.addAttribute("patient", patient);
 
@@ -166,10 +172,25 @@ public class PatientPageController {
         model.addAttribute("totalPaid", totalPaid);
         model.addAttribute("totalDebt", totalDebt);
 
-        // Billing permission: only true for accounting/cashier roles
+        // Bổ sung các model dữ liệu hợp nhất
         Object principal = session == null ? null : session.getAttribute("loggedInUser");
+        Long currentUserId = null;
+        if (principal instanceof com.cvdcms.entity.User u) {
+            currentUserId = u.getUserId();
+        }
+        model.addAttribute("appointments", overviewService.getPatientAppointments(id));
+        model.addAttribute("careData", overviewService.getPatientCareHistory(id, patient.branchId(), currentUserId));
+        model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));
+        model.addAttribute("laboOrders", overviewService.getPatientLaboOrders(id));
+        model.addAttribute("performedServices", overviewService.getPatientPerformedServices(id));
+        model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
+        model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
+        model.addAttribute("canPerformClinical", false); // Lễ tân không kê đơn/ký thay bác sĩ
+        model.addAttribute("currentTab", tab != null ? tab : "info");
+
+        // Billing permission: only true for accounting/cashier roles
         boolean canManageBilling = false;
-        if (principal instanceof User user && user.getRoles() != null) {
+        if (principal instanceof com.cvdcms.entity.User user && user.getRoles() != null) {
             canManageBilling = user.getRoles().stream()
                     .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
                                    "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||

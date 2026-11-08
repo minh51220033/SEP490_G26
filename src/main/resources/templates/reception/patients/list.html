@@ -80,7 +80,7 @@
                                 <th class="text-center" style="width: 50px;">G.T</th>
                                 <th class="text-center" style="width: 85px;">NĂM SINH</th>
                                 <th style="width: 125px;">ĐIỆN THOẠI</th>
-                                <th class="text-center" style="width: 120px;">THANH TOÁN</th>
+
                                 <th style="width: 130px;">NGUỒN</th>
                                 <th class="text-center" style="width: 85px;">THAO TÁC</th>
                             </tr>
@@ -119,12 +119,7 @@
                                     <span th:unless="${patient.phoneNumber != null}" class="text-muted">—</span>
                                 </td>
 
-                                <!-- 8. THANH TOÁN -->
-                                <td class="text-center">
-                                    <span th:if="${patient.paymentStatus == 'Chưa TT hết'}" class="badge-payment warning">Chưa TT hết</span>
-                                    <span th:elseif="${patient.paymentStatus == 'Đã TT hết'}" class="badge-payment success">Đã TT hết</span>
-                                    <span th:else class="badge-payment none">Chưa có DV</span>
-                                </td>
+                                
 
                                 <!-- 9. NGUỒN -->
                                 <td>

@@ -2209,6 +2209,11 @@
             if (branchParam && options.branches.some(b => String(b.id) === branchParam)) $('branchId').value = branchParam;
             const dateParam = new URLSearchParams(location.search).get('date');
             if (dateParam && dateParam >= today()) $('appointmentDate').value = dateParam;
+            const queryParam = new URLSearchParams(location.search).get('query');
+            if (queryParam) {
+                $('patientSearch').value = queryParam;
+                setTimeout(() => findPatient().catch(e => error(e.message)), 150);
+            }
         }
 
         let patientSeq = 0, availabilitySeq = 0, available = false;
