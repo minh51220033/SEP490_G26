@@ -7,7 +7,7 @@
 
     <div class="app-shell">
 
-        <aside th:replace="~{fragments/sidebar :: sidebar('attendance-admin')}"></aside>
+        <aside th:replace="~{fragments/sidebar :: sidebar('attendance')}"></aside>
         <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
         <div class="app-main">
@@ -53,6 +53,9 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- THANH TAB NGANG PHÂN HỆ NHÂN SỰ (Chuẩn DentalSoft) -->
+                <nav th:replace="~{fragments/hr_tabs :: hrTabs('attendance')}"></nav>
 
                 <!-- 4 THẺ KPI TỔNG QUAN (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
                 <div th:if="${selectedBranchId != null}" class="row g-3 mb-4">

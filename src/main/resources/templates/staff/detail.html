@@ -20,10 +20,12 @@
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-            <!-- QUAY LẠI DANH SÁCH -->
+            <!-- QUAY LẠI TRANG TRƯỚC ĐÓ -->
             <div class="mb-3">
-                <a th:href="@{/admin/staffs}" class="staff-breadcrumb-back">
-                    <i class="bi bi-arrow-left"></i> Quay lại danh sách nhân viên
+                <a th:href="@{/admin/staffs}"
+                   onclick="if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) { event.preventDefault(); if (window.history.length > 1) { window.history.back(); } else { window.location.href = document.referrer; } }"
+                   class="staff-breadcrumb-back">
+                    <i class="bi bi-arrow-left"></i> Quay lại
                 </a>
             </div>
 

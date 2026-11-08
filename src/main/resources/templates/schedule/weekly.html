@@ -27,13 +27,21 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
 
-            <!-- 1. TIÊU ĐỀ TRANG CHUẨN MISA (Đồng bộ Quản lý tài khoản, Quản lý nhân sự, Quản lý cơ sở) -->
-            <div class="staff-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 flex-shrink-0">
-                <div>
-                    <h1 class="staff-page-title">Bảng phân ca làm việc theo tuần</h1>
-                    <p class="staff-page-subtitle">
-                        Xếp nhân sự vào ca Sáng / Chiều / Tối theo từng chi nhánh phòng khám
-                    </p>
+            <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
+            <nav class="dv-breadcrumb mb-2">
+                <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Phân ca làm việc</span>
+            </nav>
+
+            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN (Có icon nhận diện chuẩn như Chấm công & Quản lý nhân sự) -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-calendar-range"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0">Bảng phân ca làm việc theo tuần</h1>
+                        <p class="dv-page-subtitle">Xếp nhân sự vào ca Sáng / Chiều / Tối theo từng chi nhánh phòng khám</p>
+                    </div>
                 </div>
 
                 <!-- Nút Sao chép tuần trước -->
@@ -49,6 +57,9 @@
                     </form>
                 </div>
             </div>
+
+            <!-- THANH TAB NGANG PHÂN HỆ NHÂN SỰ (Chuẩn DentalSoft) -->
+            <nav th:replace="~{fragments/hr_tabs :: hrTabs('schedules')}"></nav>
 
             <!-- 2. TOOLBAR ĐIỀU KHIỂN (Hàng ngang tích hợp) -->
             <div class="schedule-toolbar-card flex-shrink-0">
