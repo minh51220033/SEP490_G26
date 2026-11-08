@@ -162,7 +162,7 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("DoctorRecord: Phân trang bệnh nhân với 6 thuộc tính bắt buộc")
     void testDoctorRecordPagination() {
-        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository);
+        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository, patientOverviewService);
 
         List<PatientView> content = List.of();
         Page<PatientView> mockPage = new PageImpl<>(content, PageRequest.of(0, 10), 42);
@@ -187,7 +187,7 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Reception Patient: Phân trang bệnh nhân với 6 thuộc tính bắt buộc")
     void testPatientPageControllerPagination() {
-        PatientPageController controller = new PatientPageController(patientService, invoiceRepository);
+        PatientPageController controller = new PatientPageController(patientService, invoiceRepository, patientOverviewService);
 
         List<PatientView> content = List.of();
         Page<PatientView> mockPage = new PageImpl<>(content, PageRequest.of(1, 50), 120);
@@ -273,7 +273,7 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("DoctorRecord: Yêu cầu page vượt quá totalPages tự động lùi về trang cuối hợp lệ")
     void testDoctorRecord_OutOfBoundsPageFallback() {
-        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository);
+        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository, patientOverviewService);
 
         Page<PatientView> outOfBoundsPage = new PageImpl<>(List.of(), PageRequest.of(5, 10), 15);
         Page<PatientView> lastValidPage = new PageImpl<>(List.of(), PageRequest.of(1, 10), 15);
@@ -318,7 +318,7 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("PatientPageController: Yêu cầu page vượt quá totalPages tự động lùi về trang cuối")
     void testPatientPageController_OutOfBoundsPageFallback() {
-        PatientPageController controller = new PatientPageController(patientService, invoiceRepository);
+        PatientPageController controller = new PatientPageController(patientService, invoiceRepository, patientOverviewService);
 
         Page<PatientView> outOfBoundsPage = new PageImpl<>(List.of(), PageRequest.of(8, 25), 35);
         Page<PatientView> lastValidPage = new PageImpl<>(List.of(), PageRequest.of(1, 25), 35);
