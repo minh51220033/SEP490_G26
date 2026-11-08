@@ -254,28 +254,28 @@
                     <table class="dv-amis-table" id="branchTable">
                         <thead>
                         <tr>
-                            <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                            <th data-col="stt" style="width: 50px; min-width: 50px;" class="text-center">
                                 <div class="dv-th-inner justify-content-center"><span>#</span></div>
                             </th>
-                            <th data-col="code" style="min-width: 140px;">
+                            <th data-col="code" style="min-width: 110px;">
                                 <div class="dv-th-inner"><span>Mã cơ sở</span></div>
                             </th>
-                            <th data-col="name" style="min-width: 280px;">
+                            <th data-col="name" style="min-width: 220px;">
                                 <div class="dv-th-inner"><span>Tên chi nhánh</span></div>
                             </th>
-                            <th data-col="address" style="min-width: 280px;">
+                            <th data-col="address" style="min-width: 240px;">
                                 <div class="dv-th-inner"><span>Địa chỉ</span></div>
                             </th>
-                            <th data-col="contact" style="min-width: 240px;">
+                            <th data-col="contact" style="min-width: 190px;">
                                 <div class="dv-th-inner"><span>Thông tin liên hệ</span></div>
                             </th>
-                            <th data-col="scale" style="min-width: 180px;">
+                            <th data-col="scale" style="min-width: 140px;">
                                 <div class="dv-th-inner"><span>Quy mô</span></div>
                             </th>
-                            <th data-col="status" style="min-width: 160px;">
+                            <th data-col="status" style="min-width: 150px;">
                                 <div class="dv-th-inner"><span>Trạng thái</span></div>
                             </th>
-                            <th data-col="actions" class="text-center" style="min-width: 320px;">
+                            <th data-col="actions" class="text-center" style="min-width: 190px;">
                                 <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                             </th>
                             <th class="dv-floating-actions-track"></th>
@@ -293,10 +293,10 @@
                                      data-chairs=${chairCounts[branch.branchId] != null ? chairCounts[branch.branchId] : 0},
                                      data-search=${(branch.branchCode != null ? branch.branchCode : '') + ' ' + (branch.branchName != null ? branch.branchName : '') + ' ' + (branch.address != null ? branch.address : '') + ' ' + (branch.phone != null ? branch.phone : '') + ' ' + (branch.email != null ? branch.email : '')}">
                             <!-- 1. STT -->
-                            <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;" th:text="${iterStat.count}" data-col="stt">1</td>
+                            <td class="text-center text-muted fw-semibold" style="width: 50px; min-width: 50px;" th:text="${iterStat.count}" data-col="stt">1</td>
 
                             <!-- 2. Mã chi nhánh -->
-                            <td data-col="code" style="min-width: 140px;">
+                            <td data-col="code" style="min-width: 110px;">
                                 <span class="dv-code-pill" th:text="${branch.branchCode}">CN01</span>
                                 <div class="text-muted small mt-1" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
                                     MST: <span th:text="${branch.taxCode}">0101234567</span>
@@ -304,7 +304,7 @@
                             </td>
 
                             <!-- 3. Tên chi nhánh & Quản lý -->
-                            <td data-col="name" style="min-width: 280px;">
+                            <td data-col="name" style="min-width: 220px;">
                                 <div class="d-flex align-items-center gap-2">
                                     <img th:if="${branch.imageUrl != null and !branch.imageUrl.isBlank()}"
                                          th:src="${branch.imageUrl}"
@@ -319,20 +319,20 @@
                                            class="dv-patient-name"
                                            th:text="${branch.branchName}">Chi nhánh</a>
                                         <div class="text-muted small mt-1" th:if="${branch.managerUser != null}">
-                                            <i class="bi bi-person-badge text-primary me-1"></i>
-                                            <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
+                                             <i class="bi bi-person-badge text-primary me-1"></i>
+                                             <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
                                         </div>
                                     </div>
                                 </div>
                             </td>
 
                             <!-- 4. Địa chỉ -->
-                            <td data-col="address" style="min-width: 280px;">
+                            <td data-col="address" style="min-width: 240px;">
                                 <div class="text-secondary small fw-semibold" th:text="${branch.address}">Địa chỉ</div>
                             </td>
 
                             <!-- 5. Thông tin liên hệ -->
-                            <td data-col="contact" style="min-width: 240px;">
+                            <td data-col="contact" style="min-width: 190px;">
                                 <div class="small fw-semibold text-dark" th:if="${branch.phone != null and !branch.phone.isBlank()}">
                                     <i class="bi bi-telephone text-primary me-1"></i><span th:text="${branch.phone}">0901234567</span>
                                 </div>
@@ -345,7 +345,7 @@
                             </td>
 
                             <!-- 6. Quy mô (Phòng / Ghế) -->
-                            <td data-col="scale" style="min-width: 180px;">
+                            <td data-col="scale" style="min-width: 140px;">
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">
                                         <i class="bi bi-door-open me-1"></i><span th:text="${roomCounts[branch.branchId]}">0</span> phòng
@@ -357,7 +357,7 @@
                             </td>
 
                             <!-- 7. Trạng thái -->
-                            <td data-col="status" style="min-width: 160px;">
+                            <td data-col="status" style="min-width: 150px;">
                                 <span th:if="${branch.isActive}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
                                 </span>
@@ -367,7 +367,7 @@
                             </td>
 
                             <!-- 8. Cột Thao tác tĩnh (Gọn gàng 2 nút: Chi tiết/Quản lý cơ sở + Đổi trạng thái/Xóa nhầm) -->
-                            <td class="text-center" data-col="actions" style="width: 280px; min-width: 280px;">
+                            <td class="text-center" data-col="actions" style="width: 190px; min-width: 190px;">
                                 <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
                                        class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, quản lý sơ đồ phòng, ghế &amp; sửa thông tin">
@@ -457,15 +457,6 @@
                                             <span>Kích hoạt</span>
                                         </button>
                                     </form>
-                                </div>
-                            </td>
-                                            <span>Kích hoạt</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                                        <span>Xóa</span>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -925,19 +916,19 @@
 
         // ==================== KÉO DÃN CỘT (COLUMN RESIZER) ====================
         const defaultBranchColWidths = {
-            stt: 60,
-            code: 140,
-            name: 250,
-            address: 280,
-            contact: 220,
-            scale: 190,
-            status: 170,
-            actions: 240
+            stt: 50,
+            code: 110,
+            name: 220,
+            address: 240,
+            contact: 190,
+            scale: 140,
+            status: 150,
+            actions: 190
         };
-        ['cv_branch_table_widths_v2', 'cv_branch_table_widths_v3', 'cv_branch_table_columns_v2', 'cv_branch_table_columns_v3'].forEach(k => {
+        ['cv_branch_table_widths_v2', 'cv_branch_table_widths_v3', 'cv_branch_table_widths_v4', 'cv_branch_table_columns_v2', 'cv_branch_table_columns_v3'].forEach(k => {
             try { localStorage.removeItem(k); } catch (e) {}
         });
-        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v3';
+        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v4';
         const table = document.getElementById('branchTable');
 
         function loadColWidths() {
@@ -958,15 +949,16 @@
             ths.forEach(th => {
                 if (th.classList.contains('dv-floating-actions-track')) return;
                 const colKey = th.getAttribute('data-col');
-                const w = currentWidths[colKey] || defaultBranchColWidths[colKey] || 200;
+                const w = currentWidths[colKey] || defaultBranchColWidths[colKey] || 150;
                 th.style.width = w + 'px';
                 th.style.minWidth = w + 'px';
                 th.style.maxWidth = w + 'px';
                 totalW += w;
             });
+            const wrapperW = table.parentElement ? table.parentElement.clientWidth : 0;
             table.style.tableLayout = 'fixed';
-            table.style.width = Math.max(totalW, 1680) + 'px';
-            table.style.minWidth = Math.max(totalW, 1680) + 'px';
+            table.style.width = Math.max(totalW, wrapperW) + 'px';
+            table.style.minWidth = '100%';
         }
 
         const ths = Array.from(table.querySelectorAll('thead th'));

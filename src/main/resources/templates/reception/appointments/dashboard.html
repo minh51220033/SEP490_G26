@@ -1,939 +1,1540 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Quản lý lịch hẹn')}"></head>
-<body class="app-body">
-<div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
-    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-    <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Quản lý lịch hẹn')}"></header>
-        <main id="reception-content-area" class="app-content dentalsoft-appointment-page p-3">
-            <link rel="stylesheet" th:href="@{/css/patients.css}">
-            <link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
-            <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
 
-            <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
-            <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
-                    <div class="d-flex align-items-center gap-2 small">
-                        <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
-                        <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
+<head th:replace="~{fragments/head :: head('Quản lý lịch hẹn')}"></head>
+
+<body class="app-body">
+    <div class="app-shell">
+        <aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+        <div class="app-main">
+            <header th:replace="~{fragments/header :: appTopbar('Quản lý lịch hẹn')}"></header>
+            <main id="reception-content-area" class="app-content dentalsoft-appointment-page p-3">
+                <link rel="stylesheet" th:href="@{/css/patients.css}">
+                <link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
+                <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
+
+                <style>
+                    /* =========================================================================
+                   TOOLBAR & PHÂN LOẠI CHUẨN ENTERPRISE (ĐỒNG BỘ 100% VỚI DANH SÁCH KHÁM THEO NGÀY)
+                   ========================================================================= */
+                    .dv-toolbar-card {
+                        background: #ffffff;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 16px 20px;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                        margin-bottom: 18px;
+                    }
+
+                    .dv-search-box {
+                        position: relative;
+                        flex: 1;
+                        min-width: 280px;
+                    }
+
+                    .dv-search-box input {
+                        width: 100%;
+                        height: 44px;
+                        padding: 10px 42px 10px 42px;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 12px;
+                        font-size: 14.5px;
+                        font-weight: 500;
+                        color: #0f172a;
+                        background: #f8fafc;
+                        transition: all 0.2s;
+                    }
+
+                    .dv-search-box input:focus {
+                        background: #ffffff;
+                        border-color: #0284c7;
+                        box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+                        outline: none;
+                    }
+
+                    .dv-search-box .search-lead-icon {
+                        position: absolute;
+                        left: 14px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #64748b;
+                        font-size: 16px;
+                        pointer-events: none;
+                    }
+
+                    .dv-search-box .search-clear-btn {
+                        position: absolute;
+                        right: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border: none;
+                        background: #e2e8f0;
+                        color: #475569;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        font-size: 12px;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                    }
+
+                    .dv-search-box .search-clear-btn:hover {
+                        background: #cbd5e1;
+                        color: #0f172a;
+                    }
+
+                    .dv-quick-segment {
+                        display: inline-flex;
+                        background: #f1f5f9;
+                        padding: 4px;
+                        border-radius: 12px;
+                        border: 1px solid #e2e8f0;
+                        gap: 3px;
+                        align-items: center;
+                    }
+
+                    .dv-seg-btn {
+                        border: none !important;
+                        background: transparent !important;
+                        color: #475569 !important;
+                        font-size: 13.5px;
+                        font-weight: 600 !important;
+                        padding: 7px 14px;
+                        border-radius: 9px;
+                        cursor: pointer;
+                        transition: all 0.15s ease;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        white-space: nowrap;
+                        text-decoration: none;
+                        box-shadow: none !important;
+                    }
+
+                    .dv-seg-btn:hover {
+                        color: #0f172a !important;
+                        background: rgba(255, 255, 255, 0.6) !important;
+                    }
+
+                    .dv-seg-btn.active,
+                    .dv-seg-btn.is-active,
+                    .dv-seg-btn.active.btn-primary {
+                        background: #ffffff !important;
+                        color: #0284c7 !important;
+                        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+                        font-weight: 700 !important;
+                    }
+
+                    .dv-seg-count {
+                        font-size: 11px;
+                        font-weight: 800;
+                        padding: 1px 7px;
+                        border-radius: 20px;
+                        background: #e2e8f0;
+                        color: #334155;
+                    }
+
+                    .dv-seg-btn.active .dv-seg-count,
+                    .dv-seg-btn.is-active .dv-seg-count {
+                        background: #e0f2fe;
+                        color: #0369a1;
+                    }
+
+                    .dv-adv-filter-btn {
+                        height: 44px;
+                        padding: 0 16px;
+                        border-radius: 12px;
+                        border: 1.5px solid #cbd5e1;
+                        background: #ffffff;
+                        color: #0f172a;
+                        font-size: 14px;
+                        font-weight: 600;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        position: relative;
+                        white-space: nowrap;
+                    }
+
+                    .dv-adv-filter-btn:hover,
+                    .dv-adv-filter-btn.active,
+                    .dv-adv-filter-btn.is-open {
+                        border-color: #0284c7;
+                        color: #0284c7;
+                        background: #f0f9ff;
+                    }
+
+                    .dv-filter-pulse-badge {
+                        background: #ef4444;
+                        color: #ffffff;
+                        font-size: 11px;
+                        font-weight: 800;
+                        min-width: 20px;
+                        height: 20px;
+                        padding: 0 5px;
+                        border-radius: 999px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        animation: dvRedPulse 1.5s infinite;
+                        border: 2px solid #ffffff;
+                    }
+
+                    @keyframes dvRedPulse {
+                        0% {
+                            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.75);
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            box-shadow: 0 0 0 7px rgba(239, 68, 68, 0);
+                            transform: scale(1.08);
+                        }
+
+                        100% {
+                            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                            transform: scale(1);
+                        }
+                    }
+
+                    .rotate-180 {
+                        transform: rotate(180deg);
+                        transition: transform 0.2s ease;
+                    }
+
+                    .dv-adv-control {
+                        height: 44px;
+                        border-radius: 12px;
+                        border: 1.5px solid #cbd5e1;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #0f172a;
+                        padding: 6px 14px;
+                        background: #f8fafc;
+                        transition: all 0.2s;
+                    }
+
+                    .dv-adv-control:focus {
+                        background: #ffffff;
+                        border-color: #0284c7;
+                        box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+                        outline: none;
+                    }
+                </style>
+
+                <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dv-header-icon"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <div>
+                            <h1 class="dv-page-title mb-0">Quản lý lịch hẹn</h1>
+                            <p class="dv-page-subtitle">Đặt lịch hẹn khám, theo dõi trạng thái tiếp đón và phân bổ bác
+                                sĩ điều trị</p>
+                        </div>
                     </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 small">
-                        <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 1: Quản lý lịch hẹn">
+                    <div class="d-flex align-items-center gap-2">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        <a th:href="@{/reception/appointments}"
+                            class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới
+                        </a>
+                        <button type="button"
+                            class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            id="openCreateModalBtn"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                            <i class="bi bi-plus-lg"></i> Thêm lịch hẹn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
+                <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper
+                    aria-label="Quy trình tiếp đón">
+                    <div class="d-flex flex-wrap align-items-center gap-2 px-2 py-1">
+                        <span class="btn btn-sm reception-step-pill is-active rounded-pill"
+                            title="Bước 1: Quản lý lịch hẹn">
                             <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
                         </span>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/check-in}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
+                        <a th:href="@{/reception/check-in}"
+                            class="btn btn-sm reception-step-pill rounded-pill text-decoration-none"
+                            title="Bước 2: Tiếp đón &amp; Check-in">
                             <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
                         </a>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/dispatch}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
+                        <a th:href="@{/reception/dispatch}"
+                            class="btn btn-sm reception-step-pill rounded-pill text-decoration-none"
+                            title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
                             <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
                         </a>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/queue}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
+                        <a th:href="@{/reception/queue}"
+                            class="btn btn-sm reception-step-pill rounded-pill text-decoration-none"
+                            title="Bước 4: Hàng chờ gọi số">
                             <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
                         </a>
                     </div>
-                </div>
-            </nav>
+                </nav>
 
-            <!-- THANH ĐIỀU KHIỂN THỐNG NHẤT (THOÁNG ĐÃNG, HIỆN ĐẠI, KHÔNG TRÙNG LẶP) -->
-            <div class="dentalsoft-apt-toolbar mb-3 p-3">
-                <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG, CHẾ ĐỘ XEM & NÚT THÊM MỚI -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3.5 pb-3 mb-3 border-bottom w-100">
-                    <div class="d-flex flex-wrap align-items-center gap-3.5">
-                        <!-- Cụm chọn ngày: [< Thứ X, dd/MM/yyyy >] -->
-                        <div class="dentalsoft-date-nav shadow-xs">
-                            <button type="button" id="prevDateBtn" title="Lùi lại"><i class="bi bi-chevron-left"></i></button>
-                            <div class="position-relative d-inline-block">
-                                <span id="dateDisplayLabel" class="dentalsoft-date-label cursor-pointer" title="Bấm để chọn ngày cụ thể">
-                                    Chủ nhật 08/11/2026
-                                </span>
-                                <input type="date" id="filterDate" class="dentalsoft-hidden-date" style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
+                <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
+                <div class="dv-toolbar-card">
+                    <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG & CHẾ ĐỘ XEM (DANH SÁCH / Ô LỊCH) -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom"
+                        style="border-color: #f1f5f9 !important;">
+                        <div class="d-flex flex-wrap align-items-center gap-2.5">
+                            <!-- Cụm chọn ngày: [< Thứ X, dd/MM/yyyy >] -->
+                            <div class="dv-quick-segment" aria-label="Điều hướng ngày khám">
+                                <button type="button" class="dv-seg-btn px-2" id="prevDateBtn" title="Lùi lại">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <div class="position-relative d-inline-block">
+                                    <span id="dateDisplayLabel" class="dv-seg-btn px-3 fw-bold text-dark cursor-pointer"
+                                        title="Bấm để chọn ngày cụ thể">
+                                        Chủ nhật 08/11/2026
+                                    </span>
+                                    <input type="date" id="filterDate" class="dentalsoft-hidden-date"
+                                        style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <button type="button" class="dv-seg-btn px-2" id="nextDateBtn" title="Tiến lên">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
-                            <button type="button" id="nextDateBtn" title="Tiến lên"><i class="bi bi-chevron-right"></i></button>
+
+                            <!-- Phạm vi thời gian: Hôm nay / Tuần này / Tháng này -->
+                            <div class="dv-quick-segment" role="group" id="periodBtnGroup"
+                                aria-label="Phạm vi thời gian">
+                                <button type="button" class="dv-seg-btn active" id="tabToday">
+                                    <i class="bi bi-calendar-check"></i> Hôm nay
+                                </button>
+                                <button type="button" class="dv-seg-btn" id="tabWeek">
+                                    <i class="bi bi-calendar-week"></i> Tuần này
+                                </button>
+                                <button type="button" class="dv-seg-btn" id="tabMonth">
+                                    <i class="bi bi-calendar-month"></i> Tháng này
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Phạm vi thời gian: Hôm nay / Tuần này / Tháng này (Độc lập với chế độ Danh sách/Ô lịch) -->
-                        <div class="btn-group btn-group-sm rounded-3 shadow-xs" role="group" id="periodBtnGroup">
-                            <button type="button" class="btn btn-outline-secondary px-3.5 py-2 fw-semibold active" id="tabToday">Hôm nay</button>
-                            <button type="button" class="btn btn-outline-secondary px-3.5 py-2 fw-semibold" id="tabWeek">Tuần này</button>
-                            <button type="button" class="btn btn-outline-secondary px-3.5 py-2 fw-semibold" id="tabMonth">Tháng này</button>
+                        <!-- Chuyển đổi hiển thị: [ Danh sách | Ô lịch ] -->
+                        <div class="d-flex align-items-center gap-2 ms-auto">
+                            <select id="filterBranch" class="d-none"></select>
+                            <div class="dv-quick-segment" role="group" aria-label="Chế độ hiển thị">
+                                <button type="button" class="dv-seg-btn active" id="viewListBtn"
+                                    title="Xem dạng bảng danh sách">
+                                    <i class="bi bi-list-ul"></i> Danh sách
+                                </button>
+                                <button type="button" class="dv-seg-btn" id="viewCalendarBtn"
+                                    title="Xem dạng lưới ô lịch">
+                                    <i class="bi bi-calendar3"></i> Ô lịch
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Cụm phải: Chuyển đổi hiển thị [Danh sách | Ô lịch] + Thêm lịch hẹn (Căn sát góc phải) -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 ms-auto">
-                        <!-- Chi nhánh ẩn phục vụ API backend -->
-                        <select id="filterBranch" class="d-none"></select>
-
-                        <!-- Chế độ hiển thị: Danh sách vs Ô lịch -->
-                        <div class="btn-group btn-group-sm rounded-3 shadow-xs" role="group" aria-label="Chế độ hiển thị">
-                            <button type="button" class="btn btn-primary px-3.5 py-2 fw-semibold active" id="viewListBtn" title="Xem dạng bảng danh sách">
-                                <i class="bi bi-list-ul me-1"></i>Danh sách
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary px-3.5 py-2 fw-semibold" id="viewCalendarBtn" title="Xem dạng lưới ô lịch">
-                                <i class="bi bi-calendar3 me-1"></i>Ô lịch
+                    <!-- TẦNG 2: LIVE SEARCH RỘNG RÃI, PHÂN LOẠI TRẠNG THÁI (STATUS SEGMENTS), LỌC BÁC SĨ, BỘ LỌC & IN -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <!-- Live Search Box ProTable -->
+                        <div class="dv-search-box">
+                            <i class="bi bi-search search-lead-icon"></i>
+                            <input id="appointmentSearch" type="search"
+                                placeholder="Tìm nhanh theo tên KH, mã BN, SĐT, dịch vụ, bác sĩ..." autocomplete="off">
+                            <button type="button" class="search-clear-btn" id="btnClearSearch" title="Xóa từ khóa">
+                                <i class="bi bi-x-lg"></i>
                             </button>
                         </div>
 
-                        <button type="button" class="btn btn-sm btn-primary rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-2" id="openCreateModalBtn" style="background-color: #0284c7; border-color: #0284c7;">
-                            <i class="bi bi-plus-lg"></i> Thêm lịch hẹn
-                        </button>
+                        <!-- Phân loại trạng thái nhanh (Segment chuẩn daily-visits với đốm màu & badge count) -->
+                        <div class="dv-quick-segment" aria-label="Phân loại trạng thái">
+                            <button type="button" class="dv-seg-btn kpi-pill active" id="kpiTotalPill"
+                                title="Tất cả lịch hẹn">
+                                Tất cả <span class="dv-seg-count" id="kpiTotal">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn kpi-pill" id="kpiPendingPill" title="Chờ xác nhận">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#f59e0b;"></span>
+                                Chờ xác nhận <span class="dv-seg-count" id="kpiPending">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn kpi-pill" id="kpiConfirmedPill" title="Đã xác nhận">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#0284c7;"></span>
+                                Đã xác nhận <span class="dv-seg-count" id="kpiConfirmed">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn kpi-pill" id="kpiCheckedInPill"
+                                title="Đã đến / Check-in">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#10b981;"></span>
+                                Đã đến <span class="dv-seg-count" id="kpiCheckedIn">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn kpi-pill" id="kpiCompletedPill" title="Hoàn thành">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#6366f1;"></span>
+                                Hoàn thành <span class="dv-seg-count" id="kpiCompleted">0</span>
+                            </button>
+                        </div>
 
-                        <!-- Bộ chọn cơ sở chuẩn DentalSoft -->
-                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        <!-- Cụm Lọc Bác sĩ + Nút Mở Bộ lọc + In -->
+                        <div class="d-flex align-items-center gap-2.5 ms-auto flex-wrap">
+                            <div style="min-width: 190px;">
+                                <select id="filterDoctor" class="form-select dv-adv-control">
+                                    <option value="">Tất cả bác sĩ</option>
+                                </select>
+                            </div>
+
+                            <!-- Nút Lọc nâng cao chuẩn daily-visits kèm Huy hiệu số lượng filter chớp đỏ -->
+                            <button type="button" class="dv-adv-filter-btn" id="btnToggleAdvancedFilter">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Bộ lọc</span>
+                                <span class="dv-filter-pulse-badge d-none" id="advFilterCount">0</span>
+                                <i class="bi bi-chevron-down small" id="advFilterChevron"></i>
+                            </button>
+
+                            <!-- Nút In -->
+                            <button type="button" class="dv-adv-filter-btn px-3" id="printAppointmentBtn"
+                                title="In danh sách lịch hẹn">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- TẦNG 2: LIVE SEARCH RỘNG RÃI, LỌC BÁC SĨ, NÚT MỞ BỘ LỌC VÀ IN -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3.5 w-100">
-                    <!-- Live Search Box Rộng Rãi -->
-                    <div class="position-relative flex-grow-1" style="min-width: 300px; max-width: 550px;">
-                        <i class="bi bi-search position-absolute text-muted" style="left: 14px; top: 11px; font-size: 13.5px;"></i>
-                        <input id="appointmentSearch" type="search" class="form-control form-control-sm ps-4 pe-4 py-2 rounded-3"
-                               placeholder="Tìm nhanh theo tên KH, mã BN, SĐT, dịch vụ, bác sĩ..." autocomplete="off">
-                        <button type="button" id="btnClearSearch" class="btn-clear-search d-none position-absolute"
-                                style="right: 12px; top: 8px; border:none; background:none; color:#94a3b8; cursor:pointer;" title="Xóa từ khóa">
-                            <i class="bi bi-x-circle-fill"></i>
+                <!-- DENTALSOFT ACCORDION FILTER PANEL (CHUẨN ẢNH 2 - MỞ TRƯỢT MƯỢT MÀ) -->
+                <div id="advancedFilterPanel" class="dv-toolbar-card mb-3 p-3"
+                    style="display: none; border-left: 4px solid #0284c7 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
+                            <i class="bi bi-sliders2-vertical"></i>
+                            <span>BỘ LỌC CHUYÊN SÂU &amp; TOÁN TỬ SO SÁNH LINH HOẠT</span>
+                        </div>
+                        <button type="button" class="btn btn-link text-decoration-none text-muted p-0 small fw-semibold"
+                            id="btnResetAdvFilter">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
                         </button>
                     </div>
 
-                    <!-- Cụm Lọc Bác sĩ + Bộ lọc + In (Căn sát góc phải) -->
-                    <div class="d-flex align-items-center justify-content-end gap-3 flex-wrap ms-auto">
-                        <!-- Lọc Bác sĩ -->
-                        <div style="min-width: 200px;">
-                            <select id="filterDoctor" class="form-select form-select-sm py-2 rounded-3">
-                                <option value="">Tất cả bác sĩ</option>
+                    <div class="row g-3">
+                        <!-- Hàng 1 -->
+                        <div class="col-md-3 col-sm-6">
+                            <label for="advFilterDateOp" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-calendar-event me-1 text-primary"></i>Toán tử Ngày hẹn
+                            </label>
+                            <select id="advFilterDateOp" class="form-select form-select-sm rounded-3">
+                                <option value="EXACT" selected>🗓 Mốc ngày đang chọn</option>
+                                <option value="TODAY">Hôm nay</option>
+                                <option value="TOMORROW">Ngày mai</option>
+                                <option value="THIS_WEEK">Trong tuần này</option>
+                                <option value="THIS_MONTH">Trong tháng này</option>
+                                <option value="ALL">Tất cả các ngày</option>
                             </select>
                         </div>
 
-                        <!-- Nút Mở Bộ lọc (Chứa đầy đủ Ca khám, Trạng thái, v.v.) -->
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3.5 py-2 fw-medium d-flex align-items-center gap-2 bg-white" id="btnToggleAdvancedFilter">
-                            <i class="bi bi-sliders2 text-primary"></i>
-                            <span>Bộ lọc</span>
-                            <span class="badge bg-primary text-white rounded-pill d-none" id="advFilterCount">0</span>
-                            <i class="bi bi-chevron-down small" id="advFilterChevron"></i>
-                        </button>
+                        <div class="col-md-3 col-sm-6">
+                            <label for="advFilterSession" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-clock me-1 text-primary"></i>Khung giờ / Buổi khám
+                            </label>
+                            <select id="advFilterSession" class="form-select form-select-sm rounded-3">
+                                <option value="">-- Tất cả ca khám --</option>
+                                <option value="MORNING">Ca Sáng (08:00 - 12:00)</option>
+                                <option value="AFTERNOON">Ca Chiều (13:30 - 17:30)</option>
+                                <option value="EVENING">Ca Tối (17:30 - 20:30)</option>
+                            </select>
+                        </div>
 
-                        <!-- Nút In -->
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 bg-white" id="printAppointmentBtn" title="In danh sách lịch hẹn">
-                            <i class="bi bi-printer"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                        <div class="col-md-3 col-sm-6">
+                            <label for="advFilterDoctor" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-person-badge me-1 text-primary"></i>Bác sĩ phụ trách
+                            </label>
+                            <select id="advFilterDoctor" class="form-select form-select-sm rounded-3">
+                                <option value="">-- Tất cả Bác sĩ --</option>
+                            </select>
+                        </div>
 
-            <!-- DENTALSOFT ACCORDION FILTER PANEL (CHUẨN ẢNH 2 - MỞ TRƯỢT MƯỢT MÀ) -->
-            <div id="advancedFilterPanel" class="card border-0 shadow-sm rounded-3 mb-3 p-3 bg-white" style="display: none; border-left: 4px solid #0284c7 !important;">
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                    <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
-                        <i class="bi bi-sliders2-vertical"></i>
-                        <span>BỘ LỌC CHUYÊN SÂU &amp; TOÁN TỬ SO SÁNH LINH HOẠT</span>
-                    </div>
-                    <button type="button" class="btn btn-link text-decoration-none text-muted p-0 small fw-semibold" id="btnResetAdvFilter">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
-                    </button>
-                </div>
+                        <div class="col-md-3 col-sm-6">
+                            <label for="advFilterStatus" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-activity me-1 text-primary"></i>Trạng thái chi tiết
+                            </label>
+                            <select id="advFilterStatus" class="form-select form-select-sm rounded-3">
+                                <option value="">-- Tất cả Trạng thái --</option>
+                                <option value="PENDING">Chờ xác nhận (PENDING)</option>
+                                <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
+                                <option value="CHECKED_IN">Đã đến / Tiếp đón (CHECKED_IN)</option>
+                                <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
+                                <option value="NO_SHOW">Không đến (NO_SHOW)</option>
+                                <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                            </select>
+                        </div>
 
-                <div class="row g-3">
-                    <!-- Hàng 1 -->
-                    <div class="col-md-3 col-sm-6">
-                        <label for="advFilterDateOp" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-calendar-event me-1 text-primary"></i>Toán tử Ngày hẹn
-                        </label>
-                        <select id="advFilterDateOp" class="form-select form-select-sm rounded-3">
-                            <option value="EXACT" selected>🗓 Mốc ngày đang chọn</option>
-                            <option value="TODAY">Hôm nay</option>
-                            <option value="TOMORROW">Ngày mai</option>
-                            <option value="THIS_WEEK">Trong tuần này</option>
-                            <option value="THIS_MONTH">Trong tháng này</option>
-                            <option value="ALL">Tất cả các ngày</option>
-                        </select>
-                    </div>
+                        <!-- Hàng 2 -->
+                        <div class="col-md-4 col-sm-6">
+                            <label for="advFilterService" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-heart-pulse me-1 text-primary"></i>Nhóm dịch vụ hẹn
+                            </label>
+                            <select id="advFilterService" class="form-select form-select-sm rounded-3">
+                                <option value="">-- Tất cả Nhóm dịch vụ --</option>
+                            </select>
+                        </div>
 
-                    <div class="col-md-3 col-sm-6">
-                        <label for="advFilterSession" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-clock me-1 text-primary"></i>Khung giờ / Buổi khám
-                        </label>
-                        <select id="advFilterSession" class="form-select form-select-sm rounded-3">
-                            <option value="">-- Tất cả ca khám --</option>
-                            <option value="MORNING">Ca Sáng (08:00 - 12:00)</option>
-                            <option value="AFTERNOON">Ca Chiều (13:30 - 17:30)</option>
-                            <option value="EVENING">Ca Tối (17:30 - 20:30)</option>
-                        </select>
-                    </div>
+                        <div class="col-md-4 col-sm-6">
+                            <label for="advFilterMedicalAlert" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-shield-exclamation me-1 text-danger"></i>Cảnh báo y tế &amp; Nhóm BN
+                            </label>
+                            <select id="advFilterMedicalAlert" class="form-select form-select-sm rounded-3">
+                                <option value="">-- Tất cả bệnh nhân --</option>
+                                <option value="HAS_ALERT">Có cảnh báo y tế / Dị ứng thuốc</option>
+                                <option value="MINOR">Bệnh nhân dưới 18 tuổi (Có giám hộ)</option>
+                                <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa</option>
+                            </select>
+                        </div>
 
-                    <div class="col-md-3 col-sm-6">
-                        <label for="advFilterDoctor" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-person-badge me-1 text-primary"></i>Bác sĩ phụ trách
-                        </label>
-                        <select id="advFilterDoctor" class="form-select form-select-sm rounded-3">
-                            <option value="">-- Tất cả Bác sĩ --</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <label for="advFilterStatus" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-activity me-1 text-primary"></i>Trạng thái chi tiết
-                        </label>
-                        <select id="advFilterStatus" class="form-select form-select-sm rounded-3">
-                            <option value="">-- Tất cả Trạng thái --</option>
-                            <option value="PENDING">Chờ xác nhận (PENDING)</option>
-                            <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
-                            <option value="CHECKED_IN">Đã đến / Tiếp đón (CHECKED_IN)</option>
-                            <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
-                            <option value="NO_SHOW">Không đến (NO_SHOW)</option>
-                            <option value="CANCELLED">Đã hủy (CANCELLED)</option>
-                        </select>
-                    </div>
-
-                    <!-- Hàng 2 -->
-                    <div class="col-md-4 col-sm-6">
-                        <label for="advFilterService" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-heart-pulse me-1 text-primary"></i>Nhóm dịch vụ hẹn
-                        </label>
-                        <select id="advFilterService" class="form-select form-select-sm rounded-3">
-                            <option value="">-- Tất cả Nhóm dịch vụ --</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4 col-sm-6">
-                        <label for="advFilterMedicalAlert" class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-shield-exclamation me-1 text-danger"></i>Cảnh báo y tế &amp; Nhóm BN
-                        </label>
-                        <select id="advFilterMedicalAlert" class="form-select form-select-sm rounded-3">
-                            <option value="">-- Tất cả bệnh nhân --</option>
-                            <option value="HAS_ALERT">Có cảnh báo y tế / Dị ứng thuốc</option>
-                            <option value="MINOR">Bệnh nhân dưới 18 tuổi (Có giám hộ)</option>
-                            <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4 col-sm-12">
-                        <label class="form-label small fw-semibold text-secondary mb-1">
-                            <i class="bi bi-grid-3x3-gap me-1 text-primary"></i>Chế độ hiển thị
-                        </label>
-                        <div class="d-flex align-items-center gap-3 pt-1">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="displayViewModeRadio" id="radioModeList" value="list" checked>
-                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="radioModeList">
-                                    <i class="bi bi-list-ul me-1"></i>Dạng Danh sách
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="displayViewModeRadio" id="radioModeCalendar" value="week">
-                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="radioModeCalendar">
-                                    <i class="bi bi-calendar3 me-1"></i>Dạng Lưới / Ô lịch
-                                </label>
+                        <div class="col-md-4 col-sm-12">
+                            <label class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-grid-3x3-gap me-1 text-primary"></i>Chế độ hiển thị
+                            </label>
+                            <div class="d-flex align-items-center gap-3 pt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="displayViewModeRadio"
+                                        id="radioModeList" value="list" checked>
+                                    <label class="form-check-label small fw-medium text-dark cursor-pointer"
+                                        for="radioModeList">
+                                        <i class="bi bi-list-ul me-1"></i>Dạng Danh sách
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="displayViewModeRadio"
+                                        id="radioModeCalendar" value="week">
+                                    <label class="form-check-label small fw-medium text-dark cursor-pointer"
+                                        for="radioModeCalendar">
+                                        <i class="bi bi-calendar3 me-1"></i>Dạng Lưới / Ô lịch
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Hàng 3: Active Filter Tags (Theo Ảnh 2) -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2.5 border-top" id="activeFilterTagsBar" style="display: none;">
-                    <div class="d-flex flex-wrap align-items-center gap-2 small">
-                        <span class="text-muted"><i class="bi bi-funnel me-1"></i>Đang lọc theo:</span>
-                        <div class="d-flex flex-wrap align-items-center gap-1.5" id="activeFilterTagsList"></div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 small fw-semibold" id="btnClearAllAdvFilters">
-                        <i class="bi bi-x-circle me-1"></i>Xóa tất cả bộ lọc
-                    </button>
-                </div>
-            </div>
-
-            <!-- Error Banner -->
-            <div id="pageError" class="alert alert-danger rounded-3 mb-3" hidden role="alert"></div>
-
-            <!-- 1. DATA TABLE VIEW (GIAO DIỆN BẢNG DANH SÁCH - DEFAULT) -->
-            <div id="listViewContainer" class="dentalsoft-card">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-light-subtle">
-                    <div class="d-flex align-items-center gap-2 small">
-                        <span class="fw-bold text-dark" id="listPeriodTitle"><i class="bi bi-calendar-check text-primary me-1"></i>Danh sách lịch hẹn</span>
-                        <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold" id="listSummaryCount">0 lịch hẹn</span>
-                    </div>
-                    <div class="d-none d-md-flex align-items-center gap-3 small text-muted" style="font-size: 12px;">
-                        <span><i class="bi bi-sunrise text-warning me-1"></i>Ca Sáng: 08:00–12:00</span>
-                        <span><i class="bi bi-sun text-orange me-1"></i>Ca Chiều: 13:30–17:30</span>
-                        <span><i class="bi bi-moon-stars text-primary me-1"></i>Ca Tối: 17:30–20:30</span>
+                    <!-- Hàng 3: Active Filter Tags (Theo Ảnh 2) -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2.5 border-top"
+                        id="activeFilterTagsBar" style="display: none;">
+                        <div class="d-flex flex-wrap align-items-center gap-2 small">
+                            <span class="text-muted"><i class="bi bi-funnel me-1"></i>Đang lọc theo:</span>
+                            <div class="d-flex flex-wrap align-items-center gap-1.5" id="activeFilterTagsList"></div>
+                        </div>
+                        <button type="button"
+                            class="btn btn-sm btn-link text-danger text-decoration-none p-0 small fw-semibold"
+                            id="btnClearAllAdvFilters">
+                            <i class="bi bi-x-circle me-1"></i>Xóa tất cả bộ lọc
+                        </button>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="dentalsoft-apt-table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th class="text-center" style="width: 45px;">#</th>
-                                <th style="width: 145px;">Ca &amp; Giờ hẹn</th>
-                                <th style="width: 115px;">Mã KH</th>
-                                <th style="min-width: 195px;">Khách hàng</th>
-                                <th style="width: 130px;">Số điện thoại</th>
-                                <th style="min-width: 210px;">Nội dung &amp; Dịch vụ</th>
-                                <th style="min-width: 165px;">Bác sĩ phụ trách</th>
-                                <th class="text-center" style="width: 140px;">Trạng thái</th>
-                                <th class="text-center appointment-actions-column" style="width: 135px;">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="appointmentRows">
-                            <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
-                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                    Đang tải dữ liệu lịch hẹn…
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <!-- 2. CALENDAR VIEW (GIAO DIỆN LƯỚI THEO CA SÁNG / CHIỀU / TỐI) -->
-            <div id="calendarViewContainer" class="dentalsoft-card p-3" style="display: none;">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                    <div>
-                        <h6 class="fw-bold mb-0 text-dark" id="calendarSectionTitle">Lịch hẹn theo ca trong tuần</h6>
-                        <small class="text-muted">Phân bổ lịch hẹn theo 3 ca (Sáng / Chiều / Tối) — Bấm dấu (+) trên từng ca để đặt lịch nhanh vào ca đó</small>
+                <!-- Error Banner -->
+                <div id="pageError" class="alert alert-danger rounded-3 mb-3" hidden role="alert"></div>
+
+                <!-- 1. DATA TABLE VIEW (GIAO DIỆN BẢNG DANH SÁCH - DEFAULT) -->
+                <div id="listViewContainer" class="dentalsoft-card">
+                    <div
+                        class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-light-subtle">
+                        <div class="d-flex align-items-center gap-2 small">
+                            <span class="fw-bold text-dark" id="listPeriodTitle"><i
+                                    class="bi bi-calendar-check text-primary me-1"></i>Danh sách lịch hẹn</span>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold"
+                                id="listSummaryCount">0 lịch hẹn</span>
+                        </div>
+                        <div class="d-none d-md-flex align-items-center gap-3 small text-muted"
+                            style="font-size: 12px;">
+                            <span><i class="bi bi-sunrise text-warning me-1"></i>Ca Sáng: 08:00–12:00</span>
+                            <span><i class="bi bi-sun text-orange me-1"></i>Ca Chiều: 13:30–17:30</span>
+                            <span><i class="bi bi-moon-stars text-primary me-1"></i>Ca Tối: 17:30–20:30</span>
+                        </div>
                     </div>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary" id="calPrev"><i class="bi bi-chevron-left"></i> Trước</button>
-                        <button type="button" class="btn btn-outline-secondary" id="calNext">Sau <i class="bi bi-chevron-right"></i></button>
+                    <div class="table-responsive">
+                        <table class="dentalsoft-apt-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 45px;">#</th>
+                                    <th style="width: 145px;">Ca &amp; Giờ hẹn</th>
+                                    <th style="width: 115px;">Mã KH</th>
+                                    <th style="min-width: 195px;">Khách hàng</th>
+                                    <th style="width: 130px;">Số điện thoại</th>
+                                    <th style="min-width: 210px;">Nội dung &amp; Dịch vụ</th>
+                                    <th style="min-width: 165px;">Bác sĩ phụ trách</th>
+                                    <th class="text-center" style="width: 140px;">Trạng thái</th>
+                                    <th class="text-center appointment-actions-column" style="width: 135px;">Thao tác
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentRows">
+                                <tr>
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                        </div>
+                                        Đang tải dữ liệu lịch hẹn…
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div id="calendarGrid" class="appointment-calendar"></div>
-            </div>
 
-            <!-- =========================================================
+                <!-- 2. CALENDAR VIEW (GIAO DIỆN LƯỚI THEO CA SÁNG / CHIỀU / TỐI) -->
+                <div id="calendarViewContainer" class="dentalsoft-card p-3" style="display: none;">
+                    <div
+                        class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark" id="calendarSectionTitle">Lịch hẹn theo ca trong tuần
+                            </h6>
+                            <small class="text-muted">Phân bổ lịch hẹn theo 3 ca (Sáng / Chiều / Tối) — Bấm dấu (+) trên
+                                từng ca để đặt lịch nhanh vào ca đó</small>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="calPrev"><i
+                                    class="bi bi-chevron-left"></i> Trước</button>
+                            <button type="button" class="btn btn-outline-secondary" id="calNext">Sau <i
+                                    class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div id="calendarGrid" class="appointment-calendar"></div>
+                </div>
+
+                <!-- =========================================================
                  MODAL 1: CHI TIẾT LỊCH HẸN (ĐỒNG BỘ 100% CẤU TRÚC VỚI FORM THÊM)
                  ========================================================= -->
-            <div class="modal fade" id="statusQuickChangeModal" tabindex="-1" aria-labelledby="statusModalTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
-                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="modal-create-header bg-white">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="icon-circle shadow-xs">
-                                    <i class="bi bi-calendar2-check"></i>
-                                </div>
-                                <div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <h6 class="modal-title fw-bold text-dark mb-0" id="statusModalTitle">Chi tiết lịch hẹn</h6>
-                                        <span id="modalDetailCode" class="badge bg-light text-primary border font-monospace fw-bold">#LH...</span>
+                <div class="modal fade" id="statusQuickChangeModal" tabindex="-1" aria-labelledby="statusModalTitle"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <!-- Modal Header -->
+                            <div class="modal-create-header bg-white">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="icon-circle shadow-xs">
+                                        <i class="bi bi-calendar2-check"></i>
                                     </div>
-                                    <small class="text-muted" id="detailModalSubtitle">Toàn bộ thông tin đối soát khớp với phiếu hẹn khám</small>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-2.5">
-                                <span class="apt-status-badge status-confirmed" id="modalStatusBadge">
-                                    <span class="status-dot"></span>
-                                    <span>Đã xác nhận</span>
-                                </span>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                        </div>
-
-                        <!-- Modal Body (2 Cột cấu trúc y hệt Form Thêm lịch hẹn) -->
-                        <div class="modal-body p-4 bg-white">
-                            <div class="row g-4">
-                                <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG -->
-                                <div class="col-md-6 border-end pe-md-4">
-                                    <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
-                                        <i class="bi bi-person-vcard me-1.5"></i>Thông tin khách hàng
-                                    </h6>
-
-                                    <!-- Mã khách hàng -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">MÃ KHÁCH HÀNG</label>
-                                        <input type="text" id="detailPatientCode" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-primary" readonly value="—">
-                                    </div>
-
-                                    <!-- Họ tên khách hàng -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">HỌ TÊN KHÁCH HÀNG</label>
-                                        <input type="text" id="modalStatusPatientName" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark fs-6" readonly value="—">
-                                    </div>
-
-                                    <!-- Ngày sinh & Giới tính -->
-                                    <div class="row g-2.5 mb-3">
-                                        <div class="col-7">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY SINH &amp; TUỔI</label>
-                                            <input type="text" id="detailPatientDobAge" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="—">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h6 class="modal-title fw-bold text-dark mb-0" id="statusModalTitle">Chi
+                                                tiết lịch hẹn</h6>
+                                            <span id="modalDetailCode"
+                                                class="badge bg-light text-primary border font-monospace fw-bold">#LH...</span>
                                         </div>
-                                        <div class="col-5">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỚI TÍNH</label>
-                                            <input type="text" id="detailPatientGender" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="—">
-                                        </div>
-                                    </div>
-
-                                    <!-- Điện thoại -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐIỆN THOẠI</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" id="detailPatientPhoneInput" class="form-control form-control-sm py-2 px-3 rounded-start-3 bg-light font-monospace fw-bold text-dark" readonly value="—">
-                                            <a href="#" id="detailPatientPhone" class="btn btn-outline-primary d-flex align-items-center px-3" title="Gọi điện cho khách">
-                                                <i class="bi bi-telephone-fill"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                    <!-- Khối Người giám hộ (nếu BN < 18 tuổi) -->
-                                    <div id="detailGuardianContainer" class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
-                                        <div class="small fw-bold text-primary mb-1"><i class="bi bi-shield-check me-1"></i>Lưu ý người giám hộ (BN &lt; 18 tuổi)</div>
-                                        <div class="text-secondary small" id="detailGuardianText">—</div>
-                                    </div>
-
-                                    <!-- Địa chỉ -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA CHỈ / CƠ SỞ ĐĂNG KÝ</label>
-                                        <input type="text" id="detailPatientAddress" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light text-secondary" readonly value="—">
-                                    </div>
-
-                                    <!-- Nguồn khách -->
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN KHÁCH</label>
-                                        <input type="text" id="detailCustomerSource" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="Lễ tân đặt hẹn">
+                                        <small class="text-muted" id="detailModalSubtitle">Toàn bộ thông tin đối soát
+                                            khớp với phiếu hẹn khám</small>
                                     </div>
                                 </div>
-
-                                <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN -->
-                                <div class="col-md-6 ps-md-4">
-                                    <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
-                                        <i class="bi bi-calendar-event me-1.5"></i>Thông tin lịch hẹn
-                                    </h6>
-
-                                    <!-- Chi nhánh & Ngày hẹn -->
-                                    <div class="row g-2.5 mb-3">
-                                        <div class="col-6">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">CHI NHÁNH</label>
-                                            <input type="text" id="detailAppointmentBranch" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="Cơ sở phòng khám">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY HẸN</label>
-                                            <input type="text" id="detailAppointmentDate" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark" readonly value="—">
-                                        </div>
-                                    </div>
-
-                                    <!-- Ca khám đăng ký: 3 nút hiển thị trực quan khớp form thêm -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">CA KHÁM ĐĂNG KÝ</label>
-                                        <div class="row g-2" id="detailSessionGroup">
-                                            <div class="col-4">
-                                                <div class="btn btn-sm w-100 modal-session-btn py-2 text-start" id="detailSessMorning">
-                                                    <div class="fw-bold small"><i class="bi bi-sunrise me-1"></i>Ca Sáng</div>
-                                                    <div class="session-time-sub">08:00 – 12:00</div>
-                                                </div>
-                                            </div>
-                                            <div class="col-4">
-                                                <div class="btn btn-sm w-100 modal-session-btn py-2 text-start" id="detailSessAfternoon">
-                                                    <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca Chiều</div>
-                                                    <div class="session-time-sub">13:30 – 17:30</div>
-                                                </div>
-                                            </div>
-                                            <div class="col-4">
-                                                <div class="btn btn-sm w-100 modal-session-btn py-2 text-start" id="detailSessEvening">
-                                                    <div class="fw-bold small"><i class="bi bi-moon-stars me-1"></i>Ca Tối</div>
-                                                    <div class="session-time-sub">17:30 – 20:30</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Bác sĩ trực ca -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">BÁC SĨ PHỤ TRÁCH</label>
-                                        <input type="text" id="modalStatusDoctorName" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark" readonly value="—">
-                                    </div>
-
-                                    <!-- Giờ dự kiến (Linh động) -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỜ DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
-                                        <input type="text" id="detailAppointmentTime" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-semibold text-primary" readonly value="Linh động trong ca">
-                                    </div>
-
-                                    <!-- Nhóm dịch vụ -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM DỊCH VỤ</label>
-                                        <input type="text" id="detailAppointmentService" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-medium" readonly value="Khám tổng quát">
-                                    </div>
-
-                                    <!-- Nội dung hẹn -->
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NỘI DUNG HẸN</label>
-                                        <textarea id="modalStatusContent" class="form-control rounded-3 bg-light" rows="2" readonly>—</textarea>
-                                    </div>
-
-                                    <!-- Ghi chú nội bộ -->
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GHI CHÚ</label>
-                                        <input type="text" id="detailInternalNote" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fst-italic text-secondary" readonly value="Không có ghi chú thêm">
-                                    </div>
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <span class="apt-status-badge status-confirmed" id="modalStatusBadge">
+                                        <span class="status-dot"></span>
+                                        <span>Đã xác nhận</span>
+                                    </span>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Modal Footer: Nút Sửa lịch hẹn & Nút Đóng rộng rãi, thoáng mắt -->
-                        <div class="modal-footer bg-light px-4 py-2.5 border-top d-flex justify-content-end gap-3">
-                            <button type="button" class="btn btn-outline-primary px-4 py-2 fw-semibold rounded-3 bg-white" id="btnDetailOpenEdit">
-                                <i class="bi bi-pencil-square me-1.5"></i>Sửa / Đổi lịch hẹn
-                            </button>
-                            <button type="button" class="btn btn-secondary px-4 py-2 fw-medium rounded-3" data-bs-dismiss="modal">Đóng</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- =========================================================
-                 MODAL 2: THÊM LỊCH HẸN (THOÁNG ĐÃNG, BỎ THỜI LƯỢNG DỰ KIẾN)
-                 ========================================================= -->
-            <div class="modal fade" id="createAppointmentModal" tabindex="-1" aria-labelledby="createModalTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
-                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="modal-create-header bg-white">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="icon-circle shadow-xs">
-                                    <i class="bi bi-calendar-event"></i>
-                                </div>
-                                <div>
-                                    <h6 class="modal-title fw-bold text-dark mb-0" id="createModalTitle">Thêm lịch hẹn</h6>
-                                    <small class="text-muted" id="createModalSubtitle">Tạo lịch hẹn mới cho phòng khám</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-
-                        <!-- Modal Body (2 Cột thoáng đãng) -->
-                        <div class="modal-body p-4 bg-white">
-                            <form id="createAppointmentForm">
-                                <input type="hidden" id="modalProfileId" value="">
-                                <input type="hidden" id="modalPatientCode" value="">
+                            <!-- Modal Body (2 Cột cấu trúc y hệt Form Thêm lịch hẹn) -->
+                            <div class="modal-body p-4 bg-white">
                                 <div class="row g-4">
                                     <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG -->
                                     <div class="col-md-6 border-end pe-md-4">
-                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
+                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                            style="letter-spacing: 0.5px;">
                                             <i class="bi bi-person-vcard me-1.5"></i>Thông tin khách hàng
                                         </h6>
 
-                                        <!-- Khách hàng cũ search -->
-                                        <div class="mb-3.5 position-relative">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">KHÁCH HÀNG CŨ</label>
-                                            <div class="position-relative">
-                                                <i class="bi bi-search position-absolute text-muted" style="left: 13px; top: 11px; font-size: 13px;"></i>
-                                                <input type="text" id="modalPatientSearch" class="form-control form-control-sm py-2 ps-4 pe-3 rounded-3" placeholder="Mã hồ sơ, tên hoặc số điện thoại...">
-                                                <div id="modalPatientResults" class="patient-autocomplete-results" style="display: none;"></div>
+                                        <!-- Mã khách hàng -->
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">MÃ
+                                                KHÁCH HÀNG</label>
+                                            <input type="text" id="detailPatientCode"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-primary"
+                                                readonly value="—">
+                                        </div>
+
+                                        <!-- Họ tên khách hàng -->
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">HỌ
+                                                TÊN KHÁCH HÀNG</label>
+                                            <input type="text" id="modalStatusPatientName"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark fs-6"
+                                                readonly value="—">
+                                        </div>
+
+                                        <!-- Ngày sinh & Giới tính -->
+                                        <div class="row g-2.5 mb-3">
+                                            <div class="col-7">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY
+                                                    SINH &amp; TUỔI</label>
+                                                <input type="text" id="detailPatientDobAge"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                    readonly value="—">
                                             </div>
-                                            <!-- Selected patient chip -->
-                                            <div id="selectedPatientChip" class="alert alert-primary py-2 px-3 mt-2 mb-0 rounded-3 align-items-center justify-content-between small" style="display: none;">
-                                                <div>
-                                                    <strong id="selectedPatientName">Nguyễn Văn A</strong>
-                                                    <span class="text-muted ms-1" id="selectedPatientCode">(Mã BN)</span>
-                                                </div>
-                                                <button type="button" class="btn-close btn-close-sm" id="clearSelectedPatientBtn" aria-label="Bỏ chọn"></button>
+                                            <div class="col-5">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỚI
+                                                    TÍNH</label>
+                                                <input type="text" id="detailPatientGender"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                    readonly value="—">
                                             </div>
                                         </div>
 
-                                        <div class="text-center text-muted small my-3 position-relative">
-                                            <span class="bg-white px-2.5 position-relative" style="z-index: 1; font-size: 11.5px;">hoặc khách mới (chưa có hồ sơ)</span>
-                                            <hr class="position-absolute w-100 top-50 start-0 m-0" style="z-index: 0; opacity: 0.15;">
-                                        </div>
-
-                                        <!-- Khối nhập khách mới (khi chưa chọn khách cũ) -->
-                                        <div id="newPatientFieldsContainer">
-                                            <!-- Họ tên khách hàng -->
-                                            <div class="mb-3">
-                                                <label for="modalPatientName" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">HỌ TÊN KHÁCH HÀNG <span class="text-danger">*</span></label>
-                                                <input type="text" id="modalPatientName" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Nguyễn Văn A">
-                                            </div>
-
-                                            <div class="row g-2.5 mb-3">
-                                                <div class="col-7">
-                                                    <label for="modalPatientDob" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY SINH <span class="text-danger">*</span></label>
-                                                    <input type="date" id="modalPatientDob" class="form-control form-control-sm py-2 px-3 rounded-3">
-                                                </div>
-                                                <div class="col-5">
-                                                    <label for="modalPatientGender" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỚI TÍNH <span class="text-danger">*</span></label>
-                                                    <select id="modalPatientGender" class="form-select form-select-sm py-2 rounded-3">
-                                                        <option value="">-- Chọn --</option>
-                                                        <option value="Nam">Nam</option>
-                                                        <option value="Nữ">Nữ</option>
-                                                        <option value="Khác">Khác</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <!-- Điện thoại -->
-                                            <div class="mb-3">
-                                                <label for="modalPatientPhone" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">ĐIỆN THOẠI <span class="text-danger">*</span></label>
-                                                <input type="tel" id="modalPatientPhone" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="0901234567" pattern="^0\d{9,10}$">
-                                                <small class="text-muted d-block mt-1" style="font-size: 11px;">Số điện thoại 10-11 chữ số bắt đầu bằng 0</small>
-                                            </div>
-
-                                            <!-- Khối người giám hộ cho bệnh nhân < 18 tuổi (BR-PAT-09) -->
-                                            <div id="modalGuardianContainer" class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
-                                                <div class="small fw-bold text-primary mb-2"><i class="bi bi-shield-check me-1"></i>Người giám hộ (bắt buộc với BN &lt; 18 tuổi)</div>
-                                                <div class="mb-2">
-                                                    <label for="modalGuardianName" class="form-label small text-secondary mb-1">Họ tên người giám hộ</label>
-                                                    <input type="text" id="modalGuardianName" class="form-control form-control-sm py-1.5 rounded-2" placeholder="Nguyễn Văn B">
-                                                </div>
-                                                <div class="row g-2">
-                                                    <div class="col-7">
-                                                        <label for="modalGuardianPhone" class="form-label small text-secondary mb-1">SĐT người giám hộ</label>
-                                                        <input type="tel" id="modalGuardianPhone" class="form-control form-control-sm py-1.5 rounded-2" placeholder="0912345678">
-                                                    </div>
-                                                    <div class="col-5">
-                                                        <label for="modalGuardianRelationship" class="form-label small text-secondary mb-1">Quan hệ</label>
-                                                        <input type="text" id="modalGuardianRelationship" class="form-control form-control-sm py-1.5 rounded-2" placeholder="Bố/Mẹ">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Địa chỉ -->
-                                            <div class="mb-3">
-                                                <label for="modalPatientAddress" class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA CHỈ</label>
-                                                <input type="text" id="modalPatientAddress" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Số nhà, đường, phường...">
-                                            </div>
-
-                                            <!-- Nguồn khách -->
-                                            <div class="mb-3">
-                                                <label for="modalCustomerSource" class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN KHÁCH</label>
-                                                <select id="modalCustomerSource" class="form-select form-select-sm py-2 rounded-3">
-                                                    <option value="">-- Chọn --</option>
-                                                    <option value="Google">Google</option>
-                                                    <option value="Facebook">Facebook</option>
-                                                    <option value="Giới thiệu">Giới thiệu</option>
-                                                    <option value="Vãng lai">Vãng lai</option>
-                                                    <option value="Hotline">Hotline</option>
-                                                    <option value="TikTok">TikTok</option>
-                                                    <option value="Zalo">Zalo</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="mt-2 text-end">
-                                                <a th:href="@{/reception/patients/new(returnUrl='/reception/appointments')}" class="small text-primary text-decoration-none">
-                                                    <i class="bi bi-box-arrow-up-right me-1"></i> Mở trang tạo hồ sơ chi tiết đầy đủ
+                                        <!-- Điện thoại -->
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐIỆN
+                                                THOẠI</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="detailPatientPhoneInput"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-start-3 bg-light font-monospace fw-bold text-dark"
+                                                    readonly value="—">
+                                                <a href="#" id="detailPatientPhone"
+                                                    class="btn btn-outline-primary d-flex align-items-center px-3"
+                                                    title="Gọi điện cho khách">
+                                                    <i class="bi bi-telephone-fill"></i>
                                                 </a>
                                             </div>
+                                        </div>
+
+                                        <!-- Khối Người giám hộ (nếu BN < 18 tuổi) -->
+                                        <div id="detailGuardianContainer" class="p-3 bg-light rounded-3 border mb-3"
+                                            style="display: none;">
+                                            <div class="small fw-bold text-primary mb-1"><i
+                                                    class="bi bi-shield-check me-1"></i>Lưu ý người giám hộ (BN &lt; 18
+                                                tuổi)</div>
+                                            <div class="text-secondary small" id="detailGuardianText">—</div>
+                                        </div>
+
+                                        <!-- Địa chỉ -->
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA
+                                                CHỈ / CƠ SỞ ĐĂNG KÝ</label>
+                                            <input type="text" id="detailPatientAddress"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light text-secondary"
+                                                readonly value="—">
+                                        </div>
+
+                                        <!-- Nguồn khách -->
+                                        <div class="mb-2">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN
+                                                KHÁCH</label>
+                                            <input type="text" id="detailCustomerSource"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                readonly value="Lễ tân đặt hẹn">
                                         </div>
                                     </div>
 
                                     <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN -->
                                     <div class="col-md-6 ps-md-4">
-                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
+                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                            style="letter-spacing: 0.5px;">
                                             <i class="bi bi-calendar-event me-1.5"></i>Thông tin lịch hẹn
                                         </h6>
 
                                         <!-- Chi nhánh & Ngày hẹn -->
                                         <div class="row g-2.5 mb-3">
                                             <div class="col-6">
-                                                <label for="modalBranchId" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CHI NHÁNH <span class="text-danger">*</span></label>
-                                                <select id="modalBranchId" class="form-select form-select-sm py-2 rounded-3" required></select>
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">CHI
+                                                    NHÁNH</label>
+                                                <input type="text" id="detailAppointmentBranch"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                    readonly value="Cơ sở phòng khám">
                                             </div>
                                             <div class="col-6">
-                                                <label for="modalAppointmentDate" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY HẸN <span class="text-danger">*</span></label>
-                                                <input type="date" id="modalAppointmentDate" class="form-control form-control-sm py-2 px-3 rounded-3" required>
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY
+                                                    HẸN</label>
+                                                <input type="text" id="detailAppointmentDate"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark"
+                                                    readonly value="—">
                                             </div>
                                         </div>
 
-                                        <!-- CA KHÁM: SÁNG / CHIỀU / TỐI -->
+                                        <!-- Ca khám đăng ký: 3 nút hiển thị trực quan khớp form thêm -->
                                         <div class="mb-3">
-                                            <label class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CA KHÁM ĐĂNG KÝ <span class="text-danger">*</span></label>
-                                            <input type="hidden" id="modalSession" value="MORNING">
-                                            <div class="row g-2" id="modalSessionGroup">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">CA
+                                                KHÁM ĐĂNG KÝ</label>
+                                            <div class="row g-2" id="detailSessionGroup">
                                                 <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start active" data-modal-session="MORNING">
-                                                        <div class="fw-bold small"><i class="bi bi-sunrise me-1"></i>Ca Sáng</div>
+                                                    <div class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                        id="detailSessMorning">
+                                                        <div class="fw-bold small"><i class="bi bi-sunrise me-1"></i>Ca
+                                                            Sáng</div>
                                                         <div class="session-time-sub">08:00 – 12:00</div>
-                                                    </button>
+                                                    </div>
                                                 </div>
                                                 <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-modal-session="AFTERNOON">
-                                                        <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca Chiều</div>
+                                                    <div class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                        id="detailSessAfternoon">
+                                                        <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca
+                                                            Chiều</div>
                                                         <div class="session-time-sub">13:30 – 17:30</div>
-                                                    </button>
+                                                    </div>
                                                 </div>
                                                 <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-modal-session="EVENING">
-                                                        <div class="fw-bold small"><i class="bi bi-moon-stars me-1"></i>Ca Tối</div>
+                                                    <div class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                        id="detailSessEvening">
+                                                        <div class="fw-bold small"><i
+                                                                class="bi bi-moon-stars me-1"></i>Ca Tối</div>
                                                         <div class="session-time-sub">17:30 – 20:30</div>
-                                                    </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <!-- Bác sĩ trực ca -->
                                         <div class="mb-3">
-                                            <label for="modalDoctorId" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">BÁC SĨ TRỰC CA <span class="text-danger">*</span></label>
-                                            <select id="modalDoctorId" class="form-select form-select-sm py-2 rounded-3" required>
-                                                <option value="">Chọn chi nhánh và ngày hẹn trước</option>
-                                            </select>
-                                            <small id="modalDoctorHelp" class="form-text text-muted d-block mt-1" style="font-size: 11.5px;">Hiển thị bác sĩ có lịch trực trong ca và ngày đã chọn.</small>
-                                        </div>
-
-                                        <!-- Giờ dự kiến (Linh động) - Bỏ thời lượng dự kiến theo yêu cầu -->
-                                        <div class="mb-3">
-                                            <label class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỜ DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
-                                            <div class="d-flex gap-2">
-                                                <select id="modalHour" class="form-select form-select-sm py-2 rounded-3 flex-grow-1">
-                                                    <option value="">Linh động cả ca</option>
-                                                    <option value="08">08 giờ</option>
-                                                    <option value="09">09 giờ</option>
-                                                    <option value="10">10 giờ</option>
-                                                    <option value="11">11 giờ</option>
-                                                </select>
-                                                <select id="modalMinute" class="form-select form-select-sm py-2 rounded-3" style="max-width: 95px;">
-                                                    <option value="00">00 ph</option>
-                                                    <option value="15">15 ph</option>
-                                                    <option value="30">30 ph</option>
-                                                    <option value="45">45 ph</option>
-                                                </select>
-                                            </div>
-                                            <small class="text-muted d-block mt-1" style="font-size: 11.5px;">Có thể chọn giờ cụ thể hoặc để "Linh động cả ca" (tiếp đón theo thứ tự đến).</small>
-                                        </div>
-
-                                        <!-- Nhóm dịch vụ -->
-                                        <div class="mb-3">
-                                            <label for="modalServiceId" class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM DỊCH VỤ</label>
-                                            <select id="modalServiceId" class="form-select form-select-sm py-2 rounded-3">
-                                                <option value="">-- Chọn dịch vụ --</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Nội dung hẹn -->
-                                        <div class="mb-3">
-                                            <label for="modalSymptoms" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NỘI DUNG HẸN <span class="text-danger">*</span></label>
-                                            <textarea id="modalSymptoms" class="form-control rounded-3 py-2 px-3" rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..." required></textarea>
-                                        </div>
-
-                                        <!-- Ghi chú nội bộ -->
-                                        <div class="mb-3">
-                                            <label for="modalInternalNote" class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GHI CHÚ</label>
-                                            <input type="text" id="modalInternalNote" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Ghi chú nội bộ (không gửi cho KH)">
-                                        </div>
-
-                                        <!-- Checkboxes -->
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="modalIsTentative">
-                                            <label class="form-check-label small text-secondary" for="modalIsTentative">
-                                                Chờ xác nhận (lễ tân sẽ gọi điện chốt lại sau)
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="modalSendSms" checked>
-                                            <label class="form-check-label small text-secondary" for="modalSendSms">
-                                                Gửi tin nhắn SMS/Zalo xác nhận ngay khi lưu
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Modal Footer -->
-                        <div class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-end gap-3">
-                            <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-xs" id="saveAppointmentBtn" style="background-color: #0284c7; border-color: #0284c7;">Lưu</button>
-                            <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-3 bg-white" data-bs-dismiss="modal">Đóng</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- =========================================================
-                 MODAL 3: SỬA / ĐỔI LỊCH HẸN (MODAL TẠI CHỖ, THOÁNG ĐÃNG)
-                 ========================================================= -->
-            <div class="modal fade" id="editAppointmentModal" tabindex="-1" aria-labelledby="editModalTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
-                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="modal-create-header bg-white">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="icon-circle shadow-xs" style="background-color: #eff6ff; color: #0284c7;">
-                                    <i class="bi bi-pencil-square"></i>
-                                </div>
-                                <div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <h6 class="modal-title fw-bold text-dark mb-0" id="editModalTitle">Sửa / Đổi lịch hẹn</h6>
-                                        <span class="badge rounded-pill bg-light text-secondary border font-monospace" id="editModalCode">LH...</span>
-                                    </div>
-                                    <small class="text-muted" id="editModalSubtitle">Cập nhật ngày, ca khám hoặc bác sĩ phụ trách</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-
-                        <!-- Modal Body (2 Cột thoáng đãng, đồng nhất form thêm và chi tiết) -->
-                        <div class="modal-body p-4 bg-white">
-                            <form id="editAppointmentForm">
-                                <input type="hidden" id="editAppointmentId" value="">
-                                <input type="hidden" id="editBranchId" value="">
-                                <div class="row g-4">
-                                    <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG (ĐỊNH DANH) -->
-                                    <div class="col-md-6 border-end pe-md-4">
-                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
-                                            <i class="bi bi-person-vcard me-1.5"></i>Thông tin khách hàng
-                                        </h6>
-
-                                        <!-- Mã khách hàng -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">MÃ KHÁCH HÀNG</label>
-                                            <input type="text" id="editPatientCode" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-primary" readonly value="—">
-                                        </div>
-
-                                        <!-- Họ tên khách hàng -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">HỌ TÊN KHÁCH HÀNG</label>
-                                            <input type="text" id="editPatientName" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark fs-6" readonly value="—">
-                                        </div>
-
-                                        <!-- Ngày sinh & Giới tính -->
-                                        <div class="row g-2.5 mb-3.5">
-                                            <div class="col-7">
-                                                <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY SINH &amp; TUỔI</label>
-                                                <input type="text" id="editPatientDobAge" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="—">
-                                            </div>
-                                            <div class="col-5">
-                                                <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỚI TÍNH</label>
-                                                <input type="text" id="editPatientGender" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="—">
-                                            </div>
-                                        </div>
-
-                                        <!-- Điện thoại -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐIỆN THOẠI</label>
-                                            <input type="text" id="editPatientPhone" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-dark" readonly value="—">
-                                        </div>
-
-                                        <!-- Khối người giám hộ cho bệnh nhân < 18 tuổi -->
-                                        <div id="editGuardianContainer" class="p-3 bg-light rounded-3 border mb-3.5" style="display: none;">
-                                            <div class="small fw-bold text-primary mb-1"><i class="bi bi-shield-check me-1"></i>Lưu ý người giám hộ (BN &lt; 18 tuổi)</div>
-                                            <div class="text-secondary small" id="editGuardianText">Bệnh nhân dưới 18 tuổi — Có người giám hộ đi cùng.</div>
-                                        </div>
-
-                                        <!-- Địa chỉ / Cơ sở -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA CHỈ / CƠ SỞ ĐĂNG KÝ</label>
-                                            <input type="text" id="editPatientAddress" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light text-secondary" readonly value="—">
-                                        </div>
-
-                                        <!-- Nguồn khách -->
-                                        <div class="mb-2">
-                                            <label class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN KHÁCH</label>
-                                            <input type="text" id="editCustomerSource" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light" readonly value="—">
-                                        </div>
-                                    </div>
-
-                                    <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN (CHỈNH SỬA ĐƯỢC) -->
-                                    <div class="col-md-6 ps-md-4">
-                                        <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom" style="letter-spacing: 0.5px;">
-                                            <i class="bi bi-calendar-event me-1.5"></i>Thông tin lịch hẹn
-                                        </h6>
-
-                                        <!-- Chi nhánh & Ngày hẹn -->
-                                        <div class="row g-2.5 mb-3.5">
-                                            <div class="col-6">
-                                                <label class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CHI NHÁNH</label>
-                                                <input type="text" id="editBranchName" class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-medium" readonly value="Cơ sở phòng khám">
-                                            </div>
-                                            <div class="col-6">
-                                                <label for="editAppointmentDate" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY HẸN <span class="text-danger">*</span></label>
-                                                <input type="date" id="editAppointmentDate" class="form-control form-control-sm py-2 px-3 rounded-3 fw-bold" required>
-                                            </div>
-                                        </div>
-
-                                        <!-- CA KHÁM: SÁNG / CHIỀU / TỐI -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CA KHÁM ĐĂNG KÝ <span class="text-danger">*</span></label>
-                                            <input type="hidden" id="editSession" value="MORNING">
-                                            <div class="row g-2" id="editSessionGroup">
-                                                <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start active" data-edit-session="MORNING">
-                                                        <div class="fw-bold small"><i class="bi bi-sunrise me-1"></i>Ca Sáng</div>
-                                                        <div class="session-time-sub">08:00 – 12:00</div>
-                                                    </button>
-                                                </div>
-                                                <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-edit-session="AFTERNOON">
-                                                        <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca Chiều</div>
-                                                        <div class="session-time-sub">13:30 – 17:30</div>
-                                                    </button>
-                                                </div>
-                                                <div class="col-4">
-                                                    <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-edit-session="EVENING">
-                                                        <div class="fw-bold small"><i class="bi bi-moon-stars me-1"></i>Ca Tối</div>
-                                                        <div class="session-time-sub">17:30 – 20:30</div>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Bác sĩ trực ca -->
-                                        <div class="mb-3.5">
-                                            <label for="editDoctorId" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">BÁC SĨ TRỰC CA</label>
-                                            <select id="editDoctorId" class="form-select form-select-sm py-2 rounded-3">
-                                                <option value="">-- Chưa chỉ định bác sĩ --</option>
-                                            </select>
-                                            <small id="editDoctorHelp" class="form-text text-muted d-block mt-1" style="font-size: 11.5px;">Bác sĩ phụ trách khám và tư vấn cho ca này.</small>
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">BÁC
+                                                SĨ PHỤ TRÁCH</label>
+                                            <input type="text" id="modalStatusDoctorName"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark"
+                                                readonly value="—">
                                         </div>
 
                                         <!-- Giờ dự kiến (Linh động) -->
-                                        <div class="mb-3.5">
-                                            <label class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỜ DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
-                                            <div class="d-flex gap-2">
-                                                <select id="editHour" class="form-select form-select-sm py-2 rounded-3 flex-grow-1">
-                                                    <option value="">Linh động cả ca</option>
-                                                    <option value="08">08 giờ</option>
-                                                    <option value="09">09 giờ</option>
-                                                    <option value="10">10 giờ</option>
-                                                    <option value="11">11 giờ</option>
-                                                </select>
-                                                <select id="editMinute" class="form-select form-select-sm py-2 rounded-3" style="max-width: 95px;">
-                                                    <option value="00">00 ph</option>
-                                                    <option value="15">15 ph</option>
-                                                    <option value="30">30 ph</option>
-                                                    <option value="45">45 ph</option>
-                                                </select>
-                                            </div>
-                                            <small class="text-muted d-block mt-1" style="font-size: 11.5px;">Có thể chọn giờ cụ thể hoặc để "Linh động cả ca".</small>
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỜ
+                                                DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
+                                            <input type="text" id="detailAppointmentTime"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-semibold text-primary"
+                                                readonly value="Linh động trong ca">
                                         </div>
 
                                         <!-- Nhóm dịch vụ -->
-                                        <div class="mb-3.5">
-                                            <label for="editServiceId" class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM DỊCH VỤ</label>
-                                            <select id="editServiceId" class="form-select form-select-sm py-2 rounded-3">
-                                                <option value="">-- Chọn dịch vụ --</option>
-                                            </select>
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM
+                                                DỊCH VỤ</label>
+                                            <input type="text" id="detailAppointmentService"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-medium"
+                                                readonly value="Khám tổng quát">
                                         </div>
 
                                         <!-- Nội dung hẹn -->
-                                        <div class="mb-3.5">
-                                            <label for="editSymptoms" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NỘI DUNG HẸN <span class="text-danger">*</span></label>
-                                            <textarea id="editSymptoms" class="form-control rounded-3 py-2 px-3" rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..." required></textarea>
+                                        <div class="mb-3">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NỘI
+                                                DUNG HẸN</label>
+                                            <textarea id="modalStatusContent" class="form-control rounded-3 bg-light"
+                                                rows="2" readonly>—</textarea>
                                         </div>
 
-                                        <!-- Lý do thay đổi lịch hẹn -->
+                                        <!-- Ghi chú nội bộ -->
                                         <div class="mb-2">
-                                            <label for="editReason" class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">LÝ DO THAY ĐỔI / ĐỔI LỊCH <span class="text-danger">*</span></label>
-                                            <input type="text" id="editReason" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Ví dụ: Khách hàng yêu cầu đổi giờ/ngày khám" required value="Khách hàng yêu cầu đổi lịch khám">
+                                            <label
+                                                class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GHI
+                                                CHÚ</label>
+                                            <input type="text" id="detailInternalNote"
+                                                class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fst-italic text-secondary"
+                                                readonly value="Không có ghi chú thêm">
                                         </div>
                                     </div>
                                 </div>
-                            </form>
-                        </div>
+                            </div>
 
-                        <!-- Modal Footer -->
-                        <div class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-end gap-3">
-                            <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-xs" id="saveEditAppointmentBtn" style="background-color: #0284c7; border-color: #0284c7;">Lưu thay đổi</button>
-                            <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-3 bg-white" data-bs-dismiss="modal">Đóng</button>
+                            <!-- Modal Footer: Nút Sửa lịch hẹn & Nút Đóng rộng rãi, thoáng mắt -->
+                            <div class="modal-footer bg-light px-4 py-2.5 border-top d-flex justify-content-end gap-3">
+                                <button type="button"
+                                    class="btn btn-outline-primary px-4 py-2 fw-semibold rounded-3 bg-white"
+                                    id="btnDetailOpenEdit">
+                                    <i class="bi bi-pencil-square me-1.5"></i>Sửa / Đổi lịch hẹn
+                                </button>
+                                <button type="button" class="btn btn-secondary px-4 py-2 fw-medium rounded-3"
+                                    data-bs-dismiss="modal">Đóng</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-        </main>
+                <!-- =========================================================
+                 MODAL 2: THÊM LỊCH HẸN (THOÁNG ĐÃNG, BỎ THỜI LƯỢNG DỰ KIẾN)
+                 ========================================================= -->
+                <div class="modal fade" id="createAppointmentModal" tabindex="-1" aria-labelledby="createModalTitle"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <!-- Modal Header -->
+                            <div class="modal-create-header bg-white">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="icon-circle shadow-xs">
+                                        <i class="bi bi-calendar-event"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="modal-title fw-bold text-dark mb-0" id="createModalTitle">Thêm lịch
+                                            hẹn</h6>
+                                        <small class="text-muted" id="createModalSubtitle">Tạo lịch hẹn mới cho phòng
+                                            khám</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+
+                            <!-- Modal Body (2 Cột thoáng đãng) -->
+                            <div class="modal-body p-4 bg-white">
+                                <form id="createAppointmentForm">
+                                    <input type="hidden" id="modalProfileId" value="">
+                                    <input type="hidden" id="modalPatientCode" value="">
+                                    <div class="row g-4">
+                                        <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG -->
+                                        <div class="col-md-6 border-end pe-md-4">
+                                            <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                                style="letter-spacing: 0.5px;">
+                                                <i class="bi bi-person-vcard me-1.5"></i>Thông tin khách hàng
+                                            </h6>
+
+                                            <!-- Khách hàng cũ search -->
+                                            <div class="mb-3.5 position-relative">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">KHÁCH
+                                                    HÀNG CŨ</label>
+                                                <div class="position-relative">
+                                                    <i class="bi bi-search position-absolute text-muted"
+                                                        style="left: 13px; top: 11px; font-size: 13px;"></i>
+                                                    <input type="text" id="modalPatientSearch"
+                                                        class="form-control form-control-sm py-2 ps-4 pe-3 rounded-3"
+                                                        placeholder="Mã hồ sơ, tên hoặc số điện thoại...">
+                                                    <div id="modalPatientResults" class="patient-autocomplete-results"
+                                                        style="display: none;"></div>
+                                                </div>
+                                                <!-- Selected patient chip -->
+                                                <div id="selectedPatientChip"
+                                                    class="alert alert-primary py-2 px-3 mt-2 mb-0 rounded-3 align-items-center justify-content-between small"
+                                                    style="display: none;">
+                                                    <div>
+                                                        <strong id="selectedPatientName">Nguyễn Văn A</strong>
+                                                        <span class="text-muted ms-1" id="selectedPatientCode">(Mã
+                                                            BN)</span>
+                                                    </div>
+                                                    <button type="button" class="btn-close btn-close-sm"
+                                                        id="clearSelectedPatientBtn" aria-label="Bỏ chọn"></button>
+                                                </div>
+                                            </div>
+
+                                            <div class="text-center text-muted small my-3 position-relative">
+                                                <span class="bg-white px-2.5 position-relative"
+                                                    style="z-index: 1; font-size: 11.5px;">hoặc khách mới (chưa có hồ
+                                                    sơ)</span>
+                                                <hr class="position-absolute w-100 top-50 start-0 m-0"
+                                                    style="z-index: 0; opacity: 0.15;">
+                                            </div>
+
+                                            <!-- Khối nhập khách mới (khi chưa chọn khách cũ) -->
+                                            <div id="newPatientFieldsContainer">
+                                                <!-- Họ tên khách hàng -->
+                                                <div class="mb-3">
+                                                    <label for="modalPatientName"
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">HỌ
+                                                        TÊN KHÁCH HÀNG <span class="text-danger">*</span></label>
+                                                    <input type="text" id="modalPatientName"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                        placeholder="Nguyễn Văn A">
+                                                </div>
+
+                                                <div class="row g-2.5 mb-3">
+                                                    <div class="col-7">
+                                                        <label for="modalPatientDob"
+                                                            class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY
+                                                            SINH <span class="text-danger">*</span></label>
+                                                        <input type="date" id="modalPatientDob"
+                                                            class="form-control form-control-sm py-2 px-3 rounded-3">
+                                                    </div>
+                                                    <div class="col-5">
+                                                        <label for="modalPatientGender"
+                                                            class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỚI
+                                                            TÍNH <span class="text-danger">*</span></label>
+                                                        <select id="modalPatientGender"
+                                                            class="form-select form-select-sm py-2 rounded-3">
+                                                            <option value="">-- Chọn --</option>
+                                                            <option value="Nam">Nam</option>
+                                                            <option value="Nữ">Nữ</option>
+                                                            <option value="Khác">Khác</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Điện thoại -->
+                                                <div class="mb-3">
+                                                    <label for="modalPatientPhone"
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">ĐIỆN
+                                                        THOẠI <span class="text-danger">*</span></label>
+                                                    <input type="tel" id="modalPatientPhone"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                        placeholder="0901234567" pattern="^0\d{9,10}$">
+                                                    <small class="text-muted d-block mt-1" style="font-size: 11px;">Số
+                                                        điện thoại 10-11 chữ số bắt đầu bằng 0</small>
+                                                </div>
+
+                                                <!-- Khối người giám hộ cho bệnh nhân < 18 tuổi (BR-PAT-09) -->
+                                                <div id="modalGuardianContainer"
+                                                    class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
+                                                    <div class="small fw-bold text-primary mb-2"><i
+                                                            class="bi bi-shield-check me-1"></i>Người giám hộ (bắt buộc
+                                                        với BN &lt; 18 tuổi)</div>
+                                                    <div class="mb-2">
+                                                        <label for="modalGuardianName"
+                                                            class="form-label small text-secondary mb-1">Họ tên người
+                                                            giám hộ</label>
+                                                        <input type="text" id="modalGuardianName"
+                                                            class="form-control form-control-sm py-1.5 rounded-2"
+                                                            placeholder="Nguyễn Văn B">
+                                                    </div>
+                                                    <div class="row g-2">
+                                                        <div class="col-7">
+                                                            <label for="modalGuardianPhone"
+                                                                class="form-label small text-secondary mb-1">SĐT người
+                                                                giám hộ</label>
+                                                            <input type="tel" id="modalGuardianPhone"
+                                                                class="form-control form-control-sm py-1.5 rounded-2"
+                                                                placeholder="0912345678">
+                                                        </div>
+                                                        <div class="col-5">
+                                                            <label for="modalGuardianRelationship"
+                                                                class="form-label small text-secondary mb-1">Quan
+                                                                hệ</label>
+                                                            <input type="text" id="modalGuardianRelationship"
+                                                                class="form-control form-control-sm py-1.5 rounded-2"
+                                                                placeholder="Bố/Mẹ">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Địa chỉ -->
+                                                <div class="mb-3">
+                                                    <label for="modalPatientAddress"
+                                                        class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA
+                                                        CHỈ</label>
+                                                    <input type="text" id="modalPatientAddress"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                        placeholder="Số nhà, đường, phường...">
+                                                </div>
+
+                                                <!-- Nguồn khách -->
+                                                <div class="mb-3">
+                                                    <label for="modalCustomerSource"
+                                                        class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN
+                                                        KHÁCH</label>
+                                                    <select id="modalCustomerSource"
+                                                        class="form-select form-select-sm py-2 rounded-3">
+                                                        <option value="">-- Chọn --</option>
+                                                        <option value="Google">Google</option>
+                                                        <option value="Facebook">Facebook</option>
+                                                        <option value="Giới thiệu">Giới thiệu</option>
+                                                        <option value="Vãng lai">Vãng lai</option>
+                                                        <option value="Hotline">Hotline</option>
+                                                        <option value="TikTok">TikTok</option>
+                                                        <option value="Zalo">Zalo</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mt-2 text-end">
+                                                    <a th:href="@{/reception/patients/new(returnUrl='/reception/appointments')}"
+                                                        class="small text-primary text-decoration-none">
+                                                        <i class="bi bi-box-arrow-up-right me-1"></i> Mở trang tạo hồ sơ
+                                                        chi tiết đầy đủ
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN -->
+                                        <div class="col-md-6 ps-md-4">
+                                            <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                                style="letter-spacing: 0.5px;">
+                                                <i class="bi bi-calendar-event me-1.5"></i>Thông tin lịch hẹn
+                                            </h6>
+
+                                            <!-- Chi nhánh & Ngày hẹn -->
+                                            <div class="row g-2.5 mb-3">
+                                                <div class="col-6">
+                                                    <label for="modalBranchId"
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CHI
+                                                        NHÁNH <span class="text-danger">*</span></label>
+                                                    <select id="modalBranchId"
+                                                        class="form-select form-select-sm py-2 rounded-3"
+                                                        required></select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="modalAppointmentDate"
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY
+                                                        HẸN <span class="text-danger">*</span></label>
+                                                    <input type="date" id="modalAppointmentDate"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                        required>
+                                                </div>
+                                            </div>
+
+                                            <!-- CA KHÁM: SÁNG / CHIỀU / TỐI -->
+                                            <div class="mb-3">
+                                                <label
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CA
+                                                    KHÁM ĐĂNG KÝ <span class="text-danger">*</span></label>
+                                                <input type="hidden" id="modalSession" value="MORNING">
+                                                <div class="row g-2" id="modalSessionGroup">
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start active"
+                                                            data-modal-session="MORNING">
+                                                            <div class="fw-bold small"><i
+                                                                    class="bi bi-sunrise me-1"></i>Ca Sáng</div>
+                                                            <div class="session-time-sub">08:00 – 12:00</div>
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                            data-modal-session="AFTERNOON">
+                                                            <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca
+                                                                Chiều</div>
+                                                            <div class="session-time-sub">13:30 – 17:30</div>
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                            data-modal-session="EVENING">
+                                                            <div class="fw-bold small"><i
+                                                                    class="bi bi-moon-stars me-1"></i>Ca Tối</div>
+                                                            <div class="session-time-sub">17:30 – 20:30</div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Bác sĩ trực ca -->
+                                            <div class="mb-3">
+                                                <label for="modalDoctorId"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">BÁC
+                                                    SĨ TRỰC CA <span class="text-danger">*</span></label>
+                                                <select id="modalDoctorId"
+                                                    class="form-select form-select-sm py-2 rounded-3" required>
+                                                    <option value="">Chọn chi nhánh và ngày hẹn trước</option>
+                                                </select>
+                                                <small id="modalDoctorHelp" class="form-text text-muted d-block mt-1"
+                                                    style="font-size: 11.5px;">Hiển thị bác sĩ có lịch trực trong ca và
+                                                    ngày đã chọn.</small>
+                                            </div>
+
+                                            <!-- Giờ dự kiến (Linh động) - Bỏ thời lượng dự kiến theo yêu cầu -->
+                                            <div class="mb-3">
+                                                <label
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỜ
+                                                    DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
+                                                <div class="d-flex gap-2">
+                                                    <select id="modalHour"
+                                                        class="form-select form-select-sm py-2 rounded-3 flex-grow-1">
+                                                        <option value="">Linh động cả ca</option>
+                                                        <optgroup label="Ca sáng">
+                                                            <option value="08">08 giờ</option>
+                                                            <option value="09">09 giờ</option>
+                                                            <option value="10">10 giờ</option>
+                                                            <option value="11">11 giờ</option>
+                                                        </optgroup>
+                                                        <optgroup label="Ca chiều">
+                                                            <option value="13">13 giờ</option>
+                                                            <option value="14">14 giờ</option>
+                                                            <option value="15">15 giờ</option>
+                                                            <option value="16">16 giờ</option>
+                                                            <option value="17">17 giờ</option>
+                                                        </optgroup>
+                                                        <optgroup label="Ca tối">
+                                                            <option value="18">18 giờ</option>
+                                                            <option value="19">19 giờ</option>
+                                                            <option value="20">20 giờ</option>
+                                                        </optgroup>
+                                                    </select>
+                                                    <select id="modalMinute"
+                                                        class="form-select form-select-sm py-2 rounded-3"
+                                                        style="max-width: 95px;">
+                                                        <option value="00">00 ph</option>
+                                                        <option value="15">15 ph</option>
+                                                        <option value="30">30 ph</option>
+                                                        <option value="45">45 ph</option>
+                                                    </select>
+                                                </div>
+                                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;">Có thể
+                                                    chọn giờ cụ thể hoặc để "Linh động cả ca" (tiếp đón theo thứ tự
+                                                    đến).</small>
+                                            </div>
+
+                                            <!-- Nhóm dịch vụ -->
+                                            <div class="mb-3">
+                                                <label for="modalServiceId"
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM
+                                                    DỊCH VỤ</label>
+                                                <select id="modalServiceId"
+                                                    class="form-select form-select-sm py-2 rounded-3">
+                                                    <option value="">-- Chọn dịch vụ --</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Nội dung hẹn -->
+                                            <div class="mb-3">
+                                                <label for="modalSymptoms"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NỘI
+                                                    DUNG HẸN <span class="text-danger">*</span></label>
+                                                <textarea id="modalSymptoms" class="form-control rounded-3 py-2 px-3"
+                                                    rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..."
+                                                    required></textarea>
+                                            </div>
+
+                                            <!-- Ghi chú nội bộ -->
+                                            <div class="mb-3">
+                                                <label for="modalInternalNote"
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GHI
+                                                    CHÚ</label>
+                                                <input type="text" id="modalInternalNote"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                    placeholder="Ghi chú nội bộ (không gửi cho KH)">
+                                            </div>
+
+                                            <!-- Checkboxes -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="modalIsTentative">
+                                                <label class="form-check-label small text-secondary"
+                                                    for="modalIsTentative">
+                                                    Chờ xác nhận (lễ tân sẽ gọi điện chốt lại sau)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="modalSendSms"
+                                                    checked>
+                                                <label class="form-check-label small text-secondary" for="modalSendSms">
+                                                    Gửi tin nhắn SMS/Zalo xác nhận ngay khi lưu
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div
+                                class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-end gap-3">
+                                <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-xs"
+                                    id="saveAppointmentBtn"
+                                    style="background-color: #0284c7; border-color: #0284c7;">Lưu</button>
+                                <button type="button"
+                                    class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-3 bg-white"
+                                    data-bs-dismiss="modal">Đóng</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+                 MODAL 3: SỬA / ĐỔI LỊCH HẸN (MODAL TẠI CHỖ, THOÁNG ĐÃNG)
+                 ========================================================= -->
+                <div class="modal fade" id="editAppointmentModal" tabindex="-1" aria-labelledby="editModalTitle"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <!-- Modal Header -->
+                            <div class="modal-create-header bg-white">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="icon-circle shadow-xs"
+                                        style="background-color: #eff6ff; color: #0284c7;">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h6 class="modal-title fw-bold text-dark mb-0" id="editModalTitle">Sửa / Đổi
+                                                lịch hẹn</h6>
+                                            <span
+                                                class="badge rounded-pill bg-light text-secondary border font-monospace"
+                                                id="editModalCode">LH...</span>
+                                        </div>
+                                        <small class="text-muted" id="editModalSubtitle">Cập nhật ngày, ca khám hoặc bác
+                                            sĩ phụ trách</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+
+                            <!-- Modal Body (2 Cột thoáng đãng, đồng nhất form thêm và chi tiết) -->
+                            <div class="modal-body p-4 bg-white">
+                                <form id="editAppointmentForm">
+                                    <input type="hidden" id="editAppointmentId" value="">
+                                    <input type="hidden" id="editBranchId" value="">
+                                    <div class="row g-4">
+                                        <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG (ĐỊNH DANH) -->
+                                        <div class="col-md-6 border-end pe-md-4">
+                                            <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                                style="letter-spacing: 0.5px;">
+                                                <i class="bi bi-person-vcard me-1.5"></i>Thông tin khách hàng
+                                            </h6>
+
+                                            <!-- Mã khách hàng -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">MÃ
+                                                    KHÁCH HÀNG</label>
+                                                <input type="text" id="editPatientCode"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-primary"
+                                                    readonly value="—">
+                                            </div>
+
+                                            <!-- Họ tên khách hàng -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">HỌ
+                                                    TÊN KHÁCH HÀNG</label>
+                                                <input type="text" id="editPatientName"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-bold text-dark fs-6"
+                                                    readonly value="—">
+                                            </div>
+
+                                            <!-- Ngày sinh & Giới tính -->
+                                            <div class="row g-2.5 mb-3.5">
+                                                <div class="col-7">
+                                                    <label
+                                                        class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGÀY
+                                                        SINH &amp; TUỔI</label>
+                                                    <input type="text" id="editPatientDobAge"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                        readonly value="—">
+                                                </div>
+                                                <div class="col-5">
+                                                    <label
+                                                        class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GIỚI
+                                                        TÍNH</label>
+                                                    <input type="text" id="editPatientGender"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                        readonly value="—">
+                                                </div>
+                                            </div>
+
+                                            <!-- Điện thoại -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐIỆN
+                                                    THOẠI</label>
+                                                <input type="text" id="editPatientPhone"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light font-monospace fw-bold text-dark"
+                                                    readonly value="—">
+                                            </div>
+
+                                            <!-- Khối người giám hộ cho bệnh nhân < 18 tuổi -->
+                                            <div id="editGuardianContainer" class="p-3 bg-light rounded-3 border mb-3.5"
+                                                style="display: none;">
+                                                <div class="small fw-bold text-primary mb-1"><i
+                                                        class="bi bi-shield-check me-1"></i>Lưu ý người giám hộ (BN &lt;
+                                                    18 tuổi)</div>
+                                                <div class="text-secondary small" id="editGuardianText">Bệnh nhân dưới
+                                                    18 tuổi — Có người giám hộ đi cùng.</div>
+                                            </div>
+
+                                            <!-- Địa chỉ / Cơ sở -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">ĐỊA
+                                                    CHỈ / CƠ SỞ ĐĂNG KÝ</label>
+                                                <input type="text" id="editPatientAddress"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light text-secondary"
+                                                    readonly value="—">
+                                            </div>
+
+                                            <!-- Nguồn khách -->
+                                            <div class="mb-2">
+                                                <label
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NGUỒN
+                                                    KHÁCH</label>
+                                                <input type="text" id="editCustomerSource"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3 bg-light"
+                                                    readonly value="—">
+                                            </div>
+                                        </div>
+
+                                        <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN (CHỈNH SỬA ĐƯỢC) -->
+                                        <div class="col-md-6 ps-md-4">
+                                            <h6 class="fw-bold text-primary small text-uppercase mb-3.5 pb-2 border-bottom"
+                                                style="letter-spacing: 0.5px;">
+                                                <i class="bi bi-calendar-event me-1.5"></i>Thông tin lịch hẹn
+                                            </h6>
+
+                                            <!-- Chi nhánh & Ngày hẹn -->
+                                            <div class="row g-2.5 mb-3.5">
+                                                <div class="col-6">
+                                                    <label
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CHI
+                                                        NHÁNH</label>
+                                                    <input type="text" id="editBranchName"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3 bg-light fw-medium"
+                                                        readonly value="Cơ sở phòng khám">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="editAppointmentDate"
+                                                        class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NGÀY
+                                                        HẸN <span class="text-danger">*</span></label>
+                                                    <input type="date" id="editAppointmentDate"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3 fw-bold"
+                                                        required>
+                                                </div>
+                                            </div>
+
+                                            <!-- CA KHÁM: SÁNG / CHIỀU / TỐI -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">CA
+                                                    KHÁM ĐĂNG KÝ <span class="text-danger">*</span></label>
+                                                <input type="hidden" id="editSession" value="MORNING">
+                                                <div class="row g-2" id="editSessionGroup">
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start active"
+                                                            data-edit-session="MORNING">
+                                                            <div class="fw-bold small"><i
+                                                                    class="bi bi-sunrise me-1"></i>Ca Sáng</div>
+                                                            <div class="session-time-sub">08:00 – 12:00</div>
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                            data-edit-session="AFTERNOON">
+                                                            <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca
+                                                                Chiều</div>
+                                                            <div class="session-time-sub">13:30 – 17:30</div>
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <button type="button"
+                                                            class="btn btn-sm w-100 modal-session-btn py-2 text-start"
+                                                            data-edit-session="EVENING">
+                                                            <div class="fw-bold small"><i
+                                                                    class="bi bi-moon-stars me-1"></i>Ca Tối</div>
+                                                            <div class="session-time-sub">17:30 – 20:30</div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Bác sĩ trực ca -->
+                                            <div class="mb-3.5">
+                                                <label for="editDoctorId"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">BÁC
+                                                    SĨ TRỰC CA</label>
+                                                <select id="editDoctorId"
+                                                    class="form-select form-select-sm py-2 rounded-3">
+                                                    <option value="">-- Chưa chỉ định bác sĩ --</option>
+                                                </select>
+                                                <small id="editDoctorHelp" class="form-text text-muted d-block mt-1"
+                                                    style="font-size: 11.5px;">Bác sĩ phụ trách khám và tư vấn cho ca
+                                                    này.</small>
+                                            </div>
+
+                                            <!-- Giờ dự kiến (Linh động) -->
+                                            <div class="mb-3.5">
+                                                <label
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">GIỜ
+                                                    DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
+                                                <div class="d-flex gap-2">
+                                                    <select id="editHour"
+                                                        class="form-select form-select-sm py-2 rounded-3 flex-grow-1">
+                                                        <option value="">Linh động cả ca</option>
+                                                        <optgroup label="Ca sáng">
+                                                            <option value="08">08 giờ</option>
+                                                            <option value="09">09 giờ</option>
+                                                            <option value="10">10 giờ</option>
+                                                            <option value="11">11 giờ</option>
+                                                        </optgroup>
+                                                        <optgroup label="Ca chiều">
+                                                            <option value="13">13 giờ</option>
+                                                            <option value="14">14 giờ</option>
+                                                            <option value="15">15 giờ</option>
+                                                            <option value="16">16 giờ</option>
+                                                            <option value="17">17 giờ</option>
+                                                        </optgroup>
+                                                        <optgroup label="Ca tối">
+                                                            <option value="18">18 giờ</option>
+                                                            <option value="19">19 giờ</option>
+                                                            <option value="20">20 giờ</option>
+                                                        </optgroup>
+                                                    </select>
+                                                    <select id="editMinute"
+                                                        class="form-select form-select-sm py-2 rounded-3"
+                                                        style="max-width: 95px;">
+                                                        <option value="00">00 ph</option>
+                                                        <option value="15">15 ph</option>
+                                                        <option value="30">30 ph</option>
+                                                        <option value="45">45 ph</option>
+                                                    </select>
+                                                </div>
+                                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;">Có thể
+                                                    chọn giờ cụ thể hoặc để "Linh động cả ca".</small>
+                                            </div>
+
+                                            <!-- Nhóm dịch vụ -->
+                                            <div class="mb-3.5">
+                                                <label for="editServiceId"
+                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">NHÓM
+                                                    DỊCH VỤ</label>
+                                                <select id="editServiceId"
+                                                    class="form-select form-select-sm py-2 rounded-3">
+                                                    <option value="">-- Chọn dịch vụ --</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Nội dung hẹn -->
+                                            <div class="mb-3.5">
+                                                <label for="editSymptoms"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">NỘI
+                                                    DUNG HẸN <span class="text-danger">*</span></label>
+                                                <textarea id="editSymptoms" class="form-control rounded-3 py-2 px-3"
+                                                    rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..."
+                                                    required></textarea>
+                                            </div>
+
+                                            <!-- Lý do thay đổi lịch hẹn -->
+                                            <div class="mb-2">
+                                                <label for="editReason"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">LÝ
+                                                    DO THAY ĐỔI / ĐỔI LỊCH <span class="text-danger">*</span></label>
+                                                <input type="text" id="editReason"
+                                                    class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                    placeholder="Ví dụ: Khách hàng yêu cầu đổi giờ/ngày khám" required
+                                                    value="Khách hàng yêu cầu đổi lịch khám">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div
+                                class="modal-footer bg-light px-4 py-2.5 border-top-0 d-flex justify-content-end gap-3">
+                                <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-xs"
+                                    id="saveEditAppointmentBtn"
+                                    style="background-color: #0284c7; border-color: #0284c7;">Lưu thay đổi</button>
+                                <button type="button"
+                                    class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-3 bg-white"
+                                    data-bs-dismiss="modal">Đóng</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/reception-appointments.js}" defer></script>
-<script th:src="@{/js/reception-workflow-navigation.js}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/reception-appointments.js}" defer></script>
+    <script th:src="@{/js/reception-workflow-navigation.js}" defer></script>
 </body>
+
 </html>
