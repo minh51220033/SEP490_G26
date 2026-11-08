@@ -3179,3 +3179,33 @@ a.feature-card:hover {
     cursor: not-allowed !important;
     pointer-events: none !important;
 }
+
+/* ==========================================================================
+   CROSS-DOCUMENT VIEW TRANSITIONS (Chuyển trang siêu mượt, loại bỏ nhấp nháy trắng)
+   ========================================================================== */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.15s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-sidebar {
+    view-transition-name: app-sidebar;
+}
+
+.hr-tabs-nav {
+    view-transition-name: hr-tabs-nav;
+}
+
+.account-tabs-nav {
+    view-transition-name: account-tabs-nav;
+}
+
+.news-tabs-nav {
+    view-transition-name: news-tabs-nav;
+}
+

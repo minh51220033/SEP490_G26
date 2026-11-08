@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    THANH TAB NGANG CHO PHÂN HỆ QUẢN LÝ TÀI KHOẢN & BẢO MẬT
+    Kiểu dáng Compact Pill Buttons chuẩn DentalSoft (Đồng bộ Quản lý nhân sự & Chi phí)
+    active: 'accounts' | 'roles' | 'bans'
+-->
+<nav th:fragment="accountTabs(active)" class="account-tabs-nav" aria-label="Phân hệ Quản lý tài khoản">
+    <style>
+        .account-tabs-nav {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .account-tabs-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .account-tab-item {
+            display: inline-flex;
+        }
+
+        .account-tab-btn {
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 5px 12px;
+            background: #ffffff;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.4;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .account-tab-btn:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+            color: #111827;
+        }
+
+        .account-tab-btn.active {
+            border-color: #2563eb !important;
+            color: #2563eb !important;
+            background: #eff6ff !important;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+        }
+
+        .account-tab-btn i {
+            font-size: 14px;
+        }
+    </style>
+    <ul class="account-tabs-list" id="accountTabsList">
+        <!-- 1. Danh sách tài khoản -->
+        <li class="account-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'ACCOUNT_MANAGE'))}">
+            <a th:href="@{/accounts}"
+               class="account-tab-btn"
+               th:classappend="${active == 'accounts'} ? 'active' : ''">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                <span>Danh sách tài khoản</span>
+            </a>
+        </li>
+
+        <!-- 2. Vai trò & Phân quyền -->
+        <li class="account-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'ROLE_MANAGE'))}">
+            <a th:href="@{/accounts/roles}"
+               class="account-tab-btn"
+               th:classappend="${active == 'roles'} ? 'active' : ''">
+                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                <span>Vai trò &amp; Phân quyền</span>
+            </a>
+        </li>
+
+        <!-- 3. Tài khoản bị cấm bình luận -->
+        <li class="account-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SYSTEM_BANS'))}">
+            <a th:href="@{/admin/bans}"
+               class="account-tab-btn"
+               th:classappend="${active == 'bans'} ? 'active' : ''">
+                <i class="bi bi-chat-square-slash" aria-hidden="true"></i>
+                <span>Tài khoản bị cấm bình luận</span>
+            </a>
+        </li>
+    </ul>
+
+    <script>
+        (function () {
+            const prefetched = new Set();
+            function prefetch(url) {
+                if (!url || prefetched.has(url) || url.startsWith('#') || url.startsWith('javascript:')) return;
+                prefetched.add(url);
+                const l = document.createElement('link');
+                l.rel = 'prefetch';
+                l.href = url;
+                l.as = 'document';
+                document.head.appendChild(l);
+            }
+
+            document.querySelectorAll('.account-tab-btn').forEach(function (btn) {
+                const href = btn.getAttribute('href');
+                btn.addEventListener('mouseenter', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('touchstart', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('click', function (e) {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                    document.querySelectorAll('.account-tab-btn').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                });
+            });
+        })();
+    </script>
+</nav>
+</body>
+</html>
