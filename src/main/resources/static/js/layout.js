@@ -645,4 +645,55 @@
             document.body.style.removeProperty("padding-right");
         }
     });
+
+    /* =============================================================
+       11. GLOBAL INLINE BRANCH SWITCHER (CHUẨN DENTALSOFT)
+       ============================================================= */
+    window.switchAppBranchContext = function (branchId) {
+        var url = '/api/branches/switch-context?branchId=' + encodeURIComponent(branchId || '');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(function (res) {
+            return res.json();
+        }).then(function (data) {
+            if (data && data.success) {
+                var filterForm = document.getElementById('leaveFilterForm') ||
+                                 document.getElementById('filterForm') ||
+                                 document.getElementById('auditFilterForm') ||
+                                 document.querySelector('form.filter-form') ||
+                                 document.querySelector('form.df-clinic-toolbar-form');
+                var branchInput = filterForm ? (filterForm.querySelector('input[name="branchId"]') || filterForm.querySelector('select[name="branchId"]')) : null;
+                if (filterForm && branchInput) {
+                    branchInput.value = branchId || '';
+                    var pageInput = filterForm.querySelector('input[name="page"]');
+                    if (pageInput) pageInput.value = '0';
+                    filterForm.submit();
+                } else {
+                    var currentUrl = new URL(window.location.href);
+                    if (branchId) {
+                        currentUrl.searchParams.set('branchId', branchId);
+                    } else {
+                        currentUrl.searchParams.delete('branchId');
+                    }
+                    currentUrl.searchParams.set('page', '0');
+                    window.location.href = currentUrl.toString();
+                }
+            } else {
+                alert(data && data.message ? data.message : 'Không thể chuyển cơ sở');
+            }
+        }).catch(function () {
+            var currentUrl = new URL(window.location.href);
+            if (branchId) {
+                currentUrl.searchParams.set('branchId', branchId);
+            } else {
+                currentUrl.searchParams.delete('branchId');
+            }
+            currentUrl.searchParams.set('page', '0');
+            window.location.href = currentUrl.toString();
+        });
+    };
 })();

@@ -36,10 +36,7 @@
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
-                <nav class="dv-breadcrumb mb-2">
-                    <a th:href="@{/}">Trang chủ</a> / <span>Quản trị nội dung</span> / <span>Quản lý tin tức</span>
-                </nav>
+
 
                 <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -53,6 +50,7 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         <a th:href="@{/news}" target="_blank" rel="noopener" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                             <i class="bi bi-box-arrow-up-right"></i> Trang tin tức
                         </a>

@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 public class TreatmentPlanItemRequestDTO {
     private Long serviceId;
     private String customServiceName;
+    private String stepName;
     private String toothNumbers;
     private BigDecimal quantity;
     private BigDecimal estimatedPrice;

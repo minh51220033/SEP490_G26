@@ -34,6 +34,9 @@
         <span class="step-badge">4</span> Hàng chờ gọi số
       </a>
     </div>
+    <div>
+      <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+    </div>
   </div>
 </nav>
 
@@ -48,15 +51,11 @@
 
 <!-- Dispatch Toolbar with Branch Selector & Search -->
 <div class="dispatch-toolbar">
-  <form th:action="@{/reception/dispatch}" method="get" class="dispatch-branch-form">
-    <label for="branchId">Chi nhánh đang phục vụ</label>
-    <div class="input-group">
-      <select id="branchId" name="branchId" class="form-select">
-        <option th:each="b : ${board.branches}" th:value="${b.branchId}" th:selected="${b.branchId == board.branchId}" th:text="${b.branchName}"></option>
-      </select>
-      <button class="btn btn-primary" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Chọn chi nhánh</button>
-    </div>
-  </form>
+  <div class="d-none">
+    <form th:action="@{/reception/dispatch}" method="get" class="dispatch-branch-form">
+      <input type="hidden" name="branchId" th:value="${board.branchId}">
+    </form>
+  </div>
 
   <div class="dispatch-toolbar-controls">
     <div class="dispatch-search" th:unless="${#lists.isEmpty(board.visits)}">

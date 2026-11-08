@@ -38,6 +38,7 @@
 
                 <!-- Nút Sao chép tuần trước -->
                 <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     <form th:if="${selectedBranchId != null}" th:action="@{/admin/schedules/copy-week}" method="post"
                           class="m-0"
                           onsubmit="return confirm('Bạn có chắc chắn muốn sao chép toàn bộ lịch trực của tuần trước sang tuần này?');">
