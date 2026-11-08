@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(readOnly = false)
 public class CashierOverviewServiceImpl implements CashierOverviewService {
 
     private final PatientProfileRepository patientProfileRepository;
