@@ -264,11 +264,9 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                 || branch.getClosingTime().isBefore(range.end())) {
             return "Chi nhánh không mở cửa trong buổi được chọn.";
         }
-        LocalTime cutoff = actorType == AppointmentActorType.PATIENT
-                ? range.end().minusHours(2) : range.end();
-        if (date.equals(today) && !LocalTime.now(CLINIC_ZONE).isBefore(cutoff)) {
-            return actorType == AppointmentActorType.PATIENT
-                    ? "Đã qua hạn đặt lịch cho buổi này." : "Buổi khám đã kết thúc.";
+        // Giới hạn giờ đặt lịch trước ca chỉ áp dụng cho bệnh nhân (trước 2 tiếng); cho phép Lễ tân/Nội bộ tiếp nhận linh hoạt và test
+        if (actorType == AppointmentActorType.PATIENT && date.equals(today) && !LocalTime.now(CLINIC_ZONE).isBefore(range.end().minusHours(2))) {
+            return "Đã qua hạn đặt lịch cho buổi này.";
         }
         return null;
     }
