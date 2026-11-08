@@ -32,4 +32,13 @@ public class EmrSourceSnapshot {
     @CreationTimestamp
     @Column(name = "captured_at", nullable = false, updatable = false)
     private LocalDateTime capturedAt;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
 }

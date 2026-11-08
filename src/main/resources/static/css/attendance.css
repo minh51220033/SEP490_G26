@@ -59,3 +59,37 @@
 @media (max-width: 768px) {
     .checkin-card { grid-template-columns: 1fr; }
 }
+
+/* =========================================================================
+   CHI TIẾT CHẤM CÔNG TOÀN CHI NHÁNH (branch.html) - CHUẨN GỌN GÀNG MISA AMIS
+   ========================================================================= */
+.branch-attendance-content .dv-amis-table thead th {
+    padding: 10px 14px !important;
+    font-size: 12.5px !important;
+}
+
+.branch-attendance-content .dv-amis-table tbody tr.dv-data-row td:not(.dv-floating-actions-track) {
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+}
+
+.branch-attendance-content .account-empty-state {
+    padding: 36px 16px !important;
+}
+
+.branch-attendance-content .account-empty-icon {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 1.4rem !important;
+    margin: 0 auto 10px !important;
+}
+
+.branch-attendance-content .account-empty-title {
+    font-size: 0.95rem !important;
+    margin-bottom: 4px !important;
+}
+
+.branch-attendance-content .account-empty-desc {
+    font-size: 0.82rem !important;
+    margin: 0 auto 12px !important;
+}

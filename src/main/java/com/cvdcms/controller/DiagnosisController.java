@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -157,10 +158,22 @@ public class DiagnosisController {
         return "redirect:/customer-care";
     }
 
+    public String index(
+            Long visitId,
+            Long branchId,
+            jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
+            Model model
+    ) {
+        return index(visitId, branchId, false, null, session, redirectAttributes, model);
+    }
+
     @GetMapping({"/doctor/examination", "/doctor/diagnoses", "/doctor/treatment"})
     public String index(
             @RequestParam(value = "visitId", required = false) Long visitId,
             @RequestParam(value = "branchId", required = false) Long branchId,
+            @RequestParam(value = "readOnly", required = false, defaultValue = "false") boolean readOnly,
+            @RequestParam(value = "fromPatientId", required = false) Long fromPatientId,
             jakarta.servlet.http.HttpSession session,
             RedirectAttributes redirectAttributes,
             Model model
@@ -225,8 +238,18 @@ public class DiagnosisController {
 
         if (visitId != null) {
             String redirectUrl = "redirect:/doctor/examination/" + visitId + "/diagnoses";
+            List<String> queryParams = new ArrayList<>();
             if (branchId != null) {
-                redirectUrl += "?branchId=" + branchId;
+                queryParams.add("branchId=" + branchId);
+            }
+            if (readOnly) {
+                queryParams.add("readOnly=true");
+            }
+            if (fromPatientId != null) {
+                queryParams.add("fromPatientId=" + fromPatientId);
+            }
+            if (!queryParams.isEmpty()) {
+                redirectUrl += "?" + String.join("&", queryParams);
             }
             return redirectUrl;
         }
@@ -278,10 +301,22 @@ public class DiagnosisController {
         return "redirect:/doctor/examination/" + newVisit.getVisitId() + "/diagnoses";
     }
 
+    public String examinationDiagnoses(
+            Long visitId,
+            Long branchIdParam,
+            jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
+            Model model
+    ) {
+        return examinationDiagnoses(visitId, branchIdParam, false, null, session, redirectAttributes, model);
+    }
+
     @GetMapping({"/doctor/examination/{visitId}/diagnoses", "/doctor/examination/{visitId}/treatment"})
     public String examinationDiagnoses(
             @PathVariable("visitId") Long visitId,
             @RequestParam(value = "branchId", required = false) Long branchIdParam,
+            @RequestParam(value = "readOnly", required = false, defaultValue = "false") boolean readOnly,
+            @RequestParam(value = "fromPatientId", required = false) Long fromPatientId,
             jakarta.servlet.http.HttpSession session,
             RedirectAttributes redirectAttributes,
             Model model
@@ -306,15 +341,18 @@ public class DiagnosisController {
             log.warn("Không tìm thấy ca khám ID={}: {}. Hiển thị màn hình rỗng.", visitId, ex.getMessage());
             return renderEmptyDiagnosisPage(branchIdParam, session, model);
         }
-        doctorVisitAccess.require(session, visitId);
 
-        // Kiểm tra ca khám có thuộc cơ sở của bác sĩ không
-        if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Cảnh báo: Ca khám " + visit.getVisitCode() + " thuộc cơ sở khác (" +
-                            (visit.getBranch().getBranchCode() != null ? visit.getBranch().getBranchCode() + " - " : "") + visit.getBranch().getBranchName() +
-                            "). Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc (" + assignedBranchFullName + ")!");
-            return "redirect:/doctor/daily-visits";
+        if (!readOnly) {
+            doctorVisitAccess.require(session, visitId);
+
+            // Kiểm tra ca khám có thuộc cơ sở của bác sĩ không
+            if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Cảnh báo: Ca khám " + visit.getVisitCode() + " thuộc cơ sở khác (" +
+                                (visit.getBranch().getBranchCode() != null ? visit.getBranch().getBranchCode() + " - " : "") + visit.getBranch().getBranchName() +
+                                "). Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc (" + assignedBranchFullName + ")!");
+                return "redirect:/doctor/daily-visits";
+            }
         }
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
@@ -430,9 +468,26 @@ public class DiagnosisController {
         model.addAttribute("careInteractions", careInteractions);
         model.addAttribute("careTasks", careTasks);
 
-        boolean isClinicalLocked = visit.getStatus() != null &&
-                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
+        boolean isClinicalLocked = readOnly || (visit.getStatus() != null &&
+                (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED));
         model.addAttribute("isClinicalLocked", isClinicalLocked);
+        model.addAttribute("isReadOnlyView", readOnly);
+        Long resolvedFromPatientId = fromPatientId != null ? fromPatientId
+                : (visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null);
+        model.addAttribute("fromPatientId", resolvedFromPatientId);
+
+        boolean useReceptionPath = false;
+        if (session != null && session.getAttribute("permissionCodes") instanceof List<?> perms) {
+            boolean hasMedRecordView = perms.stream().anyMatch(p -> "MEDICAL_RECORD_VIEW".equalsIgnoreCase(String.valueOf(p)));
+            boolean hasPatientManage = perms.stream().anyMatch(p -> "PATIENT_PROFILE_MANAGE".equalsIgnoreCase(String.valueOf(p)));
+            if (!isAdmin && !hasMedRecordView && hasPatientManage) {
+                useReceptionPath = true;
+            }
+        }
+        String baseRecordPath = useReceptionPath ? "/reception/patients" : "/doctor/patient-records";
+        String patientRecordBackUrl = (resolvedFromPatientId != null ? baseRecordPath + "/" + resolvedFromPatientId : baseRecordPath) + "#tab-treatment";
+        model.addAttribute("patientRecordBackUrl", patientRecordBackUrl);
+        model.addAttribute("readonlySidebarMenu", useReceptionPath ? "patients" : "doctor-records");
 
         com.cvdcms.DTO.ClinicalCompletionCheckDTO clinicalCheck = null;
         try {

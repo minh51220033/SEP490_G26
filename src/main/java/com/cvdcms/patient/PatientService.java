@@ -1,10 +1,12 @@
 package com.cvdcms.patient;
 
+import com.cvdcms.emr.EmrRecordRepository;
 import com.cvdcms.entity.*;
 import com.cvdcms.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -32,6 +35,9 @@ public class PatientService {
     private final AppointmentRepository appointments;
     private final PatientDocumentStorageService documentStorage;
     private final ObjectMapper mapper;
+    private final ClinicalPhotoRepository photos;
+    private final EmrRecordRepository emrRecords;
+    private final PatientDocumentRepository documentRepository;
 
     public PatientService(PatientAccess access, ReceptionPatientRepository profiles,
                           PatientSearchRepository search, PatientVisitReadRepository visits,
@@ -42,6 +48,23 @@ public class PatientService {
                           PrescriptionRepository prescriptions, AppointmentRepository appointments,
                           PatientDocumentStorageService documentStorage,
                           ObjectMapper mapper) {
+        this(access, profiles, search, visits, branches, auditRepository, examinations, diagnoses,
+                performedServices, prescriptions, appointments, documentStorage, mapper, null, null, null);
+    }
+
+    @Autowired
+    public PatientService(PatientAccess access, ReceptionPatientRepository profiles,
+                          PatientSearchRepository search, PatientVisitReadRepository visits,
+                          BranchRepository branches, PatientAuditRepository auditRepository,
+                          ClinicalExaminationRepository examinations,
+                          ExaminationDiagnosisRepository diagnoses,
+                          PerformedServiceRepository performedServices,
+                          PrescriptionRepository prescriptions, AppointmentRepository appointments,
+                          PatientDocumentStorageService documentStorage,
+                          ObjectMapper mapper,
+                          ClinicalPhotoRepository photos,
+                          EmrRecordRepository emrRecords,
+                          PatientDocumentRepository documentRepository) {
         this.access = access;
         this.profiles = profiles;
         this.search = search;
@@ -55,6 +78,9 @@ public class PatientService {
         this.appointments = appointments;
         this.documentStorage = documentStorage;
         this.mapper = mapper;
+        this.photos = photos;
+        this.emrRecords = emrRecords;
+        this.documentRepository = documentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +95,7 @@ public class PatientService {
         }
         Long selectedBranchId = scope.admin() ? branchId : scope.branchId();
         int safePage = Math.max(0, page);
-        int safeSize = Math.min(50, Math.max(1, size));
+        int safeSize = Math.min(100, Math.max(1, size));
         String term = blankToNull(query);
         String state = blankToNull(status);
         return search.search(selectedBranchId, term, dob, state,
@@ -155,6 +181,199 @@ public class PatientService {
         var scope = access.require(session);
         visibleProfile(scope, patientId);
         return documentStorage.download(patientId, documentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorRecordService.PhotoView> photos(HttpSession session, Long patientId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        if (photos == null) return List.of();
+        return photos.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(patientId).stream()
+                .map(photo -> new DoctorRecordService.PhotoView(
+                        photo.getPhotoId(),
+                        photo.getImageUrl(),
+                        photo.getCaption() != null ? photo.getCaption() : "",
+                        photo.getPhotoStage() != null ? photo.getPhotoStage().name() : "BEFORE",
+                        photo.getPhotoCategory() != null ? photo.getPhotoCategory().name() : "INTRAORAL",
+                        photo.getCapturedAt(),
+                        photo.getVisit() != null ? photo.getVisit().getVisitId() : null,
+                        photo.getVisit() != null ? photo.getVisit().getVisitCode() : null
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorRecordService.EmrView> emrRecords(HttpSession session, Long patientId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        if (emrRecords == null) return List.of();
+        return emrRecords.findAllByPatientProfileId(patientId).stream()
+                .filter(record -> scope.permits(record.getBranch().getBranchId()))
+                .map(record -> {
+                    Visit visit = record.getVisit();
+                    String doctorName = (visit != null && visit.getPrimaryDoctor() != null) ? visit.getPrimaryDoctor().getFullName() : null;
+                    String diagnosis = null;
+                    if (visit != null) {
+                        diagnosis = diagnoses.findByVisit_VisitId(visit.getVisitId()).stream()
+                                .map(ExaminationDiagnosis::getDiagnosisText)
+                                .findFirst().orElse(null);
+                    }
+                    return new DoctorRecordService.EmrView(
+                            record.getRecordId(), record.getRecordCode(),
+                            visit != null ? visit.getVisitId() : null,
+                            visit != null ? visit.getVisitCode() : "—",
+                            visit != null ? visit.getCheckInAt() : null,
+                            record.getStatus(), record.getCurrentVersionNumber(), record.getUpdatedAt(),
+                            doctorName, diagnosis
+                    );
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorRecordService.TreatmentTimelineItem> treatmentTimeline(HttpSession session, Long patientId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        List<Visit> patientVisits = visits.forPatient(patientId);
+        List<DoctorRecordService.TreatmentTimelineItem> timeline = new ArrayList<>();
+
+        for (Visit v : patientVisits) {
+            Long vid = v.getVisitId();
+            List<String> diagList = diagnoses.findByVisit_VisitId(vid).stream()
+                    .map(ExaminationDiagnosis::getDiagnosisText).toList();
+
+            List<DoctorRecordService.TreatmentServiceItem> svcList = performedServices.findByVisitIdWithDetails(vid).stream()
+                    .map(p -> new DoctorRecordService.TreatmentServiceItem(
+                            p.getPerformedId(),
+                            p.getService() != null ? p.getService().getServiceName() : "Dịch vụ nha khoa",
+                            p.getToothNumbers(),
+                            p.getUnitPrice() != null ? p.getUnitPrice() : BigDecimal.ZERO,
+                            p.getQuantity() != null ? p.getQuantity() : BigDecimal.ONE,
+                            p.getFinalPrice() != null ? p.getFinalPrice() : BigDecimal.ZERO,
+                            p.getStatus() != null ? p.getStatus().name() : "COMPLETED"
+                    )).toList();
+
+            Long emrId = null;
+            String emrCode = null;
+            String emrStatus = null;
+            if (emrRecords != null) {
+                Optional<com.cvdcms.emr.EmrRecord> emrOpt = emrRecords.findByVisit_VisitId(vid);
+                emrId = emrOpt.map(com.cvdcms.emr.EmrRecord::getRecordId).orElse(null);
+                emrCode = emrOpt.map(com.cvdcms.emr.EmrRecord::getRecordCode).orElse(null);
+                emrStatus = emrOpt.map(e -> e.getStatus().getDisplayName()).orElse(null);
+            }
+
+            timeline.add(new DoctorRecordService.TreatmentTimelineItem(
+                    v.getVisitId(),
+                    v.getVisitCode(),
+                    v.getCheckInAt(),
+                    v.getBranch() != null ? v.getBranch().getBranchName() : "Chi nhánh",
+                    v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName() : "Chưa phân bác sĩ",
+                    v.getStatus() != null ? v.getStatus().name() : "COMPLETED",
+                    v.getInitialSymptoms(),
+                    diagList,
+                    svcList,
+                    emrId,
+                    emrCode,
+                    emrStatus
+            ));
+        }
+        return timeline;
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorRecordService.AuditLogRow> auditLogs(HttpSession session, Long patientId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        List<DoctorRecordService.AuditLogRow> list = new ArrayList<>();
+
+        if (auditRepository != null) {
+            List<SystemAuditLog> dbLogs = auditRepository.findByEntityTableAndEntityIdOrderByCreatedAtDesc("patient_profiles", patientId);
+            for (SystemAuditLog l : dbLogs) {
+                String action = l.getAction() != null ? l.getAction() : "UPDATE";
+                String badge = "bg-primary";
+                String label = "CẬP NHẬT";
+                if (action.contains("CREATE") || action.contains("UPLOAD") || action.contains("ADD")) {
+                    badge = "bg-success";
+                    label = "THÊM";
+                } else if (action.contains("DELETE") || action.contains("REMOVE") || action.contains("CANCEL")) {
+                    badge = "bg-danger";
+                    label = "XÓA";
+                } else if (action.contains("UPDATE") || action.contains("EDIT") || action.contains("CHANGE")) {
+                    badge = "bg-warning text-dark";
+                    label = "SỬA";
+                }
+                String user = l.getUser() != null ? l.getUser().getFullName() : "Hệ thống";
+                String details = action;
+                if ("CREATE".equals(action)) details = "Tạo mới hồ sơ bệnh nhân";
+                else if ("UPDATE".equals(action)) details = "Cập nhật thông tin hành chính hồ sơ";
+                else if ("UPLOAD_PATIENT_DOCUMENT".equals(action)) details = "Tải lên bản scan giấy tờ tùy thân";
+                else if (l.getNewValuesJson() != null && !l.getNewValuesJson().isBlank()) {
+                    details = l.getAction() + " - " + l.getNewValuesJson();
+                    if (details.length() > 100) details = details.substring(0, 100) + "...";
+                }
+                list.add(new DoctorRecordService.AuditLogRow(l.getLogId(), l.getCreatedAt(), user, action, badge, label, "Hồ sơ bệnh nhân", details));
+            }
+        }
+
+        List<Visit> patientVisits = visits.forPatient(patientId);
+        for (Visit v : patientVisits) {
+            String dr = v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName() : "Bác sĩ phụ trách";
+            list.add(new DoctorRecordService.AuditLogRow(
+                    v.getVisitId() + 100000L,
+                    v.getCheckInAt(),
+                    dr,
+                    "VISIT_EXAM",
+                    "bg-success",
+                    "THÊM",
+                    "Lượt khám",
+                    "Tiếp nhận và khám ca khám " + v.getVisitCode() + " tại " + (v.getBranch() != null ? v.getBranch().getBranchName() : "phòng khám")
+            ));
+        }
+
+        list.sort(Comparator.comparing(DoctorRecordService.AuditLogRow::timestamp, Comparator.nullsLast(Comparator.reverseOrder())));
+        return list;
+    }
+
+    public void updateHealthNotes(HttpSession session, Long patientId, String allergyDetails, String underlyingDiseaseDetails) {
+        var scope = access.require(session);
+        ReceptionPatientRecord profile = visibleProfile(scope, patientId);
+        String cleanAllergy = allergyDetails == null || allergyDetails.isBlank() ? null : allergyDetails.trim();
+        String cleanUnderlying = underlyingDiseaseDetails == null || underlyingDiseaseDetails.isBlank() ? null : underlyingDiseaseDetails.trim();
+        profile.setAllergyDetails(cleanAllergy);
+        profile.setHasAllergies(cleanAllergy != null);
+        profile.setUnderlyingDiseaseDetails(cleanUnderlying);
+        profile.setHasUnderlyingDisease(cleanUnderlying != null);
+        profiles.saveAndFlush(profile);
+        audit(scope, profile.getPreferredBranch(), "UPDATE_HEALTH_NOTES", patientId, null, snapshot(profile));
+    }
+
+    public void updatePatientCode(HttpSession session, Long patientId, String newCode) {
+        if (newCode == null || newCode.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã bệnh nhân không được để trống.");
+        var scope = access.require(session);
+        ReceptionPatientRecord profile = visibleProfile(scope, patientId);
+        profile.setPatientCode(newCode.trim().toUpperCase());
+        profiles.saveAndFlush(profile);
+        audit(scope, profile.getPreferredBranch(), "UPDATE_PATIENT_CODE", patientId, null, snapshot(profile));
+    }
+
+    public void updateDocumentType(HttpSession session, Long patientId, Long documentId, com.cvdcms.entity.enums.DocumentType newType) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        if (documentRepository == null) return;
+        PatientDocument doc = documentRepository.findByDocumentIdAndPatientProfile_ProfileId(documentId, patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tài liệu scan."));
+        doc.setDocumentType(newType);
+        documentRepository.saveAndFlush(doc);
+    }
+
+    public void deleteDocument(HttpSession session, Long patientId, Long documentId) {
+        var scope = access.require(session);
+        visibleProfile(scope, patientId);
+        if (documentRepository == null) return;
+        PatientDocument doc = documentRepository.findByDocumentIdAndPatientProfile_ProfileId(documentId, patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tài liệu scan."));
+        documentRepository.delete(doc);
     }
 
     @Transactional(readOnly = true)

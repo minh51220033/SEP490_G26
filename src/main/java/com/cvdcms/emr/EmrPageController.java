@@ -37,23 +37,47 @@ public class EmrPageController {
     }
 
     @GetMapping
-    public String list(HttpSession session, Model model,
+    public String list(@RequestParam(required = false) String query, RedirectAttributes redirect) {
+        if (query != null && !query.isBlank()) {
+            redirect.addAttribute("query", query.trim());
+        }
+        return "redirect:/doctor/patient-records";
+    }
+
+    @GetMapping({"/list", "/all"})
+    public String listView(HttpSession session, Model model,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) EmrRecordStatus status,
             @RequestParam(required = false) java.time.LocalDate fromDate,
             @RequestParam(required = false) java.time.LocalDate toDate,
             @RequestParam(required = false) String doctor,
             @RequestParam(required = false) String branch,
-            @RequestParam(defaultValue = "0") int page) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
+        }
         var dashboard = service.dashboard(session, query, status, fromDate, toDate, doctor, branch);
-        int pageSize = 10;
-        int pageCount = Math.max(1, (dashboard.records().size() + pageSize - 1) / pageSize);
-        int safePage = Math.max(0, Math.min(page, pageCount - 1));
+        int totalItems = dashboard.records().size();
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / size);
+        int currentPage = Math.max(0, Math.min(page, Math.max(0, totalPages - 1)));
+        int fromIndex = totalItems == 0 ? 0 : currentPage * size;
+        int toIndex = Math.min(fromIndex + size, totalItems);
+        var pagedRecords = totalItems == 0 ? List.<EmrModuleService.RecordRow>of() : dashboard.records().subList(fromIndex, toIndex);
+
+        long toItem = toIndex;
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
         model.addAttribute("dashboard", dashboard);
-        model.addAttribute("pagedRecords", dashboard.records().subList(safePage * pageSize,
-                Math.min((safePage + 1) * pageSize, dashboard.records().size())));
-        model.addAttribute("page", safePage);
-        model.addAttribute("pageCount", pageCount);
+        model.addAttribute("pagedRecords", pagedRecords);
+        model.addAttribute("items", pagedRecords);
+        model.addAttribute("totalItems", (long) totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+        model.addAttribute("keyword", query);
         model.addAttribute("query", query);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("fromDate", fromDate);
@@ -73,19 +97,73 @@ public class EmrPageController {
     @PostMapping
     public String create(HttpSession session, @RequestParam Long visitId, RedirectAttributes redirect) {
         try {
-            Long id = service.create(session, visitId);
-            redirect.addFlashAttribute("success", "Đã tạo bản nháp bệnh án điện tử.");
+            Long id = service.getOrCreate(session, visitId);
+            redirect.addFlashAttribute("success", "Đã mở / tạo bản nháp bệnh án điện tử.");
             return "redirect:/emr/records/" + id;
         } catch (RuntimeException ex) {
             redirect.addFlashAttribute("error", message(ex));
-            return "redirect:/emr/records";
+            redirect.addFlashAttribute("documentError", message(ex));
+            return "redirect:/doctor/patient-records";
         }
     }
 
-    @PostMapping("/{recordId}/refresh")
+    @GetMapping("/from-visit/{visitId}")
+    public String fromVisitGet(HttpSession session, @PathVariable Long visitId, RedirectAttributes redirect) {
+        try {
+            Long id = service.getOrCreate(session, visitId);
+            return "redirect:/emr/records/" + id;
+        } catch (RuntimeException ex) {
+            redirect.addFlashAttribute("error", message(ex));
+            redirect.addFlashAttribute("documentError", message(ex));
+            return "redirect:/doctor/patient-records";
+        }
+    }
+
+    @PostMapping("/from-visit/{visitId}")
+    public String fromVisitPost(HttpSession session, @PathVariable Long visitId, RedirectAttributes redirect) {
+        try {
+            Long id = service.getOrCreate(session, visitId);
+            redirect.addFlashAttribute("success", "Đã mở / tạo bản nháp bệnh án điện tử từ ca khám.");
+            return "redirect:/emr/records/" + id;
+        } catch (RuntimeException ex) {
+            redirect.addFlashAttribute("error", message(ex));
+            redirect.addFlashAttribute("documentError", message(ex));
+            return "redirect:/doctor/patient-records";
+        }
+    }
+
+    @PostMapping(path = {"/{recordId}/refresh", "/{recordId}/sync-examination", "/{recordId}/sync"})
     public String refresh(HttpSession session, @PathVariable Long recordId, RedirectAttributes redirect) {
-        return run(recordId, redirect, "Đã đồng bộ lại dữ liệu khám nguồn.",
+        return run(recordId, redirect, "Đã đồng bộ lại dữ liệu khám nguồn mới nhất.",
                 () -> service.refresh(session, recordId));
+    }
+
+    @PostMapping("/{recordId}/patient-demographics")
+    public String updatePatientDemographics(HttpSession session, @PathVariable Long recordId,
+            @RequestParam Map<String, String> fields, RedirectAttributes redirect) {
+        return run(recordId, redirect, "Đã cập nhật thông tin hành chính bệnh nhân.",
+                () -> service.updatePatientDemographics(session, recordId, fields));
+    }
+
+    @PostMapping(path = {"/{recordId}/delete", "/{recordId}/soft-delete"})
+    public String deleteRecord(HttpSession session, @PathVariable Long recordId, RedirectAttributes redirect) {
+        Long patientId = null;
+        try {
+            var d = service.detail(session, recordId);
+            if (d != null && d.record() != null) {
+                patientId = d.record().patientId();
+            }
+            service.deleteDraft(session, recordId);
+            redirect.addFlashAttribute("success", "Đã xóa bản nháp bệnh án điện tử thành công.");
+            redirect.addFlashAttribute("documentSuccess", "Đã xóa bản nháp bệnh án điện tử thành công.");
+        } catch (RuntimeException ex) {
+            redirect.addFlashAttribute("error", message(ex));
+            redirect.addFlashAttribute("documentError", message(ex));
+        }
+        if (patientId != null) {
+            return "redirect:/doctor/patient-records/" + patientId + "#medical";
+        }
+        return "redirect:/doctor/patient-records";
     }
 
     @PostMapping("/{recordId}/validate")

@@ -1,38 +1,2047 @@
-.emr-page{background:#f5f7fb;min-height:calc(100vh - 70px)}
-.emr-heading,.emr-record-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}.emr-heading h1,.emr-record-head h1{font-size:30px;font-weight:800;color:#172554;margin:5px 0}.emr-heading p,.emr-record-head p{margin:0;color:#64748b}.emr-eyebrow{font-size:11px;letter-spacing:.12em;font-weight:800;color:#2563eb}.emr-test-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;font-size:12px;font-weight:700;white-space:nowrap}
-.emr-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:20px}.emr-metrics article{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(15,23,42,.04)}.emr-metrics span{display:block;color:#64748b;font-size:13px}.emr-metrics strong{display:block;margin-top:7px;font-size:28px;color:#172554}
-.emr-panel{background:#fff;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:20px;overflow:hidden;box-shadow:0 5px 18px rgba(15,23,42,.04)}.emr-panel__head{display:flex;justify-content:space-between;align-items:center;padding:20px 22px;border-bottom:1px solid #e2e8f0}.emr-panel__head h2,.emr-document-nav h2,.emr-history h2{font-size:16px;font-weight:800;color:#1e293b;margin:0}.emr-panel__head p{font-size:13px;color:#64748b;margin:4px 0 0}.emr-panel .table th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;background:#f8fafc;padding:12px 18px}.emr-panel .table td{padding:14px 18px}.emr-panel td strong,.emr-panel td small{display:block}.emr-panel td small{font-size:12px;color:#64748b;margin-top:3px}.emr-filter{display:flex;gap:8px;max-width:610px}.emr-filter input{min-width:230px}.emr-filter select{min-width:200px}.emr-empty{text-align:center!important;color:#64748b!important;padding:40px!important}
-.emr-pill,.emr-status,.emr-version{display:inline-flex;align-items:center;gap:6px;border-radius:999px;font-size:11px;font-weight:800;padding:6px 10px;background:#eef2ff;color:#3730a3}.emr-pill.is-ready,.status-SIGNED{background:#dcfce7;color:#166534}.status-DRAFT,.status-AMENDMENT_DRAFT{background:#dbeafe;color:#1d4ed8}.status-READY_TO_LOCK{background:#e0e7ff;color:#4338ca}.status-PATIENT_SIGNATURE_PENDING,.status-DOCTOR_SIGNATURE_PENDING{background:#fef3c7;color:#92400e}.emr-status--large{padding:9px 14px;font-size:12px}.emr-missing>span{color:#b45309;font-size:12px;font-weight:800}.emr-missing small{max-width:310px}.emr-record-state{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.emr-back{display:inline-flex;gap:7px;align-items:center;color:#475569;text-decoration:none;font-weight:600;margin-bottom:16px}
-.emr-action-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:18px;position:sticky;top:70px;z-index:8;box-shadow:0 5px 16px rgba(15,23,42,.06)}.emr-action-bar form{margin:0}.emr-inline-sign{display:flex;gap:8px}.emr-inline-sign input{width:230px}
-.emr-workspace{display:grid;grid-template-columns:260px minmax(520px,1fr) 280px;gap:16px;align-items:start}.emr-document-nav,.emr-history{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;position:sticky;top:145px}.emr-doc-item{display:flex;align-items:center;gap:9px;padding:12px 0;border-bottom:1px solid #eef2f7}.emr-doc-item>i:first-child{font-size:18px;color:#2563eb}.emr-doc-item>i:last-child{margin-left:auto}.emr-doc-item div{min-width:0}.emr-doc-item strong,.emr-doc-item small{display:block}.emr-doc-item strong{font-size:12px}.emr-doc-item small{font-size:10px;color:#64748b;margin-top:3px}.emr-validation{margin-top:18px;padding:13px;border-radius:10px;background:#f8fafc}.emr-validation h3{font-size:12px;font-weight:800}.emr-validation p,.emr-validation li{font-size:11px;margin:5px 0}.emr-validation ul{padding-left:16px;color:#b45309;margin:0}
-.emr-paper{background:#fff;border:1px solid #dbe3ee;border-radius:4px;padding:46px 52px;box-shadow:0 8px 30px rgba(15,23,42,.09);min-height:900px}.emr-paper__facility{display:flex;justify-content:space-between;font-family:Georgia,serif}.emr-paper__facility strong,.emr-paper__facility span{display:block;font-size:13px}.emr-paper>h2{text-align:center;font-family:Georgia,serif;font-size:27px;margin:42px 0 34px;color:#111827}.emr-paper>h2 small{font-size:15px}.emr-paper>h3{font-family:Georgia,serif;font-weight:700;font-size:15px;border-bottom:1px solid #cbd5e1;padding-bottom:7px;margin:27px 0 15px}.emr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 22px}.emr-grid label{font-size:11px;color:#64748b}.emr-grid label strong{display:block;color:#1e293b;font-size:13px;margin-top:3px;font-weight:600;white-space:pre-wrap}.emr-grid .span-2{grid-column:span 2}.emr-paper-table{font-size:12px}.emr-paper-table th{background:#f8fafc}.emr-prescription{padding:10px 0;border-bottom:1px dashed #cbd5e1;font-size:12px}.emr-prescription strong,.emr-prescription span{display:block}.emr-prescription p{margin:5px 0;color:#475569}
-.emr-history h2{margin:4px 0 12px;padding-top:14px;border-top:1px solid #e2e8f0}.emr-history h2:first-child{border-top:0;padding-top:0}.emr-signature,.emr-version-row{display:flex;gap:9px;align-items:flex-start;padding:9px 0}.emr-signature>i{font-size:20px;color:#16a34a}.emr-signature strong,.emr-signature span,.emr-signature small,.emr-version-row strong,.emr-version-row small{display:block;font-size:11px}.emr-signature span,.emr-signature small,.emr-version-row small{color:#64748b;margin-top:2px}.emr-version-row>span{background:#e0e7ff;color:#3730a3;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:800}.emr-audit{display:grid;grid-template-columns:10px 1fr;gap:8px;margin-bottom:12px}.emr-audit>span{width:8px;height:8px;border-radius:50%;background:#93c5fd;margin-top:4px}.emr-audit strong,.emr-audit small{display:block;font-size:10px}.emr-audit p{font-size:10px;color:#475569;margin:2px 0}.emr-audit small{color:#94a3b8}.emr-amendment{margin-top:16px}.emr-amendment label{font-size:11px;font-weight:700}.emr-amendment textarea{min-height:74px;margin:5px 0 8px;font-size:12px}
-@media(max-width:1400px){.emr-workspace{grid-template-columns:220px minmax(500px,1fr)}.emr-history{position:static;grid-column:1/-1}.emr-history{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.emr-history h2{grid-column:span 1}}
-@media(max-width:980px){.emr-metrics{grid-template-columns:1fr 1fr}.emr-panel__head--filter{align-items:flex-start;flex-direction:column}.emr-filter{width:100%;max-width:none;flex-wrap:wrap}.emr-workspace{display:block}.emr-document-nav,.emr-history{position:static;margin-bottom:14px}.emr-paper{padding:30px 22px}.emr-history{display:block}}
-@media(max-width:640px){.emr-heading,.emr-record-head{display:block}.emr-record-state{justify-content:flex-start;margin-top:12px}.emr-metrics{grid-template-columns:1fr}.emr-grid{grid-template-columns:1fr}.emr-grid .span-2{grid-column:span 1}.emr-filter>*{width:100%;min-width:0!important}.emr-paper{padding:22px 15px}.emr-inline-sign{display:block}.emr-inline-sign input{width:100%;margin-bottom:6px}}
+/* =========================================================================
+   EMR (BỆNH ÁN ĐIỆN TỬ) - DENTALFLOW / DENTALSOFT / BỘ Y TẾ MS: BA-18
+   Thiết kế chuẩn hóa: AMIS Design System, 100% Sans-serif (Inter/Segoe UI)
+   ========================================================================= */
 
-/* Chi tiết hồ sơ theo từng tờ */
-.emr-detail-page{background:linear-gradient(180deg,#f8fafc 0,#eef3f9 100%)}
-.emr-action-bar{justify-content:space-between}.emr-workflow-actions,.emr-mode-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.emr-workflow-actions{flex:1}.emr-mode-actions{padding-left:12px;border-left:1px solid #e2e8f0}
-.emr-mode-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 13px;border:1px solid #d9e2ef;border-radius:9px;background:#fff;color:#52627a;font-size:12px;font-weight:750;transition:.18s ease}.emr-mode-btn:hover:not(:disabled),.emr-mode-btn.is-active{border-color:#2563eb;background:#eff6ff;color:#0f5ed7;box-shadow:0 4px 12px rgba(37,99,235,.1)}.emr-mode-btn:disabled{opacity:.45;cursor:not-allowed}
-.emr-workspace{grid-template-columns:276px minmax(650px,1fr) 270px;gap:18px}.emr-canvas{min-width:0}.emr-print-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;margin-bottom:10px;background:rgba(255,255,255,.92);border:1px solid #e1e8f2;border-radius:12px;box-shadow:0 5px 18px rgba(15,23,42,.05)}.emr-print-toolbar>div{display:flex;gap:8px;align-items:center;color:#334155;font-size:12px;font-weight:750}.emr-print-toolbar>div i{color:#2563eb}
-.emr-document-nav{padding:13px}.emr-document-nav__title{display:flex;align-items:center;justify-content:space-between;padding:5px 5px 12px}.emr-document-nav__title span{display:block;color:#94a3b8;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.emr-document-nav__title h2{margin-top:3px}.emr-doc-count{display:grid!important;place-items:center;width:29px;height:29px;border-radius:9px;background:#eaf2ff;color:#1d63d6!important;font-size:12px!important;letter-spacing:0!important}
-.emr-doc-item{width:100%;border:0;border-bottom:1px solid #eef2f7;background:transparent;text-align:left;padding:11px 8px;border-radius:9px;cursor:pointer;transition:.16s ease}.emr-doc-item:hover{background:#f8fafc}.emr-doc-item.is-active{background:linear-gradient(90deg,#e9f7ef,#f4fbf7);box-shadow:inset 3px 0 #16a060}.emr-doc-icon{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:9px;background:#edf4ff;color:#2563eb}.emr-doc-item.is-active .emr-doc-icon{background:#d9f4e5;color:#11814a}.emr-doc-copy{min-width:0;flex:1}.emr-doc-copy strong{font-size:11.5px;line-height:1.35}.emr-doc-copy small{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.emr-doc-chevron{color:#b5c0ce;font-size:11px;margin-left:auto}.emr-doc-item.is-active .emr-doc-chevron{color:#15935a}
-.emr-paper{position:relative;display:none;overflow:hidden;max-width:920px;margin:0 auto;padding:46px 55px 65px;border:0;border-radius:8px;min-height:1050px}.emr-paper.is-active{display:block}.emr-watermark{position:absolute;z-index:0;left:9%;top:46%;transform:rotate(-34deg);color:rgba(148,163,184,.105);font-family:Georgia,serif;font-size:74px;font-weight:900;letter-spacing:.08em;white-space:nowrap;pointer-events:none}.emr-paper>*:not(.emr-watermark){position:relative;z-index:1}.emr-page-meta{display:flex;justify-content:space-between;margin:-21px 0 28px;color:#7b8799;font:11px Georgia,serif}.emr-cover-title{text-align:center;margin:84px 0 56px}.emr-cover-title>span{color:#2563eb;font-size:11px;font-weight:800;letter-spacing:.18em}.emr-cover-title h2{margin:13px 0 0;color:#111827;font:800 30px/1.42 Georgia,serif}.emr-cover-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;padding:18px;border:1px solid #dce5ef;background:#f8fafc;border-radius:12px}.emr-cover-grid span,.emr-cover-details dt,.emr-cover-patient span{display:block;color:#7b8799;font-size:10px}.emr-cover-grid strong{display:block;margin-top:4px;color:#1e293b;font-size:13px}.emr-cover-patient{display:flex;align-items:center;gap:15px;margin:28px 0;padding-bottom:24px;border-bottom:1px solid #e2e8f0}.emr-avatar-mark{display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;border-radius:16px;background:linear-gradient(135deg,#1d65da,#0b4caf);color:#fff;font-size:24px;font-weight:800}.emr-cover-patient h3{margin:2px 0;font-size:20px;color:#172554}.emr-cover-patient p{margin:0;color:#66758a;font-size:11px}.emr-cover-details{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:0}.emr-cover-details>div{padding:12px;border-bottom:1px solid #edf1f6}.emr-cover-details dd{margin:4px 0 0;color:#1e293b;font-size:12px;font-weight:650}.emr-page-signature{position:absolute!important;left:55px;right:55px;bottom:30px;display:flex;justify-content:space-between;color:#c2410c;font:10px Georgia,serif}.emr-page-signature small{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.emr-clinical-block{margin:13px 0}.emr-clinical-block>span,.emr-subtitle{display:block;color:#172554;font:700 13px Georgia,serif}.emr-clinical-block p,.emr-manual-value{margin:5px 0;padding:10px 12px;border-left:3px solid #bfdbfe;background:#f8fafc;color:#334155;font-size:12px;white-space:pre-wrap}.emr-history-table{display:grid;grid-template-columns:repeat(3,1fr);margin:12px 0;border:1px solid #dce4ee;border-radius:7px;overflow:hidden}.emr-history-table>div{padding:9px 10px;border-right:1px solid #e2e8f0}.emr-history-table>div:last-child{border:0}.emr-history-table span,.emr-history-table strong{display:block;font-size:10px}.emr-history-table span{color:#64748b}.emr-history-table strong{margin-top:3px;color:#1e293b}.emr-subtitle{margin:18px 0 8px}.emr-tooth-chart{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));border-top:1px solid #94a3b8;border-left:1px solid #94a3b8;margin-bottom:18px}.emr-tooth-chart span{display:grid;place-items:center;height:28px;border-right:1px solid #94a3b8;border-bottom:1px solid #94a3b8;background:#fafafa;color:#334155;font:700 9px Georgia,serif}.emr-summary-list{padding-left:20px}.emr-summary-list li{padding:8px 0 11px;color:#172554;font:700 13px Georgia,serif}.emr-summary-list p{min-height:30px;margin:6px 0 0;padding:9px 12px;border-bottom:1px dotted #94a3b8;color:#334155;font:400 12px/1.55 Arial,sans-serif;white-space:pre-wrap}.emr-signature-line{display:flex;justify-content:space-around;margin-top:55px;text-align:center}.emr-signature-line>div{min-width:180px}.emr-signature-line strong,.emr-signature-line span{display:block;font-family:Georgia,serif}.emr-signature-line strong{font-size:14px}.emr-signature-line span{margin-top:50px;font-size:12px}.emr-signature-line--right{justify-content:flex-end}
-.emr-edit-form{display:none;margin:24px -22px -30px;padding:20px 22px;border-top:1px solid #bfdbfe;background:#eff6ff;border-radius:12px}.emr-mode-edit .emr-edit-form{display:block}.emr-mode-edit .emr-paper{max-width:980px}.emr-edit-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px}.emr-edit-heading>div{display:grid;grid-template-columns:24px 1fr;align-items:center}.emr-edit-heading i{grid-row:1/3;color:#2563eb;font-size:18px}.emr-edit-heading strong{font-size:13px;color:#172554}.emr-edit-heading small{font-size:10px;color:#64748b}.emr-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.emr-edit-grid label{font-size:10px;font-weight:750;color:#475569}.emr-edit-grid .span-2{grid-column:span 2}.emr-edit-grid input,.emr-edit-grid textarea{margin-top:5px;font-size:12px;background:#fff}.emr-edit-grid textarea{min-height:76px;resize:vertical}
-.emr-empty-document{display:grid;place-items:center;text-align:center;min-height:380px;padding:40px;color:#64748b}.emr-empty-document i{display:grid;place-items:center;width:70px;height:70px;border-radius:22px;background:#eff6ff;color:#2563eb;font-size:30px}.emr-empty-document h3{margin:18px 0 5px;color:#172554;font-size:16px}.emr-empty-document p{max-width:430px;font-size:12px;line-height:1.6}.emr-hash-note{display:flex;align-items:flex-start;gap:10px;padding:13px;border-radius:10px;background:#f8fafc;color:#475569;font-size:11px}.emr-hash-note i{color:#2563eb;font-size:16px}.emr-verification-list{margin:38px 0}.emr-verification-list>div{display:grid;grid-template-columns:170px 1fr;padding:11px 0;border-bottom:1px solid #e2e8f0}.emr-verification-list dt{font-weight:700;color:#334155}.emr-verification-list dd{margin:0;color:#111827}.emr-hash{overflow-wrap:anywhere;font-family:monospace;font-size:11px}.emr-verification-title{margin-top:28px!important}.emr-signature-empty{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e}.emr-signature-empty i{font-size:20px}.emr-signature-empty span{font-size:11px}.emr-verification-signatures{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0 25px}.emr-verification-signatures>div{display:grid;grid-template-columns:28px 1fr;padding:14px;border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4}.emr-verification-signatures i{grid-row:1/4;color:#16a34a;font-size:20px}.emr-verification-signatures span,.emr-verification-signatures strong,.emr-verification-signatures small{display:block}.emr-verification-signatures span{color:#15803d;font-size:9px;font-weight:800}.emr-verification-signatures strong{font-size:12px}.emr-verification-signatures small{color:#64748b;font-size:9px}
-.emr-mode-print .emr-document-nav,.emr-mode-print .emr-history{display:none}.emr-mode-print .emr-workspace{display:block}.emr-mode-print .emr-paper{box-shadow:none;border:1px solid #d7dee8}.emr-mode-print .emr-print-toolbar{max-width:920px;margin:0 auto 10px}
-@media(max-width:1450px){.emr-workspace{grid-template-columns:248px minmax(590px,1fr)}.emr-history{position:static;grid-column:1/-1}.emr-history{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.emr-history h2{grid-column:span 1}}
-@media(max-width:1050px){.emr-workspace{display:block}.emr-document-nav,.emr-history{position:static;margin-bottom:14px}.emr-action-bar{align-items:flex-start}.emr-mode-actions{border-left:0;border-top:1px solid #e2e8f0;padding:10px 0 0;width:100%}.emr-paper{padding:35px 28px}.emr-cover-title{margin:60px 0 40px}}
-@media(max-width:700px){.emr-mode-actions{display:grid;grid-template-columns:1fr 1fr}.emr-mode-actions .dropdown,.emr-mode-actions .dropdown>button{width:100%}.emr-edit-grid,.emr-cover-details,.emr-cover-grid,.emr-verification-signatures{grid-template-columns:1fr}.emr-edit-grid .span-2{grid-column:span 1}.emr-history-table{grid-template-columns:1fr}.emr-history-table>div{border-right:0;border-bottom:1px solid #e2e8f0}.emr-tooth-chart{grid-template-columns:repeat(8,1fr)}.emr-page-signature{position:static!important;margin-top:35px}.emr-signature-line{gap:20px}.emr-signature-line>div{min-width:0}.emr-paper{min-height:0}}
-@page{size:A4;margin:12mm}
-.emr-test-sign-form{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.emr-test-sign-form label{display:inline-flex;align-items:center;gap:7px;max-width:330px;font-size:12px;font-weight:700;line-height:1.3;color:#334155}.emr-test-sign-form input{width:17px;height:17px;accent-color:#135fbd}.emr-test-sign-form button{white-space:nowrap}@media(max-width:640px){.emr-test-sign-form{width:100%}.emr-test-sign-form label,.emr-test-sign-form button{width:100%;max-width:none}}
-.emr-cover-patient{display:block}.emr-cover-patient h3{font-family:Arial,Tahoma,sans-serif;font-size:17px;font-weight:700}.emr-cover-patient p{display:flex;flex-wrap:wrap;gap:6px 22px}.emr-cover-patient p span{font-size:11px;color:#334155}.emr-tooth-chart span.is-main{background:#fee2e2;color:#991b1b;border-color:#ef4444}.emr-tooth-chart span.is-secondary{background:#fef3c7;color:#92400e;border-color:#f59e0b}.emr-tooth-chart span.is-recorded{background:#dbeafe;color:#1e40af;border-color:#60a5fa}.emr-paper,.emr-paper__facility,.emr-paper>h2,.emr-paper>h3,.emr-subtitle,.emr-clinical-block>span,.emr-summary-list li{font-family:Arial,Tahoma,sans-serif}
-.emr-filter{max-width:none;flex-wrap:wrap}.emr-filter input,.emr-filter select{min-width:150px;flex:1 1 150px}.emr-filter input[name=query]{flex:2 1 220px}.emr-filter button,.emr-filter a{white-space:nowrap}
-.emr-panel__head--filter{display:block}.emr-panel__head--filter h2{margin-bottom:4px}.emr-panel__head--filter .emr-filter{margin-top:15px;width:100%}.emr-filter input[name=query]{flex:2 1 260px}.emr-filter select{flex:1 1 180px}.emr-advanced-filters{flex:1 0 100%;width:100%}.emr-advanced-filters.show{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:14px;border:1px solid #dbeafe;border-radius:10px;background:#fff}.emr-advanced-filters label{font-size:11px;font-weight:700;color:#475569}.emr-advanced-filters input{width:100%;margin-top:5px}.emr-active-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:0 20px 14px;color:#64748b;font-size:12px}.emr-active-filters strong{padding:5px 9px;border-radius:20px;background:#eaf2ff;color:#1d4ed8}.emr-panel .table th{white-space:nowrap}.emr-panel .table td{min-width:110px}.emr-panel .table th:first-child,.emr-panel .table td:first-child{position:sticky;left:0;z-index:1;min-width:180px;background:#fff}.emr-panel .table thead th:first-child{z-index:2;background:#f8fafc}@media(max-width:800px){.emr-advanced-filters.show{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.emr-advanced-filters.show{grid-template-columns:1fr}.emr-filter>*{width:100%}}
-.emr-paper,.emr-paper *{font-family:Arial,Tahoma,"Segoe UI",sans-serif!important}.emr-page-meta,.emr-cover-title h2,.emr-summary-list li,.emr-signature-line strong,.emr-signature-line span{font-family:Arial,Tahoma,"Segoe UI",sans-serif!important}.emr-paper--cover .emr-page-signature{position:static!important;margin-top:35px}.emr-care-event strong,.emr-care-event small{overflow-wrap:anywhere}
-.emr-page,.emr-page button,.emr-page input,.emr-page textarea{font-family:Arial,"Segoe UI",sans-serif}.emr-paper{font-family:Arial,"Segoe UI",sans-serif}.emr-fix-link{display:inline-flex;gap:6px;align-items:center;margin-top:9px;color:#1456a8;font-size:12px;font-weight:700;text-decoration:none}.emr-fix-link:hover{text-decoration:underline}.emr-warning-list{margin-top:14px;padding-top:10px;border-top:1px solid #fcd34d}.emr-warning-list h3{color:#92400e}.emr-warning-list li{color:#78350f}.emr-care-timeline{margin:18px 0;padding:15px;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff}.emr-care-timeline h3{margin:0 0 6px;font-size:15px;color:#173b70}.emr-section-note{font-size:12px;line-height:1.55;color:#64748b}.emr-care-event{margin:12px 0 0;padding:12px;border-left:3px solid #38bdf8;border-radius:5px;background:#fff}.emr-care-event>div{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}.emr-care-event p{margin:7px 0;color:#334155}.emr-care-event small{display:block;margin:4px 0;color:#475569}.emr-attachment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}.emr-attachment-grid figure{margin:0;overflow:hidden;border:1px solid #dbe5f1;border-radius:10px;background:#fff}.emr-attachment-grid img{display:block;width:100%;height:150px;object-fit:cover}.emr-attachment-grid figcaption{padding:10px}.emr-attachment-grid figcaption strong,.emr-attachment-grid figcaption small{display:block;overflow-wrap:anywhere}.emr-attachment-grid figcaption small{font-size:10px;color:#64748b}.emr-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-top:1px solid #e2e8f0;color:#475569;font-size:13px}.emr-pagination>div{display:flex;gap:8px}@media(max-width:640px){.emr-pagination{align-items:flex-start;flex-direction:column}.emr-attachment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.emr-attachment-grid img{height:110px}.emr-care-event>div{display:block}}@media(max-width:390px){.emr-attachment-grid{grid-template-columns:1fr}}
-@media print{
-  body{background:#fff!important}.app-shell>aside,.sidebar-backdrop,.app-main>header,.emr-chrome,.emr-edit-form{display:none!important}.app-main,.app-content,.emr-page,.emr-workspace,.emr-canvas{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}.emr-paper{display:none!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:8mm 9mm 12mm!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;break-inside:auto!important;page-break-inside:auto!important}.emr-paper.is-active{display:block!important}.emr-watermark{font-size:54px!important}.emr-page-meta{margin-top:0!important}.emr-page-signature{position:static!important;margin-top:18mm}.emr-paper-table{break-inside:auto}.emr-paper-table tr,.emr-cover-patient,.emr-signature-line,.emr-care-event,.emr-history-table{break-inside:avoid;page-break-inside:avoid}.emr-paper h2,.emr-paper h3,.emr-paper h4{break-after:avoid;page-break-after:avoid}.emr-detail-page{min-height:0!important}
+@charset "UTF-8";
+
+:root {
+    --emr-primary: #0284c7;
+    --emr-primary-dark: #0369a1;
+    --emr-primary-light: #e0f2fe;
+    --emr-success: #16a34a;
+    --emr-success-light: #dcfce7;
+    --emr-warning: #f59e0b;
+    --emr-warning-light: #fef3c7;
+    --emr-purple: #8b5cf6;
+    --emr-purple-light: #f3e8ff;
+    --emr-danger: #ef4444;
+    --emr-danger-light: #fee2e2;
+    --emr-surface: #ffffff;
+    --emr-bg-canvas: #f1f5f9;
+    --emr-border: #cbd5e1;
+    --emr-border-soft: #e2e8f0;
+    --emr-text-dark: #0f172a;
+    --emr-text-secondary: #334155;
+    --emr-text-muted: #64748b;
+    --emr-radius: 14px;
+    --emr-radius-sm: 8px;
+    --emr-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+/* =========================================================================
+   1. GLOBAL STYLES (Loại bỏ triệt để font có chân Georgia)
+   ========================================================================= */
+html {
+    scrollbar-gutter: stable;
+}
+
+body, .app-body, .emr-page, .emr-paper, .emr-paper * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+
+.emr-page {
+    background: #f8fafc;
+    min-height: calc(100vh - 64px);
+    padding-bottom: 40px;
+}
+
+/* =========================================================================
+   2. DANH SÁCH BỆNH ÁN ĐIỆN TỬ (emr/list.html)
+   ========================================================================= */
+
+/* 4 thẻ KPI màu Pastel */
+.emr-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.emr-kpi-card {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    padding: 18px 22px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.emr-kpi-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--kpi-accent, var(--emr-primary));
+    border-radius: 16px 0 0 16px;
+}
+
+.emr-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.emr-kpi-card.kpi-total { --kpi-accent: #0284c7; }
+.emr-kpi-card.kpi-open { --kpi-accent: #f59e0b; }
+.emr-kpi-card.kpi-waiting { --kpi-accent: #8b5cf6; }
+.emr-kpi-card.kpi-signed { --kpi-accent: #10b981; }
+
+.emr-kpi-num {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--emr-text-dark);
+}
+
+.emr-kpi-label {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--emr-text-secondary);
+    margin-top: 4px;
+}
+
+.emr-kpi-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.kpi-total .emr-kpi-icon { background: #e0f2fe; color: #0284c7; }
+.kpi-open .emr-kpi-icon { background: #fef3c7; color: #d97706; }
+.kpi-waiting .emr-kpi-icon { background: #f3e8ff; color: #8b5cf6; }
+.kpi-signed .emr-kpi-icon { background: #dcfce7; color: #16a34a; }
+
+/* Toolbar Card chuẩn daily-visits.html */
+.emr-toolbar-card {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    padding: 18px 22px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    margin-bottom: 20px;
+}
+
+.emr-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 280px;
+}
+
+.emr-search-box input {
+    width: 100%;
+    height: 44px;
+    padding: 10px 42px 10px 42px;
+    border: 1.5px solid var(--emr-border);
+    border-radius: 12px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--emr-text-dark);
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.emr-search-box input:focus {
+    background: #ffffff;
+    border-color: var(--emr-primary);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+
+.emr-search-box .search-lead-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--emr-text-muted);
+    font-size: 16px;
+    pointer-events: none;
+}
+
+/* Bảng danh sách 9 cột chuẩn AMIS */
+.emr-table-card {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.emr-table {
+    margin-bottom: 0;
+    font-size: 13.5px;
+}
+
+.emr-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 14px 16px;
+    border-bottom: 1.5px solid var(--emr-border-soft);
+    white-space: nowrap;
+}
+
+.emr-table td {
+    padding: 14px 16px;
+    color: var(--emr-text-dark);
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.emr-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Badge trạng thái chuẩn AMIS */
+.emr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.emr-badge-draft { background: #e0f2fe; color: #0284c7; }
+.emr-badge-ready { background: #fef3c7; color: #b45309; }
+.emr-badge-waiting { background: #f3e8ff; color: #7c3aed; }
+.emr-badge-signed { background: #dcfce7; color: #15803d; }
+.emr-badge-amendment { background: #fee2e2; color: #b91c1c; }
+
+/* =========================================================================
+   3. BỐ CỤC CHI TIẾT 2 CỘT TIÊU CHUẨN (emr/detail.html)
+   ========================================================================= */
+.emr-detail-container {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 0 8px;
+}
+
+/* Header & Sub-header của màn chi tiết */
+.emr-sub-header {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.emr-sub-header__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.emr-sub-header__title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--emr-text-dark);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.emr-sub-header__meta {
+    font-size: 13px;
+    color: var(--emr-text-muted);
+    margin-top: 3px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.emr-sub-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Khung 2 cột: Cột trái cố định 280px, Cột phải A4 preview */
+.emr-2col-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+/* Cột trái: Sidebar cố định 280px */
+.emr-sidebar-left {
+    width: 280px;
+    flex: 0 0 280px;
+    position: sticky;
+    top: 76px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Thẻ tóm tắt bệnh nhân */
+.emr-patient-summary-card {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    position: relative;
+}
+
+/* Thẻ bệnh nhân màu xanh mint chuẩn DentalSoft */
+.emr-patient-summary-card.is-green {
+    background: #ecfdf5 !important;
+    border: 1.5px solid #a7f3d0 !important;
+}
+
+.emr-patient-summary-card.is-green .emr-avatar-circle {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+.emr-patient-summary-card.is-green .emr-patient-name {
+    color: #065f46 !important;
+}
+
+.emr-patient-summary-card.is-green .emr-btn-quick-edit {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.emr-patient-summary-card.is-green .emr-btn-quick-edit:hover {
+    background: #a7f3d0;
+    color: #047857;
+}
+
+.emr-patient-summary-card .patient-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emr-patient-divider {
+    border: none;
+    border-top: 1px solid #a7f3d0;
+    margin: 14px 0 12px 0;
+}
+
+.emr-patient-meta-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.emr-patient-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #334155;
+}
+
+.emr-patient-meta-item.is-address {
+    align-items: flex-start;
+}
+
+.emr-patient-meta-item i {
+    font-size: 14px;
+    color: #059669;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.emr-patient-meta-item .meta-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.emr-patient-meta-item .meta-value {
+    color: #0f172a;
+    font-weight: 600;
+    margin-left: 2px;
+}
+
+.emr-patient-meta-item .meta-address {
+    color: #1e293b;
+    font-weight: 500;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.emr-avatar-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.emr-patient-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--emr-text-dark);
+    margin: 0;
+    line-height: 1.25;
+}
+
+.emr-patient-sub {
+    font-size: 12.5px;
+    color: var(--emr-text-muted);
+    margin-top: 3px;
+}
+
+.emr-btn-quick-edit {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    border: none;
+    background: #f1f5f9;
+    color: var(--emr-primary);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.emr-btn-quick-edit:hover {
+    background: var(--emr-primary-light);
+    color: var(--emr-primary-dark);
+}
+
+/* Cụm nút tác vụ sidebar */
+.emr-action-cluster {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.emr-action-cluster .btn {
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 9px 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/* Cây thư mục / Danh mục tờ phiếu */
+.emr-tree-card {
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.emr-tree-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--emr-text-muted);
+    margin-bottom: 12px;
+    padding-left: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Category Accordion Header chuẩn DentalSoft */
+.emr-accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #065f46;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.15s ease;
+}
+
+.emr-accordion-header:hover {
+    background: #d1fae5;
+}
+
+.emr-accordion-header i.chevron-icon {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.emr-accordion-header.is-collapsed i.chevron-icon {
+    transform: rotate(-90deg);
+}
+
+.emr-tree-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.emr-tree-item {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+    outline: none !important;
+    box-sizing: border-box;
+}
+
+.emr-tree-item:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.emr-tree-item:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.emr-tree-item.is-active {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    color: var(--emr-primary);
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+}
+
+.emr-tree-item .tree-icon {
+    font-size: 16px;
+    color: #64748b;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+
+.emr-tree-item.is-active .tree-icon {
+    color: var(--emr-primary);
+}
+
+.emr-tree-item .tree-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.emr-tree-item .tree-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--emr-text-dark);
+    display: block;
+    line-height: 1.3;
+}
+
+.emr-tree-item.is-active .tree-name {
+    color: var(--emr-primary);
+}
+
+.emr-tree-item .tree-sub {
+    font-size: 11px;
+    color: var(--emr-text-muted);
+    display: block;
+    margin-top: 2px;
+}
+
+.emr-tree-item.is-active .tree-sub {
+    color: #0284c7;
+    opacity: 0.85;
+}
+
+.emr-tree-item .tree-arrow {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.emr-tree-item.is-active .tree-arrow {
+    color: var(--emr-primary);
+    transform: translateX(2px);
+}
+
+/* =========================================================================
+   4. CỘT PHẢI: KHUNG TRANG IN A4 CUỘN LINH HOẠT & CHẾ ĐỘ XEM / SỬA / IN
+   ========================================================================= */
+
+/* Thanh chuyển 3 chế độ xem: Xem | Chỉnh sửa | Bản in (Item 9) */
+.emr-view-mode-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1.5px solid var(--emr-border-soft);
+    border-radius: 14px;
+    padding: 10px 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.emr-mode-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emr-mode-selector .mode-label {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.emr-mode-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 9px;
+    gap: 3px;
+    border: 1px solid #e2e8f0;
+}
+
+.emr-mode-radio-label {
+    margin: 0;
+    padding: 5px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.emr-mode-radio-label input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+    accent-color: #0284c7;
+}
+
+.emr-mode-radio-label.is-active,
+.emr-mode-radio-label:has(input:checked) {
+    background: #ffffff;
+    color: #0284c7;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Chế độ nhập / chỉnh sửa trực tiếp trên biểu mẫu A4 */
+.emr-inline-input,
+.emr-inline-textarea {
+    display: inline-block;
+    width: auto;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+    padding: 1px 4px;
+    line-height: inherit;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+/* Trong chế độ xem (View Mode): ẩn placeholder để không hiển thị chữ mờ giả dạng nội dung */
+.emr-canvas-right:not(.is-edit-mode) .emr-inline-input::placeholder,
+.emr-canvas-right:not(.is-edit-mode) .emr-inline-textarea::placeholder {
+    color: transparent !important;
+}
+
+/* Ẩn dòng Cơ sở / Mã khi không có dữ liệu ở chế độ xem */
+.emr-branch-row.emr-hide-when-view-empty,
+.emr-canvas-right:not(.is-edit-mode) .emr-hide-when-view-empty {
+    display: none !important;
+}
+.emr-canvas-right.is-edit-mode .emr-branch-row.emr-hide-when-view-empty {
+    display: flex !important;
+}
+.emr-canvas-right.is-edit-mode .emr-hide-when-view-empty {
+    display: inline-flex !important;
+}
+
+/* Khối chữ ký: Ô nhập co giãn theo cột, căn giữa và chống cắt chữ dài */
+.moh-signature-block .emr-inline-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+}
+
+.emr-canvas-right:not(.is-edit-mode) .moh-signature-block .emr-inline-input {
+    white-space: normal !important;
+    word-break: break-word !important;
+    height: auto !important;
+}
+
+.emr-canvas-right.is-edit-mode .emr-inline-input,
+.emr-canvas-right.is-edit-mode .emr-inline-textarea {
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+}
+
+.emr-canvas-right.is-edit-mode .emr-inline-input:focus,
+.emr-canvas-right.is-edit-mode .emr-inline-textarea:focus {
+    background: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    outline: none !important;
+}
+
+.emr-canvas-right.is-edit-mode .emr-inline-textarea {
+    width: 100% !important;
+    min-height: 54px;
+    resize: vertical;
+}
+
+.emr-check-toggle {
+    user-select: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.emr-canvas-right.is-edit-mode .emr-check-toggle {
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: #f8fafc;
+}
+.emr-canvas-right.is-edit-mode .emr-check-toggle:hover {
+    background: #e0f2fe;
+    border-color: #0284c7;
+}
+
+/* Nút In phiếu nổi góc phải dưới màn hình (Item 8) */
+.emr-floating-print-btn {
+    position: fixed;
+    bottom: 26px;
+    right: 28px;
+    z-index: 1040;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 50px;
+    padding: 11px 22px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.38);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+}
+
+.emr-floating-print-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.48);
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+}
+
+.emr-canvas-right {
+    flex: 1;
+    min-width: 0;
+    background: #f1f5f9;
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid var(--emr-border-soft);
+}
+
+/* Bản giấy in A4 */
+.emr-paper {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+    border: 1px solid #cbd5e1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 50px 60px 60px 60px;
+    position: relative;
+    min-height: 1120px;
+    display: none;
+}
+
+.emr-paper.is-active {
+    display: block;
+}
+
+/* Thanh công cụ đỉnh tờ giấy (Chế độ xem & In) */
+.emr-paper-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    border-bottom: 1.5px solid #f1f5f9;
+}
+
+.emr-paper-topbar .doc-title-badge {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--emr-primary);
+    background: var(--emr-primary-light);
+    padding: 6px 14px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =========================================================================
+   5. CHUẨN HÓA NỘI DUNG TỜ 1 & TỜ 2 (MS: BA-18 BỘ Y TẾ)
+   ========================================================================= */
+.moh-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.moh-header-left strong {
+    font-size: 13.5px;
+    text-transform: uppercase;
+    display: block;
+}
+
+.moh-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 12px;
+}
+
+.moh-header-right .emr-header-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.moh-header-right .emr-header-meta-label {
+    min-width: 68px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--emr-text-dark, #0f172a);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.moh-header-right .emr-header-meta-row .emr-inline-input {
+    width: 180px !important;
+    min-width: 180px;
+    box-sizing: border-box !important;
+    text-align: left;
+}
+
+.moh-header-right .ba-code {
+    font-weight: 800;
+    font-size: 13.5px;
+    color: var(--emr-text-dark);
+}
+
+.moh-doc-title {
+    text-align: center;
+    margin: 28px 0 20px 0;
+}
+
+.moh-doc-title h1 {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--emr-text-dark);
+    letter-spacing: 0.5px;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.moh-doc-title p {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--emr-text-muted);
+    margin: 4px 0 0;
+}
+
+/* Các ô Checkbox lựa chọn loại hình bệnh án */
+.moh-type-checkboxes {
+    display: flex;
+    justify-content: center;
+    gap: 36px;
+    margin: 14px 0 24px 0;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.moh-check-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+}
+
+.moh-check-box {
+    width: 17px;
+    height: 17px;
+    border: 1.5px solid #334155;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+}
+
+/* Tiêu đề mục lớn: A. THÔNG TIN CHUNG / B. THÔNG TIN KHÁM BỆNH */
+.moh-section-title {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: var(--emr-text-dark);
+    text-transform: uppercase;
+    margin: 24px 0 14px 0;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Ô vuông ký tự tiêu chuẩn (Tuổi, Dân tộc, CCCD, Địa chỉ...) */
+.char-box-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    vertical-align: middle;
+    margin: 0 4px;
+}
+
+.char-box {
+    width: 20px;
+    height: 22px;
+    border: 1.2px solid #334155;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+}
+
+/* Dòng thông tin Phần A (1 đến 14) */
+.moh-info-row {
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: #1e293b;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 8px;
+}
+
+.moh-info-row strong {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* =========================================================================
+   6. PHẦN B - MỤC 4: SƠ ĐỒ RĂNG CHUẨN BỘ Y TẾ (2 TẦNG CHỮ THẬP CHỒNG NHAU)
+   ========================================================================= */
+.dental-chart-section {
+    margin: 20px 0;
+    padding: 8px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+/* Bảng khám lâm sàng chuyên khoa Răng Hàm Mặt & Phân loại khe hở (MS: BA-18) */
+.emr-exam-cleft-section {
+    margin-top: 14px;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.emr-cleft-grid-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: transparent;
+    border: none;
+}
+
+.emr-cleft-grid-table th {
+    background: transparent;
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 6px 4px;
+    vertical-align: middle;
+    border: none;
+}
+
+.emr-cleft-grid-table th.cleft-col-header {
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+.emr-cleft-grid-table td {
+    border: none;
+    background: transparent;
+    vertical-align: top;
+    padding: 4px;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table th {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table td {
+    border: 1px solid #cbd5e1;
+}
+
+.emr-cleft-grid-table .cleft-col-cell {
+    font-size: 11px;
+    color: #334155;
+    line-height: 1.45;
+}
+
+.emr-cleft-grid-table .cleft-legend-list {
+    font-size: 11px;
+    color: #334155;
+    line-height: 1.45;
+    padding-left: 2px;
+}
+
+.emr-cleft-grid-table .emr-inline-textarea {
+    width: 100% !important;
+    min-height: 52px;
+    font-size: 11.5px;
+    padding: 3px 5px;
+    border: 1px dashed transparent;
+    background: transparent;
+    resize: vertical;
+    line-height: 1.45;
+    word-break: break-word;
+    box-sizing: border-box;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table .emr-inline-textarea {
+    border: 1.5px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table .emr-inline-textarea:focus {
+    border-color: #0284c7 !important;
+    background: #ffffff !important;
+}
+
+.dental-cross-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+/* Khung bọc từng bảng răng kèm 2 cột marker góc phần tư sát cạnh */
+.chart-table-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.chart-side-markers {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: 76px;
+}
+
+.chart-side-markers .quadrant-marker {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid #0f172a;
+    font-size: 11px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Bảng chữ thập răng vĩnh viễn (16 cột x 38px = 608px) */
+.permanent-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 38px);
+    width: 608px;
+    position: relative;
+    border: 1.5px solid #0f172a;
+    background: #ffffff;
+    border-radius: 0px;
+    overflow: hidden;
+}
+
+/* Bảng răng sữa (10 cột x 38px = 380px) */
+.primary-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 38px);
+    width: 380px;
+    position: relative;
+    border: 1.5px solid #0f172a;
+    background: #ffffff;
+    border-radius: 0px;
+    overflow: hidden;
+}
+
+/* Đường phân chia chữ thập chính giữa */
+.permanent-chart-grid::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #0f172a;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.primary-chart-grid::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #0f172a;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+/* Từng ô răng: Kích thước đồng nhất 38x38px */
+.tooth-cell {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1e293b;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.permanent-chart-grid .tooth-cell:nth-child(8),
+.permanent-chart-grid .tooth-cell:nth-child(24) {
+    border-right: 2px solid #0f172a;
+}
+
+.primary-chart-grid .tooth-cell:nth-child(5),
+.primary-chart-grid .tooth-cell:nth-child(15) {
+    border-right: 2px solid #0f172a;
+}
+
+/* Đường phân chia hàng ngang (Hàm trên / Hàm dưới) */
+.permanent-chart-grid .tooth-cell:nth-child(-n+16) {
+    border-bottom: 2px solid #0f172a;
+}
+
+.primary-chart-grid .tooth-cell:nth-child(-n+10) {
+    border-bottom: 2px solid #0f172a;
+}
+
+/* Răng có chẩn đoán hoặc can thiệp thủ thuật: Highlight vàng nhạt #fde68a kèm chấm đen • */
+.tooth-cell.has-intervention {
+    background-color: #fde68a !important;
+    color: #92400e !important;
+    font-weight: 800;
+}
+
+.tooth-cell .intervention-dot {
+    display: none;
+    font-size: 14px;
+    line-height: 6px;
+    color: #0f172a;
+    margin-top: 2px;
+}
+
+.tooth-cell.has-intervention .intervention-dot {
+    display: block;
+}
+
+.tooth-cell:hover {
+    background-color: #e0f2fe;
+}
+
+/* Góc phần tư [ 1 ] [ 2 ] [ 4 ] [ 3 ] */
+.quadrant-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid #0f172a;
+    font-size: 11px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    border-radius: 4px;
+}
+
+/* Dòng tổng hợp danh sách răng can thiệp dạng Text trơn (Item 10) */
+.tooth-plain-summary {
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+    font-size: 13px;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+.tooth-plain-summary strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* =========================================================================
+   7. CHỮ KÝ ĐIỆN TỬ VÀ CON DẤU XANH LÁ
+   ========================================================================= */
+.moh-signature-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+    margin-top: 40px;
+    width: 100%;
+    text-align: center;
+}
+
+/* Khối chữ ký bìa bệnh án Tờ 1: Cân đối giữa hai bên và co giãn theo kích thước chữ */
+.emr-cover-signature-grid {
+    margin-top: 60px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.moh-signature-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.moh-signature-block .signer-title {
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--emr-text-dark);
+}
+
+.moh-signature-block .signer-sub {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--emr-text-muted);
+    margin-bottom: 12px;
+}
+
+/* Con dấu điện tử màu xanh lá chuẩn Bộ Y Tế */
+.emr-digital-stamp-box {
+    border: 2px dashed #16a34a !important;
+    background: #f0fdf4 !important;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 16px;
+    text-align: center;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.08);
+}
+
+.emr-stamp-badge {
+    color: #15803d;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+
+.emr-stamp-signer {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 6px 0 2px;
+}
+
+.emr-stamp-org {
+    font-size: 12px;
+    color: #334155;
+    font-weight: 600;
+}
+
+.emr-stamp-time {
+    font-size: 11px;
+    color: #166534;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.emr-stamp-hash {
+    font-size: 10px;
+    font-family: monospace !important;
+    color: #64748b;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+}
+
+.emr-stamp-standard {
+    font-size: 9.5px;
+    color: #15803d;
+    margin-top: 4px;
+    font-weight: 700;
+    border-top: 1px dotted #86efac;
+    padding-top: 4px;
+}
+
+/* =========================================================================
+   8. DRAWER LỊCH SỬ / TIMELINE / AUDIT LOG (Trượt từ bên phải)
+   ========================================================================= */
+.emr-history-drawer {
+    width: 420px !important;
+    border-left: 1.5px solid var(--emr-border-soft);
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.1);
+}
+
+.emr-drawer-header {
+    padding: 18px 24px;
+    border-bottom: 1.5px solid var(--emr-border-soft);
+    background: #ffffff;
+}
+
+.emr-drawer-body {
+    padding: 20px 24px;
+    background: #f8fafc;
+    overflow-y: auto;
+}
+
+.drawer-section-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--emr-text-muted);
+    margin: 20px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.drawer-section-title:first-child {
+    margin-top: 0;
+}
+
+.audit-timeline {
+    position: relative;
+    padding-left: 20px;
+    margin: 0;
+    list-style: none;
+}
+
+.audit-timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: #cbd5e1;
+}
+
+.audit-item {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+.audit-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--emr-primary);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.audit-item-box {
+    background: #ffffff;
+    border: 1px solid var(--emr-border-soft);
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
+}
+
+.audit-action {
+    font-size: 12.5px;
+    font-weight: 750;
+    color: var(--emr-text-dark);
+}
+
+.audit-desc {
+    font-size: 12px;
+    color: var(--emr-text-secondary);
+    margin: 3px 0 0;
+}
+
+.audit-meta {
+    font-size: 11px;
+    color: var(--emr-text-muted);
+    margin-top: 4px;
+}
+
+/* =========================================================================
+   9. MODALS CHỈNH SỬA ĐỘC LẬP (Thay thế form xanh đáy tờ A4)
+   ========================================================================= */
+.emr-modal .modal-content {
+    border-radius: 18px;
+    border: 1px solid var(--emr-border-soft);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.emr-modal .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1.5px solid var(--emr-border-soft);
+    background: #ffffff;
+}
+
+.emr-modal .modal-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--emr-text-dark);
+}
+
+.emr-modal .modal-body {
+    padding: 24px;
+    background: #f8fafc;
+}
+
+.emr-modal .modal-footer {
+    padding: 16px 24px;
+    border-top: 1.5px solid var(--emr-border-soft);
+    background: #ffffff;
+}
+
+.emr-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.emr-form-grid .span-2 {
+    grid-column: span 2;
+}
+
+.emr-modal label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--emr-text-secondary);
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* =========================================================================
+   10. CHẾ ĐỘ BẢN IN (PRINT MODE): ĐEN - TRẮNG 100% (MONOCHROME BLACK & WHITE)
+   Áp dụng khi chọn radio "Bản in" (.is-print-mode) HOẶC khi in thật (@media print)
+   Yêu cầu: Màu đen hết, không font khác màu, không background khác màu, đen trắng hết
+   ========================================================================= */
+
+/* A. KHI BẬT CHẾ ĐỘ "BẢN IN" TRÊN MÀN HÌNH */
+.is-print-mode .emr-canvas-right,
+.emr-canvas-right.is-print-mode {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 10px 0 !important;
+}
+
+/* NÚT KÝ TÊN BỆNH ÁN (NỀN TRẮNG, KHÔNG BỊ ĐEN KHI CLICK/ACTIVE) */
+.emr-btn-sign {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 50rem !important;
+    padding: 5px 14px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    text-decoration: none !important;
+    user-select: none !important;
+}
+.emr-btn-sign:hover {
+    background: #f8fafc !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.emr-btn-sign:active,
+.emr-btn-sign:focus {
+    background: #f1f5f9 !important;
+    border-color: #64748b !important;
+    color: #0f172a !important;
+    transform: translateY(0) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.emr-btn-sign i {
+    color: #0f172a !important;
+    font-size: 13px !important;
+}
+
+.is-print-mode .emr-hide-print,
+.emr-canvas-right.is-print-mode .emr-hide-print {
+    display: none !important;
+}
+
+.is-print-mode .emr-paper,
+.emr-paper.is-print-mode,
+.emr-canvas-right.is-print-mode .emr-paper {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+}
+
+/* 1. Mọi chữ, tiêu đề, nhãn, số, icon đều chuyển sang màu đen tuyền */
+.is-print-mode .emr-paper,
+.is-print-mode .emr-paper *,
+.emr-canvas-right.is-print-mode .emr-paper,
+.emr-canvas-right.is-print-mode .emr-paper * {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-shadow: none !important;
+}
+
+/* 2. Loại bỏ hoàn toàn mọi background khác màu, chỉ để trắng hoặc trong suốt */
+.is-print-mode .emr-paper div,
+.is-print-mode .emr-paper section,
+.is-print-mode .emr-paper article,
+.is-print-mode .emr-paper .bg-light,
+.is-print-mode .emr-paper .bg-white,
+.is-print-mode .emr-paper .bg-primary-subtle,
+.is-print-mode .emr-paper .bg-success-subtle,
+.is-print-mode .emr-paper .bg-warning-subtle,
+.is-print-mode .emr-paper .bg-danger-subtle,
+.is-print-mode .emr-paper .bg-secondary-subtle,
+.is-print-mode .emr-paper .badge,
+.is-print-mode .emr-paper .doc-title-badge,
+.is-print-mode .emr-paper .p-3,
+.is-print-mode .emr-paper .p-2,
+.is-print-mode .emr-paper .p-4,
+.is-print-mode .emr-paper .alert,
+.is-print-mode .emr-paper table,
+.is-print-mode .emr-paper thead,
+.is-print-mode .emr-paper tbody,
+.is-print-mode .emr-paper tr,
+.is-print-mode .emr-paper th,
+.is-print-mode .emr-paper td,
+.is-print-mode .emr-paper .char-box,
+.is-print-mode .emr-paper .moh-check-box,
+.is-print-mode .emr-paper .quadrant-marker,
+.is-print-mode .emr-paper .tooth-orientation-box,
+.is-print-mode .emr-paper .tooth-cleft-box,
+.is-print-mode .emr-paper .emr-digital-stamp-box {
+    background-color: #ffffff !important;
+    background-image: none !important;
+}
+
+/* 3. Toàn bộ đường viền, kẻ ngang, khung hộp đều đổi thành màu đen (ngoại trừ các khối bo góc đã loại bỏ viền) */
+.is-print-mode .emr-paper .rounded,
+.is-print-mode .emr-paper .rounded-3,
+.is-print-mode .emr-paper .dental-chart-section {
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.is-print-mode .emr-paper hr,
+.is-print-mode .emr-paper .border-bottom,
+.is-print-mode .emr-paper .border-top,
+.is-print-mode .emr-paper .moh-section-title,
+.is-print-mode .emr-paper table,
+.is-print-mode .emr-paper table th,
+.is-print-mode .emr-paper table td,
+.is-print-mode .emr-paper .char-box,
+.is-print-mode .emr-paper .moh-check-box,
+.is-print-mode .emr-paper .quadrant-marker,
+.is-print-mode .emr-paper .tooth-orientation-box,
+.is-print-mode .emr-paper .tooth-cleft-box,
+.is-print-mode .emr-paper .tooth-cross-table th,
+.is-print-mode .emr-paper .tooth-cross-table td,
+.is-print-mode .emr-paper .emr-digital-stamp-box {
+    border-color: #000000 !important;
+}
+
+/* 4. Sơ đồ răng đen trắng: Ô răng can thiệp không dùng màu vàng/chữ nâu */
+.is-print-mode .emr-paper .tooth-cell {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-right-color: #000000 !important;
+    border-bottom-color: #000000 !important;
+}
+.is-print-mode .emr-paper .tooth-cell.has-intervention {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+}
+.is-print-mode .emr-paper .tooth-cell .intervention-dot {
+    color: #000000 !important;
+}
+.is-print-mode .emr-paper .tooth-cell:hover {
+    background-color: #ffffff !important;
+}
+.is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(8),
+.is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(24),
+.is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(5),
+.is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(15) {
+    border-right: 2px solid #000000 !important;
+}
+.is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(-n+16),
+.is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(-n+10) {
+    border-bottom: 2px solid #000000 !important;
+}
+.is-print-mode .emr-paper .primary-chart-grid::after,
+.is-print-mode .emr-paper .permanent-chart-grid::after {
+    background: #000000 !important;
+}
+.is-print-mode .emr-paper .tooth-orientation-box,
+.is-print-mode .emr-paper .tooth-cleft-box {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+}
+.is-print-mode .emr-paper .tooth-orientation-box .orient-top,
+.is-print-mode .emr-paper .tooth-orientation-box .orient-middle,
+.is-print-mode .emr-paper .tooth-orientation-box .orient-bottom,
+.is-print-mode .emr-paper .tooth-cleft-box .cleft-line {
+    color: #000000 !important;
+    border-color: #000000 !important;
+}
+.is-print-mode .emr-paper .tooth-plain-summary {
+    color: #000000 !important;
+    border-top: 1px dashed #000000 !important;
+}
+
+/* 5. Ô vuông ký tự (char-box) và checkbox (moh-check-box) đen trắng */
+.is-print-mode .emr-paper .char-box {
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+}
+.is-print-mode .emr-paper .moh-check-box {
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+}
+.is-print-mode .emr-paper .quadrant-marker {
+    background: #ffffff !important;
+    border: 1.5px solid #000000 !important;
+    color: #000000 !important;
+}
+
+/* 6. Khung con dấu / Chữ ký số đen trắng */
+.is-print-mode .emr-paper .emr-digital-stamp-box {
+    background: #ffffff !important;
+    border: 1.5px solid #000000 !important;
+    color: #000000 !important;
+}
+.is-print-mode .emr-paper .emr-stamp-badge,
+.is-print-mode .emr-paper .emr-stamp-signer,
+.is-print-mode .emr-paper .emr-stamp-org,
+.is-print-mode .emr-paper .emr-stamp-standard {
+    color: #000000 !important;
+    border-color: #000000 !important;
+    background: transparent !important;
+}
+
+.is-print-mode .emr-cleft-grid-table,
+.is-print-mode .emr-cleft-grid-table th,
+.is-print-mode .emr-cleft-grid-table td {
+    border-color: #000000 !important;
+    color: #000000 !important;
+    background: transparent !important;
+}
+
+/* 7. Trường nhập liệu inline phẳng, trong suốt */
+.is-print-mode .emr-paper .emr-inline-input,
+.is-print-mode .emr-paper .emr-inline-textarea {
+    background: transparent !important;
+    border: none !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.is-print-mode .emr-paper .emr-inline-input::placeholder,
+.is-print-mode .emr-paper .emr-inline-textarea::placeholder {
+    color: transparent !important;
+}
+
+/* 8. Thanh topbar đỉnh tờ A4 */
+.is-print-mode .emr-paper .emr-paper-topbar {
+    border-bottom: 1.5px solid #000000 !important;
+}
+.is-print-mode .emr-paper .emr-paper-topbar .doc-title-badge {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+}
+.is-print-mode .emr-paper .emr-paper-topbar .btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+}
+
+/* B. KHI IN RA GIẤY THẬT QUA TRÌNH DUYỆT (@media print) */
+@page {
+    size: A4 portrait;
+    margin: 0; /* Margin 0 triệt tiêu hoàn toàn header (tiêu đề/ngày) và footer (URL/số trang) mặc định của Chrome */
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Ẩn các thành phần giao diện không in */
+    .app-shell > aside,
+    .sidebar-backdrop,
+    .app-main > header,
+    .emr-sub-header,
+    .emr-sidebar-left,
+    .emr-paper-topbar,
+    .emr-view-mode-bar,
+    .emr-action-cluster,
+    .emr-floating-print-btn,
+    .emr-breadcrumb,
+    nav[aria-label="breadcrumb"],
+    .breadcrumb,
+    .btn,
+    .offcanvas,
+    .modal,
+    .alert {
+        display: none !important;
+    }
+
+    .app-main, .app-content, .emr-page, .emr-detail-container, .emr-2col-layout, .emr-canvas-right {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .emr-paper,
+    .is-print-mode .emr-paper,
+    .emr-canvas-right.is-print-mode .emr-paper {
+        display: none !important;
+        width: 100% !important;
+        max-width: 210mm !important;
+        margin: 0 auto !important;
+        padding: 12mm 16mm !important; /* Lề in chuẩn trên bề mặt trang A4 */
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        outline: none !important;
+        page-break-after: always;
+        break-after: page;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        box-sizing: border-box !important;
+    }
+
+    .emr-paper.is-active,
+    .is-print-mode .emr-paper.is-active,
+    .emr-canvas-right.is-print-mode .emr-paper.is-active {
+        display: block !important;
+    }
+
+    /* Mọi chữ đen 100% */
+    .emr-paper,
+    .emr-paper *,
+    .emr-paper h1, .emr-paper h2, .emr-paper h3, .emr-paper h4, .emr-paper h5, .emr-paper h6,
+    .emr-paper p, .emr-paper span, .emr-paper strong, .emr-paper div, .emr-paper label,
+    .emr-paper input, .emr-paper textarea, .emr-paper select, .emr-paper a,
+    .emr-paper td, .emr-paper th, .emr-paper li, .emr-paper small,
+    .emr-paper i, .emr-paper .bi, .emr-paper .ba-code {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        text-shadow: none !important;
+    }
+
+    /* Mọi nền trắng / trong suốt */
+    .emr-paper div,
+    .emr-paper section,
+    .emr-paper article,
+    .emr-paper .bg-light,
+    .emr-paper .bg-white,
+    .emr-paper .badge,
+    .emr-paper .p-3,
+    .emr-paper .p-2,
+    .emr-paper .p-4,
+    .emr-paper .alert,
+    .emr-paper table,
+    .emr-paper thead,
+    .emr-paper tbody,
+    .emr-paper tr,
+    .emr-paper th,
+    .emr-paper td,
+    .emr-paper .char-box,
+    .emr-paper .moh-check-box,
+    .emr-paper .quadrant-marker,
+    .emr-paper .tooth-orientation-box,
+    .emr-paper .tooth-cleft-box,
+    .emr-paper .emr-digital-stamp-box {
+        background-color: #ffffff !important;
+        background-image: none !important;
+    }
+
+    /* Loại bỏ khung viền và bo góc các khối bao quanh */
+    .emr-paper .rounded,
+    .emr-paper .rounded-3,
+    .emr-paper .rounded-4,
+    .emr-paper .dental-chart-section {
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+    }
+
+    /* Mọi viền đen cần thiết */
+    .emr-paper hr,
+    .emr-paper .border-bottom,
+    .emr-paper .border-top,
+    .emr-paper .moh-section-title,
+    .emr-paper table,
+    .emr-paper table th,
+    .emr-paper table td,
+    .emr-paper .char-box,
+    .emr-paper .moh-check-box,
+    .emr-paper .quadrant-marker,
+    .emr-paper .tooth-orientation-box,
+    .emr-paper .tooth-cleft-box,
+    .emr-paper .tooth-cross-table th,
+    .emr-paper .tooth-cross-table td,
+    .emr-paper .emr-digital-stamp-box {
+        border-color: #000000 !important;
+    }
+
+    /* Sơ đồ răng đen trắng */
+    .emr-paper .tooth-cell {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border-right-color: #000000 !important;
+        border-bottom-color: #000000 !important;
+    }
+    .emr-paper .tooth-cell.has-intervention {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-weight: 800 !important;
+    }
+    .emr-paper .tooth-cell .intervention-dot {
+        color: #000000 !important;
+    }
+    .emr-paper .permanent-chart-grid .tooth-cell:nth-child(8),
+    .emr-paper .permanent-chart-grid .tooth-cell:nth-child(24),
+    .emr-paper .primary-chart-grid .tooth-cell:nth-child(5),
+    .emr-paper .primary-chart-grid .tooth-cell:nth-child(15) {
+        border-right: 2px solid #000000 !important;
+    }
+    .emr-paper .permanent-chart-grid .tooth-cell:nth-child(-n+16),
+    .emr-paper .primary-chart-grid .tooth-cell:nth-child(-n+10) {
+        border-bottom: 2px solid #000000 !important;
+    }
+    .emr-paper .primary-chart-grid::after,
+    .emr-paper .permanent-chart-grid::after {
+        background: #000000 !important;
+    }
+    .emr-paper .tooth-orientation-box,
+    .emr-paper .tooth-cleft-box {
+        background: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
+    .emr-paper .tooth-orientation-box .orient-top,
+    .emr-paper .tooth-orientation-box .orient-middle,
+    .emr-paper .tooth-orientation-box .orient-bottom,
+    .emr-paper .tooth-cleft-box .cleft-line {
+        color: #000000 !important;
+        border-color: #000000 !important;
+    }
+    .emr-paper .tooth-plain-summary {
+        color: #000000 !important;
+        border-top: 1px dashed #000000 !important;
+    }
+
+    /* Ô vuông ký tự (char-box) và checkbox (moh-check-box) */
+    .emr-paper .char-box {
+        background: #ffffff !important;
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+    }
+    .emr-paper .moh-check-box {
+        background: #ffffff !important;
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+    }
+    .emr-paper .quadrant-marker {
+        background: #ffffff !important;
+        border: 1.5px solid #000000 !important;
+        color: #000000 !important;
+    }
+
+    /* Con dấu / Chữ ký số đen trắng */
+    .emr-paper .emr-digital-stamp-box {
+        background: #ffffff !important;
+        border: 1.5px solid #000000 !important;
+        color: #000000 !important;
+    }
+    .emr-paper .emr-stamp-badge,
+    .emr-paper .emr-stamp-signer,
+    .emr-paper .emr-stamp-org,
+    .emr-paper .emr-stamp-standard {
+        color: #000000 !important;
+        border-color: #000000 !important;
+        background: transparent !important;
+    }
+
+    /* Trường nhập liệu */
+    .emr-paper .emr-inline-input,
+    .emr-paper .emr-inline-textarea {
+        background: transparent !important;
+        border: none !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    .emr-paper .emr-inline-input::placeholder,
+    .emr-paper .emr-inline-textarea::placeholder {
+        color: transparent !important;
+    }
+
+    .emr-exam-cleft-section, .emr-cleft-grid-table,
+    .dental-chart-section, .permanent-chart-grid, .primary-chart-grid {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .moh-signature-grid {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
 }

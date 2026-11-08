@@ -21,9 +21,36 @@ import java.util.*;
 public class EmrModuleService {
     private static final DateTimeFormatter RECORD_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final Map<String, Set<String>> EDITABLE_DOCUMENT_FIELDS = Map.of(
-            "COVER", Set.of("archiveNo", "department", "roomBed", "admissionAt", "dischargeAt"),
-            "OUTPATIENT_DENTAL", Set.of("referralDiagnosis", "diseaseProgress", "personalHistory",
-                    "familyHistory", "lowerLevelTreatment", "treatmentPlan", "treatmentNotes"),
+            "COVER", Set.of(
+                    "archiveNo", "recordCode", "healthFacility", "branchName", "branchCode",
+                    "department", "transferredDepartment", "roomBed", "bed",
+                    "fullName", "gender", "patientCode", "dob", "age", "phoneNumber",
+                    "idCardNumber", "healthInsuranceNumber", "address",
+                    "occupation", "workplace", "ethnicity", "nationality",
+                    "guardianName", "guardianPhone", "guardianRelationship",
+                    "referralSource", "referralDiagnosis", "admissionDiagnosis",
+                    "dischargeDiagnosis", "treatmentOutcome",
+                    "admissionAt", "dischargeAt",
+                    "doctorName", "facilityDirector",
+                    "doctorSignatureUrl", "facilityDirectorSignatureUrl"),
+            "OUTPATIENT_DENTAL", Set.of(
+                    "fullName", "dob", "age", "gender", "phoneNumber", "occupation",
+                    "ethnicity", "ethnicityCode", "nationality", "nationalityCode",
+                    "workplace", "address", "ward", "district", "provinceCode",
+                    "patientType", "healthInsuranceNumber", "idCardNumber",
+                    "guardianName", "guardianPhone", "guardianRelationship",
+                    "admissionHour", "admissionMinute", "admissionDay", "admissionMonth", "admissionYear",
+                    "admissionAt",
+                    "referralDiagnosis", "referralSource",
+                    "chiefComplaint", "diseaseProgress", "allergyDetails", "personalHistory", "familyHistory",
+                    "extraoralRight", "extraoralStraight", "extraoralLeft",
+                    "upperJawPharynx", "lowerJaw",
+                    "lowerLevelTreatment", "cleftPalateClassification", "toothInterventionSummary",
+                    "paraclinicalRequired", "paraclinicalNotes",
+                    "icdDiagnosisSummary", "performedServicesSummary",
+                    "treatmentPlan", "treatmentNotes",
+                    "doctorName", "facilityDirector",
+                    "doctorSignatureUrl", "facilityDirectorSignatureUrl"),
             "TREATMENT_SUMMARY", Set.of("clinicalProgressSummary", "paraclinicalSummary",
                     "mainClinicalSigns", "dischargeDiagnosis", "treatmentMethod",
                     "dischargeCondition", "followupInstructions"),
@@ -46,6 +73,7 @@ public class EmrModuleService {
     private final EmrAttachmentStorage attachmentStorage;
     private final TreatmentPlanRepository treatmentPlans;
     private final StaffProfileRepository staffProfiles;
+    private final PatientProfileRepository patientProfiles;
     private final ObjectMapper mapper;
 
     public EmrModuleService(EmrAccess access, EmrRecordRepository records,
@@ -56,7 +84,8 @@ public class EmrModuleService {
             NanopixXraySyncLogRepository xrays, LaboOrderRepository laboOrders,
             TreatmentPlanRepository treatmentPlans,
             EmrAttachmentRepository attachments, EmrAttachmentStorage attachmentStorage,
-            StaffProfileRepository staffProfiles, ObjectMapper mapper) {
+            StaffProfileRepository staffProfiles, PatientProfileRepository patientProfiles,
+            ObjectMapper mapper) {
         this.access = access;
         this.records = records;
         this.versions = versions;
@@ -73,6 +102,7 @@ public class EmrModuleService {
         this.attachmentStorage = attachmentStorage;
         this.treatmentPlans = treatmentPlans;
         this.staffProfiles = staffProfiles;
+        this.patientProfiles = patientProfiles;
         this.mapper = mapper;
     }
 
@@ -86,11 +116,13 @@ public class EmrModuleService {
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         List<RecordRow> recordRows = records.findAllWithDetails().stream()
                 .filter(r -> scope.permits(r.getBranch().getBranchId()))
+                .filter(r -> !isSoftDeleted(r))
                 .filter(r -> status == null || r.getStatus() == status)
                 .filter(r -> fromDate == null || !r.getVisit().getCheckInAt().toLocalDate().isBefore(fromDate))
                 .filter(r -> toDate == null || !r.getVisit().getCheckInAt().toLocalDate().isAfter(toDate))
                 .filter(r -> doctor == null || doctor.isBlank() || r.getVisit().getPrimaryDoctor() != null
-                        && r.getVisit().getPrimaryDoctor().getFullName().toLowerCase(Locale.ROOT).contains(doctor.trim().toLowerCase(Locale.ROOT)))
+                        && r.getVisit().getPrimaryDoctor().getFullName().toLowerCase(Locale.ROOT)
+                                .contains(doctor.trim().toLowerCase(Locale.ROOT)))
                 .filter(r -> branch == null || branch.isBlank() || r.getBranch().getBranchName()
                         .toLowerCase(Locale.ROOT).contains(branch.trim().toLowerCase(Locale.ROOT)))
                 .filter(r -> normalized.isBlank() || matches(r, normalized))
@@ -99,7 +131,7 @@ public class EmrModuleService {
 
         List<EligibleVisitRow> eligible = visits.findFilteredVisits(null, null, null, query).stream()
                 .filter(v -> scope.permits(v.getBranch().getBranchId()))
-                .filter(v -> !records.existsByVisit_VisitId(v.getVisitId()))
+                .filter(v -> !hasActiveRecord(v.getVisitId()))
                 .limit(20)
                 .map(v -> {
                     List<String> missing = validateSource(v);
@@ -135,13 +167,16 @@ public class EmrModuleService {
                 .toList();
         List<SignatureRow> signatureRows = current.getSignatures().stream()
                 .map(s -> new SignatureRow(s.getSignatureId(), s.getSignerType(), s.getSignerName(), s.getProvider(),
-                        s.getStatus(), s.getSignedAt(), s.getExternalTransactionId())).toList();
+                        s.getStatus(), s.getSignedAt(), s.getExternalTransactionId()))
+                .toList();
         List<AttachmentRow> attachmentRows = attachments.findByVersion_VersionIdOrderByIdAsc(current.getVersionId())
                 .stream().map(a -> new AttachmentRow(a.getId(), a.getCaption(), a.getOriginalName(),
-                        a.getMimeType(), a.getByteSize(), a.getSha256(), a.getCapturedAt())).toList();
+                        a.getMimeType(), a.getByteSize(), a.getSha256(), a.getCapturedAt()))
+                .toList();
         List<DocumentRow> documentRows = current.getDocuments().stream()
                 .map(d -> new DocumentRow(d.getDocumentCode(), d.getTitle(), d.getDocumentType(),
-                        d.getSortOrder(), d.getDocumentHash(), documentManualFields(d))).toList();
+                        d.getSortOrder(), d.getDocumentHash(), documentManualFields(d)))
+                .toList();
         Map<String, Map<String, String>> documentFields = new LinkedHashMap<>();
         documentRows.forEach(document -> documentFields.put(document.code(), document.fields()));
         List<AuditRow> auditRows = audits.findByRecord_RecordIdOrderByCreatedAtDesc(recordId).stream()
@@ -159,14 +194,46 @@ public class EmrModuleService {
 
     @Transactional
     public Long create(HttpSession session, Long visitId) {
+        return getOrCreate(session, visitId);
+    }
+
+    @Transactional
+    public Long getOrCreate(HttpSession session, Long visitId) {
         EmrAccess.Scope scope = access.require(session);
         Visit visit = visits.findWithDetailsById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám."));
         access.requireBranch(scope, visit.getBranch().getBranchId());
-        records.findByVisit_VisitId(visitId).ifPresent(existing -> {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Lượt khám đã có bệnh án " + existing.getRecordCode() + ".");
-        });
+
+        Optional<EmrRecord> existingOpt = records.findByVisit_VisitId(visitId);
+        if (existingOpt.isPresent()) {
+            EmrRecord existing = existingOpt.get();
+            EmrRecordVersion current = currentVersion(existing);
+            // Nếu bản nháp trước đó bị xóa mềm thì khôi phục lại
+            if (current.getSnapshot() != null && Boolean.TRUE.equals(current.getSnapshot().getIsDeleted())) {
+                current.getSnapshot().setIsDeleted(false);
+                current.getSnapshot().setDeletedAt(null);
+                current.getSnapshot().setDeletedBy(null);
+                capture(current, visit);
+                if (existing.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
+                    existing.setStatus(EmrRecordStatus.DRAFT);
+                }
+                audit(existing, current, scope.user(), "RESTORE_DRAFT",
+                        "Khôi phục và đồng bộ lại bệnh án từ ca khám " + visit.getVisitCode() + ".");
+                return existing.getRecordId();
+            }
+            // Nếu đang ở trạng thái có thể làm mới, đồng bộ lại dữ liệu mới nhất từ ca khám
+            if (EmrStatePolicy.canRefresh(existing.getStatus())) {
+                current.setContentHash(null);
+                current.setStatus(EmrVersionStatus.DRAFT);
+                capture(current, visit);
+                if (existing.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
+                    existing.setStatus(EmrRecordStatus.DRAFT);
+                }
+                audit(existing, current, scope.user(), "SYNC_EXISTING",
+                        "Đồng bộ dữ liệu khám mới nhất vào bệnh án " + existing.getRecordCode() + ".");
+            }
+            return existing.getRecordId();
+        }
 
         EmrRecord record = new EmrRecord();
         record.setRecordCode("EMR-" + RECORD_DATE.format(visit.getCheckInAt()) + "-" + visit.getVisitId());
@@ -190,6 +257,97 @@ public class EmrModuleService {
     }
 
     @Transactional
+    public void softDeleteDraft(HttpSession session, Long recordId) {
+        EmrAccess.Scope scope = access.require(session);
+        EmrRecord record = requireRecord(recordId, scope);
+        if (record.getStatus() != EmrRecordStatus.DRAFT && record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Chỉ bản nháp bệnh án chưa khóa hoặc chưa ký mới được phép xóa theo đúng quy định y tế.");
+        }
+        EmrRecordVersion version = currentVersion(record);
+        if (version.getSnapshot() != null) {
+            version.getSnapshot().setIsDeleted(true);
+            version.getSnapshot().setDeletedAt(LocalDateTime.now());
+            version.getSnapshot().setDeletedBy(scope.user().getUsername());
+        }
+        audit(record, version, scope.user(), "SOFT_DELETE_DRAFT",
+                "Xóa mềm bản nháp bệnh án theo đúng quy định y tế.");
+    }
+
+    @Transactional
+    public void deleteDraft(HttpSession session, Long recordId) {
+        softDeleteDraft(session, recordId);
+    }
+
+    @Transactional
+    public void updatePatientDemographics(HttpSession session, Long recordId, Map<String, String> fields) {
+        EmrAccess.Scope scope = access.require(session);
+        EmrRecord record = requireRecord(recordId, scope);
+        if (!EmrStatePolicy.canRefresh(record.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Chỉ có thể cập nhật thông tin khi bệnh án còn ở trạng thái nháp/chờ khóa.");
+        }
+        PatientProfile patient = record.getPatientProfile();
+        if (fields.containsKey("fullName") && !blank(fields.get("fullName"))) {
+            patient.setFullName(fields.get("fullName").trim());
+        }
+        if (fields.containsKey("dob") && !blank(fields.get("dob"))) {
+            try {
+                patient.setDob(java.time.LocalDate.parse(fields.get("dob").trim().substring(0, 10)));
+            } catch (Exception ignored) {
+            }
+        }
+        if (fields.containsKey("gender") && !blank(fields.get("gender"))) {
+            patient.setGender(fields.get("gender").trim());
+        }
+        if (fields.containsKey("phoneNumber") && !blank(fields.get("phoneNumber"))) {
+            patient.setPhoneNumber(fields.get("phoneNumber").trim());
+        }
+        if (fields.containsKey("address") && !blank(fields.get("address"))) {
+            patient.setAddress(fields.get("address").trim());
+        }
+        if (fields.containsKey("idCardNumber")) {
+            patient.setIdCardNumber(fields.get("idCardNumber") != null ? fields.get("idCardNumber").trim() : null);
+        }
+        if (fields.containsKey("healthInsuranceNumber")) {
+            patient.setHealthInsuranceNumber(
+                    fields.get("healthInsuranceNumber") != null ? fields.get("healthInsuranceNumber").trim() : null);
+        }
+        if (fields.containsKey("guardianName")) {
+            patient.setGuardianName(fields.get("guardianName") != null ? fields.get("guardianName").trim() : null);
+        }
+        if (fields.containsKey("guardianPhone")) {
+            patient.setGuardianPhone(fields.get("guardianPhone") != null ? fields.get("guardianPhone").trim() : null);
+        }
+        if (fields.containsKey("guardianRelationship")) {
+            patient.setGuardianRelationship(
+                    fields.get("guardianRelationship") != null ? fields.get("guardianRelationship").trim() : null);
+        }
+        if (fields.containsKey("allergyDetails")) {
+            String allergy = fields.get("allergyDetails");
+            patient.setAllergyDetails(allergy != null ? allergy.trim() : null);
+            patient.setHasAllergies(!blank(allergy));
+        }
+        if (fields.containsKey("underlyingDiseaseDetails")) {
+            String disease = fields.get("underlyingDiseaseDetails");
+            patient.setUnderlyingDiseaseDetails(disease != null ? disease.trim() : null);
+            patient.setHasUnderlyingDisease(!blank(disease));
+        }
+        patientProfiles.save(patient);
+
+        // Đồng bộ lại snapshot và các tài liệu biểu mẫu
+        EmrRecordVersion version = currentVersion(record);
+        version.setContentHash(null);
+        version.setStatus(EmrVersionStatus.DRAFT);
+        capture(version, record.getVisit());
+        if (record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
+            record.setStatus(EmrRecordStatus.DRAFT);
+        }
+        audit(record, version, scope.user(), "UPDATE_PATIENT_DEMOGRAPHICS",
+                "Cập nhật nhanh thông tin hành chính bệnh nhân " + patient.getPatientCode() + " từ BAĐT.");
+    }
+
+    @Transactional
     public void refresh(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
@@ -200,7 +358,8 @@ public class EmrModuleService {
         version.setContentHash(null);
         version.setStatus(EmrVersionStatus.DRAFT);
         capture(version, record.getVisit());
-        if (record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) record.setStatus(EmrRecordStatus.DRAFT);
+        if (record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT)
+            record.setStatus(EmrRecordStatus.DRAFT);
         audit(record, version, scope.user(), "REFRESH_SNAPSHOT", "Làm mới snapshot từ dữ liệu khám nguồn.");
     }
 
@@ -208,7 +367,8 @@ public class EmrModuleService {
     public ValidationResult validate(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
-        if (!EmrStatePolicy.canValidate(record.getStatus())) conflict("Trạng thái hiện tại không cho phép kiểm tra.");
+        if (!EmrStatePolicy.canValidate(record.getStatus()))
+            conflict("Trạng thái hiện tại không cho phép kiểm tra.");
         EmrRecordVersion version = currentVersion(record);
         List<String> missing = validateRecord(record.getVisit(), version);
         String currentHash = EmrHashing.sha256(toJson(buildSource(record.getVisit())));
@@ -223,7 +383,8 @@ public class EmrModuleService {
         } else {
             if (record.getStatus() == EmrRecordStatus.READY_TO_LOCK) {
                 record.setStatus(version.getVersionNumber() > 1
-                        ? EmrRecordStatus.AMENDMENT_DRAFT : EmrRecordStatus.DRAFT);
+                        ? EmrRecordStatus.AMENDMENT_DRAFT
+                        : EmrRecordStatus.DRAFT);
                 version.setStatus(EmrVersionStatus.DRAFT);
             }
             audit(record, version, scope.user(), "VALIDATE_FAILED", String.join("; ", missing));
@@ -235,21 +396,27 @@ public class EmrModuleService {
     public void lock(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
-        if (!EmrStatePolicy.canLock(record.getStatus())) conflict("Bệnh án phải được kiểm tra hợp lệ trước khi khóa.");
+        if (!EmrStatePolicy.canLock(record.getStatus()))
+            conflict("Bệnh án phải được kiểm tra hợp lệ trước khi khóa.");
         EmrRecordVersion version = currentVersion(record);
         List<String> missing = validateRecord(record.getVisit(), version);
         String currentHash = EmrHashing.sha256(toJson(buildSource(record.getVisit())));
-        if (!currentHash.equals(version.getSnapshot().getSourceHash())) missing.add("Snapshot đã cũ.");
-        if (!missing.isEmpty()) conflict(String.join("; ", missing));
+        if (!currentHash.equals(version.getSnapshot().getSourceHash()))
+            missing.add("Snapshot đã cũ.");
+        if (!missing.isEmpty())
+            conflict(String.join("; ", missing));
         List<ClinicalPhoto> sourcePhotos = photos.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(
                 record.getPatientProfile().getProfileId()).stream()
                 .filter(photo -> photo.getVisit() != null
                         && Objects.equals(photo.getVisit().getVisitId(), record.getVisit().getVisitId()))
                 .toList();
         List<EmrAttachment> archived = new ArrayList<>();
-        for (ClinicalPhoto photo : sourcePhotos) archived.add(attachmentStorage.archive(version, photo));
-        for (NanopixXraySyncLog xray : xrays.findByMatchedVisit_VisitIdOrderByCapturedAtDesc(record.getVisit().getVisitId()))
-            archived.add(attachmentStorage.archive(version, xray.getImageUrl(), "X-quang · " + xray.getExternalStudyUid()));
+        for (ClinicalPhoto photo : sourcePhotos)
+            archived.add(attachmentStorage.archive(version, photo));
+        for (NanopixXraySyncLog xray : xrays
+                .findByMatchedVisit_VisitIdOrderByCapturedAtDesc(record.getVisit().getVisitId()))
+            archived.add(
+                    attachmentStorage.archive(version, xray.getImageUrl(), "X-quang · " + xray.getExternalStudyUid()));
         for (LaboOrder labo : laboOrders.findByVisit_VisitIdOrderBySentDateDesc(record.getVisit().getVisitId()))
             if (labo.getImageUrl() != null && !labo.getImageUrl().isBlank())
                 archived.add(attachmentStorage.archive(version, labo.getImageUrl(), "Labo · " + labo.getLaboCode()));
@@ -274,8 +441,9 @@ public class EmrModuleService {
 
     @Transactional
     public void doctorSignForTest(HttpSession session, Long recordId, boolean confirmed) {
-        if (!confirmed) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Bác sĩ cần tích xác nhận đã kiểm tra hồ sơ trước khi ký số xác thực.");
+        if (!confirmed)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bác sĩ cần tích xác nhận đã kiểm tra hồ sơ trước khi ký số xác thực.");
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
         if (!EmrStatePolicy.canDoctorSign(record.getStatus()))
@@ -306,7 +474,8 @@ public class EmrModuleService {
     public void createAmendment(HttpSession session, Long recordId, String reason) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
-        if (!EmrStatePolicy.canAmend(record.getStatus())) conflict("Chỉ bệnh án đã ký mới được tạo bản sửa đổi.");
+        if (!EmrStatePolicy.canAmend(record.getStatus()))
+            conflict("Chỉ bệnh án đã ký mới được tạo bản sửa đổi.");
         if (reason == null || reason.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phải nhập lý do sửa đổi.");
         }
@@ -348,16 +517,20 @@ public class EmrModuleService {
                         "Không tìm thấy biểu mẫu trong phiên bản hiện tại."));
 
         Map<String, Object> payload = documentPayload(document);
-        Map<String, String> manual = new LinkedHashMap<>();
-        for (String field : allowedFields) {
-            String value = submittedFields == null ? null : submittedFields.get(field);
-            if (value == null) continue;
-            String normalized = value.trim();
-            if (normalized.length() > 4000) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Nội dung trường " + field + " vượt quá 4.000 ký tự.");
+        Map<String, String> manual = new LinkedHashMap<>(documentManualFields(document));
+        if (submittedFields != null) {
+            for (Map.Entry<String, String> entry : submittedFields.entrySet()) {
+                String field = entry.getKey();
+                if (field == null || field.isBlank() || field.startsWith("_"))
+                    continue;
+                String value = entry.getValue();
+                String normalized = value == null ? "" : value.trim();
+                if (normalized.length() > 4000) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Nội dung trường " + field + " vượt quá 4.000 ký tự.");
+                }
+                manual.put(field, normalized);
             }
-            manual.put(field, normalized);
         }
         payload.put("manual", manual);
         document.setContentJson(toJson(payload));
@@ -389,7 +562,8 @@ public class EmrModuleService {
         result.put("attachments", attachments.findByVersion_VersionIdOrderByIdAsc(version.getVersionId())
                 .stream().map(a -> mapOf("id", a.getId(), "name", a.getOriginalName(),
                         "mimeType", a.getMimeType(), "byteSize", a.getByteSize(),
-                        "sha256", a.getSha256())).toList());
+                        "sha256", a.getSha256()))
+                .toList());
         result.put("signatures", version.getSignatures().stream().map(signature -> mapOf(
                 "signerType", signature.getSignerType(), "signerName", signature.getSignerName(),
                 "provider", signature.getProvider(), "status", signature.getStatus(),
@@ -467,10 +641,12 @@ public class EmrModuleService {
 
     private Map<String, String> documentManualFields(EmrDocument document) {
         Object value = documentPayload(document).get("manual");
-        if (!(value instanceof Map<?, ?> values)) return Map.of();
+        if (!(value instanceof Map<?, ?> values))
+            return Map.of();
         Map<String, String> result = new LinkedHashMap<>();
         values.forEach((key, item) -> {
-            if (key != null && item != null) result.put(key.toString(), item.toString());
+            if (key != null && item != null)
+                result.put(key.toString(), item.toString());
         });
         return Collections.unmodifiableMap(result);
     }
@@ -504,77 +680,302 @@ public class EmrModuleService {
 
         Map<String, Object> root = new LinkedHashMap<>();
         PatientProfile patient = visit.getPatientProfile();
+        int age = patient.getDob() != null
+                ? java.time.Period.between(patient.getDob(), java.time.LocalDate.now()).getYears()
+                : 0;
+        boolean hasAllergies = Boolean.TRUE.equals(patient.getHasAllergies())
+                || (patient.getAllergyDetails() != null && !patient.getAllergyDetails().isBlank());
+        boolean hasUnderlying = Boolean.TRUE.equals(patient.getHasUnderlyingDisease())
+                || (patient.getUnderlyingDiseaseDetails() != null && !patient.getUnderlyingDiseaseDetails().isBlank());
+        boolean hasCardio = Boolean.TRUE.equals(patient.getHasCardiovascularDisease())
+                || (patient.getCardiovascularDetails() != null && !patient.getCardiovascularDetails().isBlank());
+
         root.put("patient", mapOf(
                 "profileId", patient.getProfileId(), "patientCode", patient.getPatientCode(),
-                "fullName", patient.getFullName(), "dob", text(patient.getDob()), "gender", patient.getGender(),
-                "phoneNumber", patient.getPhoneNumber(), "address", patient.getAddress(),
-                "idCardNumber", patient.getIdCardNumber(), "healthInsuranceNumber", patient.getHealthInsuranceNumber(),
-                "allergyDetails", patient.getAllergyDetails(),
-                "underlyingDiseaseDetails", patient.getUnderlyingDiseaseDetails(),
-                "guardianName", patient.getGuardianName(), "guardianPhone", patient.getGuardianPhone()));
+                "fullName", patient.getFullName(), "dob", text(patient.getDob()), "age", age,
+                "gender", patient.getGender(), "phoneNumber", patient.getPhoneNumber(),
+                "address", patient.getAddress(), "idCardNumber", patient.getIdCardNumber(),
+                "healthInsuranceNumber", patient.getHealthInsuranceNumber(),
+                "hasAllergies", hasAllergies, "allergyDetails", patient.getAllergyDetails(),
+                "hasUnderlyingDisease", hasUnderlying, "underlyingDiseaseDetails",
+                patient.getUnderlyingDiseaseDetails(),
+                "hasCardiovascularDisease", hasCardio, "cardiovascularDetails", patient.getCardiovascularDetails(),
+                "guardianName", patient.getGuardianName(), "guardianPhone", patient.getGuardianPhone(),
+                "guardianRelationship", patient.getGuardianRelationship()));
+
         root.put("visit", mapOf(
                 "visitId", visit.getVisitId(), "visitCode", visit.getVisitCode(),
                 "checkInAt", text(visit.getCheckInAt()), "visitType", text(visit.getVisitType()),
                 "initialSymptoms", visit.getInitialSymptoms(), "status", text(visit.getStatus()),
                 "branchCode", visit.getBranch().getBranchCode(), "branchName", visit.getBranch().getBranchName(),
                 "doctorName", visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getFullName(),
-                "doctorLicense", visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getPracticeLicenseNo()));
-        root.put("clinical", exam == null ? Map.of() : mapOf(
-                "chiefComplaint", exam.getChiefComplaint(), "historyIllness", exam.getHistoryIllness(),
-                "vitalSigns", exam.getVitalSignsJson(), "extraoralExam", exam.getExtraoralExam(),
-                "intraoralExam", exam.getIntraoralExam(), "periodontalStatus", exam.getPeriodontalStatus(),
-                "odontogram", exam.getOdontogramChartJson(), "summaryAssessment", exam.getSummaryAssessment(),
-                "examTime", text(exam.getExamTime())));
+                "doctorLicense",
+                visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getPracticeLicenseNo(),
+                "completedAt", text(visit.getCompletedAt()), "notes", visit.getNotes()));
+
+        // Parse Vital Signs JSON thành Map dễ dùng
+        Map<String, Object> vitalSignsMap = new LinkedHashMap<>();
+        vitalSignsMap.put("pulse", "");
+        vitalSignsMap.put("bloodPressure", "");
+        vitalSignsMap.put("temperature", "");
+        vitalSignsMap.put("respiratoryRate", "");
+        vitalSignsMap.put("weight", "");
+        if (exam != null && exam.getVitalSignsJson() != null && !exam.getVitalSignsJson().isBlank()) {
+            try {
+                Map<String, Object> parsed = mapper.readValue(exam.getVitalSignsJson(), new TypeReference<>() {
+                });
+                parsed.forEach((k, v) -> {
+                    if (v != null)
+                        vitalSignsMap.put(k, v);
+                });
+            } catch (Exception ignored) {
+            }
+        }
+        root.put("vitalSigns", vitalSignsMap);
+
+        root.put("clinical", exam == null ? Map.of()
+                : mapOf(
+                        "chiefComplaint", exam.getChiefComplaint(), "historyIllness", exam.getHistoryIllness(),
+                        "vitalSigns", exam.getVitalSignsJson(), "extraoralExam", exam.getExtraoralExam(),
+                        "intraoralExam", exam.getIntraoralExam(), "periodontalStatus", exam.getPeriodontalStatus(),
+                        "odontogram", exam.getOdontogramChartJson(), "summaryAssessment", exam.getSummaryAssessment(),
+                        "examTime", text(exam.getExamTime())));
+
         root.put("diagnoses", diagnosisRows.stream().map(d -> mapOf(
-                "type", text(d.getDiagnosisType()), "icd10Code",
-                d.getIcd10Disease() == null ? null : d.getIcd10Disease().getIcd10Code(),
-                "diagnosisText", d.getDiagnosisText(), "toothNumbers", d.getToothNumbers(), "notes", d.getNotes())).toList());
+                "diagnosisId", d.getDiagnosisId(),
+                "type", text(d.getDiagnosisType()),
+                "icd10Code", d.getIcd10Disease() == null ? null : d.getIcd10Disease().getIcd10Code(),
+                "diseaseNameVi", d.getIcd10Disease() == null ? null : d.getIcd10Disease().getDiseaseNameVi(),
+                "diseaseNameEn", d.getIcd10Disease() == null ? null : d.getIcd10Disease().getDiseaseNameEn(),
+                "diagnosisText", d.getDiagnosisText(),
+                "toothNumbers", d.getToothNumbers(),
+                "notes", d.getNotes())).toList());
+
         root.put("performedServices", serviceRows.stream().map(s -> mapOf(
-                "serviceCode", s.getService().getServiceCode(), "serviceName", s.getService().getServiceName(),
-                "toothNumbers", s.getToothNumbers(), "quantity", s.getQuantity(),
-                "doctorName", s.getDoctor().getFullName(), "completedAt", text(s.getCompletedAt()),
-                "status", text(s.getStatus()), "clinicalNotes", s.getClinicalNotes())).toList());
+                "performedId", s.getPerformedId(),
+                "serviceCode", s.getService().getServiceCode(),
+                "serviceName", s.getService().getServiceName(),
+                "toothNumbers", s.getToothNumbers(),
+                "quantity", s.getQuantity(),
+                "unitPrice", s.getUnitPrice(),
+                "discountAmount", s.getDiscountAmount(),
+                "finalPrice", s.getFinalPrice(),
+                "doctorName", s.getDoctor() != null ? s.getDoctor().getFullName() : null,
+                "completedAt", text(s.getCompletedAt()),
+                "status", text(s.getStatus()),
+                "clinicalNotes", s.getClinicalNotes())).toList());
+
         root.put("prescriptions", prescriptionRows.stream().map(p -> mapOf(
-                "prescriptionCode", p.getPrescriptionCode(), "diagnosisText", p.getDiagnosisText(),
-                "adviceNotes", p.getAdviceNotes(), "followupDate", text(p.getFollowupDate()),
-                "items", p.getItems().stream().map(i -> mapOf("drugName", i.getDrugName(),
-                        "dosage", i.getDosage(), "durationDays", i.getDurationDays(),
-                        "quantity", i.getQuantity(), "unit", i.getUnit(),
-                        "usageInstruction", i.getUsageInstruction())).toList())).toList());
-        root.put("photos", photoRows.stream().map(p -> mapOf("stage", text(p.getPhotoStage()),
-                "category", text(p.getPhotoCategory()), "imageUrl", p.getImageUrl(),
-                "caption", p.getCaption(), "capturedAt", text(p.getCapturedAt()),
+                "prescriptionCode", p.getPrescriptionCode(),
+                "diagnosisText", p.getDiagnosisText(),
+                "adviceNotes", p.getAdviceNotes(),
+                "followupDate", text(p.getFollowupDate()),
+                "status", text(p.getStatus()),
+                "doctorName", p.getDoctor() != null ? p.getDoctor().getFullName() : null,
+                "items", p.getItems().stream().map(i -> mapOf(
+                        "drugName", i.getDrugName(),
+                        "activeIngredient", i.getMedication() != null ? i.getMedication().getActiveIngredient() : "",
+                        "dosage", i.getDosage(),
+                        "durationDays", i.getDurationDays(),
+                        "quantity", i.getQuantity(),
+                        "unit", i.getUnit(),
+                        "usageInstruction", i.getUsageInstruction(),
+                        "unitPrice", i.getUnitPrice())).toList()))
+                .toList());
+
+        // Bóc tách răng can thiệp phục vụ sơ đồ MS: BA-18 và visit detail
+        List<String> allIntervenedTeeth = new ArrayList<>();
+        List<Map<String, Object>> toothProcedures = new ArrayList<>();
+        List<String> toothProcedureSummary = new ArrayList<>();
+        Map<String, Map<String, Object>> toothInterventions = new LinkedHashMap<>();
+
+        for (PerformedService s : serviceRows) {
+            List<String> teeth = extractTeeth(s.getToothNumbers());
+            String procName = s.getService().getServiceName();
+            String docName = s.getDoctor() != null ? s.getDoctor().getFullName() : "";
+            for (String t : teeth) {
+                if (!allIntervenedTeeth.contains(t))
+                    allIntervenedTeeth.add(t);
+                toothProcedures.add(mapOf(
+                        "tooth", t,
+                        "procedureName", procName,
+                        "doctorName", docName,
+                        "status", text(s.getStatus()),
+                        "price", s.getFinalPrice(),
+                        "completedAt", text(s.getCompletedAt())));
+                toothInterventions.computeIfAbsent(t, k -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("tooth", k);
+                    m.put("procedures", new ArrayList<String>());
+                    m.put("diagnoses", new ArrayList<String>());
+                    m.put("notes", new ArrayList<String>());
+                    return m;
+                });
+                @SuppressWarnings("unchecked")
+                List<String> procs = (List<String>) toothInterventions.get(t).get("procedures");
+                if (!procs.contains(procName))
+                    procs.add(procName);
+            }
+            if (!teeth.isEmpty()) {
+                toothProcedureSummary.add("Răng " + String.join(", ", teeth) + ": " + procName
+                        + (docName.isBlank() ? "" : " (" + docName + ")"));
+            } else {
+                toothProcedureSummary.add(procName + (docName.isBlank() ? "" : " (" + docName + ")"));
+            }
+        }
+
+        for (ExaminationDiagnosis d : diagnosisRows) {
+            List<String> teeth = extractTeeth(d.getToothNumbers());
+            String diag = d.getDiagnosisText()
+                    + (d.getIcd10Disease() != null ? " (" + d.getIcd10Disease().getIcd10Code() + ")" : "");
+            for (String t : teeth) {
+                if (!allIntervenedTeeth.contains(t))
+                    allIntervenedTeeth.add(t);
+                toothInterventions.computeIfAbsent(t, k -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("tooth", k);
+                    m.put("procedures", new ArrayList<String>());
+                    m.put("diagnoses", new ArrayList<String>());
+                    m.put("notes", new ArrayList<String>());
+                    return m;
+                });
+                @SuppressWarnings("unchecked")
+                List<String> diags = (List<String>) toothInterventions.get(t).get("diagnoses");
+                if (!diags.contains(diag))
+                    diags.add(diag);
+            }
+        }
+
+        root.put("intervenedTeeth", allIntervenedTeeth);
+        root.put("toothProcedures", toothProcedures);
+        root.put("toothProcedureSummary", toothProcedureSummary);
+        root.put("toothInterventions", toothInterventions);
+
+        // Tóm tắt điều trị tổng hợp
+        StringBuilder summaryBuilder = new StringBuilder();
+        if (exam != null && exam.getSummaryAssessment() != null && !exam.getSummaryAssessment().isBlank()) {
+            summaryBuilder.append(exam.getSummaryAssessment()).append(". ");
+        }
+        if (!serviceRows.isEmpty()) {
+            summaryBuilder.append("Đã thực hiện: ");
+            List<String> sNames = serviceRows.stream().map(s -> s.getService().getServiceName()
+                    + (s.getToothNumbers() != null && !s.getToothNumbers().isBlank()
+                            ? " (R: " + s.getToothNumbers() + ")"
+                            : ""))
+                    .toList();
+            summaryBuilder.append(String.join(", ", sNames)).append(". ");
+        }
+        if (!prescriptionRows.isEmpty() && prescriptionRows.get(0).getFollowupDate() != null) {
+            summaryBuilder.append("Hẹn tái khám ngày: ")
+                    .append(prescriptionRows.get(0).getFollowupDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    .append(".");
+        }
+        root.put("treatmentSummary", summaryBuilder.toString().trim());
+
+        root.put("photos", photoRows.stream().map(p -> mapOf(
+                "photoId", p.getPhotoId(),
+                "stage", text(p.getPhotoStage()),
+                "category", text(p.getPhotoCategory()),
+                "imageUrl", p.getImageUrl(),
+                "caption", p.getCaption(),
+                "capturedAt", text(p.getCapturedAt()),
                 "sourceId", p.getPhotoId())).toList());
+
         root.put("xrays", xrays.findByMatchedVisit_VisitIdOrderByCapturedAtDesc(visit.getVisitId()).stream()
                 .map(x -> mapOf("studyUid", x.getExternalStudyUid(), "imageUrl", x.getImageUrl(),
-                        "toothNumbers", x.getToothNumbers(), "capturedAt", text(x.getCapturedAt()))).toList());
+                        "toothNumbers", x.getToothNumbers(), "capturedAt", text(x.getCapturedAt())))
+                .toList());
+
         root.put("laboOrders", laboOrders.findByVisit_VisitIdOrderBySentDateDesc(visit.getVisitId()).stream()
                 .map(l -> mapOf("code", l.getLaboCode(), "material", l.getMaterialType(),
                         "toothPositions", l.getToothPositions(), "status", text(l.getStatus()),
-                        "imageUrl", l.getImageUrl(), "notes", l.getNotes())).toList());
+                        "imageUrl", l.getImageUrl(), "notes", l.getNotes()))
+                .toList());
+
         root.put("visitHistory", visits.findByPatientProfile_ProfileIdOrderByCheckInAtDesc(patient.getProfileId())
                 .stream().filter(previous -> !Objects.equals(previous.getVisitId(), visit.getVisitId())
                         && !previous.getCheckInAt().isAfter(visit.getCheckInAt()))
                 .limit(30).map(previous -> mapOf("visitCode", previous.getVisitCode(),
                         "checkInAt", text(previous.getCheckInAt()),
                         "symptoms", previous.getInitialSymptoms(),
-                        "doctorName", previous.getPrimaryDoctor() == null ? null : previous.getPrimaryDoctor().getFullName(),
+                        "doctorName",
+                        previous.getPrimaryDoctor() == null ? null : previous.getPrimaryDoctor().getFullName(),
                         "diagnoses", diagnoses.findByVisitIdWithDetails(previous.getVisitId()).stream()
                                 .map(ExaminationDiagnosis::getDiagnosisText).toList(),
                         "services", performedServices.findByVisitIdWithDetails(previous.getVisitId()).stream()
-                                .map(service -> service.getService().getServiceName()).toList())).toList());
+                                .map(service -> service.getService().getServiceName()).toList()))
+                .toList());
+
         root.put("treatmentPlans", treatmentPlans.findByProfileIdWithDetails(patient.getProfileId()).stream()
                 .map(plan -> mapOf("code", plan.getPlanCode(), "name", plan.getPlanName(),
                         "status", text(plan.getStatus()), "notes", plan.getNotes(),
                         "stages", plan.getStages().stream().map(stage -> mapOf(
                                 "name", stage.getStageName(), "status", text(stage.getStatus()),
-                                "expectedEndDate", text(stage.getExpectedEndDate()))).toList())).toList());
+                                "expectedEndDate", text(stage.getExpectedEndDate()))).toList()))
+                .toList());
         return root;
+    }
+
+    public List<String> extractTeeth(String text) {
+        if (text == null || text.isBlank())
+            return List.of();
+        List<String> result = new ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b([1-4][1-8]|[5-8][1-5])\\b").matcher(text);
+        while (m.find()) {
+            String t = m.group(1);
+            if (!result.contains(t))
+                result.add(t);
+        }
+        return result;
+    }
+
+    public boolean isSoftDeleted(EmrRecord r) {
+        if (r == null)
+            return false;
+        try {
+            EmrRecordVersion cur = currentVersion(r);
+            return cur.getSnapshot() != null && Boolean.TRUE.equals(cur.getSnapshot().getIsDeleted());
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public boolean hasActiveRecord(Long visitId) {
+        if (visitId == null)
+            return false;
+        return records.findByVisit_VisitId(visitId)
+                .map(r -> !isSoftDeleted(r))
+                .orElse(false);
+    }
+
+    public Map<String, Object> getVisitSnapshot(Long visitId) {
+        Visit visit = visits.findWithDetailsById(visitId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám."));
+        return buildSource(visit);
+    }
+
+    public Optional<EmrRecord> findRecordByVisitId(Long visitId) {
+        return records.findByVisit_VisitId(visitId)
+                .filter(r -> !isSoftDeleted(r));
+    }
+
+    public record EmrRecordView(Long recordId, String recordCode, EmrRecordStatus status,
+            Integer currentVersionNumber, LocalDateTime updatedAt,
+            String doctorName, boolean signed) {
+    }
+
+    public EmrRecordView getEmrRecordViewForVisit(Long visitId) {
+        return findRecordByVisitId(visitId).map(r -> new EmrRecordView(
+                r.getRecordId(), r.getRecordCode(), r.getStatus(),
+                r.getCurrentVersionNumber(), r.getUpdatedAt(),
+                r.getVisit().getPrimaryDoctor() == null ? null : r.getVisit().getPrimaryDoctor().getFullName(),
+                r.getStatus() == EmrRecordStatus.SIGNED)).orElse(null);
     }
 
     private List<String> validateRecord(Visit visit, EmrRecordVersion version) {
         List<String> missing = validateSource(visit);
-        if (version == null) return missing;
+        if (version == null)
+            return missing;
         Map<String, String> summary = version.getDocuments().stream()
                 .filter(document -> "TREATMENT_SUMMARY".equals(document.getDocumentCode()))
                 .findFirst().map(this::documentManualFields).orElse(Map.of());
@@ -585,32 +986,45 @@ public class EmrModuleService {
         return missing;
     }
 
-    private boolean blank(String value) { return value == null || value.isBlank(); }
+    private boolean blank(String value) {
+        return value == null || value.isBlank();
+    }
 
     private List<String> warningsFor(Visit visit) {
         ClinicalExamination exam = examinations.findByVisit_VisitId(visit.getVisitId()).orElse(null);
         List<String> warnings = new ArrayList<>();
-        if (exam == null) return warnings;
-        if (blank(exam.getHistoryIllness())) warnings.add("Chưa ghi diễn biến bệnh sử; khai thác thêm ở lần khám tiếp theo.");
-        if (blank(exam.getVitalSignsJson())) warnings.add("Chưa ghi dấu hiệu sinh tồn.");
-        if (blank(exam.getExtraoralExam())) warnings.add("Chưa ghi khám ngoài miệng / khớp thái dương hàm.");
-        if (blank(exam.getIntraoralExam())) warnings.add("Chưa ghi khám trong miệng.");
-        if (blank(exam.getOdontogramChartJson())) warnings.add("Chưa có sơ đồ răng trong phiếu khám.");
+        if (exam == null)
+            return warnings;
+        if (blank(exam.getHistoryIllness()))
+            warnings.add("Chưa ghi diễn biến bệnh sử; khai thác thêm ở lần khám tiếp theo.");
+        if (blank(exam.getVitalSignsJson()))
+            warnings.add("Chưa ghi dấu hiệu sinh tồn.");
+        if (blank(exam.getExtraoralExam()))
+            warnings.add("Chưa ghi khám ngoài miệng / khớp thái dương hàm.");
+        if (blank(exam.getIntraoralExam()))
+            warnings.add("Chưa ghi khám trong miệng.");
+        if (blank(exam.getOdontogramChartJson()))
+            warnings.add("Chưa có sơ đồ răng trong phiếu khám.");
         return warnings;
     }
 
     private List<String> validateSource(Visit visit) {
         List<String> missing = new ArrayList<>();
         ClinicalExamination exam = examinations.findByVisit_VisitId(visit.getVisitId()).orElse(null);
-        if (exam == null) missing.add("Chưa có phiếu khám lâm sàng.");
+        if (exam == null)
+            missing.add("Chưa có phiếu khám lâm sàng.");
         String complaint = exam == null ? visit.getInitialSymptoms() : exam.getChiefComplaint();
-        if (complaint == null || complaint.isBlank()) missing.add("Thiếu lý do vào khám/triệu chứng chính.");
-        if (visit.getPrimaryDoctor() == null) missing.add("Chưa gán bác sĩ khám bệnh.");
+        if (complaint == null || complaint.isBlank())
+            missing.add("Thiếu lý do vào khám/triệu chứng chính.");
+        if (visit.getPrimaryDoctor() == null)
+            missing.add("Chưa gán bác sĩ khám bệnh.");
         List<ExaminationDiagnosis> rows = diagnoses.findByVisitIdWithDetails(visit.getVisitId());
         Optional<ExaminationDiagnosis> main = rows.stream()
                 .filter(d -> d.getDiagnosisType() == DiagnosisType.MAIN).findFirst();
-        if (main.isEmpty()) missing.add("Thiếu chẩn đoán chính.");
-        else if (main.get().getIcd10Disease() == null) missing.add("Chẩn đoán chính chưa có mã ICD-10.");
+        if (main.isEmpty())
+            missing.add("Thiếu chẩn đoán chính.");
+        else if (main.get().getIcd10Disease() == null)
+            missing.add("Chẩn đoán chính chưa có mã ICD-10.");
         if (exam != null && blank(exam.getSummaryAssessment()))
             missing.add("Thiếu kết luận khám lâm sàng.");
         if (visit.getPrimaryDoctor() != null && blank(visit.getPrimaryDoctor().getPracticeLicenseNo()))
@@ -660,59 +1074,93 @@ public class EmrModuleService {
     }
 
     private String toJson(Object value) {
-        try { return mapper.writeValueAsString(value); }
-        catch (JsonProcessingException ex) { throw new IllegalStateException("Không thể tạo snapshot bệnh án.", ex); }
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Không thể tạo snapshot bệnh án.", ex);
+        }
     }
 
     private String prettyJson(Object value) {
-        try { return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(value); }
-        catch (JsonProcessingException ex) { throw new IllegalStateException("Không thể xuất bệnh án.", ex); }
+        try {
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Không thể xuất bệnh án.", ex);
+        }
     }
 
     private Map<String, Object> parseJson(String json) {
-        try { return mapper.readValue(json, new TypeReference<>() {}); }
-        catch (JsonProcessingException ex) { throw new IllegalStateException("Snapshot bệnh án không hợp lệ.", ex); }
+        try {
+            return mapper.readValue(json, new TypeReference<>() {
+            });
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Snapshot bệnh án không hợp lệ.", ex);
+        }
     }
 
     private Map<String, Object> mapOf(Object... values) {
         Map<String, Object> map = new LinkedHashMap<>();
-        for (int i = 0; i < values.length; i += 2) map.put((String) values[i], values[i + 1]);
+        for (int i = 0; i < values.length; i += 2)
+            map.put((String) values[i], values[i + 1]);
         return map;
     }
 
-    private String text(Object value) { return value == null ? null : value.toString(); }
+    private String text(Object value) {
+        return value == null ? null : value.toString();
+    }
 
     private void conflict(String message) {
         throw new ResponseStatusException(HttpStatus.CONFLICT, message);
     }
 
     public record Dashboard(List<RecordRow> records, List<EligibleVisitRow> eligibleVisits,
-                            long total, long signed, long waitingSignature) {}
+            long total, long signed, long waitingSignature) {
+    }
+
     public record RecordRow(Long id, String code, Long visitId, String visitCode, Long patientId,
-                            String patientCode,
-                            String patientName, String branchName, String doctorName, LocalDateTime checkInAt,
-                            EmrRecordStatus status, Integer versionNumber, LocalDateTime updatedAt) {}
+            String patientCode,
+            String patientName, String branchName, String doctorName, LocalDateTime checkInAt,
+            EmrRecordStatus status, Integer versionNumber, LocalDateTime updatedAt) {
+    }
+
     public record EligibleVisitRow(Long visitId, String visitCode, String patientCode, String patientName,
-                                   LocalDateTime checkInAt, String branchName, String doctorName,
-                                   boolean ready, List<String> missing) {}
+            LocalDateTime checkInAt, String branchName, String doctorName,
+            boolean ready, List<String> missing) {
+    }
+
     public record RecordDetail(RecordRow record, Integer currentVersion, EmrVersionStatus versionStatus,
-                               String contentHash,
-                               Map<String, Object> snapshot, boolean stale, List<String> missing, List<String> warnings,
-                               List<DocumentRow> documents, Map<String, Map<String, String>> documentFields,
-                               List<AttachmentRow> attachments,
-                               List<SignatureRow> signatures,
-                               List<VersionRow> versions, List<AuditRow> audits,
-                               boolean canRefresh, boolean canValidate, boolean canLock,
-                               boolean canDoctorSign, boolean canAmend) {}
+            String contentHash,
+            Map<String, Object> snapshot, boolean stale, List<String> missing, List<String> warnings,
+            List<DocumentRow> documents, Map<String, Map<String, String>> documentFields,
+            List<AttachmentRow> attachments,
+            List<SignatureRow> signatures,
+            List<VersionRow> versions, List<AuditRow> audits,
+            boolean canRefresh, boolean canValidate, boolean canLock,
+            boolean canDoctorSign, boolean canAmend) {
+    }
+
     public record DocumentRow(String code, String title, String type, Integer sortOrder, String hash,
-                              Map<String, String> fields) {}
+            Map<String, String> fields) {
+    }
+
     public record AttachmentRow(Long id, String caption, String name, String mimeType,
-                                Long byteSize, String sha256, LocalDateTime capturedAt) {}
-    public record AttachmentDownload(byte[] bytes, String mimeType, String name) {}
+            Long byteSize, String sha256, LocalDateTime capturedAt) {
+    }
+
+    public record AttachmentDownload(byte[] bytes, String mimeType, String name) {
+    }
+
     public record SignatureRow(Long id, EmrSignerType type, String signerName, String provider,
-                               EmrSignatureStatus status, LocalDateTime signedAt, String transactionId) {}
+            EmrSignatureStatus status, LocalDateTime signedAt, String transactionId) {
+    }
+
     public record VersionRow(Integer number, EmrVersionStatus status, LocalDateTime createdAt,
-                             LocalDateTime lockedAt, LocalDateTime signedAt, String reason, String hash) {}
-    public record AuditRow(String action, String details, String actor, LocalDateTime createdAt) {}
-    public record ValidationResult(boolean ready, List<String> missing) {}
+            LocalDateTime lockedAt, LocalDateTime signedAt, String reason, String hash) {
+    }
+
+    public record AuditRow(String action, String details, String actor, LocalDateTime createdAt) {
+    }
+
+    public record ValidationResult(boolean ready, List<String> missing) {
+    }
 }
