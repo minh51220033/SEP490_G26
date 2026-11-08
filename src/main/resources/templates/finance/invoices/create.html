@@ -477,7 +477,7 @@
                                 <span th:if="${plan.sentToAccounting}" class="badge bg-success text-white">
                                     <i class="bi bi-check2-all me-1"></i>Đã chuyển Kế toán
                                 </span>
-                                <span th:if="${!plan.sentToAccounting}" class="badge bg-light text-muted border">
+                                <span th:if="${plan.sentToAccounting == null or plan.sentToAccounting == false}" class="badge bg-light text-muted border">
                                     Chưa chuyển
                                 </span>
                             </td>
