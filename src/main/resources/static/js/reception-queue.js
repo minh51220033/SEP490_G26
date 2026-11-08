@@ -149,7 +149,38 @@ function initialiseQueue() {
         filter.addEventListener('change', applyFilter);
     }
 
+    function updateQueueViews() {
+        const btnTable = document.getElementById('btnViewQueueTable');
+        const isTable = btnTable && btnTable.classList.contains('active');
+        const tableSec = document.getElementById('viewQueueTableSection');
+        const kanbanSec = document.getElementById('viewQueueKanbanSection');
+        if (tableSec && kanbanSec) {
+            tableSec.style.display = isTable ? '' : 'none';
+            kanbanSec.style.display = isTable ? 'none' : '';
+        }
+    }
+
+    const btnTable = document.getElementById('btnViewQueueTable');
+    const btnKanban = document.getElementById('btnViewQueueKanban');
+    if (btnTable && btnKanban) {
+        btnTable.addEventListener('click', () => {
+            btnTable.classList.add('btn-primary', 'active');
+            btnTable.classList.remove('btn-outline-secondary');
+            btnKanban.classList.remove('btn-primary', 'active');
+            btnKanban.classList.add('btn-outline-secondary');
+            updateQueueViews();
+        });
+        btnKanban.addEventListener('click', () => {
+            btnKanban.classList.add('btn-primary', 'active');
+            btnKanban.classList.remove('btn-outline-secondary');
+            btnTable.classList.remove('btn-primary', 'active');
+            btnTable.classList.add('btn-outline-secondary');
+            updateQueueViews();
+        });
+    }
+
     bindQueueActions();
+    updateQueueViews();
 
     async function refresh() {
         if (board.querySelector('details[open]') || board.contains(document.activeElement) || document.querySelector('.modal.show')) {
@@ -166,6 +197,7 @@ function initialiseQueue() {
                 board = fresh;
                 applyFilter();
                 bindQueueActions();
+                updateQueueViews();
             }
         } catch (_) {
             return;
