@@ -1475,15 +1475,17 @@
             }
             patientSearchTimer = setTimeout(async () => {
                 try {
-                    const patientBranchId = $('modalBranchId')?.value || branch.value;
-                    if (!patientBranchId) {
-                        resultsBox.innerHTML = '<div class="p-2 text-muted small">Vui lòng chọn chi nhánh trước khi tìm khách hàng.</div>';
-                        resultsBox.style.display = 'block';
-                        return;
+                    let patientBranchId = $('modalBranchId')?.value || $('filterBranch')?.value || '';
+                    if (!patientBranchId && options?.branches?.length) {
+                        patientBranchId = String(options.branches[0].id);
+                        if ($('modalBranchId')) $('modalBranchId').value = patientBranchId;
                     }
-                    const patients = await request(`/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`);
+                    const url = patientBranchId
+                        ? `/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`
+                        : `/patients?query=${encodeURIComponent(query)}`;
+                    const patients = await request(url);
                     resultsBox.replaceChildren();
-                    if (!patients.length) {
+                    if (!patients || !patients.length) {
                         resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy khách hàng cũ. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
                     } else {
                         patients.forEach(p => {
@@ -1506,7 +1508,8 @@
                     }
                     resultsBox.style.display = 'block';
                 } catch (err) {
-                    resultsBox.style.display = 'none';
+                    resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy hồ sơ hoặc lỗi kết nối. Bạn có thể nhập khách mới bên dưới.</div>';
+                    resultsBox.style.display = 'block';
                 }
             }, 250);
         });
@@ -2206,6 +2209,11 @@
             if (branchParam && options.branches.some(b => String(b.id) === branchParam)) $('branchId').value = branchParam;
             const dateParam = new URLSearchParams(location.search).get('date');
             if (dateParam && dateParam >= today()) $('appointmentDate').value = dateParam;
+            const queryParam = new URLSearchParams(location.search).get('query');
+            if (queryParam) {
+                $('patientSearch').value = queryParam;
+                setTimeout(() => findPatient().catch(e => error(e.message)), 150);
+            }
         }
 
         let patientSeq = 0, availabilitySeq = 0, available = false;
