@@ -22,6 +22,39 @@ public class DoctorParaclinicalRestController {
 
     private final ParaclinicalOrderService paraclinicalOrderService;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    private final com.cvdcms.service.NanoPixIntegrationService nanoPixIntegrationService;
+
+    /**
+     * Tải file ảnh kết quả cận lâm sàng (Panorama, CT, X-quang, Xét nghiệm, Ảnh chụp thường)
+     */
+    @PostMapping(value = "/paraclinical-orders/{orderItemId}/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadResultImage(
+            @PathVariable("orderItemId") Long orderItemId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "resultSummary", required = false) String resultSummary,
+            jakarta.servlet.http.HttpSession session
+    ) {
+        doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
+        try {
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng chọn file ảnh kết quả cần tải lên."));
+            }
+            String imageUrl = nanoPixIntegrationService.storeXrayImage(file);
+            ParaclinicalOrderCreateDTO dto = ParaclinicalOrderCreateDTO.builder()
+                    .imageUrl(imageUrl)
+                    .resultSummary(resultSummary != null && !resultSummary.isBlank() ? resultSummary.trim() : "Đã tải ảnh kết quả")
+                    .status("COMPLETED")
+                    .build();
+            ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Lỗi khi tải ảnh kết quả cận lâm sàng cho orderItemId {}: {}", orderItemId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi tải ảnh kết quả: " + e.getMessage()));
+        }
+    }
 
     /**
      * SCR-11.3: Lấy danh sách chỉ định cận lâm sàng theo lượt khám
