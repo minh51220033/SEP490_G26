@@ -13,7 +13,7 @@
                     <div class="d-flex align-items-center">
                         <i class="bi bi-chevron-right df-foldable-chevron text-secondary" id="chevron-treatment"></i>
                         <span class="df-foldable-title">CHẨN ĐOÁN VÀ ĐIỀU TRỊ</span>
-                        <span class="df-foldable-subtitle d-none d-md-inline">(Chẩn đoán ICD-10, Kế hoạch điều trị FT15, Dịch vụ thực hiện FT16, Đơn thuốc FT18)</span>
+                        <span class="df-foldable-subtitle d-none d-md-inline">(Chẩn đoán ICD-10, Kế hoạch điều trị, Dịch vụ thực hiện, Đơn thuốc)</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-primary-subtle text-primary border border-primary small fw-semibold" id="treatmentSummaryBadge">
@@ -502,7 +502,7 @@
                             <div class="df-presc-title-box">
                                 <h3 class="df-presc-title">
                                     <i class="bi bi-capsule text-primary"></i>
-                                    <span>Đơn thuốc &amp; Dặn dò bệnh nhân (FT18)</span>
+                                    <span>Đơn thuốc &amp; Dặn dò bệnh nhân</span>
                                 </h3>
                                 <span class="df-treatment-count-badge" id="prescCountBadge"
                                       th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn thuốc'">
@@ -718,7 +718,7 @@
                         <div class="d-flex align-items-center justify-content-between mb-1.5">
                             <label class="form-label fw-bold small text-dark mb-0 d-flex align-items-center gap-1.5">
                                 <i class="bi bi-diagram-3-fill text-primary"></i>
-                                <span>Chọn từ Kế hoạch điều trị (FT15)</span>
+                                <span>Chọn từ Kế hoạch điều trị</span>
                             </label>
                             <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill" style="font-size: 10px;">Tự điền dịch vụ</span>
                         </div>

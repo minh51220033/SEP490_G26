@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê - FT29/FT30')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
     <style>
@@ -135,12 +135,13 @@
             <!-- Page Header -->
             <div class="fin-header d-flex flex-wrap justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="h3 fw-bold text-dark mb-1">Báo cáo & Thống kê Quản trị (FT29–30)</h1>
+                    <h1 class="h3 fw-bold text-dark mb-1">Báo cáo & Thống kê Quản trị</h1>
                     <p class="text-muted mb-0">
                         Phân tích doanh thu, thực thu dòng tiền, chi phí vận hành, công nợ viện phí và hiệu suất điều trị theo cơ sở.
                     </p>
                 </div>
-                <div class="d-flex gap-2 mt-2 mt-md-0">
+                <div class="d-flex gap-2 mt-2 mt-md-0 align-items-center">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2 shadow-sm"
                             data-bs-toggle="modal" data-bs-target="#exportExcelModal">
                         <i class="bi bi-file-earmark-excel"></i> Xuất Excel (.xlsx)
@@ -576,7 +577,7 @@
                                 <tr class="table-light">
                                     <td colspan="3" class="py-2">
                                         <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2">
-                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương (FT32): <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
+                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
                                             <span th:if="${!financial.taxConfigured}" class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Chưa đủ cơ sở tính thuế</span>
                                         </div>
                                     </td>

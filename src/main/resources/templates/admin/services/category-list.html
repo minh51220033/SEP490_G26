@@ -94,8 +94,8 @@
               </a>
             </div>
 
-            <!-- 4. Nút Thêm nhóm dịch vụ (đặt phía bên phải) -->
-            <div class="col-12 col-md-auto ms-md-auto text-end">
+            <!-- 4. Nút Thêm nhóm dịch vụ & Bộ chọn cơ sở chuẩn DentalSoft -->
+            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
               <button type="button"
                       class="btn btn-primary"
                       data-bs-toggle="modal"
@@ -103,6 +103,7 @@
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
                 Thêm nhóm dịch vụ
               </button>
+              <div th:replace="~{fragments/header :: branchSelectInline}"></div>
             </div>
           </div>
         </form>
