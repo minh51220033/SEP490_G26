@@ -11,19 +11,16 @@ import java.util.Optional;
 public interface ReceptionAppointmentPatientRepository extends JpaRepository<PatientProfile, Long> {
     @Query("""
         SELECT p FROM PatientProfile p WHERE p.status = 'ACTIVE'
-          AND (p.preferredBranch.branchId = :branchId OR EXISTS
-              (SELECT a.appointmentId FROM Appointment a WHERE a.patientProfile = p AND a.branch.branchId = :branchId))
           AND (LOWER(p.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
                OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :query, '%'))
-               OR p.phoneNumber LIKE CONCAT('%', :query, '%'))
+               OR p.phoneNumber LIKE CONCAT('%', :query, '%')
+               OR (p.idCardNumber IS NOT NULL AND p.idCardNumber LIKE CONCAT('%', :query, '%')))
         ORDER BY p.fullName, p.profileId
         """)
-    List<PatientProfile> search(@Param("branchId") Long branchId, @Param("query") String query);
+    List<PatientProfile> search(@Param("query") String query);
 
     @Query("""
         SELECT p FROM PatientProfile p WHERE p.profileId = :id AND p.status = 'ACTIVE'
-          AND (p.preferredBranch.branchId = :branchId OR EXISTS
-              (SELECT a.appointmentId FROM Appointment a WHERE a.patientProfile = p AND a.branch.branchId = :branchId))
         """)
-    Optional<PatientProfile> findBookable(@Param("id") Long id, @Param("branchId") Long branchId);
+    Optional<PatientProfile> findBookable(@Param("id") Long id);
 }
