@@ -11,18 +11,6 @@
 <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar
        th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
                 displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? (session.loggedInUser.fullName != null and !#strings.isEmpty(session.loggedInUser.fullName) ? session.loggedInUser.fullName : session.loggedInUser.username) : '')}">
-    <style>
-        .side-icon-labo {
-            color: #0284c7 !important;
-            transition: color .15s ease;
-        }
-        .side-link:hover .side-icon-labo {
-            color: #0369a1 !important;
-        }
-        .side-link.is-active .side-icon-labo {
-            color: #38bdf8 !important;
-        }
-    </style>
 
     <!-- Đầu sidebar: cùng chiều cao & màu với topbar để liền mạch -->
     <div class="app-sidebar__head">
@@ -296,33 +284,12 @@
             </div>
         </div>
 
-        <!-- CẬN LÂM SÀNG -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_EXAM_WRITE') or #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-             th:classappend="${activeMenu == 'xray'} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false" aria-controls="sgLab">
-                <i class="bi bi-bounding-box" aria-hidden="true"></i>
-                <span class="side-group__label">Cận lâm sàng</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgLab">
-                <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY'))}"
-                       th:href="@{/xray}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'xray'} ? 'is-active' : ''"
-                       title="Trình xem ảnh X-quang tích hợp NanoPix">
-                        <i class="bi bi-radioactive" aria-hidden="true"></i><span class="side-link__label">Phim X-quang NanoPix</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-
         <!-- QUẢN LÝ LABO -->
         <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))}"
            th:href="@{/doctor/labo}" class="side-link"
            th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
            title="Quản lý labo gia công">
-            <i class="bi bi-box-seam-fill side-icon-labo" aria-hidden="true"></i><span class="side-link__label">Quản lý labo</span>
+            <i class="bi bi-box-seam" aria-hidden="true"></i><span class="side-link__label">Quản lý labo</span>
         </a>
 
         <!-- HỒ SƠ & TÁI KHÁM -->

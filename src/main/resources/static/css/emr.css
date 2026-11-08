@@ -32,6 +32,10 @@
 /* =========================================================================
    1. GLOBAL STYLES (Loại bỏ triệt để font có chân Georgia)
    ========================================================================= */
+html {
+    scrollbar-gutter: stable;
+}
+
 body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
 }
@@ -516,17 +520,17 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
 .emr-tree-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
 .emr-tree-item {
-    border: 1.5px solid transparent;
+    border: 1px solid #e2e8f0;
     background: #ffffff;
     border-radius: 10px;
-    padding: 11px 12px;
+    padding: 10px 12px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -534,23 +538,33 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     transition: all 0.15s ease;
     text-align: left;
     width: 100%;
+    outline: none !important;
+    box-sizing: border-box;
+}
+
+.emr-tree-item:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .emr-tree-item:hover {
     background: #f8fafc;
-    border-color: #e2e8f0;
+    border-color: #cbd5e1;
 }
 
 .emr-tree-item.is-active {
     background: #f0f9ff;
-    border-color: #bae6fd;
+    border-color: #0284c7;
     color: var(--emr-primary);
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
 }
 
 .emr-tree-item .tree-icon {
     font-size: 16px;
     color: #64748b;
     flex-shrink: 0;
+    width: 20px;
+    text-align: center;
 }
 
 .emr-tree-item.is-active .tree-icon {
@@ -579,6 +593,24 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     color: var(--emr-text-muted);
     display: block;
     margin-top: 2px;
+}
+
+.emr-tree-item.is-active .tree-sub {
+    color: #0284c7;
+    opacity: 0.85;
+}
+
+.emr-tree-item .tree-arrow {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.emr-tree-item.is-active .tree-arrow {
+    color: var(--emr-primary);
+    transform: translateX(2px);
 }
 
 /* =========================================================================
@@ -664,6 +696,38 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     padding: 1px 4px;
     line-height: inherit;
     transition: border-color 0.2s, background-color 0.2s;
+}
+
+/* Trong chế độ xem (View Mode): ẩn placeholder để không hiển thị chữ mờ giả dạng nội dung */
+.emr-canvas-right:not(.is-edit-mode) .emr-inline-input::placeholder,
+.emr-canvas-right:not(.is-edit-mode) .emr-inline-textarea::placeholder {
+    color: transparent !important;
+}
+
+/* Ẩn dòng Cơ sở / Mã khi không có dữ liệu ở chế độ xem */
+.emr-branch-row.emr-hide-when-view-empty,
+.emr-canvas-right:not(.is-edit-mode) .emr-hide-when-view-empty {
+    display: none !important;
+}
+.emr-canvas-right.is-edit-mode .emr-branch-row.emr-hide-when-view-empty {
+    display: flex !important;
+}
+.emr-canvas-right.is-edit-mode .emr-hide-when-view-empty {
+    display: inline-flex !important;
+}
+
+/* Khối chữ ký: Ô nhập co giãn theo cột, căn giữa và chống cắt chữ dài */
+.moh-signature-block .emr-inline-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+}
+
+.emr-canvas-right:not(.is-edit-mode) .moh-signature-block .emr-inline-input {
+    white-space: normal !important;
+    word-break: break-word !important;
+    height: auto !important;
 }
 
 .emr-canvas-right.is-edit-mode .emr-inline-input,
@@ -801,8 +865,33 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
 }
 
 .moh-header-right {
-    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     font-size: 12px;
+}
+
+.moh-header-right .emr-header-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.moh-header-right .emr-header-meta-label {
+    min-width: 68px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--emr-text-dark, #0f172a);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.moh-header-right .emr-header-meta-row .emr-inline-input {
+    width: 180px !important;
+    min-width: 180px;
+    box-sizing: border-box !important;
+    text-align: left;
 }
 
 .moh-header-right .ba-code {
@@ -928,52 +1017,92 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     border-radius: 0;
 }
 
-/* Header trên sơ đồ răng: Định hướng & Phân loại khe hở môi vòm miệng (Item 10) */
-.dental-chart-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
+/* Bảng khám lâm sàng chuyên khoa Răng Hàm Mặt & Phân loại khe hở (MS: BA-18) */
+.emr-exam-cleft-section {
+    margin-top: 14px;
     margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px dashed #e2e8f0;
-}
-
-.chart-orientation-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 280px;
-}
-
-.orientation-top-row {
-    display: flex;
-    justify-content: space-between;
     width: 100%;
-    font-size: 13px;
-    font-weight: 700;
+}
+
+.emr-cleft-grid-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: transparent;
+    border: none;
+}
+
+.emr-cleft-grid-table th {
+    background: transparent;
     color: #1e293b;
-    padding: 0 8px;
-}
-
-.orientation-sub-row {
-    font-size: 12px;
-    font-weight: 600;
-    color: #475569;
-    margin-top: 4px;
-}
-
-.cleft-classification-text {
-    font-size: 12px;
-    color: #334155;
-    line-height: 1.6;
-    text-align: right;
-}
-
-.cleft-classification-text .classification-title {
     font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 3px;
+    font-size: 12px;
+    padding: 6px 4px;
+    vertical-align: middle;
+    border: none;
+}
+
+.emr-cleft-grid-table th.cleft-col-header {
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+.emr-cleft-grid-table td {
+    border: none;
+    background: transparent;
+    vertical-align: top;
+    padding: 4px;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table th {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table td {
+    border: 1px solid #cbd5e1;
+}
+
+.emr-cleft-grid-table .cleft-col-cell {
+    font-size: 11px;
+    color: #334155;
+    line-height: 1.45;
+}
+
+.emr-cleft-grid-table .cleft-legend-list {
+    font-size: 11px;
+    color: #334155;
+    line-height: 1.45;
+    padding-left: 2px;
+}
+
+.emr-cleft-grid-table .emr-inline-textarea {
+    width: 100% !important;
+    min-height: 52px;
+    font-size: 11.5px;
+    padding: 3px 5px;
+    border: 1px dashed transparent;
+    background: transparent;
+    resize: vertical;
+    line-height: 1.45;
+    word-break: break-word;
+    box-sizing: border-box;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table .emr-inline-textarea {
+    border: 1.5px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+}
+
+.emr-canvas-right.is-edit-mode .emr-cleft-grid-table .emr-inline-textarea:focus {
+    border-color: #0284c7 !important;
+    background: #ffffff !important;
 }
 
 .dental-cross-container {
@@ -1159,24 +1288,28 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
    ========================================================================= */
 .moh-signature-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
     margin-top: 40px;
+    width: 100%;
     text-align: center;
 }
 
-/* Khối chữ ký bìa bệnh án Tờ 1: Đẩy xuống dưới gần chân trang và dịch sang bên trái */
+/* Khối chữ ký bìa bệnh án Tờ 1: Cân đối giữa hai bên và co giãn theo kích thước chữ */
 .emr-cover-signature-grid {
-    margin-top: 180px !important;
-    max-width: 620px !important;
+    margin-top: 60px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin-left: 0 !important;
-    margin-right: auto !important;
+    margin-right: 0 !important;
 }
 
 .moh-signature-block {
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-width: 0;
+    width: 100%;
 }
 
 .moh-signature-block .signer-title {
@@ -1418,6 +1551,51 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     padding: 10px 0 !important;
 }
 
+/* NÚT KÝ TÊN BỆNH ÁN (NỀN TRẮNG, KHÔNG BỊ ĐEN KHI CLICK/ACTIVE) */
+.emr-btn-sign {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 50rem !important;
+    padding: 5px 14px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    text-decoration: none !important;
+    user-select: none !important;
+}
+.emr-btn-sign:hover {
+    background: #f8fafc !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.emr-btn-sign:active,
+.emr-btn-sign:focus {
+    background: #f1f5f9 !important;
+    border-color: #64748b !important;
+    color: #0f172a !important;
+    transform: translateY(0) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.emr-btn-sign i {
+    color: #0f172a !important;
+    font-size: 13px !important;
+}
+
+.is-print-mode .emr-hide-print,
+.emr-canvas-right.is-print-mode .emr-hide-print {
+    display: none !important;
+}
+
 .is-print-mode .emr-paper,
 .emr-paper.is-print-mode,
 .emr-canvas-right.is-print-mode .emr-paper {
@@ -1580,6 +1758,14 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     background: transparent !important;
 }
 
+.is-print-mode .emr-cleft-grid-table,
+.is-print-mode .emr-cleft-grid-table th,
+.is-print-mode .emr-cleft-grid-table td {
+    border-color: #000000 !important;
+    color: #000000 !important;
+    background: transparent !important;
+}
+
 /* 7. Trường nhập liệu inline phẳng, trong suốt */
 .is-print-mode .emr-paper .emr-inline-input,
 .is-print-mode .emr-paper .emr-inline-textarea {
@@ -1684,7 +1870,6 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     .is-print-mode .emr-paper.is-active,
     .emr-canvas-right.is-print-mode .emr-paper.is-active {
         display: block !important;
-    }
     }
 
     /* Mọi chữ đen 100% */
@@ -1849,6 +2034,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         color: transparent !important;
     }
 
+    .emr-exam-cleft-section, .emr-cleft-grid-table,
     .dental-chart-section, .permanent-chart-grid, .primary-chart-grid {
         break-inside: avoid;
         page-break-inside: avoid;

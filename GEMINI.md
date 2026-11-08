@@ -2,11 +2,12 @@
 
 Mọi phản hồi và hành động của AI trong dự án này bắt buộc phải tuân thủ nghiêm ngặt các quy tắc sau:
 
-## 1. Sửa thẳng code - Không chạy lệnh thừa
+## 1. Sửa thẳng code - Không chạy lệnh thừa & Không phân tích dông dài
 - Nhận yêu cầu / link / ảnh → Xác định ngay file đích → Dùng tool sửa trực tiếp đúng vị trí cần sửa.
-- Không quét tìm kiếm (`grep`) vòng quanh các file không liên quan.
-- Không gọi nhiều lệnh kiểm tra trạng thái trước và sau khi sửa.
-- Phản hồi ngắn gọn, chỉ rõ vị trí và nội dung vừa sửa.
+- Tuyệt đối KHÔNG chạy chuỗi lệnh kiểm tra/đọc thừa trước và sau khi sửa (không chạy git diff, không git status, không đọc lại nhiều lần các đoạn không liên quan).
+- Thao tác 1 bước duy nhất: Chỉ gọi đúng tool sửa file và trả lời ngay.
+- Không tốn thời gian suy nghĩ / phân tích lan man: Vào thẳng nội dung sửa.
+- Phản hồi siêu ngắn gọn (1-2 câu), chỉ rõ vị trí và nội dung vừa sửa.
 
 ## 2. Tuyệt đối KHÔNG chạy Maven build / test
 - KHÔNG chạy `./mvnw`, `mvn compile`, `mvn test`, `mvn test-compile` hay bất kỳ lệnh build nào trừ khi người dùng yêu cầu đích danh.

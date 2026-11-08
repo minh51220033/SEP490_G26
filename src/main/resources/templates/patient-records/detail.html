@@ -592,7 +592,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tab-emr-btn" data-bs-toggle="tab" data-bs-target="#tab-emr" type="button" role="tab" aria-controls="tab-emr" aria-selected="false">
-                        <i class="bi bi-file-earmark-medical-fill"></i> Hồ sơ bệnh án (BAĐT)
+                        <i class="bi bi-file-earmark-medical-fill"></i> Hồ sơ bệnh án
                         <span class="badge bg-secondary ms-1" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}" th:text="${emrRecords.size()}">0</span>
                     </button>
                 </li>
@@ -896,7 +896,7 @@
                                         <i class="bi bi-credit-card-fill text-warning"></i> Chờ thanh toán
                                     </button>
                                     <button type="button" class="dv-seg-btn" data-filter="HAS_EMR" onclick="setTreatmentStatusFilter('HAS_EMR', this)">
-                                        <i class="bi bi-file-earmark-medical-fill text-info"></i> Đã có BAĐT
+                                        <i class="bi bi-file-earmark-medical-fill text-info"></i> Đã có Bệnh án
                                     </button>
                                 </div>
                                 <div class="text-muted small">
@@ -924,7 +924,7 @@
                                             <th style="width: 220px;">Chẩn đoán lâm sàng</th>
                                             <th>Dịch vụ / Thủ thuật thực hiện</th>
                                             <th class="text-center" style="width: 135px;">Trạng thái</th>
-                                            <th class="text-center" style="width: 150px;">Hồ sơ BAĐT</th>
+                                            <th class="text-center" style="width: 150px;">Hồ sơ Bệnh án</th>
                                             <th class="text-center" style="width: 165px;">Thao tác</th>
                                         </tr>
                                     </thead>
@@ -982,8 +982,8 @@
                                                 </a>
                                                 <form th:if="${item.emrRecordId == null}" th:action="@{/emr/records}" method="post" class="d-inline">
                                                     <input type="hidden" name="visitId" th:value="${item.visitId}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2" style="font-size: 12px;" title="Khởi tạo Bệnh án điện tử cho đợt khám này">
-                                                        <i class="bi bi-plus-circle me-1"></i>Tạo BAĐT
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2" style="font-size: 12px;" title="Khởi tạo Bệnh án cho đợt khám này">
+                                                        <i class="bi bi-plus-circle me-1"></i>Tạo Bệnh án
                                                     </button>
                                                 </form>
                                             </td>
@@ -1121,7 +1121,7 @@
                             <div class="dv-kpi-card active-filter" style="--kpi-accent: #0284c7;" onclick="setEmrStatusFilter('', this)">
                                 <div>
                                     <div class="dv-kpi-num" th:text="${emrTotal != null ? emrTotal : 0}">0</div>
-                                    <div class="dv-kpi-label">Tổng số BAĐT</div>
+                                    <div class="dv-kpi-label">Tổng số Bệnh án</div>
                                     <div class="dv-kpi-sub">Hồ sơ pháp lý lưu trữ</div>
                                 </div>
                                 <div class="dv-kpi-icon bg-primary-subtle text-primary">
@@ -1167,19 +1167,19 @@
                         </div>
                     </div>
 
-                    <!-- Toolbar Lọc & Phân loại BAĐT chuẩn /doctor/daily-visits -->
+                    <!-- Toolbar Lọc & Phân loại Bệnh án chuẩn /doctor/daily-visits -->
                     <div class="dv-toolbar-card mb-3">
                         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
                             <div class="dv-search-box">
                                 <i class="bi bi-search search-lead-icon"></i>
-                                <input type="text" id="emrSearchInput" placeholder="Tìm theo Mã BAĐT, Mã lượt khám, Bác sĩ điều trị..." oninput="filterEmrTable()">
+                                <input type="text" id="emrSearchInput" placeholder="Tìm theo Mã Bệnh án, Mã lượt khám, Bác sĩ điều trị..." oninput="filterEmrTable()">
                                 <button type="button" class="search-clear-btn" onclick="document.getElementById('emrSearchInput').value=''; filterEmrTable();" title="Xóa tìm kiếm">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Lọc theo thời gian -->
-                                <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian lập BAĐT">
+                                <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian lập Bệnh án">
                                     <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
                                     <select class="form-select form-select-sm dv-preset-select" id="emrDatePreset" onchange="applyDatePreset('emr', filterEmrTable)">
                                         <option value="ALL">Tất cả thời gian</option>
@@ -1204,14 +1204,14 @@
                                     <option value="SIGNED">Đã ký số &amp; Khóa</option>
                                 </select>
                                 <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1.5 fw-bold px-3 py-2 shadow-sm" style="border-radius: 9px;" data-bs-toggle="modal" data-bs-target="#createEmrModal">
-                                    <i class="bi bi-plus-lg"></i> Tạo Bệnh án điện tử
+                                    <i class="bi bi-plus-lg"></i> Tạo Bệnh án
                                 </button>
                             </div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                             <div class="dv-quick-segment" id="emrStatusSegment">
                                 <button type="button" class="dv-seg-btn active" data-status="" onclick="setEmrStatusFilter('', null)">
-                                    Tất cả BAĐT <span class="dv-seg-count" th:text="${emrTotal != null ? emrTotal : 0}">0</span>
+                                    Tất cả Bệnh án <span class="dv-seg-count" th:text="${emrTotal != null ? emrTotal : 0}">0</span>
                                 </button>
                                 <button type="button" class="dv-seg-btn" data-status="DRAFT" onclick="setEmrStatusFilter('DRAFT', null)">
                                     <i class="bi bi-file-earmark-text text-secondary"></i> Đang mở / Nháp <span class="dv-seg-count" th:text="${emrDraft != null ? emrDraft : 0}">0</span>
@@ -1229,11 +1229,11 @@
                         </div>
                     </div>
 
-                    <!-- Bảng danh sách Bệnh án điện tử chuẩn .dv-grid-card + .dv-amis-table -->
+                    <!-- Bảng danh sách Bệnh án chuẩn .dv-grid-card + .dv-amis-table -->
                     <div class="dv-grid-card">
                         <div class="dv-grid-topbar">
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
-                                <i class="bi bi-file-earmark-medical-fill me-1"></i>Danh sách Hồ sơ bệnh án điện tử (Chuẩn Bộ Y Tế MS: BA-18)
+                                <i class="bi bi-file-earmark-medical-fill me-1"></i>Danh sách Hồ sơ bệnh án (Chuẩn Bộ Y Tế MS: BA-18)
                             </span>
                             <small class="text-muted">Lưu trữ phiên bản, chữ ký số và liên kết trực tiếp với đợt khám</small>
                         </div>
@@ -1242,7 +1242,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 50px;" class="text-center">STT</th>
-                                        <th style="width: 150px;">Mã BAĐT</th>
+                                        <th style="width: 150px;">Mã Bệnh án</th>
                                         <th style="width: 145px;">Lượt khám liên kết</th>
                                         <th style="width: 120px;">Ngày lập</th>
                                         <th>Biểu mẫu chuyên khoa</th>
@@ -1255,9 +1255,9 @@
                                     <tr th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}" class="empty-row">
                                         <td colspan="8" class="text-center text-muted py-5">
                                             <i class="bi bi-folder-x fs-2 d-block mb-2 text-secondary"></i>
-                                            Bệnh nhân chưa có Bệnh án điện tử nào.<br>
+                                            Bệnh nhân chưa có Bệnh án nào.<br>
                                             <button type="button" class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#createEmrModal">
-                                                <i class="bi bi-plus-lg me-1"></i>Tạo Bệnh án điện tử ngay
+                                                <i class="bi bi-plus-lg me-1"></i>Tạo Bệnh án ngay
                                             </button>
                                         </td>
                                     </tr>
@@ -1952,23 +1952,23 @@
     </div>
 </div>
 
-<!-- Modal 10: Tạo Bệnh án điện tử tại chỗ theo lượt khám -->
+<!-- Modal 10: Tạo Bệnh án tại chỗ theo lượt khám -->
 <div class="modal fade" id="createEmrModal" tabindex="-1" aria-labelledby="createEmrModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form th:action="@{/emr/records}" method="post">
                 <div class="modal-header bg-light border-bottom">
                     <h5 class="modal-title fw-bold text-dark" id="createEmrModalLabel">
-                        <i class="bi bi-plus-circle-fill text-primary me-2"></i>Tạo Bệnh án điện tử mới
+                        <i class="bi bi-plus-circle-fill text-primary me-2"></i>Tạo Bệnh án mới
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-info small mb-3">
-                        Bệnh án điện tử (MS: BA-18) được lập cho từng đợt khám và sẽ tự động kế thừa chẩn đoán, thủ thuật và đơn thuốc từ ca khám nguồn.
+                        Bệnh án (MS: BA-18) được lập cho từng đợt khám và sẽ tự động kế thừa chẩn đoán, thủ thuật và đơn thuốc từ ca khám nguồn.
                     </div>
                     <div class="mb-3">
-                        <label for="emrVisitSelect" class="form-label fw-bold">Chọn Lượt khám cần lập BAĐT:</label>
+                        <label for="emrVisitSelect" class="form-label fw-bold">Chọn Lượt khám cần lập Bệnh án:</label>
                         <select class="form-select" id="emrVisitSelect" name="visitId" required>
                             <option value="">-- Chọn ca khám --</option>
                             <option th:each="v : ${visits}" th:value="${v.id != null ? v.id : (v.visitId != null ? v.visitId : 0)}" th:text="|Ca khám ${v.code != null ? v.code : v.visitCode} (${#temporals.format(v.checkInAt, 'dd/MM/yyyy HH:mm')}) - ${v.doctorName != null ? v.doctorName : 'Bác sĩ'}|">VIS-001</option>
@@ -1981,7 +1981,7 @@
                 </div>
                 <div class="modal-footer bg-light border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4">Khởi tạo BAĐT ngay</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Khởi tạo Bệnh án ngay</button>
                 </div>
             </form>
         </div>
