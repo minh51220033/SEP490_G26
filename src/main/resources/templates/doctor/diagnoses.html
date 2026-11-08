@@ -491,10 +491,6 @@
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-performed-services" onclick="switchMainTab('tab-performed-services', this)">
                             <i class="bi bi-tools"></i> Dịch vụ thực hiện
                         </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-workflow-execution" onclick="switchMainTab('tab-workflow-execution', this)">
-                            <i class="bi bi-list-check"></i> Quy trình thực hiện
-                            <span class="badge bg-primary text-white rounded-pill ms-1 d-none" id="ft43SubnavCount">0</span>
-                        </a>
                         <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
                             <i class="bi bi-box-seam"></i> Đặt xưởng
                         </a>
@@ -627,11 +623,6 @@
                 <!-- TAB 7: DỊCH VỤ THỰC HIỆN (FT16) -->
                 <div class="df-tab-pane" id="tab-performed-services" style="display: none;">
                     <div th:replace="~{doctor/fragments/performed-services :: performedServicesSection}"></div>
-                </div>
-
-                <!-- TAB 7B: THỰC HIỆN QUY TRÌNH KHÁM & ĐIỀU TRỊ (FT43 / UC-13) -->
-                <div class="df-tab-pane" id="tab-workflow-execution" style="display: none;">
-                    <div th:replace="~{doctor/fragments/workflow-execution :: workflowExecutionSection}"></div>
                 </div>
 
                 <!-- TAB 8: ĐẶT XƯỞNG LABO -->
@@ -970,11 +961,17 @@
         }
 
         if (targetTabLink) {
-            targetTabLink.classList.add('active', 'tab-highlight-active');
-            targetTabLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            setTimeout(() => {
-                targetTabLink.classList.remove('tab-highlight-active');
-            }, 1000);
+            targetTabLink.classList.add('active');
+            // Cuộn ngang êm ái thanh subnav nếu tab con bị che khuất (không làm giật trang)
+            const nav = document.getElementById('mainSubnav');
+            if (nav) {
+                const navRect = nav.getBoundingClientRect();
+                const itemRect = targetTabLink.getBoundingClientRect();
+                if (itemRect.left < navRect.left || itemRect.right > navRect.right) {
+                    const scrollOffset = (itemRect.left - navRect.left) - (navRect.width / 2) + (itemRect.width / 2);
+                    nav.scrollBy({ left: scrollOffset, behavior: 'smooth' });
+                }
+            }
         }
 
         // 2. Ẩn tất cả các panel tab và chỉ hiển thị panel của tab được chọn
@@ -989,7 +986,6 @@
             activePane.style.display = 'block';
             activePane.classList.add('active');
 
-            if (tabId === 'tab-workflow-execution' && window.FT43) { window.FT43.reload(); }
             if (tabId === 'tab-clinical-photos') {
                 const contentPhotos = document.getElementById('content-photos');
                 if (contentPhotos) contentPhotos.style.display = 'block';
@@ -997,12 +993,6 @@
                 if (barPhotos) barPhotos.classList.add('is-expanded');
                 const chevPhotos = document.getElementById('chevron-photos');
                 if (chevPhotos) chevPhotos.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
-            }
-
-            // Cuộn mượt màn hình lên đầu phân vùng nội dung
-            const container = document.getElementById('mainTabContainer');
-            if (container) {
-                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
 
@@ -1035,7 +1025,7 @@
         if (hash === 'customer-care') hash = 'tab-customer-care';
         if (hash === 'labo') hash = 'tab-labo';
         if (hash === 'instructions') hash = 'tab-instructions';
-        if (hash === 'workflow-execution') hash = 'tab-workflow-execution';
+        if (hash === 'workflow-execution' || hash === 'tab-workflow-execution') hash = 'tab-performed-services';
 
         if (hash && document.getElementById(hash)) {
             switchMainTab(hash, null, false);

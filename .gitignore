@@ -32,9 +32,11 @@ build/
 ### VS Code ###
 .vscode/
 
-uploads/
+# Cấu hình bỏ qua thư mục uploads nhưng VẪN giữ thư mục uploads/images/
+uploads/*
+!uploads/images/
+
 private-uploads/
-target/
 .idea/
 
 # Scratch & temporary files
@@ -46,4 +48,4 @@ __pycache__/
 # Project docs stored locally
 /docs/*
 !/docs/UC-08_Specification.docx
-uploads/
+GEMINI.md

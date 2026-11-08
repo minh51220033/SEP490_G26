@@ -88,6 +88,7 @@ public class QueueWorkflowController {
     public String tv(@PathVariable Long branchId, Model model) {
         model.addAttribute("branchId", branchId);
         model.addAttribute("board", service.publicBoard(branchId));
+        model.addAttribute("queueList", service.publicQueueList(branchId));
         return "reception/queue-tv";
     }
     @GetMapping("/tv/{branchId}/data")

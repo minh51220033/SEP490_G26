@@ -3,6 +3,7 @@
 <head>
     <th:block th:replace="~{fragments/head :: head('Chi tiết Khuyến mãi & Danh sách Voucher (SCR-20.3)')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/membership.css}">
 </head>
 <body class="app-body fin-brand-theme">
 <div class="app-shell">
@@ -10,9 +11,10 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Chi tiết Chương trình & Voucher')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Thành viên & Ưu đãi')}"></header>
 
-        <main class="app-content finance-page">
+        <main class="app-content finance-page membership-page">
+            <div th:replace="~{fragments/membership-tabs :: membershipTabs('promotions')}"></div>
             <!-- Alert Messages -->
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>

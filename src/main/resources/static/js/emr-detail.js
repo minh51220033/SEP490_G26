@@ -27,6 +27,7 @@
             const url = new URL(window.location.href);
             url.searchParams.set('document', target);
             window.history.replaceState({}, '', url);
+            window.scrollTo(0, 0);
         }
     }
 
@@ -298,6 +299,16 @@
         if (inlineSaveGroup) {
             inlineSaveGroup.classList.toggle('d-none', mode !== 'edit');
         }
+
+        // Bật/tắt thuộc tính readonly cho toàn bộ ô nhập inline tùy theo chế độ
+        const inlineFields = canvasRight ? canvasRight.querySelectorAll('.emr-inline-input, .emr-inline-textarea') : [];
+        inlineFields.forEach(field => {
+            if (mode === 'edit') {
+                field.removeAttribute('readonly');
+            } else {
+                field.setAttribute('readonly', 'readonly');
+            }
+        });
     }
 
     modeRadios.forEach(radio => {

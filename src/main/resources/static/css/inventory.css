@@ -1,3 +1,4 @@
+@import url('misa-pagination.css');
 /* =========================================================================
    CV-DCMS INVENTORY MANAGEMENT (QUẢN LÝ KHO VẬT TƯ) - ENTERPRISE STANDARD
    Theo chuẩn thiết kế DentalFlow / CV-DCMS:
@@ -83,10 +84,26 @@ html, body {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 12px 18px 0 18px;
-    overflow: hidden;
+    padding: 12px 18px 28px 18px;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
     background-color: var(--page);
     width: 100%;
+}
+
+.inventory-app-view::-webkit-scrollbar {
+    width: 6px;
+}
+.inventory-app-view::-webkit-scrollbar-track {
+    background: transparent;
+}
+.inventory-app-view::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.inventory-app-view::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 /* TOOLBAR THAO TÁC TRÊN BẢNG (ĐỒNG BỘ DOCTOR/DAILY-VISITS) */
@@ -496,11 +513,11 @@ html, body {
 
 /* 6. VÙNG HIỂN THỊ NỘI DUNG PANEL & FORM/TABLE */
 .panel {
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
+    min-height: auto;
+    overflow: visible !important;
     background: transparent;
     border: none;
     padding: 0;
@@ -579,13 +596,12 @@ html, body {
 
 /* VÙNG CUỘN CHO CÁC TAB CÓ CẢ FORM VÀ BẢNG (NHẬP, XUẤT, ĐIỀU CHUYỂN) */
 .form-tab-scroll-container {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding-right: 4px;
+    overflow: visible !important;
+    min-height: auto;
+    padding-right: 0;
 }
 
 .form-box-card {
@@ -1209,3 +1225,111 @@ textarea:focus {
     font-size: 12.5px;
 }
 
+
+/* Accordion sections */
+.form-box-card.df-foldable-card,
+.history-box-card.df-foldable-card {
+    padding: 0;
+    overflow: hidden;
+    min-height: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    margin-bottom: 0;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.form-box-card.df-foldable-card:hover,
+.history-box-card.df-foldable-card:hover {
+    border-color: #cbd5e1;
+}
+
+.df-foldable-card .df-foldable-bar {
+    background: #ffffff;
+    border-bottom: 1px solid transparent;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.df-foldable-card .df-foldable-bar:hover {
+    background-color: #f8fafc;
+}
+
+.df-foldable-card .df-foldable-bar.is-expanded {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.df-foldable-chevron {
+    font-size: 13px;
+    font-weight: 700;
+    width: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    transition: transform 0.2s ease, color 0.2s ease;
+    margin-right: 8px;
+}
+
+.df-foldable-card .df-foldable-bar.is-expanded .df-foldable-chevron {
+    color: #0284c7;
+}
+
+.df-foldable-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    transition: color 0.15s ease;
+}
+
+.df-foldable-card .df-foldable-bar:hover .df-foldable-title {
+    color: #0f172a;
+}
+
+.df-foldable-card .df-foldable-bar.is-expanded .df-foldable-title {
+    color: #0369a1;
+}
+
+.df-foldable-subtitle {
+    font-size: 12.5px;
+    font-weight: 400;
+    color: #94a3b8;
+    margin-left: 8px;
+    font-style: italic;
+}
+
+.df-foldable-card .df-foldable-content {
+    background: #ffffff;
+    animation: dfFadeSlideDown 0.2s ease;
+}
+
+.df-foldable-card .df-foldable-body {
+    padding: 16px 20px;
+}
+
+.df-foldable-card .table-viewport-wrapper {
+    overflow-x: auto;
+    overflow-y: visible !important;
+    min-height: auto;
+    border-bottom: 1px solid var(--table-border);
+}
+
+@keyframes dfFadeSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
