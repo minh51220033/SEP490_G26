@@ -55,4 +55,12 @@ public interface ServiceCommissionRepository extends JpaRepository<ServiceCommis
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE ServiceCommission sc SET sc.payrollItem = null WHERE sc.payrollItem.payrollPeriod.periodId = :periodId")
+    void unbindCommissionsFromPeriod(@Param("periodId") Long periodId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE ServiceCommission sc SET sc.status = com.cvdcms.entity.enums.CommissionStatus.PAID WHERE sc.payrollItem.payrollPeriod.periodId = :periodId")
+    void markCommissionsAsPaidForPeriod(@Param("periodId") Long periodId);
 }

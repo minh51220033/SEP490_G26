@@ -14,6 +14,8 @@ public interface CommissionPolicyRepository extends JpaRepository<CommissionPoli
 
     List<CommissionPolicy> findByIsActiveTrue();
 
+    boolean existsByService_ServiceId(Long serviceId);
+
     @Query("""
         SELECT cp FROM CommissionPolicy cp
         LEFT JOIN FETCH cp.service s

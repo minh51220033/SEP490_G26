@@ -13,8 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -112,11 +116,17 @@ public class LoyaltyServiceImpl implements LoyaltyService {
 
     private void calculateProgression(MemberCardDTO card, BigDecimal totalSpent, MembershipTier currentTier) {
         List<MembershipTier> activeTiers = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc();
+        calculateProgression(card, totalSpent, currentTier, activeTiers);
+    }
+
+    private void calculateProgression(MemberCardDTO card, BigDecimal totalSpent, MembershipTier currentTier, List<MembershipTier> activeTiers) {
         MembershipTier nextTier = null;
-        for (MembershipTier t : activeTiers) {
-            if (t.getMinTotalSpent().compareTo(totalSpent) > 0) {
-                nextTier = t;
-                break;
+        if (activeTiers != null) {
+            for (MembershipTier t : activeTiers) {
+                if (t.getMinTotalSpent().compareTo(totalSpent) > 0) {
+                    nextTier = t;
+                    break;
+                }
             }
         }
 
@@ -344,26 +354,63 @@ public class LoyaltyServiceImpl implements LoyaltyService {
     @Override
     @Transactional(readOnly = true)
     public List<MemberCardDTO> searchMemberCards(String keyword, Long branchId) {
-        List<PatientProfile> patients = patientProfileRepository.findAll();
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        List<PatientProfile> patients = patientProfileRepository.searchActivePatientsForLoyalty(cleanKeyword, branchId);
+        if (patients.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> profileIds = patients.stream().map(PatientProfile::getProfileId).toList();
+        List<PatientLoyaltyWallet> walletList = patientLoyaltyWalletRepository.findByPatientProfile_ProfileIdIn(profileIds);
+        Map<Long, PatientLoyaltyWallet> walletMap = walletList.stream()
+                .filter(w -> w.getPatientProfile() != null && w.getPatientProfile().getProfileId() != null)
+                .collect(Collectors.toMap(w -> w.getPatientProfile().getProfileId(), w -> w, (w1, w2) -> w1));
+
+        List<MembershipTier> activeTiers = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc();
+
         List<MemberCardDTO> results = new ArrayList<>();
+        for (PatientProfile patient : patients) {
+            PatientLoyaltyWallet wallet = walletMap.get(patient.getProfileId());
+            BigDecimal totalSpent = (wallet != null && wallet.getTotalSpentAmount() != null) ? wallet.getTotalSpentAmount() : BigDecimal.ZERO;
+            Integer currentPoints = (wallet != null && wallet.getCurrentPoints() != null) ? wallet.getCurrentPoints() : 0;
+            LocalDateTime lastUpdated = wallet != null ? wallet.getLastUpdated() : null;
 
-        String kw = keyword != null ? keyword.trim().toLowerCase() : "";
-        for (PatientProfile p : patients) {
-            if (!"ACTIVE".equalsIgnoreCase(p.getStatus())) {
-                continue;
-            }
-            if (branchId != null && p.getPreferredBranch() != null && !branchId.equals(p.getPreferredBranch().getBranchId())) {
-                continue;
+            MembershipTier tier = patient.getMembershipTier();
+            if (tier == null) {
+                tier = membershipTierService.findHighestQualifyingTier(totalSpent);
             }
 
-            boolean match = kw.isEmpty()
-                    || (p.getPatientCode() != null && p.getPatientCode().toLowerCase().contains(kw))
-                    || (p.getFullName() != null && p.getFullName().toLowerCase().contains(kw))
-                    || (p.getPhoneNumber() != null && p.getPhoneNumber().contains(kw));
-
-            if (match) {
-                results.add(getMemberCard(p.getProfileId()));
+            MemberCardDTO card = new MemberCardDTO();
+            card.setProfileId(patient.getProfileId());
+            card.setPatientCode(patient.getPatientCode());
+            card.setFullName(patient.getFullName());
+            card.setPhoneNumber(patient.getPhoneNumber());
+            card.setGender(patient.getGender());
+            card.setDob(patient.getDob());
+            card.setAddress(patient.getAddress());
+            card.setAvatarUrl(patient.getAvatarUrl());
+            if (patient.getPreferredBranch() != null) {
+                card.setPreferredBranchId(patient.getPreferredBranch().getBranchId());
+                card.setPreferredBranchName(patient.getPreferredBranch().getBranchName());
             }
+
+            if (tier != null) {
+                card.setTierId(tier.getTierId());
+                card.setTierCode(tier.getTierCode());
+                card.setTierName(tier.getTierName());
+                card.setDiscountPercent(tier.getDiscountPercent() != null ? tier.getDiscountPercent() : BigDecimal.ZERO);
+                card.setSpendPerPoint(tier.getSpendPerPoint() != null ? tier.getSpendPerPoint() : new BigDecimal("10000.00"));
+                card.setPointValue(tier.getPointValue() != null ? tier.getPointValue() : new BigDecimal("10.00"));
+            }
+
+            card.setCurrentPoints(currentPoints);
+            card.setTotalSpentAmount(totalSpent);
+            card.setLastUpdated(lastUpdated);
+
+            calculateProgression(card, totalSpent, tier, activeTiers);
+            buildBenefitsList(card, tier);
+
+            results.add(card);
         }
         return results;
     }
