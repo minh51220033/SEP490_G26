@@ -167,9 +167,13 @@ public class ReceptionAppointmentService {
     @Transactional(readOnly = true)
     public List<PatientOption> searchPatients(HttpSession session, Long branchId, String query) {
         PatientAccess.Scope scope = access.require(session);
-        requireBranch(scope, branchId);
+        if (branchId != null) {
+            try {
+                requireBranch(scope, branchId);
+            } catch (Exception ignored) {}
+        }
         if (query == null || query.trim().length() < 2) return List.of();
-        return patients.search(branchId, query.trim()).stream().limit(20)
+        return patients.search(query.trim()).stream().limit(20)
                 .map(p -> new PatientOption(p.getProfileId(), p.getPatientCode(), p.getFullName(), p.getPhoneNumber()))
                 .toList();
     }
@@ -256,7 +260,7 @@ public class ReceptionAppointmentService {
         Branch branch = lockBranch(scope, request.branchId());
         PatientProfile profile;
         if (request.profileId() != null) {
-            profile = patients.findBookable(request.profileId(), branch.getBranchId())
+            profile = patients.findBookable(request.profileId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hồ sơ không thuộc phạm vi chi nhánh."));
         } else if (request.patientName() != null && !request.patientName().isBlank()) {
             String name = request.patientName().trim();

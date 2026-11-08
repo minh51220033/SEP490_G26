@@ -267,28 +267,38 @@
             <table class="info-table">
                 <tbody>
                     <tr>
-                        <td class="info-label"><i class="bi bi-person me-1"></i>Bệnh nhân:</td>
+                        <td class="info-label"><i class="bi bi-door-open me-1"></i>Phòng khám:</td>
+                        <td class="info-value fw-bold text-primary">
+                            <span th:text="${printView.roomName != null and !printView.roomName.isBlank() ? 'Phòng khám: ' + printView.roomName : 'Phòng khám: Phòng khám Nha khoa'}">Phòng khám: Phòng 101</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="info-label"><i class="bi bi-person-workspace me-1"></i>Ghế nha:</td>
+                        <td class="info-value">
+                            <span th:text="${printView.chairName != null and !printView.chairName.isBlank() ? printView.chairName : 'Ghế tiêu chuẩn'}">Ghế 01</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="info-label"><i class="bi bi-person me-1"></i>Họ tên BN:</td>
                         <td class="info-value">
                             <span th:text="${ticket.visit.patientProfile.fullName}">Nguyễn Minh An</span>
-                            <small class="text-muted d-block fw-normal" th:if="${ticket.visit.patientProfile.patientCode != null}" th:text="|Mã BN: ${ticket.visit.patientProfile.patientCode}|"></small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="info-label"><i class="bi bi-person-vcard me-1"></i>Mã BN:</td>
+                        <td class="info-value font-monospace">
+                            <span th:text="${ticket.visit.patientProfile.patientCode != null ? ticket.visit.patientProfile.patientCode : '—'}">BN0001</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="info-label"><i class="bi bi-person-badge me-1"></i>Bác sĩ:</td>
+                        <td class="info-value">
+                            <span class="text-primary fw-bold" th:text="${ticket.visit.primaryDoctor != null ? ticket.visit.primaryDoctor.fullName : 'Theo phân bổ điều phối'}">BS. CK1 Lê Hoàng Nam</span>
                         </td>
                     </tr>
                     <tr>
                         <td class="info-label"><i class="bi bi-upc-scan me-1"></i>Mã lượt khám:</td>
                         <td class="info-value text-break font-monospace small" th:text="${ticket.visit.visitCode}">V6ABD46DBD9754960</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label"><i class="bi bi-person-badge me-1"></i>Bác sĩ phụ trách:</td>
-                        <td class="info-value">
-                            <span class="text-primary fw-bold" th:text="${ticket.visit.primaryDoctor != null ? ticket.visit.primaryDoctor.fullName : 'Theo phân bổ điều phối'}">BS. CK1 Lê Hoàng Nam</span>
-                        </td>
-                    </tr>
-                    <tr th:if="${printView.roomName != null or printView.chairName != null}">
-                        <td class="info-label"><i class="bi bi-door-open me-1"></i>Vị trí khám:</td>
-                        <td class="info-value">
-                            <span th:if="${printView.roomName != null}" th:text="${printView.roomName}">Phòng 101</span>
-                            <span th:if="${printView.chairName != null}" th:text="${printView.chairName}">Ghế 01</span>
-                        </td>
                     </tr>
                     <tr>
                         <td class="info-label"><i class="bi bi-clock me-1"></i>Thời gian cấp:</td>
