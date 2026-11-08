@@ -73,7 +73,8 @@
                             <th:block th:each="item : ${stage.items}">
                                 <tr th:if="${item.status != 'COMPLETED'}" th:id="'pending-plan-item-' + ${item.planItemId}">
                                     <td>
-                                        <strong class="text-dark" th:text="${item.serviceName}">Hàn răng sâu</strong>
+                                        <strong class="text-dark" th:text="${item.stepName != null and !item.stepName.isEmpty() ? item.stepName : item.serviceName}">Hàn răng sâu</strong>
+                                        <span class="badge bg-light text-primary border ms-1" th:text="${item.serviceName}">Dịch vụ</span>
                                         <span class="badge bg-light text-muted border ms-1" th:if="${item.categoryName != null}" th:text="${item.categoryName}" style="font-size: 10.5px;">Hàn răng</span>
                                     </td>
                                     <td>
@@ -259,27 +260,11 @@
                             <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
                         </td>
                         <td>
-                            <div class="fw-bold text-dark" th:text="${ps.serviceName}">Hàn răng sâu Composite</div>
-                            <!-- Hiển thị công đoạn KHDT gọn gàng, loại bỏ chuỗi tên KHDT bị lặp dài ngoằng -->
-                            <div class="small text-secondary mt-0.5" th:if="${ps.stageName != null and !ps.stageName.isEmpty()}" th:title="${ps.planName != null ? 'Kế hoạch gốc: ' + ps.planName : ps.clinicalNotes}">
+                            <div class="fw-bold text-dark" th:text="${ps.stepName != null and !ps.stepName.isEmpty() ? ps.stepName : ps.serviceName}">Hàn răng sâu Composite</div>
+                            <div class="small text-secondary mt-0.5">
                                 <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">
-                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT: <span th:text="${ps.stageName}">[CĐ #1] Công đoạn</span>
-                                </span>
-                            </div>
-                            <div class="small text-secondary mt-0.5" th:if="${(ps.stageName == null or ps.stageName.isEmpty()) and ps.clinicalNotes != null and !ps.clinicalNotes.isEmpty()}">
-                                <!-- Nếu là ghi chú KHDT cũ chứa chuỗi dài ([CĐ...]) thì trích xuất phần công đoạn cụ thể -->
-                                <span th:if="${#strings.contains(ps.clinicalNotes, '([CĐ')}"
-                                      th:with="startIdx=${#strings.indexOf(ps.clinicalNotes, '([CĐ')}, endIdx=${#strings.length(ps.clinicalNotes)}"
-                                      class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;"
-                                      th:title="${ps.clinicalNotes}">
-                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT: <span th:text="${#strings.substring(ps.clinicalNotes, startIdx + 1, endIdx - 1)}">[CĐ #1] Công đoạn</span>
-                                </span>
-                                <!-- Nếu là ghi chú thông thường -->
-                                <span th:unless="${#strings.contains(ps.clinicalNotes, '([CĐ')}" class="fst-italic" th:text="${ps.clinicalNotes}">Ghi chú</span>
-                            </div>
-                            <div class="small text-secondary mt-0.5" th:if="${ps.stageName == null and (ps.clinicalNotes == null or ps.clinicalNotes.isEmpty()) and ps.planName != null}">
-                                <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;" th:title="${ps.planName}">
-                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT
+                                    <i class="bi bi-diagram-3 me-1"></i>Từ KHDT: <span th:text="${ps.serviceName}">Dịch vụ</span>
+                                    <span th:if="${ps.stageName != null and !ps.stageName.isEmpty()}" th:text="' - ' + ${ps.stageName}"> - Giai đoạn</span>
                                 </span>
                             </div>
                         </td>

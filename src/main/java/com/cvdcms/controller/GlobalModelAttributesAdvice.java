@@ -7,6 +7,7 @@ import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
+import com.cvdcms.service.BranchService;
 import com.cvdcms.service.CustomerPortalService;
 import com.cvdcms.service.ServiceCatalogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +24,10 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc Customer Portal Header/Footer.
- * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches, footerServices luôn có giá trị an toàn.
+ * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc
+ * Customer Portal Header/Footer.
+ * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches,
+ * footerServices luôn có giá trị an toàn.
  */
 @ControllerAdvice
 public class GlobalModelAttributesAdvice {
@@ -34,16 +37,16 @@ public class GlobalModelAttributesAdvice {
             "BAC_SI", "ROLE_BAC_SI",
             "LE_TAN", "ROLE_LE_TAN",
             "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO",
-            "KE_TOAN", "ROLE_KE_TOAN"
-    );
+            "KE_TOAN", "ROLE_KE_TOAN");
 
     private final UserRepository userRepository;
     private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
     private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
     private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
+    private final ObjectProvider<BranchService> branchServiceProvider;
 
     public GlobalModelAttributesAdvice(UserRepository userRepository) {
-        this(userRepository, null, null, null);
+        this(userRepository, null, null, null, null);
     }
 
     @Autowired
@@ -51,12 +54,18 @@ public class GlobalModelAttributesAdvice {
             UserRepository userRepository,
             ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
             ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
-            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider
-    ) {
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider,
+            ObjectProvider<BranchService> branchServiceProvider) {
         this.userRepository = userRepository;
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
+        this.branchServiceProvider = branchServiceProvider;
+    }
+
+    public GlobalModelAttributesAdvice(Object object, ObjectProvider<CustomerPortalService> provider, Object object2,
+            Object object3) {
+        // TODO Auto-generated constructor stub
     }
 
     @ModelAttribute("roleNames")
@@ -180,7 +189,8 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("defaultPatientProfile")
     public PatientProfile populateDefaultPatientProfile(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user) || user.getUserId() == null) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
+                || user.getUserId() == null) {
             return null;
         }
         PatientProfileRepository repo = patientProfileRepositoryProvider != null
@@ -229,10 +239,97 @@ public class GlobalModelAttributesAdvice {
             User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
             if (user.getBranch() != null) {
                 Branch b = user.getBranch();
-                return (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "") + b.getBranchName();
+                return (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "")
+                        + b.getBranchName();
             }
         }
         return null;
+    }
+
+    @ModelAttribute("accessibleBranches")
+    public List<Branch> populateAccessibleBranches(HttpServletRequest request, HttpSession session) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
+                || user.getUserId() == null) {
+            return Collections.emptyList();
+        }
+        BranchService branchService = branchServiceProvider != null ? branchServiceProvider.getIfAvailable() : null;
+        if (branchService == null) {
+            return Collections.emptyList();
+        }
+        return branchService.getUserAccessibleBranches(user.getUserId());
+    }
+
+    @ModelAttribute("currentBranch")
+    public Branch populateCurrentBranch(HttpServletRequest request, HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        BranchService branchService = branchServiceProvider != null ? branchServiceProvider.getIfAvailable() : null;
+        if (branchService == null) {
+            return null;
+        }
+        // 1. Đồng bộ từ request param branchId nếu có
+        String reqBranchId = request != null ? request.getParameter("branchId") : null;
+        if (reqBranchId != null && !reqBranchId.isBlank()) {
+            try {
+                Long bId = Long.parseLong(reqBranchId.trim());
+                if (bId > 0) {
+                    Branch found = branchService.getActiveBranches().stream()
+                            .filter(b -> b.getBranchId().equals(bId))
+                            .findFirst()
+                            .orElse(null);
+                    if (found != null) {
+                        session.setAttribute("currentBranchId", bId);
+                        session.setAttribute("currentBranchName", found.getBranchName());
+                        return found;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        // 2. Lấy từ session
+        Object currentBranchIdObj = session.getAttribute("currentBranchId");
+        if (currentBranchIdObj instanceof Long branchId && branchId > 0) {
+            return branchService.getActiveBranches().stream()
+                    .filter(b -> b.getBranchId().equals(branchId))
+                    .findFirst()
+                    .orElse(null);
+        }
+        // 3. Lấy theo chi nhánh trực thuộc của user
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
+                    : sessionUser;
+            if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+                return user.getBranch();
+            }
+        }
+        // 4. Mặc định lấy cơ sở đầu tiên đang hoạt động
+        List<Branch> active = branchService.getActiveBranches();
+        return !active.isEmpty() ? active.get(0) : null;
+    }
+
+    @ModelAttribute("currentBranchId")
+    public Long populateCurrentBranchId(HttpServletRequest request, HttpSession session) {
+        Branch cb = populateCurrentBranch(request, session);
+        return cb != null ? cb.getBranchId() : null;
+    }
+
+    @ModelAttribute("currentBranchCode")
+    public String populateCurrentBranchCode(HttpServletRequest request, HttpSession session) {
+        Branch cb = populateCurrentBranch(request, session);
+        if (cb != null) {
+            if (cb.getBranchCode() != null && !cb.getBranchCode().isBlank()) {
+                return cb.getBranchCode();
+            }
+            if (cb.getBranchName() != null && !cb.getBranchName().isBlank()) {
+                return cb.getBranchName();
+            }
+        }
+        Object currentBranchNameObj = session != null ? session.getAttribute("currentBranchName") : null;
+        if (currentBranchNameObj != null && !currentBranchNameObj.toString().isBlank()) {
+            return currentBranchNameObj.toString();
+        }
+        return "DEMO";
     }
 
     @ModelAttribute("systemNotice")
@@ -267,13 +364,16 @@ public class GlobalModelAttributesAdvice {
             return null;
         }
         List<Branch> activeBranches = populatePublicBranches();
-        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân hoặc cơ sở của tài khoản
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân
+        // hoặc cơ sở của tài khoản
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
             PatientProfile pp = populateDefaultPatientProfile(session);
-            if (pp != null && pp.getPreferredBranch() != null && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+            if (pp != null && pp.getPreferredBranch() != null
+                    && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
                 return pp.getPreferredBranch();
             }
-            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser) : sessionUser;
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
+                    : sessionUser;
             if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
                 return user.getBranch();
             }

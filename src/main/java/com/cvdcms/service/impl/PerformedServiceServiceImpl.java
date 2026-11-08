@@ -133,6 +133,18 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         ps.setPatientProfile(visit.getPatientProfile());
         ps.setBranch(visit.getBranch());
         ps.setService(service);
+
+        String stepName = requestDTO.getStepName();
+        if (stepName == null && requestDTO.getPlanItemId() != null) {
+            stepName = treatmentPlanItemRepository.findById(requestDTO.getPlanItemId())
+                    .map(it -> it.getStepName() != null ? it.getStepName() : (it.getService() != null ? it.getService().getServiceName() : null))
+                    .orElse(null);
+        }
+        if (stepName == null && service != null) {
+            stepName = service.getServiceName();
+        }
+        ps.setStepName(stepName);
+
         ps.setToothNumbers(requestDTO.getToothNumbers());
         ps.setQuantity(qty);
         ps.setUnitPrice(unitPrice);
@@ -305,6 +317,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .serviceId(ps.getService() != null ? ps.getService().getServiceId() : null)
                 .serviceCode(ps.getService() != null ? ps.getService().getServiceCode() : "")
                 .serviceName(ps.getService() != null ? ps.getService().getServiceName() : "")
+                .stepName(ps.getStepName() != null && !ps.getStepName().isBlank() ? ps.getStepName() : (ps.getService() != null ? ps.getService().getServiceName() : ""))
                 .categoryName(ps.getService() != null && ps.getService().getCategory() != null ? ps.getService().getCategory().getCategoryName() : "")
                 .unit(ps.getService() != null ? ps.getService().getUnit() : "Lần")
                 .toothNumbers(ps.getToothNumbers())

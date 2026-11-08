@@ -47,6 +47,9 @@ public class PerformedService {
     @JoinColumn(name = "service_id", nullable = false)
     private Service service;
 
+    @Column(name = "step_name", length = 255)
+    private String stepName;
+
     @Column(name = "tooth_numbers", length = 50)
     private String toothNumbers;
 
