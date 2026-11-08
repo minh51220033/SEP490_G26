@@ -183,15 +183,29 @@
                 </div>
             </div>
 
-            <button type="button" id="cvdcmsChatWidgetFab" class="cvdcms-chat-fab" title="Chat trực tiếp theo cơ sở">
-                <i class="bi bi-chat-dots-fill" id="cvdcmsChatWidgetFabIcon"></i>
-                <span id="cvdcmsChatWidgetUnreadBadge" class="cvdcms-chat-fab__badge" hidden>0</span>
+            <div class="cvdcms-chat-fab-wrap" id="cvdcmsChatWidgetFabWrap">
+                <button type="button" id="cvdcmsChatWidgetFab" class="cvdcms-chat-fab" title="Chat trực tiếp theo cơ sở">
+                    <i class="bi bi-chat-dots-fill" id="cvdcmsChatWidgetFabIcon"></i>
+                    <span id="cvdcmsChatWidgetUnreadBadge" class="cvdcms-chat-fab__badge" hidden>0</span>
+                </button>
+                <button type="button" id="cvdcmsChatWidgetDismissBtn" class="cvdcms-chat-fab__dismiss" title="Ẩn nút chat" aria-label="Ẩn nút chat">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+
+            <button type="button" id="cvdcmsChatWidgetRestoreBtn" class="cvdcms-chat-restore-pill" style="display: none;" title="Mở lại nút chat">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Hiện chat</span>
+                <span id="cvdcmsChatWidgetRestoreBadge" class="badge rounded-pill bg-danger ms-1" style="display: none; font-size: 10px;">0</span>
             </button>
         `;
 
         document.body.appendChild(wrapper);
 
         const fab = document.getElementById('cvdcmsChatWidgetFab');
+        const fabWrap = document.getElementById('cvdcmsChatWidgetFabWrap');
+        const dismissBtn = document.getElementById('cvdcmsChatWidgetDismissBtn');
+        const restoreBtn = document.getElementById('cvdcmsChatWidgetRestoreBtn');
         const closeBtn = document.getElementById('cvdcmsChatWidgetCloseBtn');
         const sendBtn = document.getElementById('cvdcmsChatWidgetSendBtn');
         const input = document.getElementById('cvdcmsChatWidgetInput');
@@ -200,8 +214,36 @@
         const recKeywordInput = document.getElementById('cvdcmsWidgetRecipientKeyword');
         const recRoleSelect = document.getElementById('cvdcmsWidgetRecipientRole');
 
+        function hideChatWidget() {
+            setPopupOpen(false);
+            if (fabWrap) fabWrap.style.display = 'none';
+            if (restoreBtn) restoreBtn.style.display = 'inline-flex';
+            sessionStorage.setItem('cvdcms_chat_hidden', 'true');
+        }
+
+        function restoreChatWidget() {
+            if (restoreBtn) restoreBtn.style.display = 'none';
+            if (fabWrap) fabWrap.style.display = 'inline-block';
+            sessionStorage.removeItem('cvdcms_chat_hidden');
+        }
+
         fab.addEventListener('click', togglePopup);
         closeBtn.addEventListener('click', () => setPopupOpen(false));
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideChatWidget();
+            });
+        }
+        if (restoreBtn) {
+            restoreBtn.addEventListener('click', restoreChatWidget);
+        }
+
+        if (sessionStorage.getItem('cvdcms_chat_hidden') === 'true') {
+            if (fabWrap) fabWrap.style.display = 'none';
+            if (restoreBtn) restoreBtn.style.display = 'inline-flex';
+        }
+
         sendBtn.addEventListener('click', handleSendMessage);
 
         input.addEventListener('keydown', (e) => {
@@ -370,12 +412,25 @@
 
     function updateUnreadBadge() {
         const badge = document.getElementById('cvdcmsChatWidgetUnreadBadge');
-        if (!badge) return;
-        if (state.unreadCount > 0 && !state.isOpen) {
-            badge.textContent = state.unreadCount > 99 ? '99+' : String(state.unreadCount);
-            badge.hidden = false;
-        } else {
-            badge.hidden = true;
+        const restoreBadge = document.getElementById('cvdcmsChatWidgetRestoreBadge');
+        const hasUnread = state.unreadCount > 0 && !state.isOpen;
+        const text = state.unreadCount > 99 ? '99+' : String(state.unreadCount);
+
+        if (badge) {
+            if (hasUnread) {
+                badge.textContent = text;
+                badge.hidden = false;
+            } else {
+                badge.hidden = true;
+            }
+        }
+        if (restoreBadge) {
+            if (hasUnread) {
+                restoreBadge.textContent = text;
+                restoreBadge.style.display = 'inline-block';
+            } else {
+                restoreBadge.style.display = 'none';
+            }
         }
     }
 

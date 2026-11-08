@@ -123,9 +123,6 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/reception/queue") || uri.startsWith("/api/reception/queue")) {
             return List.of("APPOINTMENT_VIEW");
         }
-        if (uri.startsWith("/reception/workflow-progress") || uri.startsWith("/api/reception/workflow-progress")) {
-            return List.of("APPOINTMENT_VIEW");
-        }
         if (uri.startsWith("/reception/dispatch") || uri.startsWith("/api/reception/dispatch")) {
             return List.of("RECEPTION_DISPATCH", "CLINICAL_DISPATCH");
         }
