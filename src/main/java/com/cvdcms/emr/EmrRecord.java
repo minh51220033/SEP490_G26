@@ -73,4 +73,24 @@ public class EmrRecord {
     @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("versionNumber DESC")
     private List<EmrRecordVersion> versions = new ArrayList<>();
+
+    public Long getId() {
+        return recordId;
+    }
+
+    public String getCode() {
+        return recordCode;
+    }
+
+    public Integer getVersionNumber() {
+        return currentVersionNumber;
+    }
+
+    public String getVisitCode() {
+        return visit != null ? visit.getVisitCode() : null;
+    }
+
+    public String getDoctorName() {
+        return createdBy != null ? (createdBy.getFullName() != null && !createdBy.getFullName().isBlank() ? createdBy.getFullName() : createdBy.getUsername()) : null;
+    }
 }
