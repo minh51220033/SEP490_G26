@@ -17,6 +17,9 @@ import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -79,6 +82,8 @@ public class AdminServiceCatalogController {
                         @RequestParam(required = false) Long categoryId,
                         @RequestParam(required = false) ServiceStatus status,
                         @RequestParam(value = "tab", required = false) String tab,
+                        @RequestParam(value = "page", defaultValue = "0") int page,
+                        @RequestParam(value = "size", defaultValue = "10") int size,
                         Model model,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
@@ -86,7 +91,7 @@ public class AdminServiceCatalogController {
                         return REDIRECT_LIST;
                 }
                 try {
-                        prepareListPage(model, session, keyword, categoryId, status);
+                        prepareListPage(model, session, keyword, categoryId, status, page, size);
                         return LIST_VIEW;
                 } catch (IllegalArgumentException ex) {
                         redirectAttributes.addFlashAttribute(
@@ -740,7 +745,9 @@ public class AdminServiceCatalogController {
                         HttpSession session,
                         String keyword,
                         Long categoryId,
-                        ServiceStatus status) {
+                        ServiceStatus status,
+                        int page,
+                        int size) {
                 addLayoutAttributes(session, model);
 
                 // Token riêng cho thao tác xóa, kể cả khi dự án đang tắt Spring CSRF.
@@ -755,9 +762,33 @@ public class AdminServiceCatalogController {
                                 "categories",
                                 serviceCatalogService.getAllCategories());
 
-                List<Service> services = serviceCatalogService.searchServices(keyword, categoryId, status);
+                // Phân trang chuẩn Enterprise MISA AMIS: chỉ chấp nhận size 10, 25, 50, 100
+                int validSize = (size == 10 || size == 25 || size == 50 || size == 100) ? size : 10;
+                int targetPage = Math.max(0, page);
+                Pageable pageable = PageRequest.of(targetPage, validSize);
+                Page<Service> servicePage = serviceCatalogService.searchServices(keyword, categoryId, status, pageable);
 
-                model.addAttribute("services", services);
+                int totalPages = servicePage.getTotalPages();
+                if (targetPage >= totalPages && totalPages > 0) {
+                        targetPage = totalPages - 1;
+                        pageable = PageRequest.of(targetPage, validSize);
+                        servicePage = serviceCatalogService.searchServices(keyword, categoryId, status, pageable);
+                }
+
+                long totalItems = servicePage.getTotalElements();
+                long toItem = Math.min(((long) (targetPage + 1) * validSize), totalItems);
+                long fromItem = totalItems == 0 ? 0 : Math.min(((long) targetPage * validSize) + 1, toItem);
+
+                // 6 thuộc tính bắt buộc của quy chuẩn Table Footer MISA AMIS
+                model.addAttribute("items", servicePage.getContent());
+                model.addAttribute("services", servicePage.getContent());
+                model.addAttribute("totalItems", totalItems);
+                model.addAttribute("currentPage", targetPage);
+                model.addAttribute("pageSize", validSize);
+                model.addAttribute("totalPages", totalPages);
+                model.addAttribute("fromItem", fromItem);
+                model.addAttribute("toItem", toItem);
+
                 model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
                 model.addAttribute("selectedCategoryId", categoryId);
                 model.addAttribute("selectedStatus", status);

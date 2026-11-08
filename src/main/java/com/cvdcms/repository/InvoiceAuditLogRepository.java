@@ -18,4 +18,6 @@ public interface InvoiceAuditLogRepository extends JpaRepository<InvoiceAuditLog
         ORDER BY log.performedAt DESC
     """)
     List<InvoiceAuditLog> findByInvoiceIdWithStaff(@Param("invoiceId") Long invoiceId);
+
+    boolean existsByInvoice_InvoiceIdAndActionType(Long invoiceId, String actionType);
 }

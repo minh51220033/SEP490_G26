@@ -41,7 +41,7 @@ public interface SalaryAdvanceAllocationRepository extends JpaRepository<SalaryA
             @Param("excludeItemId") Long excludeItemId
     );
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM SalaryAdvanceAllocation a WHERE a.payrollItem.payrollPeriod.periodId = :periodId")
     void deleteByPeriodId(@Param("periodId") Long periodId);
 }

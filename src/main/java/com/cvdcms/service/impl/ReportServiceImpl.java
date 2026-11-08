@@ -126,8 +126,16 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành
+        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
         BigDecimal totalExpense = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
+        if (payrollPeriodRepository != null) {
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
+                    branchIds,
+                    startDate.getMonthValue(), startDate.getYear(),
+                    endDate.getMonthValue(), endDate.getYear()
+            ));
+            totalExpense = totalExpense.add(employerInsurance);
+        }
         dto.setTotalExpenseAmount(totalExpense);
         dto.setOperatingMargin(netRealRevenue.subtract(dto.getTotalExpenseAmount()));
 
@@ -268,11 +276,19 @@ public class ReportServiceImpl implements ReportService {
                 .add(dto.getPosCardAmount()).add(dto.getNewDepositAmount());
         dto.setTotalCollected(grossCollected);
 
-        // 3. Hoàn tiền & Chi phí
+        // 3. Hoàn tiền & Chi phí (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
         dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt)));
         dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()).max(BigDecimal.ZERO));
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
+        if (payrollPeriodRepository != null) {
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
+                    branchIds,
+                    startDate.getMonthValue(), startDate.getYear(),
+                    endDate.getMonthValue(), endDate.getYear()
+            ));
+            activeExpenses = activeExpenses.add(employerInsurance);
+        }
         dto.setOperatingExpenses(activeExpenses);
         dto.setOperatingMargin(dto.getNetRevenue().subtract(dto.getOperatingExpenses()));
 

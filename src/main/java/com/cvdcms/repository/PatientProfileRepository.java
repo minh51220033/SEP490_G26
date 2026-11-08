@@ -67,4 +67,23 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PatientProfile p WHERE p.profileId = :profileId")
     Optional<PatientProfile> findByIdForUpdate(@Param("profileId") Long profileId);
+
+    @Query("""
+        SELECT p FROM PatientProfile p
+        LEFT JOIN FETCH p.membershipTier t
+        LEFT JOIN FETCH p.preferredBranch b
+        WHERE LOWER(p.status) = 'active'
+          AND (:branchId IS NULL OR b.branchId = :branchId)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(p.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR p.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+        ORDER BY p.profileId DESC
+    """)
+    List<PatientProfile> searchActivePatientsForLoyalty(
+            @Param("keyword") String keyword,
+            @Param("branchId") Long branchId
+    );
 }
