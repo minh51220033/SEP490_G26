@@ -22,6 +22,41 @@
         document.head.appendChild(link);
     }
 
+    async function ensureTargetStylesheets(parsed) {
+        const links = [...parsed.querySelectorAll('link[rel="stylesheet"][href]')];
+        const tasks = links.map(link => {
+            const href = link.getAttribute('href');
+            if (!href) return Promise.resolve();
+            const targetPath = pathOf(href);
+            const alreadyInHead = [...document.head.querySelectorAll('link[rel="stylesheet"][href]')]
+                .some(el => pathOf(el.getAttribute('href')) === targetPath);
+            if (alreadyInHead) return Promise.resolve();
+            return new Promise(resolve => {
+                const headLink = document.createElement('link');
+                headLink.rel = 'stylesheet';
+                headLink.href = href;
+                headLink.onload = () => resolve();
+                headLink.onerror = () => resolve();
+                document.head.appendChild(headLink);
+                setTimeout(resolve, 200);
+            });
+        });
+        await Promise.all(tasks);
+    }
+
+    function syncSidebarAndHeader(parsed, targetPath) {
+        const newTopbarTitle = parsed.querySelector('.app-topbar h1, .app-topbar .topbar-title, header h1');
+        const curTopbarTitle = document.querySelector('.app-topbar h1, .app-topbar .topbar-title, header h1');
+        if (newTopbarTitle && curTopbarTitle) {
+            curTopbarTitle.textContent = newTopbarTitle.textContent;
+        }
+        const incomingSidebar = parsed.querySelector('aside.app-sidebar');
+        const currentSidebar = document.querySelector('aside.app-sidebar');
+        if (incomingSidebar && currentSidebar) {
+            currentSidebar.innerHTML = incomingSidebar.innerHTML;
+        }
+    }
+
     function ensureBootstrap() {
         if (window.bootstrap) return Promise.resolve();
         if (bootstrapReady) return bootstrapReady;
@@ -105,17 +140,30 @@
             const currentContent = document.getElementById('reception-content-area');
             if (!nextContent || !currentContent) throw new Error('Không tìm thấy vùng nội dung tiếp đón.');
 
+            await ensureTargetStylesheets(parsed);
+
+            // Clean up any open Bootstrap modal backdrop before swapping content
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+
             const replacement = document.importNode(nextContent, true);
             replacement.id = 'reception-content-area';
             replacement.classList.add('reception-content-enter');
             currentContent.replaceWith(replacement);
             document.title = parsed.title || document.title;
+            syncSidebarAndHeader(parsed, pathOf(targetUrl.href));
             if (pushState) window.history.pushState({receptionWorkflow: true}, '', targetUrl.href);
             markCurrentStep(pathOf(targetUrl.href), replacement);
-            await initialiseTargetScripts(parsed);
+            try {
+                await initialiseTargetScripts(parsed);
+            } catch (scriptErr) {
+                console.warn('Reception workflow script warning:', scriptErr);
+            }
             document.dispatchEvent(new CustomEvent('reception:content-loaded', {detail: {url: targetUrl.href}}));
             replacement.addEventListener('animationend', () => replacement.classList.remove('reception-content-enter'), {once: true});
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            window.scrollTo({top: 0, behavior: 'instant'});
         } catch (error) {
             // The normal browser navigation remains a reliable fallback for an unavailable fragment.
             window.location.assign(targetUrl.href);
