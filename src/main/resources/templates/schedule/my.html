@@ -18,29 +18,132 @@
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/schedule.css}">
 
-            <!-- LỊCH LÀM VIỆC CÁ NHÂN (SCR-33.3) -->
-            <section class="panel">
-                <div class="panel__head">
+            <style>
+                .dv-quick-segment {
+                    display: inline-flex;
+                    background: #f1f5f9;
+                    padding: 3px;
+                    border-radius: 10px;
+                    border: 1px solid #e2e8f0;
+                    gap: 2px;
+                    align-items: center;
+                }
+                .dv-seg-btn {
+                    border: none !important;
+                    background: transparent !important;
+                    color: #475569 !important;
+                    font-size: 12px;
+                    font-weight: 600 !important;
+                    padding: 5px 11px;
+                    border-radius: 7px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    white-space: nowrap;
+                    text-decoration: none !important;
+                    box-shadow: none !important;
+                }
+                .dv-seg-btn:hover {
+                    color: #0f172a !important;
+                    background: rgba(255, 255, 255, 0.6) !important;
+                }
+                .dv-seg-btn.active, .dv-seg-btn.is-active {
+                    background: #ffffff !important;
+                    color: #0284c7 !important;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+                    font-weight: 700 !important;
+                }
+                .dv-toolbar-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 8px 14px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                    margin-bottom: 12px;
+                }
+            </style>
+
+            <!-- TIÊU ĐỀ TRANG & THANH ĐIỀU HƯỚNG TỔNG HỢP: 1 HÀNG DUY NHẤT -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2.5">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-right: 4px;">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
                     <div>
-                        <h3 class="panel__title">Lịch làm việc hàng tuần</h3>
-                        <p class="panel__subtitle">
-                            Tuần
-                            <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">01/01/2026</strong>
-                            -
-                            <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">07/01/2026</strong>
+                        <h1 class="dv-page-title mb-0" style="font-size: 17px; font-weight: 800; line-height: 1.2;">Lịch làm việc của tôi</h1>
+                        <p class="dv-page-subtitle mb-0 text-muted" style="font-size: 12px;">
+                            Tuần <strong class="text-primary" th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">01/01/2026</strong> - <strong class="text-primary" th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">07/01/2026</strong>
                             <span th:if="${staff != null}" th:text="' · ' + ${staff.fullName} + ' (' + ${staff.staffCode} + ')'"></span>
                         </p>
                     </div>
-                    <div class="d-flex gap-2">
-                        <a th:href="@{/schedules/my(week=${prevWeek})}" class="btn btn-light">
-                            <i class="bi bi-chevron-left" aria-hidden="true"></i> Tuần trước</a>
-                        <a th:href="@{/schedules/my}" class="btn btn-light">Tuần này</a>
-                        <a th:href="@{/schedules/my(week=${nextWeek})}" class="btn btn-light">
-                            Tuần sau <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-                        <a th:href="@{/attendance/my}" class="btn btn-primary">
-                            <i class="bi bi-fingerprint" aria-hidden="true"></i> Chấm công</a>
+                </div>
+
+                <!-- BÊN PHẢI NGOÀI CÙNG: THANH ĐIỀU HƯỚNG TỔNG HỢP (GIỐNG ATTENDANCE/MY) -->
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dv-quick-segment" aria-label="Điều hướng nghiệp vụ cá nhân">
+                        <a th:href="@{/attendance/my}" class="dv-seg-btn">
+                            <i class="bi bi-fingerprint"></i> Chấm công cá nhân
+                        </a>
+                        <a th:href="@{/schedules/my}" class="dv-seg-btn active">
+                            <i class="bi bi-calendar-week"></i> Lịch trực tuần của tôi
+                        </a>
+                        <a th:href="@{/doctor/leave-requests}" class="dv-seg-btn"
+                           th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}">
+                            <i class="bi bi-calendar-x"></i> Yêu cầu nghỉ / Khóa lịch
+                        </a>
+                    </div>
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                </div>
+            </div>
+
+            <!-- THANH ĐIỀU KHIỂN & CHÚ THÍCH PHÂN BIỆT (Ở PHÍA DƯỚI) -->
+            <div class="dv-toolbar-card mb-2.5">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
+                    <!-- Bên trái: Chú thích phân biệt trạng thái ca trực -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-secondary fw-bold small text-uppercase" style="font-size: 11px;"><i class="bi bi-info-circle me-1"></i>Phân biệt:</span>
+                        <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe !important; font-size: 11.5px;">
+                            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Đã xếp ca
+                        </span>
+                        <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #fffbeb; color: #b45309; border-color: #fde68a !important; font-size: 11.5px;">
+                            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Nghỉ phép
+                        </span>
+                        <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1 !important; font-size: 11.5px;">
+                            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Đã hủy
+                        </span>
+                        <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #f0fdf4; color: #15803d; border-color: #86efac !important; font-size: 11.5px;">
+                            <i class="bi bi-calendar-check" style="font-size: 10px;"></i> Hôm nay
+                        </span>
+                    </div>
+
+                    <!-- Bên phải: Điều hướng tuần + Nút Yêu cầu nghỉ / Khóa lịch -->
+                    <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                        <!-- Chọn tuần (Segmented Control) -->
+                        <div class="dv-quick-segment" aria-label="Điều hướng tuần">
+                            <a th:href="@{/schedules/my(week=${prevWeek})}" class="dv-seg-btn px-2.5" title="Tuần trước">
+                                <i class="bi bi-chevron-left"></i> Tuần trước
+                            </a>
+                            <a th:href="@{/schedules/my}" class="dv-seg-btn active px-3" title="Về tuần hiện tại">
+                                Tuần này
+                            </a>
+                            <a th:href="@{/schedules/my(week=${nextWeek})}" class="dv-seg-btn px-2.5" title="Tuần sau">
+                                Tuần sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </div>
+
+                        <!-- Nút Yêu cầu nghỉ / Khóa lịch -->
+                        <a th:href="@{/doctor/leave-requests}"
+                           class="btn btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5"
+                           style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 12.5px; height: 32px;">
+                            <i class="bi bi-calendar2-plus"></i> Yêu cầu nghỉ / Khóa lịch
+                        </a>
                     </div>
                 </div>
+            </div>
+
+            <section class="schedule-container">
 
                 <div th:if="${staff == null}" class="schedule-empty">
                     Tài khoản của bạn chưa liên kết hồ sơ nhân viên nên chưa có lịch làm việc.

@@ -1,26 +1,16 @@
-/* Smooth in-place navigation for the four reception workflow screens. */
-#reception-content-area.reception-content-enter {
-    animation: reception-content-fade-in 150ms ease-out both;
-}
-
-@keyframes reception-content-fade-in {
-    from { opacity: 0.85; transform: translateY(2px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-[data-reception-stepper] a[aria-current="step"] {
-    pointer-events: none;
-}
-
 /* =========================================================================
    UNIFIED RECEPTION WORKFLOW STEPPER PILLS (100% ĐỒNG NHẤT GIỮA 4 MÀN HÌNH)
+   Thiết kế chuẩn Enterprise DentalSoft & MISA AMIS Hospital
+   Triệt tiêu hoàn toàn rung giật giao diện (Zero layout shift)
    ========================================================================= */
+
 [data-reception-stepper] {
-    border: 1px solid #e2e8f0 !important;
+    border: 1.5px solid #e2e8f0 !important;
     background: #ffffff !important;
     border-radius: 14px !important;
     padding: 8px 14px !important;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    user-select: none !important;
 }
 
 [data-reception-stepper] .reception-step-pill,
@@ -39,16 +29,18 @@
     line-height: 1 !important;
     white-space: nowrap !important;
     text-decoration: none !important;
+    box-sizing: border-box !important;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-/* Trạng thái Tab Chưa chọn (Inactive) - Đồng bộ 1 kiểu duy nhất */
+/* Trạng thái Tab Chưa chọn (Inactive) */
 [data-reception-stepper] a.reception-step-pill,
 [data-reception-stepper] a.btn {
     background-color: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 1.5px solid #cbd5e1 !important;
     color: #334155 !important;
     box-shadow: none !important;
+    cursor: pointer !important;
 }
 
 [data-reception-stepper] a.reception-step-pill:hover,
@@ -73,6 +65,7 @@
     font-size: 11px !important;
     font-weight: 700 !important;
     margin: 0 !important;
+    transition: background-color 0.15s ease !important;
 }
 
 [data-reception-stepper] a.reception-step-pill:hover .badge,
@@ -81,11 +74,11 @@
     color: #ffffff !important;
 }
 
-/* Trạng thái Tab Đang chọn (Active) - Nổi bật chuẩn màu chủ đạo #0284c7 */
+/* Trạng thái Tab Đang chọn (Active) */
 [data-reception-stepper] span.reception-step-pill.is-active,
 [data-reception-stepper] span.btn {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-    border: 1px solid #0284c7 !important;
+    border: 1.5px solid #0284c7 !important;
     color: #ffffff !important;
     font-weight: 700 !important;
     box-shadow: 0 2px 6px rgba(2, 132, 199, 0.24) !important;
@@ -107,8 +100,4 @@
     font-size: 11px !important;
     font-weight: 700 !important;
     margin: 0 !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #reception-content-area.reception-content-enter { animation: none; }
 }
