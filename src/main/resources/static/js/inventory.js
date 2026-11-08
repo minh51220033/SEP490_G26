@@ -571,9 +571,72 @@
         });
     }
 
+    function updateMisaPagination(labelPrefix, page, totalElements, totalPages, idPrefix = null) {
+        const idPfx = idPrefix || labelPrefix.toLowerCase();
+        const fromItem = totalElements === 0 ? 0 : (page * state.pageSize) + 1;
+        const toItem = Math.min((page + 1) * state.pageSize, totalElements);
+
+        const rangeEl = $(`lbl${labelPrefix}Range`);
+        if (rangeEl) rangeEl.textContent = totalElements === 0 ? "0 - 0" : `${fromItem} - ${toItem}`;
+
+        const totalEl = $(`lbl${labelPrefix}Total`);
+        if (totalEl) totalEl.textContent = totalElements;
+
+        const sizeSelect = $(`${idPfx}PageSizeSelect`);
+        if (sizeSelect) sizeSelect.value = state.pageSize;
+
+        const isFirst = page <= 0 || totalElements === 0;
+        const isLast = page >= totalPages - 1 || totalElements === 0;
+
+        const firstBtn = $(`${idPfx}First`);
+        if (firstBtn) {
+            firstBtn.disabled = isFirst;
+            firstBtn.classList.toggle("disabled", isFirst);
+        }
+        const prevBtn = $(`${idPfx}Prev`);
+        if (prevBtn) {
+            prevBtn.disabled = isFirst;
+            prevBtn.classList.toggle("disabled", isFirst);
+        }
+        const nextBtn = $(`${idPfx}Next`);
+        if (nextBtn) {
+            nextBtn.disabled = isLast;
+            nextBtn.classList.toggle("disabled", isLast);
+        }
+        const lastBtn = $(`${idPfx}Last`);
+        if (lastBtn) {
+            lastBtn.disabled = isLast;
+            lastBtn.classList.toggle("disabled", isLast);
+        }
+    }
+
     window.onInvPageSizeChange = function(newSize) {
         state.pageSize = parseInt(newSize, 10) || 10;
         loadInventory(0);
+    };
+    window.onBatchesPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadBatches(0);
+    };
+    window.onReceiptsPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadReceiptHistory(0);
+    };
+    window.onIssuesPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadIssueHistory(0);
+    };
+    window.onTransfersPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadTransferHistory(0);
+    };
+    window.onMaterialsPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadMaterialsTable(0);
+    };
+    window.onPaymentsPageSizeChange = function(newSize) {
+        state.pageSize = parseInt(newSize, 10) || 10;
+        loadPaymentHistory(0);
     };
 
     async function loadInventory(page = state.inventoryPage) {
@@ -630,17 +693,7 @@
                 return `<tr>${cells.join("")}</tr>`;
             }).join("") : `<tr><td colspan="${visibleCols.length}" class="empty">Không có dữ liệu tồn kho phù hợp.</td></tr>`;
 
-            if ($("lblInventoryRange")) {
-                const start = totalElements > 0 ? (page * state.pageSize + 1) : 0;
-                const end = Math.min((page + 1) * state.pageSize, totalElements);
-                $("lblInventoryRange").textContent = totalElements > 0 ? `${start} - ${end}` : "0 - 0";
-            }
-            if ($("lblInventoryTotal")) $("lblInventoryTotal").textContent = totalElements;
-            if ($("inventoryPageSizeSelect")) $("inventoryPageSizeSelect").value = state.pageSize;
-
-            $("inventoryPage").textContent = `Trang ${state.inventoryTotalPages ? page + 1 : 0} / ${state.inventoryTotalPages}`;
-            $("inventoryPrev").disabled = page <= 0;
-            $("inventoryNext").disabled = page + 1 >= state.inventoryTotalPages;
+            updateMisaPagination("Inventory", page, totalElements, state.inventoryTotalPages);
         } catch (error) {
             if (error.name === "AbortError") return;
             $("inventoryTable").innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -692,9 +745,8 @@
                     <td><span class="status ${cls}">${escapeHtml(label)}</span></td>
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Không có lô vật tư phù hợp.</td></tr>';
-            $("batchesPage").textContent = `Trang ${state.batchesTotalPages ? page + 1 : 0} / ${state.batchesTotalPages}`;
-            $("batchesPrev").disabled = page <= 0;
-            $("batchesNext").disabled = page + 1 >= state.batchesTotalPages;
+            const totalBatches = Number(data?.totalElements || 0);
+            updateMisaPagination("Batches", page, totalBatches, state.batchesTotalPages);
         } catch (error) {
             if (error.name === "AbortError") return;
             $("batchesTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -1135,9 +1187,8 @@
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Chưa có phiếu nhập kho phù hợp.</td></tr>';
 
-            $("receiptHistoryPage").textContent = `Trang ${state.receiptsTotalPages ? page + 1 : 0} / ${state.receiptsTotalPages}`;
-            $("receiptHistoryPrev").disabled = page <= 0;
-            $("receiptHistoryNext").disabled = page + 1 >= state.receiptsTotalPages;
+            const totalReceipts = Number(data?.totalElements || 0);
+            updateMisaPagination("Receipts", page, totalReceipts, state.receiptsTotalPages, "receiptHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
             $("receiptHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -1537,9 +1588,8 @@
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Chưa có phiếu xuất kho phù hợp.</td></tr>';
 
-            $("issueHistoryPage").textContent = `Trang ${state.issuesTotalPages ? page + 1 : 0} / ${state.issuesTotalPages}`;
-            $("issueHistoryPrev").disabled = page <= 0;
-            $("issueHistoryNext").disabled = page + 1 >= state.issuesTotalPages;
+            const totalIssues = Number(data?.totalElements || 0);
+            updateMisaPagination("Issues", page, totalIssues, state.issuesTotalPages, "issueHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
             $("issueHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -1591,9 +1641,8 @@
                 </tr>`;
             }).join("") : '<tr><td colspan="9" class="empty">Chưa có giao dịch điều chuyển kho.</td></tr>';
 
-            $("transferHistoryPage").textContent = `Trang ${state.transfersTotalPages ? page + 1 : 0} / ${state.transfersTotalPages}`;
-            $("transferHistoryPrev").disabled = page <= 0;
-            $("transferHistoryNext").disabled = page + 1 >= state.transfersTotalPages;
+            const totalTransfers = Number(data?.totalElements || 0);
+            updateMisaPagination("Transfers", page, totalTransfers, state.transfersTotalPages, "transferHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
             $("transferHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -1910,9 +1959,8 @@
                 </tr>
             `).join("") : '<tr><td colspan="7" class="empty">Không tìm thấy vật tư phù hợp.</td></tr>';
 
-            $("materialsPage").textContent = `Trang ${state.materialsTotalPages ? page + 1 : 0} / ${state.materialsTotalPages}`;
-            $("materialsPrev").disabled = page <= 0;
-            $("materialsNext").disabled = page + 1 >= state.materialsTotalPages;
+            const totalMaterials = Number(data?.totalElements || 0);
+            updateMisaPagination("Materials", page, totalMaterials, state.materialsTotalPages);
         } catch (error) {
             if (error.name === "AbortError") return;
             $("materialsTable").innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -2094,9 +2142,8 @@
                 </tr>
             `).join("") : '<tr><td colspan="9" class="empty">Chưa có giao dịch thanh toán nhà cung cấp.</td></tr>';
 
-            $("paymentHistoryPage").textContent = `Trang ${state.paymentsTotalPages ? page + 1 : 0} / ${state.paymentsTotalPages}`;
-            $("paymentHistoryPrev").disabled = page <= 0;
-            $("paymentHistoryNext").disabled = page + 1 >= state.paymentsTotalPages;
+            const totalPayments = Number(data?.totalElements || 0);
+            updateMisaPagination("Payments", page, totalPayments, state.paymentsTotalPages, "paymentHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
             $("supplierPaymentHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
@@ -2320,6 +2367,11 @@
             loadSupplierDebts();
             loadPaymentHistory(0);
         }
+
+        const appView = document.querySelector('.inventory-app-view');
+        if (appView) {
+            appView.scrollTop = 0;
+        }
     }
 
     function handleKpiCardActivate(target) {
@@ -2356,6 +2408,65 @@
         }
     }
 
+
+    // Thu gon / mo rong cac phan trong tab quan ly kho
+    window.toggleInventorySection = function (sectionKey) {
+        const contentEl = document.getElementById('content-' + sectionKey);
+        const chevronEl = document.getElementById('chevron-' + sectionKey);
+        const barEl = document.getElementById('bar-' + sectionKey);
+        if (!contentEl) return;
+
+        const isHidden = window.getComputedStyle(contentEl).display === 'none';
+        if (isHidden) {
+            contentEl.style.display = 'block';
+            if (chevronEl) {
+                chevronEl.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
+            }
+            if (barEl) {
+                barEl.classList.add('is-expanded');
+            }
+            try {
+                localStorage.setItem('cv_inv_collapse_' + sectionKey, 'expanded');
+            } catch (e) {}
+            setTimeout(() => {
+                if (barEl) barEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 60);
+        } else {
+            contentEl.style.display = 'none';
+            if (chevronEl) {
+                chevronEl.className = 'bi bi-chevron-right df-foldable-chevron text-secondary';
+            }
+            if (barEl) {
+                barEl.classList.remove('is-expanded');
+            }
+            try {
+                localStorage.setItem('cv_inv_collapse_' + sectionKey, 'collapsed');
+            } catch (e) {}
+        }
+    };
+
+    function initInventorySectionCollapse() {
+        const sections = [
+            'receipt-create', 'receipt-history',
+            'issue-create', 'issue-history',
+            'transfer-create', 'transfer-history',
+            'supplier-debt', 'supplier-history'
+        ];
+        sections.forEach(function (key) {
+            try {
+                const savedState = localStorage.getItem('cv_inv_collapse_' + key);
+                if (savedState === 'collapsed') {
+                    const contentEl = document.getElementById('content-' + key);
+                    const chevronEl = document.getElementById('chevron-' + key);
+                    const barEl = document.getElementById('bar-' + key);
+                    if (contentEl) contentEl.style.display = 'none';
+                    if (chevronEl) chevronEl.className = 'bi bi-chevron-right df-foldable-chevron text-secondary';
+                    if (barEl) barEl.classList.remove('is-expanded');
+                }
+            } catch (e) {}
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         const todayStr = new Date().toISOString().slice(0, 10);
         if ($("receiptDate")) $("receiptDate").value = todayStr;
@@ -2364,6 +2475,7 @@
         if ($("payDate")) $("payDate").value = todayStr;
 
         initSignatureCanvas();
+        initInventorySectionCollapse();
         addReceiptRow();
         addIssueOrTransferRow("issueItems", false);
         addIssueOrTransferRow("transferItems", true);
@@ -2474,21 +2586,41 @@
         safeOn("matCategoryFilter", "change", () => loadMaterialsTable(0));
         safeOn("matActiveFilter", "change", () => loadMaterialsTable(0));
 
-        // Pagination buttons
+        // Pagination buttons (Cụm 4 nút phân trang chuẩn MISA AMIS: |< < > >|)
+        safeOn("inventoryFirst", "click", () => loadInventory(0));
         safeOn("inventoryPrev", "click", () => loadInventory(Math.max(0, state.inventoryPage - 1)));
-        safeOn("inventoryNext", "click", () => loadInventory(state.inventoryPage + 1));
+        safeOn("inventoryNext", "click", () => { if (state.inventoryPage < state.inventoryTotalPages - 1) loadInventory(state.inventoryPage + 1); });
+        safeOn("inventoryLast", "click", () => { if (state.inventoryTotalPages > 0) loadInventory(state.inventoryTotalPages - 1); });
+
+        safeOn("batchesFirst", "click", () => loadBatches(0));
         safeOn("batchesPrev", "click", () => loadBatches(Math.max(0, state.batchesPage - 1)));
-        safeOn("batchesNext", "click", () => loadBatches(state.batchesPage + 1));
+        safeOn("batchesNext", "click", () => { if (state.batchesPage < state.batchesTotalPages - 1) loadBatches(state.batchesPage + 1); });
+        safeOn("batchesLast", "click", () => { if (state.batchesTotalPages > 0) loadBatches(state.batchesTotalPages - 1); });
+
+        safeOn("receiptHistoryFirst", "click", () => loadReceiptHistory(0));
         safeOn("receiptHistoryPrev", "click", () => loadReceiptHistory(Math.max(0, state.receiptsPage - 1)));
-        safeOn("receiptHistoryNext", "click", () => loadReceiptHistory(state.receiptsPage + 1));
+        safeOn("receiptHistoryNext", "click", () => { if (state.receiptsPage < state.receiptsTotalPages - 1) loadReceiptHistory(state.receiptsPage + 1); });
+        safeOn("receiptHistoryLast", "click", () => { if (state.receiptsTotalPages > 0) loadReceiptHistory(state.receiptsTotalPages - 1); });
+
+        safeOn("issueHistoryFirst", "click", () => loadIssueHistory(0));
         safeOn("issueHistoryPrev", "click", () => loadIssueHistory(Math.max(0, state.issuesPage - 1)));
-        safeOn("issueHistoryNext", "click", () => loadIssueHistory(state.issuesPage + 1));
+        safeOn("issueHistoryNext", "click", () => { if (state.issuesPage < state.issuesTotalPages - 1) loadIssueHistory(state.issuesPage + 1); });
+        safeOn("issueHistoryLast", "click", () => { if (state.issuesTotalPages > 0) loadIssueHistory(state.issuesTotalPages - 1); });
+
+        safeOn("transferHistoryFirst", "click", () => loadTransferHistory(0));
         safeOn("transferHistoryPrev", "click", () => loadTransferHistory(Math.max(0, state.transfersPage - 1)));
-        safeOn("transferHistoryNext", "click", () => loadTransferHistory(state.transfersPage + 1));
+        safeOn("transferHistoryNext", "click", () => { if (state.transfersPage < state.transfersTotalPages - 1) loadTransferHistory(state.transfersPage + 1); });
+        safeOn("transferHistoryLast", "click", () => { if (state.transfersTotalPages > 0) loadTransferHistory(state.transfersTotalPages - 1); });
+
+        safeOn("materialsFirst", "click", () => loadMaterialsTable(0));
         safeOn("materialsPrev", "click", () => loadMaterialsTable(Math.max(0, state.materialsPage - 1)));
-        safeOn("materialsNext", "click", () => loadMaterialsTable(state.materialsPage + 1));
+        safeOn("materialsNext", "click", () => { if (state.materialsPage < state.materialsTotalPages - 1) loadMaterialsTable(state.materialsPage + 1); });
+        safeOn("materialsLast", "click", () => { if (state.materialsTotalPages > 0) loadMaterialsTable(state.materialsTotalPages - 1); });
+
+        safeOn("paymentHistoryFirst", "click", () => loadPaymentHistory(0));
         safeOn("paymentHistoryPrev", "click", () => loadPaymentHistory(Math.max(0, state.paymentsPage - 1)));
-        safeOn("paymentHistoryNext", "click", () => loadPaymentHistory(state.paymentsPage + 1));
+        safeOn("paymentHistoryNext", "click", () => { if (state.paymentsPage < state.paymentsTotalPages - 1) loadPaymentHistory(state.paymentsPage + 1); });
+        safeOn("paymentHistoryLast", "click", () => { if (state.paymentsTotalPages > 0) loadPaymentHistory(state.paymentsTotalPages - 1); });
 
         // Add row, Reset & Form submits
         safeOn("addReceiptItem", "click", addReceiptRow);

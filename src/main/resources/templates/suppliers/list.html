@@ -5,6 +5,7 @@
 <body class="app-body">
 
 <!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
+<link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
 <link rel="stylesheet" th:href="@{/css/suppliers.css}">
 
 <div class="app-shell">
@@ -99,15 +100,47 @@
                     </table>
                 </div>
 
-                <!-- Phân trang -->
-                <div class="pagination">
-                    <button id="prevBtn" type="button" class="btn btn-secondary">
-                        ← Trang trước
-                    </button>
-                    <span id="pageInfo">Trang 1</span>
-                    <button id="nextBtn" type="button" class="btn btn-secondary">
-                        Trang sau →
-                    </button>
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <div class="misa-pagination-footer" id="supplierPaginationFooter">
+                    <!-- Bên trái: Tổng số -->
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="lblSuppliersTotal">0</strong>
+                    </div>
+
+                    <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+                    <div class="misa-pagination-right">
+                        <!-- Dropdown chọn số dòng/trang -->
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="supplierPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+
+                        <!-- Khoảng hiển thị bản ghi -->
+                        <div class="misa-page-range">
+                            <span id="lblSuppliersRange">0 - 0</span>
+                        </div>
+
+                        <!-- Cụm 4 nút điều hướng (|< < > >|) -->
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="misa-nav-btn disabled" id="supplierFirstBtn" title="Trang đầu" disabled>
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="supplierPrevBtn" title="Trang trước" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="supplierNextBtn" title="Trang sau" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" class="misa-nav-btn disabled" id="supplierLastBtn" title="Trang cuối" disabled>
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
 

@@ -72,10 +72,11 @@ public class CustomerCareRestController {
             HttpSession session) {
 
         User user = requireUser(session);
-        if (page < 0 || size < 1 || size > 100) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tham số phân trang không hợp lệ.");
+        // Chuẩn hóa pageSize (chấp nhận 10, 25, 50, 100) theo quy chuẩn MISA AMIS
+        if (size != 10 && size != 25 && size != 50 && size != 100) {
+            size = 10;
         }
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(Math.max(0, page), size);
         return customerCareService.searchTasks(
                 branchId, tabGroup, status, assignedStaffId, escalatedToDoctorId,
                 fromDate, toDate, keyword, pageable, user.getUserId()
